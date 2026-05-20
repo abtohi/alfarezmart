@@ -28,8 +28,8 @@ class PurchaseModel extends Model
 
             // 2. Insert Items & Update Stock & Prices
             $stmtItem = $this->db->prepare("
-                INSERT INTO purchase_items (purchase_id, product_id, packaging_id, quantity, buy_price, total_price, sell_price_retail, sell_price_wholesale)
-                VALUES (:pid, :prod_id, :pkg_id, :qty, :buy, :total, :retail, :wholesale)
+                INSERT INTO purchase_items (purchase_id, product_id, packaging_id, quantity, buy_price, ppn_percent, discount_percent, discount_amount, nett_price, total_price, sell_price_retail, sell_price_wholesale)
+                VALUES (:pid, :prod_id, :pkg_id, :qty, :buy, :ppn, :disc_pct, :disc_amt, :nett, :total, :retail, :wholesale)
             ");
 
             $stmtUpdatePrice = $this->db->prepare("
@@ -77,6 +77,27 @@ class PurchaseModel extends Model
                 
                 $pkgId = $pkg['id'];
 
+                // Calculate PPN and discount
+                $ppn_pct = isset($item['ppn_pct']) ? (float)$item['ppn_pct'] : 0.0;
+                $disc_pct = 0.0;
+                $disc_amt = 0.0;
+                
+                if (isset($item['diskon_mode'])) {
+                    if ($item['diskon_mode'] === 'pct') {
+                        $disc_pct = (float)($item['diskon_value'] ?? 0);
+                        $disc_amt = round(($item['buy_price'] * $disc_pct / 100), 2);
+                    } else {
+                        $disc_amt = (float)($item['diskon_value'] ?? 0);
+                        if ($item['buy_price'] > 0) {
+                            $disc_pct = round(($disc_amt / $item['buy_price'] * 100), 2);
+                        }
+                    }
+                }
+                
+                $ppn_amt = $item['buy_price'] * ($ppn_pct / 100);
+                $nett_price = max(0, $item['buy_price'] + $ppn_amt - $disc_amt);
+                $total_price = $item['quantity'] * $nett_price;
+
                 // Insert purchase item
                 $stmtItem->execute([
                     ':pid' => $purchaseId,
@@ -84,7 +105,11 @@ class PurchaseModel extends Model
                     ':pkg_id' => $pkgId,
                     ':qty' => $item['quantity'],
                     ':buy' => $item['buy_price'],
-                    ':total' => $item['quantity'] * $item['buy_price'],
+                    ':ppn' => $ppn_pct,
+                    ':disc_pct' => $disc_pct,
+                    ':disc_amt' => $disc_amt,
+                    ':nett' => $nett_price,
+                    ':total' => $total_price,
                     ':retail' => $item['sell_price_retail'],
                     ':wholesale' => $item['sell_price_wholesale']
                 ]);

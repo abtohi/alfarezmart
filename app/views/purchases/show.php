@@ -34,9 +34,22 @@
     <div style="background:var(--surface-1);border-radius:var(--radius-md);padding:12px;margin-bottom:8px;border-left:3px solid var(--info);display:flex;align-items:center;gap:12px;">
         <div style="flex:1;">
             <div style="font-weight:600;font-size:0.9rem;margin-bottom:4px;line-height:1.3;"><?= htmlspecialchars($item['product_name']) ?></div>
-            <div style="color:var(--text-muted);font-size:0.8rem;display:flex;gap:12px;">
-                <span><?= $item['quantity'] ?> <?= htmlspecialchars($item['unit_name']) ?></span>
-                <span>@ <?= Helper::rupiah($item['buy_price']) ?></span>
+            <div style="color:var(--text-muted);font-size:0.8rem;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+                <span>Qty: <strong><?= $item['quantity'] ?></strong> <?= htmlspecialchars($item['unit_name']) ?></span>
+                <span>Beli: <strong><?= Helper::rupiah($item['buy_price']) ?></strong></span>
+                <?php if (($item['ppn_percent'] ?? 0) > 0 || ($item['discount_percent'] ?? 0) > 0 || ($item['discount_amount'] ?? 0) > 0): ?>
+                    <span style="display:inline-flex;gap:6px;align-items:center;background:rgba(255,255,255,0.05);padding:2px 6px;border-radius:4px;font-size:0.75rem;">
+                        <?php if (($item['ppn_percent'] ?? 0) > 0): ?>
+                            <span style="color:var(--warning);">+PPN <?= number_format($item['ppn_percent'], 0) ?>%</span>
+                        <?php endif; ?>
+                        <?php if (($item['discount_percent'] ?? 0) > 0): ?>
+                            <span style="color:var(--success);">&minus;Disc <?= number_format($item['discount_percent'], 0) ?>%</span>
+                        <?php elseif (($item['discount_amount'] ?? 0) > 0): ?>
+                            <span style="color:var(--success);">&minus;Disc <?= Helper::rupiah($item['discount_amount']) ?></span>
+                        <?php endif; ?>
+                        <span style="color:var(--info);font-weight:600;">Nett: <?= Helper::rupiah($item['nett_price'] ?? $item['buy_price']) ?></span>
+                    </span>
+                <?php endif; ?>
             </div>
         </div>
         <div style="font-weight:700;font-size:0.95rem;">

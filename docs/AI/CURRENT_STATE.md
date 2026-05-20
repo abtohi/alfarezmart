@@ -21,6 +21,15 @@
 
 ## Pekerjaan Terakhir
 
+### Sesi: 2026-05-20 (Finalized) — PPN & Diskon Per Item di Input Barang Masuk
+
+**Yang dikerjakan:**
+1. **Penyimpanan Database** — Memperbarui `PurchaseModel@createWithDetails` untuk menyimpan `ppn_percent`, `discount_percent`, `discount_amount`, dan `nett_price` ke tabel `purchase_items`.
+2. **Form Barang Masuk & Input Massal (`create.php`)** — Mengembalikan input PPN (%) dan Diskon (Rp/%) di form reguler, form modal level kemasan, serta form input massal (bulk). Perhitungan Harga Nett dan visualisasi margin berbasis Nett disinkronkan secara real-time.
+3. **Detail Barang Masuk (`show.php`)** — Menampilkan informasi PPN, Diskon, dan Harga Nett per item yang tersimpan di dalam database pada halaman detail transaksi pembelian.
+
+---
+
 ### Sesi: 2026-05-20 (Update) — Form Sales/Supplier Fix & Fallback Implementation
 
 **Yang dikerjakan:**

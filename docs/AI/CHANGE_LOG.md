@@ -29,6 +29,28 @@
 
 ---
 
+## [2026-05-20] — Fitur PPN & Diskon Per Item Terintegrasi Database & Detail View
+
+**Tipe:** Mayor
+**Modul:** Purchase (PurchaseModel, create.php, show.php)
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Database Persistence**: Menambahkan penyimpanan kolom `ppn_percent`, `discount_percent`, `discount_amount`, dan `nett_price` di tabel `purchase_items` saat proses penyimpanan barang masuk via `PurchaseModel@createWithDetails`.
+- **UI PPN & Diskon**: Mengembalikan input PPN (%) dan Diskon (Rp/%) di form reguler, modal harga kemasan, serta form input massal (bulk) pada file `create.php`.
+- **Real-time Nett Price & Margin Calculation**: Perhitungan `Harga Nett = Beli + PPN - Diskon` dihitung real-time. Margin retail dan grosir dihitung berdasarkan harga nett tersebut (bukan lagi harga beli kotor).
+- **Detail View Update**: Memperbarui `show.php` untuk menampilkan informasi PPN, Diskon, dan Harga Nett per item yang telah disimpan dalam database di halaman detail barang masuk.
+
+### File yang Diubah/Dibuat
+- `app/models/PurchaseModel.php` — query penyimpanan detail PPN, Diskon, dan Nett.
+- `app/views/purchases/create.php` — form input PPN/Diskon, modal detail, bulk input, logic JS sinkronisasi margin & nett.
+- `app/views/purchases/show.php` — penampilan rincian harga beli kotor, diskon, PPN, dan harga nett per item.
+
+### Catatan
+- Margin ecer/grosir kini terhitung secara akurat dan fair berdasarkan modal riil setelah PPN & Diskon per item, yang disimpan dan bisa diaudit kapan saja lewat halaman detail barang masuk.
+
+---
+
 ## [2026-05-20] — Restorasi Layout & Penyempurnaan Alur Input Barang Masuk
 
 **Tipe:** Mayor
