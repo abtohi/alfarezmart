@@ -64,6 +64,8 @@ function setupDatabase()
             full_name VARCHAR(255) NOT NULL,
             short_label VARCHAR(50),
             invoice_name VARCHAR(100),
+            supplier_product_code VARCHAR(100) NULL,
+            supplier_invoice_name VARCHAR(255) NULL,
             weight_value DECIMAL(10,2),
             weight_unit VARCHAR(10),
             description TEXT,

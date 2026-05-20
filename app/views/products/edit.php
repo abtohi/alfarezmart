@@ -45,15 +45,22 @@ $pkgsJson = json_encode($packagings, JSON_UNESCAPED_UNICODE);
         <input type="hidden" name="csrf_token" id="csrfToken" value="<?= $csrfToken ?>">
         <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
         <input type="hidden" name="reference_product_id" id="editReferenceProductId" value="">
+        <input type="hidden" name="supplier_product_code" id="editSupplierProductCode" value="<?= htmlspecialchars($product['supplier_product_code'] ?? '', ENT_QUOTES) ?>">
+        <input type="hidden" name="supplier_invoice_name" id="editSupplierInvoiceName" value="<?= htmlspecialchars($product['supplier_invoice_name'] ?? '', ENT_QUOTES) ?>"
 
         <!-- Identitas Produk (Point 5: Multivarian toggle) -->
         <div id="editIdentitySection" style="background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;border:1px solid var(--border-color);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                 <div class="section-title" style="margin-bottom:0;">Identitas Produk</div>
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--font-size-xs);">
-                    <input type="checkbox" id="editIsMultivariant" <?= (!empty($product['brand_id']) || !empty($product['product_type'])) ? 'checked' : '' ?> style="width:16px;height:16px;accent-color:var(--primary);">
-                    <span>Produk Multivarian</span>
-                </label>
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--font-size-xs);">
+                        <input type="checkbox" id="editIsMultivariant" <?= (!empty($product['brand_id']) || !empty($product['product_type'])) ? 'checked' : '' ?> style="width:16px;height:16px;accent-color:var(--primary);">
+                        <span>Produk Multivarian</span>
+                    </label>
+                    <button type="button" id="btnEditSupplierInfo" class="btn-outline-custom" style="padding:6px 10px;font-size:var(--font-size-xs);display:inline-flex;align-items:center;gap:4px;border-radius:6px;">
+                        <i class="bi bi-truck"></i> Info Supplier
+                    </button>
+                </div>
             </div>
 
             <!-- Single variant panel -->
@@ -108,6 +115,8 @@ const editCsrfToken   = document.getElementById('csrfToken').value;
 const editCurBrand    = '<?= $product['brand_id'] ?? '' ?>';
 const editCurCat      = '<?= $product['category_id'] ?? '' ?>';
 const editCurWUnit    = '<?= $product['weight_unit'] ?? '' ?>';
+const editCurSupplierCode = '<?= htmlspecialchars($product['supplier_product_code'] ?? '', ENT_QUOTES) ?>';
+const editCurSupplierInvoiceName = '<?= htmlspecialchars($product['supplier_invoice_name'] ?? '', ENT_QUOTES) ?>';
 const weightUnitOpts = [
     <?php foreach ($units as $u): ?>
         <?php $wLabel = htmlspecialchars($u['name'], ENT_QUOTES) . (!empty($u['abbreviation']) ? ' (' . htmlspecialchars($u['abbreviation'], ENT_QUOTES) . ')' : ''); ?>
@@ -173,6 +182,9 @@ document.addEventListener('DOMContentLoaded', () => {
     editIsMultivariant = mvCheck?.checked ?? true;
     if (!editIsMultivariant) toggleEditMultivariant(false);
     mvCheck?.addEventListener('change', (e) => { toggleEditMultivariant(e.target.checked); });
+
+    // Supplier Info button
+    document.getElementById('btnEditSupplierInfo')?.addEventListener('click', openEditSupplierInfoModal);
 
     // Point 4: Reference mode toggle
     document.getElementById('editUseReferenceMode')?.addEventListener('change', (e) => {
@@ -397,16 +409,16 @@ function renderEditLevel(prefill = null) {
                         <input type="number" placeholder="Total Rp" class="form-control-dark calc-total" style="width:90px;font-size:12px;padding:4px;">
                         <span style="color:var(--text-muted);">/</span>
                         <input type="number" placeholder="Qty" value="1" class="form-control-dark calc-qty" style="width:50px;font-size:12px;padding:4px;">
-                        <button type="button" class="btn-primary-custom" style="padding:4px 8px;font-size:12px;border-radius:4px;" onclick="const p=this.parentElement;const t=p.querySelector('.calc-total').value;const q=p.querySelector('.calc-qty').value;if(t&&q>0){const inp=p.closest('div[style*=&quot;margin-bottom:8px&quot;]').querySelector('.pkg-buy,.buy-price');inp.value=Math.round(t/q);inp.dispatchEvent(new Event('input'));p.style.display='none';}"><i class="bi bi-check2"></i> Hitung</button>
+                        <button type="button" class="btn-primary-custom" style="padding:4px 8px;font-size:12px;border-radius:4px;" onclick="const p=this.parentElement;const t=p.querySelector('.calc-total').value;const q=p.querySelector('.calc-qty').value;if(t&&q>0){const inp=p.closest('div[style*=&quot;margin-bottom:8px&quot;]').querySelector('.pkg-buy,.buy-price');inp.value=(parseFloat(t)/parseFloat(q)).toFixed(2);inp.dispatchEvent(new Event('input'));p.style.display='none';}"><i class="bi bi-check2"></i> Hitung</button>
                     </div>
                 </label>
-                <input type="number" value="${prefill?.buyPrice||0}" placeholder="0" class="form-control-dark pkg-buy" style="width:100%;">
+                <input type="number" value="${prefill?.buyPrice||0}" placeholder="0" class="form-control-dark pkg-buy" step="0.01" style="width:100%;">
                 ${!isLevel1 ? `<div class="price-locked-note buy-locked-note ${isBuyCustom ? '' : 'visible'}"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs × isi</div>` : ''}
             </div>
             ${!isLevel1 ? `<label class="price-custom-toggle sell-custom-toggle ${isSellCustom ? 'active' : ''}"><input type="checkbox" class="chk-sell-custom" ${isSellCustom ? 'checked' : ''}><i class="bi bi-tag" style="font-size:10px;"></i> Harga Jual Custom</label>` : ''}
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <div><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Jual Ecer/Retail</label><input type="number" value="${prefill?.retail||0}" placeholder="0" class="form-control-dark pkg-retail" style="width:100%;"></div>
-                <div><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Jual Grosir</label><input type="number" value="${prefill?.wholesale||0}" placeholder="0" class="form-control-dark pkg-wholesale" style="width:100%;"></div>
+                <div><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Jual Ecer/Retail</label><input type="number" value="${prefill?.retail||0}" placeholder="0" class="form-control-dark pkg-retail" step="0.01" style="width:100%;"></div>
+                <div><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Jual Grosir</label><input type="number" value="${prefill?.wholesale||0}" placeholder="0" class="form-control-dark pkg-wholesale" step="0.01" style="width:100%;"></div>
             </div>
             ${!isLevel1 ? `<div class="price-locked-note sell-locked-note ${isSellCustom ? '' : 'visible'}"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs × isi</div>` : ''}
             <div class="pkg-margin-info" style="margin-top:8px;font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;">
@@ -721,8 +733,57 @@ async function submitEditProduct(e) {
     btn.disabled = true;
 
     try {
-        // 1. Update product basic info
+        // Validasi kategori
+        const categoryId = editCatSB?.getValue();
+        if (!categoryId) {
+            showToast('❌ Kategori produk wajib dipilih', 'error');
+            btn.innerHTML = prevText;
+            btn.disabled = false;
+            return;
+        }
+
+        // Validasi brand jika multivarian
         const isMulti = document.getElementById('editIsMultivariant')?.checked;
+        if (isMulti) {
+            const brandId = editBrandSB?.getValue();
+            if (!brandId) {
+                showToast('❌ Brand/Merek wajib dipilih untuk produk multivarian', 'error');
+                btn.innerHTML = prevText;
+                btn.disabled = false;
+                return;
+            }
+        }
+
+        // Validasi packaging
+        const pkgDivs = document.querySelectorAll('#editPkgContainer .packaging-level');
+        if (pkgDivs.length === 0) {
+            showToast('❌ Tambahkan minimal 1 level kemasan', 'error');
+            btn.innerHTML = prevText;
+            btn.disabled = false;
+            return;
+        }
+
+        // Validasi harga kemasan
+        for (const div of pkgDivs) {
+            const unitSB = div.querySelector('.unit-searchbox-instance')?._searchbox;
+            const unitId = unitSB?.getValue();
+            if (!unitId) {
+                showToast('❌ Semua satuan kemasan wajib dipilih', 'error');
+                btn.innerHTML = prevText;
+                btn.disabled = false;
+                return;
+            }
+            const buyPrice = parseFloat(div.querySelector('.pkg-buy')?.value) || 0;
+            const retail = parseFloat(div.querySelector('.pkg-retail')?.value) || 0;
+            if (retail === 0 && buyPrice === 0) {
+                showToast('❌ Harga jual atau harga beli wajib diisi untuk semua kemasan', 'error');
+                btn.innerHTML = prevText;
+                btn.disabled = false;
+                return;
+            }
+        }
+
+        // 1. Update product basic info
         const productData = {
             csrf_token: editCsrfToken,
             full_name: document.getElementById('editNamePreview').textContent,
@@ -734,9 +795,14 @@ async function submitEditProduct(e) {
             category_id: editCatSB.getValue(),
             weight_value: document.querySelector('[name="weight_value"]').value,
             weight_unit: editWeightUnitSB.getValue(),
+            supplier_product_code: document.getElementById('editSupplierProductCode').value || '',
+            supplier_invoice_name: document.getElementById('editSupplierInvoiceName').value || '',
         };
+        
         const res = await api(`${BASE_URL}api/products/update/${editProductId}`, 'POST', productData);
-        if (!res.success) throw new Error(res.error || 'Gagal update produk');
+        if (!res.success) {
+            throw new Error(res.error || 'Gagal update produk. Silahkan cek kembali data Anda');
+        }
 
         // 2. Delete removed packagings
         for (const pkgId of deletedPkgIds) {
@@ -755,30 +821,81 @@ async function submitEditProduct(e) {
             const wholesale= div.querySelector('.pkg-wholesale')?.value || 0;
             const barcode  = div.querySelector('.barcode-field')?.value || '';
 
-            if (pkgId) {
-                const up = await updatePackagingWithConflict(pkgId, {
-                    csrf_token: editCsrfToken, unit_id: unitId, buy_price: buyPrice,
-                    sell_price_retail: retail, sell_price_wholesale: wholesale, barcode
-                });
-                if (up.error && up.error !== 'barcode_conflict') throw new Error(up.error || up.message);
-            } else {
-                const addRes = await api(`${BASE_URL}api/products/${editProductId}/packaging/add`, 'POST', {
-                    csrf_token: editCsrfToken, unit_id: unitId, contained_qty: containedQty,
-                    buy_price: buyPrice, sell_price_retail: retail, sell_price_wholesale: wholesale, barcode
-                });
-                if (!addRes.success) throw new Error(addRes.error || 'Gagal tambah kemasan');
-                pkgId = String(addRes.id);
-                div.setAttribute('data-pkg-id', pkgId);
+            try {
+                if (pkgId) {
+                    const up = await updatePackagingWithConflict(pkgId, {
+                        csrf_token: editCsrfToken, unit_id: unitId, buy_price: buyPrice,
+                        sell_price_retail: retail, sell_price_wholesale: wholesale, barcode
+                    });
+                    if (up.error && up.error !== 'barcode_conflict') {
+                        throw new Error(up.error || up.message);
+                    }
+                } else {
+                    const addRes = await api(`${BASE_URL}api/products/${editProductId}/packaging/add`, 'POST', {
+                        csrf_token: editCsrfToken, unit_id: unitId, contained_qty: containedQty,
+                        buy_price: buyPrice, sell_price_retail: retail, sell_price_wholesale: wholesale, barcode
+                    });
+                    if (!addRes.success) {
+                        throw new Error(addRes.error || 'Gagal tambah kemasan. Periksa kembali data harga dan satuan');
+                    }
+                    pkgId = String(addRes.id);
+                    div.setAttribute('data-pkg-id', pkgId);
+                }
+                await saveQtyTiersForPackaging(pkgId, div);
+            } catch (pkgErr) {
+                throw new Error(`❌ Error di kemasan: ${pkgErr.message}`);
             }
-            await saveQtyTiersForPackaging(pkgId, div);
         }
 
-        showToast('Produk berhasil diupdate!', 'success');
+        showToast('✅ Produk berhasil diupdate!', 'success');
         setTimeout(() => window.location.href = `${BASE_URL}products/${editProductId}`, 1000);
     } catch (err) {
         showToast('Error: ' + err.message, 'error');
         btn.innerHTML = prevText;
         btn.disabled = false;
     }
+}
+
+// Supplier Info Modal
+async function openEditSupplierInfoModal() {
+    const currentCode = document.getElementById('editSupplierProductCode').value;
+    const currentInvoiceName = document.getElementById('editSupplierInvoiceName').value;
+    
+    await AppModal.show({
+        title: 'Info Supplier Produk',
+        subtitle: 'Gunakan informasi ini agar AI Scan lebih akurat mengenali produk dari invoice supplier',
+        icon: 'bi-truck',
+        bodyHTML: `
+            <div style="display:flex;flex-direction:column;gap:14px;">
+                <div class="modal-form-group">
+                    <label style="font-weight:600;font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:6px;">Kode Barang Supplier</label>
+                    <input type="text" id="editModalSupplierCode" class="form-control-dark" placeholder="Cth: CMY-125POR, IND-GOR-ST..." value="${escHtml(currentCode)}" style="width:100%;">
+                    <small style="display:block;margin-top:4px;color:var(--info);font-size:11px;">
+                        <i class="bi bi-info-circle"></i> Kode referensi dari supplier (jika ada di invoice)
+                    </small>
+                </div>
+                <div class="modal-form-group">
+                    <label style="font-weight:600;font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:6px;">Nama Barang di Invoice Supplier</label>
+                    <input type="text" id="editModalSupplierInvoiceName" class="form-control-dark" placeholder="Cth: CIMORY UHT PORORO 125ML..." value="${escHtml(currentInvoiceName)}" style="width:100%;">
+                    <small style="display:block;margin-top:4px;color:var(--info);font-size:11px;">
+                        <i class="bi bi-info-circle"></i> Nama barang persis seperti tertulis di invoice supplier
+                    </small>
+                </div>
+                <div style="background:var(--info-bg);border-left:3px solid var(--info);padding:10px 12px;border-radius:4px;font-size:12px;color:var(--text-primary);">
+                    <strong style="color:var(--info);">💡 Tips:</strong> Semakin detail informasi ini, semakin akurat AI dalam mengenali produk saat scanning invoice
+                </div>
+            </div>
+        `,
+        submitText: 'Simpan',
+        cancelText: 'Batal',
+        onSubmit: async () => {
+            const code = document.getElementById('editModalSupplierCode').value.trim();
+            const invoiceName = document.getElementById('editModalSupplierInvoiceName').value.trim();
+            document.getElementById('editSupplierProductCode').value = code;
+            document.getElementById('editSupplierInvoiceName').value = invoiceName;
+            showToast('Info supplier tersimpan', 'success');
+            return true;
+        }
+    });
 }
 </script>

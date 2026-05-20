@@ -165,6 +165,11 @@
     <!-- Sistem & Dukungan -->
     <div class="section-title">Sistem &amp; Dukungan</div>
     <ul class="menu-list" style="margin-bottom:24px;">
+        <a href="<?= BASE_URL ?>settings/app" class="menu-item">
+            <div class="menu-icon" style="background: rgba(var(--bs-primary-rgb, 13,110,253), 0.1); color: #0d6efd;"><i class="bi bi-gear"></i></div>
+            <div class="menu-text"><h6>Pengaturan Sistem &amp; AI</h6><small>Ganti password dan konfigurasi AI Agent</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
         <a href="<?= BASE_URL ?>settings/receipt" class="menu-item">
             <div class="menu-icon" style="background: rgba(var(--bs-secondary-rgb, 108,117,125), 0.1); color: #6c757d;"><i class="bi bi-printer"></i></div>
             <div class="menu-text"><h6>Pengaturan Struk</h6><small>Logo toko, header, footer, dan format thermal</small></div>

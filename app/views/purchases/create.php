@@ -41,6 +41,11 @@
                         <i class="bi bi-image"></i> Galeri
                     </button>
                 </div>
+                <div style="display:flex; gap:4px; margin-top:4px;">
+                    <button type="button" class="btn-primary-custom" id="btnScanAI" style="flex:1; padding:8px 4px; font-size:11px; display:none;" onclick="scanInvoiceWithAI()">
+                        <i class="bi bi-robot"></i> Scan dengan AI (Otomatis)
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -255,8 +260,75 @@ function savePhotoPreview() {
     btnCam.innerHTML = '<i class="bi bi-check2-circle"></i> OK';
     btnGal.innerHTML = '<i class="bi bi-check2-circle"></i> OK';
     
+    document.getElementById('btnScanAI').style.display = 'block';
+    
     closePhotoPreview();
     showToast('Foto berhasil disiapkan', 'success');
+}
+
+async function scanInvoiceWithAI() {
+    if (!invoicePhotoBase64) {
+        showToast('Pilih atau ambil foto invoice terlebih dahulu', 'error');
+        return;
+    }
+    
+    const btn = document.getElementById('btnScanAI');
+    const originalText = btn.innerHTML;
+    
+    try {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Memproses AI...';
+        
+        const data = {
+            csrf_token: csrfVal,
+            image_base64: invoicePhotoBase64
+        };
+        
+        const result = await api(BASE_URL + 'api/ai/scan-invoice', 'POST', data);
+        
+        if (result.success && result.data && result.data.length > 0) {
+            showToast('AI berhasil memparsing ' + result.data.length + ' item', 'success');
+            
+            // Loop through results and add to bulk items
+            for (const item of result.data) {
+                if (item.is_matched && item.product_id) {
+                    try {
+                        const productData = await api(`${BASE_URL}api/products/${item.product_id}`);
+                        // Set quantity and price based on AI output
+                        if (productData) {
+                            // Find base packaging
+                            const basePkg = productData.packagings.find(p => p.level == 1) || productData.packagings[0];
+                            if (basePkg) {
+                                basePkg.buy_price = item.price;
+                            }
+                            addProductToCart(productData);
+                            
+                            // Immediately update the added item's quantity
+                            const addedItem = purchaseItems[0]; // addProductToCart unshifts to the front
+                            if (addedItem && addedItem.product_id == item.product_id) {
+                                addedItem.quantity = item.qty;
+                                addedItem.total = addedItem.quantity * addedItem.buy_price;
+                            }
+                        }
+                    } catch(e) {
+                        console.error('Failed to add AI mapped item', e);
+                    }
+                } else {
+                    showToast('Item "' + item.original_name + '" tidak dikenali di database, silakan input manual.', 'warning');
+                }
+            }
+            renderCart();
+            calculateTotal();
+        } else {
+            showToast('AI tidak menemukan item yang valid', 'warning');
+        }
+    } catch (err) {
+        console.error('Error scanning invoice:', err);
+        showToast(err.message || 'Gagal memindai invoice dengan AI', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1058,7 +1130,7 @@ function openAllPackagingsModal(tempId) {
                         <span>Harga Modal / Beli *</span>
                         ${origBuy>0 ? `<span style="font-size:9px;">Sebelumnya: Rp${Math.round(origBuy).toLocaleString('id-ID')}</span>` : ''}
                     </label>
-                    <input type="number" id="mod_buy_${pkg.level}" class="form-control-dark buy-price pkg-buy" style="width:100%;font-size:12px;padding:6px;" value="${pkg.buy_price}" oninput="onPkgModalInput(this, ${pkg.level})">
+                    <input type="number" id="mod_buy_${pkg.level}" class="form-control-dark buy-price pkg-buy" step="0.01" style="width:100%;font-size:12px;padding:6px;" value="${pkg.buy_price}" oninput="onPkgModalInput(this, ${pkg.level})">
                     ${!isLevel1 ? `<div class="price-locked-note buy-locked-note ${pkg.buy_custom?'':'visible'}"><i class="bi bi-link-45deg"></i> Otomatis dari pcs × isi</div>` : ''}
                 </div>
 
@@ -1067,7 +1139,7 @@ function openAllPackagingsModal(tempId) {
                     <div style="display:grid;grid-template-columns:1fr 2fr;gap:6px;margin-bottom:6px;">
                         <div>
                             <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">PPN (%)</label>
-                            <input type="number" id="mod_ppn_${pkg.level}" class="form-control-dark pkg-ppn" style="width:100%;padding:4px;font-size:11px;" value="${pkg.ppn_pct || 0}" min="0" max="100" placeholder="0" oninput="onPkgModalInput(this, ${pkg.level})">
+                            <input type="number" id="mod_ppn_${pkg.level}" class="form-control-dark pkg-ppn" step="0.01" style="width:100%;padding:4px;font-size:11px;" value="${pkg.ppn_pct || 0}" min="0" max="100" placeholder="0" oninput="onPkgModalInput(this, ${pkg.level})">
                         </div>
                         <div>
                             <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">Diskon</label>
@@ -1076,7 +1148,7 @@ function openAllPackagingsModal(tempId) {
                                     <option value="rp" ${(pkg.diskon_mode||'rp')==='rp'?'selected':''}>Rp</option>
                                     <option value="pct" ${(pkg.diskon_mode||'rp')==='pct'?'selected':''}>%</option>
                                 </select>
-                                <input type="number" id="mod_diskon_value_${pkg.level}" class="form-control-dark pkg-diskon-value" style="flex:1;padding:4px;font-size:11px;" value="${pkg.diskon_value || 0}" min="0" placeholder="0" oninput="onPkgModalInput(this, ${pkg.level})">
+                                <input type="number" id="mod_diskon_value_${pkg.level}" class="form-control-dark pkg-diskon-value" step="0.01" style="flex:1;padding:4px;font-size:11px;" value="${pkg.diskon_value || 0}" min="0" placeholder="0" oninput="onPkgModalInput(this, ${pkg.level})">
                             </div>
                         </div>
                     </div>
@@ -1402,7 +1474,7 @@ function renderCart() {
                         </div>
                         <div style="flex:1;">
                             <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Harga Modal/Beli (per ${p_unit})</label>
-                            <input type="number" class="form-control-dark buy-price pkg-buy" style="width:100%;padding:8px;font-size:12px;" value="${item.buy_price}" oninput="updateItem(${item.id}, 'buy_price', this.value)">
+                            <input type="number" class="form-control-dark buy-price pkg-buy" step="0.01" style="width:100%;padding:8px;font-size:12px;" value="${item.buy_price}" oninput="updateItem(${item.id}, 'buy_price', this.value)">
                         </div>
                     </div>
                     ${item.level > 1 ? `<div class="price-locked-note buy-locked-note" style="font-size:10px;color:var(--info);margin-top:-4px;margin-bottom:8px;"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs × isi kemasan</div>` : ''}
@@ -1500,19 +1572,37 @@ function renderCart() {
 
 async function submitPurchase() {
     if (purchaseItems.length === 0) {
-        showToast('Daftar belanja masih kosong!', 'warning');
+        showToast('❌ Daftar belanja masih kosong! Tambahkan minimal 1 produk', 'warning');
         return;
     }
     const salesVal = salesRepSB ? salesRepSB.getValue() : '';
     if (!salesVal) {
-        showToast('Pilih sales terlebih dahulu!', 'warning');
+        showToast('❌ Pilih sales/supplier terlebih dahulu!', 'warning');
         return;
     }
     if (salesVal === 'other') isOtherMode = true;
     if (!isOtherMode && !currentSalesRepId) {
-        showToast('Pilih sales terlebih dahulu!', 'warning');
+        showToast('❌ Pilih sales terlebih dahulu!', 'warning');
         return;
     }
+    
+    // Validate each purchase item
+    for (let i = 0; i < purchaseItems.length; i++) {
+        const item = purchaseItems[i];
+        if (!item.product_id) {
+            showToast(`❌ Item ${i + 1}: Produk tidak valid`, 'error');
+            return;
+        }
+        if (!item.quantity || item.quantity <= 0) {
+            showToast(`❌ Item ${i + 1}: Jumlah harus lebih dari 0`, 'error');
+            return;
+        }
+        if (!item.buy_price || item.buy_price <= 0) {
+            showToast(`❌ Item ${i + 1}: Harga modal harus diisi dan lebih dari 0`, 'error');
+            return;
+        }
+    }
+    
     const date = document.getElementById('purchaseDate').value;
 
     const btn = document.getElementById('btnSavePurchase');
@@ -1533,21 +1623,21 @@ async function submitPurchase() {
                 product_id: i.product_id,
                 level: i.level,
                 quantity: i.quantity,
-                buy_price: i.buy_price,
-                sell_price_retail: i.sell_price_retail,
-                sell_price_wholesale: i.sell_price_wholesale,
-                ppn_pct: i.ppn_pct || 0,
+                buy_price: parseFloat(i.buy_price) || 0,
+                sell_price_retail: parseFloat(i.sell_price_retail) || 0,
+                sell_price_wholesale: parseFloat(i.sell_price_wholesale) || 0,
+                ppn_pct: parseFloat(i.ppn_pct) || 0,
                 diskon_mode: i.diskon_mode || 'rp',
-                diskon_value: i.diskon_value || 0,
-                harga_nett: i.harga_nett || i.buy_price,
+                diskon_value: parseFloat(i.diskon_value) || 0,
+                harga_nett: parseFloat(i.harga_nett) || parseFloat(i.buy_price) || 0,
                 packagings: i.packagings.map(p => ({
                     level: p.level,
-                    buy_price: p.buy_price,
-                    sell_price_retail: p.sell_price_retail,
-                    sell_price_wholesale: p.sell_price_wholesale,
-                    ppn_pct: p.ppn_pct || 0,
+                    buy_price: parseFloat(p.buy_price) || 0,
+                    sell_price_retail: parseFloat(p.sell_price_retail) || 0,
+                    sell_price_wholesale: parseFloat(p.sell_price_wholesale) || 0,
+                    ppn_pct: parseFloat(p.ppn_pct) || 0,
                     diskon_mode: p.diskon_mode || 'rp',
-                    diskon_value: p.diskon_value || 0
+                    diskon_value: parseFloat(p.diskon_value) || 0
                 }))
             }))
         };
@@ -1563,15 +1653,16 @@ async function submitPurchase() {
         const result = await res.json();
 
         if (result.success) {
-            showToast('Pembelian berhasil disimpan!', 'success');
+            showToast('✅ Pembelian berhasil disimpan!', 'success');
             setTimeout(() => window.location.href = `${BASE_URL}purchases`, 1500);
         } else {
-            showToast(result.error || 'Gagal menyimpan', 'error');
+            showToast('❌ ' + (result.error || 'Gagal menyimpan pembelian'), 'error');
             btn.innerHTML = prevText;
             btn.disabled = false;
         }
     } catch (err) {
-        showToast('Error: ' + err.message, 'error');
+        showToast('❌ Error: ' + (err.message || 'Terjadi kesalahan saat menyimpan'), 'error');
+        console.error('Purchase error:', err);
         btn.innerHTML = prevText;
         btn.disabled = false;
     }
@@ -1628,7 +1719,7 @@ async function openBulkInputModal() {
                                 <i class="bi bi-pencil-square" style="font-size:9px;"></i> Custom
                             </label>` : ''}
                             <div style="display:flex; gap:6px; margin-bottom:4px;">
-                                <div style="flex:1;"><label style="font-size:9px;color:var(--text-muted);">Modal</label><input type="number" class="pkg-buy buy-price form-control-dark" style="width:100%;font-size:10px;padding:4px;" value="${pkg.buy_price || 0}" oninput="onPkgModalInput(this, ${pkg.level})"></div>
+                                <div style="flex:1;"><label style="font-size:9px;color:var(--text-muted);">Modal</label><input type="number" class="pkg-buy buy-price form-control-dark" step="0.01" style="width:100%;font-size:10px;padding:4px;" value="${pkg.buy_price || 0}" oninput="onPkgModalInput(this, ${pkg.level})"></div>
                             </div>
                             ${!isLevel1 ? `<div class="price-locked-note buy-locked-note" style="font-size:8px;color:var(--info);margin-top:-2px;margin-bottom:4px;"><i class="bi bi-link-45deg"></i> Otomatis dari pcs × isi</div>` : ''}
 
@@ -1769,7 +1860,7 @@ async function openBulkInputModal() {
                 <div style="margin-bottom:8px;">
                     <label style="font-size:10px;color:var(--text-muted);">Harga Modal / Beli</label>
                     <div style="position:relative;">
-                        <input type="number" class="bulk-buy form-control-dark" style="width:100%; font-size:11px; padding-right:24px;" value="${defPkg.buy_price || p.last_buy_price || 0}" data-last-buy="${defPkg.buy_price || p.last_buy_price || 0}" oninput="calcBulkMargin(this); syncTotalFromBuy(this)">
+                        <input type="number" class="bulk-buy form-control-dark" step="0.01" style="width:100%; font-size:11px; padding-right:24px;" value="${defPkg.buy_price || p.last_buy_price || 0}" data-last-buy="${defPkg.buy_price || p.last_buy_price || 0}" oninput="calcBulkMargin(this); syncTotalFromBuy(this)">
                         <span class="buy-indicator" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:12px;"></span>
                     </div>
                 </div>

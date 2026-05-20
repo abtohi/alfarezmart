@@ -47,6 +47,7 @@ $router->get('/scanner', 'BarcodeController@scanner');
 $router->get('/settings', 'DashboardController@index');
 $router->get('/settings/master-data', 'SettingController@masterData');
 $router->get('/settings/receipt', 'SettingController@receiptSettings');
+$router->get('/settings/app', 'SettingController@appSettings');
 $router->get('/help', 'DashboardController@help');
 
 // Reports
@@ -78,6 +79,10 @@ $router->post('/api/products/{id}/photo', 'ApiController@updateProductPhoto');
 $router->post('/api/products/{id}/stock', 'ApiController@updateProductStock');
 $router->get('/api/settings/receipt', 'ApiController@getReceiptSettings');
 $router->post('/api/settings/receipt', 'ApiController@saveReceiptSettings');
+$router->post('/api/settings/app', 'ApiController@saveAppSettings');
+
+// AI Agent API
+$router->post('/api/ai/scan-invoice', 'ApiController@scanInvoiceAI');
 
 // Purchases API
 $router->get('/api/purchases', 'ApiController@getPurchases');
@@ -133,12 +138,13 @@ $router->post('/api/units/{id}/delete', 'ApiController@deleteUnit'); // DELETE
 // Dashboard API
 $router->get('/api/dashboard/stats', 'ApiController@getDashboardStats');
 
-// User Management API (superadmin only)
+// User Management API
 $router->get('/api/users', 'ApiController@getUsers');
 $router->post('/api/users', 'ApiController@createUser');
-$router->post('/api/users/{id}/toggle-active', 'ApiController@toggleUserActive');
-$router->post('/api/users/{id}/reset-password', 'ApiController@resetUserPassword');
+$router->post('/api/users/{id}/toggle', 'ApiController@toggleUserStatus');
 $router->post('/api/users/{id}/delete', 'ApiController@deleteUser');
+$router->post('/api/users/{id}/reset-password', 'ApiController@resetUserPassword');
+$router->post('/api/users/change-password', 'ApiController@changePassword');
 
 // User Management Web Routes
 $router->get('/users', 'UserController@index');

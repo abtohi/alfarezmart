@@ -33,9 +33,9 @@ Klasifikasikan task ini sebelum mulai:
 
 ## Task
 
-- [isi task 1]
-- [isi task 2]
-- [isi task 3]
+- Saat saya mencoba menggunakan fitur AI Scan otomatis, sudah berhasil, namun ada 1 item yang gagal teridentifikasi karena penamaan produk di invoice dengan standar penamaan yang ada di database saya berbeda, misalnya ada produk di database saya bernama Cimory UHT Chocolate 125ml, tapi di invoice CIMORY UHT PORORO 125ML, bisa tolong promptnya di sesuaikan lagi agar bisa mengidentifikasi berdasarkan beberapa keys misal brand,jenis produk, ukuran, rasa, kemasan, dll agar bisa lebih akurat. Aku mau di database produk juga ditambahkan kolom untuk input kode barang dari supplier dan juga kolom untuk input nama barang yang tertulis di invoice, sehingga dengan semua informasi ini yang kaya, nantinya AI akan mudah mempelajari invoice dengan lebih akurat meskipun penamaannya berbeda, tolong implementasikan semua ini, yakni penyesuaian prompt AI Scan Otomatis, penambahan kolom kode barang supplier dan nama barang di invoice dari supplier.
+- Setelah berhasil menambahkan kode barang dari supplier, di menu Produk, Edit Produk, tolong juga tambahkan form untuk menginput informasi tersebut, namun tidak perlu di tampilkan ketika user membuka halaman produk atau edit produk, melainkan di buat dalam bentuk tombol atau opsi, ketika tombol tersebut di klik, maka user bisa menginput kode barang dari supplier dan nama barang di invoice.
+- Di halaman Produk, seringkali user sudah menginput semua data namun ketika di submit gagal dan tidak tahu errornya apa, tiba tiba diarahkan ke form Harga Modal / Beli dan muncul highlight warna merah, saya tidak tahu letak salahnya dimana, padahal saya sudah input dengan benar, tolong segala bentuk kegagalan submit di catch dan tampilkan sebagai alert errornya kenapa, agar user tahu penyebab errornya. Dan pastikan untuk Harga Modal / Harga Beli, bisa diinput desimal, karena seringkali user membeli barang dengan harga desimal, misalnya 1233.50.
 
 ## Konteks Tambahan (opsional)
 

@@ -92,6 +92,25 @@
             </div>
         </div>
 
+        <!-- Informasi Supplier (Opsional) -->
+        <div style="background:var(--surface-1);border-radius:var(--radius-lg);margin-bottom:12px;border:1px solid var(--border-color);overflow:hidden;">
+            <button type="button" id="btnToggleSupplierInfo" onclick="toggleSupplierInfo()" style="width:100%;background:none;border:none;padding:14px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;color:var(--text-secondary);font-size:var(--font-size-sm);">
+                <span><i class="bi bi-building" style="color:var(--info);margin-right:8px;"></i> Informasi Supplier (Opsional)</span>
+                <i class="bi bi-chevron-down" id="iconSupplierChevron" style="transition:transform 0.3s;"></i>
+            </button>
+            <div id="supplierInfoPanel" style="display:none;padding:0 16px 16px;">
+                <p style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:12px;padding-top:4px;border-top:1px solid var(--border-color);">Data ini membantu AI Scan Invoice mengenali produk ini lebih akurat.</p>
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Kode Barang Supplier</label>
+                    <input type="text" name="supplier_product_code" id="supplierProductCode" placeholder="Cth: CMY-125, INM-001 (kode di faktur supplier)" class="form-control-dark" style="width:100%;">
+                </div>
+                <div>
+                    <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Nama Barang di Invoice Supplier</label>
+                    <input type="text" name="supplier_invoice_name" id="supplierInvoiceName" placeholder="Cth: CIMORY UHT PORORO 125ML (nama persis di faktur)" class="form-control-dark" style="width:100%;">
+                </div>
+            </div>
+        </div>
+
         <!-- Dynamic Packaging Levels -->
         <div class="section-title" style="margin-top:20px;margin-bottom:8px;">
             <i class="bi bi-layers" style="color:var(--info);"></i> Level Kemasan & Harga
@@ -569,13 +588,13 @@ function addPackagingLevel(prefill = null) {
                     <span>Harga Modal / Beli *</span>
                     <span style="color:var(--primary);cursor:pointer;background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:10px;" onclick="const b=this.nextElementSibling; b.style.display=b.style.display==='none'?'flex':'none'"><i class="bi bi-calculator"></i> Kalkulator</span>
                     <div style="display:none;position:absolute;top:24px;right:0;background:var(--surface-2);padding:8px;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.8);z-index:10;gap:4px;align-items:center;border:1px solid var(--border-color);">
-                        <input type="number" placeholder="Total Rp" class="form-control-dark calc-total" style="width:90px;font-size:12px;padding:4px;">
+                        <input type="number" placeholder="Total Rp" step="any" class="form-control-dark calc-total" style="width:90px;font-size:12px;padding:4px;">
                         <span style="color:var(--text-muted);">/</span>
                         <input type="number" placeholder="Qty" value="1" class="form-control-dark calc-qty" style="width:50px;font-size:12px;padding:4px;">
                         <button type="button" class="btn-primary-custom" style="padding:4px 8px;font-size:12px;border-radius:4px;" onclick="const p=this.parentElement; const t=p.querySelector('.calc-total').value; const q=p.querySelector('.calc-qty').value; if(t&&q>0){ const inp=p.closest('div[style*=\\'margin-bottom:8px\\']').querySelector('.buy-price'); inp.value=Math.round(t/q); inp.dispatchEvent(new Event('input')); p.style.display='none'; }"><i class="bi bi-check2"></i> Hitung</button>
                     </div>
                 </label>
-                <input type="number" name="buy_price[]" placeholder="0" class="form-control-dark price-input buy-price" style="width:100%;" required>
+                <input type="number" name="buy_price[]" placeholder="0" step="any" class="form-control-dark price-input buy-price" style="width:100%;" required>
                 ${!isLevel1 ? `<div class="price-locked-note buy-locked-note"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs × isi kemasan</div>` : ''}
             </div>
             ${!isLevel1 ? `
@@ -586,11 +605,11 @@ function addPackagingLevel(prefill = null) {
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <div>
                     <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Jual Ecer/Retail *</label>
-                    <input type="number" name="sell_price_retail[]" placeholder="0" class="form-control-dark price-input retail-price" style="width:100%;" required>
+                    <input type="number" name="sell_price_retail[]" placeholder="0" step="any" class="form-control-dark price-input retail-price" style="width:100%;" required>
                 </div>
                 <div>
                     <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Jual Grosir</label>
-                    <input type="number" name="sell_price_wholesale[]" placeholder="0" class="form-control-dark price-input wholesale-price" style="width:100%;">
+                    <input type="number" name="sell_price_wholesale[]" placeholder="0" step="any" class="form-control-dark price-input wholesale-price" style="width:100%;">
                 </div>
             </div>
             ${!isLevel1 ? `<div class="price-locked-note sell-locked-note"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs × isi kemasan</div>` : ''}
@@ -854,5 +873,13 @@ async function submitProduct(e) {
         btn.innerHTML = prevText;
         btn.disabled = false;
     }
+}
+
+function toggleSupplierInfo() {
+    const panel = document.getElementById('supplierInfoPanel');
+    const icon = document.getElementById('iconSupplierChevron');
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : 'block';
+    icon.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
 </script>

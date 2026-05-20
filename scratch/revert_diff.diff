@@ -1,0 +1,504 @@
+﻿commit e3d9d0680074cc9c529e22c56106e191deb52f30
+Author: ADEV Developer <dev@adev.local>
+Date:   Wed May 20 14:09:45 2026 +0700
+
+    Revert PPN/Diskon logic per item on purchases/create, update service worker cache version, add SearchBox.setValue
+
+diff --git a/app/views/purchases/create.php b/app/views/purchases/create.php
+index bfd1c89..2bce4cc 100644
+--- a/app/views/purchases/create.php
++++ b/app/views/purchases/create.php
+@@ -13,30 +13,12 @@
+         <div class="section-title" style="margin-bottom:8px;">
+             <i class="bi bi-1-circle" style="color:var(--primary);"></i> Sales & Supplier
+         </div>
+-        
+-        <!-- Sales Rep Selection - Primary: SearchBox, Fallback: Dropdown -->
+         <div style="margin-bottom:12px;">
+             <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Sales *</label>
+-            
+-            <!-- Fallback dropdown (visible by default, hidden if SearchBox works) -->
+-            <select id="salesRepFallback" class="form-control-dark" style="width:100%;" onchange="onSalesRepPickedFallback(this.value)">
+-                <option value="">ÔÇö Pilih Sales ÔÇö</option>
+-                <option value="other">­ƒôª Other ÔÇö belum tahu supplier/sales</option>
+-                <?php foreach ($salesReps ?? [] as $sr): ?>
+-                <option value="<?= (int)$sr['id'] ?>">
+-                    <?= htmlspecialchars(($sr['name'] ?? '') . (!empty($sr['supplier_name']) ? ' ┬À ' . $sr['supplier_name'] : ''), ENT_QUOTES) ?>
+-                </option>
+-                <?php endforeach; ?>
+-            </select>
+-            
+-            <!-- SearchBox container (primary, overlays dropdown if loaded) -->
+-            <div id="salesRepSearchBox" style="margin-top: -46px; position: relative; z-index: 10;"></div>
+-            
+-            <!-- Sales info display -->
++            <div id="salesRepSearchBox"></div>
+             <div id="salesRepInfo" style="margin-top:6px; font-size:11px; color:var(--text-muted);"></div>
+         </div>
+ 
+-        <!-- Supplier info display (auto-filled when sales selected) -->
+         <div id="supplierDisplaySection" style="margin-bottom:12px; display:none;">
+             <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Supplier (otomatis)</label>
+             <div id="supplierDisplay" style="padding:10px 12px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); font-size:var(--font-size-sm); font-weight:600; color:var(--text-primary);">ÔÇö</div>
+@@ -278,40 +260,18 @@ function savePhotoPreview() {
+ }
+ 
+ document.addEventListener('DOMContentLoaded', () => {
+-    console.log('DOMContentLoaded fired');
+-    console.log('SearchBox class available:', typeof SearchBox);
+-    console.log('salesRepSearchBox element:', document.getElementById('salesRepSearchBox'));
+-    console.log('salesRepsOptions:', salesRepsOptions);
+-    
+-    const sbContainer = document.getElementById('salesRepSearchBox');
+-    const fbDropdown = document.getElementById('salesRepFallback');
+-    
+-    // Try to init SearchBox
+-    if (sbContainer && typeof SearchBox === 'function' && salesRepsOptions && Array.isArray(salesRepsOptions)) {
+-        try {
+-            salesRepSB = new SearchBox(sbContainer, {
+-                options: salesRepsOptions,
+-                placeholder: 'Cari atau pilih sales...',
+-                icon: 'bi-person-badge',
+-                name: 'sales_rep_id',
+-                required: true,
+-                clearable: true,
+-                addLabel: 'Tambah Sales Baru',
+-                onAdd: () => addSalesRepModal(),
+-                onChange: (val, label) => onSalesRepPicked(val, label),
+-                onClear: () => clearSalesRepSelection()
+-            });
+-            console.log('SearchBox initialized successfully');
+-            // Hide fallback dropdown since SearchBox is working
+-            if (fbDropdown) fbDropdown.style.display = 'none';
+-        } catch (e) {
+-            console.error('SearchBox initialization failed:', e);
+-            // Keep fallback dropdown visible
+-        }
+-    } else {
+-        console.warn('SearchBox not available or options missing, using fallback dropdown');
+-        // Keep fallback dropdown visible
+-    }
++    salesRepSB = new SearchBox(document.getElementById('salesRepSearchBox'), {
++        options: salesRepsOptions,
++        placeholder: 'Cari atau pilih sales...',
++        icon: 'bi-person-badge',
++        name: 'sales_rep_id',
++        required: true,
++        clearable: true,
++        addLabel: 'Tambah Sales Baru',
++        onAdd: () => addSalesRepModal(),
++        onChange: (val, label) => onSalesRepPicked(val, label),
++        onClear: () => clearSalesRepSelection()
++    });
+ 
+     document.getElementById('filterBySupplierSales')?.addEventListener('change', (e) => {
+         if (isOtherMode) {
+@@ -354,10 +314,6 @@ function clearSalesRepSelection() {
+     document.getElementById('supplierDisplay').textContent = 'ÔÇö';
+     document.getElementById('salesRepInfo').textContent = '';
+ 
+-    // Also clear fallback dropdown
+-    const fallback = document.getElementById('salesRepFallback');
+-    if (fallback) fallback.value = '';
+-
+     const badge = document.getElementById('supplierBadge');
+     if (badge) badge.style.display = 'none';
+ 
+@@ -375,11 +331,6 @@ function clearSalesRepSelection() {
+     updateFilterHint();
+ }
+ 
+-// Fallback function untuk dropdown jika SearchBox gagal
+-function onSalesRepPickedFallback(val) {
+-    onSalesRepPicked(val, '');
+-}
+-
+ function onSalesRepPicked(val, label) {
+     document.getElementById('supplierDisplaySection').style.display = 'block';
+     document.getElementById('productSearchSection').style.display = 'block';
+@@ -682,11 +633,7 @@ function addProductToCart(product) {
+             sell_price_retail: parseFloat(selectedPkg.sell_price_retail) || 0,
+             sell_price_wholesale: parseFloat(selectedPkg.sell_price_wholesale) || 0,
+             last_buy_price: product.last_buy_price ? parseFloat(product.last_buy_price) : (parseFloat(product.packagings.find(p => p.level == 1)?.buy_price) || 0),
+-            total: parseFloat(selectedPkg.buy_price) || 0,
+-            ppn_pct: 0,
+-            diskon_mode: 'rp',
+-            diskon_value: 0,
+-            harga_nett: parseFloat(selectedPkg.buy_price) || 0
++            total: parseFloat(selectedPkg.buy_price) || 0
+         });
+     }
+     
+@@ -750,15 +697,9 @@ function updateItem(tempId, field, value) {
+         item.total = item.quantity * item.buy_price;
+     }
+     
+-    // Recalculate nett if buy_price changes
+-    if (field === 'buy_price') {
+-        item.harga_nett = calcItemNett(item.buy_price, item.ppn_pct || 0, item.diskon_mode || 'rp', item.diskon_value || 0);
+-        const nettEl = document.getElementById(`nett_info_${tempId}`);
+-        if (nettEl) nettEl.innerHTML = buildNettInfo(item);
+-    }
+     // Auto update margin displays
+     if (field === 'buy_price' || field === 'sell_price_retail' || field === 'sell_price_wholesale') {
+-        updateMarginDisplay(tempId, item.harga_nett || item.buy_price, item.sell_price_retail, item.sell_price_wholesale);
++        updateMarginDisplay(tempId, item.buy_price, item.sell_price_retail, item.sell_price_wholesale);
+         
+         // Sync prices to other packaging levels if not custom
+         syncPricesToPackagings(item, field);
+@@ -1014,26 +955,7 @@ function openAllPackagingsModal(tempId) {
+                     ${!isLevel1 ? `<div class="price-locked-note buy-locked-note ${pkg.buy_custom?'':'visible'}"><i class="bi bi-link-45deg"></i> Otomatis dari pcs ├ù isi</div>` : ''}
+                 </div>
+                 
+-                <div style="background:rgba(76,201,240,0.06);border:1px dashed rgba(76,201,240,0.3);border-radius:4px;padding:8px;margin-bottom:8px;">
+-                    <div style="font-size:10px;color:var(--info);font-weight:600;margin-bottom:6px;"><i class="bi bi-receipt"></i> PPN &amp; Diskon</div>
+-                    <div style="display:grid;grid-template-columns:1fr 2fr;gap:6px;margin-bottom:6px;">
+-                        <div>
+-                            <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">PPN (%)</label>
+-                            <input type="number" id="mod_ppn_${pkg.level}" class="form-control-dark pkg-ppn" style="width:100%;padding:4px;font-size:11px;" value="${pkg.ppn_pct || 0}" min="0" max="100" placeholder="0" oninput="onPkgModalInput(this, ${pkg.level})">
+-                        </div>
+-                        <div>
+-                            <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">Diskon</label>
+-                            <div style="display:flex;gap:4px;">
+-                                <select id="mod_diskon_mode_${pkg.level}" class="form-select-dark pkg-diskon-mode" style="width:50px;padding:4px;font-size:10px;" onchange="onPkgModalInput(this, ${pkg.level})">
+-                                    <option value="rp" ${(pkg.diskon_mode||'rp')==='rp'?'selected':''}>Rp</option>
+-                                    <option value="pct" ${(pkg.diskon_mode||'rp')==='pct'?'selected':''}>%</option>
+-                                </select>
+-                                <input type="number" id="mod_diskon_value_${pkg.level}" class="form-control-dark pkg-diskon-value" style="flex:1;padding:4px;font-size:11px;" value="${pkg.diskon_value || 0}" min="0" placeholder="0" oninput="onPkgModalInput(this, ${pkg.level})">
+-                            </div>
+-                        </div>
+-                    </div>
+-                    <div class="pkg-nett-info" style="min-height:14px;font-size:10px;"></div>
+-                </div>
++
+ 
+                 ${suggestedHtml}
+                 ${!isLevel1 ? `
+@@ -1083,17 +1005,9 @@ function openAllPackagingsModal(tempId) {
+                 const retEl = document.getElementById(`mod_ret_${pkg.level}`);
+                 const whoEl = document.getElementById(`mod_who_${pkg.level}`);
+                 
+-                const ppnEl = document.getElementById(`mod_ppn_${pkg.level}`);
+-                const dModeEl = document.getElementById(`mod_diskon_mode_${pkg.level}`);
+-                const dValEl = document.getElementById(`mod_diskon_value_${pkg.level}`);
+-
+                 if (buyEl) pkg.buy_price = parseFloat(buyEl.value) || 0;
+                 if (retEl) pkg.sell_price_retail = parseFloat(retEl.value) || 0;
+                 if (whoEl) pkg.sell_price_wholesale = parseFloat(whoEl.value) || 0;
+-                
+-                if (ppnEl) pkg.ppn_pct = parseFloat(ppnEl.value) || 0;
+-                if (dModeEl) pkg.diskon_mode = dModeEl.value || 'rp';
+-                if (dValEl) pkg.diskon_value = parseFloat(dValEl.value) || 0;
+ 
+                 const lvEl = document.querySelector(`.packaging-level-edit[data-level="${pkg.level}"]`);
+                 if (lvEl) {
+@@ -1158,27 +1072,10 @@ function onPkgModalInput(inputEl, level) {
+     const buy = parseFloat(lvEl?.querySelector('.pkg-buy,.buy-price')?.value) || 0;
+     const ret = parseFloat(lvEl?.querySelector('.pkg-ret,.retail-price')?.value) || 0;
+     const who = parseFloat(lvEl?.querySelector('.pkg-wholesale,.wholesale-price')?.value) || 0;
+-    
+-    const ppn = parseFloat(lvEl?.querySelector('.pkg-ppn')?.value) || 0;
+-    const diskonMode = lvEl?.querySelector('.pkg-diskon-mode')?.value || 'rp';
+-    const diskonVal = parseFloat(lvEl?.querySelector('.pkg-diskon-value')?.value) || 0;
+-    const nett = calcItemNett(buy, ppn, diskonMode, diskonVal);
+-
+-    const nettInfoEl = lvEl?.querySelector('.pkg-nett-info');
+-    if (nettInfoEl) {
+-        if (ppn > 0 || diskonVal > 0) {
+-            const ppnAmt = Math.round(buy * ppn / 100);
+-            const diskonAmt = diskonMode === 'pct' ? Math.round(buy * diskonVal / 100) : Math.round(diskonVal);
+-            nettInfoEl.innerHTML = '<span style="color:var(--text-muted);">Modal: Rp' + Math.round(buy).toLocaleString('id-ID') + '</span>'
+-                + (ppn > 0 ? ' <span style="color:var(--warning);">+PPN: Rp' + ppnAmt.toLocaleString('id-ID') + '</span>' : '')
+-                + (diskonVal > 0 ? ' <span style="color:var(--success);">\u2212Diskon: Rp' + diskonAmt.toLocaleString('id-ID') + '</span>' : '')
+-                + ' \u2192 <strong style="color:var(--info);">Nett: Rp' + Math.round(nett).toLocaleString('id-ID') + '</strong>';
+-        } else { nettInfoEl.innerHTML = ''; }
+-    }
+ 
+     if (marginEl) {
+-        marginEl.querySelector('.margin-retail-text').innerHTML = formatMarginWithProfit('Ecer', nett, ret);
+-        marginEl.querySelector('.margin-wholesale-text').innerHTML = formatMarginWithProfit('Grosir', nett, who);
++        marginEl.querySelector('.margin-retail-text').innerHTML = formatMarginWithProfit('Ecer', buy, ret);
++        marginEl.querySelector('.margin-wholesale-text').innerHTML = formatMarginWithProfit('Grosir', buy, who);
+     }
+     if (typeof PackagingPriceSync !== 'undefined') {
+         const field = inputEl.classList.contains('pkg-buy')||inputEl.classList.contains('buy-price') ? 'buy'
+@@ -1292,47 +1189,7 @@ function updateMarginDisplay(tempId, buy, retail, wholesale) {
+     if (mWholesale) mWholesale.innerHTML = formatMarginWithProfit('Grosir', buy, wholesale);
+ }
+ 
+-/** Calculate nett buy price after PPN and discount */
+-function calcItemNett(buy, ppn_pct, diskon_mode, diskon_value) {
+-    buy = parseFloat(buy) || 0;
+-    const ppn_amt = Math.round(buy * ((parseFloat(ppn_pct) || 0) / 100));
+-    const diskon_amt = diskon_mode === 'pct'
+-        ? Math.round(buy * ((parseFloat(diskon_value) || 0) / 100))
+-        : (Math.round(parseFloat(diskon_value) || 0));
+-    return Math.max(0, buy + ppn_amt - diskon_amt);
+-}
+-
+-/** Build HTML for nett price breakdown display */
+-function buildNettInfo(item) {
+-    const buy = item.buy_price || 0;
+-    const ppn = item.ppn_pct || 0;
+-    const diskon = item.diskon_value || 0;
+-    const diskonMode = item.diskon_mode || 'rp';
+-    const nett = item.harga_nett || buy;
+-    if (ppn === 0 && diskon === 0) return '<span style="font-size:9px;color:var(--text-muted);"><i class="bi bi-info-circle"></i> Isi PPN atau Diskon untuk melihat Harga Nett</span>';
+-    const ppn_amt = Math.round(buy * (ppn / 100));
+-    const diskon_amt = diskonMode === 'pct' ? Math.round(buy * (diskon / 100)) : Math.round(diskon);
+-    let html = `<div style="background:rgba(0,0,0,0.25);border-radius:4px;padding:5px 7px;font-size:10px;">`;
+-    html += `<span style="color:var(--text-muted);">Modal: Rp${Math.round(buy).toLocaleString('id-ID')}</span>`;
+-    if (ppn > 0) html += ` <span style="color:var(--warning);">+PPN(${ppn}%): Rp${ppn_amt.toLocaleString('id-ID')}</span>`;
+-    if (diskon > 0) html += ` <span style="color:var(--success);">ÔêÆDiskon: Rp${diskon_amt.toLocaleString('id-ID')}</span>`;
+-    html += ` ÔåÆ <strong style="color:var(--info);">Nett: Rp${Math.round(nett).toLocaleString('id-ID')}</strong>`;
+-    html += `</div>`;
+-    return html;
+-}
+ 
+-/** Update PPN/Diskon for an item and refresh nett + margin */
+-function updateItemPpnDiskon(tempId, type, value) {
+-    const item = purchaseItems.find(i => i.id == tempId);
+-    if (!item) return;
+-    if (type === 'ppn') item.ppn_pct = parseFloat(value) || 0;
+-    else if (type === 'mode') item.diskon_mode = value;
+-    else if (type === 'diskon') item.diskon_value = parseFloat(value) || 0;
+-    item.harga_nett = calcItemNett(item.buy_price, item.ppn_pct, item.diskon_mode, item.diskon_value);
+-    const nettEl = document.getElementById(`nett_info_${tempId}`);
+-    if (nettEl) nettEl.innerHTML = buildNettInfo(item);
+-    updateMarginDisplay(tempId, item.harga_nett, item.sell_price_retail, item.sell_price_wholesale);
+-}
+ 
+ /** Build mini packaging summary for Daftar Barang view */
+ function buildPkgMiniSummaryHtml(item) {
+@@ -1341,7 +1198,7 @@ function buildPkgMiniSummaryHtml(item) {
+     if (otherPkgs.length === 0) return '';
+     const curPkg = item.packagings.find(p => p.level == item.level);
+     const curBaseQty = parseFloat(curPkg?.base_qty) || 1;
+-    const nett = item.harga_nett || item.buy_price || 0;
++    const nett = item.buy_price || 0;
+     const nettPerPcs = nett / curBaseQty;
+     const rows = otherPkgs.map(pkg => {
+         const bq = parseFloat(pkg.base_qty) || 1;
+@@ -1355,12 +1212,12 @@ function buildPkgMiniSummaryHtml(item) {
+         return '<div style="background:rgba(0,0,0,0.12);border-radius:6px;padding:6px 8px;margin-bottom:4px;border:1px solid rgba(255,255,255,0.04);">'
+             + '<div style="font-size:9px;font-weight:700;color:var(--primary);margin-bottom:4px;"><i class="bi bi-box-seam"></i> ' + pkg.unit_name + ' <span style="font-weight:400;color:var(--text-muted);">(Isi ' + bq + ' pcs)</span></div>'
+             + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:9px;">'
+-            + '<div style="background:rgba(0,0,0,0.2);padding:4px 6px;border-radius:4px;"><div style="color:var(--text-muted);font-size:8px;">Modal Nett</div><div style="font-weight:600;font-size:10px;">' + (nb > 0 ? 'Rp'+nb.toLocaleString('id-ID') : 'ÔÇö') + '</div></div>'
++            + '<div style="background:rgba(0,0,0,0.2);padding:4px 6px;border-radius:4px;"><div style="color:var(--text-muted);font-size:8px;">Modal</div><div style="font-weight:600;font-size:10px;">' + (nb > 0 ? 'Rp'+nb.toLocaleString('id-ID') : 'ÔÇö') + '</div></div>'
+             + '<div style="background:rgba(0,0,0,0.2);padding:4px 6px;border-radius:4px;"><div style="color:var(--text-muted);font-size:8px;">Ecer</div><div style="font-weight:600;color:var(--success);font-size:10px;">' + (ret > 0 ? 'Rp'+ret.toLocaleString('id-ID') : 'ÔÇö') + '</div>' + (mR !== null ? '<div style="color:'+cR+';font-size:8px;">'+mR+'%</div>' : '') + '</div>'
+             + '<div style="background:rgba(0,0,0,0.2);padding:4px 6px;border-radius:4px;"><div style="color:var(--text-muted);font-size:8px;">Grosir</div><div style="font-weight:600;color:var(--warning);font-size:10px;">' + (who > 0 ? 'Rp'+who.toLocaleString('id-ID') : 'ÔÇö') + '</div>' + (mW !== null ? '<div style="color:'+cW+';font-size:8px;">'+mW+'%</div>' : '') + '</div>'
+             + '</div></div>';
+     }).join('');
+-    return '<div style="margin-top:8px;border-top:1px dashed rgba(255,255,255,0.08);padding-top:8px;"><div style="font-size:9px;color:var(--info);font-weight:600;margin-bottom:6px;"><i class="bi bi-info-circle-fill"></i> Info harga kemasan lain (margin vs Nett)</div>' + rows + '</div>';
++    return '<div style="margin-top:8px;border-top:1px dashed rgba(255,255,255,0.08);padding-top:8px;"><div style="font-size:9px;color:var(--info);font-weight:600;margin-bottom:6px;"><i class="bi bi-info-circle-fill"></i> Info harga kemasan lain</div>' + rows + '</div>';
+ }
+ 
+ function renderCart() {
+@@ -1415,26 +1272,7 @@ function renderCart() {
+                     </div>
+                     ${item.level > 1 ? `<div class="price-locked-note buy-locked-note" style="font-size:10px;color:var(--info);margin-top:-4px;margin-bottom:8px;"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs ├ù isi kemasan</div>` : ''}
+ 
+-                    <div style="background:rgba(76,201,240,0.06);border:1px dashed rgba(76,201,240,0.3);border-radius:var(--radius-sm);padding:8px;margin-bottom:8px;">
+-                        <div style="font-size:10px;color:var(--info);font-weight:600;margin-bottom:6px;"><i class="bi bi-receipt"></i> PPN &amp; Diskon per Barang</div>
+-                        <div style="display:grid;grid-template-columns:1fr 2fr;gap:6px;margin-bottom:6px;">
+-                            <div>
+-                                <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">PPN (%)</label>
+-                                <input type="number" class="form-control-dark item-ppn" style="width:100%;padding:6px;font-size:11px;" value="${item.ppn_pct || 0}" min="0" max="100" placeholder="0" oninput="updateItemPpnDiskon(${item.id}, 'ppn', this.value)">
+-                            </div>
+-                            <div>
+-                                <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">Diskon</label>
+-                                <div style="display:flex;gap:4px;">
+-                                    <select class="form-select-dark item-diskon-mode" style="width:60px;padding:6px;font-size:10px;" onchange="updateItemPpnDiskon(${item.id}, 'mode', this.value)">
+-                                        <option value="rp" ${(item.diskon_mode||'rp')==='rp'?'selected':''}>Rp</option>
+-                                        <option value="pct" ${(item.diskon_mode||'rp')==='pct'?'selected':''}>%</option>
+-                                    </select>
+-                                    <input type="number" class="form-control-dark item-diskon-value" style="flex:1;padding:6px;font-size:11px;" value="${item.diskon_value || 0}" min="0" placeholder="0" oninput="updateItemPpnDiskon(${item.id}, 'diskon', this.value)">
+-                                </div>
+-                            </div>
+-                        </div>
+-                        <div id="nett_info_${item.id}" style="min-height:14px;">${buildNettInfo(item)}</div>
+-                    </div>
++
+ 
+                     ${item.level > 1 ? `
+                     <label class="price-custom-toggle sell-custom-toggle" style="margin-bottom:4px;" title="Centang untuk mengatur harga jual secara manual">
+@@ -1451,10 +1289,9 @@ function renderCart() {
+                             <input type="number" class="form-control-dark wholesale-price pkg-wholesale" style="width:100%;padding:8px;font-size:12px;color:var(--warning);" value="${item.sell_price_wholesale}" oninput="updateItem(${item.id}, 'sell_price_wholesale', this.value)">
+                         </div>
+                     </div>
+-                    <div style="font-size:9px;color:var(--text-muted);margin-bottom:2px;"><i class="bi bi-info-circle"></i> Margin dihitung dari Harga Nett</div>
+                     <div id="margin_info_${item.id}" style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:8px;">
+-                        <span id="margin_retail_${item.id}">${formatMarginWithProfit('Ecer', item.harga_nett || item.buy_price, item.sell_price_retail)}</span>
+-                        <span id="margin_wholesale_${item.id}">${formatMarginWithProfit('Grosir', item.harga_nett || item.buy_price, item.sell_price_wholesale)}</span>
++                        <span id="margin_retail_${item.id}">${formatMarginWithProfit('Ecer', item.buy_price, item.sell_price_retail)}</span>
++                        <span id="margin_wholesale_${item.id}">${formatMarginWithProfit('Grosir', item.buy_price, item.sell_price_wholesale)}</span>
+                     </div>
+                     ${item.level > 1 ? `<div class="price-locked-note sell-locked-note" style="font-size:10px;color:var(--info);margin-top:-4px;margin-bottom:8px;"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs ├ù isi kemasan</div>` : ''}
+                     ${item.packagings.length > 1 ? `
+@@ -1629,26 +1466,7 @@ async function openBulkInputModal() {
+                             </div>
+                             ${!isLevel1 ? `<div class="price-locked-note buy-locked-note" style="font-size:8px;color:var(--info);margin-top:-2px;margin-bottom:4px;"><i class="bi bi-link-45deg"></i> Otomatis dari pcs ├ù isi</div>` : ''}
+                             
+-                            <div style="background:rgba(76,201,240,0.06);border:1px dashed rgba(76,201,240,0.3);border-radius:4px;padding:6px;margin-bottom:6px;">
+-                                <div style="font-size:9px;color:var(--info);font-weight:600;margin-bottom:4px;"><i class="bi bi-receipt"></i> PPN &amp; Diskon</div>
+-                                <div style="display:grid;grid-template-columns:1fr 2fr;gap:4px;margin-bottom:4px;">
+-                                    <div>
+-                                        <label style="font-size:8px;color:var(--text-muted);display:block;margin-bottom:2px;">PPN (%)</label>
+-                                        <input type="number" class="pkg-ppn form-control-dark" style="width:100%;padding:3px;font-size:9px;" value="${pkg.ppn_pct || 0}" min="0" max="100" placeholder="0" oninput="onPkgModalInput(this, ${pkg.level})">
+-                                    </div>
+-                                    <div>
+-                                        <label style="font-size:8px;color:var(--text-muted);display:block;margin-bottom:2px;">Diskon</label>
+-                                        <div style="display:flex;gap:3px;">
+-                                            <select class="pkg-diskon-mode form-select-dark" style="width:40px;padding:3px;font-size:8px;" onchange="onPkgModalInput(this, ${pkg.level})">
+-                                                <option value="rp" ${(pkg.diskon_mode||'rp')==='rp'?'selected':''}>Rp</option>
+-                                                <option value="pct" ${(pkg.diskon_mode||'rp')==='pct'?'selected':''}>%</option>
+-                                            </select>
+-                                            <input type="number" class="pkg-diskon-value form-control-dark" style="flex:1;padding:3px;font-size:9px;" value="${pkg.diskon_value || 0}" min="0" placeholder="0" oninput="onPkgModalInput(this, ${pkg.level})">
+-                                        </div>
+-                                    </div>
+-                                </div>
+-                                <div class="pkg-nett-info" style="min-height:12px;font-size:8px;"></div>
+-                            </div>
++
+                             ${!isLevel1 ? `
+                             <label class="price-custom-toggle sell-custom-toggle" style="font-size:9px;" title="Centang untuk mengatur harga jual secara manual">
+                                 <input type="checkbox" class="chk-sell-custom" ${pkg.sell_custom ? 'checked' : ''}>
+@@ -1768,26 +1586,7 @@ async function openBulkInputModal() {
+                         <span class="buy-indicator" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:12px;"></span>
+                     </div>
+                 </div>
+-                <div style="background:rgba(76,201,240,0.06);border:1px dashed rgba(76,201,240,0.3);border-radius:4px;padding:7px;margin-bottom:8px;">
+-                    <div style="font-size:10px;color:var(--info);font-weight:600;margin-bottom:5px;"><i class="bi bi-receipt"></i> PPN &amp; Diskon</div>
+-                    <div style="display:grid;grid-template-columns:1fr 2fr;gap:5px;margin-bottom:5px;">
+-                        <div>
+-                            <label style="font-size:9px;color:var(--text-muted);display:block;margin-bottom:2px;">PPN (%)</label>
+-                            <input type="number" class="bulk-ppn form-control-dark" style="width:100%;font-size:10px;padding:4px;" value="0" min="0" max="100" placeholder="0" oninput="calcBulkMargin(this)">
+-                        </div>
+-                        <div>
+-                            <label style="font-size:9px;color:var(--text-muted);display:block;margin-bottom:2px;">Diskon</label>
+-                            <div style="display:flex;gap:3px;">
+-                                <select class="bulk-diskon-mode form-select-dark" style="width:52px;font-size:9px;padding:4px;" onchange="calcBulkMargin(this)">
+-                                    <option value="rp">Rp</option>
+-                                    <option value="pct">%</option>
+-                                </select>
+-                                <input type="number" class="bulk-diskon-value form-control-dark" style="flex:1;font-size:10px;padding:4px;" value="0" min="0" placeholder="0" oninput="calcBulkMargin(this)">
+-                            </div>
+-                        </div>
+-                    </div>
+-                    <div class="bulk-nett-info" style="min-height:12px;font-size:9px;"></div>
+-                </div>
++
+                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                     <div>
+                         <label style="font-size:10px;color:var(--text-muted);">Jual Ecer</label>
+@@ -1873,17 +1672,11 @@ async function openBulkInputModal() {
+                             const pb = parseFloat(row.querySelector('.pkg-buy').value) || 0;
+                             const pr = parseFloat(row.querySelector('.pkg-ret').value) || 0;
+                             const pw = parseFloat(row.querySelector('.pkg-whole').value) || 0;
+-                            const pp = parseFloat(row.querySelector('.pkg-ppn').value) || 0;
+-                            const dm = row.querySelector('.pkg-diskon-mode').value || 'rp';
+-                            const dv = parseFloat(row.querySelector('.pkg-diskon-value').value) || 0;
+                             const pIndex = updatedPkgs.findIndex(p => p.level == lvl);
+                             if (pIndex > -1) {
+                                 updatedPkgs[pIndex].buy_price = pb;
+                                 updatedPkgs[pIndex].sell_price_retail = pr;
+                                 updatedPkgs[pIndex].sell_price_wholesale = pw;
+-                                updatedPkgs[pIndex].ppn_pct = pp;
+-                                updatedPkgs[pIndex].diskon_mode = dm;
+-                                updatedPkgs[pIndex].diskon_value = dv;
+                             }
+                         });
+                         // also sync the selected level with the main inputs
+@@ -1956,25 +1749,6 @@ function calcBulkMargin(inputEl) {
+     const ret = parseFloat(retInput.value) || 0;
+     const whole = parseFloat(wholeInput.value) || 0;
+ 
+-    // Calculate nett price with PPN & Diskon
+-    const ppn = parseFloat(item.querySelector('.bulk-ppn')?.value) || 0;
+-    const diskonMode = item.querySelector('.bulk-diskon-mode')?.value || 'rp';
+-    const diskonVal = parseFloat(item.querySelector('.bulk-diskon-value')?.value) || 0;
+-    const nett = calcItemNett(buy, ppn, diskonMode, diskonVal);
+-
+-    // Update nett display
+-    const nettEl = item.querySelector('.bulk-nett-info');
+-    if (nettEl) {
+-        if (ppn > 0 || diskonVal > 0) {
+-            const ppnAmt = Math.round(buy * ppn / 100);
+-            const diskonAmt = diskonMode === 'pct' ? Math.round(buy * diskonVal / 100) : Math.round(diskonVal);
+-            nettEl.innerHTML = '<span style="color:var(--text-muted);">Modal: Rp' + Math.round(buy).toLocaleString('id-ID') + '</span>'
+-                + (ppn > 0 ? ' <span style="color:var(--warning);">+PPN: Rp' + ppnAmt.toLocaleString('id-ID') + '</span>' : '')
+-                + (diskonVal > 0 ? ' <span style="color:var(--success);">\u2212Diskon: Rp' + diskonAmt.toLocaleString('id-ID') + '</span>' : '')
+-                + ' \u2192 <strong style="color:var(--info);">Nett: Rp' + Math.round(nett).toLocaleString('id-ID') + '</strong>';
+-        } else { nettEl.innerHTML = ''; }
+-    }
+-
+     // Update indicators (Naik/Sama/Turun)
+     const setInd = (input, selector) => {
+         const last = parseFloat(input.getAttribute('data-last-' + selector.split('-')[1])) || 0;
+@@ -1992,21 +1766,21 @@ function calcBulkMargin(inputEl) {
+     
+     const retMarginEl = item.querySelector('.bulk-margin-ret');
+     if (retMarginEl) {
+-        if (nett > 0 && ret > 0) {
+-            const m = ((ret - nett) / ret * 100).toFixed(1);
+-            const profit = Math.round(ret - nett);
++        if (buy > 0 && ret > 0) {
++            const m = ((ret - buy) / ret * 100).toFixed(1);
++            const profit = Math.round(ret - buy);
+             const color = m >= 10 ? 'var(--success)' : (m >= 0 ? 'var(--warning)' : 'var(--danger)');
+-            retMarginEl.innerHTML = `Margin(Nett): <span style="color:${color};font-weight:600;">${m}%</span> <span style="font-size:8px;color:var(--text-muted);">(+Rp${profit.toLocaleString('id-ID')})</span>`;
++            retMarginEl.innerHTML = `Margin: <span style="color:${color};font-weight:600;">${m}%</span> <span style="font-size:8px;color:var(--text-muted);">(+Rp${profit.toLocaleString('id-ID')})</span>`;
+         } else { retMarginEl.innerHTML = 'Margin: 0%'; }
+     }
+     
+     const wholeMarginEl = item.querySelector('.bulk-margin-whole');
+     if (wholeMarginEl) {
+-        if (nett > 0 && whole > 0) {
+-            const m = ((whole - nett) / whole * 100).toFixed(1);
+-            const profit = Math.round(whole - nett);
++        if (buy > 0 && whole > 0) {
++            const m = ((whole - buy) / whole * 100).toFixed(1);
++            const profit = Math.round(whole - buy);
+             const color = m >= 10 ? 'var(--success)' : (m >= 0 ? 'var(--warning)' : 'var(--danger)');
+-            wholeMarginEl.innerHTML = `Margin(Nett): <span style="color:${color};font-weight:600;">${m}%</span> <span style="font-size:8px;color:var(--text-muted);">(+Rp${profit.toLocaleString('id-ID')})</span>`;
++            wholeMarginEl.innerHTML = `Margin: <span style="color:${color};font-weight:600;">${m}%</span> <span style="font-size:8px;color:var(--text-muted);">(+Rp${profit.toLocaleString('id-ID')})</span>`;
+         } else { wholeMarginEl.innerHTML = 'Margin: 0%'; }
+     }
+ }
+@@ -2036,7 +1810,6 @@ function openBulkPkgPanel(btn) {
+     panel.style.display = isHidden ? 'block' : 'none';
+     if (!isHidden) return;
+     // Sync main prices into panel rows
+-    const bulkItem = btn.closest('.bulk-item');
+     const pkgSelect = bulkItem.querySelector('.bulk-pkg');
+     const selectedPkg = JSON.parse(pkgSelect.options[pkgSelect.selectedIndex].getAttribute('data-pkg') || '{}');
+     const selectedBaseQty = parseFloat(selectedPkg.base_qty) || 1;
+@@ -2114,9 +1887,6 @@ function syncBulkPkgPanel(btn) {
+         item.querySelector('.bulk-buy').value = editRow.querySelector('.pkg-buy').value;
+         item.querySelector('.bulk-ret').value = editRow.querySelector('.pkg-ret').value;
+         item.querySelector('.bulk-whole').value = editRow.querySelector('.pkg-whole').value;
+-        item.querySelector('.bulk-ppn').value = editRow.querySelector('.pkg-ppn').value;
+-        item.querySelector('.bulk-diskon-mode').value = editRow.querySelector('.pkg-diskon-mode').value;
+-        item.querySelector('.bulk-diskon-value').value = editRow.querySelector('.pkg-diskon-value').value;
+         calcBulkMargin(item.querySelector('.bulk-buy'));
+     }
+     btn.closest('.bulk-pkg-panel').style.display = 'none';
+@@ -2133,17 +1903,12 @@ function updateBulkPrices(selectEl) {
+         item.querySelector('.bulk-buy').value = editRow.querySelector('.pkg-buy').value;
+         item.querySelector('.bulk-ret').value = editRow.querySelector('.pkg-ret').value;
+         item.querySelector('.bulk-whole').value = editRow.querySelector('.pkg-whole').value;
+-        item.querySelector('.bulk-ppn').value = editRow.querySelector('.pkg-ppn').value;
+-        item.querySelector('.bulk-diskon-mode').value = editRow.querySelector('.pkg-diskon-mode').value;
+-        item.querySelector('.bulk-diskon-value').value = editRow.querySelector('.pkg-diskon-value').value;
+     } else {
+         item.querySelector('.bulk-buy').value = pkg.buy_price || 0;
+         item.querySelector('.bulk-ret').value = pkg.sell_price_retail || 0;
+         item.querySelector('.bulk-whole').value = pkg.sell_price_wholesale || 0;
+-        item.querySelector('.bulk-ppn').value = pkg.ppn_pct || 0;
+-        item.querySelector('.bulk-diskon-mode').value = pkg.diskon_mode || 'rp';
+-        item.querySelector('.bulk-diskon-value').value = pkg.diskon_value || 0;
+     }
+     calcBulkMargin(selectEl);
+ }
++
+ </script>

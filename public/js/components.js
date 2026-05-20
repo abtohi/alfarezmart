@@ -391,30 +391,41 @@ class SearchBox {
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         
-        // Mobile layout: Bottom sheet style
+        // Mobile layout: position it absolute below trigger
         if (viewportWidth <= 480) {
-            this._dropdown.style.position = 'fixed';
-            this._dropdown.style.top = 'auto';
-            this._dropdown.style.bottom = '0px';
+            this._dropdown.style.position = 'absolute';
             this._dropdown.style.left = '0px';
-            this._dropdown.style.right = '0px';
+            this._dropdown.style.right = 'auto';
             this._dropdown.style.width = '100%';
             this._dropdown.style.maxWidth = '100%';
-            this._dropdown.style.maxHeight = '50vh';
-            this._dropdown.style.borderRadius = 'var(--radius-lg) var(--radius-lg) 0 0';
-            this._dropdown.style.border = 'none';
-            this._dropdown.style.borderTop = '1px solid var(--border-color)';
-            this._dropdown.style.boxShadow = '0 -8px 24px rgba(0,0,0,0.6)';
-            this._dropdown.style.transform = 'translateY(100%)';
+            this._dropdown.style.maxHeight = '200px';
+            this._dropdown.style.borderRadius = 'var(--radius-md)';
+            this._dropdown.style.border = '1px solid var(--border-color)';
+            this._dropdown.style.boxShadow = 'var(--shadow-lg)';
+            
+            // Check if there is enough space below the trigger
+            const spaceBelow = viewportHeight - rect.bottom;
+            const spaceAbove = rect.top;
+            const dropdownHeight = 200;
+
+            if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+                // Open upwards
+                this._dropdown.style.top = 'auto';
+                this._dropdown.style.bottom = '100%';
+                this._dropdown.style.transform = 'translateY(-4px)';
+            } else {
+                // Open downwards
+                this._dropdown.style.top = '100%';
+                this._dropdown.style.bottom = 'auto';
+                this._dropdown.style.transform = 'translateY(4px)';
+            }
+            
             // Force reflow for animation
             void this._dropdown.offsetWidth;
-            if (this.isOpen) {
-                this._dropdown.style.transform = 'translateY(0)';
-            }
             if (this._backdrop) {
-                this._backdrop.style.background = 'rgba(0,0,0,0.5)';
-                this._backdrop.style.backdropFilter = 'blur(4px)';
-                this._backdrop.style.webkitBackdropFilter = 'blur(4px)';
+                this._backdrop.style.background = 'transparent';
+                this._backdrop.style.backdropFilter = 'none';
+                this._backdrop.style.webkitBackdropFilter = 'none';
             }
             return;
         }

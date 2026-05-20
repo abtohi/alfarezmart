@@ -21,12 +21,39 @@
 
 ## Pekerjaan Terakhir
 
-### Sesi: 2026-05-20 — Penyeragaman Desain Dropdown & Searchbox Elegant
+### Sesi: 2026-05-20 — Improvement AI Scan Otomatis & Form Produk
 
 **Yang dikerjakan:**
-1. **Refactoring CSS Input/Select** — Memodifikasi `.form-select-dark` agar memiliki visualisasi dropdown custom dengan custom chevron SVG, menghilangkan default chevron bawaan OS (dengan `appearance: none;`), dan memberikan glow efek saat di-fokus.
-2. **Small Dropdown Support** — Membuat class `.form-select-dark-sm` untuk dropdown list inline berukuran kompak namun tetap bergaya modern (diterapkan pada filter pos transaksi di halaman Keuangan).
-3. **Stylish Searchbox wrapper** — Membuat class `.search-input-wrapper` untuk membungkus elemen input pencarian teks agar memiliki border glow berwarna merah (`var(--primary)`) dan soft shadow saat fokus, serta merapikan ikon kaca pembesar di dalamnya. Diterapkan pada seluruh input pencarian di halaman Catatan Hutang/Piutang.
+1. **AI Invoice Scan Prompt Enhancement** — Meningkatkan prompt AI di `ApiController::scanInvoiceAI()` dengan instruksi lebih detail untuk ekstraksi atribut produk (brand, product_type, variant, weight, unit, supplier_code). Menambahkan contoh ekstraksi yang lebih comprehensive untuk beverage dan noodles category.
+2. **AI Matching Logic Optimization** — Revamp scoring system di `scanInvoiceAI()`:
+   - Tambah prioritas untuk exact `supplier_invoice_name` match (95 points — immediate match)
+   - Naikkan direct code matching dari 70 → 80 points
+   - Perbaiki weight distribution: name similarity 65% (turun dari 70%), brand 12 pts, product_type 8 pts, variant 8 pts, weight 10 pts
+   - Threshold tetap 65 points untuk match success
+3. **Supplier Info Modal di Product Edit** — Menambahkan button "Info Supplier" di form edit produk (`products/edit.php`) yang membuka modal untuk input:
+   - `supplier_product_code`: Kode barang dari supplier
+   - `supplier_invoice_name`: Nama barang di invoice supplier (sesuai invoice asli)
+   - Button hidden by default, hanya tampil saat user klik, tidak mengganggu form utama
+4. **Decimal Support for Prices** — Menambahkan `step="0.01"` ke semua input harga di:
+   - `products/edit.php`: buy_price, retail, wholesale inputs
+   - `purchases/create.php`: buy_price di berbagai section (modal, item level, bulk input), ppn_pct, dan diskon_value inputs
+   - Update kalkulator harga dari `Math.round(t/q)` → `(t/q).toFixed(2)` untuk support decimal
+5. **Enhanced Error Handling & Validation**:
+   - Product form: Tambah pre-submit validation (kategori, brand, packaging, harga)
+   - Purchase form: Tambah item-by-item validation sebelum submit (product_id, quantity > 0, buy_price > 0)
+   - Improve error messages dengan icon emoji dan deskripsi lebih jelas ("❌ Kategori produk wajib dipilih")
+   - Add try-catch lebih detail di packaging section dengan error message spesifik
+
+### Catatan Teknis:
+- Database schema sudah memiliki kolom `supplier_product_code` dan `supplier_invoice_name` (tidak perlu migration baru)
+- ProductModel dan ApiController sudah support field baru (no changes needed)
+- Modal supplier info menggunakan `AppModal.show()` yang sudah tersedia (consistent dengan existing patterns)
+- Semua perubahan backward-compatible, tidak breaking existing functionality
+
+### File yang Diubah:
+- `app/controllers/ApiController.php` — Update prompt & matching logic di `scanInvoiceAI()`
+- `app/views/products/edit.php` — Add supplier info button, modal, hidden inputs, decimal support, error handling
+- `app/views/purchases/create.php` — Add decimal support & validation di `submitPurchase()`
 
 ### Sesi: 2026-05-20 — Modul Keuangan Harian (Pendapatan & Pengeluaran)
 

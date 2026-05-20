@@ -162,6 +162,8 @@ class ApiController extends Controller
                 'full_name' => $this->input('full_name'),
                 'short_label' => $this->input('short_label'),
                 'invoice_name' => $this->input('invoice_name'),
+                'supplier_product_code' => $this->input('supplier_product_code') ?: null,
+                'supplier_invoice_name' => $this->input('supplier_invoice_name') ?: null,
                 'weight_value' => $this->input('weight_value') ?: null,
                 'weight_unit' => $this->input('weight_unit'),
             ];
@@ -218,8 +220,8 @@ class ApiController extends Controller
         try {
             $data = [];
             $fields = ['full_name','short_label','invoice_name','product_type','variant','brand_id','category_id',
-                       'weight_value','weight_unit'];
-            $nullableFields = ['brand_id','product_type','variant','weight_value','weight_unit'];
+                       'weight_value','weight_unit', 'supplier_product_code', 'supplier_invoice_name'];
+            $nullableFields = ['brand_id','product_type','variant','weight_value','weight_unit', 'supplier_product_code', 'supplier_invoice_name'];
             foreach ($fields as $f) {
                 $val = $this->input($f);
                 if ($val !== null && $val !== '') {
@@ -1857,6 +1859,295 @@ class ApiController extends Controller
                 'message' => 'Catatan keuangan berhasil dihapus'
             ]);
         } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // ==========================================
+    // APP SETTINGS API
+    // ==========================================
+
+    public function saveAppSettings()
+    {
+        $this->validateCSRF();
+        if (AuthController::currentUser()['level'] !== 'superadmin' && AuthController::currentUser()['level'] !== 'admin') {
+            $this->json(['error' => 'Akses ditolak'], 403);
+            return;
+        }
+
+        try {
+            $settingModel = new SettingModel();
+            $fields = ['ai_model', 'ai_api_key', 'ai_invoice_prompt'];
+            
+            foreach ($fields as $field) {
+                $val = $this->input($field);
+                if ($val !== null && $val !== '') {
+                    $settingModel->set($field, $val);
+                }
+            }
+
+            $this->json(['success' => true, 'message' => 'Pengaturan aplikasi berhasil disimpan']);
+        } catch (\Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function changePassword()
+    {
+        $this->validateCSRF();
+        $user = AuthController::currentUser();
+        if (!$user) {
+            $this->json(['error' => 'Belum login'], 401);
+            return;
+        }
+
+        try {
+            $oldPassword = $this->input('old_password');
+            $newPassword = $this->input('new_password');
+
+            if (empty($oldPassword) || empty($newPassword)) {
+                throw new \Exception("Password lama dan baru wajib diisi");
+            }
+
+            $userModel = new UserModel();
+            $dbUser = $userModel->findByEmail($user['email']); // get fresh hash
+            if (!$dbUser || !password_verify($oldPassword, $dbUser['password_hash'])) {
+                throw new \Exception("Password lama tidak sesuai");
+            }
+
+            $userModel->changePassword($user['id'], $newPassword);
+
+            $this->json(['success' => true, 'message' => 'Password berhasil diubah']);
+        } catch (\Exception $e) {
+            $this->json(['error' => $e->getMessage()], 400);
+        }
+    }
+
+    // ==========================================
+    // AI INTEGRATION API
+    // ==========================================
+
+    public function scanInvoiceAI()
+    {
+        $this->validateCSRF();
+        try {
+            $imageB64 = $this->input('image_base64');
+            if (empty($imageB64)) {
+                throw new \Exception("Gambar invoice tidak ditemukan");
+            }
+
+            $settingModel = new SettingModel();
+            $apiKey = $settingModel->get('ai_api_key');
+            $modelName = $settingModel->get('ai_model', 'google/gemini-2.5-flash');
+            $prompt = $settingModel->get('ai_invoice_prompt', "Analyze the invoice image and extract all item purchases. For each item, carefully extract:\n\n1. \"name\": The exact raw product name/description as printed on the invoice.\n2. \"qty\": The quantity purchased (numeric only).\n3. \"price\": The unit price in Indonesian Rupiah (convert 5.5, 5,5 to 5500; 12 to 12000 if it looks like abbreviated).\n4. \"brand\": The brand/manufacturer name (e.g. Cimory, Indomie, Aqua, Sprite) if visible.\n5. \"product_type\": The type/category (e.g. UHT, Mie Instan, Sabun, Minuman, Snack) if identifiable from name.\n6. \"variant\": The specific variant, flavor, taste, color, scent (e.g. Chocolate, Pororo, Strawberry, Soto, White, Lavender). Be thorough—extract any descriptive text after brand/type.\n7. \"weight\": The numeric weight/volume value only (e.g. 125, 250, 1.5, 500).\n8. \"unit\": The unit (ml, g, kg, L, pcs, box, karton, etc.).\n9. \"supplier_code\": Any supplier item code, SKU, or reference code if printed (often before/after the name or in parentheses).\n\nCRITICAL MATCHING NOTES:\n- Extract variant as detailed as possible—it often differs from DB names (e.g. invoice has 'PORORO' but DB has 'Pororo Chocolate').\n- Match product info from MULTIPLE sources: brand + type + variant + weight form a complete key.\n- Return valid JSON with \"items\" array. Use null for missing fields.\n\nExample 1 - Beverage:\nInvoice line: \"CIMORY UHT PORORO 125ML  [CMY-125POR]  Qty:40 @ 5.5\"\nExtracted:\n{\"name\":\"CIMORY UHT PORORO 125ML\",\"qty\":40,\"price\":5500,\"brand\":\"Cimory\",\"product_type\":\"UHT\",\"variant\":\"Pororo\",\"weight\":125,\"unit\":\"ml\",\"supplier_code\":\"CMY-125POR\"}\n\nExample 2 - Noodles:\nInvoice line: \"INDOMIE GORENG RASA SOTO 85G  [IND-GOR-ST]  Qty:60 @ 2.5\"\nExtracted:\n{\"name\":\"INDOMIE GORENG RASA SOTO 85G\",\"qty\":60,\"price\":2500,\"brand\":\"Indomie\",\"product_type\":\"Mie Instan\",\"variant\":\"Goreng Soto\",\"weight\":85,\"unit\":\"g\",\"supplier_code\":\"IND-GOR-ST\"}\n\nOutput format:\n{\n  \"items\": [ {...}, {...} ]\n}");
+
+            if (empty($apiKey)) {
+                throw new \Exception("API Key OpenRouter belum dikonfigurasi di Pengaturan Aplikasi");
+            }
+
+            // Clean base64 if it has prefix
+            if (preg_match('/^data:image\/(\w+);base64,/', $imageB64, $type)) {
+                $imageB64 = substr($imageB64, strpos($imageB64, ',') + 1);
+            }
+
+            // OpenRouter API payload
+            $data = [
+                "model" => $modelName,
+                "messages" => [
+                    [
+                        "role" => "user",
+                        "content" => [
+                            [
+                                "type" => "text",
+                                "text" => $prompt
+                            ],
+                            [
+                                "type" => "image_url",
+                                "image_url" => [
+                                    "url" => "data:image/jpeg;base64," . $imageB64
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                "response_format" => ["type" => "json_object"], // Assuming the model supports it or at least guides it
+                "max_tokens" => 2000
+            ];
+
+            $ch = curl_init("https://openrouter.ai/api/v1/chat/completions");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                "Authorization: Bearer " . $apiKey,
+                "HTTP-Referer: " . BASE_URL,
+                "Content-Type: application/json"
+            ]);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+            // curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60s timeout for AI
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $err = curl_error($ch);
+            curl_close($ch);
+
+            if ($err) {
+                throw new \Exception("cURL Error: " . $err);
+            }
+
+            if ($httpCode >= 400) {
+                throw new \Exception("OpenRouter API Error ($httpCode): " . $response);
+            }
+
+            $resJson = json_decode($response, true);
+            $content = $resJson['choices'][0]['message']['content'] ?? '[]';
+            
+            // Clean markdown json tags if present
+            $content = preg_replace('/^```json\s*/i', '', trim($content));
+            $content = preg_replace('/```$/i', '', $content);
+            
+            $parsedItems = json_decode($content, true);
+            if (isset($parsedItems['items'])) {
+                $parsedItems = $parsedItems['items'];
+            }
+            if (!is_array($parsedItems)) {
+                throw new \Exception("Format respons AI tidak valid. Diharapkan JSON array.");
+            }
+
+            // Fuzzy mapping against DB
+            $productModel = new ProductModel();
+            $allProducts = $productModel->allWithDetails();
+
+            $mappedItems = [];
+            foreach ($parsedItems as $item) {
+                $name = $item['name'] ?? '';
+                $qty = isset($item['qty']) ? (float)$item['qty'] : 1;
+                $price = isset($item['price']) ? (float)$item['price'] : 0;
+                $extractedBrand = $item['brand'] ?? '';
+                $extractedType = $item['product_type'] ?? '';
+                $extractedVariant = $item['variant'] ?? '';
+                $extractedWeightVal = isset($item['weight']) ? (float)$item['weight'] : null;
+                $extractedWeightUnit = $item['unit'] ?? '';
+                $extractedCode = $item['supplier_code'] ?? '';
+                
+                // Auto-scale abbreviated prices (e.g. 5.5 -> 5500, 12 -> 12000) for standard Rupiah values
+                if ($price > 0 && $price < 1000) {
+                    if (floor($price) != $price || $price < 100) {
+                        $price = $price * 1000;
+                    }
+                }
+                
+                $bestMatch = null;
+                $highestScore = 0;
+                
+                foreach ($allProducts as $p) {
+                    $score = 0;
+                    
+                    // 1. Direct code matching (if AI found a code) — highest priority
+                    if (!empty($extractedCode)) {
+                        if (strtolower(trim($extractedCode)) === strtolower(trim($p['supplier_product_code'] ?? '')) ||
+                            strtolower(trim($extractedCode)) === strtolower(trim($p['code'] ?? ''))) {
+                            $score += 80; // Increased from 70
+                        }
+                    }
+                    
+                    // 2. Exact supplier_invoice_name match — very high priority for precise matching
+                    if (!empty($p['supplier_invoice_name']) && !empty($name)) {
+                        if (strtolower(trim($name)) === strtolower(trim($p['supplier_invoice_name']))) {
+                            $score += 95; // Highest score for exact invoice name match
+                        }
+                    }
+                    
+                    // 3. Name similarity matching via similar_text()
+                    $nameSimilarities = [];
+                    
+                    // Match against full_name
+                    similar_text(strtolower($name), strtolower($p['full_name'] ?? ''), $simFullName);
+                    $nameSimilarities[] = $simFullName;
+                    
+                    // Match against short_label
+                    if (!empty($p['short_label'])) {
+                        similar_text(strtolower($name), strtolower($p['short_label']), $simShort);
+                        $nameSimilarities[] = $simShort;
+                    }
+                    
+                    // Match against invoice_name
+                    if (!empty($p['invoice_name'])) {
+                        similar_text(strtolower($name), strtolower($p['invoice_name']), $simInv);
+                        $nameSimilarities[] = $simInv;
+                    }
+                    
+                    // Match against supplier_invoice_name (for fuzzy matching if not exact)
+                    if (!empty($p['supplier_invoice_name'])) {
+                        similar_text(strtolower($name), strtolower($p['supplier_invoice_name']), $simSuppInv);
+                        $nameSimilarities[] = $simSuppInv;
+                    }
+                    
+                    $bestNameSim = max($nameSimilarities);
+                    
+                    // Base score from best name similarity (70% weight if no exact match)
+                    if ($score < 95) { // Only apply similarity weight if no exact supplier_invoice_name match
+                        $score += $bestNameSim * 0.65;
+                    }
+                    
+                    // 4. Brand match (weight: 12 points)
+                    if (!empty($extractedBrand) && !empty($p['brand_name'])) {
+                        if (stripos($p['brand_name'], $extractedBrand) !== false || stripos($extractedBrand, $p['brand_name']) !== false) {
+                            $score += 12;
+                        }
+                    }
+                    
+                    // 5. Product type match (weight: 8 points)
+                    if (!empty($extractedType) && !empty($p['product_type'])) {
+                        if (stripos($p['product_type'], $extractedType) !== false || stripos($extractedType, $p['product_type']) !== false) {
+                            $score += 8;
+                        }
+                    }
+                    
+                    // 6. Variant match (weight: 8 points)
+                    if (!empty($extractedVariant) && !empty($p['variant'])) {
+                        if (stripos($p['variant'], $extractedVariant) !== false || stripos($extractedVariant, $p['variant']) !== false) {
+                            $score += 8;
+                        }
+                    }
+                    
+                    // 7. Weight/volume match (weight: 10 points)
+                    if ($extractedWeightVal !== null && !empty($p['weight_value'])) {
+                        $dbWeightVal = (float)$p['weight_value'];
+                        if (abs($extractedWeightVal - $dbWeightVal) < 0.01) {
+                            $score += 10;
+                            if (!empty($extractedWeightUnit) && !empty($p['weight_unit'])) {
+                                if (strtolower(trim($extractedWeightUnit)) === strtolower(trim($p['weight_unit']))) {
+                                    $score += 3;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if ($score > $highestScore) {
+                        $highestScore = $score;
+                        $bestMatch = $p;
+                    }
+                }
+
+                $isMatched = ($highestScore > 65); // Threshold
+
+                $mappedItems[] = [
+                    'original_name' => $name,
+                    'qty' => $qty,
+                    'price' => $price,
+                    'is_matched' => $isMatched,
+                    'product_id' => $isMatched ? $bestMatch['id'] : null,
+                    'product_name' => $isMatched ? $bestMatch['full_name'] : null,
+                    'match_score' => round($highestScore, 2)
+                ];
+            }
+
+            $this->json([
+                'success' => true,
+                'data' => $mappedItems
+            ]);
+
+        } catch (\Exception $e) {
             $this->json(['error' => $e->getMessage()], 500);
         }
     }
