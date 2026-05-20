@@ -513,6 +513,19 @@ class SearchBox {
         }
     }
 
+    /** Programmatically set value without triggering callbacks */
+    setValue(value, label = '') {
+        this.selectedValue = String(value);
+        if (label) {
+            this.selectedLabel = label;
+        } else {
+            const found = this.options.find(o => String(o.value) === String(this.selectedValue));
+            this.selectedLabel = found ? found.label : '';
+        }
+        this._hiddenInput.value = this.selectedValue;
+        this._updateDisplay();
+    }
+
     /** Get current value */
     getValue() { return this.selectedValue; }
 

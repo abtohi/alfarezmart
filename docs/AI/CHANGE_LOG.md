@@ -29,6 +29,30 @@
 
 ---
 
+## [2026-05-20] — Restorasi Layout & Penyempurnaan Alur Input Barang Masuk
+
+**Tipe:** Mayor
+**Modul:** Purchase (create.php)
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Reposisi Form**: Mengubah tata letak Step 1 agar input **Sales** (SearchBox) berada di posisi paling atas, diikuti oleh input **Supplier** di bawahnya.
+- **Z-Index Optimization**: Menyesuaikan `z-index` agar popup dropdown dari Sales SearchBox (`z-index: 20`) menimpa area Supplier SearchBox (`z-index: 10`) secara estetik.
+- **Client-Side Filtering & Warning Badge**: 
+  - Mengubah fungsi `performProductSearch()` agar selalu mengambil data produk dari endpoint `/api/purchases/search-products` jika supplier terpilih. Hal ini memastikan status `is_supplier_product` selalu didapatkan.
+  - Melakukan penyaringan produk di sisi client jika checkbox filter dicentang.
+  - Menampilkan badge **"Milik Supplier Lain"** (warna merah) untuk memperingatkan pengguna apabila mencari produk non-supplier.
+- **Penyelamatan Data PPN & Diskon Bulk**: Memperbaiki logika `onSubmit` pada modal bulk input agar data PPN, Diskon, dan harga nett tersimpan ke dalam objek keranjang belanja (`purchaseItems`) serta list kemasannya (`updatedPkgs`).
+- **Fix Syntax Error**: Menghapus redeklarasi variabel `const bulkItem` pada fungsi `openBulkPkgPanel` yang memicu error Javascript.
+
+### File yang Diubah/Dibuat
+- `app/views/purchases/create.php` — perbaikan tata letak form, logika penyaringan pencarian produk, debugging syntax JS, dan integrasi data bulk input.
+
+### Catatan
+- Perubahan ini menyelesaikan masalah rusaknya tampilan awal dan alur "Sales -> Auto Supplier" di halaman input barang masuk.
+
+---
+
 ## [2026-05-20] — PPN & Diskon Per Barang di Input Barang Masuk
 
 **Tipe:** Mayor
