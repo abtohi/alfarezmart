@@ -13,12 +13,30 @@
         <div class="section-title" style="margin-bottom:8px;">
             <i class="bi bi-1-circle" style="color:var(--primary);"></i> Sales & Supplier
         </div>
+        
+        <!-- Sales Rep Selection - Primary: SearchBox, Fallback: Dropdown -->
         <div style="margin-bottom:12px;">
             <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Sales *</label>
-            <div id="salesRepSearchBox"></div>
+            
+            <!-- Fallback dropdown (visible by default, hidden if SearchBox works) -->
+            <select id="salesRepFallback" class="form-control-dark" style="width:100%;" onchange="onSalesRepPickedFallback(this.value)">
+                <option value="">— Pilih Sales —</option>
+                <option value="other">📦 Other — belum tahu supplier/sales</option>
+                <?php foreach ($salesReps ?? [] as $sr): ?>
+                <option value="<?= (int)$sr['id'] ?>">
+                    <?= htmlspecialchars(($sr['name'] ?? '') . (!empty($sr['supplier_name']) ? ' · ' . $sr['supplier_name'] : ''), ENT_QUOTES) ?>
+                </option>
+                <?php endforeach; ?>
+            </select>
+            
+            <!-- SearchBox container (primary, overlays dropdown if loaded) -->
+            <div id="salesRepSearchBox" style="margin-top: -46px; position: relative; z-index: 10;"></div>
+            
+            <!-- Sales info display -->
             <div id="salesRepInfo" style="margin-top:6px; font-size:11px; color:var(--text-muted);"></div>
         </div>
 
+        <!-- Supplier info display (auto-filled when sales selected) -->
         <div id="supplierDisplaySection" style="margin-bottom:12px; display:none;">
             <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Supplier (otomatis)</label>
             <div id="supplierDisplay" style="padding:10px 12px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); font-size:var(--font-size-sm); font-weight:600; color:var(--text-primary);">—</div>
@@ -260,18 +278,40 @@ function savePhotoPreview() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    salesRepSB = new SearchBox(document.getElementById('salesRepSearchBox'), {
-        options: salesRepsOptions,
-        placeholder: 'Cari atau pilih sales...',
-        icon: 'bi-person-badge',
-        name: 'sales_rep_id',
-        required: true,
-        clearable: true,
-        addLabel: 'Tambah Sales Baru',
-        onAdd: () => addSalesRepModal(),
-        onChange: (val, label) => onSalesRepPicked(val, label),
-        onClear: () => clearSalesRepSelection()
-    });
+    console.log('DOMContentLoaded fired');
+    console.log('SearchBox class available:', typeof SearchBox);
+    console.log('salesRepSearchBox element:', document.getElementById('salesRepSearchBox'));
+    console.log('salesRepsOptions:', salesRepsOptions);
+    
+    const sbContainer = document.getElementById('salesRepSearchBox');
+    const fbDropdown = document.getElementById('salesRepFallback');
+    
+    // Try to init SearchBox
+    if (sbContainer && typeof SearchBox === 'function' && salesRepsOptions && Array.isArray(salesRepsOptions)) {
+        try {
+            salesRepSB = new SearchBox(sbContainer, {
+                options: salesRepsOptions,
+                placeholder: 'Cari atau pilih sales...',
+                icon: 'bi-person-badge',
+                name: 'sales_rep_id',
+                required: true,
+                clearable: true,
+                addLabel: 'Tambah Sales Baru',
+                onAdd: () => addSalesRepModal(),
+                onChange: (val, label) => onSalesRepPicked(val, label),
+                onClear: () => clearSalesRepSelection()
+            });
+            console.log('SearchBox initialized successfully');
+            // Hide fallback dropdown since SearchBox is working
+            if (fbDropdown) fbDropdown.style.display = 'none';
+        } catch (e) {
+            console.error('SearchBox initialization failed:', e);
+            // Keep fallback dropdown visible
+        }
+    } else {
+        console.warn('SearchBox not available or options missing, using fallback dropdown');
+        // Keep fallback dropdown visible
+    }
 
     document.getElementById('filterBySupplierSales')?.addEventListener('change', (e) => {
         if (isOtherMode) {
@@ -314,6 +354,10 @@ function clearSalesRepSelection() {
     document.getElementById('supplierDisplay').textContent = '—';
     document.getElementById('salesRepInfo').textContent = '';
 
+    // Also clear fallback dropdown
+    const fallback = document.getElementById('salesRepFallback');
+    if (fallback) fallback.value = '';
+
     const badge = document.getElementById('supplierBadge');
     if (badge) badge.style.display = 'none';
 
@@ -329,6 +373,11 @@ function clearSalesRepSelection() {
     if (suggestions) suggestions.innerHTML = '';
 
     updateFilterHint();
+}
+
+// Fallback function untuk dropdown jika SearchBox gagal
+function onSalesRepPickedFallback(val) {
+    onSalesRepPicked(val, '');
 }
 
 function onSalesRepPicked(val, label) {
