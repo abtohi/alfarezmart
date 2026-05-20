@@ -21,6 +21,13 @@
 
 ## Pekerjaan Terakhir
 
+### Sesi: 2026-05-20 — Penyeragaman Desain Dropdown & Searchbox Elegant
+
+**Yang dikerjakan:**
+1. **Refactoring CSS Input/Select** — Memodifikasi `.form-select-dark` agar memiliki visualisasi dropdown custom dengan custom chevron SVG, menghilangkan default chevron bawaan OS (dengan `appearance: none;`), dan memberikan glow efek saat di-fokus.
+2. **Small Dropdown Support** — Membuat class `.form-select-dark-sm` untuk dropdown list inline berukuran kompak namun tetap bergaya modern (diterapkan pada filter pos transaksi di halaman Keuangan).
+3. **Stylish Searchbox wrapper** — Membuat class `.search-input-wrapper` untuk membungkus elemen input pencarian teks agar memiliki border glow berwarna merah (`var(--primary)`) dan soft shadow saat fokus, serta merapikan ikon kaca pembesar di dalamnya. Diterapkan pada seluruh input pencarian di halaman Catatan Hutang/Piutang.
+
 ### Sesi: 2026-05-20 — Modul Keuangan Harian (Pendapatan & Pengeluaran)
 
 **Yang dikerjakan:**

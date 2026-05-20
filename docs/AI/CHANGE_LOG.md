@@ -29,6 +29,27 @@
 
 ---
 
+## [2026-05-20] — Penyeragaman Desain Dropdown & Searchbox Elegant
+
+**Tipe:** Refactor
+**Modul:** UI Components (components.css, debts/index.php, finance/index.php)
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Custom Select Dropdown Style**: Memodifikasi class `.form-select-dark` di `components.css` dengan menerapkan `appearance: none;` untuk menghilangkan default chevron browser, dan menggantinya dengan custom SVG chevron elegant berwarna `#8892b0` (berubah menjadi warna merah `#e63946` ketika fokus). Hal ini menjamin konsistensi visual di iOS, Android, dan desktop browser.
+- **Small Select Dropdown**: Membuat class `.form-select-dark-sm` untuk inline select dropdown berukuran kecil yang tetap berpenampilan seragam dengan custom chevron SVG. Diterapkan pada filter pos di halaman Catatan Keuangan Harian.
+- **Custom Search Box Wrapper**: Membuat class `.search-input-wrapper` di `components.css` untuk membungkus elemen input pencarian teks agar memiliki border glow berwarna merah (`var(--primary)`) dan soft shadow saat fokus, serta merapikan ikon kaca pembesar di dalamnya. Diterapkan pada seluruh input pencarian di halaman Catatan Hutang/Piutang.
+
+### File yang Diubah/Dibuat
+- `public/css/components.css` — penambahan rules CSS untuk select modern dan search wrapper.
+- `app/views/debts/index.php` — mengubah filter search wrapper di 3 tab (Piutang, Hutang Toko, Pelanggan) menggunakan `search-input-wrapper`.
+- `app/views/finance/index.php` — mengubah filter pos menggunakan `form-select-dark-sm`.
+
+### Catatan
+- Perubahan ini memberikan UX yang jauh lebih stylish, premium, dan konsisten di seluruh browser modern.
+
+---
+
 ## [2026-05-20] — Modul Catatan Keuangan Harian (Pendapatan & Pengeluaran)
 
 **Tipe:** Mayor

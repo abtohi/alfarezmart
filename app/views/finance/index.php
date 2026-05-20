@@ -130,7 +130,7 @@
     <div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div class="section-title" style="margin-bottom: 0;">Daftar Transaksi</div>
-            <select id="filterPost" style="border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 11px; padding: 4px 8px; border-radius: 4px; outline: none;">
+            <select id="filterPost" class="form-select-dark-sm" style="width: auto; min-width: 120px;">
                 <option value="">Semua Pos</option>
                 <option value="Uang Laci">Uang Laci</option>
                 <option value="Uang Pulsa">Uang Pulsa</option>

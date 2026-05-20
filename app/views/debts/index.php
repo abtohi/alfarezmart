@@ -50,9 +50,9 @@
     <!-- Tab 1: Piutang Pelanggan (Customer Debts) Content -->
     <div id="tabContent-customer-debts" class="tab-panel">
         <div style="display:flex; gap:8px; margin-bottom:16px;">
-            <div style="flex:1; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0 12px; display:flex; align-items:center;">
-                <i class="bi bi-search" style="color:var(--text-muted); font-size:14px;"></i>
-                <input type="text" id="searchCustomerDebts" placeholder="Cari piutang..." style="flex:1; border:none; background:transparent; padding:10px 8px; color:var(--text-primary); font-size:14px; outline:none;">
+            <div class="search-input-wrapper">
+                <i class="bi bi-search"></i>
+                <input type="text" id="searchCustomerDebts" placeholder="Cari piutang...">
             </div>
             <button class="btn-primary-custom" style="padding:10px 14px; cursor:pointer;" onclick="showAddCustomerDebtModal()">
                 <i class="bi bi-plus-lg"></i>
@@ -77,9 +77,9 @@
     <!-- Tab 2: Hutang Toko (Shop Debts) Content -->
     <div id="tabContent-shop-debts" class="tab-panel" style="display:none;">
         <div style="display:flex; gap:8px; margin-bottom:16px;">
-            <div style="flex:1; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0 12px; display:flex; align-items:center;">
-                <i class="bi bi-search" style="color:var(--text-muted); font-size:14px;"></i>
-                <input type="text" id="searchShopDebts" placeholder="Cari hutang toko..." style="flex:1; border:none; background:transparent; padding:10px 8px; color:var(--text-primary); font-size:14px; outline:none;">
+            <div class="search-input-wrapper">
+                <i class="bi bi-search"></i>
+                <input type="text" id="searchShopDebts" placeholder="Cari hutang toko...">
             </div>
             <button class="btn-primary-custom" style="padding:10px 14px; cursor:pointer;" onclick="showAddShopDebtModal()">
                 <i class="bi bi-plus-lg"></i>
@@ -104,9 +104,9 @@
     <!-- Tab 3: Pelanggan (Customers) Content -->
     <div id="tabContent-customers" class="tab-panel" style="display:none;">
         <div style="display:flex; gap:8px; margin-bottom:16px;">
-            <div style="flex:1; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0 12px; display:flex; align-items:center;">
-                <i class="bi bi-search" style="color:var(--text-muted); font-size:14px;"></i>
-                <input type="text" id="searchCustomers" placeholder="Cari data pelanggan..." style="flex:1; border:none; background:transparent; padding:10px 8px; color:var(--text-primary); font-size:14px; outline:none;">
+            <div class="search-input-wrapper">
+                <i class="bi bi-search"></i>
+                <input type="text" id="searchCustomers" placeholder="Cari data pelanggan...">
             </div>
             <button class="btn-primary-custom" style="padding:10px 14px; cursor:pointer;" onclick="showAddCustomerModal()">
                 <i class="bi bi-person-plus-fill"></i> Pelanggan
