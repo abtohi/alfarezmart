@@ -1,0 +1,95 @@
+/* ============================================
+   AlfarezMart PWA - CSS Custom Properties
+   Design System: Dark modern with red accent
+   ============================================ */
+
+:root {
+    /* Primary Colors */
+    --primary: #e63946;
+    --primary-dark: #c1121f;
+    --primary-light: #ff6b7a;
+    --primary-bg: rgba(230, 57, 70, 0.1);
+
+    /* Dark Theme */
+    --bg-primary: #0f0f1a;
+    --bg-secondary: #1a1a2e;
+    --bg-card: #16213e;
+    --bg-card-hover: #1c2a4a;
+    --bg-elevated: #1e2a4a;
+    --bg-input: #0f1629;
+    --bg-modal: #1a1a2e;
+
+    /* Surface */
+    --surface-1: #16213e;
+    --surface-2: #1c2a4a;
+    --surface-3: #233456;
+
+    /* Text */
+    --text-primary: #f1f1f1;
+    --text-secondary: #a0a8c0;
+    --text-muted: #6b7394;
+    --text-inverse: #0f0f1a;
+
+    /* Accent Colors */
+    --success: #2ec4b6;
+    --success-bg: rgba(46, 196, 182, 0.12);
+    --warning: #ffb703;
+    --warning-bg: rgba(255, 183, 3, 0.12);
+    --danger: #e63946;
+    --danger-bg: rgba(230, 57, 70, 0.12);
+    --info: #4cc9f0;
+    --info-bg: rgba(76, 201, 240, 0.12);
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #e63946 0%, #c1121f 100%);
+    --gradient-card: linear-gradient(145deg, #1a1a2e 0%, #16213e 100%);
+    --gradient-header: linear-gradient(180deg, #1a1a2e 0%, rgba(26, 26, 46, 0.95) 100%);
+    --gradient-success: linear-gradient(135deg, #2ec4b6 0%, #1a9e92 100%);
+    --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+
+    /* Borders */
+    --border-color: rgba(255, 255, 255, 0.06);
+    --border-active: rgba(230, 57, 70, 0.4);
+
+    /* Shadows */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+    --shadow-glow: 0 0 20px rgba(230, 57, 70, 0.3);
+
+    /* Spacing */
+    --header-height: 56px;
+    --bottom-nav-height: 64px;
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+
+    /* Border Radius */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-full: 50%;
+
+    /* Typography */
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-size-xs: 0.7rem;
+    --font-size-sm: 0.8rem;
+    --font-size-base: 0.9rem;
+    --font-size-md: 1rem;
+    --font-size-lg: 1.15rem;
+    --font-size-xl: 1.4rem;
+    --font-size-2xl: 1.75rem;
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-base: 250ms ease;
+    --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Z-index */
+    --z-content: 1;
+    --z-header: 100;
+    --z-bottom-nav: 100;
+    --z-overlay: 200;
+    --z-modal: 300;
+    --z-toast: 400;
+}

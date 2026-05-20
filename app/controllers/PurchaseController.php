@@ -1,0 +1,51 @@
+<?php
+/**
+ * PurchaseController - Barang Masuk / Pembelian
+ */
+class PurchaseController extends Controller
+{
+    public function index()
+    {
+        $model = new PurchaseModel();
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $purchases = $model->getList($page, 30);
+        $groupedPurchases = $model->groupByDateAndSupplier($purchases['data']);
+
+        $this->view('purchases.index', [
+            'title' => 'Riwayat Barang Masuk',
+            'activeNav' => 'purchase',
+            'purchases' => $purchases,
+            'groupedPurchases' => $groupedPurchases,
+        ]);
+    }
+
+    public function create()
+    {
+        $supplierModel = new SupplierModel();
+        $salesRepModel = new SalesRepModel();
+
+        $this->view('purchases.create', [
+            'title' => 'Input Barang Masuk',
+            'activeNav' => 'purchase',
+            'salesReps' => $salesRepModel->getAllWithSupplier(),
+            'suppliers' => $supplierModel->all('name', 'ASC'),
+        ]);
+    }
+
+    public function show($id)
+    {
+        $model = new PurchaseModel();
+        $purchase = $model->getDetails($id);
+        
+        if (!$purchase) {
+            header('Location: ' . BASE_URL . 'purchases');
+            exit;
+        }
+
+        $this->view('purchases.show', [
+            'title' => 'Detail Pembelian',
+            'activeNav' => 'purchase',
+            'purchase' => $purchase,
+        ]);
+    }
+}

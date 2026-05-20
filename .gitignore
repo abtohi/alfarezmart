@@ -1,0 +1,65 @@
+# Environment & Configuration
+.env
+.env.local
+.env.*.local
+config.php
+settings.php
+
+# Sensitive Database Files
+database.sqlite
+*.sql
+database/backups/*
+storage/database/*
+
+# Logs
+storage/logs/*
+*.log
+debug.log
+
+# Storage & Uploads
+storage/uploads/*
+storage/invoices/*
+storage/transactions/*
+storage/backups/*
+public/storage/uploads/*
+public/storage/invoices/*
+public/storage/transactions/*
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# OS
+.DS_Store
+Thumbs.db
+.env.local
+
+# Node/Webpack
+node_modules/
+dist/
+build/
+
+# PHP Composer
+vendor/
+composer.lock
+
+# Temp files
+*.tmp
+*.temp
+.cache/
+
+# Session files
+.session/
+
+# Testing
+phpunit.xml
+.phpunit.result.cache
+
+# Backup files
+*.bak
+*.backup

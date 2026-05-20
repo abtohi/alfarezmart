@@ -1,0 +1,549 @@
+/**
+ * AlfarezMart PWA - Reusable UI Components
+ * 
+ * AppModal  — Bottom-sheet style modal dialog
+ * SearchBox — Searchable combobox/dropdown replacement
+ */
+
+/* ============================================
+   AppModal — Modern bottom-sheet dialog
+   ============================================ */
+const AppModal = {
+    _overlay: null,
+    _resolve: null,
+
+    /**
+     * Initialize modal container (called once on DOMContentLoaded)
+     */
+    init() {
+        if (document.getElementById('appModalOverlay')) return;
+        const el = document.createElement('div');
+        el.id = 'appModalOverlay';
+        el.className = 'modal-overlay';
+        el.innerHTML = `<div class="modal-dialog" id="appModalDialog">
+            <div class="modal-handle"></div>
+            <div class="modal-header">
+                <div class="modal-header-title">
+                    <div class="modal-icon" id="appModalIcon"></div>
+                    <div>
+                        <h3 id="appModalTitle"></h3>
+                        <div class="modal-subtitle" id="appModalSubtitle"></div>
+                    </div>
+                </div>
+                <button class="modal-close" id="appModalClose"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="modal-body" id="appModalBody"></div>
+            <div class="modal-footer" id="appModalFooter">
+                <button class="btn-modal-cancel" id="appModalCancelBtn">Batal</button>
+                <button class="btn-modal-submit" id="appModalSubmitBtn">Simpan</button>
+            </div>
+        </div>`;
+        document.body.appendChild(el);
+        this._overlay = el;
+
+        // Close handlers
+        document.getElementById('appModalClose').addEventListener('click', () => this.close(null));
+        document.getElementById('appModalCancelBtn').addEventListener('click', () => this.close(null));
+        
+        // Close modal when clicking on the overlay (backdrop), not the dialog
+        const dialog = document.getElementById('appModalDialog');
+        dialog.addEventListener('click', (e) => { e.stopPropagation(); });
+        el.addEventListener('click', (e) => { 
+            if (e.target === el) this.close(null);
+        });
+    },
+
+    /**
+     * Show modal with configuration
+     * @param {Object} config
+     * @param {string} config.title — Modal title
+     * @param {string} [config.subtitle] — Subtitle text
+     * @param {string} [config.icon] — Bootstrap icon class (e.g. 'bi-tag')
+     * @param {string} [config.iconColor] — CSS color for icon background
+     * @param {string} config.bodyHTML — HTML content for modal body
+     * @param {string} [config.submitText] — Submit button label (default: 'Simpan')
+     * @param {string} [config.cancelText] — Cancel button label (default: 'Batal')
+     * @param {Function} [config.onSubmit] — Called when submit clicked. Gets formData arg.
+     * @param {boolean} [config.hideFooter] — Hide footer buttons
+     * @returns {Promise} Resolves when modal closes (with result or null)
+     */
+    show(config) {
+        this.init();
+        const overlay = this._overlay;
+        const icon = document.getElementById('appModalIcon');
+        const title = document.getElementById('appModalTitle');
+        const subtitle = document.getElementById('appModalSubtitle');
+        const body = document.getElementById('appModalBody');
+        const footer = document.getElementById('appModalFooter');
+        const submitBtn = document.getElementById('appModalSubmitBtn');
+        const cancelBtn = document.getElementById('appModalCancelBtn');
+
+        // Set content
+        title.textContent = config.title || '';
+        subtitle.textContent = config.subtitle || '';
+        subtitle.style.display = config.subtitle ? 'block' : 'none';
+
+        if (config.icon) {
+            icon.innerHTML = `<i class="bi ${config.icon}"></i>`;
+            icon.style.background = config.iconColor || 'var(--primary-bg)';
+            icon.style.color = config.iconAccent || 'var(--primary)';
+            icon.style.display = 'flex';
+        } else {
+            icon.style.display = 'none';
+        }
+
+        body.innerHTML = config.bodyHTML || '';
+        submitBtn.textContent = config.submitText || 'Simpan';
+        cancelBtn.textContent = config.cancelText || 'Batal';
+        footer.style.display = config.hideFooter ? 'none' : 'flex';
+
+        // Focus first input after animation
+        setTimeout(() => {
+            const firstInput = body.querySelector('input:not([type=hidden]), textarea, select');
+            if (firstInput) firstInput.focus();
+        }, 350);
+
+        // Submit handler
+        submitBtn.onclick = async () => {
+            if (config.onSubmit) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="spinner-border spinner-border-sm"></i>';
+                try {
+                    const result = await config.onSubmit();
+                    if (result !== false) this.close(result);
+                } catch (e) {
+                    // onSubmit handles its own errors
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = config.submitText || 'Simpan';
+                }
+            } else {
+                this.close('submit');
+            }
+        };
+
+        // Show
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        return new Promise(resolve => { this._resolve = resolve; });
+    },
+
+    /**
+     * Close modal
+     * @param {*} result — Value to resolve promise with
+     */
+    close(result) {
+        if (this._overlay) {
+            this._overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+        if (this._resolve) {
+            this._resolve(result);
+            this._resolve = null;
+        }
+    }
+};
+
+
+/* ============================================
+   SearchBox — Searchable combobox
+   ============================================ */
+class SearchBox {
+    /**
+     * @param {HTMLElement} container — The wrapper element
+     * @param {Object} config
+     * @param {Array} config.options — [{value, label}]
+     * @param {string} [config.placeholder] — Placeholder text
+     * @param {string} [config.icon] — Bootstrap icon class
+     * @param {Function} [config.onSelect] — Callback(value, label)
+     * @param {Function} [config.onChange] — Callback(value, label) same as onSelect
+     * @param {Function} [config.onAdd] — Callback() for adding new item. If set, shows "+" button
+     * @param {string} [config.addLabel] — Label for add button
+     * @param {string} [config.name] — Hidden input name for form submission
+     * @param {string} [config.value] — Initial selected value
+     * @param {boolean} [config.required] — Whether field is required
+     * @param {boolean} [config.clearable] — Show clear button when a value is selected
+     */
+    constructor(container, config) {
+        this.container = container;
+        this.config = config;
+        this.options = [...(config.options || [])];
+        this.selectedValue = config.value || '';
+        this.selectedLabel = '';
+        this.isOpen = false;
+        this._backdrop = null;
+
+        this._buildDOM();
+        this._bindEvents();
+
+        // Set initial value
+        if (this.selectedValue) {
+            const found = this.options.find(o => String(o.value) === String(this.selectedValue));
+            if (found) {
+                this.selectedLabel = found.label;
+                this._updateDisplay();
+            }
+        }
+    }
+
+    setRequired(isRequired) {
+        this.config.required = !!isRequired;
+        if (this._hiddenInput) {
+            this._hiddenInput.required = this.config.required;
+        }
+    }
+
+    _buildDOM() {
+        const c = this.config;
+        const iconHTML = c.icon ? `<i class="bi ${c.icon} sb-icon"></i>` : '';
+        const selectedLabel = this._getSelectedLabel();
+        const clearBtnHTML = c.clearable
+            ? `<button type="button" class="sb-clear" aria-label="Hapus pilihan" title="Hapus pilihan" style="display:none;"><i class="bi bi-x-circle-fill"></i></button>`
+            : '';
+
+        this.container.classList.add('searchbox-wrapper');
+        this.container.innerHTML = `
+            <input type="hidden" name="${c.name || ''}" value="${this.selectedValue}" ${c.required ? 'required' : ''}>
+            <div class="searchbox-trigger" tabindex="0">
+                ${iconHTML}
+                <span class="sb-value ${!selectedLabel ? 'sb-placeholder' : ''}">${selectedLabel || c.placeholder || 'Pilih...'}</span>
+                ${clearBtnHTML}
+                <i class="bi bi-chevron-down sb-arrow"></i>
+            </div>
+            <div class="searchbox-dropdown">
+                <div class="searchbox-search">
+                    <i class="bi bi-search"></i>
+                    <input type="text" placeholder="Cari..." autocomplete="off">
+                </div>
+                <div class="searchbox-options"></div>
+                ${c.onAdd ? `<div class="searchbox-add-btn"><i class="bi bi-plus-circle"></i> ${c.addLabel || 'Tambah Baru'}</div>` : ''}
+                ${c.linkUrl ? `<a href="${c.linkUrl}" target="_blank" class="searchbox-link-btn" style="display:flex;align-items:center;gap:8px;padding:10px 14px;font-size:var(--font-size-sm);color:var(--info);text-decoration:none;border-top:1px solid rgba(255,255,255,0.05);font-weight:600;background:var(--surface-1);"><i class="bi bi-box-arrow-up-right"></i> ${c.linkLabel || 'Kelola Data'}</a>` : ''}
+            </div>
+        `;
+
+        this._trigger = this.container.querySelector('.searchbox-trigger');
+        this._dropdown = this.container.querySelector('.searchbox-dropdown');
+        this._searchInput = this._dropdown.querySelector('.searchbox-search input');
+        this._optionsList = this._dropdown.querySelector('.searchbox-options');
+        this._hiddenInput = this.container.querySelector('input[type=hidden]');
+        this._valueDisplay = this._trigger.querySelector('.sb-value');
+        this._addBtn = this._dropdown.querySelector('.searchbox-add-btn');
+        this._clearBtn = this._trigger.querySelector('.sb-clear');
+
+        this._renderOptions();
+        this._syncClearButton();
+    }
+
+    _bindEvents() {
+        // Toggle dropdown
+        this._trigger.addEventListener('click', (e) => {
+            if (e.target.closest('.sb-clear')) return;
+            e.stopPropagation();
+            this.isOpen ? this.close() : this.open();
+        });
+
+        if (this._clearBtn) {
+            this._clearBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.clear();
+            });
+        }
+
+        // Search filter
+        this._searchInput.addEventListener('input', () => {
+            this._renderOptions(this._searchInput.value.trim().toLowerCase());
+        });
+
+        // Keyboard navigation
+        this._searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') { this.close(); }
+            else if (e.key === 'Enter') {
+                const highlighted = this._optionsList.querySelector('.highlighted');
+                if (highlighted) highlighted.click();
+            } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                this._navigateOptions(e.key === 'ArrowDown' ? 1 : -1);
+            }
+        });
+
+        // Add button
+        if (this._addBtn && this.config.onAdd) {
+            this._addBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                this.close();
+                await this.config.onAdd();
+            });
+        }
+
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            if (this.isOpen && !this.container.contains(e.target)) {
+                this.close();
+            }
+        });
+    }
+
+    _renderOptions(filter = '') {
+        const filtered = filter
+            ? this.options.filter(o => o.label.toLowerCase().includes(filter))
+            : this.options;
+
+        if (filtered.length === 0) {
+            this._optionsList.innerHTML = `<div class="searchbox-empty"><i class="bi bi-inbox"></i> Tidak ditemukan</div>`;
+            return;
+        }
+
+        this._optionsList.innerHTML = filtered.map(o => `
+            <div class="searchbox-option ${String(o.value) === String(this.selectedValue) ? 'selected' : ''}" data-value="${o.value}">
+                <span class="sb-opt-check"><i class="bi bi-check2"></i></span>
+                <span>${this._highlight(o.label, filter)}</span>
+            </div>
+        `).join('');
+
+        // Bind click
+        this._optionsList.querySelectorAll('.searchbox-option').forEach(el => {
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const val = el.dataset.value;
+                const opt = this.options.find(o => String(o.value) === String(val));
+                if (opt) this.select(opt.value, opt.label);
+            });
+        });
+    }
+
+    _highlight(text, filter) {
+        if (!filter) return text;
+        const regex = new RegExp(`(${filter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return text.replace(regex, '<strong style="color:var(--primary)">$1</strong>');
+    }
+
+    _navigateOptions(direction) {
+        const items = [...this._optionsList.querySelectorAll('.searchbox-option')];
+        if (items.length === 0) return;
+        const currentIdx = items.findIndex(el => el.classList.contains('highlighted'));
+        items.forEach(el => el.classList.remove('highlighted'));
+        let nextIdx = currentIdx + direction;
+        if (nextIdx < 0) nextIdx = items.length - 1;
+        if (nextIdx >= items.length) nextIdx = 0;
+        items[nextIdx].classList.add('highlighted');
+        items[nextIdx].scrollIntoView({ block: 'nearest' });
+    }
+
+    _getSelectedLabel() {
+        const found = this.options.find(o => String(o.value) === String(this.selectedValue));
+        return found ? found.label : '';
+    }
+
+    _updateDisplay() {
+        if (this.selectedLabel) {
+            this._valueDisplay.textContent = this.selectedLabel;
+            this._valueDisplay.classList.remove('sb-placeholder');
+        } else {
+            this._valueDisplay.textContent = this.config.placeholder || 'Pilih...';
+            this._valueDisplay.classList.add('sb-placeholder');
+        }
+        this._syncClearButton();
+    }
+
+    _syncClearButton() {
+        if (!this._clearBtn) return;
+        const hasValue = this.selectedValue !== '' && this.selectedValue != null;
+        this._clearBtn.style.display = hasValue ? 'flex' : 'none';
+    }
+
+    /** Clear selection (does not close dropdown) */
+    clear() {
+        const hadValue = !!this.selectedValue;
+        this.selectedValue = '';
+        this.selectedLabel = '';
+        this._hiddenInput.value = '';
+        this._updateDisplay();
+        this._hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+        if (hadValue && this.config.onClear) this.config.onClear();
+    }
+
+    open() {
+        this.isOpen = true;
+        this._trigger.classList.add('active');
+        this._searchInput.value = '';
+        this._renderOptions();
+
+        // Position dropdown using fixed coordinates from trigger rect
+        this._positionDropdown();
+
+        this._dropdown.classList.add('open');
+        setTimeout(() => this._searchInput.focus(), 50);
+
+        // Add backdrop
+        if (!this._backdrop) {
+            this._backdrop = document.createElement('div');
+            this._backdrop.className = 'searchbox-backdrop active';
+            this._backdrop.addEventListener('click', () => this.close());
+            document.body.appendChild(this._backdrop);
+        } else {
+            this._backdrop.classList.add('active');
+        }
+    }
+
+    _positionDropdown() {
+        const rect = this._trigger.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Mobile layout: Bottom sheet style
+        if (viewportWidth <= 480) {
+            this._dropdown.style.position = 'fixed';
+            this._dropdown.style.top = 'auto';
+            this._dropdown.style.bottom = '0px';
+            this._dropdown.style.left = '0px';
+            this._dropdown.style.right = '0px';
+            this._dropdown.style.width = '100%';
+            this._dropdown.style.maxWidth = '100%';
+            this._dropdown.style.maxHeight = '50vh';
+            this._dropdown.style.borderRadius = 'var(--radius-lg) var(--radius-lg) 0 0';
+            this._dropdown.style.border = 'none';
+            this._dropdown.style.borderTop = '1px solid var(--border-color)';
+            this._dropdown.style.boxShadow = '0 -8px 24px rgba(0,0,0,0.6)';
+            this._dropdown.style.transform = 'translateY(100%)';
+            // Force reflow for animation
+            void this._dropdown.offsetWidth;
+            if (this.isOpen) {
+                this._dropdown.style.transform = 'translateY(0)';
+            }
+            if (this._backdrop) {
+                this._backdrop.style.background = 'rgba(0,0,0,0.5)';
+                this._backdrop.style.backdropFilter = 'blur(4px)';
+                this._backdrop.style.webkitBackdropFilter = 'blur(4px)';
+            }
+            return;
+        }
+
+        // Desktop layout
+        const dropdownWidth = Math.min(320, Math.max(200, rect.width, viewportWidth - 32));
+        
+        let left = rect.left;
+        // Clamp so it doesn't go off-screen right
+        if (left + dropdownWidth > viewportWidth - 16) {
+            left = viewportWidth - dropdownWidth - 16;
+        }
+        if (left < 16) left = 16;
+
+        let top = rect.bottom + 4;
+        let maxHeight = 260;
+
+        // If it goes off the bottom of the screen, open it upwards
+        if (top + maxHeight > viewportHeight - 16 && rect.top > maxHeight + 16) {
+            this._dropdown.style.top = 'auto';
+            this._dropdown.style.bottom = (viewportHeight - rect.top + 4) + 'px';
+            this._dropdown.style.maxHeight = maxHeight + 'px';
+        } else {
+            this._dropdown.style.bottom = 'auto';
+            this._dropdown.style.top = top + 'px';
+            
+            // If it still overflows, restrict max height
+            if (top + maxHeight > viewportHeight - 16) {
+                maxHeight = Math.max(150, viewportHeight - top - 16);
+            }
+            this._dropdown.style.maxHeight = maxHeight + 'px';
+        }
+
+        this._dropdown.style.left = left + 'px';
+        this._dropdown.style.width = dropdownWidth + 'px';
+        this._dropdown.style.maxWidth = (viewportWidth - 32) + 'px';
+        this._dropdown.style.borderRadius = 'var(--radius-md)';
+        this._dropdown.style.border = '1px solid var(--border-color)';
+        this._dropdown.style.boxShadow = 'var(--shadow-lg)';
+        this._dropdown.style.transform = 'translateY(-8px)';
+        void this._dropdown.offsetWidth;
+        if (this.isOpen) {
+            this._dropdown.style.transform = 'translateY(0)';
+        }
+        if (this._backdrop) {
+            this._backdrop.style.background = 'transparent';
+            this._backdrop.style.backdropFilter = 'none';
+            this._backdrop.style.webkitBackdropFilter = 'none';
+        }
+    }
+
+    close() {
+        this.isOpen = false;
+        this._trigger.classList.remove('active');
+        this._dropdown.classList.remove('open');
+        this._dropdown.style.transform = '';
+        if (this._backdrop) {
+            this._backdrop.classList.remove('active');
+            this._backdrop.style.background = 'transparent';
+            this._backdrop.style.backdropFilter = 'none';
+            this._backdrop.style.webkitBackdropFilter = 'none';
+        }
+    }
+
+    select(value, label) {
+        this.selectedValue = String(value);
+        this.selectedLabel = label;
+        this._hiddenInput.value = this.selectedValue;
+        this._updateDisplay();
+        this.close();
+
+        // Trigger change event on hidden input
+        this._hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+        if (this.config.onSelect) this.config.onSelect(value, label);
+        if (this.config.onChange) this.config.onChange(value, label);
+    }
+
+    /** Add a new option and optionally select it */
+    addOption(value, label, autoSelect = true) {
+        this.options.push({ value: String(value), label });
+        if (autoSelect) this.select(value, label);
+        else this._renderOptions();
+    }
+
+    /** Update entire options list */
+    setOptions(options) {
+        this.options = [...options];
+        this._renderOptions();
+        // If current selected value no longer exists, clear
+        if (this.selectedValue && !this.options.find(o => String(o.value) === String(this.selectedValue))) {
+            this.selectedValue = '';
+            this.selectedLabel = '';
+            this._hiddenInput.value = '';
+            this._updateDisplay();
+        }
+    }
+
+    /** Get current value */
+    getValue() { return this.selectedValue; }
+
+    /** Get current label */
+    getLabel() { return this.selectedLabel; }
+
+    /** Set required attribute on hidden input */
+    setRequired(isRequired) {
+        if (this._hiddenInput) {
+            if (isRequired) this._hiddenInput.setAttribute('required', 'required');
+            else this._hiddenInput.removeAttribute('required');
+        }
+    }
+
+    /** Programmatic reset */
+    reset() {
+        this.clear();
+    }
+
+    /** Destroy and clean up */
+    destroy() {
+        if (this._backdrop) {
+            this._backdrop.remove();
+            this._backdrop = null;
+        }
+        this.container.innerHTML = '';
+        this.container.classList.remove('searchbox-wrapper');
+    }
+}
+
+// Initialize modal on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+    AppModal.init();
+});
