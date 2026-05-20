@@ -21,6 +21,24 @@
 
 ## Pekerjaan Terakhir
 
+### Sesi: 2026-05-20 (Lanjutan) — Cleanup & Bug Investigation
+
+**Yang dikerjakan:**
+1. **Cleanup File Sampah** — Berhasil menghapus 15 file temporary/debug/migration:
+   - Root level: `check_db.php`, `check_setup.php`, `test_barcode_scanner.php`, `test_create_unit.php`, `test_session.php`, `fix_unit_fk.php`, `cleanup_bulk_fast.php`, `reset_password.php`
+   - Public folder: `public/fix_fk.php` (security risk — publicly accessible)
+   - Database: `dedupe_sales_reps.php`, `migrate_qty_prices.php`, `fix_fk.php` (migration scripts)
+   - Scratch folder: entire `scratch/` directory (test files)
+   - Commit: `ffecac1` pushed to main branch
+
+2. **Form Supplier Investigation** — Diteliti ulang fungsi form supplier di `purchases/create`:
+   - **Status**: Kode sudah benar, fungsi `onSalesRepPicked()` seharusnya menampilkan supplier otomatis
+   - **Kemungkinan penyebab masalah**: Browser cache lama, asset versi tidak reload
+   - **Solusi**: Clear browser cache, atau update asset version di `app/views/layouts/app.php`
+   - **Keterangan**: Jika masalah persisten setelah cache clear, debug via Chrome DevTools
+
+---
+
 ### Sesi: 2026-05-20 — PPN & Diskon Per Barang di Input Barang Masuk
 
 **Yang dikerjakan:**
@@ -63,11 +81,10 @@
 
 | # | Issue | Status | Catatan |
 |---|-------|--------|---------|
-| 1 | File test sementara di root (`test_barcode_scanner.php`, `test_create_unit.php`, `test_session.php`, `check_db.php`, `check_setup.php`, `fix_unit_fk.php`, `cleanup_bulk_fast.php`, `reset_password.php`) | ⚠️ Perlu review | Kemungkinan masih dipakai untuk debug/setup — belum aman dihapus |
-| 2 | `public/fix_fk.php` | ⚠️ Perlu review | File fix FK di folder public — tidak boleh diakses publik di production |
-| 3 | Thermal printer (Web Serial API) | 🔶 Browser-limited | Hanya berfungsi di Chromium-based browser (Chrome/Edge) |
-| 4 | Service Worker cache | 🔶 Manual update | Saat asset berubah besar, `CACHE_NAME` di `sw.js` harus diupdate manual |
-| 5 | ApiController.php sangat besar (~57KB) | 🔶 Tech debt | Pertimbangkan refactor ke sub-controller terpisah di masa depan |
+| 1 | Thermal printer (Web Serial API) | 🔶 Browser-limited | Hanya berfungsi di Chromium-based browser (Chrome/Edge) |
+| 2 | Service Worker cache | 🔶 Manual update | Saat asset berubah besar, `CACHE_NAME` di `sw.js` harus diupdate manual |
+| 3 | ApiController.php sangat besar (~57KB) | 🔶 Tech debt | Pertimbangkan refactor ke sub-controller terpisah di masa depan |
+| 4 | Form supplier di purchases/create | ⚠️ Cache issue | Jika hilang, clear browser cache atau hard refresh (Ctrl+Shift+R) |
 
 ---
 
@@ -95,9 +112,10 @@
 
 | Prioritas | Task | Keterangan |
 |-----------|------|-----------|
-| 🔴 Tinggi | Cleanup file test di root | Review dan hapus jika aman: `test_*.php`, `check_*.php`, `fix_*.php`, `cleanup_*.php`, `reset_password.php` |
-| 🔴 Tinggi | Amankan `public/fix_fk.php` | Hapus atau pindah agar tidak bisa diakses publik |
+| � Selesai | Cleanup file test di root | ✅ Semua file temporary/debug sudah dihapus (commit: ffecac1) |
+| 🟢 Selesai | Amankan `public/fix_fk.php` | ✅ File sudah dihapus (commit: ffecac1) |
 | 🟡 Sedang | Refactor ApiController | Pertimbangkan split ke resource-based sub-controller |
+| 🟡 Sedang | Form supplier visibility | Jika masih perlu, investigate via DevTools setelah cache clear |
 | 🟡 Sedang | Laporan penjualan per periode | Filter tanggal, total omzet, top produk |
 | 🟡 Sedang | Notifikasi stok minimum | Alert jika stok produk di bawah batas minimal |
 | 🟢 Rendah | Dark/light mode toggle | Saat ini full dark mode |
