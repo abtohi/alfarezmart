@@ -162,5 +162,15 @@ $router->post('/api/debts/shop', 'ApiController@createShopDebt');
 $router->post('/api/debts/shop/{id}/pay', 'ApiController@payShopDebt');
 $router->post('/api/debts/shop/{id}/delete', 'ApiController@deleteShopDebt');
 
+// Finance Web Routes
+$router->get('/finance', 'FinanceController@index');
+
+// Finance API Routes
+$router->get('/api/finance/summary', 'ApiController@getFinanceSummary');
+$router->get('/api/finance/logs', 'ApiController@getFinanceLogs');
+$router->post('/api/finance/logs', 'ApiController@createFinanceLog');
+$router->post('/api/finance/logs/{id}/update', 'ApiController@updateFinanceLog');
+$router->post('/api/finance/logs/{id}/delete', 'ApiController@deleteFinanceLog');
+
 // Database Setup (only in development)
 $router->get('/setup', 'SettingController@setupDatabase');

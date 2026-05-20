@@ -29,6 +29,35 @@
 
 ---
 
+## [2026-05-20] — Modul Catatan Keuangan Harian (Pendapatan & Pengeluaran)
+
+**Tipe:** Mayor
+**Modul:** Finance (FinanceModel, FinanceController, ApiController, Routes, dashboard/index.php, finance/index.php)
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Model & Controller**: Membuat `FinanceModel.php` untuk melayani operasi CRUD dan query ringkasan harian serta breakdown saldo per pos keuangan. Membuat `FinanceController.php` untuk melayani rute web utama `/finance`.
+- **API & Routing**: Mendaftarkan rute `/finance` serta 5 API endpoint (`/api/finance/summary`, `/api/finance/logs`, CRUD log transaksi) di `Routes.php` dan `ApiController.php`.
+- **Dashboard Status Integration**: Menambahkan visualisasi grid 2 kolom "Status Hari Ini" di atas grid "Ringkasan Data" pada `dashboard/index.php`:
+  - Kolom Kiri: Card **Stok Terendah** (jumlah produk dengan stok <= 5) & Card **Keuangan Harian** (menampilkan Net Balance harian, total pemasukan, total pengeluaran dengan icon dompet `bi-wallet2` yang link ke `/finance`).
+  - Kolom Kanan: Card **Omset Hari Ini** (menampilkan omset harian dari POS secara realtime).
+- **Finance Manager UI**: Membuat tampilan antarmuka keuangan harian yang mobile-first di `app/views/finance/index.php` dengan visual comparison progress bar (realtime ratio pemasukan/pengeluaran), pemilih tanggal dinamis, breakdown per pos keuangan (`Uang Laci`, `Uang Pulsa`, `Uang Beras`, `Uang Rokok`), filter pencarian log, serta modal input transaksi CRUD.
+
+### File yang Diubah/Dibuat
+- `app/models/FinanceModel.php` — model data dan operasi database [NEW].
+- `app/controllers/FinanceController.php` — controller rute halaman utama [NEW].
+- `app/controllers/DashboardController.php` — query & pasing statistik harian (omset POS, stok rendah, ringkasan kas).
+- `app/controllers/ApiController.php` — penambahan 5 endpoint API CRUD & Summary.
+- `app/config/Routes.php` — pendaftaran rute web dan API baru.
+- `app/views/dashboard/index.php` — integrasi grid visual "Status Hari Ini" (dompet, stok terendah, omset).
+- `app/views/finance/index.php` — halaman kelola kas harian per pos [NEW].
+- `app/models/ProductModel.php` — query statistik hitung low stock count.
+
+### Catatan
+- PWA caching tetap aman. Pengguna disarankan untuk memuat ulang halaman dashboard untuk melihat widget status keuangan baru yang dinamis.
+
+---
+
 ## [2026-05-20] — Modul Catatan Hutang (Piutang Pelanggan & Hutang Toko)
 
 **Tipe:** Mayor

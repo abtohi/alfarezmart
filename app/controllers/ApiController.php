@@ -1709,5 +1709,156 @@ class ApiController extends Controller
             $this->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    // ===== FINANCE LOGS API =====
+    public function getFinanceSummary()
+    {
+        try {
+            $date = $this->input('date') ?: date('Y-m-d');
+            $model = new FinanceModel();
+            $summary = $model->getDailySummary($date);
+            $breakdown = $model->getDailySummaryByPost($date);
+            $this->json([
+                'success' => true,
+                'date' => $date,
+                'summary' => [
+                    'income' => (float)($summary['income'] ?? 0),
+                    'expense' => (float)($summary['expense'] ?? 0),
+                    'net' => (float)($summary['income'] ?? 0) - (float)($summary['expense'] ?? 0)
+                ],
+                'breakdown' => $breakdown
+            ]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function getFinanceLogs()
+    {
+        try {
+            $date = $this->input('date') ?: date('Y-m-d');
+            $model = new FinanceModel();
+            $logs = $model->getLogsByDate($date);
+            $this->json([
+                'success' => true,
+                'date' => $date,
+                'logs' => $logs
+            ]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function createFinanceLog()
+    {
+        $this->validateCSRF();
+        try {
+            $model = new FinanceModel();
+            $logDate = $this->input('log_date') ?: date('Y-m-d');
+            $amount = (float)$this->input('amount');
+            $balanceType = $this->input('balance_type');
+            $category = $this->input('category');
+            $detail = $this->input('detail');
+            $description = $this->input('description');
+
+            if ($amount <= 0) {
+                throw new Exception("Nominal harus lebih besar dari 0");
+            }
+            if (empty($balanceType) || !in_array($balanceType, ['Uang Laci', 'Uang Pulsa', 'Uang Beras', 'Uang Rokok'])) {
+                throw new Exception("Pos keuangan tidak valid");
+            }
+            if (empty($category) || !in_array($category, ['Pemasukan', 'Pengeluaran'])) {
+                throw new Exception("Kategori tidak valid");
+            }
+            if (empty($detail)) {
+                throw new Exception("Detail / Jenis transaksi harus diisi");
+            }
+
+            $logId = $model->addLog([
+                'log_date' => $logDate,
+                'amount' => $amount,
+                'balance_type' => $balanceType,
+                'category' => $category,
+                'detail' => $detail,
+                'description' => $description
+            ]);
+
+            $this->json([
+                'success' => true,
+                'message' => 'Catatan keuangan berhasil disimpan',
+                'log_id' => $logId
+            ]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateFinanceLog(int $id)
+    {
+        $this->validateCSRF();
+        try {
+            $model = new FinanceModel();
+            $log = $model->findLog($id);
+            if (!$log) {
+                throw new Exception("Data pencatatan tidak ditemukan");
+            }
+
+            $logDate = $this->input('log_date') ?: date('Y-m-d');
+            $amount = (float)$this->input('amount');
+            $balanceType = $this->input('balance_type');
+            $category = $this->input('category');
+            $detail = $this->input('detail');
+            $description = $this->input('description');
+
+            if ($amount <= 0) {
+                throw new Exception("Nominal harus lebih besar dari 0");
+            }
+            if (empty($balanceType) || !in_array($balanceType, ['Uang Laci', 'Uang Pulsa', 'Uang Beras', 'Uang Rokok'])) {
+                throw new Exception("Pos keuangan tidak valid");
+            }
+            if (empty($category) || !in_array($category, ['Pemasukan', 'Pengeluaran'])) {
+                throw new Exception("Kategori tidak valid");
+            }
+            if (empty($detail)) {
+                throw new Exception("Detail / Jenis transaksi harus diisi");
+            }
+
+            $model->updateLog($id, [
+                'log_date' => $logDate,
+                'amount' => $amount,
+                'balance_type' => $balanceType,
+                'category' => $category,
+                'detail' => $detail,
+                'description' => $description
+            ]);
+
+            $this->json([
+                'success' => true,
+                'message' => 'Catatan keuangan berhasil diperbarui'
+            ]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteFinanceLog(int $id)
+    {
+        $this->validateCSRF();
+        try {
+            $model = new FinanceModel();
+            $log = $model->findLog($id);
+            if (!$log) {
+                throw new Exception("Data pencatatan tidak ditemukan");
+            }
+
+            $model->deleteLog($id);
+            $this->json([
+                'success' => true,
+                'message' => 'Catatan keuangan berhasil dihapus'
+            ]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }
 

@@ -500,6 +500,16 @@ class ProductModel extends Model
         $stats['total_categories'] = $stmt->fetch()['total'];
         $stmt = $this->db->query("SELECT COUNT(*) as total FROM suppliers WHERE is_active = 1");
         $stats['total_suppliers'] = $stmt->fetch()['total'];
+        
+        // Count products with low stock (current_qty_base <= 5)
+        $stmt = $this->db->query("
+            SELECT COUNT(*) as total 
+            FROM products p 
+            LEFT JOIN stock s ON p.id = s.product_id 
+            WHERE p.is_active = 1 AND COALESCE(s.current_qty_base, 0) <= 5
+        ");
+        $stats['low_stock_count'] = $stmt->fetch()['total'];
+        
         return $stats;
     }
 }

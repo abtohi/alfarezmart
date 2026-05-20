@@ -26,6 +26,46 @@
     </div>
     <?php endif; ?>
 
+    <!-- Status Hari Ini -->
+    <div class="section-title">Status Hari Ini</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; align-items: stretch;">
+        <!-- Left Column -->
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Stok Terendah Card -->
+            <div class="stat-card" style="margin-bottom: 0; flex: 1; display: flex; align-items: center; gap: 12px; padding: 12px 16px;">
+                <div class="stat-icon red" style="margin-bottom: 0; width: 36px; height: 36px; font-size: 1.1rem; flex-shrink: 0;"><i class="bi bi-exclamation-triangle-fill"></i></div>
+                <div style="flex: 1; min-width: 0;">
+                    <div class="stat-value" style="font-size: var(--font-size-md); font-weight: 800; line-height: 1.2;"><?= number_format($stats['low_stock_count'] ?? 0) ?></div>
+                    <div class="stat-label" style="font-size: 9px; margin-top: 0; text-transform: uppercase; letter-spacing: 0.5px;">Stok Terendah</div>
+                </div>
+            </div>
+            <!-- Keuangan/Dompet Card -->
+            <a href="<?= BASE_URL ?>finance" class="stat-card" style="margin-bottom: 0; flex: 1; display: flex; align-items: center; gap: 12px; padding: 12px 16px; text-decoration: none; color: inherit; cursor: pointer; transition: background 0.2s;">
+                <div class="stat-icon blue" style="margin-bottom: 0; width: 36px; height: 36px; font-size: 1.1rem; flex-shrink: 0;"><i class="bi bi-wallet2"></i></div>
+                <div style="flex: 1; min-width: 0;">
+                    <div class="stat-value" style="font-size: 11px; font-weight: 800; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Net: Rp <?= number_format(($stats['finance_today']['income'] ?? 0) - ($stats['finance_today']['expense'] ?? 0), 0, ',', '.') ?>">
+                        Rp <?= number_format(($stats['finance_today']['income'] ?? 0) - ($stats['finance_today']['expense'] ?? 0), 0, ',', '.') ?>
+                    </div>
+                    <div class="stat-label" style="font-size: 9px; margin-top: 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;">
+                        Keuangan Harian <i class="bi bi-chevron-right" style="font-size: 8px;"></i>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <!-- Right Column -->
+        <div style="display: flex;">
+            <!-- Omset Hari Ini Card -->
+            <div class="stat-card" style="margin-bottom: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 16px;">
+                <div class="stat-icon green" style="width: 44px; height: 44px; font-size: 1.3rem; margin-bottom: 8px; flex-shrink: 0;"><i class="bi bi-cash-stack"></i></div>
+                <div class="stat-value" style="font-size: var(--font-size-md); font-weight: 800;">Rp <?= number_format($stats['today_revenue'] ?? 0, 0, ',', '.') ?></div>
+                <div class="stat-label" style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Omset Hari Ini</div>
+                <div style="font-size: 9px; color: var(--text-muted); margin-top: 4px;">
+                    <?= number_format($stats['today_transactions'] ?? 0) ?> transaksi POS
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Stats Grid -->
     <div class="section-title">Ringkasan Data</div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px;">

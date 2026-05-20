@@ -21,6 +21,14 @@
 
 ## Pekerjaan Terakhir
 
+### Sesi: 2026-05-20 — Modul Keuangan Harian (Pendapatan & Pengeluaran)
+
+**Yang dikerjakan:**
+1. **Model & Controller** — Membuat `FinanceModel.php` untuk melayani operasi CRUD dan query harian, serta `FinanceController.php` untuk render web view utama `/finance`.
+2. **API & Routing** — Mendaftarkan rute web `/finance` serta 5 API endpoint (`/api/finance/...`) untuk kelola transaksi dan dashboard di `Routes.php` dan `ApiController.php`.
+3. **Dashboard Status Integration** — Menambahkan grid status 2 kolom "Status Hari Ini" di atas grid "Ringkasan Data" pada `dashboard/index.php`. Menampilkan stok terendah (stok <= 5), omset hari ini (POS), dan net balance harian (icon dompet).
+4. **Finance Manager UI** — Membuat view `app/views/finance/index.php` dengan visual comparison progress bar, pemilih tanggal dinamis, breakdown per pos keuangan (`Uang Laci`, `Uang Pulsa`, `Uang Beras`, `Uang Rokok`), filter pencarian log, serta modal input transaksi CRUD.
+
 ### Sesi: 2026-05-20 — Modul Catatan Hutang (Piutang Pelanggan & Hutang Toko)
 
 **Yang dikerjakan:**
@@ -143,6 +151,8 @@
 | Pengaturan Master Data | ✅ Stabil | Brand, kategori, satuan — on-the-fly create |
 | Pengaturan Struk | ✅ Stabil | Nama toko, alamat, logo, header/footer |
 | Manajemen User | ✅ Stabil | CRUD user, toggle active, reset password |
+| Catatan Hutang | ✅ Stabil | Kelola piutang pelanggan & hutang toko, pencatatan cicilan |
+| Keuangan Harian | ✅ Stabil | Pemasukan/pengeluaran harian, 4 pos keuangan, visual perbandingan |
 | Help | ✅ Stabil | Dokumentasi sistem terbaru |
 | PWA | ✅ Aktif | SW v1.93, manifest, install prompt, auto-login |
 
