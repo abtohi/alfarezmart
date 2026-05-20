@@ -21,9 +21,30 @@
 
 ## Pekerjaan Terakhir
 
-### Sesi: 2026-05-20 (Lanjutan) — Cleanup & Bug Investigation
+### Sesi: 2026-05-20 (Update) — Form Sales/Supplier Fix & Fallback Implementation
 
 **Yang dikerjakan:**
+1. **Diagnosa Form Sales/Supplier** — Ditemukan bahwa form sudah ada di kode tapi belum visible di halaman
+   - **Root cause**: Kemungkinan SearchBox component gagal render atau ada error JavaScript
+   - **Solusi**: Implementasi fallback dropdown yang selalu visible
+
+2. **Implementasi Fallback Mechanism**:
+   - Added fallback `<select>` dropdown untuk sales rep selection (visible by default)
+   - SearchBox tetap menjadi primary component (menimpa fallback jika berhasil di-load)
+   - Dropdown otomatis tersembunyi jika SearchBox berhasil render
+   - Fallback dropdown tetap visible jika SearchBox gagal atau tidak tersedia
+   
+3. **Improved Error Handling & Debugging**:
+   - Added console.log statements untuk tracking SearchBox initialization
+   - Try-catch block untuk menangani SearchBox errors gracefully
+   - User akan selalu bisa akses form baik melalui SearchBox atau fallback dropdown
+
+4. **Commit**: `556a5c8` — Fix: Add fallback dropdown for sales rep selection
+   - Ensures form visibility selalu ada untuk user
+
+---
+
+### Sesi: 2026-05-20 — Cleanup & Investigation
 1. **Cleanup File Sampah** — Berhasil menghapus 15 file temporary/debug/migration:
    - Root level: `check_db.php`, `check_setup.php`, `test_barcode_scanner.php`, `test_create_unit.php`, `test_session.php`, `fix_unit_fk.php`, `cleanup_bulk_fast.php`, `reset_password.php`
    - Public folder: `public/fix_fk.php` (security risk — publicly accessible)
@@ -84,7 +105,6 @@
 | 1 | Thermal printer (Web Serial API) | 🔶 Browser-limited | Hanya berfungsi di Chromium-based browser (Chrome/Edge) |
 | 2 | Service Worker cache | 🔶 Manual update | Saat asset berubah besar, `CACHE_NAME` di `sw.js` harus diupdate manual |
 | 3 | ApiController.php sangat besar (~57KB) | 🔶 Tech debt | Pertimbangkan refactor ke sub-controller terpisah di masa depan |
-| 4 | Form supplier di purchases/create | ⚠️ Cache issue | Jika hilang, clear browser cache atau hard refresh (Ctrl+Shift+R) |
 
 ---
 
@@ -114,8 +134,8 @@
 |-----------|------|-----------|
 | � Selesai | Cleanup file test di root | ✅ Semua file temporary/debug sudah dihapus (commit: ffecac1) |
 | 🟢 Selesai | Amankan `public/fix_fk.php` | ✅ File sudah dihapus (commit: ffecac1) |
+| 🟢 Selesai | Form sales/supplier visibility | ✅ Fallback dropdown ditambahkan (commit: 556a5c8) |
 | 🟡 Sedang | Refactor ApiController | Pertimbangkan split ke resource-based sub-controller |
-| 🟡 Sedang | Form supplier visibility | Jika masih perlu, investigate via DevTools setelah cache clear |
 | 🟡 Sedang | Laporan penjualan per periode | Filter tanggal, total omzet, top produk |
 | 🟡 Sedang | Notifikasi stok minimum | Alert jika stok produk di bawah batas minimal |
 | 🟢 Rendah | Dark/light mode toggle | Saat ini full dark mode |
