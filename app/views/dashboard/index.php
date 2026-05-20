@@ -115,6 +115,11 @@
             <div class="menu-text"><h6>Analitik &amp; Histori Produk</h6><small>Rekomendasi harga termurah &amp; riwayat belanja</small></div>
             <i class="bi bi-chevron-right menu-arrow"></i>
         </a>
+        <a href="<?= BASE_URL ?>debts" class="menu-item">
+            <div class="menu-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-journal-text"></i></div>
+            <div class="menu-text"><h6>Catatan Hutang &amp; Piutang</h6><small>Kelola piutang pelanggan &amp; hutang toko</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
     </ul>
 
     <!-- Sistem & Dukungan -->
@@ -147,11 +152,6 @@
     <!-- Fitur Segera Hadir -->
     <div class="section-title">Segera Hadir</div>
     <ul class="menu-list" style="margin-bottom:24px;">
-        <div class="menu-item" onclick="showComingSoon('Catatan Hutang','Pencatatan hutang pelanggan dan piutang','bi-journal-text')" style="cursor:pointer;">
-            <div class="menu-icon" style="background:var(--info-bg);color:var(--info);"><i class="bi bi-journal-text"></i></div>
-            <div class="menu-text"><h6>Catatan Hutang</h6><small>Pencatatan hutang pelanggan</small></div>
-            <span class="badge-custom badge-warning">Soon</span>
-        </div>
         <div class="menu-item" onclick="showComingSoon('Laporan Keuangan','Analisa omzet, profit, dan pengeluaran','bi-graph-up')" style="cursor:pointer;">
             <div class="menu-icon" style="background:var(--success-bg);color:var(--success);"><i class="bi bi-graph-up"></i></div>
             <div class="menu-text"><h6>Laporan Keuangan</h6><small>Analisa omzet dan profit</small></div>

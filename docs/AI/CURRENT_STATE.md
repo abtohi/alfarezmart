@@ -21,6 +21,17 @@
 
 ## Pekerjaan Terakhir
 
+### Sesi: 2026-05-20 — Modul Catatan Hutang (Piutang Pelanggan & Hutang Toko)
+
+**Yang dikerjakan:**
+1. **Database Schema** — Memperbarui `database/setup.php` untuk menambahkan kolom `notes` ke tabel `customers`, serta membuat tabel `customer_debts`, `customer_debt_payments`, `shop_debts`, dan `shop_debt_payments`. Berhasil mengeksekusi migrasi database.
+2. **Model Implementasi** — Membuat `DebtModel.php` untuk melayani operasi CRUD dan pencatatan cicilan pelanggan serta hutang toko ke pihak ketiga/supplier. Memperbaiki error `s.phone` pada query `getShopDebts()` dan `getShopDebtById()` karena tabel `suppliers` tidak memiliki kolom `phone` (kolom telepon hanya ada di tabel `sales_reps`).
+3. **Controller & Routing** — Membuat `DebtController.php` dan mendaftarkan rute web `/debts` serta 12 endpoint API di `app/config/Routes.php` dan `ApiController.php`.
+4. **Unified Manager UI** — Membuat `app/views/debts/index.php` dengan dashboard, tab switcher (Piutang, Hutang Toko, Pelanggan), form modal modern (menggunakan `AppModal`), dan fitur penanganan pelanggan tanpa nama/ciri fisik secara dinamis.
+5. **Dashboard Integration** — Mengaktifkan menu "Catatan Hutang" di dashboard (`app/views/dashboard/index.php`) dan memindahkannya dari kategori "Segera Hadir" ke "Laporan & Riwayat".
+
+---
+
 ### Sesi: 2026-05-20 (Finalized) — PPN & Diskon Per Item di Input Barang Masuk
 
 **Yang dikerjakan:**

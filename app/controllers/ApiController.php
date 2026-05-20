@@ -1421,5 +1421,293 @@ class ApiController extends Controller
             $this->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    // ==========================================
+    // DEBTS & CUSTOMERS API
+    // ==========================================
+
+    public function getCustomers()
+    {
+        try {
+            $model = new DebtModel();
+            $search = isset($_GET['q']) ? Security::sanitize($_GET['q']) : '';
+            $customers = $model->getCustomers($search);
+            $this->json(['success' => true, 'data' => $customers]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function createCustomer()
+    {
+        $this->validateCSRF();
+        try {
+            $model = new DebtModel();
+            $name = $this->input('name');
+            $phone = $this->input('phone');
+            $address = $this->input('address');
+            $notes = $this->input('notes');
+            $typeId = $this->input('type_id');
+
+            if (empty($name)) {
+                throw new Exception("Nama pelanggan wajib diisi");
+            }
+
+            $customerId = $model->createCustomer([
+                'name' => $name,
+                'phone' => $phone,
+                'address' => $address,
+                'notes' => $notes,
+                'type_id' => !empty($typeId) ? (int)$typeId : null
+            ]);
+
+            $this->json(['success' => true, 'message' => 'Pelanggan berhasil ditambahkan', 'customer_id' => $customerId]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateCustomer(int $id)
+    {
+        $this->validateCSRF();
+        try {
+            $model = new DebtModel();
+            $name = $this->input('name');
+            $phone = $this->input('phone');
+            $address = $this->input('address');
+            $notes = $this->input('notes');
+            $typeId = $this->input('type_id');
+
+            if (empty($name)) {
+                throw new Exception("Nama pelanggan wajib diisi");
+            }
+
+            $model->updateCustomer((int)$id, [
+                'name' => $name,
+                'phone' => $phone,
+                'address' => $address,
+                'notes' => $notes,
+                'type_id' => !empty($typeId) ? (int)$typeId : null
+            ]);
+
+            $this->json(['success' => true, 'message' => 'Pelanggan berhasil diupdate']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteCustomer(int $id)
+    {
+        $this->validateCSRF();
+        try {
+            $model = new DebtModel();
+            $model->deleteCustomer((int)$id);
+            $this->json(['success' => true, 'message' => 'Pelanggan berhasil dihapus']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function getCustomerDebts()
+    {
+        try {
+            $model = new DebtModel();
+            $status = isset($_GET['status']) ? Security::sanitize($_GET['status']) : null;
+            $search = isset($_GET['q']) ? Security::sanitize($_GET['q']) : '';
+            $debts = $model->getCustomerDebts($status, $search);
+            
+            foreach ($debts as &$d) {
+                $d['payments'] = $model->getCustomerDebtPayments($d['id']);
+            }
+            unset($d);
+
+            $this->json(['success' => true, 'data' => $debts]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function createCustomerDebt()
+    {
+        $this->validateCSRF();
+        try {
+            $model = new DebtModel();
+            $customerId = $this->input('customer_id');
+            $fallbackName = $this->input('customer_name_fallback');
+            $amount = (float)$this->input('amount');
+            $date = $this->input('debt_date');
+            $dueDate = $this->input('due_date');
+            $notes = $this->input('notes');
+            $saleId = $this->input('sale_id');
+
+            if (empty($customerId) && empty($fallbackName)) {
+                throw new Exception("Pelanggan harus dipilih atau diisi nama manual");
+            }
+            if ($amount <= 0) {
+                throw new Exception("Jumlah hutang harus lebih dari 0");
+            }
+            if (empty($date)) {
+                throw new Exception("Tanggal hutang wajib diisi");
+            }
+
+            $debtId = $model->createCustomerDebt([
+                'customer_id' => !empty($customerId) ? (int)$customerId : null,
+                'customer_name_fallback' => !empty($fallbackName) ? $fallbackName : null,
+                'amount' => $amount,
+                'debt_date' => $date,
+                'due_date' => !empty($dueDate) ? $dueDate : null,
+                'notes' => $notes,
+                'sale_id' => !empty($saleId) ? (int)$saleId : null
+            ]);
+
+            $this->json(['success' => true, 'message' => 'Hutang pelanggan berhasil dicatat', 'debt_id' => $debtId]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function payCustomerDebt(int $id)
+    {
+        $this->validateCSRF();
+        try {
+            $model = new DebtModel();
+            $amount = (float)$this->input('amount');
+            $date = $this->input('payment_date');
+            $notes = $this->input('notes');
+
+            if ($amount <= 0) {
+                throw new Exception("Nominal pembayaran harus lebih besar dari 0");
+            }
+            if (empty($date)) {
+                throw new Exception("Tanggal pembayaran wajib diisi");
+            }
+
+            $debt = $model->getCustomerDebtById($id);
+            if (!$debt) {
+                throw new Exception("Data hutang tidak ditemukan");
+            }
+            if ($amount > $debt['remaining_amount']) {
+                throw new Exception("Nominal pembayaran melebihi sisa hutang (Sisa: Rp " . number_format($debt['remaining_amount'], 0, ',', '.') . ")");
+            }
+
+            $model->addCustomerPayment((int)$id, $amount, $date, $notes);
+            $this->json(['success' => true, 'message' => 'Cicilan pembayaran berhasil dicatat']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteCustomerDebt(int $id)
+    {
+        $this->validateCSRF();
+        try {
+            $model = new DebtModel();
+            $model->deleteCustomerDebt((int)$id);
+            $this->json(['success' => true, 'message' => 'Catatan hutang berhasil dihapus']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function getShopDebts()
+    {
+        try {
+            $model = new DebtModel();
+            $status = isset($_GET['status']) ? Security::sanitize($_GET['status']) : null;
+            $search = isset($_GET['q']) ? Security::sanitize($_GET['q']) : '';
+            $debts = $model->getShopDebts($status, $search);
+
+            foreach ($debts as &$d) {
+                $d['payments'] = $model->getShopDebtPayments($d['id']);
+            }
+            unset($d);
+
+            $this->json(['success' => true, 'data' => $debts]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function createShopDebt()
+    {
+        $this->validateCSRF();
+        try {
+            $model = new DebtModel();
+            $supplierId = $this->input('supplier_id');
+            $fallbackName = $this->input('supplier_name_fallback');
+            $amount = (float)$this->input('amount');
+            $date = $this->input('debt_date');
+            $dueDate = $this->input('due_date');
+            $notes = $this->input('notes');
+            $purchaseId = $this->input('purchase_id');
+
+            if (empty($supplierId) && empty($fallbackName)) {
+                throw new Exception("Supplier harus dipilih atau diisi nama manual");
+            }
+            if ($amount <= 0) {
+                throw new Exception("Jumlah hutang harus lebih dari 0");
+            }
+            if (empty($date)) {
+                throw new Exception("Tanggal hutang wajib diisi");
+            }
+
+            $debtId = $model->createShopDebt([
+                'supplier_id' => !empty($supplierId) ? (int)$supplierId : null,
+                'supplier_name_fallback' => !empty($fallbackName) ? $fallbackName : null,
+                'amount' => $amount,
+                'debt_date' => $date,
+                'due_date' => !empty($dueDate) ? $dueDate : null,
+                'notes' => $notes,
+                'purchase_id' => !empty($purchaseId) ? (int)$purchaseId : null
+            ]);
+
+            $this->json(['success' => true, 'message' => 'Hutang toko berhasil dicatat', 'debt_id' => $debtId]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function payShopDebt(int $id)
+    {
+        $this->validateCSRF();
+        try {
+            $model = new DebtModel();
+            $amount = (float)$this->input('amount');
+            $date = $this->input('payment_date');
+            $notes = $this->input('notes');
+
+            if ($amount <= 0) {
+                throw new Exception("Nominal pembayaran harus lebih besar dari 0");
+            }
+            if (empty($date)) {
+                throw new Exception("Tanggal pembayaran wajib diisi");
+            }
+
+            $debt = $model->getShopDebtById($id);
+            if (!$debt) {
+                throw new Exception("Data hutang tidak ditemukan");
+            }
+            if ($amount > $debt['remaining_amount']) {
+                throw new Exception("Nominal pembayaran melebihi sisa hutang (Sisa: Rp " . number_format($debt['remaining_amount'], 0, ',', '.') . ")");
+            }
+
+            $model->addShopPayment((int)$id, $amount, $date, $notes);
+            $this->json(['success' => true, 'message' => 'Pembayaran berhasil dicatat']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteShopDebt(int $id)
+    {
+        $this->validateCSRF();
+        try {
+            $model = new DebtModel();
+            $model->deleteShopDebt((int)$id);
+            $this->json(['success' => true, 'message' => 'Catatan hutang berhasil dihapus']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }
 

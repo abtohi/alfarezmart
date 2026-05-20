@@ -236,11 +236,19 @@ function setupDatabase()
             phone VARCHAR(20),
             address TEXT,
             type_id INT,
+            notes TEXT,
             is_active TINYINT(1) DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (type_id) REFERENCES customer_types(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $messages[] = "✅ Table: customers";
+
+        // Ensure notes column exists if table was already created
+        try {
+            $db->exec("ALTER TABLE customers ADD COLUMN notes TEXT NULL");
+        } catch (Exception $e) {
+            // Column might already exist
+        }
 
         $db->exec("CREATE TABLE IF NOT EXISTS sale_transactions (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -333,6 +341,68 @@ function setupDatabase()
             FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $messages[] = "✅ Table: debts";
+
+        // Customer Debts (Piutang Pelanggan)
+        $db->exec("CREATE TABLE IF NOT EXISTS customer_debts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            customer_id INT NULL,
+            customer_name_fallback VARCHAR(255) NULL,
+            amount DECIMAL(15,2) NOT NULL,
+            remaining_amount DECIMAL(15,2) NOT NULL,
+            debt_date DATE NOT NULL,
+            due_date DATE NULL,
+            status ENUM('belum_lunas', 'lunas') DEFAULT 'belum_lunas',
+            notes TEXT NULL,
+            sale_id INT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
+            FOREIGN KEY (sale_id) REFERENCES sale_transactions(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $messages[] = "✅ Table: customer_debts";
+
+        // Customer Debt Payments (Cicilan Piutang Pelanggan)
+        $db->exec("CREATE TABLE IF NOT EXISTS customer_debt_payments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            debt_id INT NOT NULL,
+            amount DECIMAL(15,2) NOT NULL,
+            payment_date DATE NOT NULL,
+            notes TEXT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (debt_id) REFERENCES customer_debts(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $messages[] = "✅ Table: customer_debt_payments";
+
+        // Shop Debts (Hutang Toko)
+        $db->exec("CREATE TABLE IF NOT EXISTS shop_debts (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            supplier_id INT NULL,
+            supplier_name_fallback VARCHAR(255) NULL,
+            amount DECIMAL(15,2) NOT NULL,
+            remaining_amount DECIMAL(15,2) NOT NULL,
+            debt_date DATE NOT NULL,
+            due_date DATE NULL,
+            status ENUM('belum_lunas', 'lunas') DEFAULT 'belum_lunas',
+            notes TEXT NULL,
+            purchase_id INT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL,
+            FOREIGN KEY (purchase_id) REFERENCES purchases(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $messages[] = "✅ Table: shop_debts";
+
+        // Shop Debt Payments (Cicilan Hutang Toko)
+        $db->exec("CREATE TABLE IF NOT EXISTS shop_debt_payments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            debt_id INT NOT NULL,
+            amount DECIMAL(15,2) NOT NULL,
+            payment_date DATE NOT NULL,
+            notes TEXT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (debt_id) REFERENCES shop_debts(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $messages[] = "✅ Table: shop_debt_payments";
 
         $db->exec("CREATE TABLE IF NOT EXISTS app_settings (
             id INT AUTO_INCREMENT PRIMARY KEY,

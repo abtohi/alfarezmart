@@ -143,5 +143,24 @@ $router->post('/api/users/{id}/delete', 'ApiController@deleteUser');
 // User Management Web Routes
 $router->get('/users', 'UserController@index');
 
+// Debts Web Routes
+$router->get('/debts', 'DebtController@index');
+
+// Debts & Customers API Routes
+$router->get('/api/customers', 'ApiController@getCustomers');
+$router->post('/api/customers', 'ApiController@createCustomer');
+$router->post('/api/customers/{id}', 'ApiController@updateCustomer');
+$router->post('/api/customers/{id}/delete', 'ApiController@deleteCustomer');
+
+$router->get('/api/debts/customer', 'ApiController@getCustomerDebts');
+$router->post('/api/debts/customer', 'ApiController@createCustomerDebt');
+$router->post('/api/debts/customer/{id}/pay', 'ApiController@payCustomerDebt');
+$router->post('/api/debts/customer/{id}/delete', 'ApiController@deleteCustomerDebt');
+
+$router->get('/api/debts/shop', 'ApiController@getShopDebts');
+$router->post('/api/debts/shop', 'ApiController@createShopDebt');
+$router->post('/api/debts/shop/{id}/pay', 'ApiController@payShopDebt');
+$router->post('/api/debts/shop/{id}/delete', 'ApiController@deleteShopDebt');
+
 // Database Setup (only in development)
 $router->get('/setup', 'SettingController@setupDatabase');

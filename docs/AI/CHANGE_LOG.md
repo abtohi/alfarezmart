@@ -29,6 +29,33 @@
 
 ---
 
+## [2026-05-20] — Modul Catatan Hutang (Piutang Pelanggan & Hutang Toko)
+
+**Tipe:** Mayor
+**Modul:** Debts & Customers (DebtModel, DebtController, ApiController, Routes, debts/index.php, dashboard/index.php, setup.php)
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Database Schema Expansion**: Menambahkan kolom `notes` ke tabel `customers` dan menginisialisasi 4 tabel baru (`customer_debts`, `customer_debt_payments`, `shop_debts`, `shop_debt_payments`) di `database/setup.php`.
+- **Model & Controller**: Membuat `DebtModel.php` (business logic transaksi & cicilan) dan `DebtController.php` (page entry). Menghapus referensi kolom `s.phone` yang tidak valid pada query `getShopDebts()` dan `getShopDebtById()`.
+- **API & Routing**: Mendaftarkan rute `/debts` serta 12 API endpoint penunjang CRUD pelanggan & hutang/piutang serta pencatatan cicilan di `Routes.php` dan `ApiController.php`.
+- **Unified Manager UI**: Membuat dashboard hutang/piutang modern di `app/views/debts/index.php` lengkap dengan switcher tab, visualisasi progress pelunasan, pencatatan cicilan real-time, dan fitur identifikasi pelanggan tanpa nama (ciri fisik).
+- **Dashboard Menu Integration**: Memindahkan dan mengaktifkan menu "Catatan Hutang" dari section "Segera Hadir" ke section "Laporan & Riwayat" pada dashboard.
+
+### File yang Diubah/Dibuat
+- `database/setup.php` — modifikasi skema tabel.
+- `app/models/DebtModel.php` — model data dan operasi database [NEW].
+- `app/controllers/DebtController.php` — controller rute halaman utama [NEW].
+- `app/controllers/ApiController.php` — penambahan 12 endpoint API CRUD & transaksi.
+- `app/config/Routes.php` — pendaftaran rute web dan API baru.
+- `app/views/debts/index.php` — tampilan manager hutang-piutang & pelanggan [NEW].
+- `app/views/dashboard/index.php` — pemindahan link menu dashboard ke halaman aktif.
+
+### Catatan
+- PWA caching tetap aman karena perubahan halaman dinamis didukung oleh asset-level reload. Pengguna disarankan untuk reload aplikasi sekali untuk memperbarui layout dashboard.
+
+---
+
 ## [2026-05-20] — Fitur PPN & Diskon Per Item Terintegrasi Database & Detail View
 
 **Tipe:** Mayor
