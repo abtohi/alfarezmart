@@ -21,6 +21,14 @@
 
 ## Pekerjaan Terakhir
 
+### Sesi: 2026-05-21 — Revamp Purchase Input & Bulk Input Massal UI/UX and Code Cleanup
+
+**Yang dikerjakan:**
+1. **Pembersihan Kode Redundan & Duplikat** — Menghapus fragmen fungsi yatim piatu dan deklarasi duplikat `renderCart()`, `submitPurchase()`, dan `openBulkInputModal()` di file `purchases/create.php` (~850 baris kode terhapus). File dibersihkan total untuk mencegah conflict JavaScript pada runtime.
+2. **Standardisasi Propagation Engine** — Memvalidasi bahwa alur propagasi harga, PPN, diskon, dan perhitungan margin berjalan selaras di halaman barang masuk (baik reguler cart maupun bulk input modal).
+3. **Validasi Linter** — Memastikan file `purchases/create.php` bebas dari kesalahan sintaksis PHP dengan checker PHP CLI.
+4. **Git Versioning** — Berhasil melakukan commit dan push revisi final ke repositori GitHub (`main` branch).
+
 ### Sesi: 2026-05-21 — Database AI Prompt Update & Level Akses Keseragaman
 
 **Yang dikerjakan:**

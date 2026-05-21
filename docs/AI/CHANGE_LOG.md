@@ -27,6 +27,28 @@
 - Catatan penting, risiko, atau hal yang perlu diperhatikan (jika ada)
 ```
 
+## [2026-05-21] — Revamp Purchase Input & Bulk Input Massal UI/UX and Code Cleanup
+
+**Tipe:** Mayor
+**Modul:** Purchases (create.php)
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **UI/UX Revamp of Purchase Input**: Refactor and streamline the standard cart and modal bulk input forms to use the unified modern propagation engine.
+- **Unified Price Propagation Engine**: Main item level modifications (buy price, PPN, and discounts) dynamically scale and propagate across all other packaging sizes automatically, with flat discount rupiah values scaling based on quantity ratios and percentage discounts applying uniformly.
+- **Mini Pricing statistics Table**: Standardized interactive tables for each item rendering Modal Nett (after discount and PPN), Ecer, and Grosir prices with their margins dynamically computed in real-time.
+- **Smart Price Trend Banner**: Integrated a visual price change comparison comparing the calculated unit cost of the purchase against the last purchased supplier price.
+- **Code Cleanup**: Removed massive chunks of obsolete, duplicate, and redundant code (totaling ~850 lines) from `app/views/purchases/create.php` that were causing potential runtime and structural overlaps in the script block.
+
+### File yang Diubah/Dibuat
+- `app/views/purchases/create.php` — Complete UI overhaul, implementation of modern unified propagation, and deletion of duplicate/redundant code.
+
+### Catatan
+- Successfully ran PHP linter (`php -l`) and confirmed file is syntactically flawless.
+- Changes are fully committed and pushed to GitHub main branch.
+
+---
+
 ## [2026-05-21] — Database AI Invoice Prompt Sync & User Level Akses Style Consistency
 
 **Tipe:** Minor
