@@ -1419,139 +1419,586 @@ function updateMarginDisplay(tempId, buy, retail, wholesale) {
 
 
 
-/** Build mini packaging summary for Daftar Barang view */
-function buildPkgMiniSummaryHtml(item) {
-    if (!item.packagings || item.packagings.length <= 1) return '';
-    const otherPkgs = item.packagings.filter(p => p.level != item.level);
-    if (otherPkgs.length === 0) return '';
-    const curPkg = item.packagings.find(p => p.level == item.level);
-    const curBaseQty = parseFloat(curPkg?.base_qty) || 1;
-    const nett = item.harga_nett || item.buy_price || 0;
-    const nettPerPcs = nett / curBaseQty;
-    const rows = otherPkgs.map(pkg => {
+// ═══════════════════════════════════════════════════════════
+// UNIFIED PRICE PROPAGATION ENGINE
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Propagate buy price/PPN/diskon from the selected packaging level
+ * to all other levels, respecting custom flags.
+ * @param {object} item - purchase item object
+ */
+function propagateFromMainInputs(item) {
+    const selPkg = item.packagings.find(p => p.level == item.level);
+    if (!selPkg) return;
+
+    const selBaseQty = parseFloat(selPkg.base_qty) || 1;
+    const buyPrice   = parseFloat(item.buy_price) || 0;
+    const buyPerPcs  = buyPrice / selBaseQty;
+
+    item.packagings.forEach(pkg => {
         const bq = parseFloat(pkg.base_qty) || 1;
-        const nb = Math.round(nettPerPcs * bq);
-        const ret = parseFloat(pkg.sell_price_retail) || 0;
-        const who = parseFloat(pkg.sell_price_wholesale) || 0;
-        const mR = (nb > 0 && ret > 0) ? ((ret - nb) / ret * 100).toFixed(1) : null;
-        const mW = (nb > 0 && who > 0) ? ((who - nb) / who * 100).toFixed(1) : null;
-        const cR = mR !== null ? (parseFloat(mR) >= 10 ? 'var(--success)' : parseFloat(mR) >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
-        const cW = mW !== null ? (parseFloat(mW) >= 5 ? 'var(--success)' : parseFloat(mW) >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
-        return '<div style="background:rgba(0,0,0,0.12);border-radius:6px;padding:6px 8px;margin-bottom:4px;border:1px solid rgba(255,255,255,0.04);">'
-            + '<div style="font-size:9px;font-weight:700;color:var(--primary);margin-bottom:4px;"><i class="bi bi-box-seam"></i> ' + pkg.unit_name + ' <span style="font-weight:400;color:var(--text-muted);">(Isi ' + bq + ' pcs)</span></div>'
-            + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;font-size:9px;">'
-            + '<div style="background:rgba(0,0,0,0.2);padding:4px 6px;border-radius:4px;"><div style="color:var(--text-muted);font-size:8px;">Modal</div><div style="font-weight:600;font-size:10px;">' + (nb > 0 ? 'Rp'+nb.toLocaleString('id-ID') : '—') + '</div></div>'
-            + '<div style="background:rgba(0,0,0,0.2);padding:4px 6px;border-radius:4px;"><div style="color:var(--text-muted);font-size:8px;">Ecer</div><div style="font-weight:600;color:var(--success);font-size:10px;">' + (ret > 0 ? 'Rp'+ret.toLocaleString('id-ID') : '—') + '</div>' + (mR !== null ? '<div style="color:'+cR+';font-size:8px;">'+mR+'%</div>' : '') + '</div>'
-            + '<div style="background:rgba(0,0,0,0.2);padding:4px 6px;border-radius:4px;"><div style="color:var(--text-muted);font-size:8px;">Grosir</div><div style="font-weight:600;color:var(--warning);font-size:10px;">' + (who > 0 ? 'Rp'+who.toLocaleString('id-ID') : '—') + '</div>' + (mW !== null ? '<div style="color:'+cW+';font-size:8px;">'+mW+'%</div>' : '') + '</div>'
-            + '</div></div>';
-    }).join('');
-    return '<div style="margin-top:8px;border-top:1px dashed rgba(255,255,255,0.08);padding-top:8px;"><div style="font-size:9px;color:var(--info);font-weight:600;margin-bottom:6px;"><i class="bi bi-info-circle-fill"></i> Info harga kemasan lain</div>' + rows + '</div>';
+
+        // --- Buy Price ---
+        if (!pkg.buy_custom) {
+            pkg.buy_price = Math.round(buyPerPcs * bq);
+        }
+
+        // --- PPN (uniform) ---
+        pkg.ppn_pct = item.ppn_pct || 0;
+
+        // --- Diskon ---
+        if (item.diskon_mode === 'pct') {
+            pkg.diskon_mode  = 'pct';
+            pkg.diskon_value = item.diskon_value || 0;
+        } else {
+            // Rupiah: scale proportionally by base_qty ratio
+            pkg.diskon_mode  = 'rp';
+            pkg.diskon_value = Math.round((item.diskon_value || 0) * (bq / selBaseQty));
+        }
+
+        // --- Nett ---
+        pkg.harga_nett = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
+
+        // --- Sell prices (if not custom, scale from selected level) ---
+        if (!pkg.sell_custom) {
+            const selRetPerPcs = (parseFloat(selPkg.sell_price_retail) || 0) / selBaseQty;
+            const selWhoPerPcs = (parseFloat(selPkg.sell_price_wholesale) || 0) / selBaseQty;
+            pkg.sell_price_retail    = Math.round(selRetPerPcs * bq);
+            pkg.sell_price_wholesale = Math.round(selWhoPerPcs * bq);
+        }
+    });
 }
+
+/**
+ * Build the unified mini pricing table HTML (all packaging levels)
+ * @param {object} item - purchase item object
+ */
+function buildMiniPricingTableHtml(item) {
+    if (!item.packagings || item.packagings.length === 0) return '';
+
+    const rows = item.packagings.map(pkg => {
+        const buy  = parseFloat(pkg.buy_price) || 0;
+        const ppn  = parseFloat(pkg.ppn_pct) || 0;
+        const dm   = pkg.diskon_mode || 'rp';
+        const dv   = parseFloat(pkg.diskon_value) || 0;
+        const nett = calcItemNett(buy, ppn, dm, dv);
+        const ret  = parseFloat(pkg.sell_price_retail) || 0;
+        const who  = parseFloat(pkg.sell_price_wholesale) || 0;
+
+        const mR = (nett > 0 && ret > 0) ? ((ret - nett) / ret * 100) : null;
+        const mW = (nett > 0 && who > 0) ? ((who - nett) / who * 100) : null;
+        const cR = mR !== null ? (mR >= 10 ? 'var(--success)' : mR >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
+        const cW = mW !== null ? (mW >= 5  ? 'var(--success)' : mW >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
+        const isSelected = (pkg.level == item.level);
+
+        return `<tr style="${isSelected ? 'background:rgba(230,57,70,0.08);' : ''}">
+            <td style="padding:5px 6px;font-size:10px;font-weight:600;color:${isSelected ? 'var(--primary)' : 'var(--text-muted)'}">
+                ${isSelected ? '<i class="bi bi-arrow-right-short"></i>' : ''} ${pkg.unit_name}
+                <span style="font-size:9px;font-weight:400;color:var(--text-muted);">×${pkg.base_qty}</span>
+            </td>
+            <td style="padding:5px 6px;font-size:10px;text-align:right;">
+                <span style="font-weight:700;">${nett > 0 ? 'Rp' + Math.round(nett).toLocaleString('id-ID') : '—'}</span>
+                ${ppn > 0 || dv > 0 ? `<div style="font-size:8px;color:var(--text-muted);">(+${ppn}%PPN${dv > 0 ? ' −Disc' : ''})</div>` : ''}
+            </td>
+            <td style="padding:5px 6px;font-size:10px;text-align:right;">
+                <span style="color:var(--success);font-weight:600;">${ret > 0 ? 'Rp' + ret.toLocaleString('id-ID') : '—'}</span>
+                ${mR !== null ? `<div style="color:${cR};font-size:8px;">${mR.toFixed(1)}%</div>` : ''}
+            </td>
+            <td style="padding:5px 6px;font-size:10px;text-align:right;">
+                <span style="color:var(--warning);font-weight:600;">${who > 0 ? 'Rp' + who.toLocaleString('id-ID') : '—'}</span>
+                ${mW !== null ? `<div style="color:${cW};font-size:8px;">${mW.toFixed(1)}%</div>` : ''}
+            </td>
+        </tr>`;
+    }).join('');
+
+    return `<div style="margin-top:10px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid rgba(255,255,255,0.06);">
+        <table style="width:100%;border-collapse:collapse;">
+            <thead>
+                <tr style="background:rgba(255,255,255,0.04);">
+                    <th style="padding:5px 6px;font-size:9px;font-weight:600;color:var(--text-muted);text-align:left;">Kemasan</th>
+                    <th style="padding:5px 6px;font-size:9px;font-weight:600;color:var(--text-muted);text-align:right;">Modal Nett</th>
+                    <th style="padding:5px 6px;font-size:9px;font-weight:600;color:var(--success);text-align:right;">Jual Ecer</th>
+                    <th style="padding:5px 6px;font-size:9px;font-weight:600;color:var(--warning);text-align:right;">Jual Grosir</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>
+    </div>`;
+}
+
+/**
+ * Build the price trend banner comparing new buy price with last buy price
+ * @param {object} item - purchase item object
+ */
+function buildTrendBannerHtml(item) {
+    const selPkg      = item.packagings.find(p => p.level == item.level);
+    const selBaseQty  = parseFloat(selPkg?.base_qty) || 1;
+    const buyPerPcs   = (parseFloat(item.buy_price) || 0) / selBaseQty;
+    const lastBuy     = parseFloat(item.last_buy_price) || 0;
+
+    if (lastBuy <= 0) {
+        if (buyPerPcs > 0) {
+            return `<div style="margin-top:8px;padding:7px 10px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.08);font-size:10px;color:var(--text-muted);">
+                <i class="bi bi-info-circle"></i> Produk baru — belum ada histori harga sebelumnya
+            </div>`;
+        }
+        return '';
+    }
+
+    if (buyPerPcs <= 0) return '';
+
+    const diff = Math.round(buyPerPcs - lastBuy);
+    const diffAbs = Math.abs(diff);
+    let icon, color, bg, label;
+
+    if (diff === 0) {
+        icon  = 'bi-check-circle-fill'; color = 'var(--success)'; bg = 'rgba(40,167,69,0.1)';
+        label = `<strong>Stabil</strong> — Harga modal /pcs sama dengan harga terakhir (Rp${Math.round(lastBuy).toLocaleString('id-ID')})`;
+    } else if (diff > 0) {
+        icon  = 'bi-graph-up-arrow'; color = 'var(--warning)'; bg = 'rgba(255,193,7,0.1)';
+        label = `<strong>Naik Rp${diffAbs.toLocaleString('id-ID')}</strong> dari harga terakhir <span style="opacity:0.7">(Rp${Math.round(lastBuy).toLocaleString('id-ID')} → Rp${Math.round(buyPerPcs).toLocaleString('id-ID')} /pcs)</span>`;
+    } else {
+        icon  = 'bi-graph-down-arrow'; color = 'var(--info)'; bg = 'rgba(76,201,240,0.1)';
+        label = `<strong>Turun Rp${diffAbs.toLocaleString('id-ID')}</strong> dari harga terakhir <span style="opacity:0.7">(Rp${Math.round(lastBuy).toLocaleString('id-ID')} → Rp${Math.round(buyPerPcs).toLocaleString('id-ID')} /pcs)</span>`;
+    }
+
+    return `<div style="margin-top:8px;padding:7px 10px;border-radius:var(--radius-sm);background:${bg};border:1px solid ${color}30;font-size:10px;color:${color};display:flex;align-items:flex-start;gap:6px;">
+        <i class="bi ${icon}" style="margin-top:1px;flex-shrink:0;"></i>
+        <span>${label}</span>
+    </div>`;
+}
+
+/**
+ * Build the collapsible drawer rows (per-packaging level detail editor)
+ * @param {object} item - purchase item object  
+ * @param {string} prefix - unique prefix ('item' or 'bulk')
+ */
+function buildDrawerRowHtml(item, prefix) {
+    const uid = item.id;
+    let html  = '';
+
+    item.packagings.forEach(pkg => {
+        const isLevel1  = (pkg.level == 1);
+        const bq        = parseFloat(pkg.base_qty) || 1;
+        const buy       = parseFloat(pkg.buy_price) || 0;
+        const ppn       = parseFloat(pkg.ppn_pct) || 0;
+        const dm        = pkg.diskon_mode || 'rp';
+        const dv        = parseFloat(pkg.diskon_value) || 0;
+        const nett      = calcItemNett(buy, ppn, dm, dv);
+        const ret       = parseFloat(pkg.sell_price_retail) || 0;
+        const who       = parseFloat(pkg.sell_price_wholesale) || 0;
+        const origBuy   = parseFloat(pkg._orig_buy) || 0;
+        const origRet   = parseFloat(pkg._orig_ret) || 0;
+        const isSelected = (pkg.level == item.level);
+
+        // Price change badge vs original DB price
+        let changeBadge = '';
+        if (origBuy > 0 && buy !== origBuy) {
+            const d = Math.abs(Math.round(buy - origBuy));
+            changeBadge = buy > origBuy
+                ? `<span style="font-size:9px;background:var(--warning-bg);color:var(--warning);padding:1px 5px;border-radius:8px;"><i class="bi bi-arrow-up-right"></i> Naik Rp${d.toLocaleString('id-ID')}</span>`
+                : `<span style="font-size:9px;background:var(--info-bg);color:var(--info);padding:1px 5px;border-radius:8px;"><i class="bi bi-arrow-down-right"></i> Turun Rp${d.toLocaleString('id-ID')}</span>`;
+        } else if (origBuy > 0) {
+            changeBadge = `<span style="font-size:9px;background:var(--success-bg);color:var(--success);padding:1px 5px;border-radius:8px;"><i class="bi bi-check"></i> Sama</span>`;
+        }
+
+        // Saran harga jual berdasarkan margin lama
+        let suggestHtml = '';
+        if (origBuy > 0 && origRet > 0 && origBuy < origRet) {
+            const prevMgn = (origRet - origBuy) / origRet;
+            if (prevMgn > 0 && prevMgn < 1) {
+                const sug = Math.round(buy / (1 - prevMgn));
+                suggestHtml = `<div style="font-size:9px;color:var(--info);margin-bottom:6px;"><i class="bi bi-lightbulb"></i> Saran ecer (margin ${(prevMgn*100).toFixed(1)}%): <strong>Rp${sug.toLocaleString('id-ID')}</strong></div>`;
+            }
+        }
+
+        // Tier rows
+        const tiers = pkg.qty_prices || [];
+        const tierRowsHtml = tiers.map(t => {
+            const th = Math.round((parseFloat(t.min_qty)||0) * (parseFloat(t.unit_price)||0));
+            return `<div class="drawer-tier-row" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:4px;margin-bottom:4px;align-items:center;">
+                <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;" placeholder="Min Qty" value="${t.min_qty}" min="1">
+                <input type="number" class="form-control-dark drawer-tier-total" style="font-size:10px;padding:4px;color:var(--success);" placeholder="Total Harga" value="${th}" min="0" oninput="recalcTierHint(this)">
+                <select class="form-select-dark drawer-tier-mode" style="font-size:10px;padding:4px;">
+                    <option value="both" ${t.sale_mode==='both'?'selected':''}>Semua</option>
+                    <option value="retail" ${t.sale_mode==='retail'?'selected':''}>Ecer</option>
+                    <option value="wholesale" ${t.sale_mode==='wholesale'?'selected':''}>Grosir</option>
+                </select>
+                <button type="button" onclick="this.closest('.drawer-tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;"><i class="bi bi-x"></i></button>
+            </div>`;
+        }).join('');
+
+        html += `
+        <div class="drawer-pkg-row" data-level="${pkg.level}" data-base-qty="${bq}" data-pkg-id="${pkg.id || ''}" style="border:1px solid ${isSelected ? 'var(--primary)' : 'var(--border-color)'};border-radius:var(--radius-md);padding:12px;margin-bottom:10px;background:${isSelected ? 'rgba(230,57,70,0.05)' : 'var(--surface-2)'};">
+            <div style="font-weight:700;font-size:12px;margin-bottom:10px;color:${isSelected ? 'var(--primary)' : 'var(--text-primary)'};display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+                ${isSelected ? '<i class="bi bi-arrow-right-short"></i>' : '<i class="bi bi-box-seam" style="opacity:0.5"></i>'}
+                ${pkg.unit_name} <span style="font-weight:400;font-size:10px;color:var(--text-muted);">× ${bq} pcs</span>
+                ${changeBadge}
+            </div>
+
+            <!-- Harga Modal / Beli -->
+            <div style="margin-bottom:8px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                    <label style="font-size:10px;color:var(--text-muted);">Harga Modal / Beli</label>
+                    ${origBuy > 0 ? `<span style="font-size:9px;color:var(--text-muted);">Sebelumnya: Rp${Math.round(origBuy).toLocaleString('id-ID')}</span>` : ''}
+                </div>
+                ${!isLevel1 ? `<label class="price-custom-toggle buy-custom-toggle ${pkg.buy_custom ? 'active' : ''}" style="margin-bottom:4px;" title="Custom harga modal">
+                    <input type="checkbox" class="chk-buy-custom" ${pkg.buy_custom ? 'checked' : ''} onchange="onDrawerCustomToggle('${prefix}', ${uid}, ${pkg.level}, 'buy', this.checked)">
+                    <i class="bi bi-pencil-square" style="font-size:10px;"></i> Harga Modal Custom
+                </label>` : ''}
+                <input type="number" class="form-control-dark drawer-pkg-buy" step="0.01" style="width:100%;font-size:12px;padding:6px;" value="${buy}" placeholder="0"
+                       oninput="onDrawerBuyInput('${prefix}', ${uid}, ${pkg.level}, this.value)">
+                ${!isLevel1 ? `<div class="price-locked-note buy-locked-note ${pkg.buy_custom ? '' : 'visible'}" style="font-size:9px;color:var(--info);margin-top:3px;"><i class="bi bi-link-45deg"></i> Otomatis dari pcs × isi</div>` : ''}
+            </div>
+
+            <!-- PPN & Diskon info (read-only display, from main inputs) -->
+            <div style="background:rgba(76,201,240,0.06);border:1px dashed rgba(76,201,240,0.25);border-radius:4px;padding:6px 8px;margin-bottom:8px;font-size:9px;">
+                <span style="color:var(--info);font-weight:600;"><i class="bi bi-receipt"></i> PPN &amp; Diskon</span>
+                &nbsp;|&nbsp;
+                PPN: <strong>${ppn}%</strong>
+                &nbsp;|&nbsp;
+                Diskon: <strong>${dm === 'pct' ? dv + '%' : 'Rp' + Math.round(dv).toLocaleString('id-ID')}</strong>
+                &nbsp;|&nbsp;
+                Nett: <strong style="color:var(--info);">Rp${Math.round(nett).toLocaleString('id-ID')}</strong>
+            </div>
+
+            ${suggestHtml}
+
+            <!-- Harga Jual -->
+            ${!isLevel1 ? `<label class="price-custom-toggle sell-custom-toggle ${pkg.sell_custom ? 'active' : ''}" style="margin-bottom:4px;" title="Custom harga jual">
+                <input type="checkbox" class="chk-sell-custom" ${pkg.sell_custom ? 'checked' : ''} onchange="onDrawerCustomToggle('${prefix}', ${uid}, ${pkg.level}, 'sell', this.checked)">
+                <i class="bi bi-tag" style="font-size:10px;"></i> Harga Jual Custom
+            </label>` : ''}
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
+                <div>
+                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">Jual Ecer</label>
+                    <input type="number" class="form-control-dark drawer-pkg-ret" style="width:100%;font-size:12px;padding:6px;color:var(--success);" value="${ret}"
+                           oninput="onDrawerSellInput('${prefix}', ${uid}, ${pkg.level}, 'retail', this.value)">
+                </div>
+                <div>
+                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">Jual Grosir</label>
+                    <input type="number" class="form-control-dark drawer-pkg-who" style="width:100%;font-size:12px;padding:6px;color:var(--warning);" value="${who}"
+                           oninput="onDrawerSellInput('${prefix}', ${uid}, ${pkg.level}, 'wholesale', this.value)">
+                </div>
+            </div>
+            ${!isLevel1 ? `<div class="price-locked-note sell-locked-note ${pkg.sell_custom ? '' : 'visible'}" style="font-size:9px;color:var(--info);margin-top:-2px;margin-bottom:6px;"><i class="bi bi-link-45deg"></i> Otomatis dari pcs × isi</div>` : ''}
+
+            <!-- Margin display -->
+            <div class="drawer-margin-info" style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:8px;">
+                <span class="drawer-margin-retail">${formatMarginWithProfit('Ecer', nett, ret)}</span>
+                <span class="drawer-margin-wholesale">${formatMarginWithProfit('Grosir', nett, who)}</span>
+            </div>
+
+            <!-- Tier Pricing -->
+            <div style="border-top:1px dashed var(--border-color);padding-top:8px;margin-top:4px;">
+                <div style="font-size:10px;font-weight:600;color:var(--info);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
+                    <span><i class="bi bi-layers"></i> Harga Tier / Kuantitas</span>
+                    <button type="button" onclick="addDrawerTierRow(this)" style="background:var(--info-bg);color:var(--info);border:none;border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;"><i class="bi bi-plus"></i> Tambah</button>
+                </div>
+                <div style="font-size:9px;color:var(--text-muted);margin-bottom:3px;display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:4px;"><span>Min Qty</span><span>Total Harga</span><span>Mode</span><span></span></div>
+                <div class="drawer-tier-rows-container">${tierRowsHtml}</div>
+                ${tiers.length === 0 ? `<div class="drawer-tier-empty" style="font-size:9px;color:var(--text-muted);text-align:center;padding:4px;"><i class="bi bi-info-circle"></i> Belum ada harga tier. Klik Tambah.</div>` : ''}
+            </div>
+        </div>`;
+    });
+
+    return html;
+}
+
+/** Toggle collapse/expand of item drawer */
+function toggleItemDrawer(uid) {
+    const drawer  = document.getElementById(`drawer_${uid}`);
+    const btn     = document.getElementById(`drawer_btn_${uid}`);
+    if (!drawer || !btn) return;
+    const isOpen = drawer.style.display !== 'none';
+    drawer.style.display = isOpen ? 'none' : 'block';
+    btn.innerHTML = isOpen
+        ? '<i class="bi bi-tags"></i> Ubah Harga Kemasan Lainnya'
+        : '<i class="bi bi-chevron-up"></i> Tutup Panel Kemasan';
+    btn.style.borderStyle = isOpen ? 'dashed' : 'solid';
+    if (!isOpen) {
+        // When opening, trigger margin recalc on all drawer rows
+        drawer.querySelectorAll('.drawer-pkg-row').forEach(row => {
+            refreshDrawerRowMargin(row);
+        });
+        // Initialize custom toggle states
+        drawer.querySelectorAll('.drawer-pkg-row').forEach(row => {
+            const buyNote  = row.querySelector('.buy-locked-note');
+            const sellNote = row.querySelector('.sell-locked-note');
+            const buyToggle  = row.querySelector('.buy-custom-toggle');
+            const sellToggle = row.querySelector('.sell-custom-toggle');
+            if (buyToggle) {
+                const chk = buyToggle.querySelector('input');
+                buyToggle.classList.toggle('active', chk?.checked || false);
+            }
+            if (sellToggle) {
+                const chk = sellToggle.querySelector('input');
+                sellToggle.classList.toggle('active', chk?.checked || false);
+            }
+        });
+    }
+}
+
+/** Add new tier row to drawer */
+function addDrawerTierRow(btn) {
+    const container = btn.closest('.drawer-pkg-row').querySelector('.drawer-tier-rows-container');
+    const emptyHint = btn.closest('.drawer-pkg-row').querySelector('.drawer-tier-empty');
+    if (emptyHint) emptyHint.remove();
+    const row = document.createElement('div');
+    row.className = 'drawer-tier-row';
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:4px;margin-bottom:4px;align-items:center;';
+    row.innerHTML = `
+        <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;" placeholder="Min Qty" min="1">
+        <input type="number" class="form-control-dark drawer-tier-total" style="font-size:10px;padding:4px;color:var(--success);" placeholder="Total Harga" min="0" oninput="recalcTierHint(this)">
+        <select class="form-select-dark drawer-tier-mode" style="font-size:10px;padding:4px;">
+            <option value="both">Semua</option><option value="retail">Ecer</option><option value="wholesale">Grosir</option>
+        </select>
+        <button type="button" onclick="this.closest('.drawer-tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;"><i class="bi bi-x"></i></button>`;
+    container.appendChild(row);
+}
+
+/** Recalc margin display for a single drawer-pkg-row element */
+function refreshDrawerRowMargin(rowEl) {
+    const buy   = parseFloat(rowEl.querySelector('.drawer-pkg-buy')?.value) || 0;
+    const ppn   = parseFloat(rowEl.closest('[data-item-ppn]')?.dataset.itemPpn || rowEl.closest('.item-card')?.dataset.ppn || 0);
+    const nett  = calcItemNett(buy, ppn, 'rp', 0); // simplified; the row shows nett from badges
+    const ret   = parseFloat(rowEl.querySelector('.drawer-pkg-ret')?.value) || 0;
+    const who   = parseFloat(rowEl.querySelector('.drawer-pkg-who')?.value) || 0;
+    const rEl   = rowEl.querySelector('.drawer-margin-retail');
+    const wEl   = rowEl.querySelector('.drawer-margin-wholesale');
+    if (rEl) rEl.innerHTML = formatMarginWithProfit('Ecer', buy, ret);
+    if (wEl) wEl.innerHTML = formatMarginWithProfit('Grosir', buy, who);
+}
+
+/**
+ * Called when user types in drawer buy input.
+ * Only updates the item's pkg data; does NOT re-propagate to other levels
+ * (user is editing this level manually, buy_custom must be set).
+ */
+function onDrawerBuyInput(prefix, uid, level, newVal) {
+    const item = purchaseItems.find(i => i.id == uid);
+    if (!item) return;
+    const pkg  = item.packagings.find(p => p.level == level);
+    if (!pkg)  return;
+    pkg.buy_price = parseFloat(newVal) || 0;
+    pkg.harga_nett = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
+    // Update mini table live
+    refreshMiniTableForItem(uid);
+    // Update margin in drawer row
+    const rowEl = document.querySelector(`#drawer_${uid} .drawer-pkg-row[data-level="${level}"]`);
+    if (rowEl) refreshDrawerRowMargin(rowEl);
+}
+
+function onDrawerSellInput(prefix, uid, level, type, newVal) {
+    const item = purchaseItems.find(i => i.id == uid);
+    if (!item) return;
+    const pkg  = item.packagings.find(p => p.level == level);
+    if (!pkg)  return;
+    if (type === 'retail')    pkg.sell_price_retail    = parseFloat(newVal) || 0;
+    if (type === 'wholesale') pkg.sell_price_wholesale = parseFloat(newVal) || 0;
+    refreshMiniTableForItem(uid);
+    const rowEl = document.querySelector(`#drawer_${uid} .drawer-pkg-row[data-level="${level}"]`);
+    if (rowEl) refreshDrawerRowMargin(rowEl);
+}
+
+function onDrawerCustomToggle(prefix, uid, level, priceType, isCustom) {
+    const item = purchaseItems.find(i => i.id == uid);
+    if (!item) return;
+    const pkg  = item.packagings.find(p => p.level == level);
+    if (!pkg)  return;
+    if (priceType === 'buy')  pkg.buy_custom  = isCustom;
+    if (priceType === 'sell') pkg.sell_custom = isCustom;
+    const rowEl = document.querySelector(`#drawer_${uid} .drawer-pkg-row[data-level="${level}"]`);
+    if (!rowEl) return;
+    if (priceType === 'buy') {
+        const toggle = rowEl.querySelector('.buy-custom-toggle');
+        const note   = rowEl.querySelector('.buy-locked-note');
+        if (toggle) toggle.classList.toggle('active', isCustom);
+        if (note)   note.style.display = isCustom ? 'none' : 'block';
+        if (!isCustom) {
+            // Re-sync buy from main
+            const selPkg = item.packagings.find(p => p.level == item.level);
+            const buyPcs = (parseFloat(item.buy_price) || 0) / (parseFloat(selPkg?.base_qty) || 1);
+            pkg.buy_price = Math.round(buyPcs * (parseFloat(pkg.base_qty) || 1));
+            const inp = rowEl.querySelector('.drawer-pkg-buy');
+            if (inp) inp.value = pkg.buy_price;
+        }
+    } else {
+        const toggle = rowEl.querySelector('.sell-custom-toggle');
+        const note   = rowEl.querySelector('.sell-locked-note');
+        if (toggle) toggle.classList.toggle('active', isCustom);
+        if (note)   note.style.display = isCustom ? 'none' : 'block';
+        if (!isCustom) {
+            const selPkg = item.packagings.find(p => p.level == item.level);
+            const bqSel  = parseFloat(selPkg?.base_qty) || 1;
+            const bqThis = parseFloat(pkg.base_qty) || 1;
+            pkg.sell_price_retail    = Math.round((parseFloat(selPkg.sell_price_retail)||0) / bqSel * bqThis);
+            pkg.sell_price_wholesale = Math.round((parseFloat(selPkg.sell_price_wholesale)||0) / bqSel * bqThis);
+            const retInp = rowEl.querySelector('.drawer-pkg-ret');
+            const whoInp = rowEl.querySelector('.drawer-pkg-who');
+            if (retInp) retInp.value = pkg.sell_price_retail;
+            if (whoInp) whoInp.value = pkg.sell_price_wholesale;
+        }
+    }
+    refreshMiniTableForItem(uid);
+}
+
+/** Refreshes the mini pricing table without re-rendering the full card */
+function refreshMiniTableForItem(uid) {
+    const item   = purchaseItems.find(i => i.id == uid);
+    if (!item) return;
+    const tblEl  = document.getElementById(`mini_table_${uid}`);
+    if (tblEl)  tblEl.innerHTML = buildMiniPricingTableHtml(item);
+    const trendEl = document.getElementById(`trend_banner_${uid}`);
+    if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(item);
+}
+
+/** Collect drawer data back into item.packagings before submit */
+function collectDrawerDataForItem(item) {
+    const drawerEl = document.getElementById(`drawer_${item.id}`);
+    if (!drawerEl) return;
+    drawerEl.querySelectorAll('.drawer-pkg-row').forEach(async row => {
+        const level  = parseInt(row.dataset.level);
+        const pkgId  = row.dataset.pkgId;
+        const pkg    = item.packagings.find(p => p.level == level);
+        if (!pkg) return;
+        pkg.buy_price            = parseFloat(row.querySelector('.drawer-pkg-buy')?.value) || pkg.buy_price;
+        pkg.sell_price_retail    = parseFloat(row.querySelector('.drawer-pkg-ret')?.value) || pkg.sell_price_retail;
+        pkg.sell_price_wholesale = parseFloat(row.querySelector('.drawer-pkg-who')?.value) || pkg.sell_price_wholesale;
+        pkg.buy_custom  = row.querySelector('.chk-buy-custom')?.checked  || false;
+        pkg.sell_custom = row.querySelector('.chk-sell-custom')?.checked || false;
+        pkg.harga_nett  = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
+
+        // Collect tier prices
+        const tiers = [];
+        row.querySelectorAll('.drawer-tier-row').forEach(tr => {
+            const minQty = parseFloat(tr.querySelector('.drawer-tier-min-qty')?.value) || 0;
+            const totalH = parseFloat(tr.querySelector('.drawer-tier-total')?.value) || 0;
+            const mode   = tr.querySelector('.drawer-tier-mode')?.value || 'both';
+            if (minQty > 0 && totalH > 0) tiers.push({ min_qty: minQty, unit_price: totalH / minQty, sale_mode: mode });
+        });
+        pkg.qty_prices = tiers;
+
+        // Save tier prices to DB if pkg has an ID
+        if (pkgId) {
+            try {
+                await fetch(`${BASE_URL}api/packagings/${pkgId}/qty-prices`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfVal },
+                    body: JSON.stringify({ tiers, csrf_token: csrfVal })
+                });
+            } catch(e) { console.warn('Tier save error:', e); }
+        }
+    });
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER CART — Unified Simplified Layout
+// ═══════════════════════════════════════════════════════════
 
 function renderCart() {
     emptyState.style.display = purchaseItems.length === 0 ? 'flex' : 'none';
     countBadge.textContent = `${purchaseItems.length} Item`;
-    
+
     let html = '';
     purchaseItems.forEach(item => {
-        const levelOptions = item.packagings.map(p => 
+        // Ensure orig prices are stored for comparison (first time only)
+        item.packagings.forEach(pkg => {
+            if (pkg._orig_buy === undefined) pkg._orig_buy = parseFloat(pkg.buy_price) || 0;
+            if (pkg._orig_ret === undefined) pkg._orig_ret = parseFloat(pkg.sell_price_retail) || 0;
+            if (!pkg.qty_prices) pkg.qty_prices = [];
+        });
+
+        const levelOptions = item.packagings.map(p =>
             `<option value="${p.level}" ${p.level == item.level ? 'selected' : ''}>${p.unit_name} (Isi ${p.base_qty})</option>`
         ).join('');
 
-        const p_unit = item.packagings.find(p => p.level == item.level)?.unit_name || 'pcs';
+        const selPkg    = item.packagings.find(p => p.level == item.level) || item.packagings[0];
+        const selBaseQty = parseFloat(selPkg?.base_qty) || 1;
+        const totalVal  = Math.round((item.quantity || 1) * (item.buy_price || 0));
+        const hasPkgs   = item.packagings.length > 1;
+        const miniTable = buildMiniPricingTableHtml(item);
+        const trendBanner = buildTrendBannerHtml(item);
+        const drawerHtml  = hasPkgs ? buildDrawerRowHtml(item, 'item') : '';
 
         html += `
-            <div style="background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;border:1px solid var(--border-color);position:relative;">
-                <button onclick="removeItem(${item.id})" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--danger);font-size:1.2rem;cursor:pointer;"><i class="bi bi-x-circle-fill"></i></button>
-                <div style="font-weight:600;font-size:var(--font-size-sm);margin-bottom:12px;padding-right:24px;">${item.name}</div>
-                
-                <div style="display:flex;gap:8px;margin-bottom:12px;">
-                    <div style="flex:1;">
-                        <label style="font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:4px;">
-                            <span>Kemasan</span>
-                            <a href="<?= BASE_URL ?>settings/master-data" target="_blank" style="color:var(--info);text-decoration:none;"><i class="bi bi-box-arrow-up-right"></i> Master Data</a>
-                        </label>
-                        <select class="form-select-dark" style="width:100%;padding:8px;font-size:12px;" onchange="changeLevel(${item.id}, this.value)">
-                            ${levelOptions}
-                        </select>
-                    </div>
-                    <div style="width:70px;">
-                        <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Qty</label>
-                        <input type="number" class="form-control-dark" style="width:100%;padding:8px;font-size:12px;text-align:center;" value="${item.quantity}" min="1" oninput="updateItem(${item.id}, 'quantity', this.value)">
-                    </div>
+        <div class="item-card" id="item_card_${item.id}" data-ppn="${item.ppn_pct || 0}" style="background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;border:1px solid var(--border-color);position:relative;">
+            <!-- Remove button -->
+            <button onclick="removeItem(${item.id})" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--danger);font-size:1.2rem;cursor:pointer;"><i class="bi bi-x-circle-fill"></i></button>
+
+            <!-- Product Name -->
+            <div style="font-weight:700;font-size:var(--font-size-sm);margin-bottom:12px;padding-right:28px;color:var(--text-primary);">${item.name}</div>
+
+            <!-- ── ROW 1: Kemasan + Qty ── -->
+            <div style="display:flex;gap:8px;margin-bottom:10px;">
+                <div style="flex:2;">
+                    <label style="font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:4px;">
+                        <span>Kemasan Beli</span>
+                        <a href="<?= BASE_URL ?>settings/master-data" target="_blank" style="color:var(--info);text-decoration:none;font-size:9px;"><i class="bi bi-box-arrow-up-right"></i> Master</a>
+                    </label>
+                    <select class="form-select-dark" style="width:100%;padding:8px;font-size:12px;" onchange="changeLevel(${item.id}, this.value)">
+                        ${levelOptions}
+                    </select>
                 </div>
-
-                <div style="background:rgba(0,0,0,0.15);padding:10px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.05);">
-                    ${item.level > 1 ? `
-                    <label class="price-custom-toggle buy-custom-toggle" style="margin-bottom:4px;" title="Centang untuk mengatur harga modal secara manual pada level ini">
-                        <input type="checkbox" class="chk-buy-custom" onchange="toggleCustomPrice(${item.id}, 'buy', this.checked)">
-                        <i class="bi bi-pencil-square" style="font-size:10px;"></i> Harga Modal Custom
-                    </label>` : ''}
-                    <div style="display:flex;gap:8px;margin-bottom:8px;">
-                        <div id="total_wrap_${item.id}" style="flex:1;${item.buy_price > 0 ? '' : 'display:none;'}">
-                            <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Total Belanja (Otomatis hitung /pcs)</label>
-                            <input type="number" id="total_input_${item.id}" class="form-control-dark" style="width:100%;padding:8px;font-size:12px;color:var(--info);background:rgba(0,0,0,0.2);" placeholder="Total Harga" value="${item.buy_price > 0 ? Math.round(item.total) : ''}" oninput="updateItemTotal(${item.id}, this.value)">
-                            <div id="total_info_${item.id}" style="font-size:10px;margin-top:4px;min-height:14px;"></div>
-                        </div>
-                        <div style="flex:1;">
-                            <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Harga Modal/Beli (per ${p_unit})</label>
-                            <input type="number" class="form-control-dark buy-price pkg-buy" step="0.01" style="width:100%;padding:8px;font-size:12px;" value="${item.buy_price}" oninput="updateItem(${item.id}, 'buy_price', this.value)">
-                        </div>
-                    </div>
-                    ${item.level > 1 ? `<div class="price-locked-note buy-locked-note" style="font-size:10px;color:var(--info);margin-top:-4px;margin-bottom:8px;"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs × isi kemasan</div>` : ''}
-
-                    <div style="background:rgba(76,201,240,0.06);border:1px dashed rgba(76,201,240,0.3);border-radius:var(--radius-sm);padding:8px;margin-bottom:8px;">
-                        <div style="font-size:10px;color:var(--info);font-weight:600;margin-bottom:6px;"><i class="bi bi-receipt"></i> PPN &amp; Diskon per Barang</div>
-                        <div style="display:grid;grid-template-columns:1fr 2fr;gap:6px;margin-bottom:6px;">
-                            <div>
-                                <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">PPN (%)</label>
-                                <input type="number" class="form-control-dark item-ppn" style="width:100%;padding:6px;font-size:11px;" value="${item.ppn_pct || 0}" min="0" max="100" placeholder="0" oninput="updateItemPpnDiskon(${item.id}, 'ppn', this.value)">
-                            </div>
-                            <div>
-                                <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">Diskon</label>
-                                <div style="display:flex;gap:4px;">
-                                    <select class="form-select-dark item-diskon-mode" style="width:60px;padding:6px;font-size:10px;" onchange="updateItemPpnDiskon(${item.id}, 'mode', this.value)">
-                                        <option value="rp" ${(item.diskon_mode||'rp')==='rp'?'selected':''}>Rp</option>
-                                        <option value="pct" ${(item.diskon_mode||'rp')==='pct'?'selected':''}>%</option>
-                                    </select>
-                                    <input type="number" class="form-control-dark item-diskon-value" style="flex:1;padding:6px;font-size:11px;" value="${item.diskon_value || 0}" min="0" placeholder="0" oninput="updateItemPpnDiskon(${item.id}, 'diskon', this.value)">
-                                </div>
-                            </div>
-                        </div>
-                        <div id="nett_info_${item.id}" style="min-height:14px;">${buildNettInfo(item)}</div>
-                    </div>
-
-                    ${item.level > 1 ? `
-                    <label class="price-custom-toggle sell-custom-toggle" style="margin-bottom:4px;" title="Centang untuk mengatur harga jual secara manual">
-                        <input type="checkbox" class="chk-sell-custom" onchange="toggleCustomPrice(${item.id}, 'sell', this.checked)">
-                        <i class="bi bi-tag" style="font-size:10px;"></i> Harga Jual Custom
-                    </label>` : ''}
-                    <div style="display:flex;gap:8px;margin-bottom:8px;">
-                        <div style="flex:1;">
-                            <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Jual Ecer</label>
-                            <input type="number" class="form-control-dark retail-price pkg-ret" style="width:100%;padding:8px;font-size:12px;color:var(--success);" value="${item.sell_price_retail}" oninput="updateItem(${item.id}, 'sell_price_retail', this.value)">
-                        </div>
-                        <div style="flex:1;">
-                            <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Jual Grosir</label>
-                            <input type="number" class="form-control-dark wholesale-price pkg-wholesale" style="width:100%;padding:8px;font-size:12px;color:var(--warning);" value="${item.sell_price_wholesale}" oninput="updateItem(${item.id}, 'sell_price_wholesale', this.value)">
-                        </div>
-                    </div>
-                    <div id="margin_info_${item.id}" style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:8px;">
-                        <span id="margin_retail_${item.id}">${formatMarginWithProfit('Ecer', item.harga_nett || item.buy_price, item.sell_price_retail)}</span>
-                        <span id="margin_wholesale_${item.id}">${formatMarginWithProfit('Grosir', item.harga_nett || item.buy_price, item.sell_price_wholesale)}</span>
-                    </div>
-                    ${item.level > 1 ? `<div class="price-locked-note sell-locked-note" style="font-size:10px;color:var(--info);margin-top:-4px;margin-bottom:8px;"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs × isi kemasan</div>` : ''}
-                    ${item.packagings.length > 1 ? `
-                    <button type="button" onclick="openAllPackagingsModal(${item.id})" style="width:100%;background:var(--surface-2);color:var(--primary);border:1px dashed var(--border-color);padding:8px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;">
-                        <i class="bi bi-tags"></i> Atur Harga Kemasan Lainnya
-                    </button>
-                    ${buildPkgMiniSummaryHtml(item)}
-                    ` : ''}
+                <div style="flex:1;">
+                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Qty Beli</label>
+                    <input type="number" class="form-control-dark" style="width:100%;padding:8px;font-size:12px;text-align:center;" value="${item.quantity}" min="0.01" step="0.01"
+                           oninput="onMainInputChange(${item.id}, 'qty', this.value)">
                 </div>
             </div>
-        `;
+
+            <!-- ── ROW 2: Total Harga ── -->
+            <div style="margin-bottom:10px;">
+                <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Total Harga Pembelian</label>
+                <input type="number" id="main_total_${item.id}" class="form-control-dark" style="width:100%;padding:8px;font-size:13px;font-weight:600;color:var(--info);"
+                       value="${totalVal > 0 ? totalVal : ''}" placeholder="Masukkan total harga..."
+                       oninput="onMainInputChange(${item.id}, 'total', this.value)">
+            </div>
+
+            <!-- ── ROW 3: PPN + Diskon ── -->
+            <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:4px;">
+                <div>
+                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">PPN (%)</label>
+                    <input type="number" class="form-control-dark item-ppn" style="width:100%;padding:8px;font-size:12px;" value="${item.ppn_pct || 0}" min="0" max="100" placeholder="0"
+                           oninput="onMainInputChange(${item.id}, 'ppn', this.value)">
+                </div>
+                <div>
+                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Diskon</label>
+                    <div style="display:flex;gap:4px;">
+                        <select class="form-select-dark item-diskon-mode" style="width:65px;padding:8px;font-size:11px;" onchange="onMainInputChange(${item.id}, 'diskon_mode', this.value)">
+                            <option value="rp" ${(item.diskon_mode||'rp')==='rp'?'selected':''}>Rp</option>
+                            <option value="pct" ${(item.diskon_mode||'rp')==='pct'?'selected':''}}>%</option>
+                        </select>
+                        <input type="number" class="form-control-dark item-diskon-value" style="flex:1;padding:8px;font-size:12px;" value="${item.diskon_value || 0}" min="0" placeholder="0"
+                               oninput="onMainInputChange(${item.id}, 'diskon_value', this.value)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Mini Pricing Table ── -->
+            <div id="mini_table_${item.id}">${miniTable}</div>
+
+            <!-- ── Trend Banner ── -->
+            <div id="trend_banner_${item.id}">${trendBanner}</div>
+
+            ${hasPkgs ? `
+            <!-- ── Drawer Toggle Button ── -->
+            <button id="drawer_btn_${item.id}" type="button" onclick="toggleItemDrawer(${item.id})"
+                    style="width:100%;margin-top:10px;background:var(--surface-2);color:var(--primary);border:1px dashed var(--border-color);padding:9px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;">
+                <i class="bi bi-tags"></i> Ubah Harga Kemasan Lainnya
+            </button>
+
+            <!-- ── Collapsible Drawer ── -->
+            <div id="drawer_${item.id}" style="display:none;margin-top:10px;">
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;padding:8px;background:rgba(0,0,0,0.1);border-radius:var(--radius-sm);">
+                    <i class="bi bi-info-circle"></i> Harga modal dihitung otomatis. PPN & Diskon sama untuk semua kemasan. Centang "Custom" untuk mengunci harga individual.
+                </div>
+                ${drawerHtml}
+            </div>` : ''}
+        </div>`;
     });
-    
+
     if (purchaseItems.length > 0) {
         itemsContainer.innerHTML = html;
         itemsContainer.appendChild(emptyState);
@@ -1559,39 +2006,97 @@ function renderCart() {
         itemsContainer.innerHTML = '';
         itemsContainer.appendChild(emptyState);
     }
-    
-    // Initialize locked notes as visible by default for non-custom prices
-    purchaseItems.forEach(item => {
-        if (item.level > 1) {
-            const row = document.querySelector(`[oninput="updateItem(${item.id}, 'buy_price', this.value)"]`)?.closest('[style*="rgba(0,0,0,0.15)"]');
-            if (row) {
-                const pkg = item.packagings.find(p => p.level == item.level);
-                const buyNote = row.querySelector('.buy-locked-note');
-                const sellNote = row.querySelector('.sell-locked-note');
-                const buyToggle = row.querySelector('.buy-custom-toggle');
-                const sellToggle = row.querySelector('.sell-custom-toggle');
-                
-                // Set checkbox states based on pkg flags
-                if (buyToggle) {
-                    buyToggle.querySelector('input').checked = pkg.buy_custom || false;
-                    buyToggle.classList.toggle('active', pkg.buy_custom || false);
-                }
-                if (sellToggle) {
-                    sellToggle.querySelector('input').checked = pkg.sell_custom || false;
-                    sellToggle.classList.toggle('active', pkg.sell_custom || false);
-                }
-                
-                // Show locked notes by default if not custom
-                if (buyNote) buyNote.style.display = pkg.buy_custom ? 'none' : 'block';
-                if (sellNote) sellNote.style.display = pkg.sell_custom ? 'none' : 'block';
-            }
-        }
-    });
-    
+
     calculateTotal();
 }
 
+/** Unified main input change handler for the regular cart */
+function onMainInputChange(uid, field, val) {
+    const item = purchaseItems.find(i => i.id == uid);
+    if (!item) return;
+
+    if (field === 'ppn')         item.ppn_pct      = parseFloat(val) || 0;
+    if (field === 'diskon_mode') item.diskon_mode  = val || 'rp';
+    if (field === 'diskon_value') item.diskon_value = parseFloat(val) || 0;
+
+    if (field === 'qty') {
+        item.quantity = parseFloat(val) || 0;
+        // Recalculate total from qty × buy_price
+        item.total = item.quantity * (item.buy_price || 0);
+        const totalInp = document.getElementById(`main_total_${uid}`);
+        if (totalInp && item.buy_price > 0) totalInp.value = Math.round(item.total);
+    }
+
+    if (field === 'total') {
+        const total = parseFloat(val) || 0;
+        const qty   = item.quantity || 1;
+        const selPkg = item.packagings.find(p => p.level == item.level);
+        const bq    = parseFloat(selPkg?.base_qty) || 1;
+        if (total > 0 && qty > 0) {
+            // Total Harga = qty × buy_price_per_pkg → buy_price_per_pkg = total / qty
+            item.buy_price = Math.round(total / qty);
+            item.total     = total;
+            // Update the current level packaging too
+            if (selPkg) selPkg.buy_price = item.buy_price;
+        }
+    }
+
+    // Propagate to all levels
+    propagateFromMainInputs(item);
+    // Sync item-level fields from the selected packaging
+    const selPkg2 = item.packagings.find(p => p.level == item.level);
+    if (selPkg2) {
+        item.harga_nett          = selPkg2.harga_nett;
+        item.sell_price_retail   = selPkg2.sell_price_retail;
+        item.sell_price_wholesale = selPkg2.sell_price_wholesale;
+    }
+
+    calculateTotal();
+    // Refresh mini table & trend banner
+    refreshMiniTableForItem(uid);
+    // If drawer is open, refresh drawer rows
+    refreshOpenDrawer(uid);
+}
+
+/** Refresh drawer content if it is currently open */
+function refreshOpenDrawer(uid) {
+    const drawer = document.getElementById(`drawer_${uid}`);
+    if (!drawer || drawer.style.display === 'none') return;
+    const item = purchaseItems.find(i => i.id == uid);
+    if (!item) return;
+    // Re-render only the PPN/Diskon info badges inside each drawer row
+    drawer.querySelectorAll('.drawer-pkg-row').forEach(rowEl => {
+        const level = parseInt(rowEl.dataset.level);
+        const pkg   = item.packagings.find(p => p.level == level);
+        if (!pkg) return;
+        const ppn   = pkg.ppn_pct || 0;
+        const dm    = pkg.diskon_mode || 'rp';
+        const dv    = pkg.diskon_value || 0;
+        const nett  = pkg.harga_nett || pkg.buy_price || 0;
+        // Update PPN/Diskon info label
+        const badgesEl = rowEl.querySelector('.pkg-ppn-diskon-badge');
+        if (badgesEl) {
+            badgesEl.innerHTML = `PPN: <strong>${ppn}%</strong> &nbsp;|&nbsp; Diskon: <strong>${dm === 'pct' ? dv + '%' : 'Rp' + Math.round(dv).toLocaleString('id-ID')}</strong> &nbsp;|&nbsp; Nett: <strong style="color:var(--info);">Rp${Math.round(nett).toLocaleString('id-ID')}</strong>`;
+        }
+        // Update buy input if not custom
+        if (!pkg.buy_custom) {
+            const buyInp = rowEl.querySelector('.drawer-pkg-buy');
+            if (buyInp) buyInp.value = Math.round(pkg.buy_price);
+        }
+        // Update sell inputs if not custom
+        if (!pkg.sell_custom) {
+            const retInp = rowEl.querySelector('.drawer-pkg-ret');
+            const whoInp = rowEl.querySelector('.drawer-pkg-who');
+            if (retInp) retInp.value = Math.round(pkg.sell_price_retail);
+            if (whoInp) whoInp.value = Math.round(pkg.sell_price_wholesale);
+        }
+        refreshDrawerRowMargin(rowEl);
+    });
+}
+
 async function submitPurchase() {
+    // Collect drawer data for all items before submitting
+    purchaseItems.forEach(item => collectDrawerDataForItem(item));
     if (purchaseItems.length === 0) {
         showToast('❌ Daftar belanja masih kosong! Tambahkan minimal 1 produk', 'warning');
         return;
@@ -1694,8 +2199,7 @@ async function openBulkInputModal() {
         showToast('Input bulk hanya untuk sales dengan supplier terpilih', 'warning');
         return;
     }
-    
-    // Fetch bulk products
+
     let products = [];
     try {
         let url = `${BASE_URL}api/suppliers/${currentSupplierId}/bulk-products`;
@@ -1705,605 +2209,392 @@ async function openBulkInputModal() {
         showToast('Gagal memuat daftar barang massal', 'error');
         return;
     }
-    
+
     if (!products || products.length === 0) {
         showToast('Belum ada histori produk untuk supplier ini', 'warning');
         return;
     }
-    
-    // Build HTML table for bulk list
-    let listHTML = products.map(p => {
-        let pkgs = p.packagings || [];
-        if (pkgs.length === 0) return '';
-        
-        let selectHtml = `<select class="bulk-pkg form-select-dark" style="width:100%; font-size:11px; padding:6px; margin-bottom:4px;" onchange="updateBulkPrices(this)">`;
-        pkgs.forEach(pkg => {
-            selectHtml += `<option value="${pkg.level}" data-pkg='${JSON.stringify(pkg).replace(/'/g, "&#39;")}'>${pkg.unit_name} (Isi ${pkg.base_qty})</option>`;
-        });
-        selectHtml += `</select>`;
-        
-        let defPkg = pkgs[0];
-        
-        let pkgEditHtml = '';
-        if (pkgs.length > 1) {
-            pkgEditHtml += `<div class="bulk-pkg-panel" style="display:none; margin-top:12px; border-top:1px dashed var(--border-color); padding-top:12px;">`;
-            pkgEditHtml += `<div style="font-size:10px; color:var(--info); margin-bottom:8px;">Atur Harga Semua Kemasan:</div>`;
-            pkgs.forEach((pkg, i) => {
-                const isLevel1 = pkg.level == 1;
-                pkgEditHtml += `
-                    <div class="pkg-edit-row packaging-level-edit" data-level="${pkg.level}" data-base-qty="${pkg.base_qty}" style="background:rgba(0,0,0,0.1); padding:8px; border-radius:4px; margin-bottom:4px;">
-                        <div style="font-size:11px; font-weight:600; margin-bottom:4px;">Level ${pkg.level}: ${pkg.unit_name} (Isi ${pkg.contained_qty || 1})</div>
-                        <div style="background:rgba(0,0,0,0.15);padding:8px;border-radius:4px;">
-                            ${!isLevel1 ? `
-                            <label class="price-custom-toggle buy-custom-toggle" style="font-size:9px;" title="Centang untuk mengatur harga modal secara manual">
-                                <input type="checkbox" class="chk-buy-custom" ${pkg.buy_custom ? 'checked' : ''}>
-                                <i class="bi bi-pencil-square" style="font-size:9px;"></i> Custom
-                            </label>` : ''}
-                            <div style="display:flex; gap:6px; margin-bottom:4px;">
-                                <div style="flex:1;"><label style="font-size:9px;color:var(--text-muted);">Modal</label><input type="number" class="pkg-buy buy-price form-control-dark" step="0.01" style="width:100%;font-size:10px;padding:4px;" value="${pkg.buy_price || 0}" oninput="onPkgModalInput(this, ${pkg.level})"></div>
-                            </div>
-                            ${!isLevel1 ? `<div class="price-locked-note buy-locked-note" style="font-size:8px;color:var(--info);margin-top:-2px;margin-bottom:4px;"><i class="bi bi-link-45deg"></i> Otomatis dari pcs × isi</div>` : ''}
 
-                            <div style="background:rgba(76,201,240,0.06);border:1px dashed rgba(76,201,240,0.3);border-radius:4px;padding:6px;margin-bottom:6px;">
-                                <div style="font-size:9px;color:var(--info);font-weight:600;margin-bottom:4px;"><i class="bi bi-receipt"></i> PPN &amp; Diskon</div>
-                                <div style="display:grid;grid-template-columns:1fr 2fr;gap:4px;margin-bottom:4px;">
-                                    <div>
-                                        <label style="font-size:8px;color:var(--text-muted);display:block;margin-bottom:2px;">PPN (%)</label>
-                                        <input type="number" class="pkg-ppn form-control-dark" style="width:100%;padding:3px;font-size:9px;" value="${pkg.ppn_pct || 0}" min="0" max="100" placeholder="0" oninput="onPkgModalInput(this, ${pkg.level})">
-                                    </div>
-                                    <div>
-                                        <label style="font-size:8px;color:var(--text-muted);display:block;margin-bottom:2px;">Diskon</label>
-                                        <div style="display:flex;gap:3px;">
-                                            <select class="pkg-diskon-mode form-select-dark" style="width:40px;padding:3px;font-size:8px;" onchange="onPkgModalInput(this, ${pkg.level})">
-                                                <option value="rp" ${(pkg.diskon_mode||'rp')==='rp'?'selected':''}>Rp</option>
-                                                <option value="pct" ${(pkg.diskon_mode||'rp')==='pct'?'selected':''}>%</option>
-                                            </select>
-                                            <input type="number" class="pkg-diskon-value form-control-dark" style="flex:1;padding:3px;font-size:9px;" value="${pkg.diskon_value || 0}" min="0" placeholder="0" oninput="onPkgModalInput(this, ${pkg.level})">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="pkg-nett-info" style="min-height:12px;font-size:8px;"></div>
-                            </div>
+    // Build temporary item-like objects for bulk items so we can reuse the same helpers
+    const bulkItems = products.map(p => {
+        const pkgs = (p.packagings || []).map(pkg => ({
+            ...pkg,
+            ppn_pct:      parseFloat(pkg.ppn_pct) || 0,
+            diskon_mode:  pkg.diskon_mode || 'rp',
+            diskon_value: parseFloat(pkg.diskon_value) || 0,
+            harga_nett:   parseFloat(pkg.buy_price) || 0,
+            buy_custom:   false,
+            sell_custom:  false,
+            qty_prices:   pkg.qty_prices || [],
+            _orig_buy:    parseFloat(pkg.buy_price) || 0,
+            _orig_ret:    parseFloat(pkg.sell_price_retail) || 0
+        }));
+        const defPkg = pkgs[0];
+        return {
+            id:                    'bulk_' + p.id,
+            product_id:            p.id,
+            name:                  p.full_name || p.short_label,
+            packagings:            pkgs,
+            level:                 defPkg?.level || 1,
+            unit_name:             defPkg?.unit_name || 'pcs',
+            quantity:              0,
+            buy_price:             parseFloat(defPkg?.buy_price) || 0,
+            sell_price_retail:     parseFloat(defPkg?.sell_price_retail) || 0,
+            sell_price_wholesale:  parseFloat(defPkg?.sell_price_wholesale) || 0,
+            last_buy_price:        parseFloat(p.last_buy_price) || parseFloat(defPkg?.buy_price) || 0,
+            total:                 0,
+            ppn_pct:               0,
+            diskon_mode:           'rp',
+            diskon_value:          0,
+            harga_nett:            parseFloat(defPkg?.buy_price) || 0
+        };
+    });
 
-                            ${!isLevel1 ? `
-                            <label class="price-custom-toggle sell-custom-toggle" style="font-size:9px;" title="Centang untuk mengatur harga jual secara manual">
-                                <input type="checkbox" class="chk-sell-custom" ${pkg.sell_custom ? 'checked' : ''}>
-                                <i class="bi bi-tag" style="font-size:9px;"></i> Custom
-                            </label>` : ''}
-                            <div style="display:flex; gap:6px;">
-                                <div style="flex:1;"><label style="font-size:9px;color:var(--text-muted);">Ecer</label><input type="number" class="pkg-ret retail-price pkg-ret form-control-dark" style="width:100%;font-size:10px;padding:4px;color:var(--success);" value="${pkg.sell_price_retail || 0}"></div>
-                                <div style="flex:1;"><label style="font-size:9px;color:var(--text-muted);">Grosir</label><input type="number" class="pkg-whole wholesale-price pkg-wholesale form-control-dark" style="width:100%;font-size:10px;padding:4px;color:var(--warning);" value="${pkg.sell_price_wholesale || 0}"></div>
-                            </div>
-                            ${!isLevel1 ? `<div class="price-locked-note sell-locked-note" style="font-size:8px;color:var(--info);margin-top:-2px;"><i class="bi bi-link-45deg"></i> Otomatis dari pcs × isi</div>` : ''}
-                            <div class="margin-calc pkg-margin-info" style="margin-top:4px;font-size:9px;color:var(--text-muted);display:flex;justify-content:space-between;">
-                                <span class="margin-retail-text">Margin: 0%</span>
-                                <span class="margin-wholesale-text">Margin: 0%</span>
-                            </div>
-                        </div>
-                            
-                            <!-- Tier Pricing for pkg-edit-row -->
-                            <div style="margin-top:8px;border-top:1px dashed var(--border-color);padding-top:6px;">
-                                <div style="font-size:10px;font-weight:600;color:var(--info);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
-                                    <span><i class="bi bi-layers"></i> Harga Tier / Kuantitas</span>
-                                    <button type="button" onclick="addBulkTierRow(this)" style="background:var(--info-bg);color:var(--info);border:none;border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;">+ Tambah</button>
-                                </div>
-                                <div style="font-size:9px;color:var(--text-muted);margin-bottom:3px;display:grid;grid-template-columns:1fr 1fr auto;gap:4px;"><span>Min Qty</span><span>Total Harga</span><span></span></div>
-                                <div class="bulk-tier-rows"></div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            pkgEditHtml += `<button type="button" class="btn-outline-custom" style="width:100%; padding:4px; font-size:10px; margin-top:8px;" onclick="syncBulkPkgPanel(this)">Terapkan Harga Kemasan</button>`;
-            pkgEditHtml += `</div>`;
-            
-            const otherPkgs = pkgs.filter(pkg => pkg.level != defPkg.level);
-            let miniSummaryHtml = '';
-            if (otherPkgs.length > 0) {
-                const miniRows = otherPkgs.map(pkg => {
-                    const buy  = parseFloat(pkg.buy_price) || 0;
-                    const ret  = parseFloat(pkg.sell_price_retail) || 0;
-                    const who  = parseFloat(pkg.sell_price_wholesale) || 0;
-                    const mRet = (buy > 0 && ret > 0)  ? ((ret - buy) / ret * 100).toFixed(1)  : null;
-                    const mWho = (buy > 0 && who > 0)  ? ((who - buy) / who * 100).toFixed(1)  : null;
-                    const pRet = (ret > 0 && buy > 0)  ? Math.round(ret - buy)  : null;
-                    const pWho = (who > 0 && buy > 0)  ? Math.round(who - buy)  : null;
+    // Render each bulk item card using the same helpers
+    const listHTML = bulkItems.map(item => {
+        const levelOptions = item.packagings.map(p =>
+            `<option value="${p.level}" ${p.level == item.level ? 'selected' : ''}>${p.unit_name} (Isi ${p.base_qty})</option>`
+        ).join('');
+        const hasPkgs    = item.packagings.length > 1;
+        const miniTable  = buildMiniPricingTableHtml(item);
+        const trendBanner = buildTrendBannerHtml(item);
+        const drawerHtml  = hasPkgs ? buildDrawerRowHtml(item, 'bulk') : '';
 
-                    const retColor = mRet !== null ? (parseFloat(mRet) >= 10 ? 'var(--success)' : parseFloat(mRet) >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
-                    const whoColor = mWho !== null ? (parseFloat(mWho) >= 5  ? 'var(--success)' : parseFloat(mWho) >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
-
-                    return `
-                    <div class="bulk-pkg-mini-row" data-level="${pkg.level}" style="background:rgba(0,0,0,0.12); border-radius:6px; padding:6px 8px; margin-bottom:4px; border:1px solid rgba(255,255,255,0.04);">
-                        <div style="font-size:9px; font-weight:700; color:var(--primary); margin-bottom:4px; letter-spacing:0.3px;">
-                            <i class="bi bi-box-seam" style="font-size:8px;"></i> ${pkg.unit_name}
-                            <span style="font-weight:400; color:var(--text-muted);">(Isi ${pkg.base_qty} pcs)</span>
-                            ${pkg.buy_custom ? '<span style="font-size:8px;background:var(--warning-bg);color:var(--warning);padding:1px 4px;border-radius:4px;margin-left:4px;">Custom</span>' : '<span style="font-size:8px;background:var(--info-bg);color:var(--info);padding:1px 4px;border-radius:4px;margin-left:4px;"><i class="bi bi-link-45deg" style="font-size:7px;"></i> Otomatis</span>'}
-                        </div>
-                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; font-size:9px;">
-                            <div style="background:rgba(0,0,0,0.2); padding:4px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.05);">
-                                <div style="color:var(--text-muted); font-size:8px; margin-bottom:2px;">Modal</div>
-                                <div style="font-weight:600; color:var(--text-primary); font-size:10px;">${buy > 0 ? 'Rp' + buy.toLocaleString('id-ID') : '<span style="color:var(--text-muted);">—</span>'}</div>
-                            </div>
-                            <div style="background:rgba(0,0,0,0.2); padding:4px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.05);">
-                                <div style="color:var(--text-muted); font-size:8px; margin-bottom:2px;">Ecer</div>
-                                <div style="font-weight:600; color:var(--success); font-size:10px;">${ret > 0 ? 'Rp' + ret.toLocaleString('id-ID') : '<span style="color:var(--text-muted);">—</span>'}</div>
-                                ${mRet !== null ? `<div style="color:${retColor}; font-size:8px;">${mRet}% &nbsp;+Rp${pRet.toLocaleString('id-ID')}</div>` : ''}
-                            </div>
-                            <div style="background:rgba(0,0,0,0.2); padding:4px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.05);">
-                                <div style="color:var(--text-muted); font-size:8px; margin-bottom:2px;">Grosir</div>
-                                <div style="font-weight:600; color:var(--warning); font-size:10px;">${who > 0 ? 'Rp' + who.toLocaleString('id-ID') : '<span style="color:var(--text-muted);">—</span>'}</div>
-                                ${mWho !== null ? `<div style="color:${whoColor}; font-size:8px;">${mWho}% &nbsp;+Rp${pWho.toLocaleString('id-ID')}</div>` : ''}
-                            </div>
-                        </div>
-                    </div>`;
-                }).join('');
-
-                miniSummaryHtml = `
-                <div class="bulk-pkg-mini-summary" style="margin-top:10px; border-top:1px dashed rgba(255,255,255,0.08); padding-top:8px;">
-                    <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px; display:flex; align-items:center; gap:4px;">
-                        <i class="bi bi-info-circle-fill" style="color:var(--info); font-size:9px;"></i>
-                        <span style="font-weight:600; color:var(--info);">Info harga kemasan lain</span>
-                        <span style="color:var(--text-muted);">— ubah jika perlu</span>
-                    </div>
-                    ${miniRows}
-                </div>`;
-            }
-
-            pkgEditHtml += miniSummaryHtml;
-
-            pkgEditHtml += `<button type="button" class="btn-outline-custom" style="width:100%; padding:6px; font-size:10px; margin-top:6px; border-style:dashed; border-color:var(--primary); color:var(--primary);" onclick="openBulkPkgPanel(this)">
-                <i class="bi bi-tags"></i> Ubah Harga Kemasan Lainnya
-            </button>`;
-        }
-        
         return `
-        <div class="bulk-item" data-product='${JSON.stringify(p).replace(/'/g, "&#39;")}' style="background:var(--surface-2); padding:10px; border-radius:var(--radius-sm); margin-bottom:8px;">
-            <div style="font-weight:600; font-size:12px; margin-bottom:8px; color:var(--text-primary);">${p.full_name || p.short_label}</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
-                <div>
-                    <label style="font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:2px;">
+        <div class="bulk-item" data-bulk-id="${item.id}" style="background:var(--surface-2);padding:12px;border-radius:var(--radius-md);margin-bottom:10px;border:1px solid var(--border-color);">
+            <div style="font-weight:700;font-size:12px;margin-bottom:10px;color:var(--text-primary);">${item.name}</div>
+
+            <!-- ── ROW 1: Kemasan + Qty ── -->
+            <div style="display:flex;gap:8px;margin-bottom:8px;">
+                <div style="flex:2;">
+                    <label style="font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:3px;">
                         <span>Kemasan Beli</span>
-                        <a href="<?= BASE_URL ?>settings/master-data" target="_blank" style="color:var(--info);text-decoration:none;"><i class="bi bi-box-arrow-up-right"></i> Master</a>
+                        <a href="<?= BASE_URL ?>settings/master-data" target="_blank" style="color:var(--info);text-decoration:none;font-size:9px;"><i class="bi bi-box-arrow-up-right"></i></a>
                     </label>
-                    ${selectHtml}
+                    <select class="form-select-dark bulk-pkg-select" style="width:100%;padding:6px;font-size:11px;" onchange="onBulkLevelChange('${item.id}', this.value)">
+                        ${levelOptions}
+                    </select>
                 </div>
-                <div>
-                    <label style="font-size:10px;color:var(--text-muted);">Qty Beli</label>
-                    <input type="number" class="bulk-qty form-control-dark" style="width:100%; font-size:11px;" placeholder="0" min="0" oninput="calcBulkFromTotal(this)">
-                </div>
-                <div>
-                    <label style="font-size:10px;color:var(--text-muted);">Total Harga</label>
-                    <input type="number" class="bulk-total form-control-dark" style="width:100%; font-size:11px; color:var(--primary);" placeholder="Total" min="0" oninput="calcBulkFromTotal(this)">
-                </div>
-            </div>
-            
-            <div style="background:rgba(0,0,0,0.15); padding:8px; border-radius:var(--radius-sm); margin-top:8px;">
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:10px;color:var(--text-muted);">Harga Modal / Beli</label>
-                    <div style="position:relative;">
-                        <input type="number" class="bulk-buy form-control-dark" step="0.01" style="width:100%; font-size:11px; padding-right:24px;" value="${defPkg.buy_price || p.last_buy_price || 0}" data-last-buy="${defPkg.buy_price || p.last_buy_price || 0}" oninput="calcBulkMargin(this); syncTotalFromBuy(this)">
-                        <span class="buy-indicator" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:12px;"></span>
-                    </div>
-                </div>
-
-                <div style="background:rgba(76,201,240,0.06);border:1px dashed rgba(76,201,240,0.3);border-radius:4px;padding:7px;margin-bottom:8px;">
-                    <div style="font-size:10px;color:var(--info);font-weight:600;margin-bottom:5px;"><i class="bi bi-receipt"></i> PPN &amp; Diskon</div>
-                    <div style="display:grid;grid-template-columns:1fr 2fr;gap:5px;margin-bottom:5px;">
-                        <div>
-                            <label style="font-size:9px;color:var(--text-muted);display:block;margin-bottom:2px;">PPN (%)</label>
-                            <input type="number" class="bulk-ppn form-control-dark" style="width:100%;font-size:10px;padding:4px;" value="${defPkg.ppn_pct || 0}" min="0" max="100" placeholder="0" oninput="calcBulkMargin(this)">
-                        </div>
-                        <div>
-                            <label style="font-size:9px;color:var(--text-muted);display:block;margin-bottom:2px;">Diskon</label>
-                            <div style="display:flex;gap:3px;">
-                                <select class="bulk-diskon-mode form-select-dark" style="width:52px;font-size:9px;padding:4px;" onchange="calcBulkMargin(this)">
-                                    <option value="rp" ${(defPkg.diskon_mode||'rp')==='rp'?'selected':''}>Rp</option>
-                                    <option value="pct" ${(defPkg.diskon_mode||'rp')==='pct'?'selected':''}>%</option>
-                                </select>
-                                <input type="number" class="bulk-diskon-value form-control-dark" style="flex:1;font-size:10px;padding:4px;" value="${defPkg.diskon_value || 0}" min="0" placeholder="0" oninput="calcBulkMargin(this)">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="bulk-nett-info" style="min-height:12px;font-size:9px;"></div>
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                    <div>
-                        <label style="font-size:10px;color:var(--text-muted);">Jual Ecer</label>
-                        <div style="position:relative;">
-                            <input type="number" class="bulk-ret form-control-dark" style="width:100%; font-size:11px; color:var(--success); padding-right:24px;" value="${defPkg.sell_price_retail || 0}" data-last-ret="${defPkg.sell_price_retail || 0}" oninput="calcBulkMargin(this)">
-                            <span class="ret-indicator" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:12px;"></span>
-                        </div>
-                        <div class="bulk-margin-ret" style="font-size:9px; color:var(--text-muted); margin-top:2px;">Margin: 0%</div>
-                    </div>
-                    <div>
-                        <label style="font-size:10px;color:var(--text-muted);">Jual Grosir</label>
-                        <div style="position:relative;">
-                            <input type="number" class="bulk-whole form-control-dark" style="width:100%; font-size:11px; color:var(--warning); padding-right:24px;" value="${defPkg.sell_price_wholesale || 0}" data-last-whole="${defPkg.sell_price_wholesale || 0}" oninput="calcBulkMargin(this)">
-                            <span class="whole-indicator" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:12px;"></span>
-                        </div>
-                        <div class="bulk-margin-whole" style="font-size:9px; color:var(--text-muted); margin-top:2px;">Margin: 0%</div>
-                    </div>
-                </div>
-                <!-- Tier Pricing for main level -->
-                <div style="margin-top:8px;border-top:1px dashed var(--border-color);padding-top:6px;">
-                    <div style="font-size:10px;font-weight:600;color:var(--info);margin-bottom:4px;display:flex;justify-content:space-between;align-items:center;">
-                        <span><i class="bi bi-layers"></i> Harga Tier / Kuantitas</span>
-                        <button type="button" onclick="addBulkTierRow(this)" style="background:var(--info-bg);color:var(--info);border:none;border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;">+ Tambah</button>
-                    </div>
-                    <div style="font-size:9px;color:var(--text-muted);margin-bottom:3px;display:grid;grid-template-columns:1fr 1fr auto;gap:4px;"><span>Min Qty</span><span>Total Harga</span><span></span></div>
-                    <div class="bulk-tier-rows"></div>
+                <div style="flex:1;">
+                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">Qty Beli</label>
+                    <input type="number" class="form-control-dark bulk-qty" style="width:100%;padding:6px;font-size:11px;text-align:center;" value="" min="0" step="0.01" placeholder="0"
+                           oninput="onBulkMainChange('${item.id}', 'qty', this.value)">
                 </div>
             </div>
-            ${pkgEditHtml}
-        </div>
-        `;
+
+            <!-- ── ROW 2: Total Harga ── -->
+            <div style="margin-bottom:8px;">
+                <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">Total Harga Pembelian</label>
+                <input type="number" class="form-control-dark bulk-total" style="width:100%;padding:7px;font-size:12px;font-weight:600;color:var(--info);" value="" placeholder="Kosongkan jika tidak dibeli..."
+                       oninput="onBulkMainChange('${item.id}', 'total', this.value)">
+            </div>
+
+            <!-- ── ROW 3: PPN + Diskon ── -->
+            <div style="display:grid;grid-template-columns:1fr 2fr;gap:6px;margin-bottom:4px;">
+                <div>
+                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">PPN (%)</label>
+                    <input type="number" class="form-control-dark bulk-ppn" style="width:100%;padding:6px;font-size:11px;" value="0" min="0" max="100" placeholder="0"
+                           oninput="onBulkMainChange('${item.id}', 'ppn', this.value)">
+                </div>
+                <div>
+                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">Diskon</label>
+                    <div style="display:flex;gap:3px;">
+                        <select class="form-select-dark bulk-diskon-mode" style="width:58px;padding:6px;font-size:10px;" onchange="onBulkMainChange('${item.id}', 'diskon_mode', this.value)">
+                            <option value="rp">Rp</option>
+                            <option value="pct">%</option>
+                        </select>
+                        <input type="number" class="form-control-dark bulk-diskon-value" style="flex:1;padding:6px;font-size:11px;" value="0" min="0" placeholder="0"
+                               oninput="onBulkMainChange('${item.id}', 'diskon_value', this.value)">
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Mini Pricing Table ── -->
+            <div class="bulk-mini-table">${miniTable}</div>
+
+            <!-- ── Trend Banner ── -->
+            <div class="bulk-trend-banner">${trendBanner}</div>
+
+            ${hasPkgs ? `
+            <!-- ── Drawer Toggle ── -->
+            <button class="bulk-drawer-btn" type="button" onclick="toggleBulkDrawer('${item.id}', this)"
+                    style="width:100%;margin-top:8px;background:var(--surface-1);color:var(--primary);border:1px dashed var(--border-color);padding:7px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;">
+                <i class="bi bi-tags"></i> Ubah Harga Kemasan Lainnya
+            </button>
+            <!-- ── Collapsible Drawer ── -->
+            <div class="bulk-drawer" style="display:none;margin-top:8px;">
+                <div style="font-size:9px;color:var(--text-muted);margin-bottom:8px;padding:6px;background:rgba(0,0,0,0.1);border-radius:var(--radius-sm);">
+                    <i class="bi bi-info-circle"></i> PPN & Diskon sama untuk semua kemasan. Centang "Custom" untuk mengunci harga individual.
+                </div>
+                ${drawerHtml}
+            </div>` : ''}
+        </div>`;
     }).join('');
-    
+
     AppModal.show({
         title: 'Input Barang Massal',
-        subtitle: `Isi Qty > 0 untuk produk yang dibeli`,
+        subtitle: 'Isi Total Harga > 0 untuk produk yang dibeli',
         bodyHTML: `
             <div style="margin-bottom:12px;">
-                <div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0 12px; display:flex; align-items:center;">
+                <div style="background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:0 12px;display:flex;align-items:center;">
                     <i class="bi bi-search" style="color:var(--text-muted);font-size:12px;"></i>
                     <input type="text" placeholder="Cari nama produk..." style="flex:1;border:none;background:transparent;padding:10px;color:var(--text-primary);font-size:12px;outline:none;" oninput="filterBulkModal(this.value)" autocomplete="off">
                 </div>
             </div>
-            <div style="max-height:55vh; overflow-y:auto; overflow-x:hidden; padding-right:4px;">${listHTML}</div>
+            <div style="max-height:58vh;overflow-y:auto;overflow-x:hidden;padding-right:2px;">${listHTML}</div>
         `,
         submitText: 'Tambahkan Terpilih',
-        onShown: () => {
-            // Initialize PackagingPriceSync for bulk modal panels
-            if (typeof PackagingPriceSync !== 'undefined') {
-                document.querySelectorAll('.bulk-pkg-panel').forEach(panel => {
-                    const levels = panel.querySelectorAll('.packaging-level-edit');
-                    levels.forEach(lv => PackagingPriceSync.bindLevel(lv));
-                });
-            }
-            // Initialize locked notes as visible by default
-            document.querySelectorAll('.bulk-pkg-panel .price-locked-note').forEach(note => {
-                note.style.display = 'block';
-            });
-        },
         onSubmit: () => {
-            const items = document.querySelectorAll('.bulk-item');
             let addedCount = 0;
-            items.forEach(item => {
-                const qtyInput = item.querySelector('.bulk-qty');
-                const qty = parseInt(qtyInput.value) || 0;
-                if (qty > 0) {
-                    const productStr = item.getAttribute('data-product');
-                    const product = JSON.parse(productStr);
-                    const pkgSelect = item.querySelector('.bulk-pkg');
-                    const selectedPkgStr = pkgSelect.options[pkgSelect.selectedIndex].getAttribute('data-pkg');
-                    const selectedPkg = JSON.parse(selectedPkgStr);
-                    
-                    const buyPrice = parseFloat(item.querySelector('.bulk-buy').value) || 0;
-                    const retPrice = parseFloat(item.querySelector('.bulk-ret').value) || 0;
-                    const wholePrice = parseFloat(item.querySelector('.bulk-whole').value) || 0;
-                    
-                    // Construct updated packagings if the user edited them inline
-                    let updatedPkgs = [...product.packagings];
-                    const editRows = item.querySelectorAll('.pkg-edit-row');
-                    if (editRows.length > 0) {
-                        editRows.forEach(row => {
-                            const lvl = parseInt(row.getAttribute('data-level'));
-                            const pb = parseFloat(row.querySelector('.pkg-buy').value) || 0;
-                            const pr = parseFloat(row.querySelector('.pkg-ret').value) || 0;
-                            const pw = parseFloat(row.querySelector('.pkg-whole').value) || 0;
-                            
-                            const pp = parseFloat(row.querySelector('.pkg-ppn').value) || 0;
-                            const dm = row.querySelector('.pkg-diskon-mode').value || 'rp';
-                            const dv = parseFloat(row.querySelector('.pkg-diskon-value').value) || 0;
-                            const hn = calcItemNett(pb, pp, dm, dv);
+            // Get all bulk items and their state from bulkItems array
+            document.querySelectorAll('.bulk-item').forEach(el => {
+                const bulkId   = el.dataset.bulkId;
+                const bulkItem = bulkItems.find(b => b.id == bulkId);
+                if (!bulkItem) return;
 
-                            const pIndex = updatedPkgs.findIndex(p => p.level == lvl);
-                            if (pIndex > -1) {
-                                updatedPkgs[pIndex].buy_price = pb;
-                                updatedPkgs[pIndex].sell_price_retail = pr;
-                                updatedPkgs[pIndex].sell_price_wholesale = pw;
-                                updatedPkgs[pIndex].ppn_pct = pp;
-                                updatedPkgs[pIndex].diskon_mode = dm;
-                                updatedPkgs[pIndex].diskon_value = dv;
-                                updatedPkgs[pIndex].harga_nett = hn;
-                            }
+                // Read current values from DOM
+                const qty   = parseFloat(el.querySelector('.bulk-qty')?.value) || 0;
+                if (qty <= 0) return;
+
+                const total = parseFloat(el.querySelector('.bulk-total')?.value) || 0;
+                if (total <= 0 && bulkItem.buy_price <= 0) return;
+
+                // Collect drawer data first
+                const drawerEl = el.querySelector('.bulk-drawer');
+                if (drawerEl) {
+                    drawerEl.querySelectorAll('.drawer-pkg-row').forEach(row => {
+                        const level = parseInt(row.dataset.level);
+                        const pkg   = bulkItem.packagings.find(p => p.level == level);
+                        if (!pkg) return;
+                        pkg.buy_price            = parseFloat(row.querySelector('.drawer-pkg-buy')?.value) || pkg.buy_price;
+                        pkg.sell_price_retail    = parseFloat(row.querySelector('.drawer-pkg-ret')?.value) || pkg.sell_price_retail;
+                        pkg.sell_price_wholesale = parseFloat(row.querySelector('.drawer-pkg-who')?.value) || pkg.sell_price_wholesale;
+                        pkg.buy_custom  = row.querySelector('.chk-buy-custom')?.checked  || false;
+                        pkg.sell_custom = row.querySelector('.chk-sell-custom')?.checked || false;
+                        pkg.harga_nett  = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
+                        const tiers = [];
+                        row.querySelectorAll('.drawer-tier-row').forEach(tr => {
+                            const minQty = parseFloat(tr.querySelector('.drawer-tier-min-qty')?.value) || 0;
+                            const totalH = parseFloat(tr.querySelector('.drawer-tier-total')?.value) || 0;
+                            const mode   = tr.querySelector('.drawer-tier-mode')?.value || 'both';
+                            if (minQty > 0 && totalH > 0) tiers.push({ min_qty: minQty, unit_price: totalH / minQty, sale_mode: mode });
                         });
-                        // also sync the selected level with the main inputs
-                        const curIndex = updatedPkgs.findIndex(p => p.level == selectedPkg.level);
-                        if (curIndex > -1) {
-                            updatedPkgs[curIndex].buy_price = buyPrice;
-                            updatedPkgs[curIndex].sell_price_retail = retPrice;
-                            updatedPkgs[curIndex].sell_price_wholesale = wholePrice;
-                            
-                            updatedPkgs[curIndex].ppn_pct = parseFloat(item.querySelector('.bulk-ppn').value) || 0;
-                            updatedPkgs[curIndex].diskon_mode = item.querySelector('.bulk-diskon-mode').value || 'rp';
-                            updatedPkgs[curIndex].diskon_value = parseFloat(item.querySelector('.bulk-diskon-value').value) || 0;
-                            updatedPkgs[curIndex].harga_nett = calcItemNett(buyPrice, updatedPkgs[curIndex].ppn_pct, updatedPkgs[curIndex].diskon_mode, updatedPkgs[curIndex].diskon_value);
-                        }
-                    } else {
-                        // Just update the selected packaging
-                        const curIndex = updatedPkgs.findIndex(p => p.level == selectedPkg.level);
-                        if (curIndex > -1) {
-                            updatedPkgs[curIndex].buy_price = buyPrice;
-                            updatedPkgs[curIndex].sell_price_retail = retPrice;
-                            updatedPkgs[curIndex].sell_price_wholesale = wholePrice;
-                            
-                            updatedPkgs[curIndex].ppn_pct = parseFloat(item.querySelector('.bulk-ppn').value) || 0;
-                            updatedPkgs[curIndex].diskon_mode = item.querySelector('.bulk-diskon-mode').value || 'rp';
-                            updatedPkgs[curIndex].diskon_value = parseFloat(item.querySelector('.bulk-diskon-value').value) || 0;
-                            updatedPkgs[curIndex].harga_nett = calcItemNett(buyPrice, updatedPkgs[curIndex].ppn_pct, updatedPkgs[curIndex].diskon_mode, updatedPkgs[curIndex].diskon_value);
-                        }
-                    }
-                    
-                    const existingItem = purchaseItems.find(i => i.product_id === product.id && i.level == selectedPkg.level);
-                    if (existingItem) {
-                        existingItem.quantity += qty;
-                        existingItem.buy_price = buyPrice;
-                        existingItem.sell_price_retail = retPrice;
-                        existingItem.sell_price_wholesale = wholePrice;
-                        existingItem.total = existingItem.quantity * buyPrice;
-                        existingItem.packagings = updatedPkgs;
-                        
-                        existingItem.ppn_pct = parseFloat(item.querySelector('.bulk-ppn').value) || 0;
-                        existingItem.diskon_mode = item.querySelector('.bulk-diskon-mode').value || 'rp';
-                        existingItem.diskon_value = parseFloat(item.querySelector('.bulk-diskon-value').value) || 0;
-                        existingItem.harga_nett = calcItemNett(buyPrice, existingItem.ppn_pct, existingItem.diskon_mode, existingItem.diskon_value);
-                    } else {
-                        purchaseItems.unshift({
-                            id: Date.now() + Math.random(),
-                            product_id: product.id,
-                            name: product.full_name || product.short_label,
-                            packagings: updatedPkgs,
-                            level: selectedPkg.level,
-                            unit_name: selectedPkg.unit_name,
-                            quantity: qty,
-                            buy_price: buyPrice,
-                            sell_price_retail: retPrice,
-                            sell_price_wholesale: wholePrice,
-                            total: qty * buyPrice,
-                            ppn_pct: parseFloat(item.querySelector('.bulk-ppn').value) || 0,
-                            diskon_mode: item.querySelector('.bulk-diskon-mode').value || 'rp',
-                            diskon_value: parseFloat(item.querySelector('.bulk-diskon-value').value) || 0,
-                            harga_nett: calcItemNett(buyPrice, parseFloat(item.querySelector('.bulk-ppn').value) || 0, item.querySelector('.bulk-diskon-mode').value || 'rp', parseFloat(item.querySelector('.bulk-diskon-value').value) || 0)
-                        });
-                    }
-                    addedCount++;
+                        pkg.qty_prices = tiers;
+                    });
                 }
+
+                // Sync selected level with main inputs
+                const selPkgEl = el.querySelector('.bulk-pkg-select');
+                const selLevel = parseInt(selPkgEl?.value) || bulkItem.level;
+                const ppn      = parseFloat(el.querySelector('.bulk-ppn')?.value) || 0;
+                const dm       = el.querySelector('.bulk-diskon-mode')?.value || 'rp';
+                const dv       = parseFloat(el.querySelector('.bulk-diskon-value')?.value) || 0;
+
+                bulkItem.ppn_pct      = ppn;
+                bulkItem.diskon_mode  = dm;
+                bulkItem.diskon_value = dv;
+
+                const selPkg = bulkItem.packagings.find(p => p.level == selLevel) || bulkItem.packagings[0];
+                const bq     = parseFloat(selPkg?.base_qty) || 1;
+                if (total > 0 && qty > 0) {
+                    bulkItem.buy_price = Math.round(total / qty);
+                    if (selPkg) selPkg.buy_price = bulkItem.buy_price;
+                }
+                bulkItem.level     = selLevel;
+                bulkItem.quantity  = qty;
+                bulkItem.total     = qty * bulkItem.buy_price;
+
+                // Propagate
+                propagateFromMainInputs(bulkItem);
+
+                const selPkgFinal = bulkItem.packagings.find(p => p.level == selLevel);
+                const existingItem = purchaseItems.find(i => i.product_id === bulkItem.product_id && i.level == selLevel);
+                if (existingItem) {
+                    existingItem.quantity              += qty;
+                    existingItem.buy_price              = bulkItem.buy_price;
+                    existingItem.sell_price_retail      = selPkgFinal?.sell_price_retail || 0;
+                    existingItem.sell_price_wholesale   = selPkgFinal?.sell_price_wholesale || 0;
+                    existingItem.total                  = existingItem.quantity * existingItem.buy_price;
+                    existingItem.packagings             = bulkItem.packagings;
+                    existingItem.ppn_pct               = ppn;
+                    existingItem.diskon_mode            = dm;
+                    existingItem.diskon_value           = dv;
+                    existingItem.harga_nett             = calcItemNett(existingItem.buy_price, ppn, dm, dv);
+                } else {
+                    purchaseItems.unshift({
+                        id:                   Date.now() + Math.random(),
+                        product_id:           bulkItem.product_id,
+                        name:                 bulkItem.name,
+                        packagings:           bulkItem.packagings,
+                        level:                selLevel,
+                        unit_name:            selPkgFinal?.unit_name || 'pcs',
+                        quantity:             qty,
+                        buy_price:            bulkItem.buy_price,
+                        sell_price_retail:    selPkgFinal?.sell_price_retail || 0,
+                        sell_price_wholesale: selPkgFinal?.sell_price_wholesale || 0,
+                        last_buy_price:       bulkItem.last_buy_price,
+                        total:                bulkItem.total,
+                        ppn_pct:              ppn,
+                        diskon_mode:          dm,
+                        diskon_value:         dv,
+                        harga_nett:           calcItemNett(bulkItem.buy_price, ppn, dm, dv)
+                    });
+                }
+                addedCount++;
             });
+
             if (addedCount > 0) {
                 renderCart();
-                showToast(`${addedCount} produk ditambahkan`, 'success');
+                showToast(`${addedCount} produk ditambahkan ke daftar`, 'success');
                 return true;
             } else {
-                showToast('Belum ada barang yang diisi Qty', 'warning');
+                showToast('Belum ada barang yang diisi Qty & Total Harga', 'warning');
                 return false;
             }
         }
     });
-    // Calculate margins immediately on load
-    setTimeout(() => {
-        document.querySelectorAll('.bulk-item').forEach(item => {
-            calcBulkMargin(item.querySelector('.bulk-buy'));
-        });
-    }, 100);
 }
 
-function calcBulkMargin(inputEl) {
-    const item = inputEl.closest('.bulk-item');
-    const buyInput = item.querySelector('.bulk-buy');
-    const retInput = item.querySelector('.bulk-ret');
-    const wholeInput = item.querySelector('.bulk-whole');
-    const buy = parseFloat(buyInput.value) || 0;
-    const ret = parseFloat(retInput.value) || 0;
-    const whole = parseFloat(wholeInput.value) || 0;
-
-    // Calculate nett price with PPN & Diskon
-    const ppn = parseFloat(item.querySelector('.bulk-ppn')?.value) || 0;
-    const diskonMode = item.querySelector('.bulk-diskon-mode')?.value || 'rp';
-    const diskonVal = parseFloat(item.querySelector('.bulk-diskon-value')?.value) || 0;
-    const nett = calcItemNett(buy, ppn, diskonMode, diskonVal);
-
-    // Update nett display
-    const nettEl = item.querySelector('.bulk-nett-info');
-    if (nettEl) {
-        if (ppn > 0 || diskonVal > 0) {
-            const ppnAmt = buy * ppn / 100;
-            const diskonAmt = diskonMode === 'pct' ? buy * diskonVal / 100 : diskonVal;
-            nettEl.innerHTML = '<span style="color:var(--text-muted);">Modal: Rp' + Math.round(buy).toLocaleString('id-ID') + '</span>'
-                + (ppn > 0 ? ' <span style="color:var(--warning);">+PPN: Rp' + Math.round(ppnAmt).toLocaleString('id-ID') + '</span>' : '')
-                + (diskonVal > 0 ? ' <span style="color:var(--success);">\u2212Diskon: Rp' + Math.round(diskonAmt).toLocaleString('id-ID') + '</span>' : '')
-                + ' \u2192 <strong style="color:var(--info);">Nett: Rp' + Math.round(nett).toLocaleString('id-ID') + '</strong>';
-        } else { nettEl.innerHTML = ''; }
-    }
-
-    // Update indicators
-    const setInd = (input, selector) => {
-        const last = parseFloat(input.getAttribute('data-last-' + selector.split('-')[1])) || 0;
-        const ind = item.querySelector('.' + selector.split('-')[1] + '-indicator');
-        if (!ind) return;
-        const val = parseFloat(input.value) || 0;
-        if (last === 0) ind.innerHTML = '';
-        else if (val > last) ind.innerHTML = '<i class="bi bi-arrow-up-right text-danger" title="Naik"></i>';
-        else if (val < last) ind.innerHTML = '<i class="bi bi-arrow-down-right text-success" title="Turun"></i>';
-        else ind.innerHTML = '<i class="bi bi-dash text-muted" title="Sama"></i>';
-    };
-    if (inputEl.classList.contains('bulk-buy')) setInd(buyInput, 'bulk-buy');
-    if (inputEl.classList.contains('bulk-ret')) setInd(retInput, 'bulk-ret');
-    if (inputEl.classList.contains('bulk-whole')) setInd(wholeInput, 'bulk-whole');
-    
-    const retMarginEl = item.querySelector('.bulk-margin-ret');
-    if (retMarginEl) {
-        if (buy > 0 && ret > 0) {
-            const m = ((ret - nett) / ret * 100).toFixed(1);
-            const profit = Math.round(ret - nett);
-            const color = m >= 10 ? 'var(--success)' : (m >= 0 ? 'var(--warning)' : 'var(--danger)');
-            retMarginEl.innerHTML = `Margin(Nett): <span style="color:${color};font-weight:600;">${m}%</span> <span style="font-size:8px;color:var(--text-muted);">(+Rp${profit.toLocaleString('id-ID')})</span>`;
-        } else { retMarginEl.innerHTML = 'Margin: 0%'; }
-    }
-    
-    const wholeMarginEl = item.querySelector('.bulk-margin-whole');
-    if (wholeMarginEl) {
-        if (buy > 0 && whole > 0) {
-            const m = ((whole - nett) / whole * 100).toFixed(1);
-            const profit = Math.round(whole - nett);
-            const color = m >= 5 ? 'var(--success)' : (m >= 0 ? 'var(--warning)' : 'var(--danger)');
-            wholeMarginEl.innerHTML = `Margin(Nett): <span style="color:${color};font-weight:600;">${m}%</span> <span style="font-size:8px;color:var(--text-muted);">(+Rp${profit.toLocaleString('id-ID')})</span>`;
-        } else { wholeMarginEl.innerHTML = 'Margin: 0%'; }
+/** Handle bulk item packaging level change */
+function onBulkLevelChange(bulkId, newLevel) {
+    const el      = document.querySelector(`.bulk-item[data-bulk-id="${bulkId}"]`);
+    if (!el) return;
+    // Read current total & qty, recalculate buy_price for new level
+    const qty   = parseFloat(el.querySelector('.bulk-qty')?.value) || 0;
+    const total = parseFloat(el.querySelector('.bulk-total')?.value) || 0;
+    if (qty > 0 && total > 0) {
+        // buy_price stays the same (total/qty), the level just changes display context
     }
 }
 
-function calcBulkFromTotal(inputEl) {
-    const item = inputEl.closest('.bulk-item');
-    const qty = parseFloat(item.querySelector('.bulk-qty').value) || 0;
-    const total = parseFloat(item.querySelector('.bulk-total').value) || 0;
-    const buyInput = item.querySelector('.bulk-buy');
-    
-    if (inputEl.classList.contains('bulk-total') && qty > 0) {
-        buyInput.value = Math.round(total / qty);
-        calcBulkMargin(buyInput);
-    } else if (inputEl.classList.contains('bulk-qty') && total > 0) {
-        buyInput.value = qty > 0 ? Math.round(total / qty) : 0;
-        calcBulkMargin(buyInput);
-    } else if (inputEl.classList.contains('bulk-qty') && parseFloat(buyInput.value) > 0) {
-        item.querySelector('.bulk-total').value = Math.round(qty * parseFloat(buyInput.value));
+/** Unified main input change handler for bulk items */
+function onBulkMainChange(bulkId, field, val) {
+    // Find the DOM element and re-render the mini table & trend banner
+    const el = document.querySelector(`.bulk-item[data-bulk-id="${bulkId}"]`);
+    if (!el) return;
+
+    const qty   = parseFloat(el.querySelector('.bulk-qty')?.value) || 0;
+    const total = parseFloat(el.querySelector('.bulk-total')?.value) || 0;
+    const ppn   = parseFloat(el.querySelector('.bulk-ppn')?.value) || 0;
+    const dm    = el.querySelector('.bulk-diskon-mode')?.value || 'rp';
+    const dv    = parseFloat(el.querySelector('.bulk-diskon-value')?.value) || 0;
+
+    // Compute buy_price from qty & total
+    let buyPerPkg = 0;
+    if (field === 'total' && qty > 0) {
+        buyPerPkg = Math.round(total / qty);
+    } else if (field === 'qty' && total > 0 && qty > 0) {
+        buyPerPkg = Math.round(total / qty);
+    } else if ((field === 'ppn' || field === 'diskon_mode' || field === 'diskon_value') && qty > 0 && total > 0) {
+        buyPerPkg = Math.round(total / qty);
     }
-}
 
-/** Open pkg panel and sync current prices into it */
-function openBulkPkgPanel(btn) {
-    const bulkItem = btn.closest('.bulk-item');
-    const panel = bulkItem.querySelector('.bulk-pkg-panel');
-    const isHidden = panel.style.display === 'none' || !panel.style.display;
-    panel.style.display = isHidden ? 'block' : 'none';
-    if (!isHidden) return;
-    // Sync main prices into panel rows
-    const pkgSelect = bulkItem.querySelector('.bulk-pkg');
-    const selectedPkg = JSON.parse(pkgSelect.options[pkgSelect.selectedIndex].getAttribute('data-pkg') || '{}');
-    const selectedBaseQty = parseFloat(selectedPkg.base_qty) || 1;
-    const buy = parseFloat(bulkItem.querySelector('.bulk-buy').value) || 0;
-    const ret = parseFloat(bulkItem.querySelector('.bulk-ret').value) || 0;
-    const whole = parseFloat(bulkItem.querySelector('.bulk-whole').value) || 0;
-    const buyPerPcs = buy / selectedBaseQty;
-    const retPerPcs = ret / selectedBaseQty;
-    const wholePerPcs = whole / selectedBaseQty;
-    bulkItem.querySelectorAll('.pkg-edit-row').forEach(row => {
-        const baseQty = parseFloat(row.getAttribute('data-base-qty')) || 1;
-        const isCustomBuy = row.querySelector('.chk-buy-custom')?.checked;
-        const isCustomSell = row.querySelector('.chk-sell-custom')?.checked;
-        if (!isCustomBuy) { const el = row.querySelector('.pkg-buy'); if (el) el.value = Math.round(buyPerPcs * baseQty); }
-        if (!isCustomSell) {
-            const r = row.querySelector('.pkg-ret'); if (r) r.value = Math.round(retPerPcs * baseQty);
-            const w = row.querySelector('.pkg-whole'); if (w) w.value = Math.round(wholePerPcs * baseQty);
-        }
-        
-        // Also sync PPN and diskon to the packaging panel row
-        const mainPpn = parseFloat(bulkItem.querySelector('.bulk-ppn').value) || 0;
-        const mainDiskonMode = bulkItem.querySelector('.bulk-diskon-mode').value || 'rp';
-        const mainDiskonVal = parseFloat(bulkItem.querySelector('.bulk-diskon-value').value) || 0;
-        
-        const rowPpnInput = row.querySelector('.pkg-ppn');
-        const rowDiskonModeSelect = row.querySelector('.pkg-diskon-mode');
-        const rowDiskonValInput = row.querySelector('.pkg-diskon-value');
-        
-        if (rowPpnInput) rowPpnInput.value = mainPpn;
-        if (rowDiskonModeSelect) rowDiskonModeSelect.value = mainDiskonMode;
-        if (rowDiskonValInput) rowDiskonValInput.value = mainDiskonVal;
+    if (buyPerPkg <= 0) return; // No data to propagate yet
 
-        // Update margin display
-        const buyInput = row.querySelector('.pkg-buy');
-        if (buyInput) onPkgModalInput(buyInput, row.getAttribute('data-level'));
+    // Get the packaging select value
+    const selPkgEl = el.querySelector('.bulk-pkg-select');
+    const selLevel = parseInt(selPkgEl?.value) || 1;
+
+    // Re-build a temporary item to compute the table
+    // Pull existing packaging data from a stored reference
+    // We'll compute from the packaging data stored in the select options or build minimal
+    // For now use a lightweight approach: find the drawer rows for package info
+    const drawerRows = el.querySelectorAll('.drawer-pkg-row');
+    let pkgs = [];
+    drawerRows.forEach(row => {
+        const level  = parseInt(row.dataset.level);
+        const bq     = parseFloat(row.dataset.baseQty) || 1;
+        pkgs.push({ level, base_qty: bq, buy_custom: false, sell_custom: false });
     });
-    if (typeof PackagingPriceSync !== 'undefined') {
-        const levels = panel.querySelectorAll('.packaging-level-edit');
-        levels.forEach(lv => PackagingPriceSync.bindLevel(lv));
+    if (pkgs.length === 0) return; // No packagings metadata available
+
+    // Find selected pkg base_qty
+    const selPkgData = pkgs.find(p => p.level == selLevel) || pkgs[0];
+    const selBq = parseFloat(selPkgData?.base_qty) || 1;
+    const buyPerPcs = buyPerPkg / selBq;
+
+    // Compute per-pkg nett for mini table
+    const pkgRows = pkgs.map(p => {
+        const bq   = parseFloat(p.base_qty) || 1;
+        const buy  = Math.round(buyPerPcs * bq);
+        const diskonAmt = dm === 'pct' ? buy * dv / 100 : Math.round(dv * bq / selBq);
+        const ppnAmt    = buy * ppn / 100;
+        const nett  = Math.max(0, buy + ppnAmt - diskonAmt);
+        // Get sell prices from drawer inputs
+        const rowEl = el.querySelector(`.drawer-pkg-row[data-level="${p.level}"]`);
+        const ret   = parseFloat(rowEl?.querySelector('.drawer-pkg-ret')?.value) || 0;
+        const who   = parseFloat(rowEl?.querySelector('.drawer-pkg-who')?.value) || 0;
+        const mR    = (nett > 0 && ret > 0) ? ((ret - nett) / ret * 100) : null;
+        const mW    = (nett > 0 && who > 0) ? ((who - nett) / who * 100) : null;
+        const cR    = mR !== null ? (mR >= 10 ? 'var(--success)' : mR >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
+        const cW    = mW !== null ? (mW >= 5  ? 'var(--success)' : mW >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
+        const isSelected = (p.level == selLevel);
+        return { level: p.level, unit_name: rowEl?.querySelector('.drawer-pkg-buy')?.closest('.drawer-pkg-row')?.querySelector('[style*="font-weight:700"]')?.textContent?.trim() || ('Level ' + p.level), base_qty: bq, nett, ret, who, mR, mW, cR, cW, isSelected, ppn, dm, dv };
+    });
+
+    // Build mini table HTML inline for bulk
+    const tblHtml = `<div style="margin-top:8px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid rgba(255,255,255,0.06);">
+        <table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="background:rgba(255,255,255,0.04);">
+                <th style="padding:5px 6px;font-size:9px;font-weight:600;color:var(--text-muted);text-align:left;">Kemasan</th>
+                <th style="padding:5px 6px;font-size:9px;font-weight:600;color:var(--text-muted);text-align:right;">Modal Nett</th>
+                <th style="padding:5px 6px;font-size:9px;font-weight:600;color:var(--success);text-align:right;">Jual Ecer</th>
+                <th style="padding:5px 6px;font-size:9px;font-weight:600;color:var(--warning);text-align:right;">Jual Grosir</th>
+            </tr></thead>
+            <tbody>${pkgRows.map(r => `<tr style="${r.isSelected ? 'background:rgba(230,57,70,0.08);' : ''}">
+                <td style="padding:5px 6px;font-size:10px;font-weight:600;color:${r.isSelected ? 'var(--primary)' : 'var(--text-muted)'}">Level ${r.level} <span style="font-size:9px;font-weight:400;">×${r.base_qty}</span></td>
+                <td style="padding:5px 6px;font-size:10px;text-align:right;"><span style="font-weight:700;">Rp${Math.round(r.nett).toLocaleString('id-ID')}</span>${r.ppn > 0 || r.dv > 0 ? `<div style="font-size:8px;color:var(--text-muted);">(+${r.ppn}%PPN)</div>` : ''}</td>
+                <td style="padding:5px 6px;font-size:10px;text-align:right;"><span style="color:var(--success);font-weight:600;">${r.ret > 0 ? 'Rp' + r.ret.toLocaleString('id-ID') : '—'}</span>${r.mR !== null ? `<div style="color:${r.cR};font-size:8px;">${r.mR.toFixed(1)}%</div>` : ''}</td>
+                <td style="padding:5px 6px;font-size:10px;text-align:right;"><span style="color:var(--warning);font-weight:600;">${r.who > 0 ? 'Rp' + r.who.toLocaleString('id-ID') : '—'}</span>${r.mW !== null ? `<div style="color:${r.cW};font-size:8px;">${r.mW.toFixed(1)}%</div>` : ''}</td>
+            </tr>`).join('')}</tbody>
+        </table>
+    </div>`;
+    const tblEl = el.querySelector('.bulk-mini-table');
+    if (tblEl) tblEl.innerHTML = tblHtml;
+
+    // Trend banner
+    const lastBuy = parseFloat(el.dataset.lastBuy) || 0;
+    const diff    = lastBuy > 0 ? Math.round(buyPerPcs - lastBuy) : 0;
+    const trendEl = el.querySelector('.bulk-trend-banner');
+    if (trendEl && lastBuy > 0 && buyPerPcs > 0) {
+        let icon, color, bg, label;
+        if (diff === 0) {
+            icon = 'bi-check-circle-fill'; color = 'var(--success)'; bg = 'rgba(40,167,69,0.1)';
+            label = `<strong>Stabil</strong> — sama dengan harga terakhir (Rp${Math.round(lastBuy).toLocaleString('id-ID')})`;
+        } else if (diff > 0) {
+            icon = 'bi-graph-up-arrow'; color = 'var(--warning)'; bg = 'rgba(255,193,7,0.1)';
+            label = `<strong>Naik Rp${Math.abs(diff).toLocaleString('id-ID')}</strong> dari Rp${Math.round(lastBuy).toLocaleString('id-ID')} → Rp${Math.round(buyPerPcs).toLocaleString('id-ID')}`;
+        } else {
+            icon = 'bi-graph-down-arrow'; color = 'var(--info)'; bg = 'rgba(76,201,240,0.1)';
+            label = `<strong>Turun Rp${Math.abs(diff).toLocaleString('id-ID')}</strong> dari Rp${Math.round(lastBuy).toLocaleString('id-ID')} → Rp${Math.round(buyPerPcs).toLocaleString('id-ID')}`;
+        }
+        trendEl.innerHTML = `<div style="margin-top:6px;padding:6px 10px;border-radius:var(--radius-sm);background:${bg};border:1px solid ${color}30;font-size:9px;color:${color};display:flex;gap:6px;align-items:flex-start;">
+            <i class="bi ${icon}" style="flex-shrink:0;margin-top:1px;"></i><span>${label}</span></div>`;
+    } else if (trendEl) {
+        trendEl.innerHTML = '';
     }
 }
 
-/** Add a tier row to a bulk item's tier container */
-function addBulkTierRow(btn) {
-    const container = btn.parentElement.parentElement.querySelector('.bulk-tier-rows');
-    if (!container) return;
-    const row = document.createElement('div');
-    row.className = 'bulk-tier-row';
-    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:4px;margin-bottom:3px;align-items:center;';
-    row.innerHTML = `
-        <input type="number" class="form-control-dark bulk-tier-min-qty" style="font-size:10px;padding:4px;" placeholder="Min Qty" min="1">
-        <input type="number" class="form-control-dark bulk-tier-total" style="font-size:10px;padding:4px;color:var(--success);" placeholder="Total Harga" min="0">
-        <button type="button" onclick="this.closest('.bulk-tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:3px 7px;cursor:pointer;font-size:11px;"><i class="bi bi-x"></i></button>`;
-    container.appendChild(row);
-}
-
-function syncTotalFromBuy(buyInput) {
-    const item = buyInput.closest('.bulk-item');
-    const qty = parseFloat(item.querySelector('.bulk-qty').value) || 0;
-    const buy = parseFloat(buyInput.value) || 0;
-    const totalInput = item.querySelector('.bulk-total');
-    if (qty > 0 && buy > 0) {
-        totalInput.value = Math.round(qty * buy);
-    }
+/** Toggle bulk drawer open/close */
+function toggleBulkDrawer(bulkId, btn) {
+    const el     = btn.closest('.bulk-item');
+    const drawer = el.querySelector('.bulk-drawer');
+    if (!drawer) return;
+    const isOpen = drawer.style.display !== 'none';
+    drawer.style.display = isOpen ? 'none' : 'block';
+    btn.innerHTML = isOpen
+        ? '<i class="bi bi-tags"></i> Ubah Harga Kemasan Lainnya'
+        : '<i class="bi bi-chevron-up"></i> Tutup Panel Kemasan';
+    btn.style.borderStyle = isOpen ? 'dashed' : 'solid';
 }
 
 function filterBulkModal(keyword) {
-    const term = keyword.toLowerCase();
-    const items = document.querySelectorAll('.bulk-item');
-    items.forEach(item => {
-        const productData = JSON.parse(item.getAttribute('data-product'));
-        const searchStr = `${productData.full_name || ''} ${productData.short_label || ''}`.toLowerCase();
-        if (searchStr.includes(term)) {
-            item.style.display = 'block';
-        } else {
-            item.style.display = 'none';
-        }
+    const term  = keyword.toLowerCase();
+    document.querySelectorAll('.bulk-item').forEach(item => {
+        const name = item.querySelector('[style*="font-weight:700"]')?.textContent?.toLowerCase() || '';
+        item.style.display = name.includes(term) ? 'block' : 'none';
     });
 }
 
-function syncBulkPkgPanel(btn) {
-    // If the user clicks "Terapkan", we can sync the matching level to the main inputs
-    const item = btn.closest('.bulk-item');
-    const pkgSelect = item.querySelector('.bulk-pkg');
-    const selectedLevel = pkgSelect.value;
-    
-    const editRow = item.querySelector(`.pkg-edit-row[data-level="${selectedLevel}"]`);
-    if (editRow) {
-        item.querySelector('.bulk-buy').value = editRow.querySelector('.pkg-buy').value;
-        item.querySelector('.bulk-ret').value = editRow.querySelector('.pkg-ret').value;
-        item.querySelector('.bulk-whole').value = editRow.querySelector('.pkg-whole').value;
-        
-        item.querySelector('.bulk-ppn').value = editRow.querySelector('.pkg-ppn').value;
-        item.querySelector('.bulk-diskon-mode').value = editRow.querySelector('.pkg-diskon-mode').value;
-        item.querySelector('.bulk-diskon-value').value = editRow.querySelector('.pkg-diskon-value').value;
-        
-        calcBulkMargin(item.querySelector('.bulk-buy'));
-    }
-    btn.closest('.bulk-pkg-panel').style.display = 'none';
-    showToast('Harga kemasan diterapkan', 'success');
-}
-
-function updateBulkPrices(selectEl) {
-    const pkg = JSON.parse(selectEl.options[selectEl.selectedIndex].getAttribute('data-pkg'));
-    const item = selectEl.closest('.bulk-item');
-    
-    // Attempt to read from the inline edit panel first if it exists, so we don't overwrite user edits
-    const editRow = item.querySelector(`.pkg-edit-row[data-level="${pkg.level}"]`);
-    if (editRow) {
-        item.querySelector('.bulk-buy').value = editRow.querySelector('.pkg-buy').value;
-        item.querySelector('.bulk-ret').value = editRow.querySelector('.pkg-ret').value;
-        item.querySelector('.bulk-whole').value = editRow.querySelector('.pkg-whole').value;
-        
-        item.querySelector('.bulk-ppn').value = editRow.querySelector('.pkg-ppn').value;
-        item.querySelector('.bulk-diskon-mode').value = editRow.querySelector('.pkg-diskon-mode').value;
-        item.querySelector('.bulk-diskon-value').value = editRow.querySelector('.pkg-diskon-value').value;
-    } else {
-        item.querySelector('.bulk-buy').value = pkg.buy_price || 0;
-        item.querySelector('.bulk-ret').value = pkg.sell_price_retail || 0;
-        item.querySelector('.bulk-whole').value = pkg.sell_price_wholesale || 0;
-        
-        item.querySelector('.bulk-ppn').value = pkg.ppn_pct || 0;
-        item.querySelector('.bulk-diskon-mode').value = pkg.diskon_mode || 'rp';
-        item.querySelector('.bulk-diskon-value').value = pkg.diskon_value || 0;
-    }
-    calcBulkMargin(selectEl);
-}
 
 </script>
