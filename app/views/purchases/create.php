@@ -574,6 +574,7 @@ async function addSalesRepModal() {
 
 // ===== Product Search with Supplier Filter =====
 let purchaseItems = [];
+let bulkItems = []; // module-level so global handlers (onBulkMainChange, onBulkLevelChange) can access it
 const searchInput = document.getElementById('productSearch');
 const suggestionsDiv = document.getElementById('productSuggestions');
 const itemsContainer = document.getElementById('purchaseItems');
@@ -741,31 +742,6 @@ function changeLevel(tempId, newLevel) {
         item.harga_nett = calcItemNett(item.buy_price, item.ppn_pct, item.diskon_mode, item.diskon_value);
         item.total = item.quantity * item.buy_price;
         renderCart();
-        
-        // Initialize custom price checkboxes and locked notes after render
-        setTimeout(() => {
-            const row = document.querySelector(`[oninput="updateItem(${tempId}, 'buy_price', this.value)"]`)?.closest('[style*="rgba(0,0,0,0.15)"]');
-            if (row) {
-                const buyToggle = row.querySelector('.buy-custom-toggle');
-                const sellToggle = row.querySelector('.sell-custom-toggle');
-                const buyNote = row.querySelector('.buy-locked-note');
-                const sellNote = row.querySelector('.sell-locked-note');
-                
-                // Set checkbox states based on pkg flags
-                if (buyToggle) {
-                    buyToggle.querySelector('input').checked = pkg.buy_custom || false;
-                    buyToggle.classList.toggle('active', pkg.buy_custom || false);
-                }
-                if (sellToggle) {
-                    sellToggle.querySelector('input').checked = pkg.sell_custom || false;
-                    sellToggle.classList.toggle('active', pkg.sell_custom || false);
-                }
-                
-                // Show locked notes by default if not custom
-                if (buyNote) buyNote.style.display = pkg.buy_custom ? 'none' : 'block';
-                if (sellNote) sellNote.style.display = pkg.sell_custom ? 'none' : 'block';
-            }
-        }, 0);
     }
 }
 
@@ -1653,7 +1629,7 @@ function buildDrawerRowHtml(item, prefix) {
             </div>
 
             <!-- PPN & Diskon info (read-only display, from main inputs) -->
-            <div style="background:rgba(76,201,240,0.06);border:1px dashed rgba(76,201,240,0.25);border-radius:4px;padding:6px 8px;margin-bottom:8px;font-size:9px;">
+            <div class="pkg-ppn-diskon-badge" style="background:rgba(76,201,240,0.06);border:1px dashed rgba(76,201,240,0.25);border-radius:4px;padding:6px 8px;margin-bottom:8px;font-size:9px;">
                 <span style="color:var(--info);font-weight:600;"><i class="bi bi-receipt"></i> PPN &amp; Diskon</span>
                 &nbsp;|&nbsp;
                 PPN: <strong>${ppn}%</strong>
@@ -1775,41 +1751,54 @@ function refreshDrawerRowMargin(rowEl) {
  * Called when user types in drawer buy input.
  * Only updates the item's pkg data; does NOT re-propagate to other levels
  * (user is editing this level manually, buy_custom must be set).
+ * Works for both regular purchaseItems and bulk modal bulkItems.
  */
 function onDrawerBuyInput(prefix, uid, level, newVal) {
-    const item = purchaseItems.find(i => i.id == uid);
+    let item = purchaseItems.find(i => i.id == uid);
+    if (!item) item = bulkItems.find(b => b.id == uid);
     if (!item) return;
-    const pkg  = item.packagings.find(p => p.level == level);
-    if (!pkg)  return;
-    pkg.buy_price = parseFloat(newVal) || 0;
+    const pkg = item.packagings.find(p => p.level == level);
+    if (!pkg) return;
+    pkg.buy_price  = parseFloat(newVal) || 0;
     pkg.harga_nett = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
-    // Update mini table live
+    // Update mini table live (handles both regular and bulk)
     refreshMiniTableForItem(uid);
     // Update margin in drawer row
-    const rowEl = document.querySelector(`#drawer_${uid} .drawer-pkg-row[data-level="${level}"]`);
+    const isBulk = (prefix === 'bulk');
+    const rowEl = isBulk
+        ? document.querySelector(`.bulk-item[data-bulk-id="${uid}"] .drawer-pkg-row[data-level="${level}"]`)
+        : document.querySelector(`#drawer_${uid} .drawer-pkg-row[data-level="${level}"]`);
     if (rowEl) refreshDrawerRowMargin(rowEl);
 }
 
 function onDrawerSellInput(prefix, uid, level, type, newVal) {
-    const item = purchaseItems.find(i => i.id == uid);
+    let item = purchaseItems.find(i => i.id == uid);
+    if (!item) item = bulkItems.find(b => b.id == uid);
     if (!item) return;
-    const pkg  = item.packagings.find(p => p.level == level);
-    if (!pkg)  return;
+    const pkg = item.packagings.find(p => p.level == level);
+    if (!pkg) return;
     if (type === 'retail')    pkg.sell_price_retail    = parseFloat(newVal) || 0;
     if (type === 'wholesale') pkg.sell_price_wholesale = parseFloat(newVal) || 0;
     refreshMiniTableForItem(uid);
-    const rowEl = document.querySelector(`#drawer_${uid} .drawer-pkg-row[data-level="${level}"]`);
+    const isBulk = (prefix === 'bulk');
+    const rowEl = isBulk
+        ? document.querySelector(`.bulk-item[data-bulk-id="${uid}"] .drawer-pkg-row[data-level="${level}"]`)
+        : document.querySelector(`#drawer_${uid} .drawer-pkg-row[data-level="${level}"]`);
     if (rowEl) refreshDrawerRowMargin(rowEl);
 }
 
 function onDrawerCustomToggle(prefix, uid, level, priceType, isCustom) {
-    const item = purchaseItems.find(i => i.id == uid);
+    let item = purchaseItems.find(i => i.id == uid);
+    if (!item) item = bulkItems.find(b => b.id == uid);
     if (!item) return;
-    const pkg  = item.packagings.find(p => p.level == level);
-    if (!pkg)  return;
+    const pkg = item.packagings.find(p => p.level == level);
+    if (!pkg) return;
     if (priceType === 'buy')  pkg.buy_custom  = isCustom;
     if (priceType === 'sell') pkg.sell_custom = isCustom;
-    const rowEl = document.querySelector(`#drawer_${uid} .drawer-pkg-row[data-level="${level}"]`);
+    const isBulk = (prefix === 'bulk');
+    const rowEl = isBulk
+        ? document.querySelector(`.bulk-item[data-bulk-id="${uid}"] .drawer-pkg-row[data-level="${level}"]`)
+        : document.querySelector(`#drawer_${uid} .drawer-pkg-row[data-level="${level}"]`);
     if (!rowEl) return;
     if (priceType === 'buy') {
         const toggle = rowEl.querySelector('.buy-custom-toggle');
@@ -1844,14 +1833,30 @@ function onDrawerCustomToggle(prefix, uid, level, priceType, isCustom) {
     refreshMiniTableForItem(uid);
 }
 
-/** Refreshes the mini pricing table without re-rendering the full card */
+/**
+ * Refreshes the mini pricing table without re-rendering the full card.
+ * Works for both regular purchaseItems and bulk modal bulkItems.
+ */
 function refreshMiniTableForItem(uid) {
-    const item   = purchaseItems.find(i => i.id == uid);
+    let item = purchaseItems.find(i => i.id == uid);
+    const isBulk = !item;
+    if (isBulk) item = bulkItems.find(b => b.id == uid);
     if (!item) return;
-    const tblEl  = document.getElementById(`mini_table_${uid}`);
-    if (tblEl)  tblEl.innerHTML = buildMiniPricingTableHtml(item);
-    const trendEl = document.getElementById(`trend_banner_${uid}`);
-    if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(item);
+    if (isBulk) {
+        // Bulk item: find by data-bulk-id, update .bulk-mini-table and .bulk-trend-banner
+        const bulkEl = document.querySelector(`.bulk-item[data-bulk-id="${uid}"]`);
+        if (!bulkEl) return;
+        const miniTbl = bulkEl.querySelector('.bulk-mini-table');
+        if (miniTbl) miniTbl.innerHTML = buildMiniPricingTableHtml(item);
+        const trendEl = bulkEl.querySelector('.bulk-trend-banner');
+        if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(item);
+    } else {
+        // Regular cart item: update by ID
+        const tblEl = document.getElementById(`mini_table_${uid}`);
+        if (tblEl) tblEl.innerHTML = buildMiniPricingTableHtml(item);
+        const trendEl = document.getElementById(`trend_banner_${uid}`);
+        if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(item);
+    }
 }
 
 /** Collect drawer data back into item.packagings before submit */
@@ -2216,7 +2221,7 @@ async function openBulkInputModal() {
     }
 
     // Build temporary item-like objects for bulk items so we can reuse the same helpers
-    const bulkItems = products.map(p => {
+    bulkItems = products.map(p => {
         const pkgs = (p.packagings || []).map(pkg => ({
             ...pkg,
             ppn_pct:      parseFloat(pkg.ppn_pct) || 0,
@@ -2261,7 +2266,7 @@ async function openBulkInputModal() {
         const drawerHtml  = hasPkgs ? buildDrawerRowHtml(item, 'bulk') : '';
 
         return `
-        <div class="bulk-item" data-bulk-id="${item.id}" style="background:var(--surface-2);padding:12px;border-radius:var(--radius-md);margin-bottom:10px;border:1px solid var(--border-color);">
+        <div class="bulk-item" data-bulk-id="${item.id}" data-last-buy="${item.last_buy_price}" style="background:var(--surface-2);padding:12px;border-radius:var(--radius-md);margin-bottom:10px;border:1px solid var(--border-color);">
             <div style="font-weight:700;font-size:12px;margin-bottom:10px;color:var(--text-primary);">${item.name}</div>
 
             <!-- ── ROW 1: Kemasan + Qty ── -->
@@ -2457,115 +2462,97 @@ async function openBulkInputModal() {
 
 /** Handle bulk item packaging level change */
 function onBulkLevelChange(bulkId, newLevel) {
-    const el      = document.querySelector(`.bulk-item[data-bulk-id="${bulkId}"]`);
+    const bulkItem = bulkItems.find(b => b.id == bulkId);
+    if (!bulkItem) return;
+    const el = document.querySelector(`.bulk-item[data-bulk-id="${bulkId}"]`);
     if (!el) return;
-    // Read current total & qty, recalculate buy_price for new level
-    const qty   = parseFloat(el.querySelector('.bulk-qty')?.value) || 0;
-    const total = parseFloat(el.querySelector('.bulk-total')?.value) || 0;
-    if (qty > 0 && total > 0) {
-        // buy_price stays the same (total/qty), the level just changes display context
-    }
+    const pkg = bulkItem.packagings.find(p => p.level == newLevel);
+    if (!pkg) return;
+    bulkItem.level     = parseInt(newLevel);
+    bulkItem.unit_name = pkg.unit_name;
+    bulkItem.buy_price = parseFloat(pkg.buy_price) || 0;
+    // Refresh mini table & trend banner using the shared helpers
+    const miniTbl = el.querySelector('.bulk-mini-table');
+    if (miniTbl) miniTbl.innerHTML = buildMiniPricingTableHtml(bulkItem);
+    const trendEl = el.querySelector('.bulk-trend-banner');
+    if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(bulkItem);
 }
 
-/** Unified main input change handler for bulk items */
+/**
+ * Unified main input change handler for bulk items.
+ * Mirrors onMainInputChange() but operates on the module-level bulkItems array.
+ */
 function onBulkMainChange(bulkId, field, val) {
-    // Find the DOM element and re-render the mini table & trend banner
+    const bulkItem = bulkItems.find(b => b.id == bulkId);
+    if (!bulkItem) return;
     const el = document.querySelector(`.bulk-item[data-bulk-id="${bulkId}"]`);
     if (!el) return;
 
-    const qty   = parseFloat(el.querySelector('.bulk-qty')?.value) || 0;
-    const total = parseFloat(el.querySelector('.bulk-total')?.value) || 0;
-    const ppn   = parseFloat(el.querySelector('.bulk-ppn')?.value) || 0;
-    const dm    = el.querySelector('.bulk-diskon-mode')?.value || 'rp';
-    const dv    = parseFloat(el.querySelector('.bulk-diskon-value')?.value) || 0;
+    // Update the field on the bulkItem
+    if (field === 'ppn')          bulkItem.ppn_pct      = parseFloat(val) || 0;
+    if (field === 'diskon_mode')  bulkItem.diskon_mode  = val || 'rp';
+    if (field === 'diskon_value') bulkItem.diskon_value = parseFloat(val) || 0;
 
-    // Compute buy_price from qty & total
-    let buyPerPkg = 0;
-    if (field === 'total' && qty > 0) {
-        buyPerPkg = Math.round(total / qty);
-    } else if (field === 'qty' && total > 0 && qty > 0) {
-        buyPerPkg = Math.round(total / qty);
-    } else if ((field === 'ppn' || field === 'diskon_mode' || field === 'diskon_value') && qty > 0 && total > 0) {
-        buyPerPkg = Math.round(total / qty);
+    if (field === 'qty') {
+        bulkItem.quantity = parseFloat(val) || 0;
+        // Update total field to reflect new qty
+        const totalInp = el.querySelector('.bulk-total');
+        if (totalInp && bulkItem.buy_price > 0) {
+            totalInp.value = Math.round(bulkItem.quantity * bulkItem.buy_price);
+        }
     }
 
-    if (buyPerPkg <= 0) return; // No data to propagate yet
+    if (field === 'total') {
+        const total = parseFloat(val) || 0;
+        const qty   = parseFloat(el.querySelector('.bulk-qty')?.value) || 1;
+        if (total > 0 && qty > 0) {
+            bulkItem.quantity  = qty;
+            bulkItem.buy_price = Math.round(total / qty);
+            // Sync selected level packaging buy_price
+            const selPkg = bulkItem.packagings.find(p => p.level == bulkItem.level);
+            if (selPkg) selPkg.buy_price = bulkItem.buy_price;
+        }
+    }
 
-    // Get the packaging select value
-    const selPkgEl = el.querySelector('.bulk-pkg-select');
-    const selLevel = parseInt(selPkgEl?.value) || 1;
+    // Propagate buy price, PPN, discount to all packaging levels
+    propagateFromMainInputs(bulkItem);
 
-    // Re-build a temporary item to compute the table
-    // Pull existing packaging data from a stored reference
-    // We'll compute from the packaging data stored in the select options or build minimal
-    // For now use a lightweight approach: find the drawer rows for package info
-    const drawerRows = el.querySelectorAll('.drawer-pkg-row');
-    let pkgs = [];
-    drawerRows.forEach(row => {
-        const level  = parseInt(row.dataset.level);
-        const bq     = parseFloat(row.dataset.baseQty) || 1;
-        pkgs.push({ level, base_qty: bq, buy_custom: false, sell_custom: false });
-    });
-    if (pkgs.length === 0) return; // No packagings metadata available
-
-    // Find selected pkg base_qty
-    const selPkgData = pkgs.find(p => p.level == selLevel) || pkgs[0];
-    const selBq = parseFloat(selPkgData?.base_qty) || 1;
-    const buyPerPcs = buyPerPkg / selBq;
-
-    // Compute per-pkg nett for mini table
-    const pkgRows = pkgs.map(p => {
-        const bq   = parseFloat(p.base_qty) || 1;
-        const buy  = Math.round(buyPerPcs * bq);
-        const diskonAmt = dm === 'pct' ? buy * dv / 100 : Math.round(dv * bq / selBq);
-        const ppnAmt    = buy * ppn / 100;
-        const nett  = Math.max(0, buy + ppnAmt - diskonAmt);
-        // Get sell prices from drawer inputs
-        const rowEl = el.querySelector(`.drawer-pkg-row[data-level="${p.level}"]`);
-        const ret   = parseFloat(rowEl?.querySelector('.drawer-pkg-ret')?.value) || 0;
-        const who   = parseFloat(rowEl?.querySelector('.drawer-pkg-who')?.value) || 0;
-        const mR    = (nett > 0 && ret > 0) ? ((ret - nett) / ret * 100) : null;
-        const mW    = (nett > 0 && who > 0) ? ((who - nett) / who * 100) : null;
-        const cR    = mR !== null ? (mR >= 10 ? 'var(--success)' : mR >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
-        const cW    = mW !== null ? (mW >= 5  ? 'var(--success)' : mW >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
-        const isSelected = (p.level == selLevel);
-        return { level: p.level, unit_name: rowEl?.querySelector('.drawer-pkg-buy')?.closest('.drawer-pkg-row')?.querySelector('[style*="font-weight:700"]')?.textContent?.trim() || ('Level ' + p.level), base_qty: bq, nett, ret, who, mR, mW, cR, cW, isSelected, ppn, dm, dv };
-    });
-
-    // Build mini table HTML inline for bulk
-    const tblHtml = `<div style="margin-top:8px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid rgba(255,255,255,0.06);">
-        <table style="width:100%;border-collapse:collapse;">
-            <thead><tr style="background:rgba(255,255,255,0.04);">
-                <th style="padding:5px 6px;font-size:9px;font-weight:600;color:var(--text-muted);text-align:left;">Kemasan</th>
-                <th style="padding:5px 6px;font-size:9px;font-weight:600;color:var(--text-muted);text-align:right;">Modal Nett</th>
-                <th style="padding:5px 6px;font-size:9px;font-weight:600;color:var(--success);text-align:right;">Jual Ecer</th>
-                <th style="padding:5px 6px;font-size:9px;font-weight:600;color:var(--warning);text-align:right;">Jual Grosir</th>
-            </tr></thead>
-            <tbody>${pkgRows.map(r => `<tr style="${r.isSelected ? 'background:rgba(230,57,70,0.08);' : ''}">
-                <td style="padding:5px 6px;font-size:10px;font-weight:600;color:${r.isSelected ? 'var(--primary)' : 'var(--text-muted)'}">Level ${r.level} <span style="font-size:9px;font-weight:400;">×${r.base_qty}</span></td>
-                <td style="padding:5px 6px;font-size:10px;text-align:right;"><span style="font-weight:700;">Rp${Math.round(r.nett).toLocaleString('id-ID')}</span>${r.ppn > 0 || r.dv > 0 ? `<div style="font-size:8px;color:var(--text-muted);">(+${r.ppn}%PPN)</div>` : ''}</td>
-                <td style="padding:5px 6px;font-size:10px;text-align:right;"><span style="color:var(--success);font-weight:600;">${r.ret > 0 ? 'Rp' + r.ret.toLocaleString('id-ID') : '—'}</span>${r.mR !== null ? `<div style="color:${r.cR};font-size:8px;">${r.mR.toFixed(1)}%</div>` : ''}</td>
-                <td style="padding:5px 6px;font-size:10px;text-align:right;"><span style="color:var(--warning);font-weight:600;">${r.who > 0 ? 'Rp' + r.who.toLocaleString('id-ID') : '—'}</span>${r.mW !== null ? `<div style="color:${r.cW};font-size:8px;">${r.mW.toFixed(1)}%</div>` : ''}</td>
-            </tr>`).join('')}</tbody>
-        </table>
-    </div>`;
-    const tblEl = el.querySelector('.bulk-mini-table');
-    if (tblEl) tblEl.innerHTML = tblHtml;
-
-    // Trend banner
-    const lastBuy = parseFloat(el.dataset.lastBuy) || 0;
-    const diff    = lastBuy > 0 ? Math.round(buyPerPcs - lastBuy) : 0;
+    // Refresh mini pricing table & trend banner via shared helpers
+    const miniTbl = el.querySelector('.bulk-mini-table');
+    if (miniTbl) miniTbl.innerHTML = buildMiniPricingTableHtml(bulkItem);
     const trendEl = el.querySelector('.bulk-trend-banner');
-    if (trendEl && lastBuy > 0 && buyPerPcs > 0) {
-        let icon, color, bg, label;
-        if (diff === 0) {
-            icon = 'bi-check-circle-fill'; color = 'var(--success)'; bg = 'rgba(40,167,69,0.1)';
-            label = `<strong>Stabil</strong> — sama dengan harga terakhir (Rp${Math.round(lastBuy).toLocaleString('id-ID')})`;
-        } else if (diff > 0) {
-            icon = 'bi-graph-up-arrow'; color = 'var(--warning)'; bg = 'rgba(255,193,7,0.1)';
-            label = `<strong>Naik Rp${Math.abs(diff).toLocaleString('id-ID')}</strong> dari Rp${Math.round(lastBuy).toLocaleString('id-ID')} → Rp${Math.round(buyPerPcs).toLocaleString('id-ID')}`;
-        } else {
-            icon = 'bi-graph-down-arrow'; color = 'var(--info)'; bg = 'rgba(76,201,240,0.1)';
+    if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(bulkItem);
+
+    // If drawer is open, refresh its rows with updated values
+    const drawer = el.querySelector('.bulk-drawer');
+    if (drawer && drawer.style.display !== 'none') {
+        drawer.querySelectorAll('.drawer-pkg-row').forEach(rowEl => {
+            const level = parseInt(rowEl.dataset.level);
+            const pkg   = bulkItem.packagings.find(p => p.level == level);
+            if (!pkg) return;
+            const ppn  = pkg.ppn_pct || 0;
+            const dm   = pkg.diskon_mode || 'rp';
+            const dv   = pkg.diskon_value || 0;
+            const nett = pkg.harga_nett || pkg.buy_price || 0;
+            // Update PPN/Diskon info badge
+            const badgesEl = rowEl.querySelector('.pkg-ppn-diskon-badge');
+            if (badgesEl) {
+                badgesEl.innerHTML = `PPN: <strong>${ppn}%</strong>&nbsp;|&nbsp;Diskon: <strong>${dm === 'pct' ? dv + '%' : 'Rp' + Math.round(dv).toLocaleString('id-ID')}</strong>&nbsp;|&nbsp;Nett: <strong style="color:var(--info);">Rp${Math.round(nett).toLocaleString('id-ID')}</strong>`;
+            }
+            if (!pkg.buy_custom) {
+                const buyInp = rowEl.querySelector('.drawer-pkg-buy');
+                if (buyInp) buyInp.value = Math.round(pkg.buy_price);
+            }
+            if (!pkg.sell_custom) {
+                const retInp = rowEl.querySelector('.drawer-pkg-ret');
+                const whoInp = rowEl.querySelector('.drawer-pkg-who');
+                if (retInp) retInp.value = Math.round(pkg.sell_price_retail);
+                if (whoInp) whoInp.value = Math.round(pkg.sell_price_wholesale);
+            }
+            refreshDrawerRowMargin(rowEl);
+        });
+    }
+} 'bi-graph-down-arrow'; color = 'var(--info)'; bg = 'rgba(76,201,240,0.1)';
             label = `<strong>Turun Rp${Math.abs(diff).toLocaleString('id-ID')}</strong> dari Rp${Math.round(lastBuy).toLocaleString('id-ID')} → Rp${Math.round(buyPerPcs).toLocaleString('id-ID')}`;
         }
         trendEl.innerHTML = `<div style="margin-top:6px;padding:6px 10px;border-radius:var(--radius-sm);background:${bg};border:1px solid ${color}30;font-size:9px;color:${color};display:flex;gap:6px;align-items:flex-start;">
