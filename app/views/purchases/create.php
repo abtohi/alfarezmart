@@ -1690,10 +1690,18 @@ function toggleItemDrawer(uid) {
     const isOpen = drawer.style.display !== 'none';
     drawer.style.display = isOpen ? 'none' : 'block';
     btn.innerHTML = isOpen
-        ? '<i class="bi bi-tags"></i> Ubah Harga Kemasan Lainnya'
+        ? '<i class="bi bi-tags"></i> Atur Harga Kemasan Lainnya'
         : '<i class="bi bi-chevron-up"></i> Tutup Panel Kemasan';
     btn.style.borderStyle = isOpen ? 'dashed' : 'solid';
     if (!isOpen) {
+        // Refresh mini table and trend banner inside drawer
+        const item = purchaseItems.find(i => i.id == uid);
+        if (item) {
+            const miniTbl = drawer.querySelector('.item-mini-table');
+            if (miniTbl) miniTbl.innerHTML = buildMiniPricingTableHtml(item);
+            const trendEl = drawer.querySelector('.item-trend-banner');
+            if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(item);
+        }
         // When opening, trigger margin recalc on all drawer rows
         drawer.querySelectorAll('.drawer-pkg-row').forEach(row => {
             refreshDrawerRowMargin(row);
@@ -1852,10 +1860,13 @@ function refreshMiniTableForItem(uid) {
         if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(item);
     } else {
         // Regular cart item: update by ID
-        const tblEl = document.getElementById(`mini_table_${uid}`);
-        if (tblEl) tblEl.innerHTML = buildMiniPricingTableHtml(item);
-        const trendEl = document.getElementById(`trend_banner_${uid}`);
-        if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(item);
+        const itemEl = document.getElementById(`drawer_${uid}`);
+        if (itemEl) {
+            const tblEl = itemEl.querySelector('.item-mini-table');
+            if (tblEl) tblEl.innerHTML = buildMiniPricingTableHtml(item);
+            const trendEl = itemEl.querySelector('.item-trend-banner');
+            if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(item);
+        }
     }
 }
 
@@ -1923,9 +1934,21 @@ function renderCart() {
         const selBaseQty = parseFloat(selPkg?.base_qty) || 1;
         const totalVal  = Math.round((item.quantity || 1) * (item.buy_price || 0));
         const hasPkgs   = item.packagings.length > 1;
-        const miniTable = buildMiniPricingTableHtml(item);
-        const trendBanner = buildTrendBannerHtml(item);
         const drawerHtml  = hasPkgs ? buildDrawerRowHtml(item, 'item') : '';
+
+        // Simple per-unit price summary
+        const buyPrice = parseFloat(selPkg?.buy_price) || 0;
+        const lastBuy = parseFloat(item.last_buy_price) || 0;
+        let priceSummary = '';
+        if (buyPrice > 0) {
+            priceSummary = `<span style="font-size:10px;color:var(--text-muted);">Harga terakhir: <strong style="color:var(--info);">Rp${Math.round(buyPrice).toLocaleString('id-ID')}</strong>/${selPkg?.unit_name || 'pcs'}</span>`;
+        }
+        if (lastBuy > 0 && buyPrice > 0 && lastBuy !== buyPrice) {
+            const diff = buyPrice - lastBuy;
+            const diffIcon = diff > 0 ? 'bi-arrow-up-short' : 'bi-arrow-down-short';
+            const diffColor = diff > 0 ? 'var(--warning)' : 'var(--info)';
+            priceSummary += ` <span style="font-size:9px;color:${diffColor};font-weight:600;"><i class="bi ${diffIcon}"></i>${diff > 0 ? '+' : ''}Rp${Math.round(Math.abs(diff)).toLocaleString('id-ID')}</span>`;
+        }
 
         html += `
         <div class="item-card" id="item_card_${item.id}" data-ppn="${item.ppn_pct || 0}" style="background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;border:1px solid var(--border-color);position:relative;">
@@ -1933,7 +1956,11 @@ function renderCart() {
             <button onclick="removeItem(${item.id})" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--danger);font-size:1.2rem;cursor:pointer;"><i class="bi bi-x-circle-fill"></i></button>
 
             <!-- Product Name -->
-            <div style="font-weight:700;font-size:var(--font-size-sm);margin-bottom:12px;padding-right:28px;color:var(--text-primary);">${item.name}</div>
+            <div style="font-weight:700;font-size:var(--font-size-sm);margin-bottom:12px;padding-right:28px;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                ${item.name}
+                ${hasPkgs ? `<span style="font-size:9px;background:var(--info-bg);color:var(--info);padding:2px 6px;border-radius:8px;white-space:nowrap;">${item.packagings.length} kemasan</span>` : ''}
+            </div>
+            ${priceSummary ? `<div style="margin-bottom:10px;">${priceSummary}</div>` : ''}
 
             <!-- ── ROW 1: Kemasan + Qty ── -->
             <div style="display:flex;gap:8px;margin-bottom:10px;">
@@ -1981,17 +2008,14 @@ function renderCart() {
                 </div>
             </div>
 
-            <!-- ── Mini Pricing Table ── -->
-            <div id="mini_table_${item.id}">${miniTable}</div>
-
-            <!-- ── Trend Banner ── -->
-            <div id="trend_banner_${item.id}">${trendBanner}</div>
+            <!-- ── Harga per unit (auto calculated) ── -->
+            <div class="item-unit-price-info" style="margin-top:6px;font-size:10px;color:var(--text-muted);text-align:right;"></div>
 
             ${hasPkgs ? `
             <!-- ── Drawer Toggle Button ── -->
             <button id="drawer_btn_${item.id}" type="button" onclick="toggleItemDrawer(${item.id})"
                     style="width:100%;margin-top:10px;background:var(--surface-2);color:var(--primary);border:1px dashed var(--border-color);padding:9px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;">
-                <i class="bi bi-tags"></i> Ubah Harga Kemasan Lainnya
+                <i class="bi bi-tags"></i> Atur Harga Kemasan Lainnya
             </button>
 
             <!-- ── Collapsible Drawer ── -->
@@ -1999,6 +2023,10 @@ function renderCart() {
                 <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;padding:8px;background:rgba(0,0,0,0.1);border-radius:var(--radius-sm);">
                     <i class="bi bi-info-circle"></i> Harga modal dihitung otomatis. PPN & Diskon sama untuk semua kemasan. Centang "Custom" untuk mengunci harga individual.
                 </div>
+                <!-- ── Mini Pricing Table ── -->
+                <div class="item-mini-table">${buildMiniPricingTableHtml(item)}</div>
+                <!-- ── Trend Banner ── -->
+                <div class="item-trend-banner">${buildTrendBannerHtml(item)}</div>
                 ${drawerHtml}
             </div>` : ''}
         </div>`;
@@ -2261,13 +2289,30 @@ async function openBulkInputModal() {
             `<option value="${p.level}" ${p.level == item.level ? 'selected' : ''}>${p.unit_name} (Isi ${p.base_qty})</option>`
         ).join('');
         const hasPkgs    = item.packagings.length > 1;
-        const miniTable  = buildMiniPricingTableHtml(item);
-        const trendBanner = buildTrendBannerHtml(item);
         const drawerHtml  = hasPkgs ? buildDrawerRowHtml(item, 'bulk') : '';
+
+        // Simple per-unit price summary (instead of full table)
+        const selPkg = item.packagings.find(p => p.level == item.level) || item.packagings[0];
+        const buyPrice = parseFloat(selPkg?.buy_price) || 0;
+        const lastBuy = parseFloat(item.last_buy_price) || 0;
+        let priceSummary = '';
+        if (buyPrice > 0) {
+            priceSummary = `<span style="font-size:10px;color:var(--text-muted);">Harga terakhir: <strong style="color:var(--info);">Rp${Math.round(buyPrice).toLocaleString('id-ID')}</strong>/${selPkg?.unit_name || 'pcs'}</span>`;
+        }
+        if (lastBuy > 0 && buyPrice > 0 && lastBuy !== buyPrice) {
+            const diff = buyPrice - lastBuy;
+            const diffIcon = diff > 0 ? 'bi-arrow-up-short' : 'bi-arrow-down-short';
+            const diffColor = diff > 0 ? 'var(--warning)' : 'var(--info)';
+            priceSummary += ` <span style="font-size:9px;color:${diffColor};font-weight:600;"><i class="bi ${diffIcon}"></i>${diff > 0 ? '+' : ''}Rp${Math.round(Math.abs(diff)).toLocaleString('id-ID')}</span>`;
+        }
 
         return `
         <div class="bulk-item" data-bulk-id="${item.id}" data-last-buy="${item.last_buy_price}" style="background:var(--surface-2);padding:12px;border-radius:var(--radius-md);margin-bottom:10px;border:1px solid var(--border-color);">
-            <div style="font-weight:700;font-size:12px;margin-bottom:10px;color:var(--text-primary);">${item.name}</div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                <div style="font-weight:700;font-size:12px;color:var(--text-primary);flex:1;">${item.name}</div>
+                ${hasPkgs ? `<span style="font-size:9px;background:var(--info-bg);color:var(--info);padding:2px 6px;border-radius:8px;white-space:nowrap;margin-left:6px;">${item.packagings.length} kemasan</span>` : ''}
+            </div>
+            ${priceSummary ? `<div style="margin-bottom:8px;">${priceSummary}</div>` : ''}
 
             <!-- ── ROW 1: Kemasan + Qty ── -->
             <div style="display:flex;gap:8px;margin-bottom:8px;">
@@ -2314,23 +2359,25 @@ async function openBulkInputModal() {
                 </div>
             </div>
 
-            <!-- ── Mini Pricing Table ── -->
-            <div class="bulk-mini-table">${miniTable}</div>
-
-            <!-- ── Trend Banner ── -->
-            <div class="bulk-trend-banner">${trendBanner}</div>
+            <!-- ── Harga per unit (auto calculated) ── -->
+            <div class="bulk-unit-price-info" style="margin-top:6px;font-size:10px;color:var(--text-muted);text-align:right;"></div>
 
             ${hasPkgs ? `
             <!-- ── Drawer Toggle ── -->
             <button class="bulk-drawer-btn" type="button" onclick="toggleBulkDrawer('${item.id}', this)"
                     style="width:100%;margin-top:8px;background:var(--surface-1);color:var(--primary);border:1px dashed var(--border-color);padding:7px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;">
-                <i class="bi bi-tags"></i> Ubah Harga Kemasan Lainnya
+                <i class="bi bi-tags"></i> Atur Harga Kemasan Lainnya
             </button>
-            <!-- ── Collapsible Drawer ── -->
+            <!-- ── Collapsible Drawer (hidden by default) ── -->
             <div class="bulk-drawer" style="display:none;margin-top:8px;">
                 <div style="font-size:9px;color:var(--text-muted);margin-bottom:8px;padding:6px;background:rgba(0,0,0,0.1);border-radius:var(--radius-sm);">
                     <i class="bi bi-info-circle"></i> PPN & Diskon sama untuk semua kemasan. Centang "Custom" untuk mengunci harga individual.
                 </div>
+                <!-- Mini Pricing Table (inside drawer) -->
+                <div class="bulk-mini-table">${buildMiniPricingTableHtml(item)}</div>
+                <!-- Trend Banner (inside drawer) -->
+                <div class="bulk-trend-banner">${buildTrendBannerHtml(item)}</div>
+                <!-- Per-packaging detail editors -->
                 ${drawerHtml}
             </div>` : ''}
         </div>`;
