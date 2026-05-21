@@ -1694,14 +1694,9 @@ function toggleItemDrawer(uid) {
         : '<i class="bi bi-chevron-up"></i> Tutup Panel Kemasan';
     btn.style.borderStyle = isOpen ? 'dashed' : 'solid';
     if (!isOpen) {
-        // Refresh mini table and trend banner inside drawer
-        const item = purchaseItems.find(i => i.id == uid);
-        if (item) {
-            const miniTbl = drawer.querySelector('.item-mini-table');
-            if (miniTbl) miniTbl.innerHTML = buildMiniPricingTableHtml(item);
-            const trendEl = drawer.querySelector('.item-trend-banner');
-            if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(item);
-        }
+        // Refresh mini table and trend banner (now outside drawer, in main card)
+        refreshMiniTableForItem(uid);
+        
         // When opening, trigger margin recalc on all drawer rows
         drawer.querySelectorAll('.drawer-pkg-row').forEach(row => {
             refreshDrawerRowMargin(row);
@@ -1851,7 +1846,7 @@ function refreshMiniTableForItem(uid) {
     if (isBulk) item = bulkItems.find(b => b.id == uid);
     if (!item) return;
     if (isBulk) {
-        // Bulk item: find by data-bulk-id, update .bulk-mini-table and .bulk-trend-banner
+        // Bulk item: find by data-bulk-id, update .bulk-mini-table and .bulk-trend-banner (outside drawer)
         const bulkEl = document.querySelector(`.bulk-item[data-bulk-id="${uid}"]`);
         if (!bulkEl) return;
         const miniTbl = bulkEl.querySelector('.bulk-mini-table');
@@ -1859,8 +1854,8 @@ function refreshMiniTableForItem(uid) {
         const trendEl = bulkEl.querySelector('.bulk-trend-banner');
         if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(item);
     } else {
-        // Regular cart item: update by ID
-        const itemEl = document.getElementById(`drawer_${uid}`);
+        // Regular cart item: update by ID (outside drawer)
+        const itemEl = document.getElementById(`item_card_${uid}`);
         if (itemEl) {
             const tblEl = itemEl.querySelector('.item-mini-table');
             if (tblEl) tblEl.innerHTML = buildMiniPricingTableHtml(item);
@@ -2011,6 +2006,11 @@ function renderCart() {
             <!-- ── Harga per unit (auto calculated) ── -->
             <div class="item-unit-price-info" style="margin-top:6px;font-size:10px;color:var(--text-muted);text-align:right;"></div>
 
+            <!-- ── Mini Pricing Table (OUTSIDE drawer) ── -->
+            <div class="item-mini-table">${buildMiniPricingTableHtml(item)}</div>
+            <!-- ── Trend Banner (OUTSIDE drawer) ── -->
+            <div class="item-trend-banner">${buildTrendBannerHtml(item)}</div>
+
             ${hasPkgs ? `
             <!-- ── Drawer Toggle Button ── -->
             <button id="drawer_btn_${item.id}" type="button" onclick="toggleItemDrawer(${item.id})"
@@ -2023,10 +2023,7 @@ function renderCart() {
                 <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;padding:8px;background:rgba(0,0,0,0.1);border-radius:var(--radius-sm);">
                     <i class="bi bi-info-circle"></i> Harga modal dihitung otomatis. PPN & Diskon sama untuk semua kemasan. Centang "Custom" untuk mengunci harga individual.
                 </div>
-                <!-- ── Mini Pricing Table ── -->
-                <div class="item-mini-table">${buildMiniPricingTableHtml(item)}</div>
-                <!-- ── Trend Banner ── -->
-                <div class="item-trend-banner">${buildTrendBannerHtml(item)}</div>
+                <!-- Per-packaging detail editors -->
                 ${drawerHtml}
             </div>` : ''}
         </div>`;
@@ -2362,6 +2359,11 @@ async function openBulkInputModal() {
             <!-- ── Harga per unit (auto calculated) ── -->
             <div class="bulk-unit-price-info" style="margin-top:6px;font-size:10px;color:var(--text-muted);text-align:right;"></div>
 
+            <!-- ── Mini Pricing Table (OUTSIDE drawer) ── -->
+            <div class="bulk-mini-table">${buildMiniPricingTableHtml(item)}</div>
+            <!-- ── Trend Banner (OUTSIDE drawer) ── -->
+            <div class="bulk-trend-banner">${buildTrendBannerHtml(item)}</div>
+
             ${hasPkgs ? `
             <!-- ── Drawer Toggle ── -->
             <button class="bulk-drawer-btn" type="button" onclick="toggleBulkDrawer('${item.id}', this)"
@@ -2373,10 +2375,6 @@ async function openBulkInputModal() {
                 <div style="font-size:9px;color:var(--text-muted);margin-bottom:8px;padding:6px;background:rgba(0,0,0,0.1);border-radius:var(--radius-sm);">
                     <i class="bi bi-info-circle"></i> PPN & Diskon sama untuk semua kemasan. Centang "Custom" untuk mengunci harga individual.
                 </div>
-                <!-- Mini Pricing Table (inside drawer) -->
-                <div class="bulk-mini-table">${buildMiniPricingTableHtml(item)}</div>
-                <!-- Trend Banner (inside drawer) -->
-                <div class="bulk-trend-banner">${buildTrendBannerHtml(item)}</div>
                 <!-- Per-packaging detail editors -->
                 ${drawerHtml}
             </div>` : ''}
@@ -2617,9 +2615,13 @@ function toggleBulkDrawer(bulkId, btn) {
     const isOpen = drawer.style.display !== 'none';
     drawer.style.display = isOpen ? 'none' : 'block';
     btn.innerHTML = isOpen
-        ? '<i class="bi bi-tags"></i> Ubah Harga Kemasan Lainnya'
+        ? '<i class="bi bi-tags"></i> Atur Harga Kemasan Lainnya'
         : '<i class="bi bi-chevron-up"></i> Tutup Panel Kemasan';
     btn.style.borderStyle = isOpen ? 'dashed' : 'solid';
+    
+    if (!isOpen) {
+        refreshMiniTableForItem(bulkId);
+    }
 }
 
 function filterBulkModal(keyword) {
