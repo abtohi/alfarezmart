@@ -2029,6 +2029,7 @@ class ApiController extends Controller
                 $extractedWeightUnit = $item['unit'] ?? '';
                 $extractedCode = $item['supplier_code'] ?? '';
                 $extractedSize = strtolower(trim($item['size'] ?? ''));
+                $extractedSuppInvName = $item['supplier_invoice_name'] ?? '';
                 
                 // Auto-scale abbreviated prices (e.g. 5.5 -> 5500, 12 -> 12000) for standard Rupiah values
                 if ($price > 0 && $price < 1000) {
@@ -2058,13 +2059,20 @@ class ApiController extends Controller
                     }
                     
                     // 2. Exact supplier_invoice_name match — very high priority for precise matching
-                    if (!empty($p['supplier_invoice_name']) && !empty($name)) {
+                    if (!empty($p['supplier_invoice_name'])) {
                         $normInvName = strtolower(trim($p['supplier_invoice_name']));
+                        $normSuppInvName = strtolower(trim($extractedSuppInvName));
                         $normName = strtolower(trim($name));
-                        if ($normName === $normInvName) {
-                            $score += 95; // Highest score for exact invoice name match
-                        } elseif (stripos($normInvName, $normName) !== false || stripos($normName, $normInvName) !== false) {
-                            $score += 28; // Partial supplier_invoice_name substring match
+                        
+                        // Try matching with extracted supplier_invoice_name first
+                        if (!empty($normSuppInvName) && $normSuppInvName === $normInvName) {
+                            $score += 95;
+                        } elseif (!empty($normName) && $normName === $normInvName) {
+                            $score += 90;
+                        } elseif (!empty($normSuppInvName) && (stripos($normInvName, $normSuppInvName) !== false || stripos($normSuppInvName, $normInvName) !== false)) {
+                            $score += 28;
+                        } elseif (!empty($normName) && (stripos($normInvName, $normName) !== false || stripos($normName, $normInvName) !== false)) {
+                            $score += 25;
                         }
                     }
                     
