@@ -785,6 +785,27 @@ function updateItem(tempId, field, value) {
         item.total = item.quantity * item.buy_price;
     }
     
+    // Bidirectional sync: auto-update Total Belanja field when buy_price or quantity changes
+    if (field === 'buy_price' || field === 'quantity') {
+        const totalInput = document.getElementById(`total_input_${tempId}`);
+        const totalWrap  = document.getElementById(`total_wrap_${tempId}`);
+        if (field === 'buy_price') {
+            if (numValue > 0) {
+                if (totalWrap) totalWrap.style.display = '';
+                if (totalInput && document.activeElement !== totalInput) {
+                    totalInput.value = Math.round(item.total);
+                }
+            } else {
+                if (totalWrap) totalWrap.style.display = 'none';
+                if (totalInput) totalInput.value = '';
+            }
+        } else if (field === 'quantity' && item.buy_price > 0) {
+            if (totalInput && document.activeElement !== totalInput) {
+                totalInput.value = Math.round(item.total);
+            }
+        }
+    }
+    
     if (field === 'buy_price') {
         item.harga_nett = calcItemNett(item.buy_price, item.ppn_pct || 0, item.diskon_mode || 'rp', item.diskon_value || 0);
         const nettEl = document.getElementById(`nett_info_${tempId}`);
@@ -1467,9 +1488,9 @@ function renderCart() {
                         <i class="bi bi-pencil-square" style="font-size:10px;"></i> Harga Modal Custom
                     </label>` : ''}
                     <div style="display:flex;gap:8px;margin-bottom:8px;">
-                        <div style="flex:1;">
+                        <div id="total_wrap_${item.id}" style="flex:1;${item.buy_price > 0 ? '' : 'display:none;'}">
                             <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Total Belanja (Otomatis hitung /pcs)</label>
-                            <input type="number" class="form-control-dark" style="width:100%;padding:8px;font-size:12px;color:var(--info);background:rgba(0,0,0,0.2);" placeholder="Total Harga" oninput="updateItemTotal(${item.id}, this.value)">
+                            <input type="number" id="total_input_${item.id}" class="form-control-dark" style="width:100%;padding:8px;font-size:12px;color:var(--info);background:rgba(0,0,0,0.2);" placeholder="Total Harga" value="${item.buy_price > 0 ? Math.round(item.total) : ''}" oninput="updateItemTotal(${item.id}, this.value)">
                             <div id="total_info_${item.id}" style="font-size:10px;margin-top:4px;min-height:14px;"></div>
                         </div>
                         <div style="flex:1;">

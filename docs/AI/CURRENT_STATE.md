@@ -21,6 +21,12 @@
 
 ## Pekerjaan Terakhir
 
+### Sesi: 2026-05-21 — Database AI Prompt Update & Level Akses Keseragaman
+
+**Yang dikerjakan:**
+1. **Database AI Invoice Prompt Update** — Berhasil menjalankan script database one-shot (`update_prompt.php`) untuk menyinkronkan data di tabel `app_settings` key `ai_invoice_prompt` dengan prompt AI versi terbaru yang memiliki pendeteksian `size`, abbreviating harga, dan multi-pack matching.
+2. **Keseragaman Dropdown Level Akses** — Mengubah class input Level Akses di form tambah user (`users/index.php`) dari `form-control-dark` ke `form-select-dark` agar mengikuti custom SVG chevron style guide yang baru.
+
 ### Sesi: 2026-05-21 — POS Custom Product Quantity & Unit Price Calculation Enhancement
 
 **Yang dikerjakan:**

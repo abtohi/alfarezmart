@@ -27,6 +27,21 @@
 - Catatan penting, risiko, atau hal yang perlu diperhatikan (jika ada)
 ```
 
+## [2026-05-21] — Database AI Invoice Prompt Sync & User Level Akses Style Consistency
+
+**Tipe:** Minor
+**Modul:** Settings, User Management, AI Invoice Scan
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Sinkronisasi AI Prompt Database**: Menyinkronkan nilai `ai_invoice_prompt` di tabel `app_settings` dengan script database agar default prompt versi terbaru yang mengenali atribut `size`, multi-pack, supplier_code, dan format abbreviating harga bisa langsung diakses oleh sistem AI maupun visualisasi halaman Pengaturan Sistem & AI.
+- **Keseragaman Style Level Akses**: Refactor dropdown `<select>` di modal tambah user (`users/index.php`) untuk memakai class `.form-select-dark` (dari `.form-control-dark`) agar terintegrasi dengan style modern SVG chevron.
+
+### File yang Diubah/Dibuat
+- `app/views/users/index.php` — Ubah kelas `mu_level` select dari `form-control-dark` ke `form-select-dark`
+- `docs/AI/CURRENT_STATE.md` — Tambah catatan sesi Pekerjaan Terakhir
+- `docs/AI/CHANGE_LOG.md` — Tambah catatan log perubahan
+
 ---
 
 ## [2026-05-21] — POS Custom Product: Satuan Searchbox dari Master Data

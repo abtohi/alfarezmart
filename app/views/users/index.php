@@ -13,13 +13,47 @@
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
     <!-- Level Legend -->
-    <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:14px;margin-bottom:16px;">
-        <div style="font-weight:600;font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:8px;">LEVEL AKSES</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <div style="font-size:11px;"><span class="badge-custom badge-danger" style="margin-right:4px;">Superadmin</span>Akses penuh semua fitur</div>
-            <div style="font-size:11px;"><span class="badge-custom badge-success" style="margin-right:4px;">Admin</span>Tambah &amp; edit produk, tanpa hapus</div>
-            <div style="font-size:11px;"><span class="badge-custom badge-info" style="margin-right:4px;">Staff</span>Scan, cari, cetak struk saja</div>
-            <div style="font-size:11px;"><span class="badge-custom badge-warning" style="margin-right:4px;">Customer</span>Coming Soon</div>
+    <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;">
+        <div style="font-weight:700;font-size:var(--font-size-xs);color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+            <i class="bi bi-shield-lock" style="color:var(--primary);"></i> Level Akses
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;">
+            <div style="background:linear-gradient(135deg,rgba(230,57,70,0.12),rgba(230,57,70,0.04));border:1px solid rgba(230,57,70,0.25);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;">
+                <div style="width:32px;height:32px;border-radius:50%;background:rgba(230,57,70,0.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-shield-fill-check" style="color:#e63946;font-size:14px;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:12px;color:#e63946;margin-bottom:2px;">Superadmin</div>
+                    <div style="font-size:10px;color:var(--text-muted);line-height:1.4;">Akses penuh semua fitur &amp; pengaturan sistem</div>
+                </div>
+            </div>
+            <div style="background:linear-gradient(135deg,rgba(46,213,115,0.10),rgba(46,213,115,0.03));border:1px solid rgba(46,213,115,0.22);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;">
+                <div style="width:32px;height:32px;border-radius:50%;background:rgba(46,213,115,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-person-fill-gear" style="color:#2ed573;font-size:14px;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:12px;color:#2ed573;margin-bottom:2px;">Admin</div>
+                    <div style="font-size:10px;color:var(--text-muted);line-height:1.4;">Tambah &amp; edit produk, input barang, tanpa hapus</div>
+                </div>
+            </div>
+            <div style="background:linear-gradient(135deg,rgba(76,201,240,0.10),rgba(76,201,240,0.03));border:1px solid rgba(76,201,240,0.22);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;">
+                <div style="width:32px;height:32px;border-radius:50%;background:rgba(76,201,240,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-person-fill-check" style="color:#4cc9f0;font-size:14px;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:12px;color:#4cc9f0;margin-bottom:2px;">Staff</div>
+                    <div style="font-size:10px;color:var(--text-muted);line-height:1.4;">Scan barcode, POS kasir, cetak struk</div>
+                </div>
+            </div>
+            <div style="background:linear-gradient(135deg,rgba(255,165,2,0.08),rgba(255,165,2,0.02));border:1px solid rgba(255,165,2,0.2);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;">
+                <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,165,2,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-person-fill" style="color:#ffa502;font-size:14px;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:12px;color:#ffa502;margin-bottom:2px;">Customer</div>
+                    <div style="font-size:10px;color:var(--text-muted);line-height:1.4;">Fitur pelanggan <em style="opacity:0.7;">(Coming Soon)</em></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -87,7 +121,7 @@ async function openAddUserModal() {
             <div class="modal-form-group"><label>No HP</label><input type="text" class="form-control-dark" id="mu_phone" placeholder="08xx..."></div>
             <div class="modal-form-group"><label>Password *</label><input type="password" class="form-control-dark" id="mu_password" placeholder="Min 6 karakter" required></div>
             <div class="modal-form-group"><label>Level Akses *</label>
-                <select class="form-control-dark" id="mu_level" style="width:100%;padding:10px;border:1px solid var(--border-color);border-radius:var(--radius-sm);background:var(--bg-primary);color:var(--text-primary);">
+                <select class="form-select-dark" id="mu_level" style="width:100%;padding:10px;">
                     <option value="staff">Staff</option>
                     <option value="admin">Admin</option>
                     <option value="superadmin">Superadmin</option>
