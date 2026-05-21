@@ -19,230 +19,393 @@ $pkgsJson = json_encode($packagings, JSON_UNESCAPED_UNICODE);
     </a>
     <h2 style="font-size:var(--font-size-lg);font-weight:700;margin-bottom:20px;">Edit Produk</h2>
 
-    <!-- Mode Varian dari Referensi (Point 4) -->
+    <!-- Mode Varian dari Referensi -->
     <div style="background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;border:1px solid var(--border-color);">
         <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;">
-            <input type="checkbox" id="editUseReferenceMode" style="margin-top:3px;width:18px;height:18px;accent-color:var(--primary);">
+            <input type="checkbox" id="useReferenceMode" style="margin-top:3px;width:18px;height:18px;accent-color:var(--primary);">
             <span>
                 <span style="font-weight:600;font-size:var(--font-size-sm);display:block;">Tambah varian dari produk referensi</span>
-                <span style="font-size:var(--font-size-xs);color:var(--text-muted);">Salin spesifikasi & kemasan dari produk lain, hanya varian & barcode yang berbeda</span>
+                <span style="font-size:var(--font-size-xs);color:var(--text-muted);">Spesifikasi & kemasan sama, hanya varian & barcode yang berbeda</span>
             </span>
         </label>
-        <div id="editReferencePanel" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-color);">
+        <div id="referencePanel" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-color);">
             <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:6px;">Cari produk referensi</label>
             <div style="position:relative;">
-                <input type="text" id="editReferenceSearch" class="form-control-dark" placeholder="Ketik nama produk..." autocomplete="off" style="width:100%;">
-                <div id="editReferenceResults" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:50;background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);max-height:220px;overflow-y:auto;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,0.3);"></div>
+                <input type="text" id="referenceSearch" class="form-control-dark" placeholder="Ketik nama produk..." autocomplete="off" style="width:100%;">
+                <div id="referenceResults" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:50;background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);max-height:220px;overflow-y:auto;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,0.3);"></div>
             </div>
-            <div id="editReferenceSelected" style="display:none;margin-top:10px;padding:10px 12px;background:var(--info-bg);border-radius:var(--radius-sm);font-size:var(--font-size-xs);color:var(--info);">
-                <i class="bi bi-link-45deg"></i> Referensi: <strong id="editReferenceSelectedName"></strong>
-                <button type="button" onclick="clearEditReference()" style="float:right;background:none;border:none;color:var(--danger);font-size:11px;cursor:pointer;">Hapus</button>
+            <div id="referenceSelected" style="display:none;margin-top:10px;padding:10px 12px;background:var(--info-bg);border-radius:var(--radius-sm);font-size:var(--font-size-xs);color:var(--info);">
+                <i class="bi bi-link-45deg"></i> Referensi: <strong id="referenceSelectedName"></strong>
+                <button type="button" onclick="clearReference()" style="float:right;background:none;border:none;color:var(--danger);font-size:11px;cursor:pointer;">Hapus</button>
             </div>
         </div>
     </div>
 
-    <form id="formEditProduct" onsubmit="submitEditProduct(event)">
+    <form id="formProduct" onsubmit="submitProduct(event)">
+        <input type="hidden" name="reference_product_id" id="referenceProductId" value="">
         <input type="hidden" name="csrf_token" id="csrfToken" value="<?= $csrfToken ?>">
-        <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
-        <input type="hidden" name="reference_product_id" id="editReferenceProductId" value="">
-        <input type="hidden" name="supplier_product_code" id="editSupplierProductCode" value="<?= htmlspecialchars($product['supplier_product_code'] ?? '', ENT_QUOTES) ?>">
-        <input type="hidden" name="supplier_invoice_name" id="editSupplierInvoiceName" value="<?= htmlspecialchars($product['supplier_invoice_name'] ?? '', ENT_QUOTES) ?>"
 
-        <!-- Identitas Produk (Point 5: Multivarian toggle) -->
-        <div id="editIdentitySection" style="background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;border:1px solid var(--border-color);">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <!-- Identitas Produk -->
+        <div id="identitySection" style="background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;border:1px solid var(--border-color);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
                 <div class="section-title" style="margin-bottom:0;">Identitas Produk</div>
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--font-size-xs);">
-                        <input type="checkbox" id="editIsMultivariant" <?= (!empty($product['brand_id']) || !empty($product['product_type'])) ? 'checked' : '' ?> style="width:16px;height:16px;accent-color:var(--primary);">
-                        <span>Produk Multivarian</span>
-                    </label>
-                    <button type="button" id="btnEditSupplierInfo" class="btn-outline-custom" style="padding:6px 10px;font-size:var(--font-size-xs);display:inline-flex;align-items:center;gap:4px;border-radius:6px;">
-                        <i class="bi bi-truck"></i> Info Supplier
-                    </button>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--font-size-xs);">
+                    <input type="checkbox" id="isMultivariant" checked style="width:16px;height:16px;accent-color:var(--primary);">
+                    <span>Produk Multivarian (Brand + Jenis + Varian)</span>
+                </label>
+            </div>
+            
+            <div id="singleVariantPanel" style="display:none; margin-bottom:12px;">
+                <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Nama Produk *</label>
+                <input type="text" name="single_name" id="singleNameInput" placeholder="Cth: Sapu Lidi Pendek" class="form-control-dark" style="width:100%;" value="<?= htmlspecialchars($product['full_name'] ?? '') ?>">
+            </div>
+
+            <div id="multiVariantPanel">
+                <!-- Brand (SearchBox) -->
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Brand / Merek *</label>
+                    <div id="brandSearchBox"></div>
+                </div>
+
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Jenis Produk</label>
+                    <input type="text" name="product_type" id="productTypeInput" placeholder="Cth: UHT, Goreng, Hair Color, Mild..." class="form-control-dark" style="width:100%;" value="<?= htmlspecialchars($product['product_type'] ?? '') ?>">
+                </div>
+                
+                <div style="margin-bottom:12px;" id="variantFieldWrap">
+                    <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Varian <span id="variantRequiredMark" style="display:none;color:var(--primary);">*</span></label>
+                    <input type="text" name="variant" id="variantInput" placeholder="Cth: Choco Malt, Original, Violet Red..." class="form-control-dark" style="width:100%;" value="<?= htmlspecialchars($product['variant'] ?? '') ?>">
+                    <small id="variantHint" style="display:none;font-size:10px;color:var(--info);margin-top:4px;">Isi varian baru (wajib saat mode referensi)</small>
                 </div>
             </div>
-
-            <!-- Single variant panel -->
-            <div id="editSingleVariantPanel" style="display:none;margin-bottom:12px;">
-                <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Nama Produk *</label>
-                <input type="text" name="single_name" id="editSingleNameInput" placeholder="Cth: Sapu Lidi Pendek" class="form-control-dark" style="width:100%;" value="<?= htmlspecialchars($product['full_name'] ?? '') ?>">
+            
+            <!-- Kategori (SearchBox) -->
+            <div style="margin-bottom:12px;">
+                <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Kategori *</label>
+                <div id="categorySearchBox"></div>
             </div>
 
-            <!-- Multi variant panel -->
-            <div id="editMultiVariantPanel">
-                <div style="margin-bottom:12px;"><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Brand / Merek *</label><div id="editBrandSB"></div></div>
-                <div style="margin-bottom:12px;"><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Jenis Produk</label><input type="text" name="product_type" id="editProductTypeInput" value="<?= htmlspecialchars($product['product_type'] ?? '') ?>" placeholder="Cth: UHT, Goreng..." class="form-control-dark" style="width:100%;"></div>
-                <div style="margin-bottom:12px;" id="editVariantFieldWrap"><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Varian <span id="editVariantRequiredMark" style="display:none;color:var(--primary);">*</span></label><input type="text" name="variant" id="editVariantInput" value="<?= htmlspecialchars($product['variant'] ?? '') ?>" placeholder="Cth: Choco Malt, Original..." class="form-control-dark" style="width:100%;"><small id="editVariantHint" style="display:none;font-size:10px;color:var(--info);margin-top:4px;">Isi varian baru (wajib saat mode referensi)</small></div>
-            </div>
-
-            <div style="margin-bottom:12px;"><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Kategori *</label><div id="editCatSB"></div></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <div><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Berat/Volume</label><input type="number" name="weight_value" step="0.01" value="<?= htmlspecialchars($product['weight_value'] ?? '') ?>" placeholder="250" class="form-control-dark" style="width:100%;"></div>
-                <div><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Satuan Ukuran</label><div id="editWeightUnitSB"></div></div>
+                <div>
+                    <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Berat/Volume</label>
+                    <input type="number" name="weight_value" step="0.01" placeholder="250" class="form-control-dark" style="width:100%;" value="<?= htmlspecialchars($product['weight_value'] ?? '') ?>">
+                </div>
+                <div>
+                    <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Satuan Ukuran</label>
+                    <div id="weightUnitSearchBox"></div>
+                </div>
             </div>
         </div>
 
-        <!-- Packaging Levels -->
-        <div class="section-title" style="margin-top:20px;margin-bottom:8px;"><i class="bi bi-layers" style="color:var(--info);"></i> Level Kemasan &amp; Harga</div>
-        <p style="font-size:var(--font-size-xs);color:var(--info);margin-bottom:8px;"><i class="bi bi-calculator"></i> Harga otomatis dikalikan isi kemasan.</p>
-        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-            <button type="button" class="btn-outline-custom" style="flex:1;min-width:140px;font-size:var(--font-size-xs);padding:8px;" onclick="BarcodeUtil.generateAllEmpty('input.barcode-field')"><i class="bi bi-magic"></i> Generate Semua Barcode</button>
-            <button type="button" class="btn-outline-custom" style="flex:1;min-width:140px;font-size:var(--font-size-xs);padding:8px;" onclick="printAllBarcodesEdit()"><i class="bi bi-printer"></i> Cetak Semua Barcode</button>
+        <!-- Informasi Supplier (Opsional) -->
+        <div style="background:var(--surface-1);border-radius:var(--radius-lg);margin-bottom:12px;border:1px solid var(--border-color);overflow:hidden;">
+            <button type="button" id="btnToggleSupplierInfo" onclick="toggleSupplierInfo()" style="width:100%;background:none;border:none;padding:14px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;color:var(--text-secondary);font-size:var(--font-size-sm);">
+                <span><i class="bi bi-building" style="color:var(--info);margin-right:8px;"></i> Informasi Supplier (Opsional)</span>
+                <i class="bi bi-chevron-down" id="iconSupplierChevron" style="transition:transform 0.3s;"></i>
+            </button>
+            <div id="supplierInfoPanel" style="display:none;padding:0 16px 16px;">
+                <p style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:12px;padding-top:4px;border-top:1px solid var(--border-color);">Data ini membantu AI Scan Invoice mengenali produk ini lebih akurat.</p>
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Kode Barang Supplier</label>
+                    <input type="text" name="supplier_product_code" id="supplierProductCode" placeholder="Cth: CMY-125, INM-001 (kode di faktur supplier)" class="form-control-dark" style="width:100%;" value="<?= htmlspecialchars($product['supplier_product_code'] ?? '', ENT_QUOTES) ?>">
+                </div>
+                <div>
+                    <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Nama Barang di Invoice Supplier</label>
+                    <input type="text" name="supplier_invoice_name" id="supplierInvoiceName" placeholder="Cth: CIMORY UHT PORORO 125ML (nama persis di faktur)" class="form-control-dark" style="width:100%;" value="<?= htmlspecialchars($product['supplier_invoice_name'] ?? '', ENT_QUOTES) ?>">
+                </div>
+            </div>
         </div>
-        <div id="editPkgContainer"></div>
-        <button type="button" id="btnAddEditLevel" onclick="addEditLevel()" class="btn-outline-custom" style="width:100%;margin-bottom:16px;border-style:dashed;"><i class="bi bi-plus-circle"></i> Tambah Level Kemasan</button>
 
-        <!-- Preview (Point 6: auto-label) -->
+        <!-- Dynamic Packaging Levels -->
+        <div class="section-title" style="margin-top:20px;margin-bottom:8px;">
+            <i class="bi bi-layers" style="color:var(--info);"></i> Level Kemasan & Harga
+        </div>
+        <p style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:8px;">
+            Contoh: 1 Karton → 2 Pack → 4 Box → 10 Papan → Pcs. Mulai dari satuan terkecil.
+        </p>
+        <p style="font-size:var(--font-size-xs);color:var(--info);margin-bottom:8px;">
+            <i class="bi bi-calculator"></i> Harga modal/jual otomatis dikalikan isi kemasan (ubah di level manapun, level lain menyesuaikan).
+        </p>
+        <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <button type="button" class="btn-outline-custom" style="flex:1;min-width:140px;font-size:var(--font-size-xs);padding:8px;" onclick="BarcodeUtil.generateAllEmpty('input.barcode-field')">
+                <i class="bi bi-magic"></i> Generate Semua Barcode
+            </button>
+            <button type="button" class="btn-outline-custom" style="flex:1;min-width:140px;font-size:var(--font-size-xs);padding:8px;" onclick="printAllBarcodes()">
+                <i class="bi bi-printer"></i> Cetak Semua Barcode
+            </button>
+        </div>
+        <div id="packagingContainer">
+            <!-- Levels generated by JS -->
+        </div>
+
+        <button type="button" id="btnAddPackagingLevel" onclick="addPackagingLevel()" class="btn-outline-custom" style="width:100%;margin-bottom:16px;border-style:dashed;">
+            <i class="bi bi-plus-circle"></i> Tambah Level Kemasan (Grosir/Karton)
+        </button>
+
+        <!-- Nama Preview -->
         <div style="background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;border:1px solid var(--border-color);">
             <div class="section-title" style="margin-bottom:8px;">Preview Nama Produk</div>
-            <div id="editNamePreview" style="font-size:var(--font-size-sm);color:var(--text-secondary);font-weight:600;margin-bottom:12px;"><?= htmlspecialchars($product['full_name']) ?></div>
+            <div id="namePreview" style="font-size:var(--font-size-sm);color:var(--text-secondary);font-weight:600;margin-bottom:12px;">-</div>
+            
             <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Label Struk & Rak (Bisa diubah manual)</label>
-            <input type="text" id="editShortLabel" name="short_label" class="form-control-dark" style="width:100%;font-size:var(--font-size-sm);font-weight:600;color:var(--info);" maxlength="35" placeholder="Maks 35 Karakter" value="<?= htmlspecialchars($product['short_label'] ?? '') ?>">
+            <input type="text" id="manualLabel" class="form-control-dark" style="width:100%;font-size:var(--font-size-sm);font-weight:600;color:var(--info);" maxlength="35" placeholder="Maks 35 Karakter" value="<?= htmlspecialchars($product['short_label'] ?? '') ?>">
         </div>
 
-        <button type="submit" id="btnEditSubmit" class="btn-primary-custom" style="width:100%;padding:14px;cursor:pointer;"><i class="bi bi-check-circle"></i> Simpan Perubahan</button>
+        <button type="submit" id="btnSubmit" class="btn-primary-custom" style="width:100%;padding:14px;box-shadow:0 8px 24px rgba(230,57,70,0.4);cursor:pointer;">
+            <i class="bi bi-check-circle"></i> Simpan Perubahan
+        </button>
     </form>
 </div>
 
+<!-- Template for units -->
 <script>
-const editUnitsData   = <?= $unitsJson ?>;
-const editBrandsData  = <?= $brandsJson ?>;
-const editCatsData    = <?= $catsJson ?>;
-const editPkgsData    = <?= $pkgsJson ?>;
-const editProductId   = <?= $product['id'] ?>;
-const editCsrfToken   = document.getElementById('csrfToken').value;
-const editCurBrand    = '<?= $product['brand_id'] ?? '' ?>';
-const editCurCat      = '<?= $product['category_id'] ?? '' ?>';
-const editCurWUnit    = '<?= $product['weight_unit'] ?? '' ?>';
-const editCurSupplierCode = '<?= htmlspecialchars($product['supplier_product_code'] ?? '', ENT_QUOTES) ?>';
-const editCurSupplierInvoiceName = '<?= htmlspecialchars($product['supplier_invoice_name'] ?? '', ENT_QUOTES) ?>';
-const weightUnitOpts = [
+// ===== Data from PHP =====
+const brandsData = <?= $brandsJson ?>;
+const categoriesData = <?= $catsJson ?>;
+const unitsData = <?= $unitsJson ?>;
+const packagingsData = <?= $pkgsJson ?>;
+const productId = <?= $product['id'] ?>;
+const weightUnitOptions = [
     <?php foreach ($units as $u): ?>
         <?php $wLabel = htmlspecialchars($u['name'], ENT_QUOTES) . (!empty($u['abbreviation']) ? ' (' . htmlspecialchars($u['abbreviation'], ENT_QUOTES) . ')' : ''); ?>
         { value: '<?= htmlspecialchars($u['abbreviation'] ?: $u['name'], ENT_QUOTES) ?>', label: '<?= $wLabel ?>' },
     <?php endforeach; ?>
 ];
 
-let editBrandSB, editCatSB, editWeightUnitSB;
-let editLevels = [];
-let editNextTempId = 1;
+const csrfTokenValue = document.getElementById('csrfToken').value;
+let levelCount = 0;
+let referenceMode = false;
+let isMultivariant = <?= (!empty($product['brand_id']) || !empty($product['product_type'])) ? 'true' : 'false' ?>;
+let isLabelEdited = false;
+let referenceProductData = null;
+let referenceSearchTimer = null;
 let deletedPkgIds = [];
-let editIsMultivariant = true;
-let editIsLabelEdited = false;
-let editReferenceMode = false;
-let editReferenceProductData = null;
-let editRefSearchTimer = null;
+
+// ===== SearchBox Instances =====
+let brandSB, categorySB, weightUnitSB;
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Point 1: Brand SearchBox with instant add
-    editBrandSB = new SearchBox(document.getElementById('editBrandSB'), {
-        options: editBrandsData, placeholder:'Pilih brand...', icon:'bi-tag', name:'brand_id',
-        value: editCurBrand, required:true,
-        addLabel:'Tambah Brand Baru', onAdd: () => openEditMasterModal('brand'),
-        onChange: updateEditPreview,
+    brandSB = new SearchBox(document.getElementById('brandSearchBox'), {
+        options: brandsData,
+        placeholder: 'Cari atau pilih brand...',
+        icon: 'bi-tag',
+        name: 'brand_id',
+        value: '<?= $product['brand_id'] ?? '' ?>',
+        required: isMultivariant,
+        addLabel: 'Tambah Brand Baru',
+        onAdd: () => openMasterModal('brand'),
+        onChange: () => updateNamePreview(),
         linkUrl: BASE_URL + 'settings/master-data',
         linkLabel: 'Buka Master Data'
     });
-    editCatSB = new SearchBox(document.getElementById('editCatSB'), {
-        options: editCatsData, placeholder:'Pilih kategori...', icon:'bi-grid', name:'category_id',
-        value: editCurCat, required:true,
-        addLabel:'Tambah Kategori Baru', onAdd: () => openEditMasterModal('category'),
-        onChange: updateEditPreview,
+
+    categorySB = new SearchBox(document.getElementById('categorySearchBox'), {
+        options: categoriesData,
+        placeholder: 'Cari atau pilih kategori...',
+        icon: 'bi-grid',
+        name: 'category_id',
+        value: '<?= $product['category_id'] ?? '' ?>',
+        required: true,
+        addLabel: 'Tambah Kategori Baru',
+        onAdd: () => openMasterModal('category'),
+        onChange: () => updateNamePreview(),
         linkUrl: BASE_URL + 'settings/master-data',
         linkLabel: 'Buka Master Data'
     });
-    editWeightUnitSB = new SearchBox(document.getElementById('editWeightUnitSB'), {
-        options: weightUnitOpts, placeholder:'Pilih...', name:'weight_unit',
-        value: editCurWUnit, onChange: updateEditPreview,
-        addLabel: 'Tambah Satuan Baru', onAdd: () => openEditUnitModal(),
-        linkUrl: BASE_URL + 'settings/master-data', linkLabel: 'Buka Master Data'
+
+    // Weight Unit SearchBox
+    weightUnitSB = new SearchBox(document.getElementById('weightUnitSearchBox'), {
+        options: weightUnitOptions,
+        placeholder: 'Pilih...',
+        name: 'weight_unit',
+        value: '<?= $product['weight_unit'] ?? '' ?>',
+        addLabel: 'Tambah Satuan Baru',
+        onAdd: () => openMasterModal('unit'),
+        onChange: () => updateNamePreview(),
+        linkUrl: BASE_URL + 'settings/master-data',
+        linkLabel: 'Buka Master Data'
     });
 
     // Render existing packagings
-    const sorted = [...editPkgsData].sort((a,b) => a.level - b.level);
-    sorted.forEach(pk => renderEditLevel({
-        pkgId: pk.id, unitId: String(pk.unit_id), unitName: pk.unit_name,
-        containedQty: pk.contained_qty, baseQty: pk.base_qty, barcode: pk.barcode || '',
-        buyPrice: pk.buy_price, retail: pk.sell_price_retail, wholesale: pk.sell_price_wholesale,
-        qtyPrices: pk.qty_prices || [],
+    const sorted = [...packagingsData].sort((a, b) => a.level - b.level);
+    sorted.forEach(pk => addPackagingLevel({
+        pkgId: pk.id,
+        unit_id: String(pk.unit_id),
+        unit_name: pk.unit_name,
+        contained_qty: pk.contained_qty,
+        base_qty: pk.base_qty,
+        buy_price: pk.buy_price,
+        sell_price_retail: pk.sell_price_retail,
+        sell_price_wholesale: pk.sell_price_wholesale,
+        barcode: pk.barcode || '',
+        qty_prices: pk.qty_prices || []
     }));
-
+    if (sorted.length === 0) addPackagingLevel();
+    updateBaseQtyInfo();
     if (typeof PackagingPriceSync !== 'undefined') PackagingPriceSync.init();
 
-    document.querySelectorAll('[name="product_type"],[name="variant"],[name="weight_value"],[name="single_name"]').forEach(el => {
-        el.addEventListener('input', updateEditPreview);
+    // Auto-expand supplier collapsible if already filled
+    const supCode = '<?= htmlspecialchars($product['supplier_product_code'] ?? '', ENT_QUOTES) ?>';
+    const supName = '<?= htmlspecialchars($product['supplier_invoice_name'] ?? '', ENT_QUOTES) ?>';
+    if (supCode || supName) {
+        toggleSupplierInfo();
+    }
+
+    // Reference mode toggle
+    document.getElementById('useReferenceMode')?.addEventListener('change', (e) => {
+        referenceMode = e.target.checked;
+        document.getElementById('referencePanel').style.display = referenceMode ? 'block' : 'none';
+        document.getElementById('variantHint').style.display = referenceMode ? 'block' : 'none';
+        document.getElementById('variantRequiredMark').style.display = referenceMode ? 'inline' : 'none';
+        if (!referenceMode) clearReference();
+        applyReferenceLock();
     });
 
-    // Point 6: Track manual label edits
-    document.getElementById('editShortLabel')?.addEventListener('input', () => { editIsLabelEdited = true; });
+    // Multivariant toggle
+    const mvCheck = document.getElementById('isMultivariant');
+    if (mvCheck) {
+        mvCheck.checked = isMultivariant;
+        toggleMultivariant(isMultivariant);
+        mvCheck.addEventListener('change', (e) => {
+            toggleMultivariant(e.target.checked);
+        });
+    }
 
-    // Point 5: Multivarian toggle
-    const mvCheck = document.getElementById('editIsMultivariant');
-    editIsMultivariant = mvCheck?.checked ?? true;
-    if (!editIsMultivariant) toggleEditMultivariant(false);
-    mvCheck?.addEventListener('change', (e) => { toggleEditMultivariant(e.target.checked); });
-
-    // Supplier Info button
-    document.getElementById('btnEditSupplierInfo')?.addEventListener('click', openEditSupplierInfoModal);
-
-    // Point 4: Reference mode toggle
-    document.getElementById('editUseReferenceMode')?.addEventListener('change', (e) => {
-        editReferenceMode = e.target.checked;
-        document.getElementById('editReferencePanel').style.display = editReferenceMode ? 'block' : 'none';
-        document.getElementById('editVariantHint').style.display = editReferenceMode ? 'block' : 'none';
-        document.getElementById('editVariantRequiredMark').style.display = editReferenceMode ? 'inline' : 'none';
-        if (!editReferenceMode) clearEditReference();
+    document.getElementById('manualLabel')?.addEventListener('input', () => {
+        isLabelEdited = true;
     });
-    document.getElementById('editReferenceSearch')?.addEventListener('input', (e) => {
-        clearTimeout(editRefSearchTimer);
+
+    document.getElementById('referenceSearch')?.addEventListener('input', (e) => {
+        clearTimeout(referenceSearchTimer);
         const q = e.target.value.trim();
-        if (q.length < 2) { document.getElementById('editReferenceResults').style.display = 'none'; return; }
-        editRefSearchTimer = setTimeout(() => searchEditReference(q), 300);
+        if (q.length < 2) {
+            document.getElementById('referenceResults').style.display = 'none';
+            return;
+        }
+        referenceSearchTimer = setTimeout(() => searchReferenceProducts(q), 300);
     });
+
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('#editReferenceSearch') && !e.target.closest('#editReferenceResults'))
-            document.getElementById('editReferenceResults').style.display = 'none';
+        if (!e.target.closest('#referenceSearch') && !e.target.closest('#referenceResults')) {
+            document.getElementById('referenceResults').style.display = 'none';
+        }
     });
 });
 
-function toggleEditMultivariant(isMulti) {
-    editIsMultivariant = isMulti;
-    document.getElementById('editMultiVariantPanel').style.display = isMulti ? 'block' : 'none';
-    document.getElementById('editSingleVariantPanel').style.display = isMulti ? 'none' : 'block';
-    if (isMulti) {
-        document.getElementById('editSingleNameInput').required = false;
-        if (editBrandSB) editBrandSB.setRequired(true);
+function toggleMultivariant(checked) {
+    isMultivariant = checked;
+    if (isMultivariant) {
+        document.getElementById('multiVariantPanel').style.display = 'block';
+        document.getElementById('singleVariantPanel').style.display = 'none';
+        document.getElementById('singleNameInput').required = false;
+        if (brandSB) brandSB.setRequired(true);
     } else {
-        document.getElementById('editSingleNameInput').required = true;
-        if (editBrandSB) editBrandSB.setRequired(false);
+        document.getElementById('multiVariantPanel').style.display = 'none';
+        document.getElementById('singleVariantPanel').style.display = 'block';
+        document.getElementById('singleNameInput').required = true;
+        if (brandSB) brandSB.setRequired(false);
     }
-    updateEditPreview();
+    updateNamePreview();
 }
 
-// Point 1: Add brand/category instantly
-async function openEditMasterModal(type) {
-    const cfg = type === 'brand' ? {
-        title:'Tambah Brand Baru', icon:'bi-tag', endpoint:`${BASE_URL}api/brands`,
-        label:'Nama Brand', placeholder:'Cth: Indomie, Aqua...'
-    } : {
-        title:'Tambah Kategori Baru', icon:'bi-grid', endpoint:`${BASE_URL}api/categories`,
-        label:'Nama Kategori', placeholder:'Cth: Makanan Ringan, Minuman...'
+// ===== Add Master Data via Modal =====
+async function openMasterModal(type) {
+    const configs = {
+        brand: {
+            title: 'Tambah Brand Baru',
+            subtitle: 'Masukkan nama brand/merek produk',
+            icon: 'bi-tag',
+            iconColor: 'var(--primary-bg)',
+            iconAccent: 'var(--primary)',
+            fields: [
+                { name: 'name', label: 'Nama Brand', placeholder: 'Cth: Indomie, Aqua, Unilever...', required: true }
+            ],
+            endpoint: `${BASE_URL}api/brands`
+        },
+        category: {
+            title: 'Tambah Kategori Baru',
+            subtitle: 'Masukkan nama kategori produk',
+            icon: 'bi-grid',
+            iconColor: 'var(--info-bg)',
+            iconAccent: 'var(--info)',
+            fields: [
+                { name: 'name', label: 'Nama Kategori', placeholder: 'Cth: Makanan Ringan, Minuman, Rokok...', required: true }
+            ],
+            endpoint: `${BASE_URL}api/categories`
+        },
+        unit: {
+            title: 'Tambah Satuan Baru',
+            subtitle: 'Masukkan nama satuan kemasan',
+            icon: 'bi-rulers',
+            iconColor: 'var(--success-bg)',
+            iconAccent: 'var(--success)',
+            fields: [
+                { name: 'name', label: 'Nama Satuan', placeholder: 'Cth: Karton, Renteng, Lusin...', required: true },
+                { name: 'abbreviation', label: 'Singkatan (opsional)', placeholder: 'Cth: krt, rtg, lsn...', required: false }
+            ],
+            endpoint: `${BASE_URL}api/units`
+        }
     };
-    await AppModal.show({
-        title: cfg.title, icon: cfg.icon,
-        bodyHTML: `<div class="modal-form-group"><label>${cfg.label} *</label><input type="text" class="form-control-dark" id="editModalMasterName" placeholder="${cfg.placeholder}" required></div>`,
-        submitText:'Simpan',
+
+    const cfg = configs[type];
+    if (!cfg) return;
+
+    const fieldsHTML = cfg.fields.map(f => `
+        <div class="modal-form-group">
+            <label>${f.label} ${f.required ? '*' : ''}</label>
+            <input type="text" class="form-control-dark" id="modalField_${f.name}" 
+                   placeholder="${f.placeholder}" ${f.required ? 'required' : ''} autocomplete="off">
+        </div>
+    `).join('');
+
+    const result = await AppModal.show({
+        title: cfg.title,
+        subtitle: cfg.subtitle,
+        icon: cfg.icon,
+        iconColor: cfg.iconColor,
+        iconAccent: cfg.iconAccent,
+        bodyHTML: fieldsHTML,
+        submitText: 'Simpan',
         onSubmit: async () => {
-            const name = document.getElementById('editModalMasterName').value.trim();
-            if (!name) { showToast(`${cfg.label} wajib diisi`,'warning'); return false; }
-            const res = await fetch(cfg.endpoint, {method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':editCsrfToken},body:JSON.stringify({csrf_token:editCsrfToken,name})});
+            const payload = { csrf_token: csrfTokenValue };
+            for (const f of cfg.fields) {
+                const val = document.getElementById(`modalField_${f.name}`).value.trim();
+                if (f.required && !val) {
+                    showToast(`${f.label} wajib diisi`, 'warning');
+                    return false;
+                }
+                payload[f.name] = val;
+            }
+
+            const res = await fetch(cfg.endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfTokenValue },
+                body: JSON.stringify(payload)
+            });
             const data = await res.json();
-            if (data.error) { showToast(data.error,'error'); return false; }
+
+            if (data.error) {
+                showToast(data.error, 'error');
+                return false;
+            }
+
             if (data.success) {
-                if (type === 'brand') { editBrandsData.push({value:String(data.id),label:data.name}); editBrandSB.addOption(data.id, data.name, true); }
-                else { editCatsData.push({value:String(data.id),label:data.name}); editCatSB.addOption(data.id, data.name, true); }
-                showToast(`"${data.name}" berhasil ditambahkan!`,'success');
+                if (type === 'brand') {
+                    brandSB.addOption(data.id, data.name, true);
+                } else if (type === 'category') {
+                    categorySB.addOption(data.id, data.name, true);
+                } else if (type === 'unit') {
+                    unitsData.push({ value: String(data.id), label: data.name });
+                    document.querySelectorAll('.unit-searchbox-instance').forEach(el => {
+                        if (el._searchbox) el._searchbox.addOption(data.id, data.name, false);
+                    });
+                    
+                    const abbr = data.abbreviation || data.name;
+                    const wLabel = data.abbreviation ? `${data.name} (${data.abbreviation})` : data.name;
+                    weightUnitOptions.push({ value: abbr, label: wLabel });
+                    if (weightUnitSB) weightUnitSB.addOption(abbr, wLabel, false);
+                }
+                showToast(`${cfg.title.replace('Tambah ', '')} "${data.name}" berhasil ditambahkan!`, 'success');
                 return data;
             }
             return false;
@@ -250,182 +413,270 @@ async function openEditMasterModal(type) {
     });
 }
 
-// Point 4: Reference search
-async function searchEditReference(q) {
-    const box = document.getElementById('editReferenceResults');
+// ===== Reference Product (Multivarian) =====
+async function searchReferenceProducts(q) {
+    const box = document.getElementById('referenceResults');
     try {
         const res = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
         const items = await res.json();
-        if (!items.length) { box.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--text-muted);">Tidak ditemukan</div>'; box.style.display = 'block'; return; }
-        box.innerHTML = items.map(p => `<button type="button" onclick="selectEditReference(${p.id})" style="display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text-primary);font-size:12px;cursor:pointer;border-bottom:1px solid var(--border-color);"><strong>${escHtml(p.short_label || p.full_name)}</strong></button>`).join('');
+        if (!items.length) {
+            box.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--text-muted);">Tidak ditemukan</div>';
+            box.style.display = 'block';
+            return;
+        }
+        box.innerHTML = items.map(p => `
+            <button type="button" onclick="selectReferenceProduct(${p.id})" style="display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text-primary);font-size:12px;cursor:pointer;border-bottom:1px solid var(--border-color);">
+                <strong>${escapeHtml(p.short_label || p.full_name)}</strong>
+                ${p.variant ? `<span style="color:var(--text-muted);"> · ${escapeHtml(p.variant)}</span>` : ''}
+            </button>
+        `).join('');
         box.style.display = 'block';
-    } catch(e) { showToast('Gagal mencari produk','error'); }
+    } catch (e) {
+        showToast('Gagal mencari produk', 'error');
+    }
 }
-async function selectEditReference(id) {
-    document.getElementById('editReferenceResults').style.display = 'none';
-    document.getElementById('editReferenceSearch').value = '';
+
+function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+}
+
+async function selectReferenceProduct(id) {
+    document.getElementById('referenceResults').style.display = 'none';
+    document.getElementById('referenceSearch').value = '';
     try {
         const product = await api(`${BASE_URL}api/products/${id}`);
-        editReferenceProductData = product;
-        document.getElementById('editReferenceProductId').value = product.id;
-        document.getElementById('editReferenceSelectedName').textContent = product.short_label || product.full_name;
-        document.getElementById('editReferenceSelected').style.display = 'block';
-        // Fill identity fields from reference
-        if (product.brand_id) editBrandSB.select(String(product.brand_id), product.brand_name || '');
-        if (product.category_id) editCatSB.select(String(product.category_id), product.category_name || '');
-        document.getElementById('editProductTypeInput').value = product.product_type || '';
-        document.querySelector('[name="weight_value"]').value = product.weight_value || '';
-        if (product.weight_unit) editWeightUnitSB.select(product.weight_unit, product.weight_unit);
-        // Clear variant and barcode - user must fill these
-        document.getElementById('editVariantInput').value = '';
-        // Rebuild packagings from reference (same structure, clear barcodes)
-        rebuildEditPackagingsFromRef(product.packagings || []);
-        applyEditReferenceLock();
-        document.getElementById('editVariantInput').focus();
-        updateEditPreview();
-        showToast('Data referensi dimuat. Isi varian & barcode baru.','success');
-    } catch(e) { showToast('Gagal memuat produk referensi','error'); }
-}
-function clearEditReference() {
-    editReferenceProductData = null;
-    document.getElementById('editReferenceProductId').value = '';
-    document.getElementById('editReferenceSelected').style.display = 'none';
-    applyEditReferenceLock();
-}
-function rebuildEditPackagingsFromRef(packagings) {
-    const container = document.getElementById('editPkgContainer');
-    container.innerHTML = '';
-    editLevels = [];
-    editNextTempId = 1;
-    const sorted = [...packagings].sort((a,b) => a.level - b.level);
-    sorted.forEach(pk => renderEditLevel({
-        pkgId: null, unitId: String(pk.unit_id), unitName: pk.unit_name,
-        containedQty: pk.contained_qty, barcode: '',
-        buyPrice: pk.buy_price, retail: pk.sell_price_retail, wholesale: pk.sell_price_wholesale,
-        qtyPrices: [],
-    }));
-    if (sorted.length === 0) renderEditLevel();
-}
-function applyEditReferenceLock() {
-    const locked = editReferenceMode && editReferenceProductData;
-    // Lock identity fields except variant
-    const identity = document.getElementById('editIdentitySection');
-    if (identity) {
-        identity.querySelectorAll('input, .searchbox-wrapper').forEach(el => {
-            if (el.name === 'variant' || el.id === 'editVariantInput') return;
-            el.style.pointerEvents = locked ? 'none' : '';
-            el.style.opacity = locked ? '0.65' : '';
-        });
-        const variantInput = document.getElementById('editVariantInput');
-        if (variantInput) { variantInput.style.pointerEvents = ''; variantInput.style.opacity = '1'; }
+        loadReferenceProduct(product);
+    } catch (e) {
+        showToast('Gagal memuat produk referensi', 'error');
     }
-    // Lock packaging fields except barcode
-    document.querySelectorAll('#editPkgContainer .packaging-level').forEach(lv => {
+}
+
+function loadReferenceProduct(product) {
+    referenceProductData = product;
+    document.getElementById('referenceProductId').value = product.id;
+    document.getElementById('referenceSelectedName').textContent = product.short_label || product.full_name;
+    document.getElementById('referenceSelected').style.display = 'block';
+
+    if (product.brand_id) brandSB.select(String(product.brand_id), product.brand_name || '');
+    if (product.category_id) categorySB.select(String(product.category_id), product.category_name || '');
+    document.querySelector('[name="product_type"]').value = product.product_type || '';
+    document.querySelector('[name="weight_value"]').value = product.weight_value || '';
+    if (product.weight_unit) weightUnitSB.select(product.weight_unit, product.weight_unit);
+
+    document.querySelector('[name="variant"]').value = '';
+    document.querySelector('[name="variant"]').focus();
+
+    rebuildPackagingsFromReference(product.packagings || []);
+    applyReferenceLock();
+    updateNamePreview();
+    showToast('Data referensi dimuat. Isi varian & barcode baru.', 'success');
+}
+
+function clearReference() {
+    referenceProductData = null;
+    document.getElementById('referenceProductId').value = '';
+    document.getElementById('referenceSelected').style.display = 'none';
+    document.getElementById('referenceSelectedName').textContent = '';
+    applyReferenceLock();
+}
+
+function rebuildPackagingsFromReference(packagings) {
+    const container = document.getElementById('packagingContainer');
+    container.innerHTML = '';
+    
+    // Clear and keep track of existing packages to delete
+    document.querySelectorAll('.packaging-level').forEach(lv => {
+        const pkgId = lv.getAttribute('data-pkg-id');
+        if (pkgId) deletedPkgIds.push(pkgId);
+    });
+
+    levelCount = 0;
+    const sorted = [...packagings].sort((a, b) => a.level - b.level);
+    sorted.forEach(pk => addPackagingLevel({
+        pkgId: null, // Since we copy from reference, these are new packages for this product
+        unit_id: pk.unit_id,
+        unit_name: pk.unit_name,
+        contained_qty: pk.contained_qty,
+        base_qty: pk.base_qty,
+        buy_price: pk.buy_price,
+        sell_price_retail: pk.sell_price_retail,
+        sell_price_wholesale: pk.sell_price_wholesale,
+        barcode: '',
+        qty_prices: []
+    }));
+    if (sorted.length === 0) addPackagingLevel();
+    updateBaseQtyInfo();
+}
+
+function applyReferenceLock() {
+    const locked = referenceMode && referenceProductData;
+    const identity = document.getElementById('identitySection');
+    identity?.querySelectorAll('input, .searchbox-wrapper').forEach(el => {
+        if (el.name === 'variant') return;
+        el.style.pointerEvents = locked ? 'none' : '';
+        el.style.opacity = locked ? '0.65' : '';
+    });
+    document.querySelector('[name="variant"]').style.pointerEvents = '';
+    document.querySelector('[name="variant"]').style.opacity = '1';
+
+    document.querySelectorAll('.packaging-level').forEach(lv => {
         lv.querySelectorAll('input, .searchbox-wrapper').forEach(el => {
             const isBarcode = el.classList.contains('barcode-field');
             el.style.pointerEvents = locked && !isBarcode ? 'none' : '';
             el.style.opacity = locked && !isBarcode ? '0.65' : '';
         });
-        const removeBtn = lv.querySelector('button[onclick*="removeEditLevel"]');
+        const removeBtn = lv.querySelector('button[onclick*="removeLevel"]');
         if (removeBtn) removeBtn.style.display = locked ? 'none' : '';
     });
-    const addBtn = document.getElementById('btnAddEditLevel');
+
+    const addBtn = document.getElementById('btnAddPackagingLevel');
     if (addBtn) addBtn.style.display = locked ? 'none' : '';
 }
 
-function renderEditLevel(prefill = null) {
-    const container = document.getElementById('editPkgContainer');
-    const isLevel1 = (editLevels.length === 0);
-    const levelNum = editLevels.length + 1;
-    const tempId = editNextTempId++;
+function getProductLabel() {
+    return document.getElementById('namePreview')?.textContent?.trim() || 'Produk';
+}
 
+function printAllBarcodes() {
+    BarcodeUtil.printAllFilled('input.barcode-field', (input, row) => {
+        const unit = row?.querySelector('.unit-searchbox-instance')?._searchbox?.getLabel() || '';
+        return { title: getProductLabel(), subtitle: unit ? `1 ${unit}` : '' };
+    });
+}
+
+// ===== Packaging Levels =====
+function addPackagingLevel(prefill = null) {
+    if (referenceMode && referenceProductData && !prefill) {
+        showToast('Kemasan mengikuti produk referensi', 'info');
+        return;
+    }
+    levelCount++;
+    const container = document.getElementById('packagingContainer');
+    
     const div = document.createElement('div');
     div.className = 'packaging-level';
-    div.setAttribute('data-temp-id', tempId);
-    div.setAttribute('data-level', levelNum);
-    if (prefill?.pkgId) div.setAttribute('data-pkg-id', prefill.pkgId);
-    div.style.cssText = 'background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;border:1px solid var(--border-color);position:relative;';
-
+    div.setAttribute('data-level', levelCount);
+    if (prefill && prefill.pkgId) {
+        div.setAttribute('data-pkg-id', prefill.pkgId);
+    }
+    div.style.cssText = 'background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;border:1px solid var(--border-color);position:relative;transition:all 0.3s ease;';
+    
+    const isLevel1 = levelCount === 1;
     const levelLabels = {
         1: 'Level 1 — Satuan Terkecil (Eceran)',
         2: 'Level 2 — Kemasan Tambahan (Bebas/Opsional)',
-        3: 'Level 3 — Kemasan Tambahan (Bebas/Opsional)'
+        3: 'Level 3 — Kemasan Tambahan (Bebas/Opsional)',
     };
-    const title = levelLabels[levelNum] || `Level ${levelNum} — Kemasan Tambahan (Opsional)`;
+    const title = levelLabels[levelCount] || `Level ${levelCount} — Kemasan Tambahan (Opsional)`;
+    
+    let containedHtml = '';
+    if (isLevel1) {
+        containedHtml = `
+            <div style="flex:1;">
+                <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Isi</label>
+                <input type="number" name="contained_qty[]" value="1" class="form-control-dark" style="width:100%;background:var(--surface-2);color:var(--text-muted);" readonly>
+            </div>
+        `;
+    } else {
+        containedHtml = `
+            <div style="flex:1;">
+                <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Isi per kemasan *</label>
+                <input type="number" name="contained_qty[]" placeholder="Cth: 10, 12, 24" class="form-control-dark contained-qty" style="width:100%;" min="2" required value="${prefill ? prefill.contained_qty : ''}">
+                <small class="base-qty-info" style="font-size:10px;color:var(--info);margin-top:2px;display:block;"></small>
+            </div>
+        `;
+    }
 
-    const removeBtn = !isLevel1
-        ? `<button type="button" onclick="removeEditLevel(this)" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--danger);font-size:1.2rem;cursor:pointer;"><i class="bi bi-x-circle-fill"></i></button>`
-        : '';
+    const removeBtn = !isLevel1 ? `<button type="button" onclick="removeLevel(this)" style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--danger);font-size:1.2rem;cursor:pointer;z-index:2;"><i class="bi bi-x-circle-fill"></i></button>` : '';
 
     let isBuyCustom = false;
     let isSellCustom = false;
 
     if (!isLevel1 && prefill) {
         try {
-            const l1 = editLevels[0].domEl;
-            const l1Buy = parseFloat(l1.querySelector('.pkg-buy').value) || 0;
-            const l1Retail = parseFloat(l1.querySelector('.pkg-retail').value) || 0;
-            const l1Wholesale = parseFloat(l1.querySelector('.pkg-wholesale').value) || 0;
-            const bQty = parseInt(prefill.baseQty) || 1;
-            
-            const expBuy = l1Buy * bQty;
-            const expRetail = l1Retail * bQty;
-            const expWholesale = l1Wholesale * bQty;
-            
-            if (prefill.buyPrice > 0 && Math.abs(prefill.buyPrice - expBuy) > 0.01) isBuyCustom = true;
-            if ((prefill.retail > 0 && Math.abs(prefill.retail - expRetail) > 0.01) || 
-                (prefill.wholesale > 0 && Math.abs(prefill.wholesale - expWholesale) > 0.01)) isSellCustom = true;
+            const levels = document.querySelectorAll('.packaging-level');
+            if (levels.length > 0) {
+                const l1 = levels[0];
+                const l1Buy = parseFloat(l1.querySelector('.buy-price')?.value) || 0;
+                const l1Retail = parseFloat(l1.querySelector('.retail-price')?.value) || 0;
+                const l1Wholesale = parseFloat(l1.querySelector('.wholesale-price')?.value) || 0;
+                const bQty = parseInt(prefill.base_qty) || 1;
+                
+                const expBuy = l1Buy * bQty;
+                const expRetail = l1Retail * bQty;
+                const expWholesale = l1Wholesale * bQty;
+                
+                if (prefill.buy_price > 0 && Math.abs(prefill.buy_price - expBuy) > 0.01) isBuyCustom = true;
+                if ((prefill.sell_price_retail > 0 && Math.abs(prefill.sell_price_retail - expRetail) > 0.01) || 
+                    (prefill.sell_price_wholesale > 0 && Math.abs(prefill.sell_price_wholesale - expWholesale) > 0.01)) isSellCustom = true;
+            }
         } catch (e) {}
     }
-
-    const containedHtml = isLevel1
-        ? `<div style="flex:1;"><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Isi</label><input type="number" value="1" class="form-control-dark" style="width:100%;background:var(--surface-2);color:var(--text-muted);" readonly></div>`
-        : `<div style="flex:1;"><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Isi per kemasan *</label><input type="number" class="form-control-dark contained-qty" placeholder="Cth: 10,12,24" style="width:100%;" min="2" required value="${prefill?.containedQty||''}"></div>`;
 
     div.innerHTML = `
         ${removeBtn}
         <div class="section-title" style="margin-bottom:12px;color:var(--primary);">${title}</div>
+        
         <div style="display:flex;gap:8px;margin-bottom:12px;">
-            <div style="flex:2;"><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:4px;align-items:center;"><span>Satuan *</span><a href="${BASE_URL}settings/master-data" target="_blank" style="font-size:10px;color:var(--primary);text-decoration:none;"><i class="bi bi-box-arrow-up-right"></i> Master Data</a></label><div class="unit-searchbox-instance" data-level="${levelNum}"></div></div>
+            <div style="flex:2;"><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:4px;align-items:center;"><span>Satuan *</span><a href="${BASE_URL}settings/master-data" target="_blank" style="font-size:10px;color:var(--primary);text-decoration:none;"><i class="bi bi-box-arrow-up-right"></i> Master Data</a></label><div class="unit-searchbox-instance" data-level="${levelCount}"></div></div>
             ${containedHtml}
         </div>
+
         <div style="margin-bottom:12px;" class="pkg-barcode-row">
             <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Barcode</label>
             <div style="background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:0 8px 0 12px;display:flex;align-items:center;gap:4px;">
-                <i class="bi bi-upc-scan" style="color:var(--primary);flex-shrink:0;cursor:pointer;padding:8px 4px;font-size:1.1rem;" onclick="BarcodeUtil.scanBarcode(this.nextElementSibling)"></i>
-                <input type="text" class="barcode-field" value="${escHtml(prefill?.barcode||'')}" placeholder="Scan, ketik, atau generate..." style="flex:1;border:none;background:transparent;padding:12px 6px;color:var(--text-primary);font-size:var(--font-size-base);outline:none;font-family:var(--font-family);min-width:0;">
-                <button type="button" class="btn-scan-bc" style="border:none;background:var(--info-bg);color:var(--info);padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer;"><i class="bi bi-camera"></i></button>
-                <button type="button" class="btn-gen-bc" style="border:none;background:var(--primary-bg);color:var(--primary);padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer;"><i class="bi bi-magic"></i></button>
-                <button type="button" class="btn-print-bc" style="border:none;background:var(--surface-2);color:var(--text-secondary);padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer;"><i class="bi bi-printer"></i></button>
+                <i class="bi bi-upc-scan" style="color:var(--primary);flex-shrink:0;cursor:pointer;padding:8px 4px;font-size:1.1rem;" onclick="BarcodeUtil.scanBarcode(this.nextElementSibling)" title="Scan Barcode"></i>
+                <input type="text" name="barcode[]" class="barcode-field" placeholder="Scan, ketik, atau generate..." style="flex:1;border:none;background:transparent;padding:12px 6px;color:var(--text-primary);font-size:var(--font-size-base);outline:none;font-family:var(--font-family);min-width:0;" value="${prefill ? escapeHtml(prefill.barcode) : ''}">
+                <button type="button" class="btn-scan-bc" title="Scan barcode dengan kamera" style="border:none;background:var(--info-bg);color:var(--info);padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap;"><i class="bi bi-camera"></i></button>
+                <button type="button" class="btn-gen-bc" title="Generate barcode" style="border:none;background:var(--primary-bg);color:var(--primary);padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap;"><i class="bi bi-magic"></i></button>
+                <button type="button" class="btn-print-bc" title="Cetak barcode" style="border:none;background:var(--surface-2);color:var(--text-secondary);padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer;"><i class="bi bi-printer"></i></button>
             </div>
         </div>
+
         <div style="background:rgba(0,0,0,0.15);padding:12px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.05);">
-            ${!isLevel1 ? `<label class="price-custom-toggle buy-custom-toggle ${isBuyCustom ? 'active' : ''}"><input type="checkbox" class="chk-buy-custom" ${isBuyCustom ? 'checked' : ''}><i class="bi bi-pencil-square" style="font-size:10px;"></i> Harga Modal Custom</label>` : ''}
+            ${!isLevel1 ? `
+            <label class="price-custom-toggle buy-custom-toggle ${isBuyCustom ? 'active' : ''}" title="Centang untuk mengatur harga modal secara manual pada level ini">
+                <input type="checkbox" class="chk-buy-custom" ${isBuyCustom ? 'checked' : ''}>
+                <i class="bi bi-pencil-square" style="font-size:10px;"></i> Harga Modal Custom (tidak ikut otomatis)
+            </label>` : ''}
             <div style="margin-bottom:8px;position:relative;">
                 <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:4px;align-items:center;">
-                    <span>Harga Modal / Beli</span>
-                    <span style="color:var(--primary);cursor:pointer;background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:10px;" onclick="const b=this.nextElementSibling;b.style.display=b.style.display==='none'?'flex':'none'"><i class="bi bi-calculator"></i> Kalkulator</span>
+                    <span>Harga Modal / Beli *</span>
+                    <span style="color:var(--primary);cursor:pointer;background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:10px;" onclick="const b=this.nextElementSibling; b.style.display=b.style.display==='none'?'flex':'none'"><i class="bi bi-calculator"></i> Kalkulator</span>
                     <div style="display:none;position:absolute;top:24px;right:0;background:var(--surface-2);padding:8px;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.8);z-index:10;gap:4px;align-items:center;border:1px solid var(--border-color);">
-                        <input type="number" placeholder="Total Rp" class="form-control-dark calc-total" style="width:90px;font-size:12px;padding:4px;">
+                        <input type="number" placeholder="Total Rp" step="any" class="form-control-dark calc-total" style="width:90px;font-size:12px;padding:4px;">
                         <span style="color:var(--text-muted);">/</span>
                         <input type="number" placeholder="Qty" value="1" class="form-control-dark calc-qty" style="width:50px;font-size:12px;padding:4px;">
-                        <button type="button" class="btn-primary-custom" style="padding:4px 8px;font-size:12px;border-radius:4px;" onclick="const p=this.parentElement;const t=p.querySelector('.calc-total').value;const q=p.querySelector('.calc-qty').value;if(t&&q>0){const inp=p.closest('div[style*=&quot;margin-bottom:8px&quot;]').querySelector('.pkg-buy,.buy-price');inp.value=(parseFloat(t)/parseFloat(q)).toFixed(2);inp.dispatchEvent(new Event('input'));p.style.display='none';}"><i class="bi bi-check2"></i> Hitung</button>
+                        <button type="button" class="btn-primary-custom" style="padding:4px 8px;font-size:12px;border-radius:4px;" onclick="const p=this.parentElement; const t=p.querySelector('.calc-total').value; const q=p.querySelector('.calc-qty').value; if(t&&q>0){ const inp=p.closest('div[style*=\\'margin-bottom:8px\\']').querySelector('.buy-price'); inp.value=(parseFloat(t)/parseFloat(q)).toFixed(2); inp.dispatchEvent(new Event('input')); p.style.display='none'; }"><i class="bi bi-check2"></i> Hitung</button>
                     </div>
                 </label>
-                <input type="number" value="${prefill?.buyPrice||0}" placeholder="0" class="form-control-dark pkg-buy" step="0.01" style="width:100%;">
-                ${!isLevel1 ? `<div class="price-locked-note buy-locked-note ${isBuyCustom ? '' : 'visible'}"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs × isi</div>` : ''}
+                <input type="number" name="buy_price[]" placeholder="0" step="0.01" class="form-control-dark price-input buy-price" style="width:100%;" required value="${prefill ? prefill.buy_price : ''}">
+                ${!isLevel1 ? `<div class="price-locked-note buy-locked-note ${isBuyCustom ? '' : 'visible'}"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs × isi kemasan</div>` : ''}
             </div>
-            ${!isLevel1 ? `<label class="price-custom-toggle sell-custom-toggle ${isSellCustom ? 'active' : ''}"><input type="checkbox" class="chk-sell-custom" ${isSellCustom ? 'checked' : ''}><i class="bi bi-tag" style="font-size:10px;"></i> Harga Jual Custom</label>` : ''}
+            ${!isLevel1 ? `
+            <label class="price-custom-toggle sell-custom-toggle ${isSellCustom ? 'active' : ''}" title="Centang untuk mengatur harga jual secara manual (misal harga renceng lebih murah dari harga pcs × qty)">
+                <input type="checkbox" class="chk-sell-custom" ${isSellCustom ? 'checked' : ''}>
+                <i class="bi bi-tag" style="font-size:10px;"></i> Harga Jual Custom (harga spesial per kemasan ini)
+            </label>` : ''}
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <div><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Jual Ecer/Retail</label><input type="number" value="${prefill?.retail||0}" placeholder="0" class="form-control-dark pkg-retail" step="0.01" style="width:100%;"></div>
-                <div><label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Jual Grosir</label><input type="number" value="${prefill?.wholesale||0}" placeholder="0" class="form-control-dark pkg-wholesale" step="0.01" style="width:100%;"></div>
+                <div>
+                    <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Jual Ecer/Retail *</label>
+                    <input type="number" name="sell_price_retail[]" placeholder="0" step="0.01" class="form-control-dark price-input retail-price" style="width:100%;" required value="${prefill ? prefill.sell_price_retail : ''}">
+                </div>
+                <div>
+                    <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Jual Grosir</label>
+                    <input type="number" name="sell_price_wholesale[]" placeholder="0" step="0.01" class="form-control-dark price-input wholesale-price" style="width:100%;" value="${prefill ? prefill.sell_price_wholesale : ''}">
+                </div>
             </div>
-            ${!isLevel1 ? `<div class="price-locked-note sell-locked-note ${isSellCustom ? '' : 'visible'}"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs × isi</div>` : ''}
-            <div class="pkg-margin-info" style="margin-top:8px;font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;">
+            ${!isLevel1 ? `<div class="price-locked-note sell-locked-note ${isSellCustom ? '' : 'visible'}"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs × isi kemasan</div>` : ''}
+            <div class="margin-calc" style="margin-top:8px;font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;">
                 <span class="margin-retail-text">Margin Retail: 0%</span>
                 <span class="margin-wholesale-text">Margin Grosir: 0%</span>
             </div>
         </div>
+
         <div class="qty-price-tiers-section" style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border-color);">
             <div style="font-size:11px;font-weight:600;color:var(--info);margin-bottom:6px;"><i class="bi bi-tags"></i> Harga Spesial per Kuantitas</div>
             <p style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">Min. qty = jumlah satuan kemasan ini. Harga = per 1 satuan pada tier tersebut.</p>
@@ -433,43 +684,206 @@ function renderEditLevel(prefill = null) {
             <button type="button" class="btn-outline-custom btn-add-qty-tier" style="width:100%;margin-top:6px;font-size:11px;padding:6px;border-style:dashed;"><i class="bi bi-plus"></i> Tambah Tier Harga</button>
         </div>
     `;
+    
     container.appendChild(div);
 
     const unitContainer = div.querySelector('.unit-searchbox-instance');
     const unitSB = new SearchBox(unitContainer, {
-        options: [...editUnitsData], placeholder:'Pilih satuan...', name:'unit_id[]', required:true,
-        addLabel:'Tambah Satuan Baru', onAdd:() => openEditUnitModal(),
-        onChange: updateEditPreview,
+        options: [...unitsData],
+        placeholder: 'Pilih satuan...',
+        name: 'unit_id[]',
+        required: true,
+        addLabel: 'Tambah Satuan Baru',
+        onAdd: () => openMasterModal('unit'),
+        onChange: () => { updateNamePreview(); updateBaseQtyInfo(); },
         linkUrl: BASE_URL + 'settings/master-data',
         linkLabel: 'Buka Master Data'
     });
     unitContainer._searchbox = unitSB;
-    if (prefill?.unitId) unitSB.select(prefill.unitId, prefill.unitName || '');
 
-    const record = { tempId, pkgId: prefill?.pkgId || null, sbRef: unitSB, domEl: div };
-    editLevels.push(record);
-
-    // Barcode buttons
-    const bcInput = div.querySelector('.barcode-field');
-    div.querySelector('.btn-scan-bc')?.addEventListener('click', () => BarcodeUtil.scanBarcode(bcInput));
-    div.querySelector('.btn-gen-bc')?.addEventListener('click', () => BarcodeUtil.fillInput(bcInput, div.querySelector('.btn-gen-bc')));
-    div.querySelector('.btn-print-bc')?.addEventListener('click', () => {
-        const unit = unitSB.getLabel() || '';
-        BarcodeUtil.printFromInput(bcInput, document.getElementById('editNamePreview').textContent, unit ? `1 ${unit}` : '');
-    });
-
-    if (typeof PackagingPriceSync !== 'undefined') PackagingPriceSync.bindNewLevel(div);
-    initQtyTiers(div, prefill?.qtyPrices || []);
-
-    // Listen for contained qty changes to update naming
-    const cqtyInput = div.querySelector('.contained-qty');
-    if (cqtyInput) {
-        cqtyInput.addEventListener('input', () => updateEditPreview());
+    if (prefill) {
+        if (prefill.unit_id) unitSB.select(String(prefill.unit_id), prefill.unit_name || '');
+        calcMarginForLevel(div);
+        initQtyTiers(div, prefill.qty_prices || []);
+    } else if (isLevel1) {
+        const pcsOption = unitsData.find(u => u.label.toLowerCase() === 'pcs');
+        if (pcsOption) unitSB.select(pcsOption.value, pcsOption.label);
+        initQtyTiers(div, []);
+    } else {
+        initQtyTiers(div, []);
     }
 
-    updateEditPreview();
+    const bcInput = div.querySelector('.barcode-field');
+    const genBtn = div.querySelector('.btn-gen-bc');
+    const printBtn = div.querySelector('.btn-print-bc');
+    const scanBtn = div.querySelector('.btn-scan-bc');
+    
+    scanBtn?.addEventListener('click', () => BarcodeUtil.scanBarcode(bcInput));
+    genBtn?.addEventListener('click', () => BarcodeUtil.fillInput(bcInput, genBtn));
+    printBtn?.addEventListener('click', () => {
+        const unit = unitSB.getLabel() || '';
+        BarcodeUtil.printFromInput(bcInput, getProductLabel(), unit ? `1 ${unit}` : '');
+    });
+
+    applyReferenceLock();
+
+    if (typeof PackagingPriceSync !== 'undefined') {
+        PackagingPriceSync.bindNewLevel(div);
+    } else {
+        div.querySelectorAll('.price-input').forEach(input => {
+            input.addEventListener('input', () => calcMarginForLevel(div));
+        });
+    }
+
+    const cqtyInput = div.querySelector('.contained-qty');
+    if (cqtyInput) {
+        cqtyInput.addEventListener('input', () => { updateNamePreview(); updateBaseQtyInfo(); });
+    }
 }
 
+function removeLevel(btn) {
+    if (referenceMode && referenceProductData) return;
+    const div = btn.closest('.packaging-level');
+    const pkgId = div.getAttribute('data-pkg-id');
+    if (pkgId) deletedPkgIds.push(pkgId);
+    div.remove();
+    // Renumber levels
+    const levels = document.querySelectorAll('.packaging-level');
+    levelCount = levels.length;
+    levels.forEach((lv, i) => {
+        lv.setAttribute('data-level', i + 1);
+    });
+    updateNamePreview();
+    updateBaseQtyInfo();
+    if (typeof PackagingPriceSync !== 'undefined') PackagingPriceSync.propagateAllFromLevel1();
+}
+
+function updateBaseQtyInfo() {
+    const levels = document.querySelectorAll('.packaging-level');
+    let runningBase = 1;
+    const firstUnitSB = levels[0]?.querySelector('.unit-searchbox-instance')?._searchbox;
+    const baseUnitName = firstUnitSB ? firstUnitSB.getLabel() || 'pcs' : 'pcs';
+    
+    levels.forEach((lv, i) => {
+        if (i === 0) {
+            runningBase = 1;
+            return;
+        }
+        const cqty = parseInt(lv.querySelector('.contained-qty')?.value) || 0;
+        if (cqty > 0) runningBase = runningBase * cqty;
+        const info = lv.querySelector('.base-qty-info');
+        if (info && cqty > 0) {
+            info.textContent = `= ${runningBase} ${baseUnitName}`;
+        } else if (info) {
+            info.textContent = '';
+        }
+    });
+}
+
+function calcMarginForLevel(div) {
+    const buy = parseFloat(div.querySelector('.buy-price')?.value) || 0;
+    const retail = parseFloat(div.querySelector('.retail-price')?.value) || 0;
+    const wholesale = parseFloat(div.querySelector('.wholesale-price')?.value) || 0;
+    
+    const retailText = div.querySelector('.margin-retail-text');
+    const wholesaleText = div.querySelector('.margin-wholesale-text');
+
+    const formatRp = (num) => 'Rp ' + Math.round(num).toLocaleString('id-ID');
+
+    if (buy > 0 && retail > 0) {
+        const m = ((retail - buy) / retail * 100).toFixed(1);
+        const profit = retail - buy;
+        const color = m >= 10 ? 'var(--success)' : (m >= 0 ? 'var(--warning)' : 'var(--danger)');
+        retailText.innerHTML = `Ecer: <strong style="color:${color}">${m}%</strong> <span style="font-size:10px;color:var(--text-muted);">(${formatRp(profit)})</span>`;
+    } else {
+        retailText.innerHTML = `Margin Retail: 0%`;
+    }
+
+    if (buy > 0 && wholesale > 0) {
+        const m = ((wholesale - buy) / wholesale * 100).toFixed(1);
+        const profit = wholesale - buy;
+        const color = m >= 5 ? 'var(--success)' : (m >= 0 ? 'var(--warning)' : 'var(--danger)');
+        wholesaleText.innerHTML = `Grosir: <strong style="color:${color}">${m}%</strong> <span style="font-size:10px;color:var(--text-muted);">(${formatRp(profit)})</span>`;
+    } else {
+        wholesaleText.innerHTML = `Margin Grosir: 0%`;
+    }
+}
+
+// Auto-generate name preview
+document.querySelectorAll('[name="product_type"],[name="variant"],[name="weight_value"],[name="single_name"]').forEach(el => {
+    el.addEventListener('input', updateNamePreview);
+    el.addEventListener('change', updateNamePreview);
+});
+
+function updateNamePreview() {
+    const isMulti = document.getElementById('isMultivariant')?.checked;
+    
+    let baseName = '';
+    let shortBaseName = '';
+
+    if (isMulti) {
+        const brand = brandSB ? brandSB.getLabel() : '';
+        const type = document.querySelector('[name="product_type"]')?.value?.trim() || '';
+        const variant = document.querySelector('[name="variant"]')?.value?.trim() || '';
+        
+        if (brand) baseName += brand;
+        if (type) baseName += (baseName ? ' ' : '') + type;
+        if (variant) baseName += ' ' + variant;
+        
+        shortBaseName = baseName;
+    } else {
+        const singleName = document.querySelector('[name="single_name"]')?.value?.trim() || '';
+        baseName = singleName;
+        shortBaseName = singleName;
+    }
+
+    let rawWeight = document.querySelector('[name="weight_value"]')?.value || '';
+    let formattedWeight = '';
+    if (rawWeight !== '') {
+        formattedWeight = parseFloat(rawWeight).toString();
+    }
+    const wUnit = weightUnitSB ? weightUnitSB.getValue() : '';
+    
+    let fullName = baseName;
+    let shortLabel = shortBaseName;
+
+    const levels = document.querySelectorAll('.packaging-level');
+    const qtyChain = [];
+    if (levels.length > 1) {
+        for (let i = levels.length - 1; i >= 1; i--) {
+            const qty = parseInt(levels[i].querySelector('input[name="contained_qty[]"]')?.value) || 0;
+            if (qty > 0) qtyChain.push(qty);
+        }
+    }
+
+    if (qtyChain.length > 0) {
+        const chainStr = qtyChain.join(' x ');
+        if (formattedWeight && wUnit) {
+            fullName += ` (${chainStr} x ${formattedWeight}${wUnit})`;
+            shortLabel += ` ${formattedWeight}${wUnit}`;
+            formattedWeight = ''; // clear so it doesn't get added twice
+        } else {
+            const unitSB = levels[0].querySelector('.unit-searchbox-instance')?._searchbox;
+            const baseUnit = unitSB ? unitSB.getLabel() || 'pcs' : 'pcs';
+            fullName += ` (${chainStr} x 1${baseUnit})`;
+        }
+    }
+
+    if (formattedWeight && wUnit) {
+        fullName += ' ' + formattedWeight + wUnit;
+        shortLabel += ' ' + formattedWeight + wUnit;
+    }
+
+    if (shortLabel.length > 35) shortLabel = shortLabel.substring(0, 32) + '...';
+
+    document.getElementById('namePreview').textContent = fullName || '-';
+    
+    if (!isLabelEdited) {
+        document.getElementById('manualLabel').value = shortLabel || '';
+    }
+}
+
+// ===== Special Pricing Qty Tiers =====
 const QTY_MODE_OPTS = [
     { v: 'both', l: 'Ecer & Grosir' },
     { v: 'retail', l: 'Ecer saja' },
@@ -498,7 +912,7 @@ function addQtyTierRow(listEl, data = {}) {
             <select class="form-control-dark tier-sale-mode" style="width:100%;padding:6px;font-size:11px;">${modeOpts}</select></div>
         <button type="button" title="Hapus tier" style="border:none;background:var(--danger-bg);color:var(--danger);padding:8px;border-radius:6px;cursor:pointer;margin-bottom:2px;" onclick="this.closest('.qty-tier-row').remove()"><i class="bi bi-trash"></i></button>
         <div style="grid-column:1/-1;"><label style="font-size:9px;color:var(--text-muted);">Label (opsional)</label>
-            <input type="text" class="form-control-dark tier-label" value="${escHtml(data.label || '')}" placeholder="Cth: 3 renceng = Rp 10.000" style="width:100%;padding:6px;font-size:11px;"></div>
+            <input type="text" class="form-control-dark tier-label" value="${escapeHtml(data.label || '')}" placeholder="Cth: 3 renceng = Rp 10.000" style="width:100%;padding:6px;font-size:11px;"></div>
     `;
     listEl.appendChild(row);
 }
@@ -530,138 +944,17 @@ function collectQtyTiers(levelDiv) {
 async function saveQtyTiersForPackaging(pkgId, levelDiv) {
     const tiers = collectQtyTiers(levelDiv);
     const res = await api(`${BASE_URL}api/products/packaging/${pkgId}/qty-prices`, 'POST', {
-        csrf_token: editCsrfToken,
+        csrf_token: csrfTokenValue,
         tiers,
     });
     if (res.error) throw new Error(res.error);
     return res;
 }
 
-function addEditLevel() { renderEditLevel(); }
-
-function removeEditLevel(btn) {
-    const div = btn.closest('.packaging-level');
-    const pkgId = div.getAttribute('data-pkg-id');
-    if (pkgId) deletedPkgIds.push(pkgId);
-    const tempId = parseInt(div.getAttribute('data-temp-id'));
-    editLevels = editLevels.filter(l => l.tempId !== tempId);
-    div.remove();
-    // Renumber
-    document.querySelectorAll('#editPkgContainer .packaging-level').forEach((el, i) => el.setAttribute('data-level', i + 1));
-    updateEditPreview();
-}
-
-async function openEditUnitModal() {
-    const result = await AppModal.show({
-        title:'Tambah Satuan Baru', icon:'bi-rulers',
-        bodyHTML:`<div class="modal-form-group"><label>Nama Satuan *</label><input type="text" class="form-control-dark" id="editModalUnitName" placeholder="Cth: Karton, Renteng..." required></div>`,
-        submitText:'Simpan',
-        onSubmit: async () => {
-            const name = document.getElementById('editModalUnitName').value.trim();
-            if (!name) { showToast('Nama satuan wajib diisi','warning'); return false; }
-            const res = await fetch(`${BASE_URL}api/units`, {method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':editCsrfToken},body:JSON.stringify({csrf_token:editCsrfToken,name})});
-            const data = await res.json();
-            if (data.error) { showToast(data.error,'error'); return false; }
-            if (data.success) {
-                editUnitsData.push({value:String(data.id),label:data.name});
-                document.querySelectorAll('.unit-searchbox-instance').forEach(el => {
-                    if (el._searchbox) el._searchbox.addOption(data.id, data.name, false);
-                });
-                
-                // Add to weight unit searchbox
-                const abbr = data.abbreviation || data.name;
-                const wLabel = data.abbreviation ? `${data.name} (${data.abbreviation})` : data.name;
-                weightUnitOpts.push({ value: abbr, label: wLabel });
-                if (editWeightUnitSB) editWeightUnitSB.addOption(abbr, wLabel, false);
-                
-                showToast(`Satuan "${data.name}" ditambahkan!`,'success');
-                return data;
-            }
-            return false;
-        }
-    });
-}
-
-function escHtml(str) {
-    const d = document.createElement('div'); d.textContent = str||''; return d.innerHTML;
-}
-
-function printAllBarcodesEdit() {
-    BarcodeUtil.printAllFilled('input.barcode-field', (input) => ({
-        title: document.getElementById('editNamePreview')?.textContent?.trim() || 'Produk',
-        subtitle: input.dataset.unit ? `1 ${input.dataset.unit}` : '',
-    }));
-}
-
-function updateEditPreview() {
-    const isMulti = document.getElementById('editIsMultivariant')?.checked;
-    let baseName = '';
-    let shortBaseName = '';
-
-    if (isMulti) {
-        const brand  = editBrandSB ? editBrandSB.getLabel() : '';
-        const type   = document.querySelector('[name="product_type"]')?.value?.trim() || '';
-        const variant= document.querySelector('[name="variant"]')?.value?.trim() || '';
-        if (brand) baseName += brand;
-        if (type) baseName += (baseName ? ' ' : '') + type;
-        if (variant) baseName += ' ' + variant;
-        shortBaseName = baseName;
-    } else {
-        const singleName = document.querySelector('[name="single_name"]')?.value?.trim() || '';
-        baseName = singleName;
-        shortBaseName = singleName;
-    }
-
-    let rawWeight = document.querySelector('[name="weight_value"]')?.value || '';
-    let formattedWeight = '';
-    if (rawWeight !== '') formattedWeight = parseFloat(rawWeight).toString();
-    const wUnit = editWeightUnitSB ? editWeightUnitSB.getValue() : '';
-
-    let fullName = baseName;
-    let shortLabel = shortBaseName;
-
-    // Point 7: Build packaging multiplier chain for all levels
-    const levels = document.querySelectorAll('#editPkgContainer .packaging-level');
-    const qtyChain = [];
-    if (levels.length > 1) {
-        for (let i = levels.length - 1; i >= 1; i--) {
-            const qty = parseInt(levels[i].querySelector('.contained-qty')?.value) || 0;
-            if (qty > 0) qtyChain.push(qty);
-        }
-    }
-
-    if (qtyChain.length > 0) {
-        const chainStr = qtyChain.join(' x ');
-        if (formattedWeight && wUnit) {
-            fullName += ` (${chainStr} x ${formattedWeight}${wUnit})`;
-            shortLabel += ` ${formattedWeight}${wUnit}`;
-            formattedWeight = '';
-        } else {
-            const unitSB = levels[0]?.querySelector('.unit-searchbox-instance')?._searchbox;
-            const baseUnit = unitSB ? unitSB.getLabel() || 'pcs' : 'pcs';
-            fullName += ` (${chainStr} x 1${baseUnit})`;
-        }
-    }
-
-    if (formattedWeight && wUnit) {
-        fullName += ' ' + formattedWeight + wUnit;
-        shortLabel += ' ' + formattedWeight + wUnit;
-    }
-
-    if (shortLabel.length > 35) shortLabel = shortLabel.substring(0, 32) + '...';
-
-    document.getElementById('editNamePreview').textContent = fullName || '-';
-
-    // Point 6: Auto-update label unless manually edited
-    if (!editIsLabelEdited) {
-        document.getElementById('editShortLabel').value = shortLabel || '';
-    }
-}
-
 async function updatePackagingWithConflict(pkgId, payload) {
     const resp = await fetch(`${BASE_URL}api/products/packaging/${pkgId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': editCsrfToken },
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfTokenValue },
         body: JSON.stringify(payload),
         credentials: 'same-origin'
     });
@@ -672,7 +965,7 @@ async function updatePackagingWithConflict(pkgId, payload) {
         const userChoice = await new Promise(resolve => {
             AppModal.show({
                 title: 'Barcode Duplikat Terdeteksi',
-                subtitle: `Barcode: ${escHtml(payload.barcode)}`,
+                subtitle: `Barcode: ${escapeHtml(payload.barcode)}`,
                 icon: 'bi-exclamation-triangle',
                 iconColor: 'var(--warning-bg)',
                 iconAccent: 'var(--warning)',
@@ -683,17 +976,17 @@ async function updatePackagingWithConflict(pkgId, payload) {
                             <div style="flex:1;min-width:0;">
                                 <div style="font-weight:700;font-size:var(--font-size-sm);color:var(--text-primary);margin-bottom:4px;">Barcode sudah digunakan!</div>
                                 <div style="font-size:var(--font-size-xs);color:var(--text-secondary);line-height:1.5;">
-                                    Barcode <strong style="font-family:monospace;">${escHtml(payload.barcode)}</strong> saat ini digunakan oleh:
+                                    Barcode <strong style="font-family:monospace;">${escapeHtml(payload.barcode)}</strong> saat ini digunakan oleh:
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:14px;margin-bottom:14px;">
                         <div style="font-weight:700;font-size:var(--font-size-sm);color:var(--text-primary);margin-bottom:4px;">
-                            <i class="bi bi-box-seam" style="color:var(--info);"></i> ${escHtml(c.product_name)}
+                            <i class="bi bi-box-seam" style="color:var(--info);"></i> ${escapeHtml(c.product_name)}
                         </div>
                         <div style="font-size:var(--font-size-xs);color:var(--text-muted);">
-                            Level ${c.level} · ${escHtml(c.unit_name || 'pcs')}
+                            Level ${c.level} · ${escapeHtml(c.unit_name || 'pcs')}
                         </div>
                     </div>
                     <div style="font-size:var(--font-size-xs);color:var(--text-muted);background:var(--surface-2);padding:10px 12px;border-radius:var(--radius-sm);">
@@ -710,13 +1003,13 @@ async function updatePackagingWithConflict(pkgId, payload) {
             // Retry with force_replace
             const resp2 = await fetch(`${BASE_URL}api/products/packaging/${pkgId}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': editCsrfToken },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfTokenValue },
                 body: JSON.stringify({ ...payload, force_replace: true }),
                 credentials: 'same-origin'
             });
             return await resp2.json();
         }
-        return data; // Return original conflict (caller checks for barcode_conflict)
+        return data; // Return original conflict
     }
 
     if (!resp.ok && data.error) {
@@ -725,16 +1018,18 @@ async function updatePackagingWithConflict(pkgId, payload) {
     return data;
 }
 
-async function submitEditProduct(e) {
+// ===== Submit Product =====
+async function submitProduct(e) {
     e.preventDefault();
-    const btn = document.getElementById('btnEditSubmit');
+
+    const btn = document.getElementById('btnSubmit');
     const prevText = btn.innerHTML;
     btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
     btn.disabled = true;
 
     try {
-        // Validasi kategori
-        const categoryId = editCatSB?.getValue();
+        // Validations
+        const categoryId = categorySB?.getValue();
         if (!categoryId) {
             showToast('❌ Kategori produk wajib dipilih', 'error');
             btn.innerHTML = prevText;
@@ -742,10 +1037,9 @@ async function submitEditProduct(e) {
             return;
         }
 
-        // Validasi brand jika multivarian
-        const isMulti = document.getElementById('editIsMultivariant')?.checked;
+        const isMulti = document.getElementById('isMultivariant')?.checked;
         if (isMulti) {
-            const brandId = editBrandSB?.getValue();
+            const brandId = brandSB?.getValue();
             if (!brandId) {
                 showToast('❌ Brand/Merek wajib dipilih untuk produk multivarian', 'error');
                 btn.innerHTML = prevText;
@@ -754,8 +1048,7 @@ async function submitEditProduct(e) {
             }
         }
 
-        // Validasi packaging
-        const pkgDivs = document.querySelectorAll('#editPkgContainer .packaging-level');
+        const pkgDivs = document.querySelectorAll('#packagingContainer .packaging-level');
         if (pkgDivs.length === 0) {
             showToast('❌ Tambahkan minimal 1 level kemasan', 'error');
             btn.innerHTML = prevText;
@@ -763,7 +1056,7 @@ async function submitEditProduct(e) {
             return;
         }
 
-        // Validasi harga kemasan
+        // Validate individual levels
         for (const div of pkgDivs) {
             const unitSB = div.querySelector('.unit-searchbox-instance')?._searchbox;
             const unitId = unitSB?.getValue();
@@ -773,8 +1066,8 @@ async function submitEditProduct(e) {
                 btn.disabled = false;
                 return;
             }
-            const buyPrice = parseFloat(div.querySelector('.pkg-buy')?.value) || 0;
-            const retail = parseFloat(div.querySelector('.pkg-retail')?.value) || 0;
+            const buyPrice = parseFloat(div.querySelector('.buy-price')?.value) || 0;
+            const retail = parseFloat(div.querySelector('.retail-price')?.value) || 0;
             if (retail === 0 && buyPrice === 0) {
                 showToast('❌ Harga jual atau harga beli wajib diisi untuk semua kemasan', 'error');
                 btn.innerHTML = prevText;
@@ -783,72 +1076,85 @@ async function submitEditProduct(e) {
             }
         }
 
-        // 1. Update product basic info
+        // 1. Update basic product info
         const productData = {
-            csrf_token: editCsrfToken,
-            full_name: document.getElementById('editNamePreview').textContent,
-            short_label: document.getElementById('editShortLabel')?.value?.trim() || '',
-            invoice_name: document.getElementById('editShortLabel')?.value?.trim() || '',
+            csrf_token: csrfTokenValue,
+            full_name: document.getElementById('namePreview').textContent,
+            short_label: document.getElementById('manualLabel').value.trim() || document.getElementById('namePreview').textContent.substring(0, 35),
+            invoice_name: document.getElementById('manualLabel').value.trim() || document.getElementById('namePreview').textContent.substring(0, 35),
             product_type: isMulti ? (document.querySelector('[name="product_type"]')?.value?.trim() || '') : '',
             variant: isMulti ? (document.querySelector('[name="variant"]')?.value?.trim() || '') : '',
-            brand_id: isMulti ? editBrandSB.getValue() : '',
-            category_id: editCatSB.getValue(),
+            brand_id: isMulti ? brandSB.getValue() : '',
+            category_id: categorySB.getValue(),
             weight_value: document.querySelector('[name="weight_value"]').value,
-            weight_unit: editWeightUnitSB.getValue(),
-            supplier_product_code: document.getElementById('editSupplierProductCode').value || '',
-            supplier_invoice_name: document.getElementById('editSupplierInvoiceName').value || '',
+            weight_unit: weightUnitSB.getValue(),
+            supplier_product_code: document.getElementById('supplierProductCode').value || '',
+            supplier_invoice_name: document.getElementById('supplierInvoiceName').value || '',
         };
-        
-        const res = await api(`${BASE_URL}api/products/update/${editProductId}`, 'POST', productData);
-        if (!res.success) {
-            throw new Error(res.error || 'Gagal update produk. Silahkan cek kembali data Anda');
+
+        const updateRes = await api(`${BASE_URL}api/products/update/${productId}`, 'POST', productData);
+        if (!updateRes.success) {
+            throw new Error(updateRes.error || 'Gagal mengupdate info produk');
         }
 
         // 2. Delete removed packagings
-        for (const pkgId of deletedPkgIds) {
-            await api(`${BASE_URL}api/products/packaging/${pkgId}/delete`, 'POST', { csrf_token: editCsrfToken });
+        for (const pId of deletedPkgIds) {
+            await api(`${BASE_URL}api/products/packaging/${pId}/delete`, 'POST', { csrf_token: csrfTokenValue });
         }
 
-        // 3. Update / create packagings
-        const pkgDivs = document.querySelectorAll('#editPkgContainer .packaging-level');
+        // 3. Upsert packaging levels
         for (const div of pkgDivs) {
             let pkgId = div.getAttribute('data-pkg-id');
             const unitSB = div.querySelector('.unit-searchbox-instance')?._searchbox;
             const unitId = unitSB ? unitSB.getValue() : '';
             const containedQty = div.querySelector('.contained-qty')?.value || 1;
-            const buyPrice = div.querySelector('.pkg-buy')?.value || 0;
-            const retail   = div.querySelector('.pkg-retail')?.value || 0;
-            const wholesale= div.querySelector('.pkg-wholesale')?.value || 0;
+            const buyPrice = div.querySelector('.buy-price')?.value || 0;
+            const retail   = div.querySelector('.retail-price')?.value || 0;
+            const wholesale= div.querySelector('.wholesale-price')?.value || 0;
             const barcode  = div.querySelector('.barcode-field')?.value || '';
 
             try {
                 if (pkgId) {
-                    const up = await updatePackagingWithConflict(pkgId, {
-                        csrf_token: editCsrfToken, unit_id: unitId, buy_price: buyPrice,
-                        sell_price_retail: retail, sell_price_wholesale: wholesale, barcode
+                    // Update existing
+                    const upRes = await updatePackagingWithConflict(pkgId, {
+                        csrf_token: csrfTokenValue,
+                        unit_id: unitId,
+                        buy_price: buyPrice,
+                        sell_price_retail: retail,
+                        sell_price_wholesale: wholesale,
+                        barcode: barcode
                     });
-                    if (up.error && up.error !== 'barcode_conflict') {
-                        throw new Error(up.error || up.message);
+                    if (upRes.error && upRes.error !== 'barcode_conflict') {
+                        throw new Error(upRes.error || upRes.message);
                     }
                 } else {
-                    const addRes = await api(`${BASE_URL}api/products/${editProductId}/packaging/add`, 'POST', {
-                        csrf_token: editCsrfToken, unit_id: unitId, contained_qty: containedQty,
-                        buy_price: buyPrice, sell_price_retail: retail, sell_price_wholesale: wholesale, barcode
+                    // Add new
+                    const addRes = await api(`${BASE_URL}api/products/${productId}/packaging/add`, 'POST', {
+                        csrf_token: csrfTokenValue,
+                        unit_id: unitId,
+                        contained_qty: containedQty,
+                        buy_price: buyPrice,
+                        sell_price_retail: retail,
+                        sell_price_wholesale: wholesale,
+                        barcode: barcode
                     });
                     if (!addRes.success) {
-                        throw new Error(addRes.error || 'Gagal tambah kemasan. Periksa kembali data harga dan satuan');
+                        throw new Error(addRes.error || 'Gagal menambahkan kemasan baru');
                     }
                     pkgId = String(addRes.id);
                     div.setAttribute('data-pkg-id', pkgId);
                 }
+                
+                // Save special price qty tiers
                 await saveQtyTiersForPackaging(pkgId, div);
             } catch (pkgErr) {
-                throw new Error(`❌ Error di kemasan: ${pkgErr.message}`);
+                throw new Error(`❌ Error pada kemasan: ${pkgErr.message}`);
             }
         }
 
         showToast('✅ Produk berhasil diupdate!', 'success');
-        setTimeout(() => window.location.href = `${BASE_URL}products/${editProductId}`, 1000);
+        setTimeout(() => window.location.href = `${BASE_URL}products/${productId}`, 1000);
+
     } catch (err) {
         showToast('Error: ' + err.message, 'error');
         btn.innerHTML = prevText;
@@ -856,46 +1162,11 @@ async function submitEditProduct(e) {
     }
 }
 
-// Supplier Info Modal
-async function openEditSupplierInfoModal() {
-    const currentCode = document.getElementById('editSupplierProductCode').value;
-    const currentInvoiceName = document.getElementById('editSupplierInvoiceName').value;
-    
-    await AppModal.show({
-        title: 'Info Supplier Produk',
-        subtitle: 'Gunakan informasi ini agar AI Scan lebih akurat mengenali produk dari invoice supplier',
-        icon: 'bi-truck',
-        bodyHTML: `
-            <div style="display:flex;flex-direction:column;gap:14px;">
-                <div class="modal-form-group">
-                    <label style="font-weight:600;font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:6px;">Kode Barang Supplier</label>
-                    <input type="text" id="editModalSupplierCode" class="form-control-dark" placeholder="Cth: CMY-125POR, IND-GOR-ST..." value="${escHtml(currentCode)}" style="width:100%;">
-                    <small style="display:block;margin-top:4px;color:var(--info);font-size:11px;">
-                        <i class="bi bi-info-circle"></i> Kode referensi dari supplier (jika ada di invoice)
-                    </small>
-                </div>
-                <div class="modal-form-group">
-                    <label style="font-weight:600;font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:6px;">Nama Barang di Invoice Supplier</label>
-                    <input type="text" id="editModalSupplierInvoiceName" class="form-control-dark" placeholder="Cth: CIMORY UHT PORORO 125ML..." value="${escHtml(currentInvoiceName)}" style="width:100%;">
-                    <small style="display:block;margin-top:4px;color:var(--info);font-size:11px;">
-                        <i class="bi bi-info-circle"></i> Nama barang persis seperti tertulis di invoice supplier
-                    </small>
-                </div>
-                <div style="background:var(--info-bg);border-left:3px solid var(--info);padding:10px 12px;border-radius:4px;font-size:12px;color:var(--text-primary);">
-                    <strong style="color:var(--info);">💡 Tips:</strong> Semakin detail informasi ini, semakin akurat AI dalam mengenali produk saat scanning invoice
-                </div>
-            </div>
-        `,
-        submitText: 'Simpan',
-        cancelText: 'Batal',
-        onSubmit: async () => {
-            const code = document.getElementById('editModalSupplierCode').value.trim();
-            const invoiceName = document.getElementById('editModalSupplierInvoiceName').value.trim();
-            document.getElementById('editSupplierProductCode').value = code;
-            document.getElementById('editSupplierInvoiceName').value = invoiceName;
-            showToast('Info supplier tersimpan', 'success');
-            return true;
-        }
-    });
+function toggleSupplierInfo() {
+    const panel = document.getElementById('supplierInfoPanel');
+    const icon = document.getElementById('iconSupplierChevron');
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : 'block';
+    icon.style.transform = isOpen ? '' : 'rotate(180deg)';
 }
 </script>

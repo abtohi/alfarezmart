@@ -29,6 +29,93 @@
 
 ---
 
+## [2026-05-21] — POS Custom Product: Satuan Searchbox dari Master Data
+
+**Tipe:** Minor
+**Modul:** Sales POS (pos.php)
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Satuan Field → Searchbox Master Data**:
+  - Mengganti field input teks bebas `Satuan` di modal barang custom (`openCustomProductModal()`) dengan searchbox autocomplete yang data listnya diambil dari endpoint `/api/units` (master data satuan).
+  - Implementasi menggunakan `<input type="hidden" id="customItemUnit">` sebagai value holder dan `<input type="text" id="customItemUnitSearch">` sebagai UI input yang dapat diketik untuk filter.
+  - Dropdown muncul saat field difokus, menampilkan daftar satuan beserta singkatan (jika ada), dan menutup otomatis setelah pilihan dibuat atau field kehilangan fokus.
+  - User **tidak bisa input teks bebas** — harus memilih dari daftar master data satuan.
+  - Default otomatis ke "Pcs" jika tersedia di master data, atau satuan pertama dalam daftar.
+  - Setelah pilih satuan, fokus otomatis pindah ke field Total Harga untuk mempercepat input.
+  - Pesan validasi diperbarui: `'Satuan wajib dipilih dari daftar'` (sebelumnya `'Satuan wajib diisi'`).
+
+### File yang Diubah/Dibuat
+- `app/views/sales/pos.php` — refactor `openCustomProductModal`: ganti Satuan text input jadi searchbox dengan fetch `/api/units`, dropdown filter, hidden input, auto-default, auto-focus.
+
+### Catatan
+- Tidak ada perubahan backend. Endpoint `/api/units` sudah tersedia dan hanya perlu dikonsumsi dari frontend.
+- Tidak breaking bagi flow `addCustomProductToCart` — nilai satuan tetap dibaca dari `customItemUnit` (hidden input).
+
+---
+
+## [2026-05-21] — POS Custom Product Quantity & Unit Price Calculation Enhancement
+
+**Tipe:** Minor
+**Modul:** Sales POS (pos.php), Layout (app.php), PWA Service Worker (sw.js)
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Custom Product Modal Quantity & Input Upgrades**:
+  - Mengubah form input Qty (`customItemQty`) di modal barang custom untuk mendukung kuantitas desimal (misalnya 0.5 kg atau 1.5 meter) dengan mengatur `min="0.01"` dan `step="any"`.
+  - Mengubah parsing Qty di frontend `onSubmit` modal dari `parseInt` menjadi `parseFloat` untuk memfasilitasi transaksi dengan kuantitas pecahan, serta meningkatkan validasi agar lebih aman.
+- **Cart Presentation & Unit Price Display**:
+  - Memperbarui visual cart di Kasir POS (`renderCart` & `updateCartItemDom`): untuk barang custom, kini menampilkan detail harga per pcs/unit yang dihitung secara real-time dari `Total Harga / Qty` di samping total harganya (contoh: `Rp2.000 / Pcs (Total Rp6.000)` alih-alih hanya `Total Rp6.000 (3 Pcs)`). Hal ini memperjelas informasi harga per unit sebelum checkout.
+- **Cache Busting & SW Cache Bump**:
+  - Meningkatkan versi cache Service Worker (`sw.js`) dari `alfarezmart-v1.94` ke `alfarezmart-v1.95`.
+  - Meningkatkan versi query parameter asset (`app.php`) dari `?v=3.8` ke `?v=3.9` untuk memastikan reload script and styles yang bersih bagi user.
+
+### File yang Diubah/Dibuat
+- `app/views/sales/pos.php` — dukung float Qty, parse as float, perbarui renderCart dan updateCartItemDom untuk menampilkan kalkulasi harga satuan.
+- `app/views/layouts/app.php` — bump static asset version ke v3.9.
+- `sw.js` — bump Service Worker cache version ke v1.95.
+
+### Catatan
+- Perubahan ini 100% backward-compatible, tidak mengubah data model ataupun struktur tabel, dan memastikan detail `unit_price` dan `total_price` tersimpan akurat di database `sale_items`.
+
+## [2026-05-21] — Restore Product Edit Layout & POS Barang Custom
+
+**Tipe:** Mayor
+**Modul:** Products (edit.php), Sales POS (pos.php), SaleModel, Database Migration
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Restore & Perbaikan Form Edit Produk (`edit.php`)**:
+  - Memastikan layout form kembali bersih dan fungsional — checkbox "Produk Multivarian" toggle brand/varian/jenis berjalan dengan benar.
+  - Mengganti modal popup supplier info dengan inline collapsible card **"Informasi Supplier (Opsional)"** menggunakan accordion chevron di dalam form. Panel ditampilkan/disembunyikan via `toggleSupplierInfo()`.
+  - Field `supplier_product_code` dan `supplier_invoice_name` kini berada langsung di dalam form — tidak perlu modal terpisah — sehingga ikut ter-submit otomatis saat form utama disimpan.
+  - Panel otomatis expand jika produk sudah memiliki data supplier (self-reveal on load).
+- **Fitur Barang Custom di Kasir POS (`pos.php`)**:
+  - Menambahkan tombol `+ Barang Custom` di header area scan/cari produk.
+  - Implementasi `openCustomProductModal()` — modal dengan field Nama Barang, Satuan, dan Total Harga (Rp).
+  - Implementasi `addCustomProductToCart(name, unit, totalPrice)` — inject item ke cart dengan `product_id: 'CUSTOM'`, `is_custom: true`, dan `use_custom_price: true`.
+  - Checkout payload diperluas dengan field `is_custom`, `custom_name`, `custom_unit` per item.
+- **Backend Custom Item (`SaleModel.php`)**:
+  - Menambah metode private `getPlaceholderProductAndPackaging()` — self-healing resolver untuk produk placeholder `CUSTOM` dan packagingnya, dengan in-request cache `$placeholderCache`.
+  - `createWithDetails()` diperluas: deteksi `is_custom` per item, skip stock deduction, simpan `custom_name` dan `custom_unit` ke tabel `sale_items`.
+  - `getTransactionDetails()` diupdate menggunakan `COALESCE(si.custom_name, p.full_name)` dll. agar struk dan laporan menampilkan nama custom secara transparan.
+- **Database Migration (`database/migrate_custom_items.php`)**:
+  - Kolom `custom_name VARCHAR(255) NULL` dan `custom_unit VARCHAR(50) NULL` ditambahkan ke tabel `sale_items`.
+  - Produk placeholder `CUSTOM` (code='CUSTOM'), stock row, dan packaging level 1 berhasil dibuat/diverifikasi di database.
+
+### File yang Diubah/Dibuat
+- `app/views/products/edit.php` — restore layout, ganti modal supplier info jadi inline collapsible panel.
+- `app/views/sales/pos.php` — tambah tombol + Barang Custom, modal input, fungsi addCustomProductToCart, perbarui checkout payload.
+- `app/models/SaleModel.php` — tambah getPlaceholderProductAndPackaging(), perbarui createWithDetails() dan getTransactionDetails().
+- `database/migrate_custom_items.php` — script migrasi one-shot [NEW].
+
+### Catatan
+- Barang custom tidak mengurangi stok produk manapun — menggunakan produk placeholder CUSTOM sebagai anchor FK.
+- `getPlaceholderProductAndPackaging()` bersifat self-healing: jika placeholder belum ada, dibuat otomatis dalam transaksi yang sama.
+- Struk, detail transaksi, dan laporan secara otomatis menampilkan nama/satuan custom tanpa perubahan di View/Controller lain.
+
+---
+
 ## [2026-05-20] — Penyeragaman Desain Dropdown & Searchbox Elegant
 
 **Tipe:** Refactor

@@ -93,7 +93,7 @@ const AppModal = {
         }
 
         body.innerHTML = config.bodyHTML || '';
-        submitBtn.textContent = config.submitText || 'Simpan';
+        submitBtn.innerHTML = config.submitText || 'Simpan';
         cancelBtn.textContent = config.cancelText || 'Batal';
         footer.style.display = config.hideFooter ? 'none' : 'flex';
 
@@ -115,7 +115,7 @@ const AppModal = {
                     // onSubmit handles its own errors
                 } finally {
                     submitBtn.disabled = false;
-                    submitBtn.textContent = config.submitText || 'Simpan';
+                    submitBtn.innerHTML = config.submitText || 'Simpan';
                 }
             } else {
                 this.close('submit');

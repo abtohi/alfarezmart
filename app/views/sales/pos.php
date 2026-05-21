@@ -21,7 +21,12 @@
 
     <!-- Search: barcode atau nama -->
     <div style="background:var(--surface-1); border-radius:var(--radius-md); padding:12px; margin-bottom:16px; border:1px solid var(--border-color);">
-        <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Scan/Cari Produk</label>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label style="font-size:var(--font-size-xs); font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin:0;">Scan/Cari Produk</label>
+            <button type="button" class="btn-outline-custom" onclick="openCustomProductModal()" style="padding:4px 10px; border-radius:6px; font-size:11px; display:inline-flex; align-items:center; gap:4px; border:1px solid var(--border-color); background:var(--surface-2);">
+                <i class="bi bi-plus-circle"></i> + Barang Custom
+            </button>
+        </div>
         <div class="search-input-wrapper" style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0 12px; display:flex; align-items:center; gap:8px;">
             <i class="bi bi-upc-scan" style="color:var(--primary); font-size:1.2rem; cursor:pointer;" onclick="BarcodeUtil.scanBarcode(document.getElementById('posSearch'))" title="Scan Barcode Kamera"></i>
             <input type="text" id="posSearch" placeholder="Scan barcode atau ketik nama produk..." 
@@ -129,7 +134,7 @@ function updateCartItemDom(item) {
     const noteEl = row.querySelector('.cart-item-note');
     if (unitPriceEl) {
         if (item.use_custom_price) {
-            unitPriceEl.textContent = `Total ${formatRupiah(item.total)} (${item.quantity} ${item.unit_name})`;
+            unitPriceEl.textContent = `${formatRupiah(item.unit_price)} / ${item.unit_name} (Total ${formatRupiah(item.total)})`;
         } else {
             unitPriceEl.textContent = `${formatRupiah(item.unit_price)} / ${item.unit_name}`;
         }
@@ -385,6 +390,10 @@ function updateQty(id, delta) {
     if (item.quantity <= 0) {
         cart = cart.filter(i => i.id != id);
     } else {
+        if (item.use_custom_price && item.unit_price > 0) {
+            item.custom_line_total = item.unit_price * item.quantity;
+            item.custom_price_draft = String(item.custom_line_total);
+        }
         recalcItemPrice(item);
     }
     renderCart();
@@ -438,7 +447,7 @@ function renderCart() {
                 <div style="display:grid;grid-template-columns:1fr auto;gap:12px;margin-bottom:10px;">
                     <div style="min-width:0;">
                         <div style="font-weight:600;font-size:0.95rem;margin-bottom:3px;line-height:1.3;color:var(--text-primary);">${escapeHtml(item.name)}</div>
-                        <div class="cart-item-unit-price" style="color:var(--text-muted);font-size:0.85rem;">${item.use_custom_price ? `Total ${formatRupiah(item.total)} (${item.quantity} ${escapeHtml(item.unit_name)})` : `${formatRupiah(item.unit_price)} / ${escapeHtml(item.unit_name)}`}</div>
+                        <div class="cart-item-unit-price" style="color:var(--text-muted);font-size:0.85rem;">${item.use_custom_price ? `${formatRupiah(item.unit_price)} / ${escapeHtml(item.unit_name)} (Total ${formatRupiah(item.total)})` : `${formatRupiah(item.unit_price)} / ${escapeHtml(item.unit_name)}`}</div>
                         ${noteBlock}
                     </div>
                     <div class="cart-item-total" style="font-weight:700;font-size:1rem;text-align:right;color:var(--primary);">${formatRupiah(item.total)}</div>
@@ -524,7 +533,7 @@ function saveDraft() {
                 <i class="bi bi-info-circle"></i> Draft akan tersimpan di perangkat ini. Keranjang saat ini akan dikosongkan setelah disimpan.
             </div>
         `,
-        submitText: '<i class="bi bi-save"></i> Simpan Draft',
+        submitText: 'Simpan Draft',
         onSubmit: async () => {
             const draftName = document.getElementById('draftNameInput')?.value?.trim() || '';
             const draft = {
@@ -548,6 +557,13 @@ function saveDraft() {
             return true;
         }
     });
+
+    setTimeout(() => {
+        const submitBtn = document.getElementById('appModalSubmitBtn');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="bi bi-save"></i> Simpan Draft';
+        }
+    }, 50);
 }
 
 function openDrafts() {
@@ -648,6 +664,9 @@ async function checkout() {
             level: i.level,
             quantity: i.quantity,
             unit_price: i.unit_price,
+            is_custom: !!i.is_custom,
+            custom_name: i.is_custom ? i.name : null,
+            custom_unit: i.is_custom ? i.unit_name : null,
         })),
     };
 
@@ -1020,6 +1039,184 @@ function showHistorySaveConfirmation(invoiceNo, total, cartItems) {
         });
     }, 400);
 }
+
+window.openCustomProductModal = function() {
+    AppModal.show({
+        title: 'Input Barang Custom',
+        subtitle: 'Untuk barang tidak terdaftar di database',
+        icon: 'bi-plus-circle',
+        bodyHTML: `
+            <div style="display:flex;flex-direction:column;gap:14px;">
+                <div class="modal-form-group">
+                    <label style="font-weight:600;font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:6px;">Nama Barang *</label>
+                    <input type="text" id="customItemName" class="form-control-dark" placeholder="Cth: Fotokopi Kertas, Jasa Service..." required style="width:100%;">
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+                    <div class="modal-form-group">
+                        <label style="font-weight:600;font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:6px;">Qty *</label>
+                        <input type="number" id="customItemQty" min="0.01" step="any" value="1" class="form-control-dark" required style="width:100%;">
+                    </div>
+                    <div class="modal-form-group">
+                        <label style="font-weight:600;font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:6px;">Satuan *</label>
+                        <input type="hidden" id="customItemUnit">
+                        <div style="position:relative;">
+                            <input type="text" id="customItemUnitSearch" class="form-control-dark"
+                                   placeholder="Pilih satuan..." autocomplete="off" readonly
+                                   style="width:100%;cursor:pointer;">
+                            <div id="customItemUnitDropdown"
+                                 style="position:absolute;top:100%;left:0;right:0;margin-top:2px;
+                                        background:var(--surface-2);border:1px solid var(--border-color);
+                                        border-radius:var(--radius-sm);max-height:160px;overflow-y:auto;
+                                        z-index:9999;display:none;box-shadow:0 4px 16px rgba(0,0,0,0.35);">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-form-group">
+                        <label style="font-weight:600;font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:6px;">Total Harga (Rp) *</label>
+                        <input type="number" id="customItemTotalPrice" min="1" step="any" class="form-control-dark" placeholder="Cth: 5000" required style="width:100%;">
+                    </div>
+                </div>
+                <div style="background:var(--info-bg);border-left:3px solid var(--info);padding:10px 12px;border-radius:4px;font-size:12px;color:var(--text-primary);">
+                    <strong style="color:var(--info);">💡 Tips:</strong> Barang custom tidak mengurangi stok produk manapun dan tercatat sebagai item terpisah di laporan.
+                </div>
+            </div>
+        `,
+        submitText: 'Tambah ke Keranjang',
+        onSubmit: async () => {
+            const name = document.getElementById('customItemName')?.value?.trim();
+            const qty = parseFloat(document.getElementById('customItemQty')?.value) || 1;
+            const unit = document.getElementById('customItemUnit')?.value?.trim();
+            const totalPrice = parseFloat(document.getElementById('customItemTotalPrice')?.value);
+
+            if (!name) { showToast('Nama barang wajib diisi', 'warning'); return false; }
+            if (isNaN(qty) || qty <= 0) { showToast('Quantity harus minimal 0.01', 'warning'); return false; }
+            if (!unit) { showToast('Satuan wajib dipilih dari daftar', 'warning'); return false; }
+            if (!Number.isFinite(totalPrice) || totalPrice <= 0) { showToast('Total harga harus lebih dari 0', 'warning'); return false; }
+
+            addCustomProductToCart(name, qty, unit, totalPrice);
+            return true;
+        }
+    });
+
+    // Inisialisasi unit searchbox setelah DOM modal siap
+    setTimeout(async () => {
+        // Manually set submit button icon to bypass potential service worker caching of components.js
+        const submitBtn = document.getElementById('appModalSubmitBtn');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="bi bi-cart-plus"></i> Tambah ke Keranjang';
+        }
+
+        const searchEl  = document.getElementById('customItemUnitSearch');
+        const hiddenEl  = document.getElementById('customItemUnit');
+        const dropEl    = document.getElementById('customItemUnitDropdown');
+        if (!searchEl || !hiddenEl || !dropEl) return;
+
+        // Fetch master data satuan
+        let units = [];
+        try {
+            const resp = await fetch(`${BASE_URL}api/units`, { credentials: 'same-origin' });
+            const data = await resp.json();
+            units = Array.isArray(data) ? data : [];
+        } catch(e) { units = []; }
+
+        function renderUnitDropdown(filtered) {
+            if (filtered.length === 0) {
+                dropEl.innerHTML = '<div style="padding:9px 12px;color:var(--text-muted);font-size:12px;text-align:center;">Tidak ada satuan ditemukan</div>';
+            } else {
+                dropEl.innerHTML = filtered.map(u => `
+                    <div data-unit-name="${escapeHtml(u.name)}"
+                         style="padding:9px 12px;cursor:pointer;font-size:13px;
+                                color:var(--text-primary);display:flex;align-items:center;
+                                gap:8px;border-bottom:1px solid var(--border-color);transition:background 0.12s;">
+                        <i class="bi bi-rulers" style="color:var(--success);font-size:11px;flex-shrink:0;"></i>
+                        <span>${escapeHtml(u.name)}</span>
+                        ${u.abbreviation ? `<span style="color:var(--text-muted);font-size:11px;margin-left:auto;">${escapeHtml(u.abbreviation)}</span>` : ''}
+                    </div>
+                `).join('');
+
+                dropEl.querySelectorAll('[data-unit-name]').forEach(el => {
+                    el.addEventListener('mouseover', () => el.style.background = 'var(--surface-1)');
+                    el.addEventListener('mouseout',  () => el.style.background = '');
+                    el.addEventListener('mousedown', (e) => {
+                        e.preventDefault(); // Jangan trigger blur dulu
+                        const name = el.getAttribute('data-unit-name');
+                        searchEl.value = name;
+                        hiddenEl.value = name;
+                        dropEl.style.display = 'none';
+                        document.getElementById('customItemTotalPrice')?.focus();
+                    });
+                });
+            }
+            dropEl.style.display = 'block';
+        }
+
+        // Default ke "Pcs" atau unit pertama
+        const defaultUnit = units.find(u => u.name.toLowerCase() === 'pcs') || units[0];
+        if (defaultUnit) {
+            searchEl.value = defaultUnit.name;
+            hiddenEl.value = defaultUnit.name;
+        }
+
+        // Aktifkan typing untuk filter
+        searchEl.removeAttribute('readonly');
+        searchEl.style.cursor = '';
+
+        searchEl.addEventListener('focus', () => {
+            const q = searchEl.value.trim().toLowerCase();
+            renderUnitDropdown(units.filter(u => u.name.toLowerCase().includes(q)));
+        });
+
+        searchEl.addEventListener('input', () => {
+            hiddenEl.value = ''; // reset sampai user pilih
+            const q = searchEl.value.trim().toLowerCase();
+            renderUnitDropdown(units.filter(u => u.name.toLowerCase().includes(q)));
+        });
+
+        searchEl.addEventListener('blur', () => {
+            setTimeout(() => { dropEl.style.display = 'none'; }, 180);
+            // Jika value persis cocok dengan salah satu unit, konfirmasi pilihan
+            const q = searchEl.value.trim().toLowerCase();
+            const match = units.find(u => u.name.toLowerCase() === q);
+            if (match) {
+                hiddenEl.value = match.name;
+                searchEl.value = match.name;
+            } else if (!hiddenEl.value) {
+                searchEl.value = ''; // Kosongkan jika tidak valid dan belum ada pilihan
+            }
+        });
+    }, 150);
+};
+
+window.addCustomProductToCart = function(name, qty, unit, totalPrice) {
+    const unitPrice = totalPrice / qty;
+    const newItem = {
+        id: Date.now(),
+        product_id: 'CUSTOM',
+        is_custom: true,
+        name: name,
+        print_name: name,
+        product_name: name,
+        packagings: [{
+            level: 1,
+            unit_name: unit,
+            sell_price_retail: unitPrice,
+            sell_price_wholesale: unitPrice,
+            qty_prices: []
+        }],
+        level: 1,
+        unit_name: unit,
+        quantity: qty,
+        use_custom_price: true,
+        custom_line_total: totalPrice,
+        custom_price_draft: String(totalPrice),
+        unit_price: unitPrice,
+        total: totalPrice,
+        price_note: 'Barang Custom',
+    };
+    cart.unshift(newItem);
+    renderCart();
+    showToast(`"${name}" ditambahkan ke keranjang`, 'success');
+};
 
 document.addEventListener('DOMContentLoaded', function() {
     try {

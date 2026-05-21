@@ -271,6 +271,8 @@ function setupDatabase()
             transaction_id INT NOT NULL,
             product_id INT NOT NULL,
             packaging_id INT NOT NULL,
+            custom_name VARCHAR(255) NULL,
+            custom_unit VARCHAR(50) NULL,
             quantity DECIMAL(10,2) NOT NULL,
             unit_price DECIMAL(12,2) NOT NULL,
             total_price DECIMAL(15,2) NOT NULL,

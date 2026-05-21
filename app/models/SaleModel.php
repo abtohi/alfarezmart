@@ -26,8 +26,8 @@ class SaleModel extends Model
 
             // 2. Insert Items & Update Stock
             $stmtItem = $this->db->prepare("
-                INSERT INTO sale_items (transaction_id, product_id, packaging_id, quantity, unit_price, total_price, profit)
-                VALUES (:tid, :prod_id, :pkg_id, :qty, :price, :total, :profit)
+                INSERT INTO sale_items (transaction_id, product_id, packaging_id, quantity, unit_price, total_price, profit, custom_name, custom_unit)
+                VALUES (:tid, :prod_id, :pkg_id, :qty, :price, :total, :profit, :custom_name, :custom_unit)
             ");
 
             $stmtUpdateStock = $this->db->prepare("
@@ -42,6 +42,32 @@ class SaleModel extends Model
             ");
 
             foreach ($items as $item) {
+                if (!empty($item['is_custom'])) {
+                    // Resolve placeholder product and packaging
+                    $placeholder = $this->getPlaceholderProductAndPackaging();
+                    $productId = $placeholder['product_id'];
+                    $pkgId = $placeholder['packaging_id'];
+                    $customName = $item['custom_name'] ?? 'Barang Custom';
+                    $customUnit = $item['custom_unit'] ?? 'Pcs';
+                    $profit = $item['quantity'] * $item['unit_price']; // since custom item buy price is 0
+
+                    // Insert sale item
+                    $stmtItem->execute([
+                        ':tid' => $transactionId,
+                        ':prod_id' => $productId,
+                        ':pkg_id' => $pkgId,
+                        ':qty' => $item['quantity'],
+                        ':price' => $item['unit_price'],
+                        ':total' => $item['quantity'] * $item['unit_price'],
+                        ':profit' => $profit,
+                        ':custom_name' => $customName,
+                        ':custom_unit' => $customUnit
+                    ]);
+
+                    // Skip stock update for custom items
+                    continue;
+                }
+
                 // Query langsung — jangan pakai getPackagings() (DDL qty_prices bisa commit transaksi MySQL)
                 $pkg = $this->resolvePackagingForSale(
                     (int)$item['product_id'],
@@ -68,7 +94,9 @@ class SaleModel extends Model
                     ':qty' => $item['quantity'],
                     ':price' => $item['unit_price'],
                     ':total' => $item['quantity'] * $item['unit_price'],
-                    ':profit' => $profit
+                    ':profit' => $profit,
+                    ':custom_name' => null,
+                    ':custom_unit' => null
                 ]);
 
                 $baseQtyDeducted = $item['quantity'] * $multiplier;
@@ -199,8 +227,10 @@ class SaleModel extends Model
         if (!$transaction) return null;
 
         $stmtItems = $this->db->prepare("
-            SELECT si.*, p.full_name, p.short_label, p.invoice_name,
-                   pp.level, u.name as unit_name
+            SELECT si.*, COALESCE(si.custom_name, p.full_name) AS full_name, 
+                   COALESCE(si.custom_name, p.short_label) AS short_label, 
+                   COALESCE(si.custom_name, p.invoice_name) AS invoice_name,
+                   pp.level, COALESCE(si.custom_unit, u.name) AS unit_name
             FROM sale_items si
             JOIN products p ON si.product_id = p.id
             LEFT JOIN product_packagings pp ON si.packaging_id = pp.id
@@ -212,6 +242,68 @@ class SaleModel extends Model
         $transaction['items'] = $stmtItems->fetchAll();
 
         return $transaction;
+    }
+
+    private ?array $placeholderCache = null;
+
+    private function getPlaceholderProductAndPackaging(): array
+    {
+        if ($this->placeholderCache !== null) {
+            return $this->placeholderCache;
+        }
+
+        // Search for placeholder product
+        $stmt = $this->db->prepare("SELECT id FROM products WHERE code = 'CUSTOM' LIMIT 1");
+        $stmt->execute();
+        $prod = $stmt->fetch();
+        
+        if (!$prod) {
+            // Self-healing: create the product if it doesn't exist
+            $stmt = $this->db->prepare("INSERT INTO products (code, full_name, short_label, invoice_name, is_active) VALUES ('CUSTOM', 'Barang Custom', 'Custom', 'Custom', 1)");
+            $stmt->execute();
+            $productId = $this->db->lastInsertId();
+
+            // Create stock row
+            $stmt = $this->db->prepare("INSERT INTO stock (product_id, current_qty_base) VALUES (:pid, 999999)");
+            $stmt->execute([':pid' => $productId]);
+
+            // Get Pcs unit
+            $stmt = $this->db->prepare("SELECT id FROM units WHERE name = 'Pcs' OR name = 'pcs' LIMIT 1");
+            $stmt->execute();
+            $unit = $stmt->fetch();
+            $unitId = $unit ? $unit['id'] : 1; // Fallback to 1
+
+            // Create packaging row
+            $stmt = $this->db->prepare("INSERT INTO product_packagings (product_id, level, unit_id, contained_qty, base_qty, barcode, buy_price, sell_price_retail, sell_price_wholesale) VALUES (:pid, 1, :uid, 1, 1, 'CUSTOM', 0, 0, 0)");
+            $stmt->execute([':pid' => $productId, ':uid' => $unitId]);
+            $packagingId = $this->db->lastInsertId();
+        } else {
+            $productId = $prod['id'];
+            // Find the packaging
+            $stmt = $this->db->prepare("SELECT id FROM product_packagings WHERE product_id = :pid AND level = 1 LIMIT 1");
+            $stmt->execute([':pid' => $productId]);
+            $pkg = $stmt->fetch();
+            if (!$pkg) {
+                // Self-healing packaging
+                $stmt = $this->db->prepare("SELECT id FROM units WHERE name = 'Pcs' OR name = 'pcs' LIMIT 1");
+                $stmt->execute();
+                $unit = $stmt->fetch();
+                $unitId = $unit ? $unit['id'] : 1;
+
+                $stmt = $this->db->prepare("INSERT INTO product_packagings (product_id, level, unit_id, contained_qty, base_qty, barcode, buy_price, sell_price_retail, sell_price_wholesale) VALUES (:pid, 1, :uid, 1, 1, 'CUSTOM', 0, 0, 0)");
+                $stmt->execute([':pid' => $productId, ':uid' => $unitId]);
+                $packagingId = $this->db->lastInsertId();
+            } else {
+                $packagingId = $pkg['id'];
+            }
+        }
+
+        $this->placeholderCache = [
+            'product_id' => (int)$productId,
+            'packaging_id' => (int)$packagingId
+        ];
+
+        return $this->placeholderCache;
     }
 
     public function findByInvoice(string $invoiceNumber)

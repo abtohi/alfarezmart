@@ -11,17 +11,67 @@
 | Item | Nilai |
 |------|-------|
 | **Status** | Aktif dikembangkan (Production-ready, fitur lanjutan sedang ditambah) |
-| **Versi Cache SW** | `alfarezmart-v1.93` |
-| **Versi Asset** | `?v=3.8` (di `app/views/layouts/app.php`) |
+| **Versi Cache SW** | `alfarezmart-v1.95` |
+| **Versi Asset** | `?v=3.9` (di `app/views/layouts/app.php`) |
 | **PHP Version** | XAMPP (cek `php -v`) |
 | **Timezone** | Asia/Jakarta (GMT+7) |
-| **Last Updated** | 2026-05-20 |
+| **Last Updated** | 2026-05-21 |
 
 ---
 
 ## Pekerjaan Terakhir
 
-### Sesi: 2026-05-20 — Improvement AI Scan Otomatis & Form Produk
+### Sesi: 2026-05-21 — POS Custom Product Quantity & Unit Price Calculation Enhancement
+
+**Yang dikerjakan:**
+1. **Custom Product Modal Quantity & Input Upgrades** — Mendukung penjualan barang custom dengan kuantitas desimal (seperti 0.5 kg, 1.5 meter):
+   - Form input Qty (`customItemQty`) di modal mendukung desimal (`min="0.01"` dan `step="any"`).
+   - Validasi dan parsing Qty di frontend menggunakan `parseFloat` alih-alive integer.
+2. **Cart Presentation & Unit Price Display** — Perhitungan real-time dan presentasi transparan di keranjang POS (`renderCart` & `updateCartItemDom`):
+   - Menampilkan detail `Harga Satuan / Satuan (Total Harga)` (contoh: `Rp2.000 / Pcs (Total Rp6.000)`).
+   - Penambahan kuantitas via button `+` / `-` otomatis meng-update total harga secara proporsional dengan mempertahankan unit price.
+3. **PWA Service Worker & Cache Busting** — Menghindari stale caching akibat perubahan script & style:
+   - Bump query version asset di `app.php` menjadi `?v=3.9`.
+   - Bump cache version Service Worker di `sw.js` menjadi `alfarezmart-v1.95`.
+
+### File yang Diubah:
+- `app/views/sales/pos.php` — modifikasi float qty modal, calculation logic, renderCart, & updateCartItemDom.
+- `app/views/layouts/app.php` — bump static asset version ke ?v=3.9.
+- `sw.js` — bump Service Worker cache version ke alfarezmart-v1.95.
+
+---
+
+### Sesi: 2026-05-21 — Restore Form Edit Produk & Fitur Barang Custom POS
+
+**Yang dikerjakan:**
+1. **Restore Product Edit Layout (`edit.php`)** — Form edit produk dipastikan kembali bersih dan fungsional:
+   - Checkbox "Produk Multivarian" toggle brand/jenis/varian berjalan dengan benar.
+   - Modal popup supplier info digantikan dengan **inline collapsible panel** (accordion dengan chevron) di dalam form.
+   - Field `supplier_product_code` dan `supplier_invoice_name` langsung ikut di-submit bersama form utama tanpa modal terpisah.
+   - Panel otomatis expand jika produk sudah memiliki data supplier tersimpan.
+2. **Fitur Barang Custom di Kasir POS (`pos.php`)** — Kasir dapat input item tidak terdaftar:
+   - Tombol `+ Barang Custom` ditambahkan di samping header "Scan/Cari Produk".
+   - Modal `openCustomProductModal()` dengan field Nama Barang, Satuan, dan Total Harga (Rp).
+   - `addCustomProductToCart()` inject item ke cart dengan flag `is_custom: true`.
+   - Checkout payload dikirim dengan field `is_custom`, `custom_name`, `custom_unit`.
+3. **Backend SaleModel (`SaleModel.php`)** — Support custom item end-to-end:
+   - `getPlaceholderProductAndPackaging()`: self-healing resolver produk placeholder CUSTOM.
+   - `createWithDetails()`: deteksi `is_custom`, skip stock update, simpan `custom_name`/`custom_unit`.
+   - `getTransactionDetails()`: COALESCE query agar nama/satuan custom tampil di struk & laporan.
+4. **Database Migration** — Kolom `custom_name` dan `custom_unit` ditambahkan ke `sale_items`. Produk placeholder CUSTOM (id=9381, packaging id=18924) terverifikasi di database.
+
+### Catatan Teknis:
+- Barang custom tidak mengurangi stok — menggunakan produk placeholder CUSTOM sebagai anchor FK.
+- `$placeholderCache` di SaleModel mencegah query ulang dalam satu request transaksi.
+- Detail transaksi dan struk menampilkan nama/satuan custom secara transparan tanpa perubahan di layer lain.
+
+### File yang Diubah:
+- `app/views/products/edit.php` — Restore layout, inline collapsible supplier info panel.
+- `app/views/sales/pos.php` — Tombol Barang Custom, modal, cart injection, checkout payload.
+- `app/models/SaleModel.php` — Backend custom item support.
+- `database/migrate_custom_items.php` — Migrasi DB [NEW].
+
+---
 
 **Yang dikerjakan:**
 1. **AI Invoice Scan Prompt Enhancement** — Meningkatkan prompt AI di `ApiController::scanInvoiceAI()` dengan instruksi lebih detail untuk ekstraksi atribut produk (brand, product_type, variant, weight, unit, supplier_code). Menambahkan contoh ekstraksi yang lebih comprehensive untuk beverage dan noodles category.
@@ -196,9 +246,11 @@
 
 | Prioritas | Task | Keterangan |
 |-----------|------|-----------|
-| � Selesai | Cleanup file test di root | ✅ Semua file temporary/debug sudah dihapus (commit: ffecac1) |
+| 🟢 Selesai | Cleanup file test di root | ✅ Semua file temporary/debug sudah dihapus (commit: ffecac1) |
 | 🟢 Selesai | Amankan `public/fix_fk.php` | ✅ File sudah dihapus (commit: ffecac1) |
 | 🟢 Selesai | Form sales/supplier visibility | ✅ Fallback dropdown ditambahkan (commit: 556a5c8) |
+| 🟢 Selesai | Restore form edit produk | ✅ Layout & multivarian checkbox diperbaiki, supplier info inline collapsible |
+| 🟢 Selesai | Fitur Barang Custom di POS | ✅ Modal + backend + DB migration selesai |
 | 🟡 Sedang | Refactor ApiController | Pertimbangkan split ke resource-based sub-controller |
 | 🟡 Sedang | Laporan penjualan per periode | Filter tanggal, total omzet, top produk |
 | 🟡 Sedang | Notifikasi stok minimum | Alert jika stok produk di bawah batas minimal |
