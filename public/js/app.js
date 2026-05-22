@@ -157,3 +157,59 @@ function initHeaderScroll() {
         lastScroll = current;
     }, { passive: true });
 }
+
+// ==========================================
+// UNSAVED CHANGES TRACKER
+// ==========================================
+window.hasUnsavedChanges = false;
+window.setUnsavedChanges = function(state) {
+    window.hasUnsavedChanges = state;
+};
+
+// Listen to input changes in any form to set the flag
+document.addEventListener('input', function(e) {
+    if (e.target.closest('form') && !e.target.classList.contains('no-track')) {
+        window.hasUnsavedChanges = true;
+    }
+});
+
+// Intercept clicks on links
+document.addEventListener('click', function(e) {
+    const a = e.target.closest('a');
+    // Only intercept if we have unsaved changes and it's a real navigation link
+    if (a && a.href && !a.target && window.hasUnsavedChanges) {
+        const href = a.getAttribute('href');
+        if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+            e.preventDefault();
+            
+            if (typeof AppModal !== 'undefined') {
+                AppModal.show({
+                    title: 'Konfirmasi Keluar',
+                    subtitle: 'Ada input yang belum disimpan. Jika Anda keluar, semua inputan akan terhapus. Yakin ingin keluar?',
+                    icon: 'bi-exclamation-triangle',
+                    iconColor: 'var(--warning-bg)',
+                    iconAccent: 'var(--warning)',
+                    submitText: 'Ya, Keluar',
+                    cancelText: 'Tidak, Tetap di Sini',
+                    onSubmit: () => {
+                        window.hasUnsavedChanges = false;
+                        window.location.href = a.href;
+                    }
+                });
+            } else {
+                if (confirm('Ada input yang belum disimpan. Semua inputan akan hilang. Yakin ingin keluar?')) {
+                    window.hasUnsavedChanges = false;
+                    window.location.href = a.href;
+                }
+            }
+        }
+    }
+});
+
+// For browser back button / refresh
+window.addEventListener('beforeunload', function (e) {
+    if (window.hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});

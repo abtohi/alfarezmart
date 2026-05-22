@@ -33,7 +33,9 @@ Klasifikasikan task ini sebelum mulai:
 
 ## Task
 
-- Di Kasir POS, tambahkan juga opsi untuk menginput nama barang secara custom, quantitynya, satuannya, dan totalnya (bukan harga satuan) barangkali ada barang yang tidak terdaftar di database, sehingga bisa langsung diinput nama barangnya secara custom. Sepertinya quantity nya masih belum ada formnya, tolong kamu tambahkan, tetapi total harga tetap ditulis sebagai harga total, misal jika total diinput 6000 sementara quantity 3, artinya harga per pcs sebenarnya 2000, sehingga ketika disimpan sebagai data baru di produk, harga per pcsnya otomatis menjadi 2000 bukan 6000.
+- Di halaman Edit Produk, saat user men-checklist box Tambah varian dari produk referensi, masih terdapat bug, yakni meskipun sudah menginput sudah menginput kemasan, tetap ketika disimpan muncul error Isi Kemasan minimal 2, padahal saya sudah isi, tolong ini diperbaiki lagi dan pastikan disimpan ketika menggunakan referensi produk lain.
+
+- Ketika user sedang dalam mode edit atau mode menginput form, di semua halaman, khususnya halaman Produk, Edit produk, Input Barang, dan Input Barang dengan mode Input Massal, ketika user sedang menginput namun belum selesai, kemudian tidak sengaja ke klik back, atau apapun yang menghilangkan semua inputan, tolong tambahkan pop up modal konfirmasi bahwa ketika back, semua inputan akan terhapus, jika di konfirmasi Ya, maka boleh back, tetapi ketika konfirmasi Tidak, maka tampilan tetap di mode edit form, karena berulang kali user sudah menginput banyak data, tidak sengaja melakukan back, akhirnya semua inputannya hilang tanpa konfirmasi
 
 ## Konteks Tambahan (opsional)
 

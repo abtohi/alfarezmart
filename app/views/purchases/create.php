@@ -2597,14 +2597,6 @@ function onBulkMainChange(bulkId, field, val) {
             refreshDrawerRowMargin(rowEl);
         });
     }
-} 'bi-graph-down-arrow'; color = 'var(--info)'; bg = 'rgba(76,201,240,0.1)';
-            label = `<strong>Turun Rp${Math.abs(diff).toLocaleString('id-ID')}</strong> dari Rp${Math.round(lastBuy).toLocaleString('id-ID')} → Rp${Math.round(buyPerPcs).toLocaleString('id-ID')}`;
-        }
-        trendEl.innerHTML = `<div style="margin-top:6px;padding:6px 10px;border-radius:var(--radius-sm);background:${bg};border:1px solid ${color}30;font-size:9px;color:${color};display:flex;gap:6px;align-items:flex-start;">
-            <i class="bi ${icon}" style="flex-shrink:0;margin-top:1px;"></i><span>${label}</span></div>`;
-    } else if (trendEl) {
-        trendEl.innerHTML = '';
-    }
 }
 
 /** Toggle bulk drawer open/close */

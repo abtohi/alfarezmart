@@ -486,27 +486,44 @@ function rebuildPackagingsFromReference(packagings) {
     const container = document.getElementById('packagingContainer');
     container.innerHTML = '';
     
-    // Clear and keep track of existing packages to delete
+    // Extract existing pkgIds to reuse them, preventing deletion errors for level 1
+    const existingPkgs = [];
     document.querySelectorAll('.packaging-level').forEach(lv => {
         const pkgId = lv.getAttribute('data-pkg-id');
-        if (pkgId) deletedPkgIds.push(pkgId);
+        if (pkgId) existingPkgs.push(pkgId);
     });
 
     levelCount = 0;
     const sorted = [...packagings].sort((a, b) => a.level - b.level);
-    sorted.forEach(pk => addPackagingLevel({
-        pkgId: null, // Since we copy from reference, these are new packages for this product
-        unit_id: pk.unit_id,
-        unit_name: pk.unit_name,
-        contained_qty: pk.contained_qty,
-        base_qty: pk.base_qty,
-        buy_price: pk.buy_price,
-        sell_price_retail: pk.sell_price_retail,
-        sell_price_wholesale: pk.sell_price_wholesale,
-        barcode: '',
-        qty_prices: []
-    }));
-    if (sorted.length === 0) addPackagingLevel();
+    
+    sorted.forEach((pk, i) => {
+        const targetPkgId = existingPkgs[i] || null;
+        addPackagingLevel({
+            pkgId: targetPkgId, 
+            unit_id: pk.unit_id,
+            unit_name: pk.unit_name,
+            contained_qty: pk.contained_qty,
+            base_qty: pk.base_qty,
+            buy_price: pk.buy_price,
+            sell_price_retail: pk.sell_price_retail,
+            sell_price_wholesale: pk.sell_price_wholesale,
+            barcode: '', // Barcode must be unique, don't copy
+            qty_prices: []
+        });
+    });
+    
+    // Any remaining existingPkgs that weren't mapped need to be deleted
+    for (let i = sorted.length; i < existingPkgs.length; i++) {
+        deletedPkgIds.push(existingPkgs[i]);
+    }
+
+    if (sorted.length === 0) {
+        addPackagingLevel({ pkgId: existingPkgs[0] || null });
+        for (let i = 1; i < existingPkgs.length; i++) {
+            deletedPkgIds.push(existingPkgs[i]);
+        }
+    }
+    
     updateBaseQtyInfo();
 }
 
