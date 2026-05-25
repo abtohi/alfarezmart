@@ -281,10 +281,45 @@ async function scanInvoiceWithAI() {
         
         const data = {
             csrf_token: csrfVal,
-            image_base64: invoicePhotoBase64
+            image_base64: invoicePhotoBase64,
+            supplier_id: currentSupplierId || null
         };
         
-        const result = await api(BASE_URL + 'api/ai/scan-invoice', 'POST', data);
+        // Use custom fetch with 2-minute timeout instead of api() helper
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 120000); // 2 min
+        
+        let result;
+        try {
+            const response = await fetch(BASE_URL + 'api/ai/scan-invoice', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfVal
+                },
+                body: JSON.stringify(data),
+                signal: controller.signal
+            });
+            clearTimeout(timeout);
+            
+            const text = await response.text();
+            if (!text || text.trim().length === 0) {
+                throw new Error('Server mengembalikan respons kosong. Kemungkinan timeout server.');
+            }
+            try {
+                result = JSON.parse(text);
+            } catch(pe) {
+                console.error('AI scan response not JSON:', text.substring(0, 500));
+                throw new Error('Respons AI tidak valid. Coba lagi atau gunakan gambar lebih kecil.');
+            }
+            if (result.error) throw new Error(result.error);
+        } catch(fetchErr) {
+            clearTimeout(timeout);
+            if (fetchErr.name === 'AbortError') {
+                throw new Error('Request timeout (2 menit). Coba gunakan gambar dengan resolusi lebih rendah.');
+            }
+            throw fetchErr;
+        }
         
         if (result.success && result.data && result.data.length > 0) {
             showToast('AI berhasil memparsing ' + result.data.length + ' item', 'success');
@@ -295,19 +330,47 @@ async function scanInvoiceWithAI() {
                     try {
                         const productData = await api(`${BASE_URL}api/products/${item.product_id}`);
                         // Set quantity and price based on AI output
-                        if (productData) {
-                            // Find base packaging
-                            const basePkg = productData.packagings.find(p => p.level == 1) || productData.packagings[0];
-                            if (basePkg) {
-                                basePkg.buy_price = item.price;
-                            }
-                            addProductToCart(productData);
+                        if (productData && productData.packagings && productData.packagings.length > 0) {
+                            let bestPkg = null;
+                            let targetUnit = (item.unit || '').toLowerCase().trim();
                             
-                            // Immediately update the added item's quantity
+                            // 1. First, try to match by unit name (if AI extracted 'Karton', match 'Karton')
+                            if (targetUnit) {
+                                bestPkg = productData.packagings.find(p => p.unit_name && p.unit_name.toLowerCase().includes(targetUnit));
+                            }
+                            
+                            // 2. If no name match, try to match by closest price (unit_price)
+                            if (!bestPkg) {
+                                let closestDiff = Infinity;
+                                for (const p of productData.packagings) {
+                                    const diff = Math.abs((parseFloat(p.buy_price) || 0) - item.unit_price);
+                                    // If difference is within 20% of the price, consider it a possible match
+                                    if (diff < closestDiff && item.unit_price > 0 && (diff / item.unit_price) < 0.3) {
+                                        closestDiff = diff;
+                                        bestPkg = p;
+                                    }
+                                }
+                            }
+                            
+                            // 3. Fallback to base packaging (level 1)
+                            if (!bestPkg) {
+                                bestPkg = productData.packagings.find(p => p.level == 1) || productData.packagings[0];
+                            }
+                            
+                            // Set the selected packaging level's buy_price to the AI's unit_price
+                            // We do NOT modify sell_price_retail or sell_price_wholesale (they remain from DB)
+                            if (bestPkg) {
+                                bestPkg.buy_price = item.unit_price;
+                            }
+                            
+                            // Add to cart with the specific level pre-selected
+                            addProductToCart(productData, bestPkg ? bestPkg.level : 1);
+                            
+                            // Immediately update the added item's quantity and total
                             const addedItem = purchaseItems[0]; // addProductToCart unshifts to the front
                             if (addedItem && addedItem.product_id == item.product_id) {
                                 addedItem.quantity = item.qty;
-                                addedItem.total = addedItem.quantity * addedItem.buy_price;
+                                addedItem.total = item.qty * item.unit_price;
                             }
                         }
                     } catch(e) {
@@ -685,16 +748,37 @@ async function selectProduct(productSummary) {
     }
 }
 
-function addProductToCart(product) {
-    let defaultLevel = 1;
-    let selectedPkg = product.packagings.find(p => p.level == defaultLevel) || product.packagings[0];
+function addProductToCart(product, defaultLevel = 1) {
+    let selectedPkg = product.packagings.find(p => p.level == defaultLevel) || product.packagings.find(p => p.level == 1) || product.packagings[0];
     
-    // Ensure all packagings have PPN/diskon initialized
+    // Ensure all packagings have PPN/diskon initialized and auto-detect custom pricing
+    const lv1 = product.packagings.find(p => p.level == 1) || product.packagings[0];
+    const lv1BaseQty = parseFloat(lv1?.base_qty) || 1;
+    const lv1Buy = parseFloat(lv1?.buy_price) || 0;
+    const lv1Ret = parseFloat(lv1?.sell_price_retail) || 0;
+    const lv1Who = parseFloat(lv1?.sell_price_wholesale) || 0;
+
     product.packagings.forEach(p => {
         if (p.ppn_pct === undefined) p.ppn_pct = 0;
         if (p.diskon_mode === undefined) p.diskon_mode = 'rp';
         if (p.diskon_value === undefined) p.diskon_value = 0;
         p.harga_nett = parseFloat(p.buy_price) || 0;
+
+        // Auto-detect custom flags by checking against proportional values
+        if (p.level == 1) {
+            p.buy_custom = false;
+            p.sell_custom = false;
+        } else {
+            const ratio = (parseFloat(p.base_qty) || 1) / lv1BaseQty;
+            const expectedRet = Math.round(lv1Ret * ratio);
+            const expectedWho = Math.round(lv1Who * ratio);
+
+            p.buy_custom = false;
+            
+            const diffRet = Math.abs((parseFloat(p.sell_price_retail) || 0) - expectedRet);
+            const diffWho = Math.abs((parseFloat(p.sell_price_wholesale) || 0) - expectedWho);
+            p.sell_custom = diffRet > 5 || diffWho > 5;
+        }
     });
     
     const existingIndex = purchaseItems.findIndex(i => i.product_id == product.id && i.level == selectedPkg.level);
@@ -794,6 +878,11 @@ function updateItem(tempId, field, value) {
         
         // Sync prices to other packaging levels if not custom
         syncPricesToPackagings(item, field);
+        
+        // If buy_price changed, also sync sell prices to other levels based on margin
+        if (field === 'buy_price') {
+            syncSellPricesWhenBuyPriceChanges(item);
+        }
     }
 
     calculateTotal();
@@ -819,10 +908,27 @@ function updateItemTotal(tempId, totalValue) {
     const totalPcs = qty * baseQty;
     const newBaseBuyPrice = total / totalPcs;
     
-    // Set the new buy_price on the current level (already multiplied by base_qty for this level)
+    // STEP 1: Update Level 1 packaging dengan harga per pcs baru
+    const level1Pkg = item.packagings.find(p => p.level == 1);
+    if (level1Pkg) {
+        level1Pkg.buy_price = Math.round(newBaseBuyPrice);
+    }
+    
+    // STEP 2: Sync semua packaging levels dari level 1
+    syncPricesFromLevel1(item);
+    
+    // STEP 2b: Sync harga jual dengan margin maintained
+    syncSellPricesWhenBuyPriceChanges(item);
+    
+    // STEP 3: Update item.buy_price untuk display
     const newLevelBuyPrice = Math.round(newBaseBuyPrice * baseQty);
-    updateItem(tempId, 'buy_price', newLevelBuyPrice);
-
+    item.buy_price = newLevelBuyPrice;
+    
+    // Update packaging di current level juga
+    if (pkg) {
+        pkg.buy_price = newLevelBuyPrice;
+    }
+    
     // Update input field visually
     const buyInput = document.querySelector(`[oninput="updateItem(${tempId}, 'buy_price', this.value)"]`);
     if (buyInput) buyInput.value = newLevelBuyPrice;
@@ -852,6 +958,9 @@ function updateItemTotal(tempId, totalValue) {
     } else if (infoEl) {
         infoEl.innerHTML = `<span style="color:var(--text-muted);">Harga modal per pcs: Rp${Math.round(newBaseBuyPrice).toLocaleString('id-ID')}</span>`;
     }
+    
+    // Re-render tabel harga kemasan dengan harga modal yang sudah ter-update
+    renderCart();
 }
 
 function toggleCustomPrice(tempId, priceType, isCustom) {
@@ -890,6 +999,108 @@ function toggleCustomPrice(tempId, priceType, isCustom) {
     }
 }
 
+/**
+ * Handle sell price custom toggle in modal - lock/unlock sell price per packaging
+ * When unchecked: sync sell prices from level 1 with margin maintained
+ * When checked: lock sell prices to be independent per packaging
+ */
+function onModalSellCustomToggle(chkEl, level) {
+    const lvEl = chkEl.closest('.packaging-level-edit');
+    if (!lvEl) return;
+    
+    const isCustom = chkEl.checked;
+    const toggle = lvEl.querySelector('.sell-custom-toggle');
+    const note = lvEl.querySelector('.sell-locked-note');
+    
+    // Update toggle styling
+    if (toggle) toggle.classList.toggle('active', isCustom);
+    if (note) note.style.display = isCustom ? 'none' : 'block';
+    
+    // If unchecking (disabling custom), sync sell prices from level 1 based on margin
+    if (!isCustom) {
+        const retEl = lvEl.querySelector('.pkg-ret');
+        const whoEl = lvEl.querySelector('.pkg-wholesale');
+        const buyEl = lvEl.querySelector('.pkg-buy');
+        
+        const level1LvEl = document.querySelector(`.packaging-level-edit[data-level="1"]`);
+        if (!level1LvEl) return;
+        
+        const level1RetEl = level1LvEl.querySelector('.pkg-ret');
+        const level1WhoEl = level1LvEl.querySelector('.pkg-wholesale');
+        const level1BuyEl = level1LvEl.querySelector('.pkg-buy');
+        
+        if (level1RetEl && retEl && level1BuyEl && buyEl) {
+            const level1Retail = parseFloat(level1RetEl.value) || 0;
+            const level1Buy = parseFloat(level1BuyEl.value) || 0;
+            const currentBuy = parseFloat(buyEl.value) || 0;
+            
+            // Calculate margin percentage from level 1
+            if (level1Buy > 0 && level1Retail > 0) {
+                const marginPct = (level1Retail - level1Buy) / level1Retail;
+                const newRetail = Math.round(currentBuy / (1 - marginPct));
+                retEl.value = newRetail;
+            }
+        }
+        
+        if (level1WhoEl && whoEl && level1BuyEl && buyEl) {
+            const level1Wholesale = parseFloat(level1WhoEl.value) || 0;
+            const level1Buy = parseFloat(level1BuyEl.value) || 0;
+            const currentBuy = parseFloat(buyEl.value) || 0;
+            
+            // Calculate margin percentage from level 1
+            if (level1Buy > 0 && level1Wholesale > 0) {
+                const marginPct = (level1Wholesale - level1Buy) / level1Wholesale;
+                const newWholesale = Math.round(currentBuy / (1 - marginPct));
+                whoEl.value = newWholesale;
+            }
+        }
+        
+        // Trigger margin update display
+        if (retEl) onPkgModalInput(retEl, level);
+    }
+}
+
+/**
+ * Handle buy price custom toggle in modal - lock/unlock buy price per packaging
+ * When unchecked: sync buy prices from level 1 (recalculate from pcs × isi)
+ * When checked: lock buy prices to be independent per packaging
+ */
+function onModalBuyCustomToggle(chkEl, level) {
+    const lvEl = chkEl.closest('.packaging-level-edit');
+    if (!lvEl) return;
+    
+    const isCustom = chkEl.checked;
+    const toggle = lvEl.querySelector('.buy-custom-toggle');
+    const note = lvEl.querySelector('.buy-locked-note');
+    
+    // Update toggle styling
+    if (toggle) toggle.classList.toggle('active', isCustom);
+    if (note) note.style.display = isCustom ? 'none' : 'block';
+    
+    // If unchecking (disabling custom), sync buy price from level 1
+    if (!isCustom) {
+        const buyEl = lvEl.querySelector('.pkg-buy');
+        const level1LvEl = document.querySelector(`.packaging-level-edit[data-level="1"]`);
+        
+        if (buyEl && level1LvEl) {
+            const level1BuyEl = level1LvEl.querySelector('.pkg-buy');
+            const baseQty = parseFloat(lvEl.dataset.baseQty) || 1;
+            const level1BaseQty = parseFloat(level1LvEl.dataset.baseQty) || 1;
+            
+            if (level1BuyEl) {
+                const level1Buy = parseFloat(level1BuyEl.value) || 0;
+                const buyPerPcs = level1Buy / level1BaseQty;
+                const newBuy = Math.round(buyPerPcs * baseQty);
+                buyEl.value = newBuy;
+                
+                // Trigger margin update
+                onPkgModalInput(buyEl, level);
+            }
+        }
+    }
+}
+
+
 function syncPricesToPackagings(item, field) {
     // Only sync if this is level 1 (pcs) - the base unit
     if (item.level != 1) return;
@@ -918,6 +1129,40 @@ function syncPricesToPackagings(item, field) {
             pkg.sell_price_retail = Math.round(basePrice * ratio);
         } else if (field === 'sell_price_wholesale') {
             pkg.sell_price_wholesale = Math.round(basePrice * ratio);
+        }
+    });
+}
+
+/**
+ * When buy price changes, sync sell prices to other levels based on margin from level 1
+ * This ensures that margin percentage is maintained across all packaging levels
+ */
+function syncSellPricesWhenBuyPriceChanges(item) {
+    const level1Pkg = item.packagings.find(p => p.level == 1);
+    if (!level1Pkg) return;
+    
+    const level1Buy = parseFloat(level1Pkg.buy_price) || 0;
+    const level1Retail = parseFloat(level1Pkg.sell_price_retail) || 0;
+    const level1Wholesale = parseFloat(level1Pkg.sell_price_wholesale) || 0;
+    
+    if (level1Buy <= 0) return;
+    
+    // Calculate margin percentages from level 1
+    const retailMarginPct = level1Retail > 0 ? (level1Retail - level1Buy) / level1Retail : 0;
+    const wholesaleMarginPct = level1Wholesale > 0 ? (level1Wholesale - level1Buy) / level1Wholesale : 0;
+    
+    // Apply margins to other levels if sell_price is not custom
+    item.packagings.forEach(pkg => {
+        if (pkg.level == 1 || pkg.sell_custom) return;
+        
+        const pkgBuy = parseFloat(pkg.buy_price) || 0;
+        if (pkgBuy <= 0) return;
+        
+        if (retailMarginPct > 0) {
+            pkg.sell_price_retail = Math.round(pkgBuy / (1 - retailMarginPct));
+        }
+        if (wholesaleMarginPct > 0) {
+            pkg.sell_price_wholesale = Math.round(pkgBuy / (1 - wholesaleMarginPct));
         }
     });
 }
@@ -1037,20 +1282,25 @@ function openAllPackagingsModal(tempId) {
     const item = purchaseItems.find(i => i.id == tempId);
     if (!item) return;
 
-    // --- STEP 1: Recalculate buy prices per level from current item.buy_price ---
+    // Recalculate buy prices per level from CURRENT item.buy_price (after Total Harga Pembelian updated)
     const currentPkg = item.packagings.find(p => p.level == item.level);
     const currentBaseQty = parseFloat(currentPkg?.base_qty) || 1;
     const buyPricePerPcs = item.buy_price / currentBaseQty;
 
     item.packagings.forEach(pkg => {
-        // Store original prices once for comparison
-        if (pkg._orig_buy === undefined) pkg._orig_buy = pkg.buy_price;
-        if (pkg._orig_ret === undefined) pkg._orig_ret = pkg.sell_price_retail;
+        // Store original prices for THIS modal opening (updated setiap kali modal dibuka)
+        // This ensures comparison dengan harga terbaru, bukan harga lama yang di-cache
+        pkg._orig_buy = pkg.buy_price;
+        pkg._orig_ret = pkg.sell_price_retail;
         if (!pkg.qty_prices) pkg.qty_prices = [];
         if (pkg.ppn_pct === undefined) pkg.ppn_pct = 0;
         if (pkg.diskon_mode === undefined) pkg.diskon_mode = 'rp';
         if (pkg.diskon_value === undefined) pkg.diskon_value = 0;
-        // Recalculate non-custom buy prices
+        // Initialize custom flags if not set
+        if (pkg.buy_custom === undefined) pkg.buy_custom = false;
+        if (pkg.sell_custom === undefined) pkg.sell_custom = false;
+        
+        // Recalculate non-custom buy prices berdasarkan current selected level
         if (!pkg.buy_custom) {
             pkg.buy_price = Math.round(buyPricePerPcs * (parseFloat(pkg.base_qty) || 1));
         }
@@ -1119,7 +1369,7 @@ function openAllPackagingsModal(tempId) {
             <div style="background:rgba(0,0,0,0.15);padding:12px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.05);">
                 ${!isLevel1 ? `
                 <label class="price-custom-toggle buy-custom-toggle ${pkg.buy_custom?'active':''}" title="Centang untuk harga modal manual">
-                    <input type="checkbox" class="chk-buy-custom" ${pkg.buy_custom?'checked':''}>
+                    <input type="checkbox" class="chk-buy-custom" ${pkg.buy_custom?'checked':''} onchange="onModalBuyCustomToggle(this, ${pkg.level})">
                     <i class="bi bi-pencil-square" style="font-size:10px;"></i> Harga Modal Custom
                 </label>` : ''}
                 <div style="margin-bottom:8px;">
@@ -1155,7 +1405,7 @@ function openAllPackagingsModal(tempId) {
                 ${suggestedHtml}
                 ${!isLevel1 ? `
                 <label class="price-custom-toggle sell-custom-toggle ${pkg.sell_custom?'active':''}" title="Centang untuk harga jual manual">
-                    <input type="checkbox" class="chk-sell-custom" ${pkg.sell_custom?'checked':''}>
+                    <input type="checkbox" class="chk-sell-custom" ${pkg.sell_custom?'checked':''} onchange="onModalSellCustomToggle(this, ${pkg.level})">
                     <i class="bi bi-tag" style="font-size:10px;"></i> Harga Jual Custom
                 </label>` : ''}
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px;">
@@ -1436,13 +1686,8 @@ function propagateFromMainInputs(item) {
         // --- Nett ---
         pkg.harga_nett = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
 
-        // --- Sell prices (if not custom, scale from selected level) ---
-        if (!pkg.sell_custom) {
-            const selRetPerPcs = (parseFloat(selPkg.sell_price_retail) || 0) / selBaseQty;
-            const selWhoPerPcs = (parseFloat(selPkg.sell_price_wholesale) || 0) / selBaseQty;
-            pkg.sell_price_retail    = Math.round(selRetPerPcs * bq);
-            pkg.sell_price_wholesale = Math.round(selWhoPerPcs * bq);
-        }
+        // --- Do not modify sell prices ---
+        // (Harga jual tetap seperti di database, jangan diubah)
     });
 }
 
@@ -1697,6 +1942,9 @@ function toggleItemDrawer(uid) {
         // Refresh mini table and trend banner (now outside drawer, in main card)
         refreshMiniTableForItem(uid);
         
+        // Refresh drawer inputs to ensure they match item.packagings
+        refreshOpenDrawer(uid);
+        
         // When opening, trigger margin recalc on all drawer rows
         drawer.querySelectorAll('.drawer-pkg-row').forEach(row => {
             refreshDrawerRowMargin(row);
@@ -1764,6 +2012,33 @@ function onDrawerBuyInput(prefix, uid, level, newVal) {
     if (!pkg) return;
     pkg.buy_price  = parseFloat(newVal) || 0;
     pkg.harga_nett = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
+    
+    // Propagate if level 1
+    if (level === 1) {
+        item.packagings.forEach(p => {
+            if (p.level === 1 || p.buy_custom) return;
+            const ratio = (parseFloat(p.base_qty) || 1) / (parseFloat(pkg.base_qty) || 1);
+            p.buy_price = Math.round(pkg.buy_price * ratio);
+            p.harga_nett = calcItemNett(p.buy_price, p.ppn_pct, p.diskon_mode, p.diskon_value);
+        });
+        
+        if (item.level === 1) {
+            item.buy_price = pkg.buy_price;
+            item.total = item.quantity * item.buy_price;
+            const totalInp = document.getElementById(prefix === 'bulk' ? '' : `main_total_${uid}`);
+            if (totalInp && prefix !== 'bulk') totalInp.value = Math.round(item.total);
+            else if (prefix === 'bulk') {
+                const rowEl = document.querySelector(`.bulk-item[data-bulk-id="${uid}"]`);
+                if (rowEl) {
+                    const blkTot = rowEl.querySelector('.bulk-total');
+                    if (blkTot) blkTot.value = Math.round(item.total);
+                }
+            }
+        }
+        
+        refreshOpenDrawer(uid);
+    }
+
     // Update mini table live (handles both regular and bulk)
     refreshMiniTableForItem(uid);
     // Update margin in drawer row
@@ -1782,6 +2057,19 @@ function onDrawerSellInput(prefix, uid, level, type, newVal) {
     if (!pkg) return;
     if (type === 'retail')    pkg.sell_price_retail    = parseFloat(newVal) || 0;
     if (type === 'wholesale') pkg.sell_price_wholesale = parseFloat(newVal) || 0;
+    
+    // Propagate if level 1
+    if (level === 1) {
+        const baseVal = parseFloat(newVal) || 0;
+        item.packagings.forEach(p => {
+            if (p.level === 1 || p.sell_custom) return;
+            const ratio = (parseFloat(p.base_qty) || 1) / (parseFloat(pkg.base_qty) || 1);
+            if (type === 'retail') p.sell_price_retail = Math.round(baseVal * ratio);
+            if (type === 'wholesale') p.sell_price_wholesale = Math.round(baseVal * ratio);
+        });
+        refreshOpenDrawer(uid);
+    }
+
     refreshMiniTableForItem(uid);
     const isBulk = (prefix === 'bulk');
     const rowEl = isBulk
@@ -2090,10 +2378,23 @@ function onMainInputChange(uid, field, val) {
 
 /** Refresh drawer content if it is currently open */
 function refreshOpenDrawer(uid) {
-    const drawer = document.getElementById(`drawer_${uid}`);
-    if (!drawer || drawer.style.display === 'none') return;
-    const item = purchaseItems.find(i => i.id == uid);
+    let isBulk = false;
+    let item = purchaseItems.find(i => i.id == uid);
+    if (!item) {
+        item = bulkItems.find(b => b.id == uid);
+        isBulk = true;
+    }
     if (!item) return;
+
+    let drawer;
+    if (isBulk) {
+        const bulkEl = document.querySelector(`.bulk-item[data-bulk-id="${uid}"]`);
+        if (bulkEl) drawer = bulkEl.querySelector('.bulk-drawer');
+    } else {
+        drawer = document.getElementById(`drawer_${uid}`);
+    }
+
+    if (!drawer || drawer.style.display === 'none') return;
     // Re-render only the PPN/Diskon info badges inside each drawer row
     drawer.querySelectorAll('.drawer-pkg-row').forEach(rowEl => {
         const level = parseInt(rowEl.dataset.level);
@@ -2247,18 +2548,36 @@ async function openBulkInputModal() {
 
     // Build temporary item-like objects for bulk items so we can reuse the same helpers
     bulkItems = products.map(p => {
-        const pkgs = (p.packagings || []).map(pkg => ({
-            ...pkg,
-            ppn_pct:      parseFloat(pkg.ppn_pct) || 0,
-            diskon_mode:  pkg.diskon_mode || 'rp',
-            diskon_value: parseFloat(pkg.diskon_value) || 0,
-            harga_nett:   parseFloat(pkg.buy_price) || 0,
-            buy_custom:   false,
-            sell_custom:  false,
-            qty_prices:   pkg.qty_prices || [],
-            _orig_buy:    parseFloat(pkg.buy_price) || 0,
-            _orig_ret:    parseFloat(pkg.sell_price_retail) || 0
-        }));
+        const lv1 = (p.packagings || []).find(pkg => pkg.level == 1) || (p.packagings || [])[0];
+        const lv1BaseQty = parseFloat(lv1?.base_qty) || 1;
+        const lv1Buy = parseFloat(lv1?.buy_price) || 0;
+        const lv1Ret = parseFloat(lv1?.sell_price_retail) || 0;
+        const lv1Who = parseFloat(lv1?.sell_price_wholesale) || 0;
+
+        const pkgs = (p.packagings || []).map(pkg => {
+            let buyCustom = false, sellCustom = false;
+            if (pkg.level != 1) {
+                const ratio = (parseFloat(pkg.base_qty) || 1) / lv1BaseQty;
+                const expectedRet = Math.round(lv1Ret * ratio);
+                const expectedWho = Math.round(lv1Who * ratio);
+                buyCustom = false;
+                const diffRet = Math.abs((parseFloat(pkg.sell_price_retail) || 0) - expectedRet);
+                const diffWho = Math.abs((parseFloat(pkg.sell_price_wholesale) || 0) - expectedWho);
+                sellCustom = diffRet > 5 || diffWho > 5;
+            }
+            return {
+                ...pkg,
+                ppn_pct:      parseFloat(pkg.ppn_pct) || 0,
+                diskon_mode:  pkg.diskon_mode || 'rp',
+                diskon_value: parseFloat(pkg.diskon_value) || 0,
+                harga_nett:   parseFloat(pkg.buy_price) || 0,
+                buy_custom:   buyCustom,
+                sell_custom:  sellCustom,
+                qty_prices:   pkg.qty_prices || [],
+                _orig_buy:    parseFloat(pkg.buy_price) || 0,
+                _orig_ret:    parseFloat(pkg.sell_price_retail) || 0
+            };
+        });
         const defPkg = pkgs[0];
         return {
             id:                    'bulk_' + p.id,
@@ -2569,34 +2888,7 @@ function onBulkMainChange(bulkId, field, val) {
     if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(bulkItem);
 
     // If drawer is open, refresh its rows with updated values
-    const drawer = el.querySelector('.bulk-drawer');
-    if (drawer && drawer.style.display !== 'none') {
-        drawer.querySelectorAll('.drawer-pkg-row').forEach(rowEl => {
-            const level = parseInt(rowEl.dataset.level);
-            const pkg   = bulkItem.packagings.find(p => p.level == level);
-            if (!pkg) return;
-            const ppn  = pkg.ppn_pct || 0;
-            const dm   = pkg.diskon_mode || 'rp';
-            const dv   = pkg.diskon_value || 0;
-            const nett = pkg.harga_nett || pkg.buy_price || 0;
-            // Update PPN/Diskon info badge
-            const badgesEl = rowEl.querySelector('.pkg-ppn-diskon-badge');
-            if (badgesEl) {
-                badgesEl.innerHTML = `PPN: <strong>${ppn}%</strong>&nbsp;|&nbsp;Diskon: <strong>${dm === 'pct' ? dv + '%' : 'Rp' + Math.round(dv).toLocaleString('id-ID')}</strong>&nbsp;|&nbsp;Nett: <strong style="color:var(--info);">Rp${Math.round(nett).toLocaleString('id-ID')}</strong>`;
-            }
-            if (!pkg.buy_custom) {
-                const buyInp = rowEl.querySelector('.drawer-pkg-buy');
-                if (buyInp) buyInp.value = Math.round(pkg.buy_price);
-            }
-            if (!pkg.sell_custom) {
-                const retInp = rowEl.querySelector('.drawer-pkg-ret');
-                const whoInp = rowEl.querySelector('.drawer-pkg-who');
-                if (retInp) retInp.value = Math.round(pkg.sell_price_retail);
-                if (whoInp) whoInp.value = Math.round(pkg.sell_price_wholesale);
-            }
-            refreshDrawerRowMargin(rowEl);
-        });
-    }
+    refreshOpenDrawer(bulkId);
 }
 
 /** Toggle bulk drawer open/close */
@@ -2613,6 +2905,7 @@ function toggleBulkDrawer(bulkId, btn) {
     
     if (!isOpen) {
         refreshMiniTableForItem(bulkId);
+        refreshOpenDrawer(bulkId);
     }
 }
 

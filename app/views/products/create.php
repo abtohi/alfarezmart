@@ -142,8 +142,12 @@
             <div class="section-title" style="margin-bottom:8px;">Preview Nama Produk</div>
             <div id="namePreview" style="font-size:var(--font-size-sm);color:var(--text-secondary);font-weight:600;margin-bottom:12px;">-</div>
             
-            <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Label Struk & Rak (Bisa diubah manual)</label>
-            <input type="text" id="manualLabel" class="form-control-dark" style="width:100%;font-size:var(--font-size-sm);font-weight:600;color:var(--info);" maxlength="35" placeholder="Maks 35 Karakter">
+            <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Label Struk & Rak</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;margin-bottom:8px;">
+                <input type="checkbox" id="isCustomLabel" name="is_custom_label" value="1" style="width:14px;height:14px;accent-color:var(--primary);">
+                <span>Custom nama label (jangan otomatis ubah)</span>
+            </label>
+            <input type="text" id="manualLabel" class="form-control-dark" style="width:100%;font-size:var(--font-size-sm);font-weight:600;color:var(--info);" maxlength="35" placeholder="Maks 35 Karakter" disabled>
         </div>
 
         <button type="submit" id="btnSubmit" class="btn-primary-custom" style="width:100%;padding:14px;box-shadow:0 8px 24px rgba(230,57,70,0.4);cursor:pointer;">
@@ -260,8 +264,15 @@ document.addEventListener('DOMContentLoaded', () => {
         updateNamePreview();
     });
 
-    document.getElementById('manualLabel')?.addEventListener('input', () => {
-        isLabelEdited = true;
+    document.getElementById('isCustomLabel')?.addEventListener('change', (e) => {
+        isLabelEdited = e.target.checked;
+        const manualLabel = document.getElementById('manualLabel');
+        manualLabel.disabled = !isLabelEdited;
+        if (!isLabelEdited) {
+            updateNamePreview();
+        } else {
+            manualLabel.focus();
+        }
     });
 
     document.getElementById('referenceSearch')?.addEventListener('input', (e) => {
@@ -450,6 +461,21 @@ function loadReferenceProduct(product) {
     rebuildPackagingsFromReference(product.packagings || []);
     applyReferenceLock();
     updateNamePreview();
+
+    if (product.is_custom_label == 1) {
+        isLabelEdited = true;
+        const chk = document.getElementById('isCustomLabel');
+        if (chk) chk.checked = true;
+        const manualLabel = document.getElementById('manualLabel');
+        manualLabel.disabled = false;
+        manualLabel.value = product.short_label || '';
+    } else {
+        isLabelEdited = false;
+        const chk = document.getElementById('isCustomLabel');
+        if (chk) chk.checked = false;
+        document.getElementById('manualLabel').disabled = true;
+    }
+
     showToast('Data referensi dimuat. Isi varian & barcode baru.', 'success');
 }
 
@@ -474,6 +500,7 @@ function rebuildPackagingsFromReference(packagings) {
         sell_price_retail: pk.sell_price_retail,
         sell_price_wholesale: pk.sell_price_wholesale,
         barcode: '',
+        qty_prices: pk.qty_prices ? [...pk.qty_prices] : [] // Copy qty_prices from reference, not empty
     }));
     if (sorted.length === 0) addPackagingLevel();
     updateBaseQtyInfo();
@@ -650,9 +677,33 @@ function addPackagingLevel(prefill = null) {
         if (wholesaleEl) wholesaleEl.value = prefill.sell_price_wholesale ?? '';
         if (bcEl) bcEl.value = prefill.barcode ?? '';
         calcMarginForLevel(div);
+        
+        setTimeout(() => {
+            const chkBuy = div.querySelector('.chk-buy-custom');
+            const chkSell = div.querySelector('.chk-sell-custom');
+            if (chkBuy && !chkBuy.checked) { chkBuy.checked = true; chkBuy.dispatchEvent(new Event('change')); }
+            if (chkSell && !chkSell.checked) { chkSell.checked = true; chkSell.dispatchEvent(new Event('change')); }
+        }, 50);
+
+        const hiddenQty = document.createElement('input');
+        hiddenQty.type = 'hidden';
+        hiddenQty.name = 'qty_prices_json[]';
+        hiddenQty.value = JSON.stringify(prefill.qty_prices || []);
+        div.appendChild(hiddenQty);
     } else if (isLevel1) {
         const pcsOption = unitsData.find(u => u.label.toLowerCase() === 'pcs');
         if (pcsOption) unitSB.select(pcsOption.value, pcsOption.label);
+        const hiddenQty = document.createElement('input');
+        hiddenQty.type = 'hidden';
+        hiddenQty.name = 'qty_prices_json[]';
+        hiddenQty.value = '[]';
+        div.appendChild(hiddenQty);
+    } else {
+        const hiddenQty = document.createElement('input');
+        hiddenQty.type = 'hidden';
+        hiddenQty.name = 'qty_prices_json[]';
+        hiddenQty.value = '[]';
+        div.appendChild(hiddenQty);
     }
 
     const bcInput = div.querySelector('.barcode-field');

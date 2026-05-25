@@ -147,8 +147,12 @@ $pkgsJson = json_encode($packagings, JSON_UNESCAPED_UNICODE);
             <div class="section-title" style="margin-bottom:8px;">Preview Nama Produk</div>
             <div id="namePreview" style="font-size:var(--font-size-sm);color:var(--text-secondary);font-weight:600;margin-bottom:12px;">-</div>
             
-            <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Label Struk & Rak (Bisa diubah manual)</label>
-            <input type="text" id="manualLabel" class="form-control-dark" style="width:100%;font-size:var(--font-size-sm);font-weight:600;color:var(--info);" maxlength="35" placeholder="Maks 35 Karakter" value="<?= htmlspecialchars($product['short_label'] ?? '') ?>">
+            <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Label Struk & Rak</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;margin-bottom:8px;">
+                <input type="checkbox" id="isCustomLabel" name="is_custom_label" value="1" style="width:14px;height:14px;accent-color:var(--primary);" <?= !empty($product['is_custom_label']) ? 'checked' : '' ?>>
+                <span>Custom nama label (jangan otomatis ubah)</span>
+            </label>
+            <input type="text" id="manualLabel" class="form-control-dark" style="width:100%;font-size:var(--font-size-sm);font-weight:600;color:var(--info);" maxlength="35" placeholder="Maks 35 Karakter" value="<?= htmlspecialchars($product['short_label'] ?? '') ?>" <?= empty($product['is_custom_label']) ? 'disabled' : '' ?>>
         </div>
 
         <button type="submit" id="btnSubmit" class="btn-primary-custom" style="width:100%;padding:14px;box-shadow:0 8px 24px rgba(230,57,70,0.4);cursor:pointer;">
@@ -176,7 +180,7 @@ const csrfTokenValue = document.getElementById('csrfToken').value;
 let levelCount = 0;
 let referenceMode = false;
 let isMultivariant = <?= (!empty($product['brand_id']) || !empty($product['product_type'])) ? 'true' : 'false' ?>;
-let isLabelEdited = false;
+let isLabelEdited = <?= !empty($product['is_custom_label']) ? 'true' : 'false' ?>;
 let referenceProductData = null;
 let referenceSearchTimer = null;
 let deletedPkgIds = [];
@@ -271,8 +275,17 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    document.getElementById('manualLabel')?.addEventListener('input', () => {
-        isLabelEdited = true;
+    // Removed redundant isLabelEdited initialization
+
+    document.getElementById('isCustomLabel')?.addEventListener('change', (e) => {
+        isLabelEdited = e.target.checked;
+        const manualLabel = document.getElementById('manualLabel');
+        manualLabel.disabled = !isLabelEdited;
+        if (!isLabelEdited) {
+            updateNamePreview();
+        } else {
+            manualLabel.focus();
+        }
     });
 
     document.getElementById('referenceSearch')?.addEventListener('input', (e) => {
@@ -471,6 +484,21 @@ function loadReferenceProduct(product) {
     rebuildPackagingsFromReference(product.packagings || []);
     applyReferenceLock();
     updateNamePreview();
+
+    if (product.is_custom_label == 1) {
+        isLabelEdited = true;
+        const chk = document.getElementById('isCustomLabel');
+        if (chk) chk.checked = true;
+        const manualLabel = document.getElementById('manualLabel');
+        manualLabel.disabled = false;
+        manualLabel.value = product.short_label || '';
+    } else {
+        isLabelEdited = false;
+        const chk = document.getElementById('isCustomLabel');
+        if (chk) chk.checked = false;
+        document.getElementById('manualLabel').disabled = true;
+    }
+
     showToast('Data referensi dimuat. Isi varian & barcode baru.', 'success');
 }
 
@@ -483,15 +511,15 @@ function clearReference() {
 }
 
 function rebuildPackagingsFromReference(packagings) {
-    const container = document.getElementById('packagingContainer');
-    container.innerHTML = '';
-    
     // Extract existing pkgIds to reuse them, preventing deletion errors for level 1
     const existingPkgs = [];
     document.querySelectorAll('.packaging-level').forEach(lv => {
         const pkgId = lv.getAttribute('data-pkg-id');
         if (pkgId) existingPkgs.push(pkgId);
     });
+
+    const container = document.getElementById('packagingContainer');
+    container.innerHTML = '';
 
     levelCount = 0;
     const sorted = [...packagings].sort((a, b) => a.level - b.level);
@@ -508,7 +536,7 @@ function rebuildPackagingsFromReference(packagings) {
             sell_price_retail: pk.sell_price_retail,
             sell_price_wholesale: pk.sell_price_wholesale,
             barcode: '', // Barcode must be unique, don't copy
-            qty_prices: []
+            qty_prices: pk.qty_prices ? [...pk.qty_prices] : [] // Copy qty_prices from reference, not empty
         });
     });
     
@@ -612,24 +640,29 @@ function addPackagingLevel(prefill = null) {
     let isSellCustom = false;
 
     if (!isLevel1 && prefill) {
-        try {
-            const levels = document.querySelectorAll('.packaging-level');
-            if (levels.length > 0) {
-                const l1 = levels[0];
-                const l1Buy = parseFloat(l1.querySelector('.buy-price')?.value) || 0;
-                const l1Retail = parseFloat(l1.querySelector('.retail-price')?.value) || 0;
-                const l1Wholesale = parseFloat(l1.querySelector('.wholesale-price')?.value) || 0;
-                const bQty = parseInt(prefill.base_qty) || 1;
-                
-                const expBuy = l1Buy * bQty;
-                const expRetail = l1Retail * bQty;
-                const expWholesale = l1Wholesale * bQty;
-                
-                if (prefill.buy_price > 0 && Math.abs(prefill.buy_price - expBuy) > 0.01) isBuyCustom = true;
-                if ((prefill.sell_price_retail > 0 && Math.abs(prefill.sell_price_retail - expRetail) > 0.01) || 
-                    (prefill.sell_price_wholesale > 0 && Math.abs(prefill.sell_price_wholesale - expWholesale) > 0.01)) isSellCustom = true;
-            }
-        } catch (e) {}
+        if (referenceMode) {
+            isBuyCustom = true;
+            isSellCustom = true;
+        } else {
+            try {
+                const levels = document.querySelectorAll('.packaging-level');
+                if (levels.length > 0) {
+                    const l1 = levels[0];
+                    const l1Buy = parseFloat(l1.querySelector('.buy-price')?.value) || 0;
+                    const l1Retail = parseFloat(l1.querySelector('.retail-price')?.value) || 0;
+                    const l1Wholesale = parseFloat(l1.querySelector('.wholesale-price')?.value) || 0;
+                    const bQty = parseInt(prefill.base_qty) || 1;
+                    
+                    const expBuy = l1Buy * bQty;
+                    const expRetail = l1Retail * bQty;
+                    const expWholesale = l1Wholesale * bQty;
+                    
+                    if (prefill.buy_price > 0 && Math.abs(prefill.buy_price - expBuy) > 0.01) isBuyCustom = true;
+                    if ((prefill.sell_price_retail > 0 && Math.abs(prefill.sell_price_retail - expRetail) > 0.01) || 
+                        (prefill.sell_price_wholesale > 0 && Math.abs(prefill.sell_price_wholesale - expWholesale) > 0.01)) isSellCustom = true;
+                }
+            } catch (e) {}
+        }
     }
 
     div.innerHTML = `
@@ -645,7 +678,7 @@ function addPackagingLevel(prefill = null) {
             <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Barcode</label>
             <div style="background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:0 8px 0 12px;display:flex;align-items:center;gap:4px;">
                 <i class="bi bi-upc-scan" style="color:var(--primary);flex-shrink:0;cursor:pointer;padding:8px 4px;font-size:1.1rem;" onclick="BarcodeUtil.scanBarcode(this.nextElementSibling)" title="Scan Barcode"></i>
-                <input type="text" name="barcode[]" class="barcode-field" placeholder="Scan, ketik, atau generate..." style="flex:1;border:none;background:transparent;padding:12px 6px;color:var(--text-primary);font-size:var(--font-size-base);outline:none;font-family:var(--font-family);min-width:0;" value="${prefill ? escapeHtml(prefill.barcode) : ''}">
+                <input type="text" name="barcode[]" class="barcode-field" placeholder="Scan, ketik, atau generate..." style="flex:1;border:none;background:transparent;padding:12px 6px;color:var(--text-primary);font-size:var(--font-size-base);outline:none;font-family:var(--font-family);min-width:0;" value="${prefill && prefill.barcode ? prefill.barcode : ''}">
                 <button type="button" class="btn-scan-bc" title="Scan barcode dengan kamera" style="border:none;background:var(--info-bg);color:var(--info);padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap;"><i class="bi bi-camera"></i></button>
                 <button type="button" class="btn-gen-bc" title="Generate barcode" style="border:none;background:var(--primary-bg);color:var(--primary);padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap;"><i class="bi bi-magic"></i></button>
                 <button type="button" class="btn-print-bc" title="Cetak barcode" style="border:none;background:var(--surface-2);color:var(--text-secondary);padding:6px 10px;border-radius:6px;font-size:11px;cursor:pointer;"><i class="bi bi-printer"></i></button>
@@ -720,8 +753,19 @@ function addPackagingLevel(prefill = null) {
 
     if (prefill) {
         if (prefill.unit_id) unitSB.select(String(prefill.unit_id), prefill.unit_name || '');
+        const cqtyEl = div.querySelector('.contained-qty');
+        if (cqtyEl && prefill.contained_qty !== undefined && prefill.contained_qty !== null) {
+            cqtyEl.value = prefill.contained_qty;
+        }
+        const wholesaleEl = div.querySelector('.wholesale-price');
+        const bcEl = div.querySelector('.barcode-field');
+        if (wholesaleEl) wholesaleEl.value = prefill.sell_price_wholesale ?? '';
+        if (bcEl) bcEl.value = prefill.barcode ?? '';
         calcMarginForLevel(div);
-        initQtyTiers(div, prefill.qty_prices || []);
+        
+        if (typeof initQtyTiers === 'function') {
+            setTimeout(() => initQtyTiers(div, prefill.qty_prices || []), 100);
+        }
     } else if (isLevel1) {
         const pcsOption = unitsData.find(u => u.label.toLowerCase() === 'pcs');
         if (pcsOption) unitSB.select(pcsOption.value, pcsOption.label);
@@ -929,7 +973,7 @@ function addQtyTierRow(listEl, data = {}) {
             <select class="form-control-dark tier-sale-mode" style="width:100%;padding:6px;font-size:11px;">${modeOpts}</select></div>
         <button type="button" title="Hapus tier" style="border:none;background:var(--danger-bg);color:var(--danger);padding:8px;border-radius:6px;cursor:pointer;margin-bottom:2px;" onclick="this.closest('.qty-tier-row').remove()"><i class="bi bi-trash"></i></button>
         <div style="grid-column:1/-1;"><label style="font-size:9px;color:var(--text-muted);">Label (opsional)</label>
-            <input type="text" class="form-control-dark tier-label" value="${escapeHtml(data.label || '')}" placeholder="Cth: 3 renceng = Rp 10.000" style="width:100%;padding:6px;font-size:11px;"></div>
+            <input type="text" class="form-control-dark tier-label" value="${data && data.label ? data.label : ''}" placeholder="Cth: 3 renceng = Rp 10.000" style="width:100%;padding:6px;font-size:11px;"></div>
     `;
     listEl.appendChild(row);
 }
@@ -1099,6 +1143,7 @@ async function submitProduct(e) {
             full_name: document.getElementById('namePreview').textContent,
             short_label: document.getElementById('manualLabel').value.trim() || document.getElementById('namePreview').textContent.substring(0, 35),
             invoice_name: document.getElementById('manualLabel').value.trim() || document.getElementById('namePreview').textContent.substring(0, 35),
+            is_custom_label: document.getElementById('isCustomLabel').checked ? 1 : 0,
             product_type: isMulti ? (document.querySelector('[name="product_type"]')?.value?.trim() || '') : '',
             variant: isMulti ? (document.querySelector('[name="variant"]')?.value?.trim() || '') : '',
             brand_id: isMulti ? brandSB.getValue() : '',
@@ -1136,6 +1181,7 @@ async function submitProduct(e) {
                     const upRes = await updatePackagingWithConflict(pkgId, {
                         csrf_token: csrfTokenValue,
                         unit_id: unitId,
+                        contained_qty: containedQty,
                         buy_price: buyPrice,
                         sell_price_retail: retail,
                         sell_price_wholesale: wholesale,
@@ -1169,8 +1215,10 @@ async function submitProduct(e) {
             }
         }
 
+
+
         showToast('✅ Produk berhasil diupdate!', 'success');
-        setTimeout(() => window.location.href = `${BASE_URL}products/${productId}`, 1000);
+        setTimeout(() => window.location.href = `${BASE_URL}products`, 1000);
 
     } catch (err) {
         showToast('Error: ' + err.message, 'error');

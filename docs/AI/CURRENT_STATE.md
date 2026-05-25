@@ -11,15 +11,67 @@
 | Item | Nilai |
 |------|-------|
 | **Status** | Aktif dikembangkan (Production-ready, fitur lanjutan sedang ditambah) |
-| **Versi Cache SW** | `alfarezmart-v1.95` |
-| **Versi Asset** | `?v=3.9` (di `app/views/layouts/app.php`) |
+| **Versi Cache SW** | `alfarezmart-v4.9` |
+| **Versi Asset** | `?v=4.9` (di `app/views/layouts/app.php`) |
 | **PHP Version** | XAMPP (cek `php -v`) |
 | **Timezone** | Asia/Jakarta (GMT+7) |
-| **Last Updated** | 2026-05-21 |
+| **Last Updated** | 2026-05-24 |
 
 ---
 
 ## Pekerjaan Terakhir
+
+### Sesi: 2026-05-24 — Bugfix Tier Harga & Live Search
+**Yang dikerjakan:**
+1. Memperbaiki tombol "Tambah Harga Tier" pada halaman Edit Produk yang tidak berfungsi untuk produk lama yang belum punya tier sama sekali (masalah missing initialization `initQtyTiers`).
+2. Memperbaiki fitur *Live Search* (rekomendasi pencarian) di halaman Produk (`products/index.php`) yang rusak akibat *Syntax Error* pada blok `try...catch` asinkron Javascript.
+3. PWA Cache Busting — Update ke versi `4.9`.
+
+---
+
+### Sesi Sebelumnya: 2026-05-24 — AI Scan Kemasan Cerdas & Keamanan Harga Jual
+
+**Yang dikerjakan:**
+1. **AI Extract Unit Price** — Memperbarui instruksi prompt AI di `ApiController.php` & tabel `app_settings` agar mampu mengekstrak attribut `unit_price` (harga per satuan kemasan) terpisah dari `total_price` serta mempertegas deteksi kolom nama `unit` (kemasan) seperti Karton, Renceng, dll.
+2. **Auto-Selection Kemasan** — Mengubah logika frontend di `purchases/create.php` saat memasukkan hasil scan AI ke dalam keranjang. Kini sistem tidak langsung mematok level 1 (Pcs), melainkan secara cerdas memilih level kemasan. Sistem mencocokkan kemasan melalui nama satuan terlebih dahulu, dan jika tidak jelas, mencari harga kemasan yang mendekati hasil hitungan AI.
+3. **Keamanan Harga Jual** — AI tidak lagi menimpa data harga level dasar. Harga beli (modal) hanya di-update khusus untuk kemasan terpilih, tanpa menimpa/merusak harga jual ritel dan grosir di database.
+4. **PWA Cache Busting** — Memperbarui cache service worker dan asset menjadi versi `4.8`.
+
+### File yang Diubah:
+- `app/controllers/ApiController.php` — Update default prompt AI & extraksi `unit_price`, `total_price`.
+- `app/views/purchases/create.php` — Logika pemetaan kemasan otomatis.
+- `app/views/layouts/app.php` & `sw.js` — PWA Cache Buster v4.8.
+- `update_prompt.php` — Script one-shot penimpa config prompt di database (sudah dieksekusi).
+
+---
+
+### Sesi Sebelumnya: 2026-05-24 — PWA Fast Fallback & Sinkronisasi Harga Mode Referensi
+
+**Yang dikerjakan:**
+1. **PWA Fast Fallback (Timeout-based Network First)** — Mengatasi keluhan "load lama saat sinyal lemah". `sw.js` diperbarui untuk melayani request navigasi HTML menggunakan `Promise.race` dengan timeout 800ms. Jika dalam 0,8 detik server belum merespon (sinyal buruk), SW akan segera men-serve versi cache lokal sementara update data berjalan asinkron. Menu aplikasi akan "terasa" instan mirip AppSheet di kondisi sinyal apapun.
+2. **Sinkronisasi Harga Mode Referensi** — Melengkapi fitur duplikasi produk referensi di halaman Edit dan Tambah Produk. Saat referensi dipilih, form tak hanya mengisi data level kemasan, tetapi juga meneruskan dan menyiapkan `qty_prices` (tier harga khusus kuantitas) ke produk baru. Opsi "Harga Custom" juga akan otomatis terkunci (`checked`) untuk memastikan harga ecer & modal tidak terekayasa oleh auto-calculation.
+3. **Backend Propagation** — Mengupdate `ApiController::createProduct` untuk mem-parsing json harga tier dan meneruskannya ke `ProductModel::createWithDetails` yang kini dapat menangani insert tier harga.
+
+### File yang Diubah:
+- `sw.js` — Strategi fetch dengan 800ms fallback timeout.
+- `app/views/products/create.php` & `app/views/products/edit.php` — Penyesuaian hidden input & auto-lock "Harga Custom" toggle.
+- `app/controllers/ApiController.php` & `app/models/ProductModel.php` — Penyimpanan qty_prices backend.
+- `app/views/layouts/app.php` — Bump APP_VERSION menjadi 4.7.
+
+---
+
+### Sesi Sebelumnya: 2026-05-24 — Fix Popup "Data Tidak Tersimpan" Saat Simpan Edit Produk
+
+**Yang dikerjakan:**
+1. **Fix Unsaved Changes Popup pada Save** — Di `app/views/products/edit.php`, saya menggunakan metode `Object.defineProperty(window, 'hasUnsavedChanges', ...)` untuk mengunci nilai flag menjadi `false` secara permanen. Hal ini penting karena device Android dengan fitur autofill atau Service Worker caching yang agresif terkadang memicu event `input` susulan saat delay 1000ms sebelum redirect, yang membuat flag ini kembali menjadi `true`. Dengan *property lock*, popup `beforeunload` di `app.js` 1000% ter-bypass.
+2. **Redirect ke Daftar Produk** — Mengubah target redirect setelah simpan produk dari halaman detail (`products/{id}`) kembali ke halaman index produk (`products`), sesuai instruksi task.
+3. **Support Update `contained_qty` pada Packaging Existing** — Diperbarui payload AJAX di frontend dan handler di `ApiController.php@updatePackaging` untuk mendukung pengiriman dan penyimpanan `contained_qty` untuk level kemasan yang sudah ada. Backend juga otomatis akan me-recalculate nilai `base_qty` untuk semua level di produk terkait jika `contained_qty` berubah.
+
+### File yang Diubah:
+- `app/views/products/edit.php` — Set `window.hasUnsavedChanges = false`, ubah target redirect, tambahkan `contained_qty` ke payload AJAX.
+- `app/controllers/ApiController.php` — Modifikasi `updatePackaging()` untuk menyimpan parameter `contained_qty` dan otomatis me-recalculate `base_qty` beruntun.
+
+---
 
 ### Sesi: 2026-05-21 — Revamp Purchase Input & Bulk Input Massal UI/UX and Code Cleanup
 

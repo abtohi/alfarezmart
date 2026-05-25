@@ -85,6 +85,38 @@ class ApiController extends Controller
         }
     }
 
+    public function syncProducts()
+    {
+        try {
+            $model = new ProductModel();
+            // Fetch all active products
+            $results = $model->allWithDetails();
+            if (!is_array($results)) {
+                $results = [];
+            }
+            
+            if (count($results) > 0) {
+                $db = Database::getInstance()->getConnection();
+                foreach ($results as &$r) {
+                    try {
+                        $stmt = $db->prepare("SELECT current_qty_base FROM stock WHERE product_id = :id LIMIT 1");
+                        $stmt->execute([':id' => $r['id']]);
+                        $r['current_qty_base'] = (int)($stmt->fetchColumn() ?: 0);
+                    } catch (Exception $e) {
+                        $r['current_qty_base'] = 0;
+                    }
+                }
+                unset($r);
+            }
+            
+            $model->attachPackagingsForProductList($results);
+            $this->json(['products' => $results]);
+        } catch (\Throwable $e) {
+            error_log('Sync Products Error: ' . $e->getMessage());
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function getByBarcode(string $code)
     {
         $model = new ProductModel();
@@ -166,6 +198,7 @@ class ApiController extends Controller
                 'supplier_invoice_name' => $this->input('supplier_invoice_name') ?: null,
                 'weight_value' => $this->input('weight_value') ?: null,
                 'weight_unit' => $this->input('weight_unit'),
+                'is_custom_label' => $this->input('is_custom_label') ? 1 : 0,
             ];
 
             $packagings = [];
@@ -201,6 +234,7 @@ class ApiController extends Controller
                     'margin_retail' => $retail > 0 ? Helper::calculateMargin($buy, $retail) : 0,
                     'sell_price_wholesale' => $wholesale,
                     'margin_wholesale' => $wholesale > 0 ? Helper::calculateMargin($buy, $wholesale) : 0,
+                    'qty_prices' => json_decode($_POST['qty_prices_json'][$i] ?? '[]', true) ?: [],
                 ];
             }
 
@@ -220,7 +254,7 @@ class ApiController extends Controller
         try {
             $data = [];
             $fields = ['full_name','short_label','invoice_name','product_type','variant','brand_id','category_id',
-                       'weight_value','weight_unit', 'supplier_product_code', 'supplier_invoice_name'];
+                       'weight_value','weight_unit', 'supplier_product_code', 'supplier_invoice_name', 'is_custom_label'];
             $nullableFields = ['brand_id','product_type','variant','weight_value','weight_unit', 'supplier_product_code', 'supplier_invoice_name'];
             foreach ($fields as $f) {
                 $val = $this->input($f);
@@ -417,6 +451,42 @@ class ApiController extends Controller
         }
     }
 
+    public function bulkDeleteProducts()
+    {
+        $this->validateCSRF();
+        $db = Database::getInstance()->getConnection();
+        try {
+            $jsonBody = json_decode(file_get_contents('php://input'), true);
+            $ids = $jsonBody['ids'] ?? [];
+            if (!is_array($ids) || empty($ids)) {
+                throw new Exception("Tidak ada produk yang dipilih.");
+            }
+
+            $model = new ProductModel();
+            $db->beginTransaction();
+            
+            // Use prepared statements to prevent SQL injection
+            $tables = ['purchase_items', 'sale_items', 'stock_movements', 'stock', 'product_packagings', 'supplier_products'];
+            
+            foreach ($ids as $id) {
+                $id = (int)$id;
+                foreach ($tables as $table) {
+                    $stmt = $db->prepare("DELETE FROM {$table} WHERE product_id = :id");
+                    $stmt->execute([':id' => $id]);
+                }
+                $model->delete($id);
+            }
+            
+            $db->commit();
+            $this->json(['success' => true, 'message' => count($ids) . ' produk berhasil dihapus']);
+        } catch (Exception $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     /**
      * Update a single product packaging (price, barcode)
      */
@@ -463,9 +533,12 @@ class ApiController extends Controller
             $marginWholesale = $wholesalePrice > 0 ? Helper::calculateMargin($buyPrice, $wholesalePrice) : 0;
             
             $unitSql = $unitId ? 'unit_id = :uid,' : '';
+            $containedQty = $this->input('contained_qty');
+            $containedQtySql = ($containedQty !== null && $containedQty !== '') ? 'contained_qty = :cqty,' : '';
             $stmt = $db->prepare("
                 UPDATE product_packagings 
                 SET {$unitSql}
+                    {$containedQtySql}
                     buy_price = :buy, 
                     sell_price_retail = :retail, 
                     sell_price_wholesale = :wholesale,
@@ -484,12 +557,31 @@ class ApiController extends Controller
                 ':id' => $id
             ];
             if ($unitId) $params[':uid'] = $unitId;
+            if ($containedQty !== null && $containedQty !== '') $params[':cqty'] = (int)$containedQty;
             $stmt->execute($params);
 
             // Update product's updated_at timestamp
             $stmtPid = $db->prepare("SELECT product_id FROM product_packagings WHERE id = :id");
             $stmtPid->execute([':id' => $id]);
             $productId = $stmtPid->fetchColumn();
+
+            // Recalculate base_qty for all levels of this product if contained_qty changed
+            if ($productId && $containedQty !== null && $containedQty !== '') {
+                $stmtLevels = $db->prepare("SELECT id, level, contained_qty FROM product_packagings WHERE product_id = :pid ORDER BY level ASC");
+                $stmtLevels->execute([':pid' => $productId]);
+                $levels = $stmtLevels->fetchAll(\PDO::FETCH_ASSOC);
+                $runningBase = 1;
+                foreach ($levels as $lv) {
+                    if ((int)$lv['level'] === 1) {
+                        $runningBase = 1;
+                    } else {
+                        $runningBase *= (int)$lv['contained_qty'];
+                    }
+                    $stmtBq = $db->prepare("UPDATE product_packagings SET base_qty = :bq WHERE id = :lid");
+                    $stmtBq->execute([':bq' => $runningBase, ':lid' => $lv['id']]);
+                }
+            }
+
             if ($productId) {
                 $db->prepare("UPDATE products SET updated_at = NOW() WHERE id = :pid")
                    ->execute([':pid' => $productId]);
@@ -1877,7 +1969,7 @@ class ApiController extends Controller
 
         try {
             $settingModel = new SettingModel();
-            $fields = ['ai_model', 'ai_api_key', 'ai_invoice_prompt'];
+            $fields = ['ai_model', 'ai_api_key', 'ai_invoice_prompt', 'store_latitude', 'store_longitude', 'store_radius_meters'];
             
             foreach ($fields as $field) {
                 $val = $this->input($field);
@@ -1930,8 +2022,33 @@ class ApiController extends Controller
     public function scanInvoiceAI()
     {
         $this->validateCSRF();
+        set_time_limit(120); // Prevent timeout for long AI requests
+        
+        // Custom shutdown handler to catch silent crashes (OOM, Timeouts)
+        register_shutdown_function(function() {
+            $error = error_get_last();
+            if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR, E_CORE_WARNING, E_COMPILE_WARNING, E_PARSE])) {
+                file_put_contents('c:\\xampp\\htdocs\\AlfarezMart\\logs\\ai_crash.log', date('Y-m-d H:i:s') . " FATAL CRASH: " . print_r($error, true) . "\n", FILE_APPEND);
+            }
+        });
+        
+        ob_start(); // Capture any stray output/warnings to prevent breaking JSON
         try {
-            $imageB64 = $this->input('image_base64');
+            error_log("SCAN_AI_TRACE: Starting scanInvoiceAI");
+            file_put_contents('c:\\xampp\\htdocs\\AlfarezMart\\logs\\ai_crash.log', date('Y-m-d H:i:s') . " Trace: Starting scanInvoiceAI\n", FILE_APPEND);
+            
+            // Read image_base64 directly from raw JSON to bypass Security::sanitize()
+            // which calls strip_tags() and could corrupt base64 data.
+            // We must read php://input before any $this->input() call consumes it.
+            $rawInput = file_get_contents('php://input');
+            error_log("SCAN_AI_TRACE: Read php://input length: " . strlen($rawInput));
+            $rawJson = json_decode($rawInput, true);
+            if (!is_array($rawJson)) {
+                // Fallback: try cached _jsonData from Controller::input()
+                $this->input('_init_cache_'); // force cache
+                $rawJson = $this->_jsonData ?? [];
+            }
+            $imageB64 = $rawJson['image_base64'] ?? '';
             if (empty($imageB64)) {
                 throw new \Exception("Gambar invoice tidak ditemukan");
             }
@@ -1939,11 +2056,61 @@ class ApiController extends Controller
             $settingModel = new SettingModel();
             $apiKey = $settingModel->get('ai_api_key');
             $modelName = $settingModel->get('ai_model', 'google/gemini-2.5-flash');
-            $defaultPrompt = "Kamu adalah AI asisten untuk AlfarezMart (Toko Retail/Grosir).\nTugasmu: Ekstrak data dari gambar invoice/faktur supplier menjadi array JSON valid sesuai schema.\n\nINSTRUKSI WAJIB:\n1. OUTPUT HARUS JSON VALID! Tidak boleh ada teks Markdown (seperti ```json) sebelum atau sesudah array JSON.\n2. JANGAN tambahkan penjelasan apapun, HANYA KELUARKAN ARRAY JSON.\n3. Ekstrak 15-20 item terpenting/terjelas saja jika item terlalu banyak untuk mencegah error.\n4. Nilai uang/harga hanya angka (tanpa titik, koma, atau Rp).\n\nEKSTRAKSI & IDENTIFIKASI CERDAS:\n1. Nama Barang: Ambil apa adanya dari invoice. Jika disingkat, tulis apa adanya di `name`.\n2. Kode Supplier: Jika ada kode barang di invoice (misal \"[CMY-125]\"), masukkan ke `supplier_product_code`.\n3. Quantity (Qty): Angka jumlah barang yang dibeli.\n4. Satuan (Unit): \n   - WAJIB deteksi: PCS, KARTON (KRT, CTN), RENCENG (RCG, RTG), PACK (PCK), BOX, SLOP.\n   - Jika harga beli per item sangat besar dibanding harga ecer, itu pasti kemasan besar (Karton/Pack/Box). Jangan konversi ke PCS.\n5. Harga Beli Total: Harga total untuk baris barang tersebut (sebelum diskon).\n6. Diskon: Nominal potongan harga/diskon baris (angka).\n7. Pengurangan Berat/Gramasi: Sertakan berat pada `name` jika ada.\n\nFORMAT JSON OUTPUT YANG WAJIB:\n[\n  {\n    \"supplier_product_code\": \"KODE123\",\n    \"name\": \"NAMA BARANG LENGKAP\",\n    \"qty\": 10,\n    \"unit\": \"Karton\",\n    \"total_price\": 60000,\n    \"discount\": 0\n  }\n]";
+            $defaultPrompt = "Kamu adalah AI asisten untuk AlfarezMart (Toko Retail/Grosir).\nTugasmu: Ekstrak data dari gambar invoice/faktur supplier menjadi array JSON valid sesuai ALGORITMA 4-POIN SCANNING.\n\n" .
+"========== ALGORITMA 4-POIN SCANNING ==========\n" .
+"POIN 1 - KODE BARANG SUPPLIER (supplier_product_code):\n" .
+"  • Cari kode barang yang tertera di invoice (misal [CMY-125], #12345, atau kode lain yang terstruktur)\n" .
+"  • WAJIB: Ekstrak EXACTLY apa adanya dari invoice (case-sensitive, spasi sensitive)\n" .
+"  • Jika ADA kode, masukkan ke field `supplier_product_code`\n" .
+"  • Jika TIDAK ADA kode, biarkan kosong string: \"\"\n" .
+"\nPOIN 2 - NAMA BARANG SUPPLIER (supplier_invoice_name):\n" .
+"  • Ambil nama barang EXACTLY seperti tertera di invoice\n" .
+"  • Jangan terjemahkan, jangan singkat, AMBIL APA ADANYA\n" .
+"  • Contoh: Jika invoice tulis \"Lbl Coklat 100gr\", ekstrak: \"Lbl Coklat 100gr\"\n" .
+"  • Masukkan ke field `supplier_invoice_name`\n" .
+"\nPOIN 3 - ANALISIS NAMA PRODUK (name, brand, variant, type, size):\n" .
+"  • Ekstrak komponen nama produk untuk fuzzy matching di backend\n" .
+"  • `name`: Nama produk lengkap dari invoice (bisa sama dengan supplier_invoice_name)\n" .
+"  • `brand`: Brand/merek jika terdeteksi (Cth: \"Nestle\", \"Indomie\")\n" .
+"  • `variant`: Varian rasa/warna jika ada (Cth: \"Pedas\", \"Coklat\", \"Hijau\")\n" .
+"  • `product_type`: Tipe produk jika terdeteksi (Cth: \"Mie\", \"Minuman\", \"Snack\")\n" .
+"  • `size`: Ukuran/packaging info jika ada (Cth: \"100gr\", \"500ml\", \"1DZ\", \"12pcs\")\n" .
+"\nPOIN 4 - ANALISIS UNIT KEMASAN (qty, unit, unit_price, total_price):\n" .
+"  • Reverse-engineer unit dari qty dan pricing\n" .
+"  • `qty`: Jumlah unit yang dibeli (angka murni)\n" .
+"  • `unit`: Satuan unit (DETEKSI: PCS, KARTON/KRT/CTN, RENCENG/RCG/RTG, PACK/PCK, BOX, SLOP, dll)\n" .
+"  • `unit_price`: Harga per satuan = total_price / qty. WAJIB kalkulasi dengan akurat.\n" .
+"  • `total_price`: Total harga baris (sebelum diskon)\n" .
+"  • CONTOH: Jika invoice \"4 Karton × Rp 150.000 = Rp 600.000\", maka: qty=4, unit=\"Karton\", unit_price=150000, total_price=600000\n" .
+"\n" .
+"========== INSTRUKSI TEKNIS ==========\n" .
+"1. OUTPUT HARUS JSON VALID! Tidak boleh ada Markdown (```json) atau teks apapun sebelum/sesudah array.\n" .
+"2. JANGAN tambahkan penjelasan, HANYA array JSON.\n" .
+"3. Ekstrak maksimal 15-20 item (jika terlalu banyak, ambil yang terpenting/terjelas).\n" .
+"4. Semua harga: ANGKA MURNI saja (tanpa titik, koma, atau simbol Rp).\n" .
+"5. Untuk SETIAP item, WAJIB centang 4-poin: Kode? Nama supplier? Analisis nama? Unit+price? \n" .
+"\n" .
+"========== FORMAT JSON OUTPUT YANG WAJIB ==========\n" .
+"[\n" .
+"  {\n" .
+"    \"supplier_product_code\": \"KODE123\",\n" .
+"    \"supplier_invoice_name\": \"Nama Barang Seperti Di Invoice\",\n" .
+"    \"name\": \"Nama Produk Lengkap\",\n" .
+"    \"brand\": \"Brand\",\n" .
+"    \"variant\": \"Varian\",\n" .
+"    \"product_type\": \"Tipe\",\n" .
+"    \"size\": \"Ukuran\",\n" .
+"    \"qty\": 4,\n" .
+"    \"unit\": \"Karton\",\n" .
+"    \"unit_price\": 150000,\n" .
+"    \"total_price\": 600000,\n" .
+"    \"discount\": 0\n" .
+"  }\n" .
+"]";
             $prompt = $settingModel->get('ai_invoice_prompt', $defaultPrompt);
 
             if (empty($apiKey)) {
-                throw new \Exception("API Key OpenRouter belum dikonfigurasi di Pengaturan Aplikasi");
+                throw new \Exception("API Key AI belum dikonfigurasi di Pengaturan Aplikasi");
             }
 
             // Clean base64 if it has prefix
@@ -1972,9 +2139,10 @@ class ApiController extends Controller
                     ]
                 ],
                 "response_format" => ["type" => "json_object"], // Assuming the model supports it or at least guides it
-                "max_tokens" => 2000
+                "max_tokens" => 4000
             ];
 
+            file_put_contents('c:\\xampp\\htdocs\\AlfarezMart\\logs\\ai_crash.log', date('Y-m-d H:i:s') . " Trace: Preparing curl request\n", FILE_APPEND);
             $ch = curl_init("https://openrouter.ai/api/v1/chat/completions");
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -1983,13 +2151,26 @@ class ApiController extends Controller
                 "Content-Type: application/json"
             ]);
             curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-            // curl_setopt($ch, CURLOPT_TIMEOUT, 60); // 60s timeout for AI
+            
+            file_put_contents('c:\\xampp\\htdocs\\AlfarezMart\\logs\\ai_crash.log', date('Y-m-d H:i:s') . " Trace: Encoding JSON for curl\n", FILE_APPEND);
+            $jsonPayload = json_encode($data);
+            if ($jsonPayload === false) {
+                throw new \Exception("Failed to encode JSON payload: " . json_last_error_msg());
+            }
+            
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonPayload);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 110); // 110s timeout for AI (must be less than max_execution_time)
 
+            error_log("SCAN_AI_TRACE: Executing curl");
+            file_put_contents('c:\\xampp\\htdocs\\AlfarezMart\\logs\\ai_crash.log', date('Y-m-d H:i:s') . " Trace: Executing curl...\n", FILE_APPEND);
+            
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $err = curl_error($ch);
             curl_close($ch);
+            
+            error_log("SCAN_AI_TRACE: Curl finished with code: " . $httpCode);
+            file_put_contents('c:\\xampp\\htdocs\\AlfarezMart\\logs\\ai_crash.log', date('Y-m-d H:i:s') . " Trace: Curl finished, code: $httpCode, err: $err\n", FILE_APPEND);
 
             if ($err) {
                 throw new \Exception("cURL Error: " . $err);
@@ -2000,13 +2181,33 @@ class ApiController extends Controller
             }
 
             $resJson = json_decode($response, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new \Exception("Gagal membaca respons dari AI (Bukan JSON valid). Response: " . substr($response, 0, 100) . "...");
+            }
+
             $content = $resJson['choices'][0]['message']['content'] ?? '[]';
             
             // Clean markdown json tags if present
             $content = preg_replace('/^```json\s*/i', '', trim($content));
             $content = preg_replace('/```$/i', '', $content);
             
+            // Attempt to fix common truncated JSON by adding closing brackets if missing
             $parsedItems = json_decode($content, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                // If truncated, it might miss ] or }]
+                if (substr(trim($content), -1) !== ']') {
+                    if (substr(trim($content), -1) !== '}') {
+                        $content .= '}';
+                    }
+                    $content .= ']';
+                    $parsedItems = json_decode($content, true);
+                }
+                
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw new \Exception("Format JSON dari AI terpotong atau tidak valid: " . json_last_error_msg());
+                }
+            }
+
             if (isset($parsedItems['items'])) {
                 $parsedItems = $parsedItems['items'];
             }
@@ -2017,33 +2218,77 @@ class ApiController extends Controller
             // Fuzzy mapping against DB
             $productModel = new ProductModel();
             $allProducts = $productModel->allWithDetails();
+            $productModel->attachPackagingsForProductList($allProducts);
+
+            $supplierId = $this->input('supplier_id');
+            $supplierProductIds = [];
+            if ($supplierId) {
+                $spModel = new SupplierProductModel();
+                $supplierProducts = $spModel->getProductsBySupplier($supplierId);
+                
+                foreach ($supplierProducts as $sp) {
+                    $supplierProductIds[] = $sp['product_id'];
+                }
+            }
 
             $mappedItems = [];
             foreach ($parsedItems as $item) {
                 $name = $item['name'] ?? '';
-                $qty = isset($item['qty']) ? (float)$item['qty'] : 1;
-                $price = isset($item['price']) ? (float)$item['price'] : 0;
+                $qty = isset($item['qty']) && $item['qty'] > 0 ? (float)$item['qty'] : 1;
+                $totalPrice = isset($item['total_price']) ? (float)$item['total_price'] : (isset($item['price']) ? (float)$item['price'] : 0);
+                $unitPrice = isset($item['unit_price']) ? (float)$item['unit_price'] : ($totalPrice > 0 ? $totalPrice / $qty : 0);
                 $extractedBrand = $item['brand'] ?? '';
                 $extractedType = $item['product_type'] ?? '';
                 $extractedVariant = $item['variant'] ?? '';
                 $extractedWeightVal = isset($item['weight']) ? (float)$item['weight'] : null;
                 $extractedWeightUnit = $item['unit'] ?? '';
-                $extractedCode = $item['supplier_code'] ?? '';
+                $extractedCode = $item['supplier_code'] ?? $item['supplier_product_code'] ?? '';
                 $extractedSize = strtolower(trim($item['size'] ?? ''));
                 $extractedSuppInvName = $item['supplier_invoice_name'] ?? '';
                 
                 // Auto-scale abbreviated prices (e.g. 5.5 -> 5500, 12 -> 12000) for standard Rupiah values
-                if ($price > 0 && $price < 1000) {
-                    if (floor($price) != $price || $price < 100) {
-                        $price = $price * 1000;
+                if ($unitPrice > 0 && $unitPrice < 1000) {
+                    if (floor($unitPrice) != $unitPrice || $unitPrice < 100) {
+                        $unitPrice = $unitPrice * 1000;
                     }
+                }
+                if ($totalPrice > 0 && $totalPrice < 1000 && $totalPrice < $unitPrice) {
+                     $totalPrice = $unitPrice * $qty; // Correct it if AI abbreviated it
                 }
                 
                 $bestMatch = null;
                 $highestScore = 0;
                 
-                foreach ($allProducts as $p) {
-                    $score = 0;
+                // ========== ALGORITMA 4-POIN SCANNING - MATCHING STRATEGY ==========
+                // POIN 1 (100pts): Kode Barang Supplier - exact match only
+                // POIN 2 (80-95pts): Nama Barang Supplier - exact match first, fuzzy match second
+                // POIN 3 (25-65pts): Product Name/Label Analysis - keyword matching, brand/variant/type
+                // POIN 4 (15-35pts): Unit Kemasan Analysis - reverse-engineer dari qty/price
+                // =====================================================================
+                
+                $trimmedCode = trim($extractedCode);
+                if (!empty($trimmedCode)) {
+                    foreach ($allProducts as $p) {
+                        $dbSuppCode = trim($p['supplier_product_code'] ?? '');
+                        $dbCode = trim($p['code'] ?? '');
+                        if ((!empty($dbSuppCode) && strcasecmp($trimmedCode, $dbSuppCode) === 0) ||
+                            (!empty($dbCode) && strcasecmp($trimmedCode, $dbCode) === 0)) {
+                            $bestMatch = $p;
+                            $highestScore = 200; // POIN 1: Kode exact match = highest priority
+                            break;
+                        }
+                    }
+                }
+                
+                if (!$bestMatch) {
+                    foreach ($allProducts as $p) {
+                        $score = 0;
+                    
+                    // ========== POIN 1: KODE BARANG SUPPLIER (Supplier Product Code) ==========
+                    // Supplier belonging check
+                    if ($supplierId && in_array($p['id'], $supplierProductIds)) {
+                        $score += 25; // Boost score if product belongs to this supplier
+                    }
                     
                     // 1. Direct code matching (if AI found a code) — highest priority
                     if (!empty($extractedCode)) {
@@ -2059,6 +2304,7 @@ class ApiController extends Controller
                         }
                     }
                     
+                    // ========== POIN 2: NAMA BARANG SUPPLIER (Supplier Invoice Name) ==========
                     // 2. Exact supplier_invoice_name match — very high priority for precise matching
                     if (!empty($p['supplier_invoice_name'])) {
                         $normInvName = strtolower(trim($p['supplier_invoice_name']));
@@ -2067,17 +2313,18 @@ class ApiController extends Controller
                         
                         // Try matching with extracted supplier_invoice_name first
                         if (!empty($normSuppInvName) && $normSuppInvName === $normInvName) {
-                            $score += 95;
+                            $score += 95; // POIN 2: Nama supplier exact match
                         } elseif (!empty($normName) && $normName === $normInvName) {
                             $score += 90;
                         } elseif (!empty($normSuppInvName) && (stripos($normInvName, $normSuppInvName) !== false || stripos($normSuppInvName, $normInvName) !== false)) {
-                            $score += 28;
+                            $score += 28; // Fuzzy match untuk supplier invoice name
                         } elseif (!empty($normName) && (stripos($normInvName, $normName) !== false || stripos($normName, $normInvName) !== false)) {
                             $score += 25;
                         }
                     }
                     
-                    // 3. Name similarity matching via similar_text()
+                    // ========== POIN 3: ANALISIS NAMA PRODUK (Product Name/Label Analysis) ==========
+                    // 3. Name similarity matching via similar_text() — keyword matching
                     $nameSimilarities = [];
                     
                     // Match against full_name
@@ -2104,33 +2351,33 @@ class ApiController extends Controller
                     
                     $bestNameSim = max($nameSimilarities);
                     
-                    // Base score from best name similarity (70% weight if no exact match)
+                    // Base score from best name similarity (65% weight if no exact match)
                     if ($score < 95) { // Only apply similarity weight if no exact supplier_invoice_name match
-                        $score += $bestNameSim * 0.65;
+                        $score += $bestNameSim * 0.65; // POIN 3: Keyword matching score
                     }
                     
-                    // 4. Brand match (weight: 12 points)
+                    // 4. Brand match (weight: 12 points) — part of POIN 3
                     if (!empty($extractedBrand) && !empty($p['brand_name'])) {
                         if (stripos($p['brand_name'], $extractedBrand) !== false || stripos($extractedBrand, $p['brand_name']) !== false) {
                             $score += 12;
                         }
                     }
                     
-                    // 5. Product type match (weight: 8 points)
+                    // 5. Product type match (weight: 8 points) — part of POIN 3
                     if (!empty($extractedType) && !empty($p['product_type'])) {
                         if (stripos($p['product_type'], $extractedType) !== false || stripos($extractedType, $p['product_type']) !== false) {
                             $score += 8;
                         }
                     }
                     
-                    // 6. Variant match (weight: 8 points)
+                    // 6. Variant match (weight: 8 points) — part of POIN 3
                     if (!empty($extractedVariant) && !empty($p['variant'])) {
                         if (stripos($p['variant'], $extractedVariant) !== false || stripos($extractedVariant, $p['variant']) !== false) {
                             $score += 8;
                         }
                     }
                     
-                    // 7. Weight/volume match (weight: 10 points)
+                    // 7. Weight/volume match (weight: 10 points) — part of POIN 3
                     if ($extractedWeightVal !== null && !empty($p['weight_value'])) {
                         $dbWeightVal = (float)$p['weight_value'];
                         if (abs($extractedWeightVal - $dbWeightVal) < 0.01) {
@@ -2143,7 +2390,7 @@ class ApiController extends Controller
                         }
                     }
                     
-                    // 8. Size / package configuration match (weight: up to 10 points)
+                    // 8. Size / package configuration match (weight: up to 10 points) — part of POIN 3
                     if (!empty($extractedSize)) {
                         // Check size against product full_name (e.g. "1DZ" in product name)
                         if (!empty($p['full_name']) && stripos($p['full_name'], $extractedSize) !== false) {
@@ -2162,18 +2409,47 @@ class ApiController extends Controller
                         }
                     }
                     
+                    // ========== POIN 4: UNIT KEMASAN ANALYSIS (Reverse-engineer dari qty/price) ==========
+                    // 9. Analisis Satuan Harga — detect packaging level from unit price
+                    if ($unitPrice > 0 && !empty($p['packagings'])) {
+                        $bestPriceMatch = 0;
+                        foreach ($p['packagings'] as $pkg) {
+                            $dbPrice = (float)($pkg['buy_price'] ?? 0);
+                            if ($dbPrice > 0) {
+                                $diff = abs($dbPrice - $unitPrice);
+                                $pct = $diff / max($dbPrice, $unitPrice);
+                                if ($pct < 0.05) { // Within 5% difference — strong match
+                                    $priceMatchScore = 25; // POIN 4: Strong unit price match
+                                    // Also check unit text match
+                                    if (!empty($extractedWeightUnit) && !empty($pkg['unit_name'])) {
+                                        if (stripos($pkg['unit_name'], $extractedWeightUnit) !== false || stripos($extractedWeightUnit, $pkg['unit_name']) !== false) {
+                                            $priceMatchScore += 10; // Additional bonus for unit text match
+                                        }
+                                    }
+                                    $bestPriceMatch = max($bestPriceMatch, $priceMatchScore);
+                                } elseif ($pct < 0.15) { // Within 15% — moderate match
+                                    $bestPriceMatch = max($bestPriceMatch, 15); // POIN 4: Moderate unit price match
+                                }
+                            }
+                        }
+                        $score += $bestPriceMatch;
+                    }
+                    
                     if ($score > $highestScore) {
                         $highestScore = $score;
                         $bestMatch = $p;
                     }
                 }
+                } // End of if (!$bestMatch)
 
                 $isMatched = ($highestScore > 65); // Threshold
 
                 $mappedItems[] = [
                     'original_name' => $name,
                     'qty' => $qty,
-                    'price' => $price,
+                    'unit_price' => $unitPrice,
+                    'total_price' => $totalPrice,
+                    'unit' => $extractedWeightUnit,
                     'is_matched' => $isMatched,
                     'product_id' => $isMatched ? $bestMatch['id'] : null,
                     'product_name' => $isMatched ? $bestMatch['full_name'] : null,
@@ -2181,13 +2457,20 @@ class ApiController extends Controller
                 ];
             }
 
+            ob_end_clean(); // Discard any stray output before sending JSON
             $this->json([
                 'success' => true,
                 'data' => $mappedItems
             ]);
 
         } catch (\Exception $e) {
+            error_log("SCAN_AI_TRACE: Exception caught: " . $e->getMessage());
+            ob_end_clean(); // Discard any stray output before sending JSON
             $this->json(['error' => $e->getMessage()], 500);
+        } catch (\Error $err) {
+            error_log("SCAN_AI_TRACE: Fatal Error caught: " . $err->getMessage());
+            ob_end_clean();
+            $this->json(['error' => 'Fatal internal error: ' . $err->getMessage()], 500);
         }
     }
 }

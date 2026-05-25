@@ -33,9 +33,11 @@ Klasifikasikan task ini sebelum mulai:
 
 ## Task
 
-- Di halaman Edit Produk, saat user men-checklist box Tambah varian dari produk referensi, masih terdapat bug, yakni meskipun sudah menginput sudah menginput kemasan, tetap ketika disimpan muncul error Isi Kemasan minimal 2, padahal saya sudah isi, tolong ini diperbaiki lagi dan pastikan disimpan ketika menggunakan referensi produk lain.
+- Pada halaman produk, tambahkan checkbox untuk select all, kemudian tambahkan icon hapus, aku mau bisa menghapus produk dengan cara menyeleksi, termasuk ketika di tulis keyword, terus di enter, lalu muncul semua list produk terfilter, aku juga mau bisa menyeleksi dengan cara menahan produk agak lama, muncul checkboxnya dan bisa menyeleksi beberapa produk sekaligus untuk dihapus.
 
-- Ketika user sedang dalam mode edit atau mode menginput form, di semua halaman, khususnya halaman Produk, Edit produk, Input Barang, dan Input Barang dengan mode Input Massal, ketika user sedang menginput namun belum selesai, kemudian tidak sengaja ke klik back, atau apapun yang menghilangkan semua inputan, tolong tambahkan pop up modal konfirmasi bahwa ketika back, semua inputan akan terhapus, jika di konfirmasi Ya, maka boleh back, tetapi ketika konfirmasi Tidak, maka tampilan tetap di mode edit form, karena berulang kali user sudah menginput banyak data, tidak sengaja melakukan back, akhirnya semua inputannya hilang tanpa konfirmasi
+- Di halaman Edit Produk, di bagian label Label Struk & Rak (Bisa diubah manual), tambahkan checkbox untuk custom nama label, jika dicentang maka inputan nama label bisa diubah, jika tidak dicentang maka inputan nama label tidak bisa diubah. Kemudian, jika merefer ke produk lain, atau ketika di edit, pastikan kondisi checkbox dan inputan nama label sesuai dengan produk yang direfer. Termasuk jika di edit, jika sebelumnya nama label disimpan dengan custom, maka pastikan ketika di edit kembali, nama label tetap terchecklist dan tidak berubah, akan menyimpan riwayat edit sebelumnya.
+
+-Pastikan semua perubahan bisa terimplementasi di mobile app, jangan hanya di browser, pastikan versi, cache, cookies, dan semuanya bisa di refresh agar appnya update.
 
 ## Konteks Tambahan (opsional)
 

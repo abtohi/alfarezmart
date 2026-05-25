@@ -60,6 +60,7 @@ $router->get('/reports/product-history/export/{id}', 'ReportController@exportPro
 // ============================================
 
 // Products API
+$router->get('/api/products/sync', 'ApiController@syncProducts');
 $router->get('/api/products', 'ApiController@getProducts');
 $router->get('/api/products/search', 'ApiController@searchProducts');
 $router->get('/api/products/barcode/{code}', 'ApiController@getByBarcode');
@@ -68,6 +69,7 @@ $router->get('/api/products/{id}', 'ApiController@getById');
 $router->post('/api/products', 'ApiController@createProduct');
 $router->post('/api/products/update/{id}', 'ApiController@updateProduct');
 $router->post('/api/products/{id}/delete', 'ApiController@deleteProduct');
+$router->post('/api/products/bulk-delete', 'ApiController@bulkDeleteProducts');
 $router->post('/api/products/packaging/{id}', 'ApiController@updatePackaging');
 $router->post('/api/products/packaging/{id}/qty-prices', 'ApiController@savePackagingQtyPrices');
 $router->post('/api/products/packaging/{id}/delete', 'ApiController@deletePackaging');

@@ -49,7 +49,9 @@ if (!class_exists('Security')) {
         {
             if (is_null($input)) return '';
             if (is_numeric($input)) return $input;
-            return htmlspecialchars(strip_tags(trim($input)), ENT_QUOTES, 'UTF-8');
+            // Strip tags first, then decode HTML entities to preserve special chars like &
+            $stripped = trim(strip_tags($input));
+            return html_entity_decode($stripped, ENT_QUOTES, 'UTF-8');
         }
 
         /**

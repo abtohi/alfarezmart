@@ -74,6 +74,7 @@ function setupDatabase()
             max_stock INT,
             is_active TINYINT(1) DEFAULT 1,
             is_multivariant TINYINT(1) DEFAULT 0,
+            is_custom_label TINYINT(1) DEFAULT 0,
             ref_product_id INT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

@@ -7,6 +7,28 @@ class ProductModel extends Model
 {
     protected $table = 'products';
 
+    public function __construct()
+    {
+        parent::__construct();
+        $this->ensureCustomLabelColumn();
+    }
+
+    private function ensureCustomLabelColumn()
+    {
+        static $checked = false;
+        if ($checked) return;
+        try {
+            $this->db->query("SELECT is_custom_label FROM products LIMIT 1");
+        } catch (PDOException $e) {
+            try {
+                $this->db->exec("ALTER TABLE products ADD COLUMN is_custom_label TINYINT(1) DEFAULT 0");
+            } catch (PDOException $e2) {
+                // Ignore
+            }
+        }
+        $checked = true;
+    }
+
     public function findWithDetails($id)
     {
         $stmt = $this->db->prepare("
@@ -379,6 +401,11 @@ class ProductModel extends Model
                         ':wholesale' => $pk['sell_price_wholesale'] ?? 0,
                         ':mw' => $pk['margin_wholesale'] ?? 0,
                     ]);
+                    
+                    $pkgId = $this->db->lastInsertId();
+                    if (!empty($pk['qty_prices'])) {
+                        $this->saveQtyPricesForPackaging((int)$pkgId, $pk['qty_prices']);
+                    }
                 }
             }
 

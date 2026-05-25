@@ -6,11 +6,14 @@
     </div>
 
     <!-- Tabs -->
-    <div style="display:flex; border-bottom:1px solid var(--border-color); margin-bottom:20px;">
-        <button id="tabBtn-ai" class="tab-btn active" style="flex:1; padding:12px; background:none; border:none; border-bottom:2px solid var(--primary); color:var(--primary); font-weight:700; font-size:var(--font-size-sm);" onclick="switchTab('ai')">
+    <div style="display:flex; border-bottom:1px solid var(--border-color); margin-bottom:20px; overflow-x:auto; white-space:nowrap;">
+        <button id="tabBtn-ai" class="tab-btn active" style="padding:12px 16px; background:none; border:none; border-bottom:2px solid var(--primary); color:var(--primary); font-weight:700; font-size:var(--font-size-sm);" onclick="switchTab('ai')">
             <i class="bi bi-robot"></i> AI Agent
         </button>
-        <button id="tabBtn-pwd" class="tab-btn" style="flex:1; padding:12px; background:none; border:none; border-bottom:2px solid transparent; color:var(--text-muted); font-weight:600; font-size:var(--font-size-sm);" onclick="switchTab('pwd')">
+        <button id="tabBtn-geo" class="tab-btn" style="padding:12px 16px; background:none; border:none; border-bottom:2px solid transparent; color:var(--text-muted); font-weight:600; font-size:var(--font-size-sm);" onclick="switchTab('geo')">
+            <i class="bi bi-geo-alt"></i> Geofencing
+        </button>
+        <button id="tabBtn-pwd" class="tab-btn" style="padding:12px 16px; background:none; border:none; border-bottom:2px solid transparent; color:var(--text-muted); font-weight:600; font-size:var(--font-size-sm);" onclick="switchTab('pwd')">
             <i class="bi bi-key"></i> Ganti Password
         </button>
     </div>
@@ -44,6 +47,42 @@
                 </div>
             </div>
             <button type="submit" class="btn-primary-custom" style="width:100%; padding:12px; font-weight:600; margin-bottom:8px;">💾 Simpan Pengaturan AI</button>
+        </form>
+    </div>
+
+    <!-- Geofencing Tab -->
+    <div id="tabContent-geo" style="display:none;">
+        <form id="geo-settings-form">
+            <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
+                <div style="font-weight:600; margin-bottom:12px; color:var(--text-primary);">
+                    <i class="bi bi-geo-alt" style="color:var(--success); margin-right:8px;"></i> Pembatasan Lokasi Staff
+                </div>
+                
+                <div style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:16px; background:rgba(255,255,255,0.03); padding:8px; border-radius:4px;">
+                    Staff hanya bisa mengakses aplikasi jika berada dalam radius (meter) yang ditentukan dari koordinat toko ini. Pastikan Anda mengisinya dengan akurat.
+                </div>
+
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Latitude Toko</label>
+                    <input id="store_latitude" name="store_latitude" type="text" value="<?= htmlspecialchars($storeLat ?? '') ?>" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="contoh: -6.200000" />
+                </div>
+
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Longitude Toko</label>
+                    <input id="store_longitude" name="store_longitude" type="text" value="<?= htmlspecialchars($storeLng ?? '') ?>" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="contoh: 106.816666" />
+                </div>
+                
+                <button type="button" class="btn-outline-custom" onclick="getLocation()" style="width:100%; padding:8px; margin-bottom:12px; font-size:12px; display:flex; align-items:center; justify-content:center; gap:6px;">
+                    <i class="bi bi-crosshair"></i> Dapatkan Lokasi Saat Ini
+                </button>
+
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Radius Akses (Meter)</label>
+                    <input id="store_radius_meters" name="store_radius_meters" type="number" value="<?= htmlspecialchars($storeRadius ?? '25') ?>" min="0" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="25" />
+                    <small style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-top:4px;">Saran: 20-30 meter. Set 0 untuk menonaktifkan fitur Geofencing.</small>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary-custom" style="width:100%; padding:12px; font-weight:600; margin-bottom:8px;">💾 Simpan Pengaturan Lokasi</button>
         </form>
     </div>
 
@@ -86,6 +125,10 @@
         document.getElementById('tabBtn-ai').style.color = 'var(--text-muted)';
         document.getElementById('tabBtn-ai').style.fontWeight = '600';
         
+        document.getElementById('tabBtn-geo').style.borderBottomColor = 'transparent';
+        document.getElementById('tabBtn-geo').style.color = 'var(--text-muted)';
+        document.getElementById('tabBtn-geo').style.fontWeight = '600';
+        
         document.getElementById('tabBtn-pwd').style.borderBottomColor = 'transparent';
         document.getElementById('tabBtn-pwd').style.color = 'var(--text-muted)';
         document.getElementById('tabBtn-pwd').style.fontWeight = '600';
@@ -97,9 +140,24 @@
 
         // Toggle Content
         document.getElementById('tabContent-ai').style.display = 'none';
+        document.getElementById('tabContent-geo').style.display = 'none';
         document.getElementById('tabContent-pwd').style.display = 'none';
         
         document.getElementById('tabContent-' + tab).style.display = 'block';
+    }
+
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                document.getElementById('store_latitude').value = position.coords.latitude;
+                document.getElementById('store_longitude').value = position.coords.longitude;
+                showToast('Lokasi berhasil didapatkan', 'success');
+            }, function(error) {
+                showToast('Gagal mendapatkan lokasi. Pastikan izin lokasi diberikan.', 'error');
+            });
+        } else {
+            showToast('Geolocation tidak didukung di browser ini.', 'error');
+        }
     }
 
     // ── Save AI Settings ──────────────────────────────────────────────
@@ -130,6 +188,34 @@
         } catch (err) {
             console.error('Error saving AI settings:', err);
             showToast(err.message || 'Gagal menyimpan pengaturan AI', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    });
+
+    // ── Save Geo Settings ──────────────────────────────────────────────
+    document.getElementById('geo-settings-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = this.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
+            
+            const data = {
+                csrf_token: csrfToken,
+                store_latitude: document.getElementById('store_latitude').value,
+                store_longitude: document.getElementById('store_longitude').value,
+                store_radius_meters: document.getElementById('store_radius_meters').value
+            };
+            
+            const result = await api('<?= BASE_URL ?>api/settings/app', 'POST', data);
+            showToast(result.message || 'Pengaturan Lokasi berhasil disimpan', 'success');
+        } catch (err) {
+            console.error('Error saving Geo settings:', err);
+            showToast(err.message || 'Gagal menyimpan pengaturan Lokasi', 'error');
         } finally {
             btn.disabled = false;
             btn.textContent = originalText;

@@ -26,7 +26,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS -->
-    <?php $v = '?v=4.2'; ?>
+    <?php $v = '?v=5.4'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -67,6 +67,10 @@
                 <h1 class="header-title"><?= htmlspecialchars($title ?? 'AlfarezMart') ?></h1>
             </div>
             <div class="header-right">
+                <button class="header-btn" id="btnSync" aria-label="Sinkronisasi" onclick="triggerSync()">
+                    <i class="bi bi-arrow-repeat"></i>
+                    <span class="notif-badge" id="syncBadge" style="display:none">0</span>
+                </button>
                 <button class="header-btn" id="btnSearch" aria-label="Cari">
                     <i class="bi bi-search"></i>
                 </button>
@@ -137,6 +141,7 @@
     <!-- App JS -->
     <script>const BASE_URL = '<?= BASE_URL ?>';</script>
     <script src="<?= BASE_URL ?>public/js/utils.js<?= $v ?>"></script>
+    <script src="<?= BASE_URL ?>public/js/offline-db.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/printer.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/barcode.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/packaging-prices.js<?= $v ?>"></script>
@@ -144,8 +149,28 @@
     <script src="<?= BASE_URL ?>public/js/components.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/app.js<?= $v ?>"></script>
     
-    <!-- Service Worker Registration -->
+    <!-- Service Worker Registration & Cache Buster -->
     <script>
+    const APP_VERSION = '5.4'; // Update this to force client reloads
+    
+    // Self-healing cache buster
+    if (localStorage.getItem('app_version') !== APP_VERSION) {
+        console.log('New version detected! Clearing caches...');
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                for (let name of names) caches.delete(name);
+            });
+        }
+        localStorage.setItem('app_version', APP_VERSION);
+        if (navigator.serviceWorker) {
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                for (let registration of registrations) registration.unregister();
+            });
+        }
+        // Force reload from server
+        setTimeout(() => window.location.reload(true), 500);
+    }
+
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('<?= BASE_URL ?>sw.js')
             .then(reg => console.log('SW registered:', reg.scope))

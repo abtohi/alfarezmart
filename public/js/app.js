@@ -52,10 +52,52 @@ window.addEventListener('appinstalled', () => {
     showToast('AlfarezMart sudah terpasang di perangkat Anda.', 'success');
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initSearch();
     initHeaderScroll();
+    
+    // Initialize Offline DB
+    try {
+        if (typeof OfflineDB !== 'undefined') {
+            await OfflineDB.init();
+            
+            // Background sync if online
+            if (navigator.onLine) {
+                setTimeout(() => {
+                    OfflineDB.syncProductsFromServer().catch(e => console.error('Background sync failed:', e));
+                }, 5000);
+            }
+        }
+    } catch (e) {
+        console.error('Offline DB init failed:', e);
+    }
 });
+
+async function triggerSync() {
+    const btn = document.getElementById('btnSync');
+    if (!navigator.onLine) {
+        showToast('Koneksi terputus. Tidak dapat sinkronisasi.', 'warning');
+        return;
+    }
+    
+    if (btn) btn.style.transform = 'rotate(360deg)';
+    showToast('Sedang sinkronisasi data produk...', 'info');
+    
+    try {
+        if (typeof OfflineDB !== 'undefined') {
+            const count = await OfflineDB.syncProductsFromServer();
+            showToast(`Berhasil sinkronisasi ${count} produk ke perangkat`, 'success');
+        }
+    } catch (e) {
+        showToast('Gagal sinkronisasi data', 'error');
+    }
+    
+    if (btn) {
+        setTimeout(() => {
+            btn.style.transform = 'rotate(0deg)';
+        }, 500);
+    }
+}
 
 // Global Search
 function initSearch() {
@@ -116,29 +158,42 @@ function initSearch() {
                         </div>
                     </div>
                 `).join('');
-            } else {
                 // Default Product Search
-                const data = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
-                if (data.length === 0) {
-                    results.innerHTML = '<div class="empty-state" style="padding:24px"><i class="bi bi-search"></i><p>Produk tidak ditemukan</p></div>';
-                    return;
+                try {
+                    const data = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
+                    renderProductSearch(data, results);
+                } catch (apiErr) {
+                    // Fallback to offline DB
+                    if (typeof OfflineDB !== 'undefined') {
+                        const data = await OfflineDB.searchProducts(q);
+                        renderProductSearch(data, results);
+                    } else {
+                        throw apiErr;
+                    }
                 }
-                results.innerHTML = data.map(p => `
-                    <a href="${BASE_URL}products/${p.id}" class="search-result-item">
-                        <div style="width:40px;height:40px;background:var(--primary-bg);border-radius:8px;display:flex;align-items:center;justify-content:center">
-                            <i class="bi bi-box-seam" style="color:var(--primary)"></i>
-                        </div>
-                        <div style="flex:1;min-width:0">
-                            <div style="font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.full_name || p.short_label}</div>
-                            <div style="font-size:0.7rem;color:var(--text-muted)">${p.brand_name || ''} · ${p.category_name || ''}</div>
-                        </div>
-                    </a>
-                `).join('');
             }
         } catch (e) {
-            results.innerHTML = '<div class="empty-state" style="padding:24px"><p>Gagal mencari</p></div>';
+            results.innerHTML = '<div class="empty-state" style="padding:24px"><p>Gagal mencari (Offline)</p></div>';
         }
     }, 300));
+}
+
+function renderProductSearch(data, results) {
+    if (!data || data.length === 0) {
+        results.innerHTML = '<div class="empty-state" style="padding:24px"><i class="bi bi-search"></i><p>Produk tidak ditemukan</p></div>';
+        return;
+    }
+    results.innerHTML = data.map(p => `
+        <a href="${BASE_URL}products/${p.id}" class="search-result-item">
+            <div style="width:40px;height:40px;background:var(--primary-bg);border-radius:8px;display:flex;align-items:center;justify-content:center">
+                <i class="bi bi-box-seam" style="color:var(--primary)"></i>
+            </div>
+            <div style="flex:1;min-width:0">
+                <div style="font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.full_name || p.short_label}</div>
+                <div style="font-size:0.7rem;color:var(--text-muted)">${p.brand_name || ''} · ${p.category_name || ''}</div>
+            </div>
+        </a>
+    `).join('');
 }
 
 // Header hide/show on scroll
@@ -171,6 +226,11 @@ document.addEventListener('input', function(e) {
     if (e.target.closest('form') && !e.target.classList.contains('no-track')) {
         window.hasUnsavedChanges = true;
     }
+});
+
+// Reset flag on any form submit to prevent blocking the normal save flow
+document.addEventListener('submit', function(e) {
+    window.hasUnsavedChanges = false;
 });
 
 // Intercept clicks on links

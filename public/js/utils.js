@@ -60,9 +60,28 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
 
     try {
         const response = await fetch(endpoint, config);
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Request failed');
-        return data;
+        
+        // Read response as text first to avoid json parse crash on empty/invalid body
+        const text = await response.text();
+        
+        if (!text || text.trim().length === 0) {
+            throw new Error('Server mengembalikan respons kosong. Kemungkinan timeout atau error internal.');
+        }
+        
+        let jsonData;
+        try {
+            jsonData = JSON.parse(text);
+        } catch (parseErr) {
+            console.error('Response bukan JSON valid:', text.substring(0, 500));
+            // Check if it looks like an HTML error page
+            if (text.includes('<br') || text.includes('<html') || text.includes('Fatal error')) {
+                throw new Error('Server error (kemungkinan timeout atau kehabisan memori). Coba lagi dengan gambar yang lebih kecil.');
+            }
+            throw new Error('Respons server tidak valid (bukan JSON)');
+        }
+        
+        if (!response.ok) throw new Error(jsonData.error || 'Request failed');
+        return jsonData;
     } catch (error) {
         console.error('API Error:', error);
         showToast(error.message, 'error');

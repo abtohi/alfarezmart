@@ -27,6 +27,91 @@
 - Catatan penting, risiko, atau hal yang perlu diperhatikan (jika ada)
 ```
 
+## [2026-05-24] — Bugfix Tier Harga & Live Search
+
+**Tipe:** Minor / Hotfix
+**Modul:** UI/UX, Products
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Fix Tombol Tambah Harga Tier**: Menyelesaikan isu dimana tombol tidak bisa diklik pada produk yang belum memiliki tier harga. Perbaikan dilakukan dengan memastikan `initQtyTiers` selalu terinisialisasi walaupun jumlah tier `0`.
+- **Fix Live Search Produk**: Memperbaiki pencarian real-time (tanpa enter) di halaman Produk yang rusak diakibatkan *Syntax Error* pada blok `try...catch` (ada blok `catch` yatim piatu yang tertinggal dari modifikasi sebelumnya).
+- **PWA Update**: Meningkatkan versi `CACHE_NAME` dan aset menjadi versi `4.9` agar langsung ber-efek di mobile app.
+
+### File yang Diubah
+- `app/views/products/edit.php`
+- `app/views/products/index.php`
+- `app/views/layouts/app.php` & `sw.js`
+
+---
+
+## [2026-05-24] — AI Scan Kemasan Cerdas & Keamanan Harga Jual
+
+**Tipe:** Mayor
+**Modul:** AI, Pembelian (Purchases)
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **AI Extract Unit Price**: Memperbarui instruksi prompt AI (`ApiController.php` & tabel `app_settings`) agar mengeluarkan attribut `unit_price` (harga per satuan kemasan) dan `total_price` serta mempertegas deteksi kolom nama `unit` (kemasan) di invoice.
+- **Auto-Selection Kemasan**: Mengubah logika pada `purchases/create.php` agar saat hasil scan AI dimasukkan ke keranjang, sistem akan otomatis memilih level kemasan yang tepat (Level 1, 2, 3, dst). 
+  - *Prioritas 1*: Pencocokan nama satuan AI dengan satuan produk (Karton, Box, Renceng, dll).
+  - *Prioritas 2*: Jika tidak jelas, sistem mencari harga level kemasan yang paling mendekati dengan hasil hitungan AI.
+- **Keamanan Harga Jual**: AI tidak lagi menimpa harga level dasar secara default, tetapi merubah harga beli (modal) khusus untuk level kemasan yang terpilih secara spesifik, tanpa menyentuh harga jual ritel dan grosir.
+
+### File yang Diubah
+- `app/controllers/ApiController.php` — Update default prompt AI & extraksi `unit_price`, `total_price`.
+- `app/views/purchases/create.php` — Logika pemetaan kemasan otomatis.
+- `app/views/layouts/app.php` & `sw.js` — PWA Cache Buster v4.8.
+- `update_prompt.php` — Script untuk menimpa config prompt di database (sudah dieksekusi).
+
+---
+## [2026-05-24] — PWA Fast Fallback & Mode Referensi Sinkronisasi Harga
+
+**Tipe:** Mayor
+**Modul:** PWA (sw.js), Products (create.php, edit.php, ApiController.php, ProductModel.php)
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Timeout-based Network First Strategy**: Mengubah strategi PWA service worker (`sw.js`) untuk request navigasi HTML. Jika koneksi lambat dan server tidak merespon dalam 800ms, SW akan instan menampilkan halaman dari cache lokal sementara update data berjalan di background. Ini menghasilkan load yang "instan" ala AppSheet walaupun sinyal lemah.
+- **Sinkronisasi Harga Tier (Mode Referensi)**: Ketika user menduplikasi varian produk referensi (`create.php` / `edit.php`), `qty_prices` (harga khusus kuantitas) kini juga disalin utuh ke produk baru.
+- **Lock Harga Custom (Mode Referensi)**: Opsi "Harga Modal Custom" dan "Harga Jual Custom" kini dicentang otomatis saat menduplikasi dari referensi. Ini mengikat agar harga modal dan jual ecer yang disalin tidak ter-overwrite (berubah otomatis) oleh kalkulasi saat user memodifikasi harga base level 1.
+- **PWA Cache Busting**: Meningkatkan `CACHE_NAME` ke `alfarezmart-v4.7` dan asset version ke `?v=4.7`.
+
+### File yang Diubah/Dibuat
+- `sw.js` — Implementasi timeout 800ms di strategi fetch request navigasi.
+- `app/views/layouts/app.php` — Bump APP_VERSION & asset version.
+- `app/views/products/create.php` — Penambahan hidden input untuk menyertakan `qty_prices` dalam payload serta auto-check custom price toggles saat prefill.
+- `app/views/products/edit.php` — Menjalankan `initQtyTiers` pada object prefill dan auto-check custom price toggles.
+- `app/controllers/ApiController.php` — Membaca json tier harga pada endpoint `createProduct`.
+- `app/models/ProductModel.php` — Menyimpan `qty_prices` beruntun saat memanggil `createWithDetails`.
+
+### Catatan
+- Fitur ini sangat meningkatkan User Experience di lapangan dimana sinyal seluler tidak stabil.
+
+---
+
+
+## [2026-05-24] — Fix Popup "Data Tidak Tersimpan" Saat Simpan Edit Produk
+
+**Tipe:** Hotfix
+**Modul:** Products (edit.php), ApiController.php
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Fix Unsaved Changes Popup pada Save**: Menambahkan `window.hasUnsavedChanges = false` sebelum redirect setelah berhasil simpan di `submitProduct()`. Sebelumnya, flag unsaved changes tetap `true` saat redirect terjadi, menyebabkan popup `beforeunload` browser muncul dan memblokir navigasi, sehingga user mengira data tidak tersimpan.
+- **Redirect ke Daftar Produk**: Mengubah redirect setelah simpan dari halaman detail produk (`products/{id}`) ke halaman daftar produk (`products`) agar user langsung kembali ke daftar produk setelah edit.
+- **Support Update `contained_qty` pada Packaging Existing**: Menambahkan pengiriman field `contained_qty` di payload frontend saat update packaging yang sudah ada, dan menambahkan handler di backend `updatePackaging()` untuk menyimpan perubahan `contained_qty` serta merecalculate `base_qty` secara otomatis untuk semua level kemasan produk terkait.
+
+### File yang Diubah/Dibuat
+- `app/views/products/edit.php` — fix `window.hasUnsavedChanges`, redirect ke daftar produk, tambah `contained_qty` di payload update packaging
+- `app/controllers/ApiController.php` — support `contained_qty` update dan recalculate `base_qty` di method `updatePackaging()`
+
+### Catatan
+- Root cause popup: `app.js` men-track semua input changes via global `beforeunload` listener. Saat AJAX save berhasil dan redirect via `setTimeout`, flag tidak di-reset sehingga browser menampilkan popup konfirmasi keluar.
+- Data sebenarnya sudah tersimpan via AJAX, tetapi popup menyebabkan kebingungan user dan di beberapa device memblokir navigasi.
+
+---
+
 ## [2026-05-21] — Revamp Purchase Input & Bulk Input Massal UI/UX and Code Cleanup
 
 **Tipe:** Mayor

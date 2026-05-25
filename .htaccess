@@ -11,6 +11,14 @@
     RewriteRule ^ index.php [L]
 </IfModule>
 
+# PHP settings for large AI requests
+<IfModule php_module>
+    php_value max_execution_time 120
+    php_value max_input_time 120
+    php_value post_max_size 50M
+    php_value upload_max_filesize 50M
+</IfModule>
+
 # Ensure correct MIME types for static assets
 <IfModule mod_mime.c>
     AddType text/css .css
