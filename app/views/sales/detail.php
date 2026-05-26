@@ -12,6 +12,9 @@
             <h2 style="font-size: var(--font-size-lg); font-weight:700;">Detail Transaksi</h2>
         </div>
         <div style="display:flex; gap:8px;">
+            <a href="<?= BASE_URL ?>sales/pos?edit=<?= $sale['id'] ?>" class="btn-outline-custom" style="padding:6px 12px; font-size:var(--font-size-xs); text-decoration:none; color:var(--text-primary); border:1px solid var(--border-color); display:flex; align-items:center; gap:4px;">
+                <i class="bi bi-pencil-square"></i> Edit
+            </a>
             <button type="button" id="btnConnectPrinter" onclick="connectPrinter()" class="btn-outline-custom" style="padding:6px 12px; font-size:var(--font-size-xs);">
                 <i class="bi bi-bluetooth"></i> Printer
             </button>

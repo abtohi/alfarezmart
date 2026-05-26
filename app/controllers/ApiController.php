@@ -1293,6 +1293,81 @@ class ApiController extends Controller
         }
     }
 
+    // ===== SALES BULK DELETE & UPDATE =====
+
+    public function bulkDeleteSales()
+    {
+        $this->validateCSRF();
+        try {
+            $jsonBody = json_decode(file_get_contents('php://input'), true);
+            $ids = $jsonBody['ids'] ?? [];
+            if (empty($ids) || !is_array($ids)) {
+                throw new \Exception('Tidak ada transaksi yang dipilih');
+            }
+
+            $model = new SaleModel();
+            $deleted = 0;
+            foreach ($ids as $id) {
+                $model->deleteSale((int)$id);
+                $deleted++;
+            }
+
+            $this->json([
+                'success' => true,
+                'deleted' => $deleted,
+                'message' => "$deleted transaksi berhasil dihapus"
+            ]);
+        } catch (\Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateSale(int $id)
+    {
+        $this->validateCSRF();
+        try {
+            $model = new SaleModel();
+
+            // 1. Verify the old transaction exists
+            $old = $model->getTransactionDetails($id);
+            if (!$old) {
+                $this->json(['error' => 'Transaksi tidak ditemukan'], 404);
+                return;
+            }
+
+            $jsonBody = json_decode(file_get_contents('php://input'), true);
+            $items = $jsonBody['items'] ?? [];
+            if (empty($items)) {
+                throw new \Exception('Keranjang belanja kosong.');
+            }
+
+            // 2. Delete old transaction (reverses stock, finance, movements)
+            $model->deleteSale($id);
+
+            // 3. Re-create with same invoice number
+            $headerData = [
+                'invoice_number' => $old['invoice_number'],
+                'customer_id'    => $jsonBody['customer_id'] ?? $old['customer_id'],
+                'sale_mode'      => $jsonBody['sale_mode'] ?? $old['sale_mode'],
+                'total_amount'   => $jsonBody['total_amount'] ?? 0,
+                'payment_method' => $jsonBody['payment_method'] ?? $old['payment_method'],
+                'payment_status' => $jsonBody['payment_status'] ?? $old['payment_status'],
+                'notes'          => $jsonBody['notes'] ?? ($old['notes'] ?? ''),
+            ];
+
+            $newId = $model->createWithDetails($headerData, $items);
+
+            $this->json([
+                'success' => true,
+                'id'      => $newId,
+                'invoice' => $old['invoice_number'],
+                'message' => 'Transaksi berhasil diperbarui'
+            ]);
+        } catch (\Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     // ===== PACKAGING ADD/DELETE =====
     public function addPackaging(int $productId)
     {

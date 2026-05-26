@@ -306,6 +306,64 @@ class SaleModel extends Model
         return $this->placeholderCache;
     }
 
+    /**
+     * Hapus satu transaksi secara aman:
+     * 1. Kembalikan stok produk (bukan custom) yang terjual
+     * 2. Hapus stock_movements terkait
+     * 3. Hapus finance_logs terkait
+     * 4. Hapus sale_items & sale_transactions
+     */
+    public function deleteSale(int $id): void
+    {
+        $this->db->beginTransaction();
+        try {
+            // 1. Ambil detail items untuk kembalikan stok
+            $stmtItems = $this->db->prepare("
+                SELECT si.product_id, si.packaging_id, si.quantity, si.custom_name,
+                       pp.base_qty
+                FROM sale_items si
+                LEFT JOIN product_packagings pp ON si.packaging_id = pp.id
+                WHERE si.transaction_id = :tid
+            ");
+            $stmtItems->execute([':tid' => $id]);
+            $items = $stmtItems->fetchAll();
+
+            // 2. Kembalikan stok untuk setiap item (bukan custom)
+            $stmtStock = $this->db->prepare("
+                UPDATE stock SET current_qty_base = current_qty_base + :qty
+                WHERE product_id = :pid
+            ");
+            foreach ($items as $item) {
+                // Skip item custom (custom_name tidak null) atau produk placeholder CUSTOM
+                $stmtCheck = $this->db->prepare("SELECT code FROM products WHERE id = :pid LIMIT 1");
+                $stmtCheck->execute([':pid' => $item['product_id']]);
+                $prodCode = $stmtCheck->fetchColumn();
+                if ($item['custom_name'] !== null || $prodCode === 'CUSTOM') continue;
+
+                $baseQty = (int)($item['base_qty'] ?: 1);
+                $qty = $item['quantity'] * $baseQty;
+                $stmtStock->execute([':qty' => $qty, ':pid' => $item['product_id']]);
+            }
+
+            // 3. Hapus stock_movements terkait
+            $this->db->prepare("DELETE FROM stock_movements WHERE reference_type = 'sale' AND reference_id = :id")
+                     ->execute([':id' => $id]);
+
+            // 4. Hapus finance_logs terkait
+            $this->db->prepare("DELETE FROM finance_logs WHERE reference_type = 'sale' AND reference_id = :id")
+                     ->execute([':id' => $id]);
+
+            // 5. Hapus sale_items dulu (foreign key), lalu sale_transactions
+            $this->db->prepare("DELETE FROM sale_items WHERE transaction_id = :id")->execute([':id' => $id]);
+            $this->db->prepare("DELETE FROM sale_transactions WHERE id = :id")->execute([':id' => $id]);
+
+            $this->db->commit();
+        } catch (\Exception $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
+        }
+    }
+
     public function findByInvoice(string $invoiceNumber)
     {
         $stmt = $this->db->prepare("

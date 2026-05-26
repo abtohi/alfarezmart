@@ -99,6 +99,8 @@ $router->get('/api/reports/product-history/{id}', 'ApiController@getProductHisto
 // Sales Transactions API
 $router->post('/api/sales', 'ApiController@createSale');
 $router->get('/api/sales/invoice/{id}', 'ApiController@getInvoice');
+$router->post('/api/sales/bulk-delete', 'ApiController@bulkDeleteSales');
+$router->post('/api/sales/update/{id}', 'ApiController@updateSale');
 
 // Suppliers API
 $router->get('/api/suppliers', 'ApiController@getSuppliers');

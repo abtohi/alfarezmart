@@ -75,6 +75,7 @@ const STORE_SETTINGS = <?= json_encode($storeSettings ?? [], JSON_UNESCAPED_UNIC
 let cart = [];
 let saleMode = 'retail';
 let currentDraftId = null;
+let editSaleId = null;
 let searchInput, suggestionsDiv, cartContainer, emptyState, cartTotalEl, cartCountEl, btnCheckout, btnSaveDraft;
 
 function escapeHtml(str) {
@@ -706,7 +707,8 @@ async function checkout() {
     };
 
     try {
-        const res = await fetch(`${BASE_URL}api/sales`, {
+        const endpoint = editSaleId ? `${BASE_URL}api/sales/update/${editSaleId}` : `${BASE_URL}api/sales`;
+        const res = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -732,10 +734,18 @@ async function checkout() {
 
             cart = [];
             currentDraftId = null;
+            if (editSaleId) editSaleId = null;
             clearAutoSave();
             renderCart();
             btnCheckout.innerHTML = 'BAYAR SEKARANG';
             btnCheckout.disabled = false;
+
+            // Remove edit param from URL silently
+            if (window.history.replaceState) {
+                const url = new URL(window.location);
+                url.searchParams.delete('edit');
+                window.history.replaceState(null, '', url);
+            }
 
             const tp = getThermalPrinterSafe();
             if (STORE_SETTINGS && tp?.setStoreSettings) {
@@ -1269,11 +1279,95 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         initPosSearch();
-        autoRestoreCart();
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const editId = urlParams.get('edit');
+
+        if (editId) {
+            editSaleId = editId;
+            loadSaleForEdit(editId);
+        } else {
+            autoRestoreCart();
+        }
+        
         renderCart();
     } catch (err) {
         console.error('POS init error:', err);
         showToast('Gagal memuat halaman kasir. Muat ulang halaman.', 'error');
     }
 });
+
+async function loadSaleForEdit(id) {
+    try {
+        showToast('Memuat data transaksi...', 'info');
+        const res = await fetch(`${BASE_URL}api/sales/invoice/${id}`);
+        const data = await res.json();
+
+        if (data.success && data.transaction) {
+            const sale = data.transaction;
+            setSaleMode(sale.sale_mode);
+            
+            // Map items
+            cart = sale.items.map(item => {
+                const isCustom = item.custom_name !== null;
+                const printName = item.invoice_name || item.full_name || item.custom_name;
+                
+                let pkg = null;
+                if (!isCustom) {
+                    pkg = {
+                        level: item.packaging_level || 1,
+                        unit_name: item.unit_name,
+                        sell_price_retail: item.unit_price,
+                        sell_price_wholesale: item.unit_price,
+                        ppn_pct: 0,
+                        discount_value: 0
+                    };
+                }
+
+                return {
+                    id: Date.now() + Math.random(),
+                    product_id: isCustom ? 'CUSTOM' : item.product_id,
+                    is_custom: isCustom,
+                    name: printName,
+                    print_name: printName,
+                    product_name: printName,
+                    packagings: isCustom ? [{ level: 1, unit_name: item.unit_name, qty_prices: [] }] : [pkg],
+                    level: isCustom ? 1 : (item.packaging_level || 1),
+                    unit_name: item.unit_name,
+                    quantity: parseFloat(item.quantity),
+                    use_custom_price: isCustom,
+                    custom_line_total: isCustom ? parseFloat(item.total_price) : null,
+                    custom_price_draft: isCustom ? String(item.total_price) : undefined,
+                    unit_price: parseFloat(item.unit_price),
+                    total: parseFloat(item.total_price),
+                    price_note: isCustom ? 'Barang Custom' : ''
+                };
+            });
+
+            // Insert edit banner
+            const banner = document.createElement('div');
+            banner.innerHTML = `
+                <div style="background:var(--warning-bg); border-left:4px solid var(--warning); padding:12px; margin-bottom:16px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-weight:700; color:var(--warning); font-size:14px;"><i class="bi bi-pencil-square"></i> Mode Edit Transaksi</div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Mengedit Invoice: <strong style="color:var(--text-primary);">${sale.invoice_number}</strong></div>
+                    </div>
+                    <a href="${BASE_URL}sales/pos" class="btn-outline-custom" style="padding:4px 10px; font-size:11px; text-decoration:none;">Batal Edit</a>
+                </div>
+            `;
+            document.querySelector('.page-section').insertBefore(banner, document.querySelector('.pos-header').nextSibling);
+
+            cart.forEach(it => recalcItemPrice(it));
+            renderCart();
+            showToast('Transaksi dimuat untuk diedit', 'success');
+        } else {
+            showToast('Gagal memuat transaksi', 'error');
+            editSaleId = null;
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('Error memuat transaksi', 'error');
+        editSaleId = null;
+    }
+}
 </script>

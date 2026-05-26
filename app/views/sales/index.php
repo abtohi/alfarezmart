@@ -27,7 +27,13 @@
         </div>
         
         <?php foreach ($sales['data'] as $s): ?>
-            <div class="product-card" style="align-items:flex-start; cursor:pointer;" onclick="window.location.href='/sales/<?= $s['id'] ?>'">
+            <div class="product-card sale-card" data-sale-id="<?= $s['id'] ?>" style="align-items:flex-start; cursor:pointer; position:relative; transition: all 0.2s;">
+                <!-- Selection checkbox (hidden by default) -->
+                <div class="sale-check" style="display:none; position:absolute; left:8px; top:50%; transform:translateY(-50%); z-index:2;">
+                    <div style="width:24px;height:24px;border-radius:var(--radius-full);border:2px solid var(--primary);display:flex;align-items:center;justify-content:center;background:var(--surface-1);transition:all 0.2s;">
+                        <i class="bi bi-check-lg" style="font-size:14px;color:var(--primary);display:none;"></i>
+                    </div>
+                </div>
                 <div class="product-icon" style="background:var(--primary-bg);color:var(--primary);">
                     <i class="bi bi-receipt"></i>
                 </div>
@@ -87,8 +93,157 @@
     <?php endif; ?>
 </div>
 
+<!-- Bulk Action Bar (fixed bottom) -->
+<div id="bulkActionBar" style="display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:1000;padding:0 12px 12px;">
+    <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 -4px 24px rgba(0,0,0,0.25);backdrop-filter:blur(12px);">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <button type="button" onclick="exitSelectionMode()" style="background:none;border:none;color:var(--text-primary);cursor:pointer;padding:4px;font-size:1.2rem;"><i class="bi bi-x-lg"></i></button>
+            <span id="bulkSelectedCount" style="font-weight:700;font-size:var(--font-size-sm);color:var(--text-primary);">0 dipilih</span>
+        </div>
+        <div style="display:flex;gap:8px;">
+            <button type="button" onclick="selectAllSales()" style="padding:8px 14px;border-radius:var(--radius-md);border:1px solid var(--border-color);background:var(--surface-2);color:var(--text-primary);cursor:pointer;font-size:var(--font-size-xs);display:flex;align-items:center;gap:4px;">
+                <i class="bi bi-check-all"></i> Semua
+            </button>
+            <button type="button" id="btnBulkDelete" onclick="bulkDeleteSelected()" style="padding:8px 14px;border-radius:var(--radius-md);border:none;background:var(--danger);color:white;cursor:pointer;font-size:var(--font-size-xs);display:flex;align-items:center;gap:4px;font-weight:600;">
+                <i class="bi bi-trash"></i> Hapus
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
-// Point 9: Thermal Printer Management
+// ===== Selection Mode =====
+let selectionMode = false;
+let selectedIds = new Set();
+let longPressTimer = null;
+const LONG_PRESS_MS = 500;
+
+function initSelectionMode() {
+    document.querySelectorAll('.sale-card').forEach(card => {
+        const saleId = card.dataset.saleId;
+
+        // Long-press (touch)
+        card.addEventListener('touchstart', (e) => {
+            longPressTimer = setTimeout(() => {
+                e.preventDefault();
+                if (!selectionMode) enterSelectionMode();
+                toggleSelect(saleId);
+                // Haptic feedback
+                if (navigator.vibrate) navigator.vibrate(30);
+            }, LONG_PRESS_MS);
+        }, { passive: false });
+
+        card.addEventListener('touchend', () => clearTimeout(longPressTimer));
+        card.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+
+        // Right-click (desktop)
+        card.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            if (!selectionMode) enterSelectionMode();
+            toggleSelect(saleId);
+        });
+
+        // Normal click
+        card.addEventListener('click', (e) => {
+            if (selectionMode) {
+                e.preventDefault();
+                e.stopPropagation();
+                toggleSelect(saleId);
+            } else {
+                window.location.href = `${BASE_URL}sales/${saleId}`;
+            }
+        });
+    });
+}
+
+function enterSelectionMode() {
+    selectionMode = true;
+    document.querySelectorAll('.sale-check').forEach(el => el.style.display = 'flex');
+    document.querySelectorAll('.sale-card .product-icon').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.sale-card').forEach(el => el.style.paddingLeft = '44px');
+    document.getElementById('bulkActionBar').style.display = 'block';
+}
+
+function exitSelectionMode() {
+    selectionMode = false;
+    selectedIds.clear();
+    document.querySelectorAll('.sale-check').forEach(el => {
+        el.style.display = 'none';
+        el.querySelector('div').style.background = 'var(--surface-1)';
+        el.querySelector('i').style.display = 'none';
+    });
+    document.querySelectorAll('.sale-card .product-icon').forEach(el => el.style.display = '');
+    document.querySelectorAll('.sale-card').forEach(el => {
+        el.style.paddingLeft = '';
+        el.style.background = '';
+    });
+    document.getElementById('bulkActionBar').style.display = 'none';
+}
+
+function toggleSelect(id) {
+    const card = document.querySelector(`.sale-card[data-sale-id="${id}"]`);
+    if (!card) return;
+    const check = card.querySelector('.sale-check');
+    const checkDiv = check.querySelector('div');
+    const checkIcon = check.querySelector('i');
+
+    if (selectedIds.has(id)) {
+        selectedIds.delete(id);
+        checkDiv.style.background = 'var(--surface-1)';
+        checkIcon.style.display = 'none';
+        card.style.background = '';
+    } else {
+        selectedIds.add(id);
+        checkDiv.style.background = 'var(--primary)';
+        checkIcon.style.display = 'block';
+        checkIcon.style.color = 'white';
+        card.style.background = 'var(--primary-bg)';
+    }
+
+    document.getElementById('bulkSelectedCount').textContent = `${selectedIds.size} dipilih`;
+
+    if (selectedIds.size === 0) exitSelectionMode();
+}
+
+function selectAllSales() {
+    document.querySelectorAll('.sale-card').forEach(card => {
+        const id = card.dataset.saleId;
+        if (!selectedIds.has(id)) toggleSelect(id);
+    });
+}
+
+async function bulkDeleteSelected() {
+    if (selectedIds.size === 0) return;
+
+    const count = selectedIds.size;
+    if (!confirm(`Hapus ${count} transaksi? Stok produk yang terjual akan dikembalikan. Tindakan ini tidak bisa dibatalkan.`)) return;
+
+    const btn = document.getElementById('btnBulkDelete');
+    btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menghapus...';
+    btn.disabled = true;
+
+    try {
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const res = await fetch(`${BASE_URL}api/sales/bulk-delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+            body: JSON.stringify({ csrf_token: csrf, ids: Array.from(selectedIds).map(Number) })
+        });
+        const result = await res.json();
+        if (result.success) {
+            showToast(`✅ ${result.deleted} transaksi berhasil dihapus`, 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            throw new Error(result.error || 'Gagal menghapus');
+        }
+    } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+        btn.innerHTML = '<i class="bi bi-trash"></i> Hapus';
+        btn.disabled = false;
+    }
+}
+
+// ===== Printer (unchanged) =====
 function updatePrinterUI() {
     const btn = document.getElementById('btnSalesPrinter');
     const icon = document.getElementById('salesPrinterIcon');
@@ -135,7 +290,6 @@ async function toggleSalesPrinter() {
     }
 
     if (tp.isConnected()) {
-        // Disconnect
         tp.disconnect();
         tp.clearLastDevice();
         showToast('Printer diputuskan', 'info');
@@ -143,7 +297,6 @@ async function toggleSalesPrinter() {
         return;
     }
 
-    // Try auto-reconnect first
     const btn = document.getElementById('btnSalesPrinter');
     const prevHTML = btn.innerHTML;
     btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i>';
@@ -159,7 +312,6 @@ async function toggleSalesPrinter() {
                 return;
             }
         }
-        // Manual connect with picker
         await tp.connect();
         showToast(`Printer terhubung: ${tp.device?.name || 'Bluetooth'}`, 'success');
     } catch (e) {
@@ -171,8 +323,9 @@ async function toggleSalesPrinter() {
     updatePrinterUI();
 }
 
-// Auto-check printer status on page load
+// Init on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
+    initSelectionMode();
     updatePrinterUI();
     const tp = (typeof thermalPrinter !== 'undefined') ? thermalPrinter : null;
     if (tp && !tp.isConnected() && tp.hasSavedDevice() && tp.hasBluetoothAPI && !tp.isIOS) {
