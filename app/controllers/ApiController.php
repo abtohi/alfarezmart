@@ -22,6 +22,56 @@ class ApiController extends Controller
         $this->json($result);
     }
 
+    public function syncAllData()
+    {
+        $limit = 500; // Limit payload size
+        
+        // Products
+        $productModel = new ProductModel();
+        $productsResult = $productModel->getProductsWithPrices(1, 999999, '', null);
+        $products = [];
+        if (isset($productsResult['data'])) {
+            foreach ($productsResult['data'] as $p) {
+                $products[] = [
+                    'id' => (int)$p['id'],
+                    'short_label' => $p['short_label'],
+                    'full_name' => $p['full_name'],
+                    'brand_name' => $p['brand_name'],
+                    'category_name' => $p['category_name'],
+                    'code' => $p['code'],
+                    'packagings' => $p['packagings']
+                ];
+            }
+        }
+
+        // Sales
+        require_once __DIR__ . '/../models/SaleModel.php';
+        $saleModel = new SaleModel();
+        $salesResult = $saleModel->getList(1, $limit);
+        $sales = $salesResult['data'] ?? [];
+
+        // Suppliers
+        require_once __DIR__ . '/../models/SupplierModel.php';
+        $supplierModel = new SupplierModel();
+        $suppliers = $supplierModel->getAllWithType();
+
+        // Purchases
+        require_once __DIR__ . '/../models/PurchaseModel.php';
+        $purchaseModel = new PurchaseModel();
+        $purchasesResult = $purchaseModel->getList(1, $limit);
+        $purchases = $purchasesResult['data'] ?? [];
+
+        $this->json([
+            'success' => true,
+            'products' => $products,
+            'sales' => $sales,
+            'suppliers' => $suppliers,
+            'purchases' => $purchases,
+            'debts' => [],
+            'finance' => []
+        ]);
+    }
+
     public function syncProducts()
     {
         $model = new ProductModel();

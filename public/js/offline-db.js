@@ -4,8 +4,13 @@
 
 const OfflineDB = (function() {
     const DB_NAME = 'alfarezmart_offline';
-    const DB_VERSION = 2; // Upgraded for full offline support
+    const DB_VERSION = 3; // Upgraded for full offline support
     const STORE_PRODUCTS = 'products';
+    const STORE_SALES = 'sales';
+    const STORE_SUPPLIERS = 'suppliers';
+    const STORE_PURCHASES = 'purchases';
+    const STORE_DEBTS = 'debts';
+    const STORE_FINANCE = 'finance';
     const STORE_PENDING = 'pending_changes';
     const STORE_AUTH = 'auth_cache';
 
@@ -36,6 +41,13 @@ const OfflineDB = (function() {
                     productStore.createIndex('code', 'code', { unique: false });
                 }
 
+                // New stores for full offline mode
+                [STORE_SALES, STORE_SUPPLIERS, STORE_PURCHASES, STORE_DEBTS, STORE_FINANCE].forEach(storeName => {
+                    if (!db.objectStoreNames.contains(storeName)) {
+                        db.createObjectStore(storeName, { keyPath: 'id' });
+                    }
+                });
+
                 // Pending changes store (offline queue)
                 if (!db.objectStoreNames.contains(STORE_PENDING)) {
                     db.createObjectStore(STORE_PENDING, { keyPath: 'id', autoIncrement: true });
@@ -53,7 +65,7 @@ const OfflineDB = (function() {
         try {
             const data = await api(`${BASE_URL}api/products/sync`);
             if (data && data.products) {
-                await _saveAllProducts(data.products);
+                await _saveAll(STORE_PRODUCTS, data.products);
                 return data.products.length;
             }
             return 0;
@@ -63,20 +75,51 @@ const OfflineDB = (function() {
         }
     }
 
-    function _saveAllProducts(products) {
+    async function syncAllDataFromServer() {
+        try {
+            const data = await api(`${BASE_URL}api/sync/all`);
+            if (data) {
+                if (data.products) await _saveAll(STORE_PRODUCTS, data.products);
+                if (data.sales) await _saveAll(STORE_SALES, data.sales);
+                if (data.suppliers) await _saveAll(STORE_SUPPLIERS, data.suppliers);
+                if (data.purchases) await _saveAll(STORE_PURCHASES, data.purchases);
+                if (data.debts) await _saveAll(STORE_DEBTS, data.debts);
+                if (data.finance) await _saveAll(STORE_FINANCE, data.finance);
+                return true;
+            }
+            return false;
+        } catch (e) {
+            console.error("Failed to sync all data from server:", e);
+            throw e;
+        }
+    }
+
+    function _saveAll(storeName, items) {
         return new Promise((resolve, reject) => {
             if (!db) return reject("DB not initialized");
             
-            const transaction = db.transaction([STORE_PRODUCTS], 'readwrite');
-            const store = transaction.objectStore(STORE_PRODUCTS);
+            const transaction = db.transaction([storeName], 'readwrite');
+            const store = transaction.objectStore(storeName);
             
             store.clear();
-            products.forEach(product => {
-                store.put(product);
+            items.forEach(item => {
+                store.put(item);
             });
 
             transaction.oncomplete = () => resolve();
             transaction.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    function _getAll(storeName) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("DB not initialized");
+            const transaction = db.transaction([storeName], 'readonly');
+            const store = transaction.objectStore(storeName);
+            const request = store.getAll();
+
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (e) => reject(e.target.error);
         });
     }
 
@@ -94,16 +137,14 @@ const OfflineDB = (function() {
     }
 
     function getAllProducts() {
-        return new Promise((resolve, reject) => {
-            if (!db) return reject("DB not initialized");
-            const transaction = db.transaction([STORE_PRODUCTS], 'readonly');
-            const store = transaction.objectStore(STORE_PRODUCTS);
-            const request = store.getAll();
-
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = (e) => reject(e.target.error);
-        });
+        return _getAll(STORE_PRODUCTS);
     }
+
+    function getAllSales() { return _getAll(STORE_SALES); }
+    function getAllSuppliers() { return _getAll(STORE_SUPPLIERS); }
+    function getAllPurchases() { return _getAll(STORE_PURCHASES); }
+    function getAllDebts() { return _getAll(STORE_DEBTS); }
+    function getAllFinance() { return _getAll(STORE_FINANCE); }
 
     function getProductById(id) {
         return new Promise((resolve, reject) => {
@@ -242,7 +283,13 @@ const OfflineDB = (function() {
     return {
         init,
         syncProductsFromServer,
+        syncAllDataFromServer,
         getAllProducts,
+        getAllSales,
+        getAllSuppliers,
+        getAllPurchases,
+        getAllDebts,
+        getAllFinance,
         saveProduct,
         getProductById,
         searchProducts,

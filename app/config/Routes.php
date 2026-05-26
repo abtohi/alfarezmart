@@ -60,6 +60,7 @@ $router->get('/reports/product-history/export/{id}', 'ReportController@exportPro
 // ============================================
 
 // Products API
+$router->get('/api/sync/all', 'ApiController@syncAllData');
 $router->get('/api/products/sync', 'ApiController@syncProducts');
 $router->get('/api/products', 'ApiController@getProducts');
 $router->get('/api/products/search', 'ApiController@searchProducts');

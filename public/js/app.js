@@ -64,7 +64,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Background sync if online
             if (navigator.onLine) {
                 setTimeout(() => {
-                    OfflineDB.syncProductsFromServer().catch(e => console.error('Background sync failed:', e));
+                    if (typeof OfflineDB.syncAllDataFromServer === 'function') {
+                        OfflineDB.syncAllDataFromServer().catch(e => console.error('Background sync failed:', e));
+                    } else if (typeof OfflineDB.syncProductsFromServer === 'function') {
+                        OfflineDB.syncProductsFromServer().catch(e => console.error('Background sync failed:', e));
+                    }
                 }, 5000);
             }
         }
@@ -89,9 +93,14 @@ async function triggerSync() {
                 // syncPendingChanges will also sync products when done
                 await syncPendingChanges(); 
             } else {
-                showToast('Sedang sinkronisasi data master produk...', 'info');
-                const count = await OfflineDB.syncProductsFromServer();
-                showToast(`Berhasil sinkronisasi ${count} produk ke perangkat`, 'success');
+                showToast('Sedang sinkronisasi data master...', 'info');
+                if (typeof OfflineDB.syncAllDataFromServer === 'function') {
+                    await OfflineDB.syncAllDataFromServer();
+                    showToast(`Berhasil sinkronisasi data master ke perangkat`, 'success');
+                } else {
+                    const count = await OfflineDB.syncProductsFromServer();
+                    showToast(`Berhasil sinkronisasi ${count} produk ke perangkat`, 'success');
+                }
             }
         }
     } catch (e) {
@@ -363,7 +372,9 @@ async function syncPendingChanges() {
         if (failCount === 0) {
             showToast(`Sinkronisasi selesai (${successCount} data)`, 'success');
             // Jika ada fungsi syncProductsFromServer (master data produk), panggil juga
-            if (typeof OfflineDB.syncProductsFromServer === 'function') {
+            if (typeof OfflineDB.syncAllDataFromServer === 'function') {
+                OfflineDB.syncAllDataFromServer().catch(e => console.log('Gagal update cache master', e));
+            } else if (typeof OfflineDB.syncProductsFromServer === 'function') {
                 OfflineDB.syncProductsFromServer().catch(e => console.log('Gagal update cache produk', e));
             }
             // Refresh data on current page if applicable
@@ -378,6 +389,7 @@ async function syncPendingChanges() {
 
 // Listen for connection changes
 window.addEventListener('online', function() {
+    document.getElementById('offlineBanner').style.display = 'none';
     if (localStorage.getItem('alfarezmart_sync_mode') !== 'manual') {
         showToast('Koneksi internet kembali. Menyinkronkan data...', 'success');
         syncPendingChanges();
@@ -387,6 +399,7 @@ window.addEventListener('online', function() {
 });
 
 window.addEventListener('offline', function() {
+    document.getElementById('offlineBanner').style.display = 'block';
     showToast('Koneksi terputus. Beralih ke mode offline.', 'warning');
 });
 
@@ -398,6 +411,11 @@ document.addEventListener('DOMContentLoaded', () => {
         style.id = 'spinKeyframes';
         style.innerHTML = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
         document.head.appendChild(style);
+    }
+
+    if (!navigator.onLine) {
+        const banner = document.getElementById('offlineBanner');
+        if (banner) banner.style.display = 'block';
     }
 
     if (window.OfflineDB) {

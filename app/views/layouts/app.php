@@ -59,6 +59,11 @@
     <!-- Status Bar Overlay (Android-like) -->
     <div class="status-bar-overlay"></div>
 
+    <!-- Offline Banner -->
+    <div id="offlineBanner" style="display:none; background:var(--warning-bg); color:var(--warning); padding:8px 16px; text-align:center; font-size:12px; font-weight:600; width:100%; position:fixed; top:env(safe-area-inset-top, 0px); left:0; z-index:9999; border-bottom:1px solid var(--warning);">
+        <i class="bi bi-wifi-off" style="margin-right:6px;"></i> Mode Offline. Menampilkan data tersimpan.
+    </div>
+
     <!-- App Header -->
     <header class="app-header" id="appHeader">
         <div class="header-content">
