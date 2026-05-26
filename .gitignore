@@ -46,7 +46,6 @@ build/
 
 # PHP Composer
 vendor/
-composer.lock
 
 # Temp files
 *.tmp
