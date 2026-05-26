@@ -93,6 +93,8 @@
     <?php endif; ?>
 </div>
 
+<input type="hidden" id="csrfToken" value="<?= CsrfHelper::getToken() ?>">
+
 <!-- Bulk Action Bar (fixed bottom) -->
 <div id="bulkActionBar" style="display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:1000;padding:0 12px 12px;">
     <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 -4px 24px rgba(0,0,0,0.25);backdrop-filter:blur(12px);">
@@ -216,31 +218,55 @@ async function bulkDeleteSelected() {
     if (selectedIds.size === 0) return;
 
     const count = selectedIds.size;
-    if (!confirm(`Hapus ${count} transaksi? Stok produk yang terjual akan dikembalikan. Tindakan ini tidak bisa dibatalkan.`)) return;
+    
+    AppModal.show({
+        title: 'Hapus Transaksi',
+        subtitle: `${count} transaksi dipilih`,
+        icon: 'bi-trash',
+        iconColor: 'var(--danger-bg)',
+        iconAccent: 'var(--danger)',
+        bodyHTML: `
+            <div style="text-align:center; padding:12px 0;">
+                <p style="font-size:var(--font-size-md); font-weight:600; color:var(--text-primary); margin-bottom:8px;">
+                    Yakin ingin menghapus ${count} transaksi?
+                </p>
+                <p style="font-size:var(--font-size-sm); color:var(--text-muted); margin-bottom:16px;">
+                    Stok produk yang terjual akan dikembalikan. Tindakan ini tidak bisa dibatalkan.
+                </p>
+            </div>
+        `,
+        submitText: 'Ya, Hapus',
+        submitClass: 'btn-danger',
+        cancelText: 'Batal',
+        onSubmit: async () => {
+            const btn = document.getElementById('appModalSubmitBtn') || document.getElementById('btnBulkDelete');
+            const prevText = btn.innerHTML;
+            btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menghapus...';
+            btn.disabled = true;
 
-    const btn = document.getElementById('btnBulkDelete');
-    btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menghapus...';
-    btn.disabled = true;
-
-    try {
-        const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
-        const res = await fetch(`${BASE_URL}api/sales/bulk-delete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
-            body: JSON.stringify({ csrf_token: csrf, ids: Array.from(selectedIds).map(Number) })
-        });
-        const result = await res.json();
-        if (result.success) {
-            showToast(`✅ ${result.deleted} transaksi berhasil dihapus`, 'success');
-            setTimeout(() => window.location.reload(), 800);
-        } else {
-            throw new Error(result.error || 'Gagal menghapus');
+            try {
+                const csrf = document.getElementById('csrfToken')?.value || '';
+                const res = await fetch(`${BASE_URL}api/sales/bulk-delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+                    body: JSON.stringify({ csrf_token: csrf, ids: Array.from(selectedIds).map(Number) })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast(`✅ ${result.deleted} transaksi berhasil dihapus`, 'success');
+                    setTimeout(() => window.location.reload(), 800);
+                    return true;
+                } else {
+                    throw new Error(result.error || 'Gagal menghapus');
+                }
+            } catch (err) {
+                showToast('Error: ' + err.message, 'error');
+                btn.innerHTML = prevText;
+                btn.disabled = false;
+                return false;
+            }
         }
-    } catch (err) {
-        showToast('Error: ' + err.message, 'error');
-        btn.innerHTML = '<i class="bi bi-trash"></i> Hapus';
-        btn.disabled = false;
-    }
+    });
 }
 
 // ===== Printer (unchanged) =====
