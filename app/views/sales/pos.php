@@ -301,8 +301,22 @@ function initPosSearch() {
 
 async function processBarcodeScan(q, inpEl, sugEl) {
     try {
-        const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}`);
-        const result = await resp.json();
+        let result = null;
+        try {
+            if (navigator.onLine) {
+                const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}`);
+                result = await resp.json();
+            } else {
+                throw new Error("Offline");
+            }
+        } catch (e) {
+            if (typeof OfflineDB !== 'undefined') {
+                result = await OfflineDB.findByBarcode(q);
+            } else {
+                throw e;
+            }
+        }
+
         if (result && result.id) {
             addProductToCart(result);
             if (inpEl) inpEl.value = '';
@@ -333,12 +347,25 @@ async function performSearch(q) {
     sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Mencari...</div>';
     
     try {
-        const resp = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
-        if (!resp.ok) {
-            sug.innerHTML = '<div style="padding:12px;text-align:center;color:#f59e0b;">Gagal memuat. Refresh halaman atau login ulang.</div>';
-            return;
+        let items = [];
+        try {
+            if (navigator.onLine) {
+                const resp = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
+                if (!resp.ok) {
+                    sug.innerHTML = '<div style="padding:12px;text-align:center;color:#f59e0b;">Gagal memuat. Refresh halaman atau login ulang.</div>';
+                    return;
+                }
+                items = await resp.json();
+            } else {
+                throw new Error("Offline");
+            }
+        } catch (e) {
+            if (typeof OfflineDB !== 'undefined') {
+                items = await OfflineDB.searchProducts(q);
+            } else {
+                throw e;
+            }
         }
-        const items = await resp.json();
         
         if (!Array.isArray(items) || items.length === 0) {
             sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Tidak ada</div>';
@@ -358,14 +385,28 @@ async function performSearch(q) {
 
 async function selectProduct(id) {
     try {
-        const resp = await fetch(`${BASE_URL}api/products/${id}`, { credentials: 'same-origin' });
-        if (!resp.ok) {
-            let errMsg = 'Gagal memuat produk';
-            try { const errData = await resp.json(); errMsg = errData.error || errMsg; } catch(_){}
-            showToast(errMsg, 'error');
-            return;
+        let data = null;
+        try {
+            if (navigator.onLine) {
+                const resp = await fetch(`${BASE_URL}api/products/${id}`, { credentials: 'same-origin' });
+                if (!resp.ok) {
+                    let errMsg = 'Gagal memuat produk';
+                    try { const errData = await resp.json(); errMsg = errData.error || errMsg; } catch(_){}
+                    showToast(errMsg, 'error');
+                    return;
+                }
+                data = await resp.json();
+            } else {
+                throw new Error("Offline");
+            }
+        } catch (e) {
+            if (typeof OfflineDB !== 'undefined') {
+                data = await OfflineDB.getProductById(id);
+            } else {
+                throw e;
+            }
         }
-        const data = await resp.json();
+        
         if (!data || !data.id) {
             showToast('Data produk tidak valid', 'error');
             return;
@@ -374,8 +415,8 @@ async function selectProduct(id) {
         document.getElementById('posSearch').value = '';
         document.getElementById('posSuggestions').innerHTML = '';
     } catch (e) {
-        console.error('selectProduct error:', e);
-        showToast('Gagal memuat produk: ' + (e.message || 'Coba lagi'), 'error');
+        console.error('POS select product error:', e);
+        showToast('Gagal memuat detail produk', 'error');
     }
 }
 
