@@ -392,7 +392,9 @@ class ApiController extends Controller
                             // Delete old photo
                             $oldProduct = $model->find($id);
                             if (!empty($oldProduct['photo'])) {
-                                $oldPath = BASE_PATH . '/' . $oldProduct['photo'];
+                                $oldPath = strpos($oldProduct['photo'], 'storage/') === 0
+                                    ? dirname(BASE_PATH) . '/' . ltrim($oldProduct['photo'], '/')
+                                    : BASE_PATH . '/' . ltrim($oldProduct['photo'], '/');
                                 if (file_exists($oldPath)) @unlink($oldPath);
                             }
 

@@ -19,7 +19,12 @@ class Database
 
         try {
             if ($driver === 'sqlite') {
-                $dbPath = BASE_PATH . '/' . (defined('DB_SQLITE_PATH') ? DB_SQLITE_PATH : 'storage/database/alfarezmart.sqlite');
+                $sqlitePath = defined('DB_SQLITE_PATH') ? DB_SQLITE_PATH : 'storage/database/alfarezmart.sqlite';
+                if (strpos($sqlitePath, 'storage/') === 0) {
+                    $dbPath = defined('STORAGE_PATH') ? STORAGE_PATH . substr($sqlitePath, 7) : dirname(BASE_PATH) . '/' . $sqlitePath;
+                } else {
+                    $dbPath = BASE_PATH . '/' . $sqlitePath;
+                }
                 $dir = dirname($dbPath);
                 if (!is_dir($dir)) mkdir($dir, 0755, true);
                 

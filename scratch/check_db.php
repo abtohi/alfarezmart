@@ -1,7 +1,7 @@
 <?php
 define('BASE_PATH', dirname(__DIR__));
 // Define STORAGE_PATH which is needed by App.php
-define('STORAGE_PATH', BASE_PATH . '/storage');
+define('STORAGE_PATH', dirname(BASE_PATH) . '/storage');
 require 'app/config/App.php';
 require 'app/config/Database.php';
 

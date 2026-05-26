@@ -14,10 +14,11 @@ if ($scriptDir !== '/' && strpos($uri, $scriptDir) === 0) {
 } else {
     $cleanUri = $uri;
 }
-$staticFile = __DIR__ . $cleanUri;
+$isStorageRequest = strpos($cleanUri, '/storage/') === 0;
+$staticFile = $isStorageRequest ? dirname(__DIR__) . $cleanUri : __DIR__ . $cleanUri;
 
 if ($cleanUri !== '/' && file_exists($staticFile) && is_file($staticFile)) {
-    $ext = pathinfo($staticFile, PATHINFO_EXTENSION);
+    $ext = strtolower(pathinfo($staticFile, PATHINFO_EXTENSION));
     $mimeTypes = [
         'css' => 'text/css',
         'js' => 'application/javascript',
@@ -35,10 +36,20 @@ if ($cleanUri !== '/' && file_exists($staticFile) && is_file($staticFile)) {
     ];
     if (isset($mimeTypes[$ext])) {
         header('Content-Type: ' . $mimeTypes[$ext]);
+        if ($isStorageRequest) {
+            header('Cache-Control: public, max-age=86400');
+        }
         readfile($staticFile);
         return;
     }
+    if ($isStorageRequest) {
+        http_response_code(404);
+        exit;
+    }
     return false; // Let PHP built-in server handle it
+} elseif ($isStorageRequest) {
+    http_response_code(404);
+    exit;
 }
 
 // Error reporting
@@ -49,7 +60,7 @@ ini_set('display_errors', 1);
 define('BASE_PATH', __DIR__);
 define('APP_PATH', BASE_PATH . '/app');
 define('PUBLIC_PATH', BASE_PATH . '/public');
-define('STORAGE_PATH', BASE_PATH . '/storage');
+define('STORAGE_PATH', dirname(BASE_PATH) . '/storage');
 
 // Verify app directory exists
 if (!is_dir(APP_PATH)) {
