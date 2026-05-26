@@ -156,6 +156,36 @@ if (!$isPublicRoute && !$isStaticFile && !isset($_SESSION['user_id'])) {
 // Make current user available globally to views
 $currentUser = AuthController::currentUser();
 
+// ============================================
+// STAFF ROUTE RESTRICTIONS
+// Block staff from accessing restricted pages (server-side)
+// ============================================
+if (($currentUser['level'] ?? '') === 'staff') {
+    $staffBlockedRoutes = [
+        '/reports', '/debts', '/finance', '/users',
+        '/settings/master-data',
+    ];
+    foreach ($staffBlockedRoutes as $blocked) {
+        if ($uri === $blocked || strpos($uri, $blocked . '/') === 0) {
+            header('Location: ' . (defined('BASE_URL') ? BASE_URL : '/'));
+            exit;
+        }
+    }
+    // Block API endpoints for sensitive data
+    $staffBlockedApis = [
+        '/api/reports', '/api/debts', '/api/finance',
+        '/api/users', '/api/dashboard/stats',
+    ];
+    foreach ($staffBlockedApis as $blockedApi) {
+        if (strpos($uri, $blockedApi) === 0) {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Akses ditolak untuk level staff']);
+            exit;
+        }
+    }
+}
+
 // Initialize router
 $router = new Router();
 
