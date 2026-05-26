@@ -2,7 +2,7 @@
  * AlfarezMart PWA - Service Worker
  * Cache Strategy: Cache First for assets, Network First for API
  */
-const CACHE_NAME = 'alfarezmart-v5.3';
+const CACHE_NAME = 'alfarezmart-v5.7';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -46,6 +46,11 @@ self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
 
     const url = new URL(event.request.url);
+
+    if (url.pathname.includes('/api/products/sync')) {
+        event.respondWith(fetch(event.request, { cache: 'no-cache' }));
+        return;
+    }
 
     if (url.pathname.includes('/api/')) {
         event.respondWith(

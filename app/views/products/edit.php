@@ -1157,8 +1157,7 @@ async function submitProduct(e) {
     btn.disabled = true;
 
     try {
-        // Validations
-        const categoryId = categorySB?.getValue();
+    const categoryId = categorySB?.getValue();
         if (!categoryId) {
             showToast('❌ Kategori produk wajib dipilih', 'error');
             btn.innerHTML = prevText;
@@ -1185,7 +1184,6 @@ async function submitProduct(e) {
             return;
         }
 
-        // Validate individual levels
         for (const div of pkgDivs) {
             const unitSB = div.querySelector('.unit-searchbox-instance')?._searchbox;
             const unitId = unitSB?.getValue();
@@ -1205,7 +1203,70 @@ async function submitProduct(e) {
             }
         }
 
-        // 1. Update basic product info
+    if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+        try {
+            const productData = {
+                csrf_token: csrfTokenValue,
+                full_name: document.getElementById('namePreview').textContent,
+                short_label: document.getElementById('manualLabel').value.trim() || document.getElementById('namePreview').textContent.substring(0, 35),
+                invoice_name: document.getElementById('manualLabel').value.trim() || document.getElementById('namePreview').textContent.substring(0, 35),
+                is_custom_label: document.getElementById('isCustomLabel').checked ? 1 : 0,
+                product_type: isMulti ? (document.querySelector('[name="product_type"]')?.value?.trim() || '') : '',
+                variant: isMulti ? (document.querySelector('[name="variant"]')?.value?.trim() || '') : '',
+                brand_id: isMulti ? brandSB.getValue() : '',
+                category_id: categorySB.getValue(),
+                weight_value: document.querySelector('[name="weight_value"]').value,
+                weight_unit: weightUnitSB.getValue(),
+                supplier_product_code: document.getElementById('supplierProductCode').value || '',
+                supplier_invoice_name: document.getElementById('supplierInvoiceName').value || '',
+            };
+
+            await OfflineDB.addPendingChange(`${BASE_URL}api/products/update/${productId}`, 'POST', productData);
+
+            for (const pId of deletedPkgIds) {
+                await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pId}/delete`, 'POST', { csrf_token: csrfTokenValue });
+            }
+
+            for (const div of pkgDivs) {
+                let pkgId = div.getAttribute('data-pkg-id');
+                const unitSB = div.querySelector('.unit-searchbox-instance')?._searchbox;
+                const pkgPayload = {
+                    csrf_token: csrfTokenValue,
+                    unit_id: unitSB ? unitSB.getValue() : '',
+                    contained_qty: div.querySelector('.contained-qty')?.value || 1,
+                    buy_price: div.querySelector('.buy-price')?.value || 0,
+                    sell_price_retail: div.querySelector('.retail-price')?.value || 0,
+                    sell_price_wholesale: div.querySelector('.wholesale-price')?.value || 0,
+                    barcode: div.querySelector('.barcode-field')?.value || '',
+                    ppn_pct: div.querySelector('.ppn-input')?.value || 0,
+                    discount_mode: div.querySelector('.discount-mode')?.value || 'rp',
+                    discount_value: div.querySelector('.discount-value')?.value || 0
+                };
+
+                if (pkgId) {
+                    await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pkgId}`, 'POST', pkgPayload);
+                    const tiers = collectQtyTiers(div);
+                    if (tiers.length > 0) {
+                        await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pkgId}/qty-prices`, 'POST', { csrf_token: csrfTokenValue, tiers });
+                    }
+                } else {
+                    await OfflineDB.addPendingChange(`${BASE_URL}api/products/${productId}/packaging/add`, 'POST', pkgPayload);
+                    // Tier prices for NEW packagings won't be saved offline due to missing ID
+                }
+            }
+
+            showToast('Tersimpan offline. Akan disinkronkan saat online.', 'info');
+            if (typeof updateSyncBadge === 'function') updateSyncBadge();
+            setTimeout(() => window.location.href = `${BASE_URL}products/${productId}`, 1500);
+        } catch (err) {
+            showToast('Gagal menyimpan offline: ' + err.message, 'error');
+            btn.innerHTML = prevText;
+            btn.disabled = false;
+        }
+        return;
+    }
+
+    try {
         const productData = {
             csrf_token: csrfTokenValue,
             full_name: document.getElementById('namePreview').textContent,

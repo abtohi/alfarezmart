@@ -164,6 +164,7 @@ function initSearch() {
                         </div>
                     </div>
                 `).join('');
+            } else {
                 // Default Product Search
                 try {
                     const data = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
@@ -377,8 +378,12 @@ async function syncPendingChanges() {
 
 // Listen for connection changes
 window.addEventListener('online', function() {
-    showToast('Koneksi internet kembali. Menyinkronkan data...', 'success');
-    syncPendingChanges();
+    if (localStorage.getItem('alfarezmart_sync_mode') !== 'manual') {
+        showToast('Koneksi internet kembali. Menyinkronkan data...', 'success');
+        syncPendingChanges();
+    } else {
+        showToast('Koneksi internet kembali. Sinkronisasi manual aktif.', 'info');
+    }
 });
 
 window.addEventListener('offline', function() {
@@ -399,9 +404,67 @@ document.addEventListener('DOMContentLoaded', () => {
         window.OfflineDB.init().then(() => {
             updateSyncBadge();
             // Sync on load if online
-            if (navigator.onLine) {
+            if (navigator.onLine && localStorage.getItem('alfarezmart_sync_mode') !== 'manual') {
                 syncPendingChanges();
             }
         }).catch(e => console.error("DB Init failed on load", e));
     }
 });
+
+// ==========================================
+// SYNC SETTINGS MODAL & LONG PRESS LOGIC
+// ==========================================
+let syncSettingsTimer = null;
+
+function startSyncSettingsTimer(e) {
+    syncSettingsTimer = setTimeout(() => {
+        openSyncSettings(e);
+    }, 600);
+}
+
+function clearSyncSettingsTimer() {
+    if (syncSettingsTimer) clearTimeout(syncSettingsTimer);
+}
+
+async function openSyncSettings(e) {
+    if (e) e.preventDefault();
+    clearSyncSettingsTimer();
+    
+    // Set toggle state
+    const autoSync = localStorage.getItem('alfarezmart_sync_mode') !== 'manual';
+    document.getElementById('autoSyncToggle').checked = autoSync;
+    
+    // Get counts
+    if (typeof OfflineDB !== 'undefined') {
+        try {
+            const pendingCount = await OfflineDB.countPending();
+            document.getElementById('syncPendingCount').textContent = pendingCount;
+            
+            const allProducts = await OfflineDB.getAllProducts();
+            document.getElementById('syncCachedCount').textContent = allProducts ? allProducts.length : 0;
+        } catch(e) {
+            console.error('Gagal mengambil stat offline', e);
+        }
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('syncSettingsModal'));
+    modal.show();
+}
+
+function toggleAutoSync(isAuto) {
+    if (isAuto) {
+        localStorage.setItem('alfarezmart_sync_mode', 'auto');
+        showToast('Sinkronisasi otomatis diaktifkan', 'success');
+    } else {
+        localStorage.setItem('alfarezmart_sync_mode', 'manual');
+        showToast('Sinkronisasi manual diaktifkan', 'info');
+    }
+}
+
+function forceManualSync() {
+    const modalEl = document.getElementById('syncSettingsModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+    
+    triggerSync();
+}

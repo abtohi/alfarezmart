@@ -43,11 +43,38 @@ async function lookupBarcode() {
         const data = await api(`/api/products/barcode/${encodeURIComponent(code)}`);
         showProductResult(data);
     } catch (e) {
-        // Try search by name
+        if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+            try {
+                const p = await OfflineDB.findByBarcode(code);
+                if (p) {
+                    showProductResultOffline(p);
+                    return;
+                }
+                const searchData = await OfflineDB.searchProducts(code);
+                if (searchData && searchData.length > 0) {
+                    resultDiv.innerHTML = searchData.map(prod => `
+                        <a href="${BASE_URL}products/${prod.id}" class="product-card">
+                            <div class="product-icon"><i class="bi bi-box-seam"></i></div>
+                            <div class="product-info">
+                                <div class="product-name">${prod.full_name}</div>
+                                <div class="product-category">${prod.brand_name || ''} · ${prod.category_name || ''}</div>
+                            </div>
+                        </a>
+                    `).join('');
+                } else {
+                    resultDiv.innerHTML = '<div class="empty-state"><i class="bi bi-search"></i><h3>Tidak Ditemukan</h3><p>Produk dengan barcode/nama tersebut tidak ada di database lokal (Offline)</p></div>';
+                }
+            } catch (offErr) {
+                resultDiv.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><h3>Error</h3><p>Gagal mencari produk di database lokal</p></div>';
+            }
+            return;
+        }
+
+        // Try search by name online
         try {
-            const data = await api(`/api/products/search?q=${encodeURIComponent(code)}`);
-            if (data.length > 0) {
-                resultDiv.innerHTML = data.map(p => `
+            const searchData = await api(`/api/products/search?q=${encodeURIComponent(code)}`);
+            if (searchData.length > 0) {
+                resultDiv.innerHTML = searchData.map(p => `
                     <a href="<?= BASE_URL ?>products/${p.id}" class="product-card">
                         <div class="product-icon"><i class="bi bi-box-seam"></i></div>
                         <div class="product-info">
@@ -63,6 +90,44 @@ async function lookupBarcode() {
             resultDiv.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><h3>Error</h3><p>Gagal mencari produk</p></div>';
         }
     }
+}
+
+function showProductResultOffline(data) {
+    const resultDiv = document.getElementById('scanResult');
+    const packagings = data.packagings || [];
+    
+    let priceHtml = packagings.map(p => {
+        return `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border-color);">
+                <div>
+                    <div style="font-weight:600; font-size:var(--font-size-sm);">Per ${p.unit_name || 'Level '+p.level}</div>
+                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);"><span class="badge" style="background:var(--surface-2);color:var(--text-muted);">Offline</span></div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="color:var(--success); font-weight:700;">${formatRupiah(p.sell_price_retail)}</div>
+                    ${p.sell_price_wholesale > 0 ? `<div style="font-size:var(--font-size-xs); color:var(--warning);">Grosir: ${formatRupiah(p.sell_price_wholesale)}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    resultDiv.innerHTML = `
+        <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:20px; border:1px solid var(--border-color);">
+            <div style="display:flex; gap:14px; margin-bottom:16px;">
+                <div style="width:56px;height:56px;background:var(--primary-bg);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-box-seam-fill" style="font-size:1.5rem;color:var(--primary);"></i>
+                </div>
+                <div style="flex:1; min-width:0;">
+                    <h3 style="font-size:var(--font-size-md); font-weight:700; margin-bottom:4px;">${data.full_name} <span class="badge" style="background:var(--warning);color:black;font-size:9px;">OFFLINE</span></h3>
+                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">${data.brand_name || ''} · ${data.category_name || ''}</div>
+                    ${data.short_label ? `<div style="font-size:var(--font-size-xs); color:var(--info); margin-top:2px;">Label: ${data.short_label}</div>` : ''}
+                </div>
+            </div>
+            <div class="divider"></div>
+            <div style="font-weight:600; font-size:var(--font-size-sm); margin-bottom:8px; color:var(--text-secondary);">Daftar Harga</div>
+            ${priceHtml || '<p style="color:var(--text-muted);font-size:var(--font-size-sm);">Belum ada harga</p>'}
+        </div>
+    `;
 }
 
 function showProductResult(data) {

@@ -22,6 +22,33 @@ class ApiController extends Controller
         $this->json($result);
     }
 
+    public function syncProducts()
+    {
+        $model = new ProductModel();
+        // Fetch all active products (up to a large limit)
+        $result = $model->getProductsWithPrices(1, 999999, '', null);
+        
+        // Return only what is needed for OfflineDB to keep payload small
+        $products = [];
+        foreach ($result['data'] as $p) {
+            $products[] = [
+                'id' => (int)$p['id'],
+                'short_label' => $p['short_label'],
+                'full_name' => $p['full_name'],
+                'brand_name' => $p['brand_name'],
+                'category_name' => $p['category_name'],
+                'code' => $p['code'],
+                'packagings' => $p['packagings']
+            ];
+        }
+        
+        $this->json([
+            'success' => true,
+            'products' => $products,
+            'count' => count($products)
+        ]);
+    }
+
     public function getProductHistory(int $id)
     {
         $purchaseModel = new PurchaseModel();

@@ -26,7 +26,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS -->
-    <?php $v = '?v=5.6'; ?>
+    <?php $v = '?v=5.7'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -67,9 +67,9 @@
                 <h1 class="header-title"><?= htmlspecialchars($title ?? 'AlfarezMart') ?></h1>
             </div>
             <div class="header-right">
-                <button class="header-btn" id="btnSync" aria-label="Sinkronisasi" onclick="triggerSync()">
-                    <i class="bi bi-arrow-repeat"></i>
-                    <span class="notif-badge" id="syncBadge" style="display:none">0</span>
+                <button class="header-btn" id="btnSync" aria-label="Sinkronisasi" onclick="triggerSync()" oncontextmenu="openSyncSettings(event)" ontouchstart="startSyncSettingsTimer(event)" ontouchend="clearSyncSettingsTimer(event)" title="Tahan untuk Pengaturan Sync">
+                    <i class="bi bi-arrow-repeat" id="syncIcon"></i>
+                    <span class="notif-badge" id="offlineSyncBadge" style="display:none">0</span>
                 </button>
                 <button class="header-btn" id="btnSearch" aria-label="Cari">
                     <i class="bi bi-search"></i>
@@ -134,6 +134,45 @@
 
     <!-- Toast Notification -->
     <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Sync Settings Modal -->
+    <div class="modal fade" id="syncSettingsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background:var(--bg-secondary);border:1px solid var(--border-color);">
+                <div class="modal-header" style="border-bottom:1px solid var(--border-color);">
+                    <h5 class="modal-title" style="font-size:1.1rem;font-weight:700;"><i class="bi bi-cloud-sync" style="color:var(--primary);margin-right:8px;"></i>Pengaturan Sinkronisasi</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div style="background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;border:1px solid var(--border-color);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                            <span style="font-weight:600;font-size:0.95rem;">Sinkronisasi Otomatis</span>
+                            <div class="form-check form-switch" style="margin:0;">
+                                <input class="form-check-input" type="checkbox" id="autoSyncToggle" style="width:2.5em;height:1.2em;cursor:pointer;background-color:var(--surface-2);border-color:var(--border-color);" onchange="toggleAutoSync(this.checked)">
+                            </div>
+                        </div>
+                        <p style="font-size:0.8rem;color:var(--text-muted);margin:0;line-height:1.4;">Jika aktif, sistem akan otomatis mengunduh pembaruan produk dan mengirim data offline saat aplikasi online. Jika mati, gunakan tombol sinkronisasi secara manual.</p>
+                    </div>
+
+                    <div style="display:flex;gap:12px;margin-bottom:16px;">
+                        <div style="flex:1;background:var(--surface-1);border-radius:var(--radius-lg);padding:12px;border:1px solid var(--border-color);text-align:center;">
+                            <div style="font-size:1.5rem;font-weight:700;color:var(--primary);" id="syncPendingCount">0</div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);">Menunggu Dikirim</div>
+                        </div>
+                        <div style="flex:1;background:var(--surface-1);border-radius:var(--radius-lg);padding:12px;border:1px solid var(--border-color);text-align:center;">
+                            <div style="font-size:1.5rem;font-weight:700;color:var(--success);" id="syncCachedCount">0</div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);">Produk Offline</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top:1px solid var(--border-color);">
+                    <button type="button" class="btn-primary-custom w-100" onclick="forceManualSync()" style="padding:10px;font-weight:600;">
+                        <i class="bi bi-arrow-repeat"></i> Mulai Sinkronisasi Sekarang
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

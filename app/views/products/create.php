@@ -972,6 +972,29 @@ async function submitProduct(e) {
     data.set('short_label', labelText);
     data.set('invoice_name', labelText);
 
+    if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+        try {
+            const payload = {};
+            data.forEach((value, key) => {
+                if (payload[key]) {
+                    if (!Array.isArray(payload[key])) payload[key] = [payload[key]];
+                    payload[key].push(value);
+                } else {
+                    payload[key] = value;
+                }
+            });
+            await OfflineDB.addPendingChange(`${BASE_URL}api/products`, 'POST', payload);
+            showToast('Tersimpan offline. Akan disinkronkan saat online.', 'info');
+            if (typeof updateSyncBadge === 'function') updateSyncBadge();
+            setTimeout(() => window.location.href = `${BASE_URL}products`, 1500);
+        } catch (err) {
+            showToast('Gagal menyimpan offline: ' + err.message, 'error');
+            btn.innerHTML = prevText;
+            btn.disabled = false;
+        }
+        return;
+    }
+
     try {
         const result = await api(`${BASE_URL}api/products`, {
             method: 'POST',
@@ -980,6 +1003,12 @@ async function submitProduct(e) {
         
         if (result.success) {
             showToast('Produk berhasil ditambahkan!', 'success');
+            if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) {
+                // Fetch again to save the complete product with all relations to local DB
+                api(`${BASE_URL}api/products/${result.id}`).then(res => {
+                    if (res && res.id) OfflineDB.saveProduct(res);
+                }).catch(e => console.error(e));
+            }
             setTimeout(() => window.location.href = `${BASE_URL}products/${result.id}`, 1000);
         } else {
             showToast(result.error || 'Gagal menyimpan produk', 'error');

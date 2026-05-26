@@ -80,6 +80,19 @@ const OfflineDB = (function() {
         });
     }
 
+    function saveProduct(product) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("DB not initialized");
+            
+            const transaction = db.transaction([STORE_PRODUCTS], 'readwrite');
+            const store = transaction.objectStore(STORE_PRODUCTS);
+            const request = store.put(product);
+            
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
     function getAllProducts() {
         return new Promise((resolve, reject) => {
             if (!db) return reject("DB not initialized");
@@ -226,9 +239,10 @@ const OfflineDB = (function() {
         });
     }
 
-    return {
         init,
         syncProductsFromServer,
+        getAllProducts,
+        saveProduct,
         getProductById,
         searchProducts,
         findByBarcode,
