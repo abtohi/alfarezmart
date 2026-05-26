@@ -351,6 +351,8 @@ class ProductModel extends Model
                 $p['packagings'] = [[
                     'level' => 1,
                     'unit_name' => $p['unit_small_name'] ?? 'pcs',
+                    'base_qty' => 1,
+                    'buy_price' => $p['buy_price_small'] ?? 0,
                     'sell_price_retail' => $p['price_small_retail'],
                     'sell_price_wholesale' => $p['price_small_wholesale'] ?? 0,
                 ]];

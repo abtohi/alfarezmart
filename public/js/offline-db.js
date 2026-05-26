@@ -63,7 +63,7 @@ const OfflineDB = (function() {
 
     async function syncProductsFromServer() {
         try {
-            const data = await api(`${BASE_URL}api/products/sync`);
+            const data = await api(`${BASE_URL}api/products/sync?_t=` + Date.now());
             if (data && data.products) {
                 await _saveAll(STORE_PRODUCTS, data.products);
                 return data.products.length;
@@ -77,7 +77,7 @@ const OfflineDB = (function() {
 
     async function syncAllDataFromServer() {
         try {
-            const data = await api(`${BASE_URL}api/sync/all`);
+            const data = await api(`${BASE_URL}api/sync/all?_t=` + Date.now());
             if (data) {
                 if (data.products) await _saveAll(STORE_PRODUCTS, data.products);
                 if (data.sales) await _saveAll(STORE_SALES, data.sales);
