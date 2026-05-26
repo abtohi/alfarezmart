@@ -5,6 +5,11 @@
 
 // Load .env file
 $envFile = BASE_PATH . '/.env';
+if (!file_exists($envFile)) {
+    // Coba cari 1 tingkat di atas root (untuk keamanan & deploy di cPanel/Hostinger)
+    $envFile = dirname(BASE_PATH) . '/.env';
+}
+
 if (file_exists($envFile)) {
     $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
