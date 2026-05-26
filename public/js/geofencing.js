@@ -4,15 +4,15 @@
  */
 document.addEventListener('DOMContentLoaded', () => {
     // Only run for staff
-    if (typeof USER_ROLE !== 'undefined' && USER_ROLE === 'staff') {
+    if (typeof window.GEO_CONFIG !== 'undefined' && window.GEO_CONFIG.role === 'staff') {
         initGeofencing();
     }
 });
 
 function initGeofencing() {
-    const storeLat = parseFloat(STORE_LATITUDE);
-    const storeLng = parseFloat(STORE_LONGITUDE);
-    const radiusMeters = parseFloat(STORE_RADIUS);
+    const storeLat = parseFloat(window.GEO_CONFIG.lat);
+    const storeLng = parseFloat(window.GEO_CONFIG.lng);
+    const radiusMeters = parseFloat(window.GEO_CONFIG.radius);
 
     // If radius is 0 or not configured, disable geofencing
     if (!storeLat || !storeLng || isNaN(radiusMeters) || radiusMeters <= 0) {
@@ -66,7 +66,7 @@ function handleGeofenceViolation(reason) {
     // Redirect to logout API or route
     // Add a parameter so the login page can show why they were logged out
     const reasonEncoded = encodeURIComponent(reason);
-    window.location.href = BASE_URL + 'auth/logout?reason=' + reasonEncoded;
+    window.location.href = window.GEO_CONFIG.logoutUrl + '?reason=' + reasonEncoded;
 }
 
 /**
