@@ -39,6 +39,7 @@
                     <div class="stat-label" style="font-size: 9px; margin-top: 0; text-transform: uppercase; letter-spacing: 0.5px;">Stok Terendah</div>
                 </div>
             </div>
+            <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
             <!-- Keuangan/Dompet Card -->
             <a href="<?= BASE_URL ?>finance" class="stat-card" style="margin-bottom: 0; flex: 1; display: flex; align-items: center; gap: 12px; padding: 12px 16px; text-decoration: none; color: inherit; cursor: pointer; transition: background 0.2s;">
                 <div class="stat-icon blue" style="margin-bottom: 0; width: 36px; height: 36px; font-size: 1.1rem; flex-shrink: 0;"><i class="bi bi-wallet2"></i></div>
@@ -51,9 +52,11 @@
                     </div>
                 </div>
             </a>
+            <?php endif; ?>
         </div>
         <!-- Right Column -->
         <div style="display: flex;">
+            <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
             <!-- Omset Hari Ini Card -->
             <div class="stat-card" style="margin-bottom: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 16px;">
                 <div class="stat-icon green" style="width: 44px; height: 44px; font-size: 1.3rem; margin-bottom: 8px; flex-shrink: 0;"><i class="bi bi-cash-stack"></i></div>
@@ -63,6 +66,13 @@
                     <?= number_format($stats['today_transactions'] ?? 0) ?> transaksi POS
                 </div>
             </div>
+            <?php else: ?>
+            <div class="stat-card" style="margin-bottom: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 16px;">
+                <div class="stat-icon green" style="width: 44px; height: 44px; font-size: 1.3rem; margin-bottom: 8px; flex-shrink: 0;"><i class="bi bi-cart-check"></i></div>
+                <div class="stat-value" style="font-size: var(--font-size-md); font-weight: 800;"><?= number_format($stats['today_transactions'] ?? 0) ?></div>
+                <div class="stat-label" style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Transaksi Hari Ini</div>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -135,11 +145,13 @@
     <!-- Laporan & Riwayat -->
     <div class="section-title">Laporan &amp; Riwayat</div>
     <ul class="menu-list" style="margin-bottom:24px;">
+        <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
         <a href="<?= BASE_URL ?>reports" class="menu-item">
             <div class="menu-icon" style="background: var(--warning-bg); color: var(--warning);"><i class="bi bi-graph-up-arrow"></i></div>
             <div class="menu-text"><h6>Laporan Keuangan</h6><small>Ringkasan profit, aset, dan performa omzet</small></div>
             <i class="bi bi-chevron-right menu-arrow"></i>
         </a>
+        <?php endif; ?>
         <a href="<?= BASE_URL ?>sales" class="menu-item">
             <div class="menu-icon" style="background: rgba(var(--bs-primary-rgb, 13,110,253), 0.1); color: #0d6efd;"><i class="bi bi-receipt"></i></div>
             <div class="menu-text"><h6>Riwayat Penjualan</h6><small>Daftar transaksi kasir POS &amp; cetak ulang</small></div>
@@ -155,21 +167,31 @@
             <div class="menu-text"><h6>Analitik &amp; Histori Produk</h6><small>Rekomendasi harga termurah &amp; riwayat belanja</small></div>
             <i class="bi bi-chevron-right menu-arrow"></i>
         </a>
+        <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
         <a href="<?= BASE_URL ?>debts" class="menu-item">
             <div class="menu-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-journal-text"></i></div>
             <div class="menu-text"><h6>Catatan Hutang &amp; Piutang</h6><small>Kelola piutang pelanggan &amp; hutang toko</small></div>
             <i class="bi bi-chevron-right menu-arrow"></i>
         </a>
+        <?php endif; ?>
     </ul>
 
     <!-- Sistem & Dukungan -->
     <div class="section-title">Sistem &amp; Dukungan</div>
     <ul class="menu-list" style="margin-bottom:24px;">
+        <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
         <a href="<?= BASE_URL ?>settings/app" class="menu-item">
             <div class="menu-icon" style="background: rgba(var(--bs-primary-rgb, 13,110,253), 0.1); color: #0d6efd;"><i class="bi bi-gear"></i></div>
             <div class="menu-text"><h6>Pengaturan Sistem &amp; AI</h6><small>Ganti password dan konfigurasi AI Agent</small></div>
             <i class="bi bi-chevron-right menu-arrow"></i>
         </a>
+        <?php else: ?>
+        <a href="<?= BASE_URL ?>settings/app" class="menu-item">
+            <div class="menu-icon" style="background: rgba(var(--bs-primary-rgb, 13,110,253), 0.1); color: #0d6efd;"><i class="bi bi-key"></i></div>
+            <div class="menu-text"><h6>Ganti Password</h6><small>Ubah kata sandi akun Anda</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
+        <?php endif; ?>
         <a href="<?= BASE_URL ?>settings/receipt" class="menu-item">
             <div class="menu-icon" style="background: rgba(var(--bs-secondary-rgb, 108,117,125), 0.1); color: #6c757d;"><i class="bi bi-printer"></i></div>
             <div class="menu-text"><h6>Pengaturan Struk</h6><small>Logo toko, header, footer, dan format thermal</small></div>

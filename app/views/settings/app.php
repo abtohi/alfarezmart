@@ -7,6 +7,7 @@
 
     <!-- Tabs -->
     <div style="display:flex; border-bottom:1px solid var(--border-color); margin-bottom:20px; overflow-x:auto; white-space:nowrap;">
+        <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
         <button id="tabBtn-ai" class="tab-btn active" style="padding:12px 16px; background:none; border:none; border-bottom:2px solid var(--primary); color:var(--primary); font-weight:700; font-size:var(--font-size-sm);" onclick="switchTab('ai')">
             <i class="bi bi-robot"></i> AI Agent
         </button>
@@ -14,12 +15,16 @@
             <i class="bi bi-geo-alt"></i> Geofencing
         </button>
         <button id="tabBtn-pwd" class="tab-btn" style="padding:12px 16px; background:none; border:none; border-bottom:2px solid transparent; color:var(--text-muted); font-weight:600; font-size:var(--font-size-sm);" onclick="switchTab('pwd')">
+        <?php else: ?>
+        <button id="tabBtn-pwd" class="tab-btn active" style="padding:12px 16px; background:none; border:none; border-bottom:2px solid var(--primary); color:var(--primary); font-weight:700; font-size:var(--font-size-sm);" onclick="switchTab('pwd')">
+        <?php endif; ?>
             <i class="bi bi-key"></i> Ganti Password
         </button>
     </div>
 
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>" />
 
+    <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
     <!-- AI Agent Tab -->
     <div id="tabContent-ai" style="display:block;">
         <form id="ai-settings-form">
@@ -85,9 +90,10 @@
             <button type="submit" class="btn-primary-custom" style="width:100%; padding:12px; font-weight:600; margin-bottom:8px;">💾 Simpan Pengaturan Lokasi</button>
         </form>
     </div>
+    <?php endif; ?>
 
     <!-- Password Tab -->
-    <div id="tabContent-pwd" style="display:none;">
+    <div id="tabContent-pwd" style="display:<?= (($currentUser['level'] ?? '') === 'staff') ? 'block' : 'none' ?>;">
         <form id="password-form">
             <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
                 <div style="font-weight:600; margin-bottom:12px; color:var(--text-primary);">

@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <?php
 // Ambil setting lokasi toko untuk keperluan geofencing
-$userRole = AuthController::currentUser()['role'] ?? '';
+$userLevel = AuthController::currentUser()['level'] ?? '';
 $geoLat = '';
 $geoLng = '';
 $geoRadius = '';
-if ($userRole === 'staff') {
+if ($userLevel === 'staff') {
     $settingModel = new SettingModel();
     $geoLat = $settingModel->get('store_latitude', '');
     $geoLng = $settingModel->get('store_longitude', '');
@@ -208,7 +208,7 @@ if ($userRole === 'staff') {
         // Injeksi konfigurasi geofencing untuk staff
         window.GEO_CONFIG = {
             enabled: true,
-            role: '<?= $userRole ?>',
+            role: '<?= $userLevel ?>',
             lat: '<?= $geoLat ?>',
             lng: '<?= $geoLng ?>',
             radius: '<?= $geoRadius ?>',
