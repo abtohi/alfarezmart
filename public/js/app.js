@@ -486,3 +486,166 @@ function forceManualSync() {
     
     triggerSync();
 }
+
+// ==========================================
+// OFFLINE DETAIL MODALS
+// ==========================================
+document.addEventListener('click', function(e) {
+    const a = e.target.closest('a');
+    if (a && a.href && !a.target && !navigator.onLine) {
+        const href = a.getAttribute('href');
+        if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+            const url = new URL(a.href);
+            const path = url.pathname;
+            
+            const productMatch = path.match(/\/products\/(\d+)(?:\/edit)?$/);
+            if (productMatch) {
+                e.preventDefault();
+                showOfflineProductDetail(productMatch[1]);
+                return;
+            }
+
+            const saleMatch = path.match(/\/sales\/(\d+)$/);
+            if (saleMatch) {
+                e.preventDefault();
+                showOfflineSaleDetail(saleMatch[1]);
+                return;
+            }
+
+            const suppMatch = path.match(/\/suppliers\/(\d+)$/);
+            if (suppMatch) {
+                e.preventDefault();
+                showOfflineSupplierDetail(suppMatch[1]);
+                return;
+            }
+        }
+    }
+});
+
+async function showOfflineProductDetail(id) {
+    if (typeof OfflineDB === 'undefined' || typeof AppModal === 'undefined') return;
+    try {
+        const p = await OfflineDB.getProductById(id);
+        if (!p) {
+            showToast('Data produk tidak ditemukan di penyimpanan offline.', 'error');
+            return;
+        }
+
+        let packagingsHtml = '';
+        if (p.packagings && p.packagings.length > 0) {
+            packagingsHtml = p.packagings.map(pkg => `
+                <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:8px;">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                        <span style="font-weight:600;font-size:var(--font-size-sm);">${pkg.unit_name} (Level ${pkg.level})</span>
+                        <span style="color:var(--text-muted);font-size:var(--font-size-xs);">Isi: ${pkg.base_quantity}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div style="color:var(--text-muted);font-size:var(--font-size-xs);">
+                            Beli: ${formatRupiah(pkg.buy_price)}<br>
+                            Jual: <span style="color:var(--primary);font-weight:600;">${formatRupiah(pkg.sell_price)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            packagingsHtml = '<div style="color:var(--text-muted);font-size:var(--font-size-sm);text-align:center;">Belum ada kemasan</div>';
+        }
+
+        AppModal.show({
+            title: p.full_name || p.short_label,
+            subtitle: `${p.code || '-'} • ${p.brand_name || '-'} • ${p.category_name || '-'}`,
+            icon: 'bi-box-seam',
+            iconColor: 'var(--primary-bg)',
+            iconAccent: 'var(--primary)',
+            hideFooter: true,
+            bodyHTML: `
+                <div style="margin-bottom:16px;">
+                    <span class="badge-custom badge-warning" style="margin-bottom:12px;"><i class="bi bi-wifi-off"></i> Mode Offline</span>
+                </div>
+                <h4 style="font-size:var(--font-size-sm);margin-bottom:8px;color:var(--text-primary);">Harga & Kemasan</h4>
+                ${packagingsHtml}
+                <div style="margin-top:16px;text-align:center;font-size:11px;color:var(--text-muted);">
+                    Data diambil dari penyimpanan lokal perangkat Anda.
+                </div>
+            `
+        });
+    } catch (e) {
+        showToast('Gagal memuat data produk offline.', 'error');
+        console.error(e);
+    }
+}
+
+async function showOfflineSaleDetail(id) {
+    if (typeof OfflineDB === 'undefined' || typeof AppModal === 'undefined') return;
+    try {
+        const sales = await OfflineDB.getAllSales();
+        const s = sales.find(x => x.id == id);
+        if (!s) {
+            showToast('Data penjualan tidak ditemukan di penyimpanan offline.', 'error');
+            return;
+        }
+
+        AppModal.show({
+            title: s.invoice_number,
+            subtitle: `${formatDate(s.created_at)} • ${s.sale_mode === 'retail' ? 'Ecer' : 'Grosir'}`,
+            icon: 'bi-receipt',
+            iconColor: 'var(--success-bg)',
+            iconAccent: 'var(--success)',
+            hideFooter: true,
+            bodyHTML: `
+                <div style="margin-bottom:16px;">
+                    <span class="badge-custom badge-warning" style="margin-bottom:12px;"><i class="bi bi-wifi-off"></i> Mode Offline</span>
+                </div>
+                <table class="table-custom" style="width:100%;margin-bottom:16px;font-size:var(--font-size-sm);">
+                    <tr><td style="color:var(--text-muted);padding:8px 0;">Pelanggan</td><td style="text-align:right;font-weight:600;">${s.customer_name || 'Pelanggan Umum'}</td></tr>
+                    <tr><td style="color:var(--text-muted);padding:8px 0;">Status</td><td style="text-align:right;">${s.payment_status}</td></tr>
+                    <tr><td style="color:var(--text-muted);padding:8px 0;">Total Item</td><td style="text-align:right;">${s.total_items || '-'}</td></tr>
+                    <tr><td style="color:var(--text-muted);padding:8px 0;font-weight:700;">Total Bayar</td><td style="text-align:right;font-weight:700;color:var(--primary);">${formatRupiah(s.total_amount)}</td></tr>
+                </table>
+                <div style="margin-top:16px;text-align:center;font-size:11px;color:var(--text-muted);">
+                    Untuk melihat rincian item barang, harap aktifkan internet kembali.
+                </div>
+            `
+        });
+    } catch (e) {
+        showToast('Gagal memuat data penjualan offline.', 'error');
+        console.error(e);
+    }
+}
+
+async function showOfflineSupplierDetail(id) {
+    if (typeof OfflineDB === 'undefined' || typeof AppModal === 'undefined') return;
+    try {
+        const suppliers = await OfflineDB.getAllSuppliers();
+        const s = suppliers.find(x => x.id == id);
+        if (!s) {
+            showToast('Data supplier tidak ditemukan di penyimpanan offline.', 'error');
+            return;
+        }
+
+        AppModal.show({
+            title: s.name,
+            subtitle: s.type_name || 'Supplier',
+            icon: 'bi-building',
+            iconColor: 'var(--info-bg)',
+            iconAccent: 'var(--info)',
+            hideFooter: true,
+            bodyHTML: `
+                <div style="margin-bottom:16px;">
+                    <span class="badge-custom badge-warning" style="margin-bottom:12px;"><i class="bi bi-wifi-off"></i> Mode Offline</span>
+                </div>
+                <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;font-size:var(--font-size-sm);">
+                    <div style="margin-bottom:8px;"><i class="bi bi-telephone" style="color:var(--text-muted);margin-right:8px;"></i> ${s.phone || '-'}</div>
+                    <div style="margin-bottom:8px;"><i class="bi bi-envelope" style="color:var(--text-muted);margin-right:8px;"></i> ${s.email || '-'}</div>
+                    <div><i class="bi bi-geo-alt" style="color:var(--text-muted);margin-right:8px;"></i> ${s.address || '-'}</div>
+                </div>
+                <div style="margin-top:16px;text-align:center;font-size:11px;color:var(--text-muted);">
+                    Data diambil dari penyimpanan lokal perangkat Anda.
+                </div>
+            `
+        });
+    } catch (e) {
+        showToast('Gagal memuat data supplier offline.', 'error');
+        console.error(e);
+    }
+}
