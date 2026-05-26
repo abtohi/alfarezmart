@@ -711,12 +711,10 @@ function addPackagingLevel(prefill = null) {
         
         calcMarginForLevel(div);
         
-        setTimeout(() => {
-            const chkBuy = div.querySelector('.chk-buy-custom');
-            const chkSell = div.querySelector('.chk-sell-custom');
-            if (chkBuy && !chkBuy.checked) { chkBuy.checked = true; chkBuy.dispatchEvent(new Event('change')); }
-            if (chkSell && !chkSell.checked) { chkSell.checked = true; chkSell.dispatchEvent(new Event('change')); }
-        }, 50);
+        const chkBuy = div.querySelector('.chk-buy-custom');
+        const chkSell = div.querySelector('.chk-sell-custom');
+        if (chkBuy) chkBuy.checked = true;
+        if (chkSell) chkSell.checked = true;
 
         const hiddenQty = document.createElement('input');
         hiddenQty.type = 'hidden';

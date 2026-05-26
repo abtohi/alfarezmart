@@ -181,8 +181,9 @@ const PackagingPriceSync = {
                 // When enabling custom, unlock — when disabling, re-sync from level 1
                 if (!isCustom) this.propagateAllFromLevel1();
             });
-            // Initialize: show note if not custom
+            // Initialize: show note if not custom and toggle active class
             if (buyNote) buyNote.classList.toggle('visible', !chkBuy.checked);
+            if (buyToggle) buyToggle.classList.toggle('active', chkBuy.checked);
         }
 
         if (chkSell) {
@@ -192,8 +193,9 @@ const PackagingPriceSync = {
                 if (sellNote) sellNote.classList.toggle('visible', !isCustom);
                 if (!isCustom) this.propagateAllFromLevel1();
             });
-            // Initialize: show note if not custom
+            // Initialize: show note if not custom and toggle active class
             if (sellNote) sellNote.classList.toggle('visible', !chkSell.checked);
+            if (sellToggle) sellToggle.classList.toggle('active', chkSell.checked);
         }
     },
 
