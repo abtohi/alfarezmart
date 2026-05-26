@@ -329,6 +329,7 @@ class ProductModel extends Model
         $in = implode(',', $ids);
         $stmt = $this->db->query("
             SELECT pp.id, pp.product_id, pp.level, pp.sell_price_retail, pp.sell_price_wholesale,
+                   pp.ppn_pct, pp.discount_mode, pp.discount_value,
                    u.name AS unit_name
             FROM product_packagings pp
             JOIN units u ON u.id = pp.unit_id
@@ -389,17 +390,17 @@ class ProductModel extends Model
                     }
 
                     $pkStmt->execute([
-                        ':pid' => $productId,
-                        ':lvl' => $pk['level'],
-                        ':uid' => $pk['unit_id'],
-                        ':cqty' => $cqty,
-                        ':bqty' => $currentBaseQty,
-                        ':bc' => $pk['barcode'] ?: null,
-                        ':buy' => $pk['buy_price'] ?? 0,
-                        ':retail' => $pk['sell_price_retail'] ?? 0,
-                        ':mr' => $pk['margin_retail'] ?? 0,
-                        ':wholesale' => $pk['sell_price_wholesale'] ?? 0,
-                        ':mw' => $pk['margin_wholesale'] ?? 0,
+                        ':pid'      => $productId,
+                        ':lvl'      => $pk['level'],
+                        ':uid'      => $pk['unit_id'],
+                        ':cqty'     => $cqty,
+                        ':bqty'     => $currentBaseQty,
+                        ':bc'       => $pk['barcode'] ?: null,
+                        ':buy'      => $pk['buy_price'] ?? 0,
+                        ':retail'   => $pk['sell_price_retail'] ?? 0,
+                        ':mr'       => $pk['margin_retail'] ?? 0,
+                        ':wholesale'=> $pk['sell_price_wholesale'] ?? 0,
+                        ':mw'       => $pk['margin_wholesale'] ?? 0,
                     ]);
                     
                     $pkgId = $this->db->lastInsertId();

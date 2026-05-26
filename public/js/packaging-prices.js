@@ -57,7 +57,7 @@ const PackagingPriceSync = {
         
         if (rText) {
             if (buy > 0 && retail > 0) {
-                const m = ((retail - buy) / retail * 100).toFixed(1);
+                const m = ((retail - buy) / buy * 100).toFixed(1);
                 const profit = retail - buy;
                 const color = m >= 10 ? 'var(--success)' : (m >= 0 ? 'var(--warning)' : 'var(--danger)');
                 rText.innerHTML = `Ecer: <strong style="color:${color}">${m}%</strong> <span style="font-size:10px;color:var(--text-muted);">(${formatRp(profit)})</span>`;
@@ -68,7 +68,7 @@ const PackagingPriceSync = {
         
         if (wText) {
             if (buy > 0 && wholesale > 0) {
-                const m = ((wholesale - buy) / wholesale * 100).toFixed(1);
+                const m = ((wholesale - buy) / buy * 100).toFixed(1);
                 const profit = wholesale - buy;
                 const color = m >= 5 ? 'var(--success)' : (m >= 0 ? 'var(--warning)' : 'var(--danger)');
                 wText.innerHTML = `Grosir: <strong style="color:${color}">${m}%</strong> <span style="font-size:10px;color:var(--text-muted);">(${formatRp(profit)})</span>`;

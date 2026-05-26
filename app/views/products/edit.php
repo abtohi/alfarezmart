@@ -685,8 +685,7 @@ function addPackagingLevel(prefill = null) {
             </div>
         </div>
 
-        <div style="background:rgba(0,0,0,0.15);padding:12px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.05);">
-            ${!isLevel1 ? `
+        <div style="background:rgba(0,0,0,0.15);padding:12px;border-radius:var(--radius-sm);border:1px solid rgba(255,            ${!isLevel1 ? `
             <label class="price-custom-toggle buy-custom-toggle ${isBuyCustom ? 'active' : ''}" title="Centang untuk mengatur harga modal secara manual pada level ini">
                 <input type="checkbox" class="chk-buy-custom" ${isBuyCustom ? 'checked' : ''}>
                 <i class="bi bi-pencil-square" style="font-size:10px;"></i> Harga Modal Custom (tidak ikut otomatis)
@@ -697,7 +696,7 @@ function addPackagingLevel(prefill = null) {
                     <span style="color:var(--primary);cursor:pointer;background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:10px;" onclick="const b=this.nextElementSibling; b.style.display=b.style.display==='none'?'flex':'none'"><i class="bi bi-calculator"></i> Kalkulator</span>
                     <div style="display:none;position:absolute;top:24px;right:0;background:var(--surface-2);padding:8px;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.8);z-index:10;gap:4px;align-items:center;border:1px solid var(--border-color);">
                         <input type="number" placeholder="Total Rp" step="any" class="form-control-dark calc-total" style="width:90px;font-size:12px;padding:4px;">
-                        <span style="color:var(--text-muted);">/</span>
+                        <span style="color:var(--text-muted);"></span>
                         <input type="number" placeholder="Qty" value="1" class="form-control-dark calc-qty" style="width:50px;font-size:12px;padding:4px;">
                         <button type="button" class="btn-primary-custom" style="padding:4px 8px;font-size:12px;border-radius:4px;" onclick="const p=this.parentElement; const t=p.querySelector('.calc-total').value; const q=p.querySelector('.calc-qty').value; if(t&&q>0){ const inp=p.closest('div[style*=\\'margin-bottom:8px\\']').querySelector('.buy-price'); inp.value=(parseFloat(t)/parseFloat(q)).toFixed(2); inp.dispatchEvent(new Event('input')); p.style.display='none'; }"><i class="bi bi-check2"></i> Hitung</button>
                     </div>
@@ -705,11 +704,35 @@ function addPackagingLevel(prefill = null) {
                 <input type="number" name="buy_price[]" placeholder="0" step="0.01" class="form-control-dark price-input buy-price" style="width:100%;" required value="${prefill ? prefill.buy_price : ''}">
                 ${!isLevel1 ? `<div class="price-locked-note buy-locked-note ${isBuyCustom ? '' : 'visible'}"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs × isi kemasan</div>` : ''}
             </div>
+
+            <!-- PPN & Diskon — mempengaruhi Harga Modal Final yang disimpan ke DB -->
+            <div style="margin-top:8px;margin-bottom:10px;padding:8px 10px;background:rgba(0,0,0,0.12);border-radius:var(--radius-sm);border:1px dashed rgba(255,255,255,0.08);">
+                <div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;"><i class="bi bi-percent"></i> PPN & Diskon (Harga Modal)</div>
+                <div style="display:flex;gap:8px;">
+                    <div style="flex:1;">
+                        <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">PPN (%)</label>
+                        <input type="number" name="ppn_pct[]" placeholder="0" step="any" min="0" max="100" class="form-control-dark ppn-input" style="width:100%;font-size:12px;">
+                    </div>
+                    <div style="flex:1.5;">
+                        <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Diskon</label>
+                        <div style="display:flex;">
+                            <select name="discount_mode[]" class="form-control-dark discount-mode" style="width:60px;border-top-right-radius:0;border-bottom-right-radius:0;padding:6px;font-size:12px;">
+                                <option value="rp">Rp</option>
+                                <option value="pct">%</option>
+                            </select>
+                            <input type="number" name="discount_value[]" placeholder="0" step="any" min="0" class="form-control-dark discount-value" style="width:100%;border-top-left-radius:0;border-bottom-left-radius:0;border-left:none;font-size:12px;">
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size:10px;color:var(--warning);margin-top:5px;"><i class="bi bi-exclamation-triangle"></i> Harga Modal Final = Modal + PPN - Diskon — disimpan permanen ke DB</div>
+            </div>
+
             ${!isLevel1 ? `
             <label class="price-custom-toggle sell-custom-toggle ${isSellCustom ? 'active' : ''}" title="Centang untuk mengatur harga jual secara manual (misal harga renceng lebih murah dari harga pcs × qty)">
                 <input type="checkbox" class="chk-sell-custom" ${isSellCustom ? 'checked' : ''}>
                 <i class="bi bi-tag" style="font-size:10px;"></i> Harga Jual Custom (harga spesial per kemasan ini)
             </label>` : ''}
+
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <div>
                     <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Jual Ecer/Retail *</label>
@@ -721,9 +744,12 @@ function addPackagingLevel(prefill = null) {
                 </div>
             </div>
             ${!isLevel1 ? `<div class="price-locked-note sell-locked-note ${isSellCustom ? '' : 'visible'}"><i class="bi bi-link-45deg"></i> Otomatis dihitung dari harga pcs × isi kemasan</div>` : ''}
-            <div class="margin-calc" style="margin-top:8px;font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;">
-                <span class="margin-retail-text">Margin Retail: 0%</span>
-                <span class="margin-wholesale-text">Margin Grosir: 0%</span>
+            <div class="margin-calc" style="margin-top:8px;font-size:11px;color:var(--text-muted);">
+                <div style="display:flex;justify-content:space-between;">
+                    <span class="margin-retail-text">Markup Retail: 0%</span>
+                    <span class="margin-wholesale-text">Markup Grosir: 0%</span>
+                </div>
+                <div class="margin-final-note" style="font-size:10px;color:var(--info);margin-top:3px;"></div>
             </div>
         </div>
 
@@ -761,6 +787,14 @@ function addPackagingLevel(prefill = null) {
         const bcEl = div.querySelector('.barcode-field');
         if (wholesaleEl) wholesaleEl.value = prefill.sell_price_wholesale ?? '';
         if (bcEl) bcEl.value = prefill.barcode ?? '';
+        
+        const ppnEl = div.querySelector('.ppn-input');
+        const dModeEl = div.querySelector('.discount-mode');
+        const dValEl = div.querySelector('.discount-value');
+        if (ppnEl) ppnEl.value = prefill.ppn_pct ?? '';
+        if (dModeEl && prefill.discount_mode) dModeEl.value = prefill.discount_mode;
+        if (dValEl) dValEl.value = prefill.discount_value ?? '';
+        
         calcMarginForLevel(div);
         
         if (typeof initQtyTiers === 'function') {
@@ -795,6 +829,10 @@ function addPackagingLevel(prefill = null) {
             input.addEventListener('input', () => calcMarginForLevel(div));
         });
     }
+    // PPN & Diskon inputs juga trigger recalc margin
+    div.querySelector('.ppn-input')?.addEventListener('input', () => calcMarginForLevel(div));
+    div.querySelector('.discount-value')?.addEventListener('input', () => calcMarginForLevel(div));
+    div.querySelector('.discount-mode')?.addEventListener('change', () => calcMarginForLevel(div));
 
     const cqtyInput = div.querySelector('.contained-qty');
     if (cqtyInput) {
@@ -845,28 +883,58 @@ function calcMarginForLevel(div) {
     const buy = parseFloat(div.querySelector('.buy-price')?.value) || 0;
     const retail = parseFloat(div.querySelector('.retail-price')?.value) || 0;
     const wholesale = parseFloat(div.querySelector('.wholesale-price')?.value) || 0;
-    
+
+    // Baca PPN & Diskon
+    const ppnPct = parseFloat(div.querySelector('.ppn-input')?.value) || 0;
+    const dMode = div.querySelector('.discount-mode')?.value || 'rp';
+    const dVal = parseFloat(div.querySelector('.discount-value')?.value) || 0;
+
     const retailText = div.querySelector('.margin-retail-text');
     const wholesaleText = div.querySelector('.margin-wholesale-text');
+    const finalNoteEl = div.querySelector('.margin-final-note');
 
     const formatRp = (num) => 'Rp ' + Math.round(num).toLocaleString('id-ID');
 
-    if (buy > 0 && retail > 0) {
-        const m = ((retail - buy) / retail * 100).toFixed(1);
-        const profit = retail - buy;
+    // Harga Modal Final = Modal + PPN - Diskon (harga modal yang benar-benar disimpan ke DB)
+    function applyPpnDiskon(basePrice) {
+        if (basePrice <= 0) return basePrice;
+        const buyAfterPpn = basePrice * (1 + ppnPct / 100);
+        if (dMode === 'pct') {
+            return buyAfterPpn * (1 - dVal / 100);
+        } else {
+            return buyAfterPpn - dVal;
+        }
+    }
+
+    const finalBuy = Math.max(0, applyPpnDiskon(buy));
+    const hasPpnDiskon = ppnPct > 0 || dVal > 0;
+
+    // Markup = (Jual - Modal) / Modal × 100 (berbasis harga modal, bukan harga jual)
+    if (finalBuy > 0 && retail > 0) {
+        const m = ((retail - finalBuy) / finalBuy * 100).toFixed(1);
+        const profit = retail - finalBuy;
         const color = m >= 10 ? 'var(--success)' : (m >= 0 ? 'var(--warning)' : 'var(--danger)');
         retailText.innerHTML = `Ecer: <strong style="color:${color}">${m}%</strong> <span style="font-size:10px;color:var(--text-muted);">(${formatRp(profit)})</span>`;
     } else {
-        retailText.innerHTML = `Margin Retail: 0%`;
+        retailText.innerHTML = `Markup Retail: 0%`;
     }
 
-    if (buy > 0 && wholesale > 0) {
-        const m = ((wholesale - buy) / wholesale * 100).toFixed(1);
-        const profit = wholesale - buy;
+    if (finalBuy > 0 && wholesale > 0) {
+        const m = ((wholesale - finalBuy) / finalBuy * 100).toFixed(1);
+        const profit = wholesale - finalBuy;
         const color = m >= 5 ? 'var(--success)' : (m >= 0 ? 'var(--warning)' : 'var(--danger)');
         wholesaleText.innerHTML = `Grosir: <strong style="color:${color}">${m}%</strong> <span style="font-size:10px;color:var(--text-muted);">(${formatRp(profit)})</span>`;
     } else {
-        wholesaleText.innerHTML = `Margin Grosir: 0%`;
+        wholesaleText.innerHTML = `Markup Grosir: 0%`;
+    }
+
+    // Tampilkan info harga modal final jika ada PPN/Diskon
+    if (finalNoteEl) {
+        if (hasPpnDiskon && buy > 0) {
+            finalNoteEl.innerHTML = `<i class="bi bi-arrow-right-short"></i> Harga Modal Final (disimpan ke DB): <strong>${formatRp(finalBuy)}</strong>`;
+        } else {
+            finalNoteEl.innerHTML = '';
+        }
     }
 }
 
@@ -1174,6 +1242,9 @@ async function submitProduct(e) {
             const retail   = div.querySelector('.retail-price')?.value || 0;
             const wholesale= div.querySelector('.wholesale-price')?.value || 0;
             const barcode  = div.querySelector('.barcode-field')?.value || '';
+            const ppnPct = div.querySelector('.ppn-input')?.value || 0;
+            const discountMode = div.querySelector('.discount-mode')?.value || 'rp';
+            const discountValue = div.querySelector('.discount-value')?.value || 0;
 
             try {
                 if (pkgId) {
@@ -1185,7 +1256,10 @@ async function submitProduct(e) {
                         buy_price: buyPrice,
                         sell_price_retail: retail,
                         sell_price_wholesale: wholesale,
-                        barcode: barcode
+                        barcode: barcode,
+                        ppn_pct: ppnPct,
+                        discount_mode: discountMode,
+                        discount_value: discountValue
                     });
                     if (upRes.error && upRes.error !== 'barcode_conflict') {
                         throw new Error(upRes.error || upRes.message);
@@ -1199,7 +1273,10 @@ async function submitProduct(e) {
                         buy_price: buyPrice,
                         sell_price_retail: retail,
                         sell_price_wholesale: wholesale,
-                        barcode: barcode
+                        barcode: barcode,
+                        ppn_pct: ppnPct,
+                        discount_mode: discountMode,
+                        discount_value: discountValue
                     });
                     if (!addRes.success) {
                         throw new Error(addRes.error || 'Gagal menambahkan kemasan baru');

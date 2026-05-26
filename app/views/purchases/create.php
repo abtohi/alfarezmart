@@ -1147,11 +1147,11 @@ function syncSellPricesWhenBuyPriceChanges(item) {
     
     if (level1Buy <= 0) return;
     
-    // Calculate margin percentages from level 1
-    const retailMarginPct = level1Retail > 0 ? (level1Retail - level1Buy) / level1Retail : 0;
-    const wholesaleMarginPct = level1Wholesale > 0 ? (level1Wholesale - level1Buy) / level1Wholesale : 0;
+    // Calculate markup percentages from level 1
+    const retailMarginPct = level1Buy > 0 ? (level1Retail - level1Buy) / level1Buy : 0;
+    const wholesaleMarginPct = level1Buy > 0 ? (level1Wholesale - level1Buy) / level1Buy : 0;
     
-    // Apply margins to other levels if sell_price is not custom
+    // Apply margins (markup) to other levels if sell_price is not custom
     item.packagings.forEach(pkg => {
         if (pkg.level == 1 || pkg.sell_custom) return;
         
@@ -1159,10 +1159,10 @@ function syncSellPricesWhenBuyPriceChanges(item) {
         if (pkgBuy <= 0) return;
         
         if (retailMarginPct > 0) {
-            pkg.sell_price_retail = Math.round(pkgBuy / (1 - retailMarginPct));
+            pkg.sell_price_retail = Math.round(pkgBuy * (1 + retailMarginPct));
         }
         if (wholesaleMarginPct > 0) {
-            pkg.sell_price_wholesale = Math.round(pkgBuy / (1 - wholesaleMarginPct));
+            pkg.sell_price_wholesale = Math.round(pkgBuy * (1 + wholesaleMarginPct));
         }
     });
 }
@@ -1334,13 +1334,13 @@ function openAllPackagingsModal(tempId) {
             changeBadge = `<span style="font-size:9px;background:var(--success-bg);color:var(--success);padding:2px 6px;border-radius:10px;margin-left:6px;"><i class="bi bi-check-circle"></i> Sama</span>`;
         }
 
-        // Suggested sell price based on prev margin
+        // Suggested sell price based on prev markup
         let suggestedHtml = '';
         if (origBuy > 0 && origRet > 0) {
-            const prevMargin = (origRet - origBuy) / origRet;
-            if (prevMargin > 0 && prevMargin < 1) {
-                const sugRet = Math.round(pkg.buy_price / (1 - prevMargin));
-                suggestedHtml = `<div style="font-size:10px;color:var(--info);margin-top:3px;margin-bottom:6px;"><i class="bi bi-lightbulb"></i> Saran jual ecer (margin ${(prevMargin*100).toFixed(1)}%): <strong>Rp${sugRet.toLocaleString('id-ID')}</strong></div>`;
+            const prevMarkup = (origRet - origBuy) / origBuy;
+            if (prevMarkup > 0) {
+                const sugRet = Math.round(pkg.buy_price * (1 + prevMarkup));
+                suggestedHtml = `<div style="font-size:10px;color:var(--info);margin-top:3px;margin-bottom:6px;"><i class="bi bi-lightbulb"></i> Saran jual ecer (markup ${(prevMarkup*100).toFixed(1)}%): <strong>Rp${sugRet.toLocaleString('id-ID')}</strong></div>`;
             }
         }
 
@@ -1629,11 +1629,11 @@ function formatMarginWithProfit(label, buy, sell) {
     buy = parseFloat(buy) || 0;
     sell = parseFloat(sell) || 0;
     if (buy <= 0 || sell <= 0) return `${label}: 0%`;
-    const m = ((sell - buy) / sell * 100).toFixed(1);
+    const m = ((sell - buy) / buy * 100).toFixed(1);
     const profit = sell - buy;
     const color = label === 'Ecer' ? (m >= 10 ? 'var(--success)' : (m >= 0 ? 'var(--warning)' : 'var(--danger)'))
                                    : (m >= 5 ? 'var(--success)' : (m >= 0 ? 'var(--warning)' : 'var(--danger)'));
-    return `${label}: <strong style="color:${color}">${m}%</strong> <span style="font-size:10px;color:var(--text-muted);">(Rp${Math.round(profit).toLocaleString('id-ID')})</span>`;
+    return `Markup ${label}: <strong style="color:${color}">${m}%</strong> <span style="font-size:10px;color:var(--text-muted);">(Rp${Math.round(profit).toLocaleString('id-ID')})</span>`;
 }
 
 function updateMarginDisplay(tempId, buy, retail, wholesale) {
@@ -2476,27 +2476,33 @@ async function submitPurchase() {
             total_amount: currentSubtotal,
             grand_total: currentGrandTotal,
             invoice_photo_base64: invoicePhotoBase64,
-            items: purchaseItems.map(i => ({
-                product_id: i.product_id,
-                level: i.level,
-                quantity: i.quantity,
-                buy_price: parseFloat(i.buy_price) || 0,
-                sell_price_retail: parseFloat(i.sell_price_retail) || 0,
-                sell_price_wholesale: parseFloat(i.sell_price_wholesale) || 0,
-                ppn_pct: parseFloat(i.ppn_pct) || 0,
-                diskon_mode: i.diskon_mode || 'rp',
-                diskon_value: parseFloat(i.diskon_value) || 0,
-                harga_nett: parseFloat(i.harga_nett) || parseFloat(i.buy_price) || 0,
-                packagings: i.packagings.map(p => ({
-                    level: p.level,
-                    buy_price: parseFloat(p.buy_price) || 0,
-                    sell_price_retail: parseFloat(p.sell_price_retail) || 0,
-                    sell_price_wholesale: parseFloat(p.sell_price_wholesale) || 0,
-                    ppn_pct: parseFloat(p.ppn_pct) || 0,
-                    diskon_mode: p.diskon_mode || 'rp',
-                    diskon_value: parseFloat(p.diskon_value) || 0
-                }))
-            }))
+            items: purchaseItems.map(i => {
+                const itemNett = parseFloat(i.harga_nett) || parseFloat(i.buy_price) || 0;
+                return {
+                    product_id: i.product_id,
+                    level: i.level,
+                    quantity: i.quantity,
+                    buy_price: itemNett, // Kirim harga nett (sudah ada PPN & Diskon) sebagai harga modal final ke server
+                    sell_price_retail: parseFloat(i.sell_price_retail) || 0,
+                    sell_price_wholesale: parseFloat(i.sell_price_wholesale) || 0,
+                    ppn_pct: parseFloat(i.ppn_pct) || 0,
+                    diskon_mode: i.diskon_mode || 'rp',
+                    diskon_value: parseFloat(i.diskon_value) || 0,
+                    harga_nett: itemNett,
+                    packagings: i.packagings.map(p => {
+                        const pkgNett = calcItemNett(parseFloat(p.buy_price) || 0, parseFloat(p.ppn_pct) || 0, p.diskon_mode || 'rp', parseFloat(p.diskon_value) || 0);
+                        return {
+                            level: p.level,
+                            buy_price: pkgNett, // Kirim harga nett juga untuk packaging agar tersimpan dengan benar
+                            sell_price_retail: parseFloat(p.sell_price_retail) || 0,
+                            sell_price_wholesale: parseFloat(p.sell_price_wholesale) || 0,
+                            ppn_pct: parseFloat(p.ppn_pct) || 0,
+                            diskon_mode: p.diskon_mode || 'rp',
+                            diskon_value: parseFloat(p.diskon_value) || 0
+                        };
+                    })
+                };
+            })
         };
 
         const res = await fetch(`${BASE_URL}api/purchases`, {

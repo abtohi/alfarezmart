@@ -184,6 +184,13 @@ class ApiController extends Controller
         $this->validateCSRF();
         $model = new ProductModel();
 
+        if (empty($_POST)) {
+            $jsonBody = json_decode(file_get_contents('php://input'), true);
+            if (is_array($jsonBody)) {
+                $_POST = array_merge($_POST, $jsonBody);
+            }
+        }
+
         try {
             $productData = [
                 'code' => $this->input('code'),
@@ -212,7 +219,7 @@ class ApiController extends Controller
                 
                 $level = $i + 1;
                 $cqty = $_POST['contained_qty'][$i] ?? 1;
-                $buy = $_POST['buy_price'][$i] ?? 0;
+                $buy = (float)($_POST['buy_price'][$i] ?? 0);
                 $retail = $_POST['sell_price_retail'][$i] ?? 0;
                 $wholesale = $_POST['sell_price_wholesale'][$i] ?? 0;
 
@@ -224,16 +231,28 @@ class ApiController extends Controller
                     throw new Exception("Barcode \"{$barcode}\" sudah digunakan produk lain.");
                 }
 
+                // Terapkan PPN & Diskon langsung ke harga modal
+                $ppnPct       = (float)($_POST['ppn_pct'][$i] ?? 0);
+                $discountMode  = $_POST['discount_mode'][$i] ?? 'rp';
+                $discountValue = (float)($_POST['discount_value'][$i] ?? 0);
+                $buyAfterPpn   = $buy * (1 + $ppnPct / 100);
+                if ($discountMode === 'pct') {
+                    $finalBuy = $buyAfterPpn * (1 - $discountValue / 100);
+                } else {
+                    $finalBuy = $buyAfterPpn - $discountValue;
+                }
+                $finalBuy = max(0, round($finalBuy, 2));
+
                 $packagings[] = [
                     'level' => $level,
                     'unit_id' => $unitId,
                     'contained_qty' => $cqty,
                     'barcode' => $barcode,
-                    'buy_price' => $buy,
+                    'buy_price' => $finalBuy,
                     'sell_price_retail' => $retail,
-                    'margin_retail' => $retail > 0 ? Helper::calculateMargin($buy, $retail) : 0,
+                    'margin_retail' => $retail > 0 ? Helper::calculateMargin($finalBuy, $retail) : 0,
                     'sell_price_wholesale' => $wholesale,
-                    'margin_wholesale' => $wholesale > 0 ? Helper::calculateMargin($buy, $wholesale) : 0,
+                    'margin_wholesale' => $wholesale > 0 ? Helper::calculateMargin($finalBuy, $wholesale) : 0,
                     'qty_prices' => json_decode($_POST['qty_prices_json'][$i] ?? '[]', true) ?: [],
                 ];
             }
@@ -503,6 +522,18 @@ class ApiController extends Controller
             $barcode = trim($this->input('barcode', ''));
             $unitId = (int)$this->input('unit_id', 0);
             $forceReplace = (bool)$this->input('force_replace', false);
+            
+            // Terapkan PPN & Diskon langsung ke harga modal
+            $ppnPct        = (float) $this->input('ppn_pct', 0);
+            $discountMode  = $this->input('discount_mode', 'rp');
+            $discountValue = (float) $this->input('discount_value', 0);
+            $buyAfterPpn   = $buyPrice * (1 + $ppnPct / 100);
+            if ($discountMode === 'pct') {
+                $finalBuyPrice = $buyAfterPpn * (1 - $discountValue / 100);
+            } else {
+                $finalBuyPrice = $buyAfterPpn - $discountValue;
+            }
+            $finalBuyPrice = max(0, round($finalBuyPrice, 2));
 
             if (!empty($barcode)) {
                 $owner = Helper::barcodeOwner($barcode, $id);
@@ -528,9 +559,9 @@ class ApiController extends Controller
                 }
             }
             
-            // Calculate margins
-            $marginRetail = $retailPrice > 0 ? Helper::calculateMargin($buyPrice, $retailPrice) : 0;
-            $marginWholesale = $wholesalePrice > 0 ? Helper::calculateMargin($buyPrice, $wholesalePrice) : 0;
+            // Calculate margins using final buy price (after PPN & discount)
+            $marginRetail    = $retailPrice > 0    ? Helper::calculateMargin($finalBuyPrice, $retailPrice)    : 0;
+            $marginWholesale = $wholesalePrice > 0 ? Helper::calculateMargin($finalBuyPrice, $wholesalePrice) : 0;
             
             $unitSql = $unitId ? 'unit_id = :uid,' : '';
             $containedQty = $this->input('contained_qty');
@@ -548,13 +579,13 @@ class ApiController extends Controller
                 WHERE id = :id
             ");
             $params = [
-                ':buy' => $buyPrice,
-                ':retail' => $retailPrice,
-                ':wholesale' => $wholesalePrice,
-                ':mr' => $marginRetail,
-                ':mw' => $marginWholesale,
-                ':barcode' => $barcode ?: null,
-                ':id' => $id
+                ':buy'      => $finalBuyPrice,
+                ':retail'   => $retailPrice,
+                ':wholesale'=> $wholesalePrice,
+                ':mr'       => $marginRetail,
+                ':mw'       => $marginWholesale,
+                ':barcode'  => $barcode ?: null,
+                ':id'       => $id
             ];
             if ($unitId) $params[':uid'] = $unitId;
             if ($containedQty !== null && $containedQty !== '') $params[':cqty'] = (int)$containedQty;
@@ -1298,6 +1329,18 @@ class ApiController extends Controller
             $barcode   = trim($this->input('barcode', ''));
             if (empty($barcode)) $barcode = Helper::generateBarcode();
 
+            // Terapkan PPN & Diskon langsung ke harga modal
+            $ppnPct        = (float) $this->input('ppn_pct', 0);
+            $discountMode  = $this->input('discount_mode', 'rp');
+            $discountValue = (float) $this->input('discount_value', 0);
+            $buyAfterPpn   = $buyPrice * (1 + $ppnPct / 100);
+            if ($discountMode === 'pct') {
+                $finalBuyPrice = $buyAfterPpn * (1 - $discountValue / 100);
+            } else {
+                $finalBuyPrice = $buyAfterPpn - $discountValue;
+            }
+            $finalBuyPrice = max(0, round($finalBuyPrice, 2));
+
             $stmt = $db->prepare("
                 INSERT INTO product_packagings
                   (product_id, level, unit_id, contained_qty, base_qty, buy_price,
@@ -1310,11 +1353,11 @@ class ApiController extends Controller
                 ':uid'       => $unitId,
                 ':cqty'      => $containedQty,
                 ':bqty'      => $baseQty,
-                ':buy'       => $buyPrice,
+                ':buy'       => $finalBuyPrice,
                 ':retail'    => $retail,
                 ':wholesale' => $wholesale,
-                ':mr'        => $retail > 0 ? Helper::calculateMargin($buyPrice, $retail) : 0,
-                ':mw'        => $wholesale > 0 ? Helper::calculateMargin($buyPrice, $wholesale) : 0,
+                ':mr'        => $retail > 0 ? Helper::calculateMargin($finalBuyPrice, $retail) : 0,
+                ':mw'        => $wholesale > 0 ? Helper::calculateMargin($finalBuyPrice, $wholesale) : 0,
                 ':barcode'   => $barcode ?: null,
             ]);
             $newId = $db->lastInsertId();

@@ -81,12 +81,18 @@ async function triggerSync() {
     }
     
     if (btn) btn.style.transform = 'rotate(360deg)';
-    showToast('Sedang sinkronisasi data produk...', 'info');
     
     try {
-        if (typeof OfflineDB !== 'undefined') {
-            const count = await OfflineDB.syncProductsFromServer();
-            showToast(`Berhasil sinkronisasi ${count} produk ke perangkat`, 'success');
+        if (typeof window.OfflineDB !== 'undefined') {
+            const countPending = await window.OfflineDB.countPending();
+            if (countPending > 0) {
+                // syncPendingChanges will also sync products when done
+                await syncPendingChanges(); 
+            } else {
+                showToast('Sedang sinkronisasi data master produk...', 'info');
+                const count = await OfflineDB.syncProductsFromServer();
+                showToast(`Berhasil sinkronisasi ${count} produk ke perangkat`, 'success');
+            }
         }
     } catch (e) {
         showToast('Gagal sinkronisasi data', 'error');
@@ -271,5 +277,131 @@ window.addEventListener('beforeunload', function (e) {
     if (window.hasUnsavedChanges) {
         e.preventDefault();
         e.returnValue = '';
+    }
+});
+
+// ==========================================
+// OFFLINE SYNC MANAGER
+// ==========================================
+async function updateSyncBadge() {
+    if (typeof window.OfflineDB !== 'undefined') {
+        try {
+            const count = await window.OfflineDB.countPending();
+            const badge = document.getElementById('offlineSyncBadge');
+            if (badge) {
+                if (count > 0) {
+                    badge.style.display = 'flex';
+                    badge.textContent = count;
+                    const icon = document.getElementById('syncIcon');
+                    if(icon) icon.style.color = 'var(--warning)';
+                } else {
+                    badge.style.display = 'none';
+                    const icon = document.getElementById('syncIcon');
+                    if(icon) icon.style.color = '';
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+}
+
+async function syncPendingChanges() {
+    if (!navigator.onLine) return;
+    if (typeof window.OfflineDB === 'undefined') return;
+
+    try {
+        const changes = await window.OfflineDB.getPendingChanges();
+        if (changes.length === 0) return;
+
+        showToast('Menyinkronkan data offline...', 'info');
+        
+        // Show spinning icon
+        const syncIcon = document.getElementById('syncIcon');
+        if (syncIcon) {
+            syncIcon.classList.add('bi-arrow-repeat'); // Ensure icon type
+            syncIcon.style.animation = 'spin 1s linear infinite';
+        }
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const change of changes) {
+            try {
+                // Use standard fetch to bypass api() offline interception
+                const config = {
+                    method: change.method,
+                    headers: {}
+                };
+                
+                const csrfToken = document.getElementById('csrfToken') ? document.getElementById('csrfToken').value : '';
+                if (csrfToken) config.headers['X-CSRF-Token'] = csrfToken;
+                
+                if (change.payload) {
+                    config.headers['Content-Type'] = 'application/json';
+                    config.body = JSON.stringify(change.payload);
+                }
+
+                const response = await fetch(change.endpoint, config);
+                if (response.ok) {
+                    await window.OfflineDB.removePendingChange(change.id);
+                    successCount++;
+                } else {
+                    failCount++;
+                    console.error("Gagal sinkron data ID:", change.id);
+                }
+            } catch (e) {
+                console.error("Error saat sinkron data ID:", change.id, e);
+                failCount++;
+            }
+        }
+
+        updateSyncBadge();
+        if (syncIcon) syncIcon.style.animation = '';
+
+        if (failCount === 0) {
+            showToast(`Sinkronisasi selesai (${successCount} data)`, 'success');
+            // Jika ada fungsi syncProductsFromServer (master data produk), panggil juga
+            if (typeof OfflineDB.syncProductsFromServer === 'function') {
+                OfflineDB.syncProductsFromServer().catch(e => console.log('Gagal update cache produk', e));
+            }
+            // Refresh data on current page if applicable
+            setTimeout(() => { window.location.reload(); }, 1500);
+        } else {
+            showToast(`Sinkronisasi selesai dengan ${failCount} gagal`, 'warning');
+        }
+    } catch (e) {
+        console.error("Sync process failed", e);
+    }
+}
+
+// Listen for connection changes
+window.addEventListener('online', function() {
+    showToast('Koneksi internet kembali. Menyinkronkan data...', 'success');
+    syncPendingChanges();
+});
+
+window.addEventListener('offline', function() {
+    showToast('Koneksi terputus. Beralih ke mode offline.', 'warning');
+});
+
+// Initial badge check
+document.addEventListener('DOMContentLoaded', () => {
+    // Inject spin keyframes if not exists
+    if (!document.getElementById('spinKeyframes')) {
+        const style = document.createElement('style');
+        style.id = 'spinKeyframes';
+        style.innerHTML = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
+        document.head.appendChild(style);
+    }
+
+    if (window.OfflineDB) {
+        window.OfflineDB.init().then(() => {
+            updateSyncBadge();
+            // Sync on load if online
+            if (navigator.onLine) {
+                syncPendingChanges();
+            }
+        }).catch(e => console.error("DB Init failed on load", e));
     }
 });

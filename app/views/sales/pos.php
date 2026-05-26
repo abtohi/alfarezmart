@@ -107,19 +107,54 @@ function recalcItemPrice(item) {
     const qty = parseFloat(item.quantity) || 1;
 
     // Robust check: verify QtyPricing AND its methods exist
+    let basePricePerUnit = 0;
     if (typeof QtyPricing !== 'undefined' && typeof QtyPricing.calculateTotalPrice === 'function') {
-        item.total = QtyPricing.calculateTotalPrice(pkg, saleMode, item.quantity, false, null);
+        basePricePerUnit = QtyPricing.calculateTotalPrice(pkg, saleMode, 1, false, null);
         item.price_note = typeof QtyPricing.getPriceNote === 'function'
             ? QtyPricing.getPriceNote(pkg, saleMode, item.quantity, false) : '';
     } else {
-        // Fallback: direct unit price × qty (no tier pricing)
-        const basePrice = saleMode === 'wholesale'
+        // Fallback: direct unit price (no tier pricing)
+        basePricePerUnit = saleMode === 'wholesale'
             ? (parseFloat(pkg.sell_price_wholesale) || parseFloat(pkg.sell_price_retail) || 0)
             : (parseFloat(pkg.sell_price_retail) || 0);
-        item.total = Math.round(basePrice * qty);
         item.price_note = '';
     }
+
+    // Apply PPN and Discount
+    const ppnPct = parseFloat(pkg.ppn_pct) || 0;
+    const dMode = pkg.discount_mode || 'rp';
+    const dVal = parseFloat(pkg.discount_value) || 0;
+
+    let ppnAmount = 0;
+    if (ppnPct > 0) {
+        ppnAmount = basePricePerUnit * (ppnPct / 100);
+    }
+
+    let discountAmount = 0;
+    if (dVal > 0) {
+        if (dMode === 'pct') {
+            // Usually discount percent is applied to base + ppn or just base. 
+            // In typical POS, if both exist: (Base + PPN) - Diskon or (Base - Diskon) + PPN
+            // We'll apply % discount to (basePricePerUnit + ppnAmount)
+            discountAmount = (basePricePerUnit + ppnAmount) * (dVal / 100);
+        } else {
+            discountAmount = dVal;
+        }
+    }
+
+    const finalUnitPrice = basePricePerUnit + ppnAmount - discountAmount;
+    item.total = Math.round(finalUnitPrice * qty);
     item.unit_price = qty > 0 ? item.total / qty : 0;
+
+    // Add PPN & Diskon info to price_note
+    if (ppnPct > 0 || discountAmount > 0) {
+        let extraNote = [];
+        if (ppnPct > 0) extraNote.push(`+PPN ${ppnPct}%`);
+        if (discountAmount > 0) {
+            extraNote.push(`-Diskon ${dMode === 'pct' ? dVal + '%' : 'Rp' + dVal}`);
+        }
+        item.price_note = (item.price_note ? item.price_note + ' | ' : '') + extraNote.join(' ');
+    }
 }
 
 function getThermalPrinterSafe() {

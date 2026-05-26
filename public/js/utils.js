@@ -49,8 +49,57 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
         options = methodOrOptions || {};
     }
     
-    const defaults = { headers: { 'Content-Type': 'application/json' } };
-    const config = { ...defaults, ...options };
+    const method = (options.method || 'GET').toUpperCase();
+    
+    // OFFLINE INTERCEPTION FOR MUTATIONS
+    if (!navigator.onLine && ['POST', 'PUT', 'DELETE'].includes(method)) {
+        if (window.OfflineDB) {
+            try {
+                let payloadData = null;
+                if (options.body) {
+                    if (options.body instanceof FormData) {
+                        payloadData = {};
+                        for (let [key, value] of options.body.entries()) {
+                            if (value instanceof File) continue; // skip file for offline sync
+                            if (key.endsWith('[]')) {
+                                const baseKey = key.slice(0, -2);
+                                if (!payloadData[baseKey]) payloadData[baseKey] = [];
+                                payloadData[baseKey].push(value);
+                            } else {
+                                payloadData[key] = value;
+                            }
+                        }
+                    } else if (typeof options.body === 'string') {
+                        payloadData = JSON.parse(options.body);
+                    } else {
+                        payloadData = options.body;
+                    }
+                }
+                await window.OfflineDB.addPendingChange(endpoint, method, payloadData);
+                
+                // Update badge if app.js functions are available
+                if (typeof updateSyncBadge === 'function') {
+                    updateSyncBadge();
+                }
+
+                showToast('Offline: Perubahan disimpan ke antrian lokal', 'warning');
+                
+                // Return dummy success so UI doesn't break
+                return { success: true, message: 'Disimpan offline (menunggu sinkronisasi)', id: 'offline_' + Date.now() };
+            } catch (e) {
+                console.error("Gagal menyimpan ke antrian offline", e);
+                throw new Error('Offline: Gagal menyimpan data sementara');
+            }
+        } else {
+            throw new Error('Koneksi terputus dan sistem offline tidak siap.');
+        }
+    }
+
+    const config = { ...options };
+    if (!config.headers) config.headers = {};
+    if (!(options.body instanceof FormData) && !config.headers['Content-Type']) {
+        config.headers['Content-Type'] = 'application/json';
+    }
     
     // Add CSRF token header if exists
     const csrfToken = document.getElementById('csrfToken') ? document.getElementById('csrfToken').value : '';
@@ -73,7 +122,6 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
             jsonData = JSON.parse(text);
         } catch (parseErr) {
             console.error('Response bukan JSON valid:', text.substring(0, 500));
-            // Check if it looks like an HTML error page
             if (text.includes('<br') || text.includes('<html') || text.includes('Fatal error')) {
                 throw new Error('Server error (kemungkinan timeout atau kehabisan memori). Coba lagi dengan gambar yang lebih kecil.');
             }
@@ -83,6 +131,13 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
         if (!response.ok) throw new Error(jsonData.error || 'Request failed');
         return jsonData;
     } catch (error) {
+        // Fallback for network error if not caught earlier
+        if (!navigator.onLine && ['POST', 'PUT', 'DELETE'].includes(method)) {
+            // Already handled above, but just in case connection dropped exactly during fetch
+            console.error('API Error during request while connection dropped:', error);
+            throw new Error('Koneksi terputus saat mengirim data.');
+        }
+
         console.error('API Error:', error);
         showToast(error.message, 'error');
         throw error;
@@ -95,8 +150,11 @@ function truncate(text, len = 35) {
     return text.length > len ? text.substring(0, len) + '...' : text;
 }
 
-// Calculate margin
-function calcMargin(buy, sell) {
+// Calculate markup (berbasis harga modal)
+function calcMarkup(buy, sell) {
     if (!buy || buy <= 0 || !sell || sell <= 0) return 0;
-    return ((sell - buy) / sell * 100).toFixed(1);
+    return ((sell - buy) / buy * 100).toFixed(1);
 }
+
+// Alias for backward compatibility (in case it's used elsewhere)
+const calcMargin = calcMarkup;

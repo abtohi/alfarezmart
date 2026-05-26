@@ -4,9 +4,10 @@
 
 const OfflineDB = (function() {
     const DB_NAME = 'alfarezmart_offline';
-    const DB_VERSION = 1;
+    const DB_VERSION = 2; // Upgraded for full offline support
     const STORE_PRODUCTS = 'products';
     const STORE_PENDING = 'pending_changes';
+    const STORE_AUTH = 'auth_cache';
 
     let db = null;
 
@@ -33,12 +34,16 @@ const OfflineDB = (function() {
                     productStore.createIndex('full_name', 'full_name', { unique: false });
                     productStore.createIndex('short_label', 'short_label', { unique: false });
                     productStore.createIndex('code', 'code', { unique: false });
-                    // Custom index for searching by barcode will be handled manually since packagings is an array
                 }
 
-                // Pending changes store (for future offline editing support)
+                // Pending changes store (offline queue)
                 if (!db.objectStoreNames.contains(STORE_PENDING)) {
                     db.createObjectStore(STORE_PENDING, { keyPath: 'id', autoIncrement: true });
+                }
+
+                // Auth store (for offline login validation if needed)
+                if (!db.objectStoreNames.contains(STORE_AUTH)) {
+                    db.createObjectStore(STORE_AUTH, { keyPath: 'key' });
                 }
             };
         });
@@ -65,9 +70,7 @@ const OfflineDB = (function() {
             const transaction = db.transaction([STORE_PRODUCTS], 'readwrite');
             const store = transaction.objectStore(STORE_PRODUCTS);
             
-            // Clear existing
             store.clear();
-
             products.forEach(product => {
                 store.put(product);
             });
@@ -83,6 +86,18 @@ const OfflineDB = (function() {
             const transaction = db.transaction([STORE_PRODUCTS], 'readonly');
             const store = transaction.objectStore(STORE_PRODUCTS);
             const request = store.getAll();
+
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    function getProductById(id) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("DB not initialized");
+            const transaction = db.transaction([STORE_PRODUCTS], 'readonly');
+            const store = transaction.objectStore(STORE_PRODUCTS);
+            const request = store.get(parseInt(id));
 
             request.onsuccess = () => resolve(request.result);
             request.onerror = (e) => reject(e.target.error);
@@ -107,7 +122,7 @@ const OfflineDB = (function() {
                 }
 
                 return nameMatch || brandMatch || codeMatch || barcodeMatch;
-            }).slice(0, 15); // Limit to 15 like server
+            }).slice(0, 15);
         } catch (e) {
             console.error("Offline search failed", e);
             return [];
@@ -132,10 +147,96 @@ const OfflineDB = (function() {
         }
     }
 
+    // --- PENDING CHANGES ---
+    function addPendingChange(endpoint, method, payload) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("DB not initialized");
+            const transaction = db.transaction([STORE_PENDING], 'readwrite');
+            const store = transaction.objectStore(STORE_PENDING);
+            const request = store.add({
+                endpoint,
+                method,
+                payload,
+                timestamp: Date.now()
+            });
+
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    function getPendingChanges() {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("DB not initialized");
+            const transaction = db.transaction([STORE_PENDING], 'readonly');
+            const store = transaction.objectStore(STORE_PENDING);
+            const request = store.getAll();
+
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    function removePendingChange(id) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("DB not initialized");
+            const transaction = db.transaction([STORE_PENDING], 'readwrite');
+            const store = transaction.objectStore(STORE_PENDING);
+            const request = store.delete(id);
+
+            request.onsuccess = () => resolve();
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    function countPending() {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("DB not initialized");
+            const transaction = db.transaction([STORE_PENDING], 'readonly');
+            const store = transaction.objectStore(STORE_PENDING);
+            const request = store.count();
+
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    // --- AUTH CACHE ---
+    function saveAuth(key, data) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("DB not initialized");
+            const transaction = db.transaction([STORE_AUTH], 'readwrite');
+            const store = transaction.objectStore(STORE_AUTH);
+            const request = store.put({ key, data, timestamp: Date.now() });
+
+            request.onsuccess = () => resolve();
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    function getAuth(key) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("DB not initialized");
+            const transaction = db.transaction([STORE_AUTH], 'readonly');
+            const store = transaction.objectStore(STORE_AUTH);
+            const request = store.get(key);
+
+            request.onsuccess = () => resolve(request.result ? request.result.data : null);
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
     return {
         init,
         syncProductsFromServer,
+        getProductById,
         searchProducts,
-        findByBarcode
+        findByBarcode,
+        addPendingChange,
+        getPendingChanges,
+        removePendingChange,
+        countPending,
+        saveAuth,
+        getAuth
     };
 })();

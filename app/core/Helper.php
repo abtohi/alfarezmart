@@ -178,20 +178,20 @@ if (!class_exists('Helper')) {
     }
 
     /**
-     * Calculate margin percentage
+     * Calculate markup percentage (berbasis harga modal)
      */
     public static function calculateMargin($buyPrice, $sellPrice)
     {
         if ($buyPrice <= 0) return 0;
-        return round(($sellPrice - $buyPrice) / $sellPrice, 4);
+        return round(($sellPrice - $buyPrice) / $buyPrice, 4);
     }
 
     /**
-     * Calculate sell price from buy price and margin
+     * Calculate sell price from buy price and markup
      */
-    public static function calculateSellPrice($buyPrice, $margin)
+    public static function calculateSellPrice($buyPrice, $markup)
     {
-        return round($buyPrice / (1 - $margin));
+        return round($buyPrice * (1 + $markup));
     }
 
     /**
