@@ -285,7 +285,8 @@ Setelah task selesai:
 
 - Cek dan update `.gitignore` jika diperlukan.
 - Tambahkan file/folder sensitif, credential, cache, temporary, log, generated files, env file, atau file lokal yang tidak boleh masuk repository.
-- Hapus file temporary hanya jika benar-benar aman.
+- **Wajib Clean Code**: Di akhir setiap task, selalu lakukan pengecekan direktori untuk mencari file-file sampah yang tidak digunakan (misalnya: file `test_*.php`, `backup_*.sql`, `*.bak`, script `debug_*`, atau `update_*.php`).
+- Hapus file-file sampah tersebut secara proaktif untuk menjaga *clean code*, namun dengan syarat **wajib memastikan keamanannya terlebih dahulu** (cek referensi/dependensi agar sistem tidak rusak).
 
 ---
 
@@ -303,7 +304,7 @@ Akhiri setiap task dengan ringkasan singkat:
 3. ✔️ Validasi yang dilakukan
 4. 📝 Update CHANGE_LOG.md: [ya/tidak + keterangan singkat]
 5. 📝 Update CURRENT_STATE.md: [ya/tidak + keterangan singkat]
-6. 🧹 Cleanup & .gitignore: [jika ada]
+6. 🧹 Pembersihan File Sampah: [sebutkan jika ada file test/debug/backup yang dihapus]
 7. ⚠️ File perlu review manual: [jika ada]
 8. 🚨 Catatan penting / risiko: [jika ada]
 ```
