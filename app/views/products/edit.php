@@ -1156,9 +1156,8 @@ async function submitProduct(e) {
     btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
     btn.disabled = true;
 
-    try {
     const categoryId = categorySB?.getValue();
-        if (!categoryId) {
+    if (!categoryId) {
             showToast('❌ Kategori produk wajib dipilih', 'error');
             btn.innerHTML = prevText;
             btn.disabled = false;
