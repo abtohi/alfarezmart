@@ -239,6 +239,7 @@ const OfflineDB = (function() {
         });
     }
 
+    return {
         init,
         syncProductsFromServer,
         getAllProducts,
