@@ -113,8 +113,8 @@ if (!class_exists('Controller')) {
     protected function validateCSRF()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Check POST body first, then X-CSRF-Token header
-            $token = isset($_POST['csrf_token']) ? $_POST['csrf_token'] : '';
+            // Check POST/JSON body first, then X-CSRF-Token header
+            $token = $this->input('csrf_token');
             if (empty($token)) {
                 $token = isset($_SERVER['HTTP_X_CSRF_TOKEN']) ? $_SERVER['HTTP_X_CSRF_TOKEN'] : '';
             }
