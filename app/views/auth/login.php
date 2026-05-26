@@ -391,6 +391,10 @@
 
     // Auto-focus first input
     document.addEventListener('DOMContentLoaded', () => {
+        <?php if (isset($_GET['error'])): ?>
+        showError(<?= json_encode($_GET['error']) ?>);
+        <?php endif; ?>
+        
         document.getElementById('credential').focus();
     });
     </script>

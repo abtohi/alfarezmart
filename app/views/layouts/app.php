@@ -1,4 +1,17 @@
 <!DOCTYPE html>
+<?php
+// Ambil setting lokasi toko untuk keperluan geofencing
+$userRole = AuthController::currentUser()['role'] ?? '';
+$geoLat = '';
+$geoLng = '';
+$geoRadius = '';
+if ($userRole === 'staff') {
+    $settingModel = new SettingModel();
+    $geoLat = $settingModel->get('store_latitude', '');
+    $geoLng = $settingModel->get('store_longitude', '');
+    $geoRadius = $settingModel->get('store_radius_meters', '25');
+}
+?>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -191,6 +204,18 @@
     <script src="<?= BASE_URL ?>public/js/packaging-prices.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/qty-pricing.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/components.js<?= $v ?>"></script>
+    <script>
+        // Injeksi konfigurasi geofencing untuk staff
+        window.GEO_CONFIG = {
+            enabled: true,
+            role: '<?= $userRole ?>',
+            lat: '<?= $geoLat ?>',
+            lng: '<?= $geoLng ?>',
+            radius: '<?= $geoRadius ?>',
+            logoutUrl: '<?= BASE_URL ?>auth/logout'
+        };
+    </script>
+    <script src="<?= BASE_URL ?>public/js/geofencing.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/app.js<?= $v ?>"></script>
     
     <!-- Service Worker Registration & Cache Buster -->

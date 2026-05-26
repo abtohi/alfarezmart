@@ -19,15 +19,8 @@ function initGeofencing() {
         return;
     }
 
-    // 1. Offline Check
-    window.addEventListener('offline', () => {
-        handleGeofenceViolation('Koneksi internet terputus. Staff wajib memiliki koneksi internet aktif untuk verifikasi lokasi.');
-    });
-
-    if (!navigator.onLine) {
-        handleGeofenceViolation('Koneksi internet tidak tersedia saat login. Pastikan Anda terhubung ke internet.');
-        return;
-    }
+    // 1. Offline Check dihapus agar fitur Kasir POS Offline tetap bisa digunakan oleh Staff.
+    // Geolocation API HTML5 tetap bisa bekerja secara offline dengan mengandalkan chip GPS perangkat.
 
     // 2. Location Tracking
     if (!navigator.geolocation) {

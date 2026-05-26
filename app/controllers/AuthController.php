@@ -88,7 +88,13 @@ class AuthController extends Controller
             );
         }
         session_destroy();
-        header('Location: ' . BASE_URL . 'login');
+
+        $redirectUrl = BASE_URL . 'login';
+        if (isset($_GET['reason'])) {
+            $redirectUrl .= '?error=' . urlencode($_GET['reason']);
+        }
+        
+        header('Location: ' . $redirectUrl);
         exit;
     }
 
