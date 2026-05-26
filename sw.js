@@ -2,7 +2,7 @@
  * AlfarezMart PWA - Service Worker
  * Cache Strategy: Cache First for assets, Network First for API
  */
-const CACHE_NAME = 'alfarezmart-v6.3';
+const CACHE_NAME = 'alfarezmart-v6.4';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -92,7 +92,7 @@ self.addEventListener('fetch', event => {
             let isResolved = false;
             const timeoutId = setTimeout(() => {
                 if (!isResolved) {
-                    caches.match(event.request).then(cached => {
+                    caches.match(event.request, { ignoreSearch: true }).then(cached => {
                         if (cached) {
                             isResolved = true;
                             resolve(cached);
@@ -115,7 +115,18 @@ self.addEventListener('fetch', event => {
                     clearTimeout(timeoutId);
                     if (!isResolved) {
                         isResolved = true;
-                        caches.match(event.request).then(cached => resolve(cached || caches.match(BASE_URL)));
+                        caches.match(event.request, { ignoreSearch: true }).then(cached => {
+                            if (cached) {
+                                resolve(cached);
+                            } else {
+                                caches.match(BASE_URL).then(baseCached => {
+                                    resolve(baseCached || new Response('<html><body><h1>Offline</h1><p>Mohon periksa koneksi internet Anda.</p></body></html>', { 
+                                        status: 200, 
+                                        headers: {'Content-Type': 'text/html'} 
+                                    }));
+                                });
+                            }
+                        });
                     }
                 });
         })
