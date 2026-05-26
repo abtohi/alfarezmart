@@ -537,12 +537,17 @@ async function showOfflineProductDetail(id) {
                 <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:8px;">
                     <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
                         <span style="font-weight:600;font-size:var(--font-size-sm);">${pkg.unit_name} (Level ${pkg.level})</span>
-                        <span style="color:var(--text-muted);font-size:var(--font-size-xs);">Isi: ${pkg.base_quantity}</span>
+                        <span style="color:var(--text-muted);font-size:var(--font-size-xs);">Isi: ${pkg.base_quantity || 1}</span>
                     </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <div style="color:var(--text-muted);font-size:var(--font-size-xs);">
-                            Beli: ${formatRupiah(pkg.buy_price)}<br>
-                            Jual: <span style="color:var(--primary);font-weight:600;">${formatRupiah(pkg.sell_price)}</span>
+                    <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+                        <div style="font-size:var(--font-size-xs);">
+                            <div style="color:var(--text-muted);margin-bottom:2px;">Beli: ${formatRupiah(pkg.buy_price || 0)}</div>
+                            <div style="color:var(--text-primary);">
+                                Ecer: <span style="color:var(--primary);font-weight:600;">${formatRupiah(pkg.sell_price_retail || 0)}</span>
+                            </div>
+                            <div style="color:var(--text-primary);">
+                                Grosir: <span style="color:var(--warning);font-weight:600;">${formatRupiah(pkg.sell_price_wholesale || 0)}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
