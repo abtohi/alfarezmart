@@ -125,14 +125,19 @@ Semua token lengkap di `public/css/variables.css`.
 
 ---
 
-## PWA Rules
+## PWA & Offline Mode Rules
 
-- AlfarezMart adalah **PWA (Progressive Web App)** yang dioptimalkan untuk Android.
+- AlfarezMart adalah **PWA (Progressive Web App)** yang dioptimalkan untuk Android dan memiliki kapabilitas **Offline Mode**.
 - **Service Worker** di `sw.js` (root) — cache strategy:
   - API (`/api/*`): **Network First**, fallback cache
   - Static assets (CSS, JS, images, fonts): **Cache First**, fallback network
   - HTML pages: **Network First**, fallback cache, fallback index
-- **Cache version** di `sw.js`: perbarui `CACHE_NAME` jika ada perubahan static asset besar.
+- **Cache version** di `sw.js`: perbarui `CACHE_NAME` jika ada perubahan static asset besar, atau jika ada perubahan struktur JSON API krusial yang membutuhkan pembaharuan cache di sisi klien.
+- **OfflineDB (IndexedDB)**:
+  - Semua data master (Produk, Penjualan, Supplier, dll) disinkronisasikan ke IndexedDB lokal via `public/js/offline-db.js`.
+  - **Setiap kali menambahkan atau memodifikasi fitur yang berhubungan dengan data (terutama pencarian, pengambilan detail, atau transaksi)**, wajib memastikan fitur tersebut memiliki **Fallback ke OfflineDB** saat `!navigator.onLine` atau saat request `fetch` gagal.
+  - Jangan buat request API yang "hard fail" (langsung memunculkan error) jika user offline, selalu upayakan menarik data dari fungsi-fungsi di `OfflineDB` terlebih dahulu.
+  - Jika menambah field/kolom baru di database backend, pastikan query di model yang digunakan oleh API Sync (`ApiController::syncAllData`) ikut diperbarui agar field tersebut terbawa ke payload JSON dan tersimpan di `OfflineDB`.
 - **Manifest** di `manifest.json` (root): `display: standalone`, orientasi portrait, lang id.
 - Service Worker didaftarkan di layout `app/views/layouts/app.php`.
 - `localStorage` key `alfarezmart_logged_in` digunakan untuk auto-login hint.
@@ -156,7 +161,8 @@ Semua token lengkap di `public/css/variables.css`.
 | File | Fungsi |
 |------|--------|
 | `public/js/utils.js` | `formatRupiah`, `showToast`, `debounce`, `api()`, `calcMargin` |
-| `public/js/app.js` | PWA install prompt, global search, header scroll |
+| `public/js/app.js` | PWA install prompt, global search, header scroll, offline navigation interceptor |
+| `public/js/offline-db.js` | OfflineDB (IndexedDB): sinkronisasi & pencarian data lokal saat offline. Fungsi utama: `syncAllDataFromServer()`, `syncProductsFromServer()`, `searchProducts()`, `getProductById()`, `findByBarcode()`, `getAllProducts()` |
 | `public/js/components.js` | Komponen UI reusable (modal, card, dll) |
 | `public/js/barcode.js` | Scanner barcode (ZXing-JS + html5-qrcode) |
 | `public/js/printer.js` | Thermal printer / ESC-POS via Web Serial |
@@ -189,6 +195,7 @@ Semua token lengkap di `public/css/variables.css`.
 - Jangan hapus, rename, atau pindah file/function/class tanpa memastikan semua referensinya aman.
 - Jangan ubah format AJAX response existing.
 - Jangan ubah nama/struktur route existing tanpa instruksi eksplisit.
+- **Offline Mode**: Jangan ubah atau hapus logika fallback offline (pola `!navigator.onLine` atau `try/catch OfflineDB`) yang sudah ada di fitur-fitur existing.
 
 ---
 
@@ -223,6 +230,7 @@ Semua token lengkap di `public/css/variables.css`.
 - Terapkan security.
 - Hindari regression.
 - Jangan keluar scope.
+- **Offline Mode**: Jika task menyentuh fitur yang mengambil atau menampilkan data (search, detail, form transaksi), pastikan ada fallback ke `OfflineDB` agar fitur tetap berfungsi saat `!navigator.onLine`.
 
 ### Setelah Implementasi
 - Update `docs/AI/CHANGE_LOG.md`.
@@ -245,6 +253,11 @@ Setelah implementasi:
 - Jika ada form: pastikan validasi frontend dan backend berjalan.
 - Jika ada JS baru: pastikan tidak ada console error penting.
 - Jika ada perubahan PWA/SW: pastikan cache version diperbarui jika diperlukan.
+- **Offline Mode**: Jika task menyentuh fitur pencarian / pengambilan detail / transaksi, verifikasi:
+  - ✅ Skenario online berjalan normal.
+  - ✅ Skenario offline (mode pesawat) memberikan hasil dari `OfflineDB`, bukan error.
+  - ✅ Jika ada field baru di DB, pastikan `ApiController::syncAllData` menyertakan field tersebut dalam payload JSON.
+  - ✅ Cache version (`CACHE_NAME` di `sw.js`) diperbarui jika ada perubahan pada payload sync.
 
 ---
 
