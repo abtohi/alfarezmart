@@ -305,6 +305,7 @@ async function processBarcodeScan(q, inpEl, sugEl) {
         try {
             if (navigator.onLine) {
                 const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}`);
+                if (!resp.ok && resp.status === 503) throw new Error("Offline");
                 result = await resp.json();
             } else {
                 throw new Error("Offline");
@@ -352,6 +353,7 @@ async function performSearch(q) {
             if (navigator.onLine) {
                 const resp = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
                 if (!resp.ok) {
+                    if (resp.status === 503) throw new Error("Offline");
                     sug.innerHTML = '<div style="padding:12px;text-align:center;color:#f59e0b;">Gagal memuat. Refresh halaman atau login ulang.</div>';
                     return;
                 }
@@ -390,6 +392,7 @@ async function selectProduct(id) {
             if (navigator.onLine) {
                 const resp = await fetch(`${BASE_URL}api/products/${id}`, { credentials: 'same-origin' });
                 if (!resp.ok) {
+                    if (resp.status === 503) throw new Error("Offline");
                     let errMsg = 'Gagal memuat produk';
                     try { const errData = await resp.json(); errMsg = errData.error || errMsg; } catch(_){}
                     showToast(errMsg, 'error');

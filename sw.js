@@ -68,7 +68,16 @@ self.addEventListener('fetch', event => {
                 const clone = response.clone();
                 caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
                 return response;
-            }).catch(() => caches.match(event.request))
+            }).catch(() => {
+                return caches.match(event.request).then(cached => {
+                    if (cached) return cached;
+                    // Return a proper JSON offline response — never null
+                    return new Response(
+                        JSON.stringify({ offline: true, error: 'Offline', data: [] }),
+                        { status: 503, headers: { 'Content-Type': 'application/json' } }
+                    );
+                });
+            })
         );
         return;
     }
