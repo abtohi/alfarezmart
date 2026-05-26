@@ -112,37 +112,6 @@ class ApiController extends Controller
         }
     }
 
-    public function syncProducts()
-    {
-        try {
-            $model = new ProductModel();
-            // Fetch all active products
-            $results = $model->allWithDetails();
-            if (!is_array($results)) {
-                $results = [];
-            }
-            
-            if (count($results) > 0) {
-                $db = Database::getInstance()->getConnection();
-                foreach ($results as &$r) {
-                    try {
-                        $stmt = $db->prepare("SELECT current_qty_base FROM stock WHERE product_id = :id LIMIT 1");
-                        $stmt->execute([':id' => $r['id']]);
-                        $r['current_qty_base'] = (int)($stmt->fetchColumn() ?: 0);
-                    } catch (Exception $e) {
-                        $r['current_qty_base'] = 0;
-                    }
-                }
-                unset($r);
-            }
-            
-            $model->attachPackagingsForProductList($results);
-            $this->json(['products' => $results]);
-        } catch (\Throwable $e) {
-            error_log('Sync Products Error: ' . $e->getMessage());
-            $this->json(['error' => $e->getMessage()], 500);
-        }
-    }
 
     public function getByBarcode(string $code)
     {
