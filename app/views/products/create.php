@@ -618,7 +618,7 @@ function addPackagingLevel(prefill = null) {
                         <input type="number" placeholder="Total Rp" step="any" class="form-control-dark calc-total" style="width:90px;font-size:12px;padding:4px;">
                         <span style="color:var(--text-muted);">/</span>
                         <input type="number" placeholder="Qty" value="1" class="form-control-dark calc-qty" style="width:50px;font-size:12px;padding:4px;">
-                        <button type="button" class="btn-primary-custom" style="padding:4px 8px;font-size:12px;border-radius:4px;" onclick="const p=this.parentElement; const t=p.querySelector('.calc-total').value; const q=p.querySelector('.calc-qty').value; if(t&&q>0){ const inp=p.closest('div[style*=\\'margin-bottom:8px\\']').querySelector('.buy-price'); inp.value=Math.round(t/q); inp.dispatchEvent(new Event('input')); p.style.display='none'; }"><i class="bi bi-check2"></i> Hitung</button>
+                        <button type="button" class="btn-primary-custom" style="padding:4px 8px;font-size:12px;border-radius:4px;" onclick="const p=this.parentElement; const t=p.querySelector('.calc-total').value; const q=p.querySelector('.calc-qty').value; if(t&&q>0){ const inp=p.closest('label').parentElement.querySelector('.buy-price'); inp.value=Math.round(t/q); inp.dispatchEvent(new Event('input')); p.style.display='none'; }"><i class="bi bi-check2"></i> Hitung</button>
                     </div>
                 </label>
                 <input type="number" name="buy_price[]" placeholder="0" step="any" class="form-control-dark price-input buy-price" style="width:100%;" required>
