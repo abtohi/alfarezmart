@@ -537,7 +537,7 @@ async function showOfflineProductDetail(id) {
                 <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:8px;">
                     <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
                         <span style="font-weight:600;font-size:var(--font-size-sm);">${pkg.unit_name} (Level ${pkg.level})</span>
-                        <span style="color:var(--text-muted);font-size:var(--font-size-xs);">Isi: ${pkg.base_quantity || 1}</span>
+                        <span style="color:var(--text-muted);font-size:var(--font-size-xs);">Isi: ${pkg.base_qty || 1}</span>
                     </div>
                     <div style="display:flex;justify-content:space-between;align-items:flex-end;">
                         <div style="font-size:var(--font-size-xs);">
