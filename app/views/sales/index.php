@@ -93,7 +93,7 @@
     <?php endif; ?>
 </div>
 
-<input type="hidden" id="csrfToken" value="<?= CsrfHelper::getToken() ?>">
+<input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
 <!-- Bulk Action Bar (fixed bottom) -->
 <div id="bulkActionBar" style="display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:1000;padding:0 12px 12px;">
