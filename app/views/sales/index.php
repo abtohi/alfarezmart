@@ -96,7 +96,7 @@
 <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
 <!-- Bulk Action Bar (fixed bottom) -->
-<div id="bulkActionBar" style="display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:90;padding:0 12px 12px;">
+<div id="bulkActionBar" style="display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:110;padding:0 12px 12px;">
     <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 -4px 24px rgba(0,0,0,0.25);backdrop-filter:blur(12px);">
         <div style="display:flex;align-items:center;gap:10px;">
             <button type="button" onclick="exitSelectionMode()" style="background:none;border:none;color:var(--text-primary);cursor:pointer;padding:4px;font-size:1.2rem;"><i class="bi bi-x-lg"></i></button>
