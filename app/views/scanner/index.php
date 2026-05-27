@@ -97,15 +97,21 @@ function showProductResultOffline(data) {
     const packagings = data.packagings || [];
     
     let priceHtml = packagings.map(p => {
+        const modal = parseFloat(p.buy_price) || 0;
+        const ecer = parseFloat(p.sell_price_retail) || 0;
+        const grosir = parseFloat(p.sell_price_wholesale) || 0;
+        const margin = ecer > 0 ? calcMargin(modal, ecer) : 0;
+        
         return `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border-color);">
                 <div>
-                    <div style="font-weight:600; font-size:var(--font-size-sm);">Per ${p.unit_name || 'Level '+p.level}</div>
-                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);"><span class="badge" style="background:var(--surface-2);color:var(--text-muted);">Offline</span></div>
+                    <div style="font-weight:600; font-size:var(--font-size-sm);">Per ${p.unit_name || 'Level '+p.level} <span class="badge" style="background:var(--surface-2);color:var(--text-muted);font-size:10px;margin-left:4px;">Offline</span></div>
+                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">Modal: ${formatRupiah(modal)}</div>
                 </div>
                 <div style="text-align:right;">
-                    <div style="color:var(--success); font-weight:700;">${formatRupiah(p.sell_price_retail)}</div>
-                    ${p.sell_price_wholesale > 0 ? `<div style="font-size:var(--font-size-xs); color:var(--warning);">Grosir: ${formatRupiah(p.sell_price_wholesale)}</div>` : ''}
+                    <div style="color:var(--success); font-weight:700;">${formatRupiah(ecer)}</div>
+                    ${grosir > 0 ? `<div style="font-size:var(--font-size-xs); color:var(--warning);">Grosir: ${formatRupiah(grosir)}</div>` : ''}
+                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">Margin: ${margin}%</div>
                 </div>
             </div>
         `;
@@ -132,21 +138,24 @@ function showProductResultOffline(data) {
 
 function showProductResult(data) {
     const resultDiv = document.getElementById('scanResult');
-    const prices = data.prices || [];
+    const packagings = data.packagings || [];
     
-    let priceHtml = prices.map(p => {
-        const levelNames = { small: data.unit_small_name || 'Pcs', medium: data.unit_medium_name || 'Pack', large: data.unit_large_name || 'Karton' };
-        const levelName = levelNames[p.unit_level] || p.unit_level;
+    let priceHtml = packagings.map(p => {
+        const modal = parseFloat(p.buy_price) || 0;
+        const ecer = parseFloat(p.sell_price_retail) || 0;
+        const grosir = parseFloat(p.sell_price_wholesale) || 0;
+        const margin = ecer > 0 ? calcMargin(modal, ecer) : 0;
+        
         return `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border-color);">
                 <div>
-                    <div style="font-weight:600; font-size:var(--font-size-sm);">Per ${levelName}</div>
-                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">Modal: ${formatRupiah(p.buy_price)}</div>
+                    <div style="font-weight:600; font-size:var(--font-size-sm);">Per ${p.unit_name || 'Level '+p.level}</div>
+                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">Modal: ${formatRupiah(modal)}</div>
                 </div>
                 <div style="text-align:right;">
-                    <div style="color:var(--success); font-weight:700;">${formatRupiah(p.sell_price_retail)}</div>
-                    ${p.sell_price_wholesale > 0 ? `<div style="font-size:var(--font-size-xs); color:var(--warning);">Grosir: ${formatRupiah(p.sell_price_wholesale)}</div>` : ''}
-                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">Margin: ${calcMargin(p.buy_price, p.sell_price_retail)}%</div>
+                    <div style="color:var(--success); font-weight:700;">${formatRupiah(ecer)}</div>
+                    ${grosir > 0 ? `<div style="font-size:var(--font-size-xs); color:var(--warning);">Grosir: ${formatRupiah(grosir)}</div>` : ''}
+                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">Margin: ${margin}%</div>
                 </div>
             </div>
         `;

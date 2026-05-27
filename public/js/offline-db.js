@@ -160,22 +160,26 @@ const OfflineDB = (function() {
 
     async function searchProducts(query) {
         if (!query) return [];
-        query = query.toLowerCase();
+        query = query.toLowerCase().trim();
+        const words = query.split(/\s+/).filter(w => w.length > 0);
+        if (words.length === 0) return [];
         
         try {
             const all = await getAllProducts();
             return all.filter(p => {
-                const nameMatch = (p.full_name && p.full_name.toLowerCase().includes(query)) ||
-                                  (p.short_label && p.short_label.toLowerCase().includes(query));
-                const brandMatch = p.brand_name && p.brand_name.toLowerCase().includes(query);
-                const codeMatch = p.code && p.code.toLowerCase().includes(query);
-                
-                let barcodeMatch = false;
-                if (p.packagings && Array.isArray(p.packagings)) {
-                    barcodeMatch = p.packagings.some(pkg => pkg.barcode && pkg.barcode.toLowerCase().includes(query));
-                }
+                return words.every(word => {
+                    const nameMatch = (p.full_name && p.full_name.toLowerCase().includes(word)) ||
+                                      (p.short_label && p.short_label.toLowerCase().includes(word));
+                    const brandMatch = p.brand_name && p.brand_name.toLowerCase().includes(word);
+                    const codeMatch = p.code && p.code.toLowerCase().includes(word);
+                    
+                    let barcodeMatch = false;
+                    if (p.packagings && Array.isArray(p.packagings)) {
+                        barcodeMatch = p.packagings.some(pkg => pkg.barcode && pkg.barcode.toLowerCase().includes(word));
+                    }
 
-                return nameMatch || brandMatch || codeMatch || barcodeMatch;
+                    return nameMatch || brandMatch || codeMatch || barcodeMatch;
+                });
             }).slice(0, 15);
         } catch (e) {
             console.error("Offline search failed", e);

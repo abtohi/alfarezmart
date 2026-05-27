@@ -46,24 +46,35 @@ class ProductModel extends Model
 
     public function searchProducts($keyword, $limit = 20)
     {
+        $words = array_filter(explode(' ', trim($keyword)));
+        if (empty($words)) {
+            $words = ['']; // fallback
+        }
+        
+        $whereClauses = [];
+        $params = [];
+        
+        foreach ($words as $idx => $word) {
+            $paramKey = ":kw_{$idx}";
+            $whereClauses[] = "(p.full_name LIKE $paramKey OR p.short_label LIKE $paramKey OR b.name LIKE $paramKey OR p.code LIKE $paramKey OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $paramKey))";
+            $params[$paramKey] = "%{$word}%";
+        }
+        
+        $whereSql = implode(' AND ', $whereClauses);
+
         $stmt = $this->db->prepare("
             SELECT p.*, b.name as brand_name, c.name as category_name
             FROM products p
             LEFT JOIN brands b ON p.brand_id = b.id
             LEFT JOIN categories c ON p.category_id = c.id
-            WHERE p.full_name LIKE :kw1 
-               OR p.short_label LIKE :kw2
-               OR b.name LIKE :kw3
-               OR p.code LIKE :kw4
-               OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE :kw5)
+            WHERE $whereSql
             ORDER BY p.full_name ASC
             LIMIT :lim
         ");
-        $stmt->bindValue(':kw1', "%{$keyword}%");
-        $stmt->bindValue(':kw2', "%{$keyword}%");
-        $stmt->bindValue(':kw3', "%{$keyword}%");
-        $stmt->bindValue(':kw4', "%{$keyword}%");
-        $stmt->bindValue(':kw5', "%{$keyword}%");
+        
+        foreach ($params as $key => $val) {
+            $stmt->bindValue($key, $val);
+        }
         $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll();
@@ -257,10 +268,13 @@ class ProductModel extends Model
         $where = "WHERE p.is_active = 1";
         $params = [];
 
-        if (!empty($search)) {
-            $where .= " AND (p.full_name LIKE :search OR b.name LIKE :search2)";
-            $params[':search'] = "%{$search}%";
-            $params[':search2'] = "%{$search}%";
+        if (!empty(trim($search))) {
+            $words = array_filter(explode(' ', trim($search)));
+            foreach ($words as $idx => $word) {
+                $paramKey = ":search_{$idx}";
+                $where .= " AND (p.full_name LIKE $paramKey OR b.name LIKE $paramKey OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $paramKey))";
+                $params[$paramKey] = "%{$word}%";
+            }
         }
         if ($categoryId) {
             $where .= " AND p.category_id = :cat_id";
