@@ -40,7 +40,9 @@ async function lookupBarcode() {
     resultDiv.innerHTML = '<div style="text-align:center;padding:20px;"><div class="skeleton" style="width:100%;height:120px;"></div></div>';
     
     try {
-        const data = await api(`/api/products/barcode/${encodeURIComponent(code)}`);
+        const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/barcode/${encodeURIComponent(code)}`);
+        if (!res.ok) throw new Error('Not found');
+        const data = await res.json();
         showProductResult(data);
     } catch (e) {
         if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
@@ -72,7 +74,9 @@ async function lookupBarcode() {
 
         // Try search by name online
         try {
-            const searchData = await api(`/api/products/search?q=${encodeURIComponent(code)}`);
+            const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/search?q=${encodeURIComponent(code)}`);
+            if (!res.ok) throw new Error('Search failed');
+            const searchData = await res.json();
             if (searchData.length > 0) {
                 resultDiv.innerHTML = searchData.map(p => `
                     <a href="<?= BASE_URL ?>products/${p.id}" class="product-card">
@@ -100,7 +104,7 @@ function showProductResultOffline(data) {
         const modal = parseFloat(p.buy_price) || 0;
         const ecer = parseFloat(p.sell_price_retail) || 0;
         const grosir = parseFloat(p.sell_price_wholesale) || 0;
-        const margin = ecer > 0 ? calcMargin(modal, ecer) : 0;
+        const markup = ecer > 0 ? calcMarkup(modal, ecer) : 0;
         
         return `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border-color);">
@@ -111,7 +115,7 @@ function showProductResultOffline(data) {
                 <div style="text-align:right;">
                     <div style="color:var(--success); font-weight:700;">${formatRupiah(ecer)}</div>
                     ${grosir > 0 ? `<div style="font-size:var(--font-size-xs); color:var(--warning);">Grosir: ${formatRupiah(grosir)}</div>` : ''}
-                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">Margin: ${margin}%</div>
+                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">Markup: ${markup}%</div>
                 </div>
             </div>
         `;
@@ -144,7 +148,7 @@ function showProductResult(data) {
         const modal = parseFloat(p.buy_price) || 0;
         const ecer = parseFloat(p.sell_price_retail) || 0;
         const grosir = parseFloat(p.sell_price_wholesale) || 0;
-        const margin = ecer > 0 ? calcMargin(modal, ecer) : 0;
+        const markup = ecer > 0 ? calcMarkup(modal, ecer) : 0;
         
         return `
             <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border-color);">
@@ -155,7 +159,7 @@ function showProductResult(data) {
                 <div style="text-align:right;">
                     <div style="color:var(--success); font-weight:700;">${formatRupiah(ecer)}</div>
                     ${grosir > 0 ? `<div style="font-size:var(--font-size-xs); color:var(--warning);">Grosir: ${formatRupiah(grosir)}</div>` : ''}
-                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">Margin: ${margin}%</div>
+                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">Markup: ${markup}%</div>
                 </div>
             </div>
         `;
