@@ -191,9 +191,20 @@ function openGlobalScanner() {
     }
 }
 
-// Enter key to search
-document.getElementById('barcodeInput')?.addEventListener('keyup', (e) => {
-    if (e.key === 'Enter') lookupBarcode();
+let scannerTimer = null;
+document.getElementById('barcodeInput')?.addEventListener('input', (e) => {
+    clearTimeout(scannerTimer);
+    scannerTimer = setTimeout(() => {
+        lookupBarcode();
+    }, 300);
+});
+
+// Also support Enter key for immediate search
+document.getElementById('barcodeInput')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        clearTimeout(scannerTimer);
+        lookupBarcode();
+    }
 });
 
 // Auto-focus

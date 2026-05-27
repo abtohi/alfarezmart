@@ -54,8 +54,13 @@
     <?php if (empty($products['data'])): ?>
         <div class="empty-state">
             <i class="bi bi-box-seam"></i>
-            <h3>Belum Ada Produk</h3>
-            <p>Tambahkan produk pertama Anda.</p>
+            <?php if (!empty($search)): ?>
+                <h3>Produk Tidak Ditemukan</h3>
+                <p>Tidak ada produk yang cocok dengan pencarian "<?= htmlspecialchars($search) ?>".</p>
+            <?php else: ?>
+                <h3>Belum Ada Produk</h3>
+                <p>Tambahkan produk pertama Anda.</p>
+            <?php endif; ?>
         </div>
     <?php else: ?>
         <?php foreach ($products['data'] as $p): ?>

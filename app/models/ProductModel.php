@@ -46,21 +46,19 @@ class ProductModel extends Model
 
     public function searchProducts($keyword, $limit = 20)
     {
-        $words = array_filter(explode(' ', trim($keyword)));
-        if (empty($words)) {
-            $words = ['']; // fallback
-        }
-        
-        $whereClauses = [];
+        $words = array_filter(explode(' ', trim($keyword)), 'strlen');
+        $whereSql = "p.is_active = 1"; // base condition
         $params = [];
         
-        foreach ($words as $idx => $word) {
-            $paramKey = ":kw_{$idx}";
-            $whereClauses[] = "(p.full_name LIKE $paramKey OR p.short_label LIKE $paramKey OR b.name LIKE $paramKey OR p.code LIKE $paramKey OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $paramKey))";
-            $params[$paramKey] = "%{$word}%";
+        if (!empty($words)) {
+            $whereClauses = [];
+            foreach ($words as $idx => $word) {
+                $paramKey = ":kw_{$idx}";
+                $whereClauses[] = "(p.full_name LIKE $paramKey OR p.short_label LIKE $paramKey OR b.name LIKE $paramKey OR p.code LIKE $paramKey OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $paramKey))";
+                $params[$paramKey] = "%{$word}%";
+            }
+            $whereSql .= ' AND ' . implode(' AND ', $whereClauses);
         }
-        
-        $whereSql = implode(' AND ', $whereClauses);
 
         $stmt = $this->db->prepare("
             SELECT p.*, b.name as brand_name, c.name as category_name
@@ -269,7 +267,7 @@ class ProductModel extends Model
         $params = [];
 
         if (!empty(trim($search))) {
-            $words = array_filter(explode(' ', trim($search)));
+            $words = array_filter(explode(' ', trim($search)), 'strlen');
             foreach ($words as $idx => $word) {
                 $paramKey = ":search_{$idx}";
                 $where .= " AND (p.full_name LIKE $paramKey OR b.name LIKE $paramKey OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $paramKey))";
