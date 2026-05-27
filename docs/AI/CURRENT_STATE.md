@@ -21,6 +21,14 @@
 
 ## Pekerjaan Terakhir
 
+### Sesi: 2026-05-27 — Fix Kalkulasi Tier POS & Hapus Produk Massal
+**Yang dikerjakan:**
+1. Memperbaiki logika kalkulasi harga tier di Kasir POS (`app/views/sales/pos.php`) agar menggunakan kuantitas aktual item di cart, bukan statis 1 item, sehingga total kelipatan harga tier berfungsi dengan benar.
+2. Memperbaiki fitur hapus produk secara massal di halaman Produk (`app/views/products/index.php`) dengan menambahkan metode utilitas yang hilang `AppModal.confirm()` ke `public/js/components.js`.
+3. PWA Cache Busting — Update ke versi `5.9` (asset) dan `6.7` (SW).
+
+---
+
 ### Sesi: 2026-05-24 — Bugfix Tier Harga & Live Search
 **Yang dikerjakan:**
 1. Memperbaiki tombol "Tambah Harga Tier" pada halaman Edit Produk yang tidak berfungsi untuk produk lama yang belum punya tier sama sekali (masalah missing initialization `initQtyTiers`).

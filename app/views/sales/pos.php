@@ -109,15 +109,18 @@ function recalcItemPrice(item) {
 
     // Robust check: verify QtyPricing AND its methods exist
     let basePricePerUnit = 0;
+    let rawTotal = 0;
     if (typeof QtyPricing !== 'undefined' && typeof QtyPricing.calculateTotalPrice === 'function') {
-        basePricePerUnit = QtyPricing.calculateTotalPrice(pkg, saleMode, 1, false, null);
+        rawTotal = QtyPricing.calculateTotalPrice(pkg, saleMode, qty, false, null);
+        basePricePerUnit = qty > 0 ? rawTotal / qty : 0;
         item.price_note = typeof QtyPricing.getPriceNote === 'function'
-            ? QtyPricing.getPriceNote(pkg, saleMode, item.quantity, false) : '';
+            ? QtyPricing.getPriceNote(pkg, saleMode, qty, false) : '';
     } else {
         // Fallback: direct unit price (no tier pricing)
         basePricePerUnit = saleMode === 'wholesale'
             ? (parseFloat(pkg.sell_price_wholesale) || parseFloat(pkg.sell_price_retail) || 0)
             : (parseFloat(pkg.sell_price_retail) || 0);
+        rawTotal = basePricePerUnit * qty;
         item.price_note = '';
     }
 

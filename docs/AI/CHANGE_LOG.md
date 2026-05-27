@@ -27,6 +27,22 @@
 - Catatan penting, risiko, atau hal yang perlu diperhatikan (jika ada)
 ```
 
+## [2026-05-27] — Fix Kalkulasi Tier POS & Hapus Produk Massal
+
+**Tipe:** Minor / Hotfix
+**Modul:** UI/UX, Sales, Products
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Fix Kalkulasi Harga Tier Kasir POS**: Memperbaiki masalah dimana jika user menginput kuantitas barang di POS yang memenuhi syarat tier kelipatan harga (contoh: beli 4 dengan harga Rp 5000), total harga yang dihitung tidak menggunakan harga tier total, melainkan harga ecer biasa. Perbaikan dilakukan di `recalcItemPrice` (`app/views/sales/pos.php`) dengan menghitung total tier raw price sebelum mendapatkan harga per-item rata-rata yang kemudian digabung dengan PPN dan Diskon per-item.
+- **Fix Hapus Produk Massal (Bulk Delete)**: Menambahkan implementasi metode `AppModal.confirm()` pada pustaka UI komponen (`public/js/components.js`) yang sebelumnya belum tersedia, sehingga mengaktifkan fitur hapus multi-produk di halaman index produk.
+
+### File yang Diubah
+- `app/views/sales/pos.php` — logic `recalcItemPrice`.
+- `public/js/components.js` — penambahan `AppModal.confirm()`.
+- `app/views/layouts/app.php` & `sw.js` — PWA Cache Buster v5.9 & SW v6.7.
+
+
 ## [2026-05-24] — Bugfix Tier Harga & Live Search
 
 **Tipe:** Minor / Hotfix

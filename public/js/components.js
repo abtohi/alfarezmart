@@ -142,6 +142,21 @@ const AppModal = {
             this._resolve(result);
             this._resolve = null;
         }
+    },
+
+    /**
+     * Helper for quick confirmation dialogs
+     */
+    confirm(title, message, confirmText = 'Ya', confirmColor = 'var(--danger)') {
+        return this.show({
+            title: title,
+            bodyHTML: `<p style="font-size:var(--font-size-sm);color:var(--text-secondary);">${message}</p>`,
+            icon: 'bi-question-circle',
+            iconColor: 'var(--warning-bg)',
+            iconAccent: 'var(--warning)',
+            submitText: confirmText,
+            onSubmit: () => true
+        });
     }
 };
 
