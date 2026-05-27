@@ -171,8 +171,8 @@ const packagingsData = <?= $pkgsJson ?>;
 const productId = <?= $product['id'] ?>;
 const weightUnitOptions = [
     <?php foreach ($units as $u): ?>
-        <?php $wLabel = htmlspecialchars($u['name'], ENT_QUOTES) . (!empty($u['abbreviation']) ? ' (' . htmlspecialchars($u['abbreviation'], ENT_QUOTES) . ')' : ''); ?>
-        { value: '<?= htmlspecialchars($u['abbreviation'] ?: $u['name'], ENT_QUOTES) ?>', label: '<?= $wLabel ?>' },
+        <?php $wLabel = $u['name'] . (!empty($u['abbreviation']) ? ' (' . $u['abbreviation'] . ')' : ''); ?>
+        { value: <?= json_encode($u['abbreviation'] ?: $u['name']) ?>, label: <?= json_encode($wLabel) ?> },
     <?php endforeach; ?>
 ];
 

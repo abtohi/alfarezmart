@@ -152,7 +152,7 @@
 // ===== Data from PHP =====
 const suppliersData = [
     <?php foreach ($suppliers ?? [] as $s): ?>
-        { value: '<?= $s['id'] ?>', label: '<?= htmlspecialchars($s['name'], ENT_QUOTES) ?>' },
+        { value: '<?= $s['id'] ?>', label: <?= json_encode($s['name']) ?> },
     <?php endforeach; ?>
 ];
 

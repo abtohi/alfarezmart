@@ -175,7 +175,8 @@ Semua token lengkap di `public/css/variables.css`.
 
 - Semua query database wajib **prepared statement / parameterized query** (via PDO).
 - Validasi dan sanitasi **semua input** dari form, AJAX, URL parameter.
-- **Escape output** ke View dengan `htmlspecialchars()`.
+- **Escape output HTML** ke View dengan `htmlspecialchars()`.
+- **PENTING**: Saat meng-inject string/data dari PHP ke dalam *variable JavaScript* (misal untuk data dropdown/options), **wajib gunakan `json_encode()`** (bukan `htmlspecialchars()`) agar karakter khusus seperti `&` aman dari XSS dan tidak berubah menjadi entitas HTML mentah (`&amp;`) di tampilan JS.
 - Lindungi dari: SQL Injection, XSS, CSRF, broken access control, path traversal, file upload abuse.
 - **Jangan hardcode** credentials/token/key — gunakan `.env`.
 - CSRF: gunakan `CsrfHelper::tokenField()` di setiap form POST. Validasi di Controller.

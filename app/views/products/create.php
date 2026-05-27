@@ -161,23 +161,23 @@
 // ===== Data from PHP =====
 const brandsData = [
     <?php foreach ($brands as $b): ?>
-        { value: '<?= $b['id'] ?>', label: '<?= htmlspecialchars($b['name'], ENT_QUOTES) ?>' },
+        { value: '<?= $b['id'] ?>', label: <?= json_encode($b['name']) ?> },
     <?php endforeach; ?>
 ];
 const categoriesData = [
     <?php foreach ($categories as $c): ?>
-        { value: '<?= $c['id'] ?>', label: '<?= htmlspecialchars($c['name'], ENT_QUOTES) ?>' },
+        { value: '<?= $c['id'] ?>', label: <?= json_encode($c['name']) ?> },
     <?php endforeach; ?>
 ];
 const unitsData = [
     <?php foreach ($units as $u): ?>
-        { value: '<?= $u['id'] ?>', label: '<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>' },
+        { value: '<?= $u['id'] ?>', label: <?= json_encode($u['name']) ?> },
     <?php endforeach; ?>
 ];
 const weightUnitOptions = [
     <?php foreach ($units as $u): ?>
-        <?php $wLabel = htmlspecialchars($u['name'], ENT_QUOTES) . (!empty($u['abbreviation']) ? ' (' . htmlspecialchars($u['abbreviation'], ENT_QUOTES) . ')' : ''); ?>
-        { value: '<?= htmlspecialchars($u['abbreviation'] ?: $u['name'], ENT_QUOTES) ?>', label: '<?= $wLabel ?>' },
+        <?php $wLabel = $u['name'] . (!empty($u['abbreviation']) ? ' (' . $u['abbreviation'] . ')' : ''); ?>
+        { value: <?= json_encode($u['abbreviation'] ?: $u['name']) ?>, label: <?= json_encode($wLabel) ?> },
     <?php endforeach; ?>
 ];
 

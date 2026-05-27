@@ -66,7 +66,7 @@ const csrfVal = document.getElementById('csrfToken').value;
 // Supplier Types Data
 const supplierTypes = [
     <?php foreach ($supplierTypes ?? [] as $st): ?>
-        { value: '<?= $st['id'] ?>', label: '<?= htmlspecialchars($st['name'], ENT_QUOTES) ?>' },
+        { value: '<?= $st['id'] ?>', label: <?= json_encode($st['name']) ?> },
     <?php endforeach; ?>
 ];
 
