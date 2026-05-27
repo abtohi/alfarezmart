@@ -53,9 +53,19 @@ class ProductModel extends Model
         if (!empty($words)) {
             $whereClauses = [];
             foreach ($words as $idx => $word) {
-                $paramKey = ":kw_{$idx}";
-                $whereClauses[] = "(p.full_name LIKE $paramKey OR p.short_label LIKE $paramKey OR b.name LIKE $paramKey OR p.code LIKE $paramKey OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $paramKey))";
-                $params[$paramKey] = "%{$word}%";
+                // PDO requires unique param names — cannot reuse :kw_0 multiple times
+                $p_name  = ":kw_{$idx}_name";
+                $p_label = ":kw_{$idx}_label";
+                $p_brand = ":kw_{$idx}_brand";
+                $p_code  = ":kw_{$idx}_code";
+                $p_bar   = ":kw_{$idx}_bar";
+                $whereClauses[] = "(p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR b.name LIKE $p_brand OR p.code LIKE $p_code OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
+                $like = "%{$word}%";
+                $params[$p_name]  = $like;
+                $params[$p_label] = $like;
+                $params[$p_brand] = $like;
+                $params[$p_code]  = $like;
+                $params[$p_bar]   = $like;
             }
             $whereSql .= ' AND ' . implode(' AND ', $whereClauses);
         }
@@ -269,9 +279,15 @@ class ProductModel extends Model
         if (!empty(trim($search))) {
             $words = array_filter(explode(' ', trim($search)), 'strlen');
             foreach ($words as $idx => $word) {
-                $paramKey = ":search_{$idx}";
-                $where .= " AND (p.full_name LIKE $paramKey OR b.name LIKE $paramKey OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $paramKey))";
-                $params[$paramKey] = "%{$word}%";
+                // PDO requires unique param names per occurrence
+                $p_name  = ":s_{$idx}_name";
+                $p_brand = ":s_{$idx}_brand";
+                $p_bar   = ":s_{$idx}_bar";
+                $where .= " AND (p.full_name LIKE $p_name OR b.name LIKE $p_brand OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
+                $like = "%{$word}%";
+                $params[$p_name]  = $like;
+                $params[$p_brand] = $like;
+                $params[$p_bar]   = $like;
             }
         }
         if ($categoryId) {
