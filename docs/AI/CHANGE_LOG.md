@@ -27,7 +27,33 @@
 - Catatan penting, risiko, atau hal yang perlu diperhatikan (jika ada)
 ```
 
+## [2026-05-28] — Fix: Purchases Submit "Unauthorized" pada Klik Pertama
+
+**Tipe:** Hotfix
+**Modul:** Session, Service Worker (sw.js)
+**Dikerjakan oleh:** AI Agent
+
+### Masalah
+Saat user menyimpan inputan Barang Masuk (purchases/create), muncul error "Unauthorized. Please login." pada klik pertama. Baru berhasil tersimpan saat klik kedua.
+
+### Root Cause
+Terdapat dua bug yang berkontribusi:
+1. **Race Condition di Session.php**: `session_regenerate_id(true)` dipanggil setiap 300 detik saat session start. Jika ada request paralel (misalnya background sync dari Service Worker + page request), satu request bisa mengganti session ID sementara request lain masih menggunakan session ID lama → session dianggap tidak valid → `user_id` tidak ditemukan → 401 Unauthorized.
+2. **Service Worker meng-cache response error**: SW menyimpan semua response API ke cache termasuk response 401/403, yang berpotensi mengembalikan response error lama pada request offline berikutnya.
+
+### Perubahan
+- **Session.php**: Hapus logika `session_regenerate_id(true)` periodik. Session ID hanya di-regenerate saat login (sudah di `AuthController::login()`).
+- **sw.js**: Tambahkan pengecekan `response.ok` sebelum menyimpan response ke cache — hanya cache response 2xx yang sukses.
+- **sw.js**: Bump cache version ke `alfarezmart-v6.8`.
+
+### File yang Diubah
+- `app/core/Session.php` — hapus periodic session regeneration
+- `sw.js` — conditional caching (only 2xx), bump version v6.8
+
+---
+
 ## [2026-05-27] — Hotfix & UI Polish
+
 
 **Tipe:** Minor / Hotfix
 **Modul:** UI/UX, Sales, Products, Core

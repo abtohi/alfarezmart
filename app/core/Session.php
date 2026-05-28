@@ -22,13 +22,9 @@ if (!class_exists('Session')) {
                 session_name('AMRT_SESSION');
                 session_start();
 
-                // Regenerate session ID periodically
-                if (!isset($_SESSION['_last_regeneration'])) {
-                    $_SESSION['_last_regeneration'] = time();
-                } elseif (time() - $_SESSION['_last_regeneration'] > 300) {
-                    session_regenerate_id(true);
-                    $_SESSION['_last_regeneration'] = time();
-                }
+                // Session ID regeneration on login only (see AuthController::login())
+                // Periodic regeneration removed: it caused race conditions with CSRF tokens
+                // when multiple parallel requests hit the server (e.g. background sync + page POST)
             }
         }
 
