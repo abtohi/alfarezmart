@@ -90,7 +90,7 @@ class DashboardController extends Controller
         // Top 10 produk laris (bulan ini)
         $stmt = $db->prepare("
             SELECT
-                COALESCE(NULLIF(si.invoice_name, ''), p.full_name, 'Produk') AS name,
+                COALESCE(NULLIF(si.custom_name, ''), p.full_name, 'Produk') AS name,
                 SUM(si.quantity) AS qty_sold,
                 SUM(si.total_price) AS revenue,
                 SUM(si.profit) AS profit

@@ -15,11 +15,34 @@
 | **Versi Asset** | `?v=4.9` (di `app/views/layouts/app.php`) |
 | **PHP Version** | XAMPP (cek `php -v`) |
 | **Timezone** | Asia/Jakarta (GMT+7) |
-| **Last Updated** | 2026-05-24 |
+| **Last Updated** | 2026-05-29 |
 
 ---
 
 ## Pekerjaan Terakhir
+
+### Sesi: 2026-05-29 — Fix Dashboard Summary (Statistik Bulanan Superadmin)
+**Yang dikerjakan:**
+1. **Bug Identified & Fixed** — Fitur Dashboard Summary halaman statistik bulanan superadmin (`/dashboard/summary`) tidak dapat diakses karena error pada query Top 10 Produk Laris.
+   - **Root Cause**: Query menggunakan kolom `si.invoice_name` yang tidak ada di tabel `sale_items`. Kolom yang seharusnya digunakan adalah `si.custom_name` (untuk produk custom).
+   - **File Affected**: `app/controllers/DashboardController.php` line ~91
+   - **Fix**: Ganti `COALESCE(NULLIF(si.invoice_name, ''), ...)` dengan `COALESCE(NULLIF(si.custom_name, ''), ...)`
+2. **Verification** — Semua queries dan model methods di-verify:
+   - ✅ `DashboardController@index()` — model methods `ProductModel::getStats()`, `SaleModel::getDailyStats()`, `FinanceModel::getDailySummary()` ada dan bekerja
+   - ✅ `DashboardController@summary()` — semua 6 queries (omzet, belanja, markup, daily series, top products, hutang) verified benar
+   - ✅ View template `dashboard/summary.php` — sudah lengkap dengan KPI cards, debt summary, daily chart, top products list
+3. **Feature Status**:
+   - ✅ Link "Summary" hanya tampil untuk superadmin (di `dashboard/index.php`)
+   - ✅ Halaman summary menampilkan periode bulanan dengan month picker
+   - ✅ Dashboard menampilkan KPI: Omzet, Total Belanja, Gross Profit, Net, Piutang, Hutang Toko
+   - ✅ Chart omzet harian (CSS bar chart)
+   - ✅ Top 10 produk laris dengan profit breakdown
+   - ✅ Security: `requireSuperadmin()` guard aktif
+
+**Catatan Teknis:**
+- Database schema `sale_items` menggunakan `custom_name` untuk identifikasi produk custom (dari feature POS Custom Item di sesi sebelumnya)
+- Query fallback logic: gunakan `custom_name` jika ada, else `p.full_name`, else generic 'Produk'
+- Semua try-catch blocks untuk debt queries sudah ter-setup aman meski table optional
 
 ### Sesi: 2026-05-27 — Fix Kalkulasi Tier POS & Hapus Produk Massal
 **Yang dikerjakan:**
