@@ -129,6 +129,11 @@ class PurchaseModel extends Model
                                     ':margin_w' => $m_w,
                                     ':pkg_id' => $pDb['id']
                                 ]);
+
+                                // Save tier prices if provided
+                                if (isset($pUpdate['qty_prices'])) {
+                                    $productModel->saveQtyPricesForPackaging($pDb['id'], $pUpdate['qty_prices']);
+                                }
                             }
                         }
                     }

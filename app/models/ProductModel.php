@@ -99,7 +99,8 @@ class ProductModel extends Model
             LEFT JOIN brands b ON p.brand_id = b.id
             LEFT JOIN categories c ON p.category_id = c.id
             LEFT JOIN units u ON pp.unit_id = u.id
-            WHERE pp.barcode = :barcode
+            WHERE pp.barcode = :barcode OR p.code = :barcode
+            ORDER BY pp.level ASC
             LIMIT 1
         ");
         $stmt->execute([':barcode' => $barcode]);

@@ -542,6 +542,64 @@ function printAllBarcodesCreate() {
     });
 }
 
+// ===== Tier Pricing JS =====
+const QTY_MODE_OPTS = [
+    { v: 'both', l: 'Ecer & Grosir' },
+    { v: 'retail', l: 'Ecer saja' },
+    { v: 'wholesale', l: 'Grosir saja' },
+];
+
+function addQtyTierRow(listEl, data = {}) {
+    const row = document.createElement('div');
+    row.className = 'qty-tier-row';
+    row.style.cssText = 'display:grid;grid-template-columns:minmax(56px,0.8fr) minmax(80px,1fr) minmax(90px,1fr) auto;gap:6px;align-items:end;margin-bottom:6px;';
+    const mode = data.sale_mode || 'both';
+    const modeOpts = QTY_MODE_OPTS.map(o => `<option value="${o.v}" ${mode === o.v ? 'selected' : ''}>${o.l}</option>`).join('');
+    
+    const minQty = data.min_qty || '';
+    const unitPrice = data.unit_price || '';
+    const totalPrice = (minQty && unitPrice) ? Math.round(minQty * unitPrice) : '';
+
+    row.innerHTML = `
+        <div><label style="font-size:9px;color:var(--text-muted);">Untuk Qty</label>
+            <input type="number" class="form-control-dark tier-min-qty" min="1" step="1" value="${minQty}" placeholder="1" style="width:100%;padding:6px;font-size:12px;" oninput="this.closest('.qty-tier-row').querySelector('.tier-total-price').dispatchEvent(new Event('input'))"></div>
+        <div><label style="font-size:9px;color:var(--text-muted);">Total Harga</label>
+            <input type="number" class="form-control-dark tier-total-price" min="0" step="any" value="${totalPrice}" placeholder="10000" style="width:100%;padding:6px;font-size:12px;" oninput="const r=this.closest('.qty-tier-row'); const q=r.querySelector('.tier-min-qty').value; if(q>0) r.querySelector('.tier-unit-price').value=(this.value/q).toFixed(2);">
+            <input type="hidden" class="tier-unit-price" value="${unitPrice}">
+        </div>
+        <div><label style="font-size:9px;color:var(--text-muted);">Mode</label>
+            <select class="form-control-dark tier-sale-mode" style="width:100%;padding:6px;font-size:11px;">${modeOpts}</select></div>
+        <button type="button" title="Hapus tier" style="border:none;background:var(--danger-bg);color:var(--danger);padding:8px;border-radius:6px;cursor:pointer;margin-bottom:2px;" onclick="this.closest('.qty-tier-row').remove()"><i class="bi bi-trash"></i></button>
+        <div style="grid-column:1/-1;"><label style="font-size:9px;color:var(--text-muted);">Label (opsional)</label>
+            <input type="text" class="form-control-dark tier-label" value="${data && data.label ? data.label : ''}" placeholder="Cth: 3 renceng = Rp 10.000" style="width:100%;padding:6px;font-size:11px;"></div>
+    `;
+    listEl.appendChild(row);
+}
+
+function initQtyTiers(levelDiv, tiers = []) {
+    const list = levelDiv.querySelector('.qty-tiers-list');
+    const btn = levelDiv.querySelector('.btn-add-qty-tier');
+    if (!list || !btn) return;
+    list.innerHTML = '';
+    tiers.forEach(t => addQtyTierRow(list, t));
+    btn.onclick = () => addQtyTierRow(list);
+}
+
+function collectQtyTiers(levelDiv) {
+    const tiers = [];
+    levelDiv.querySelectorAll('.qty-tier-row').forEach(row => {
+        const min_qty = parseFloat(row.querySelector('.tier-min-qty')?.value);
+        const unit_price = parseFloat(row.querySelector('.tier-unit-price')?.value);
+        const sale_mode = row.querySelector('.tier-sale-mode')?.value || 'both';
+        const label = row.querySelector('.tier-label')?.value?.trim() || '';
+        if (min_qty > 0 && Number.isFinite(unit_price) && unit_price >= 0) {
+            tiers.push({ min_qty, unit_price, sale_mode, label });
+        }
+    });
+    tiers.sort((a, b) => a.min_qty - b.min_qty);
+    return tiers;
+}
+
 // ===== Packaging Levels =====
 function addPackagingLevel(prefill = null) {
     if (referenceMode && referenceProductData && !prefill) {
@@ -670,6 +728,13 @@ function addPackagingLevel(prefill = null) {
                 <div class="margin-final-note" style="font-size:10px;color:var(--info);margin-top:3px;"></div>
             </div>
         </div>
+
+        <div class="qty-price-tiers-section" style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--border-color);">
+            <div style="font-size:11px;font-weight:600;color:var(--info);margin-bottom:6px;"><i class="bi bi-tags"></i> Harga Spesial per Kuantitas</div>
+            <p style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">Min. qty = jumlah satuan kemasan ini. Harga = per 1 satuan pada tier tersebut.</p>
+            <div class="qty-tiers-list"></div>
+            <button type="button" class="btn-outline-custom btn-add-qty-tier" style="width:100%;margin-top:6px;font-size:11px;padding:6px;border-style:dashed;"><i class="bi bi-plus"></i> Tambah Tier Harga</button>
+        </div>
     `;
     
     container.appendChild(div);
@@ -719,6 +784,7 @@ function addPackagingLevel(prefill = null) {
         const hiddenQty = document.createElement('input');
         hiddenQty.type = 'hidden';
         hiddenQty.name = 'qty_prices_json[]';
+        hiddenQty.className = 'qty-prices-json-input';
         hiddenQty.value = JSON.stringify(prefill.qty_prices || []);
         div.appendChild(hiddenQty);
     } else if (isLevel1) {
@@ -727,15 +793,19 @@ function addPackagingLevel(prefill = null) {
         const hiddenQty = document.createElement('input');
         hiddenQty.type = 'hidden';
         hiddenQty.name = 'qty_prices_json[]';
+        hiddenQty.className = 'qty-prices-json-input';
         hiddenQty.value = '[]';
         div.appendChild(hiddenQty);
     } else {
         const hiddenQty = document.createElement('input');
         hiddenQty.type = 'hidden';
         hiddenQty.name = 'qty_prices_json[]';
+        hiddenQty.className = 'qty-prices-json-input';
         hiddenQty.value = '[]';
         div.appendChild(hiddenQty);
     }
+
+    initQtyTiers(div, prefill ? (prefill.qty_prices || []) : []);
 
     const bcInput = div.querySelector('.barcode-field');
     const genBtn = div.querySelector('.btn-gen-bc');
@@ -961,6 +1031,16 @@ async function submitProduct(e) {
     const form = e.target;
     const data = new FormData(form);
     
+    // Update qty_prices json array
+    document.querySelectorAll('.packaging-level').forEach(div => {
+        const tiers = collectQtyTiers(div);
+        const hiddenInp = div.querySelector('.qty-prices-json-input');
+        if (hiddenInp) hiddenInp.value = JSON.stringify(tiers);
+    });
+    
+    // Refresh formData with updated hidden fields
+    const updatedData = new FormData(form);
+    
     // Set auto-generated names
     data.set('full_name', document.getElementById('namePreview').textContent);
     
@@ -973,7 +1053,7 @@ async function submitProduct(e) {
     if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
         try {
             const payload = {};
-            data.forEach((value, key) => {
+            updatedData.forEach((value, key) => {
                 if (payload[key]) {
                     if (!Array.isArray(payload[key])) payload[key] = [payload[key]];
                     payload[key].push(value);
@@ -996,7 +1076,7 @@ async function submitProduct(e) {
     try {
         const result = await api(`${BASE_URL}api/products`, {
             method: 'POST',
-            body: data
+            body: updatedData
         });
         
         if (result.success) {

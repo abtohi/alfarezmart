@@ -608,3 +608,18 @@ Terdapat dua bug yang berkontribusi:
 
 ### Catatan
 - File `cleanup_bulk_fast.php` di root masih ada — perlu review apakah sudah aman dihapus.
+
+## 29 Mei 2026 - Perbaikan Barcode Scanner & Penambahan Tier Pricing di Tambah Produk & Input Barang
+**Tipe:** Feature/Fix  
+**Modul:** Scanner, Product, Purchase  
+**Dikerjakan oleh:** AI Agent
+
+### Perubahan
+- Modifikasi ProductModel::findByBarcode agar pencarian scanner mencakup products.code selain product_packagings.barcode.
+- Menambahkan fungsionalitas Tier Pricing (Harga Spesial per Kuantitas) di halaman Tambah Produk Baru (pp/views/products/create.php) agar selaras dengan halaman Edit.
+- Menyempurnakan form Tier Pricing di halaman Input Barang (pp/views/purchases/create.php) dengan mengubah opsi dropdown Mode agar sesuai dengan tampilan di Edit Produk (Ecer & Grosir, Ecer saja, Grosir saja).
+- Memperbarui payload JSON di Input Barang untuk menyertakan qty_prices saat input reguler maupun massal.
+- Mengubah PurchaseModel::createWithDetails agar menyimpan qty_prices melalui ProductModel::saveQtyPricesForPackaging saat menyimpan pembelian baru.
+
+### File yang Diubah
+- pp/models/ProductModel.php`n- pp/views/products/create.php`n- pp/views/purchases/create.php`n- pp/models/PurchaseModel.php
