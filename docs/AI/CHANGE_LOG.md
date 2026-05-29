@@ -623,3 +623,6 @@ Terdapat dua bug yang berkontribusi:
 
 ### File yang Diubah
 - pp/models/ProductModel.php`n- pp/views/products/create.php`n- pp/views/purchases/create.php`n- pp/models/PurchaseModel.php
+
+- Menyelesaikan bug hilang nya harga tier ketika menekan tombol Distribusikan ke Harga Modal Barang di form Input Barang (menambahkan collectDrawerDataForItem sebelum re-render).
+- Menambahkan input field Label (opsional) di form Harga Tier pada Input Barang untuk sinkronisasi dengan fitur Edit Produk.

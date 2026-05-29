@@ -1474,8 +1474,9 @@ function openAllPackagingsModal(tempId) {
                         const minQty = parseFloat(row.querySelector('.tier-min-qty')?.value) || 0;
                         const totalH = parseFloat(row.querySelector('.tier-total-harga')?.value) || 0;
                         const mode = row.querySelector('.tier-mode')?.value || 'both';
+                        const label = row.querySelector('.tier-label')?.value?.trim() || '';
                         if (minQty > 0 && totalH > 0) {
-                            tiers.push({ min_qty: minQty, unit_price: totalH / minQty, sale_mode: mode });
+                            tiers.push({ min_qty: minQty, unit_price: totalH / minQty, sale_mode: mode, label: label });
                         }
                     });
                     pkg.qty_prices = tiers;
@@ -1606,6 +1607,7 @@ function calculateGrandTotal() {
 }
 
 function distributeAdjustments() {
+    purchaseItems.forEach(item => collectDrawerDataForItem(item));
     if (purchaseItems.length === 0 || currentSubtotal === 0) return;
     
     // The ratio of grand_total to subtotal
@@ -2175,7 +2177,8 @@ function collectDrawerDataForItem(item) {
             const minQty = parseFloat(tr.querySelector('.drawer-tier-min-qty')?.value) || 0;
             const totalH = parseFloat(tr.querySelector('.drawer-tier-total')?.value) || 0;
             const mode   = tr.querySelector('.drawer-tier-mode')?.value || 'both';
-            if (minQty > 0 && totalH > 0) tiers.push({ min_qty: minQty, unit_price: totalH / minQty, sale_mode: mode });
+            const label  = tr.querySelector('.drawer-tier-label')?.value?.trim() || '';
+            if (minQty > 0 && totalH > 0) tiers.push({ min_qty: minQty, unit_price: totalH / minQty, sale_mode: mode, label: label });
         });
         pkg.qty_prices = tiers;
 
@@ -2753,7 +2756,8 @@ async function openBulkInputModal() {
                             const minQty = parseFloat(tr.querySelector('.drawer-tier-min-qty')?.value) || 0;
                             const totalH = parseFloat(tr.querySelector('.drawer-tier-total')?.value) || 0;
                             const mode   = tr.querySelector('.drawer-tier-mode')?.value || 'both';
-                            if (minQty > 0 && totalH > 0) tiers.push({ min_qty: minQty, unit_price: totalH / minQty, sale_mode: mode });
+                            const label  = tr.querySelector('.drawer-tier-label')?.value?.trim() || '';
+                            if (minQty > 0 && totalH > 0) tiers.push({ min_qty: minQty, unit_price: totalH / minQty, sale_mode: mode, label: label });
                         });
                         pkg.qty_prices = tiers;
                     });
