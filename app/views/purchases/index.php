@@ -64,7 +64,7 @@
                         </button>
                         <div class="purchase-group-body purchase-supplier-body" style="display:<?= $dayIdx === 0 && $supIdx === 0 ? 'block' : 'none' ?>;">
                             <?php foreach ($sup['purchases'] as $p): ?>
-                            <a href="<?= BASE_URL ?>purchases/<?= (int)$p['id'] ?>" class="purchase-item-card" style="position:relative; padding-right:60px;">
+                            <div class="purchase-item-card" style="position:relative; padding-right:120px; cursor:pointer;" onclick="if(!event.target.closest('.purchase-actions')) window.location.href='<?= BASE_URL ?>purchases/<?= (int)$p['id'] ?>'">
                                 <div class="purchase-item-card__icon">
                                     <i class="bi bi-box-arrow-in-down"></i>
                                 </div>
@@ -81,19 +81,19 @@
                                     </div>
                                 </div>
                                 <!-- Actions Container -->
-                                <div style="position:absolute; top:50%; right:12px; transform:translateY(-50%); display:flex; gap:12px; align-items:center;" onclick="event.preventDefault(); event.stopPropagation();">
+                                <div class="purchase-actions" style="position:absolute; top:50%; right:12px; transform:translateY(-50%); display:flex; gap:12px; align-items:center; background:var(--bg-card); padding-left:8px;">
                                     <?php if (!empty($p['invoice_photo'])): ?>
-                                        <a href="<?= invoicePhotoUrl($p['invoice_photo']) ?>" target="_blank" style="color:var(--info); font-size:1.2rem; cursor:pointer;" title="Lihat Foto Invoice">
+                                        <a href="<?= invoicePhotoUrl($p['invoice_photo']) ?>" target="_blank" style="color:var(--info); font-size:1.2rem; cursor:pointer; text-decoration:none;" title="Lihat Foto Invoice">
                                             <i class="bi bi-image"></i>
                                         </a>
                                     <?php endif; ?>
-                                    <a href="<?= BASE_URL ?>purchases/<?= (int)$p['id'] ?>/edit" style="color:var(--primary); font-size:1.2rem; cursor:pointer;" title="Edit Pembelian">
+                                    <a href="<?= BASE_URL ?>purchases/<?= (int)$p['id'] ?>/edit" style="color:var(--primary); font-size:1.2rem; cursor:pointer; text-decoration:none;" title="Edit Pembelian">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
                                     <button type="button" onclick="deleteSinglePurchase(<?= (int)$p['id'] ?>, '<?= htmlspecialchars($p['purchase_code']) ?>')" style="background:none;border:none;color:var(--danger);font-size:1.2rem;cursor:pointer;padding:0;" title="Hapus Pembelian"><i class="bi bi-trash"></i></button>
                                     <input type="checkbox" class="purchase-chk" value="<?= (int)$p['id'] ?>" style="width:18px;height:18px;accent-color:var(--danger);cursor:pointer;margin-left:4px;" onchange="updatePurchaseSelection()">
                                 </div>
-                            </a>
+                            </div>
                             <?php endforeach; ?>
                         </div>
                     </div>
