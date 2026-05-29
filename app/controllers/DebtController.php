@@ -6,6 +6,7 @@ class DebtController extends Controller
 {
     public function index()
     {
+        $this->requireSuperadmin();
         $supplierModel = new SupplierModel();
         $suppliers = $supplierModel->all('name', 'ASC');
 

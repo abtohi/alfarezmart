@@ -158,10 +158,12 @@
     </div>
 
     <!-- Actions -->
+    <?php $isStaffShow = (($_SESSION['user_level'] ?? '') === 'staff'); ?>
     <div style="display:flex;gap:8px;margin-top:24px;flex-direction:column;">
         <button class="btn-primary-custom" style="width:100%;padding:12px;background:var(--success);color:white;border:none;" onclick="openUpdateStockModal()">
             <i class="bi bi-box-seam"></i> Update Stok Fisik (Opname)
         </button>
+        <?php if (!$isStaffShow): ?>
         <div style="display:flex;gap:8px;">
             <a href="<?= BASE_URL ?>products/<?= $product['id'] ?>/edit" class="btn-outline-custom" style="flex:1;text-align:center;text-decoration:none;padding:12px;">
                 <i class="bi bi-pencil"></i> Edit Produk
@@ -170,6 +172,7 @@
             <i class="bi bi-trash"></i> Hapus
         </button>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 <script>

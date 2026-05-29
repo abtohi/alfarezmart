@@ -238,15 +238,45 @@ class ApiController extends Controller
         }
 
         try {
+            // Compose fallback nama produk supaya constraint NOT NULL `full_name` tidak gagal.
+            $fullName = trim((string)$this->input('full_name'));
+            $shortLabel = trim((string)$this->input('short_label'));
+            $invoiceName = trim((string)$this->input('invoice_name'));
+            $singleName = trim((string)$this->input('single_name'));
+            $variant = trim((string)$this->input('variant'));
+            $productType = trim((string)$this->input('product_type'));
+            // Resolve brand name from id (best effort)
+            $brandName = '';
+            $brandId = $this->input('brand_id');
+            if (!empty($brandId)) {
+                try {
+                    $b = (new BrandModel())->find((int)$brandId);
+                    if ($b && !empty($b['name'])) $brandName = trim((string)$b['name']);
+                } catch (Exception $ex) { /* abaikan */ }
+            }
+            if ($fullName === '' || $fullName === '-') {
+                $composed = trim($brandName . ' ' . $productType . ' ' . $variant);
+                $fullName = $singleName !== '' ? $singleName : ($shortLabel !== '' ? $shortLabel : $composed);
+            }
+            if ($fullName === '') {
+                throw new Exception('Nama produk wajib diisi (Brand/Jenis/Varian atau Nama Produk).');
+            }
+            if ($shortLabel === '') {
+                $shortLabel = mb_substr($fullName, 0, 35);
+            }
+            if ($invoiceName === '') {
+                $invoiceName = $shortLabel;
+            }
+
             $productData = [
                 'code' => $this->input('code'),
-                'brand_id' => $this->input('brand_id') ?: null,
+                'brand_id' => $brandId ?: null,
                 'category_id' => $this->input('category_id') ?: null,
-                'product_type' => $this->input('product_type'),
-                'variant' => $this->input('variant'),
-                'full_name' => $this->input('full_name'),
-                'short_label' => $this->input('short_label'),
-                'invoice_name' => $this->input('invoice_name'),
+                'product_type' => $productType !== '' ? $productType : null,
+                'variant' => $variant !== '' ? $variant : null,
+                'full_name' => $fullName,
+                'short_label' => $shortLabel,
+                'invoice_name' => $invoiceName,
                 'supplier_product_code' => $this->input('supplier_product_code') ?: null,
                 'supplier_invoice_name' => $this->input('supplier_invoice_name') ?: null,
                 'weight_value' => $this->input('weight_value') ?: null,
@@ -313,9 +343,10 @@ class ApiController extends Controller
 
     public function updateProduct(int $id)
     {
+        $this->blockStaffMutations('mengedit');
         $this->validateCSRF();
         $model = new ProductModel();
-        
+
         try {
             $data = [];
             $fields = ['full_name','short_label','invoice_name','product_type','variant','brand_id','category_id',
@@ -493,6 +524,7 @@ class ApiController extends Controller
 
     public function deleteProduct(int $id)
     {
+        $this->blockStaffMutations('menghapus');
         $this->validateCSRF();
         $db = Database::getInstance()->getConnection();
         try {
@@ -520,6 +552,7 @@ class ApiController extends Controller
 
     public function bulkDeleteProducts()
     {
+        $this->blockStaffMutations('menghapus');
         $this->validateCSRF();
         $db = Database::getInstance()->getConnection();
         try {
@@ -1457,6 +1490,7 @@ class ApiController extends Controller
 
     public function bulkDeleteSales()
     {
+        $this->requireSuperadmin();
         $this->validateCSRF();
         try {
             $jsonBody = json_decode(file_get_contents('php://input'), true);
@@ -1600,6 +1634,7 @@ class ApiController extends Controller
 
     public function deletePackaging(int $id)
     {
+        $this->blockStaffMutations('menghapus kemasan');
         $this->validateCSRF();
         try {
             $id = (int)$id;
@@ -1878,6 +1913,7 @@ class ApiController extends Controller
 
     public function getCustomerDebts()
     {
+        $this->requireSuperadmin();
         try {
             $model = new DebtModel();
             $status = isset($_GET['status']) ? Security::sanitize($_GET['status']) : null;
@@ -1897,6 +1933,7 @@ class ApiController extends Controller
 
     public function createCustomerDebt()
     {
+        $this->requireSuperadmin();
         $this->validateCSRF();
         try {
             $model = new DebtModel();
@@ -1936,6 +1973,7 @@ class ApiController extends Controller
 
     public function payCustomerDebt(int $id)
     {
+        $this->requireSuperadmin();
         $this->validateCSRF();
         try {
             $model = new DebtModel();
@@ -1967,6 +2005,7 @@ class ApiController extends Controller
 
     public function deleteCustomerDebt(int $id)
     {
+        $this->requireSuperadmin();
         $this->validateCSRF();
         try {
             $model = new DebtModel();
@@ -1979,6 +2018,7 @@ class ApiController extends Controller
 
     public function getShopDebts()
     {
+        $this->requireSuperadmin();
         try {
             $model = new DebtModel();
             $status = isset($_GET['status']) ? Security::sanitize($_GET['status']) : null;
@@ -1998,6 +2038,7 @@ class ApiController extends Controller
 
     public function createShopDebt()
     {
+        $this->requireSuperadmin();
         $this->validateCSRF();
         try {
             $model = new DebtModel();
@@ -2037,6 +2078,7 @@ class ApiController extends Controller
 
     public function payShopDebt(int $id)
     {
+        $this->requireSuperadmin();
         $this->validateCSRF();
         try {
             $model = new DebtModel();
@@ -2068,6 +2110,7 @@ class ApiController extends Controller
 
     public function deleteShopDebt(int $id)
     {
+        $this->requireSuperadmin();
         $this->validateCSRF();
         try {
             $model = new DebtModel();
@@ -2081,6 +2124,7 @@ class ApiController extends Controller
     // ===== FINANCE LOGS API =====
     public function getFinanceSummary()
     {
+        $this->requireSuperadmin();
         try {
             $date = $this->input('date') ?: date('Y-m-d');
             $model = new FinanceModel();
@@ -2103,6 +2147,7 @@ class ApiController extends Controller
 
     public function getFinanceLogs()
     {
+        $this->requireSuperadmin();
         try {
             $date = $this->input('date') ?: date('Y-m-d');
             $model = new FinanceModel();
@@ -2119,6 +2164,7 @@ class ApiController extends Controller
 
     public function createFinanceLog()
     {
+        $this->requireSuperadmin();
         $this->validateCSRF();
         try {
             $model = new FinanceModel();
@@ -2163,6 +2209,7 @@ class ApiController extends Controller
 
     public function updateFinanceLog(int $id)
     {
+        $this->requireSuperadmin();
         $this->validateCSRF();
         try {
             $model = new FinanceModel();
@@ -2211,6 +2258,7 @@ class ApiController extends Controller
 
     public function deleteFinanceLog(int $id)
     {
+        $this->requireSuperadmin();
         $this->validateCSRF();
         try {
             $model = new FinanceModel();

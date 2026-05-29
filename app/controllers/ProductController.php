@@ -72,6 +72,7 @@ class ProductController extends Controller
 
     public function edit($id)
     {
+        $this->blockStaffMutations('mengedit');
         $product = $this->productModel->findWithDetails($id);
         if (!$product) {
             $this->redirect('/products');

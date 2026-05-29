@@ -37,17 +37,18 @@
             <span id="totalProductsText"><?= (int)($products['total'] ?? 0) ?> produk</span>
         </span>
         <div style="display:flex;align-items:center;gap:8px;">
+            <?php
+            $userLevel = $_SESSION['user_level'] ?? '';
+            $isStaff = $userLevel === 'staff';
+            if (!$isStaff):
+            ?>
             <button type="button" id="btnBulkDelete" onclick="bulkDeleteSelected()" style="display:none;background:var(--danger);color:white;border:none;border-radius:var(--radius-sm);padding:6px 12px;font-size:var(--font-size-xs);cursor:pointer;align-items:center;gap:4px;flex-shrink:0;">
                 <i class="bi bi-trash"></i> Hapus (<span id="selectedCount">0</span>)
             </button>
-            <?php
-            $userLevel = $_SESSION['user_level'] ?? '';
-            if (in_array($userLevel, ['superadmin', 'admin'], true)):
-            ?>
+            <?php endif; ?>
             <a href="<?= BASE_URL ?>products/create" id="btnAddProduct" class="btn-primary-custom" style="padding:6px 12px;font-size:var(--font-size-xs);text-decoration:none;color:white;flex-shrink:0;">
                 <i class="bi bi-plus"></i> Tambah
             </a>
-            <?php endif; ?>
         </div>
     </div>
 
@@ -65,7 +66,9 @@
     <?php else: ?>
         <?php foreach ($products['data'] as $p): ?>
             <div class="product-card" data-id="<?= (int)$p['id'] ?>" style="position:relative;display:block;">
+                <?php if (!$isStaff): ?>
                 <input type="checkbox" class="product-checkbox" value="<?= (int)$p['id'] ?>" style="display:none;position:absolute;top:16px;left:16px;width:20px;height:20px;accent-color:var(--primary);z-index:2;">
+                <?php endif; ?>
                 <a href="<?= BASE_URL ?>products/<?= (int)$p['id'] ?>" class="product-card-link" style="display:flex;text-decoration:none;color:inherit;width:100%;">
                     <div class="product-icon"><i class="bi bi-box-seam"></i></div>
                     <div class="product-info" style="width:100%;">
@@ -167,6 +170,7 @@
 <script>
 let selectMode = false;
 let pressTimer;
+const ROLE_IS_STAFF = <?= $isStaff ? 'true' : 'false' ?>;
 
 document.addEventListener('DOMContentLoaded', () => {
     const cards = document.querySelectorAll('.product-card');
@@ -177,10 +181,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectAllContainer = document.getElementById('selectAllContainer');
     const totalProductsText = document.getElementById('totalProductsText');
 
+    // Staff tidak punya hak hapus/edit — skip semua handler seleksi & long-press
+    if (ROLE_IS_STAFF) return;
+
     function updateSelectionState() {
         const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
         const count = checkedBoxes.length;
-        selectedCountSpan.textContent = count;
+        if (selectedCountSpan) selectedCountSpan.textContent = count;
         
         if (count > 0) {
             btnBulkDelete.style.display = 'flex';

@@ -151,13 +151,15 @@
                 tp.clearLastDevice();
                 showToast('Printer diputuskan', 'info');
             } else {
-                // Try silent auto-reconnect first (no dialog)
-                const ok = (tp.device || tp.hasSavedDevice()) ? await tp.tryAutoReconnect() : false;
-                if (!ok) {
-                    // Show Bluetooth picker as fallback
-                    await tp.connect();
+                // Show app-styled chooser (saved printer vs cari baru)
+                let ok = false;
+                if (typeof window.openPrinterChooser === 'function') {
+                    ok = await window.openPrinterChooser(tp);
+                } else {
+                    ok = (tp.device || tp.hasSavedDevice()) ? await tp.tryAutoReconnect() : false;
+                    if (!ok) { await tp.connect(); ok = tp.isConnected(); }
                 }
-                showToast(`Printer terhubung: ${tp.device?.name || 'Bluetooth'}`, 'success');
+                if (ok) showToast(`Printer terhubung: ${tp.device?.name || 'Bluetooth'}`, 'success');
             }
         } catch (e) {
             showToast(e.message || 'Gagal menghubungkan printer', 'error');

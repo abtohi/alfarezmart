@@ -6,6 +6,7 @@ class ReportController extends Controller
 {
     public function index()
     {
+        $this->requireSuperadmin();
         $saleModel = new SaleModel();
         $purchaseModel = new PurchaseModel();
         

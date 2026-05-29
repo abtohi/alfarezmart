@@ -131,5 +131,55 @@ if (!class_exists('Controller')) {
             }
         }
     }
+
+    /**
+     * Get current user level (kept simple, lowercase string).
+     */
+    protected function userLevel(): string
+    {
+        return strtolower((string)($_SESSION['user_level'] ?? ''));
+    }
+
+    protected function isStaff(): bool
+    {
+        return $this->userLevel() === 'staff';
+    }
+
+    protected function isSuperadmin(): bool
+    {
+        return $this->userLevel() === 'superadmin';
+    }
+
+    /**
+     * Guard: block access for non-superadmin (web view: redirect; API: 403 JSON).
+     */
+    protected function requireSuperadmin(): void
+    {
+        if ($this->isSuperadmin()) return;
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        if (strpos($uri, '/api/') !== false) {
+            $this->json(['error' => 'Akses ditolak. Fitur ini hanya untuk Superadmin.'], 403);
+        }
+        $_SESSION['_flash']['error'] = 'Akses ditolak. Fitur ini hanya untuk Superadmin.';
+        header('Location: ' . BASE_URL);
+        exit;
+    }
+
+    /**
+     * Guard: block staff from destructive product actions (edit/delete).
+     * Staff hanya boleh CREATE produk (untuk POS custom).
+     */
+    protected function blockStaffMutations(string $action = 'mengubah'): void
+    {
+        if (!$this->isStaff()) return;
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        $msg = 'Staff tidak diizinkan ' . $action . ' produk. Hubungi Superadmin.';
+        if (strpos($uri, '/api/') !== false) {
+            $this->json(['error' => $msg], 403);
+        }
+        $_SESSION['_flash']['error'] = $msg;
+        header('Location: ' . BASE_URL . 'products');
+        exit;
+    }
     }
 }

@@ -6,6 +6,51 @@
 
 ---
 
+## [2026-05-30] — Hitung Orderan, Dashboard Summary, Offline Auto-Login, Staff Role Limits, Geofencing, Printer Modal
+
+**Tipe:** Mayor
+**Modul:** Multi-modul (Auth, Products, Sales, Dashboard, Geofencing, Printer)
+**Dikerjakan oleh:** AI Agent
+
+### Perubahan
+- **Fix SQL constraint `full_name`** pada Tambah Produk: komposisi nama dengan fallback brand+type+variant → single_name → short_label (FE + BE).
+- **Fitur Baru — Hitung Orderan** (`/hitung-orderan`): cari produk dengan algoritma yang sama seperti POS (multi-kata), pilih level kemasan, hitung total estimasi belanja real-time, copy daftar ke clipboard dalam format WhatsApp.
+- **Fix barcode reset** di Edit Produk: `rebuildPackagingsFromReference()` kini mempertahankan barcode existing dari DOM ketika user mengganti produk referensi.
+- **Offline Auto-Login superadmin**: login.php cache credentials hash di localStorage saat superadmin login online sukses; tryOfflineLogin saat `!navigator.onLine`; `app.js` checkAutoLogin skip fetch saat offline.
+- **Modal Pilih Printer Bluetooth**: `window.openPrinterChooser(tp)` bottom-sheet bertemakan aplikasi (saved printer + cari baru), terintegrasi di POS dan Detail Penjualan (reprint invoice). Auto-reconnect silent pada page load.
+- **Limit Role Staff**: hide finance/reports/debts di dashboard & controller `requireSuperadmin()`; block product edit/delete (UI + ApiController.blockStaffMutations); staff masih bisa create product (untuk POS custom item).
+- **Geofencing Strict**: `geofencing.js` blocking alert app-styled (bukan native `alert()`) + auto-clear `alfarezmart_logged_in`/`alfarezmart_user` localStorage sebelum logout + safety auto-logout 4 detik.
+- **Fitur Baru — Dashboard Summary** (`/dashboard/summary`, superadmin-only): omzet/belanja/profit/markup rata-rata bulanan, chart omzet harian (CSS bar), top 10 produk laris, outstanding debt snapshot, month picker.
+- **Cache Buster**: SW `alfarezmart-v7.0`, `APP_VERSION = '7.0'`, asset `?v=7.0` untuk force PWA refresh.
+
+### File yang Diubah/Dibuat
+- `app/core/Controller.php` — helper `userLevel()`, `isStaff()`, `isSuperadmin()`, `requireSuperadmin()`, `blockStaffMutations()`
+- `app/controllers/ApiController.php` — fullName fallback di createProduct; role guards di ~18 endpoint
+- `app/controllers/FinanceController.php`, `DebtController.php`, `ReportController.php` — requireSuperadmin() di index
+- `app/controllers/ProductController.php` — blockStaffMutations di edit()
+- `app/controllers/OrderEstimateController.php` — **BARU**, fitur Hitung Orderan
+- `app/controllers/DashboardController.php` — method `summary()` baru
+- `app/views/products/create.php`, `edit.php` — fullName fallback chain + preserve barcode
+- `app/views/products/index.php`, `show.php` — gating tombol untuk staff
+- `app/views/auth/login.php` — offline login + credentials cache
+- `app/views/orders/hitung.php` — **BARU**, halaman Hitung Orderan
+- `app/views/dashboard/index.php` — menu Hitung Orderan & Summary
+- `app/views/dashboard/summary.php` — **BARU**, halaman Summary & Statistik
+- `app/views/sales/pos.php`, `detail.php` — integrasi `openPrinterChooser` + auto-reconnect
+- `app/config/Routes.php` — route `/hitung-orderan` dan `/dashboard/summary`
+- `public/js/app.js` — checkAutoLogin offline-aware
+- `public/js/geofencing.js` — blocking alert + auto-logout
+- `public/js/printer.js` — `window.openPrinterChooser(tp)` global
+- `public/sw.js` — CACHE_NAME → `alfarezmart-v7.0`
+- `app/views/layouts/app.php` — APP_VERSION `7.0`, asset `?v=7.0`
+
+### Catatan
+- Service Worker baru akan trigger auto-purge cache lama → semua user perlu reload pertama kali setelah deploy.
+- Offline login HANYA untuk superadmin (sesuai spesifikasi). Admin/staff offline tetap diblokir.
+- Web Bluetooth `requestDevice()` native popup tetap dipakai untuk pairing baru (tidak bisa diganti); modal kustom hanya membungkus alur saved/new.
+
+---
+
 ## [2026-05-29] — Fitur Draft, Edit, dan Hapus Riwayat Pembelian
 
 **Tipe:** Mayor

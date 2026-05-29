@@ -33,13 +33,31 @@ Klasifikasikan task ini sebelum mulai:
 
 ## Task
 
-- Pada halaman Scanner, saat ini belum bisa menggunakan fitur barcode, hanya bisa menggunakan fitur nama produk, tolong perbaiki agar ketika di scan dengan barcode juga bisa memunculkan produknya
+- Pada halaman Tambah Produk, saat saya mencoba menambah produk baru masih gagal ada error SQL constrain full_name, tolong cek lagi dan perbaiki.
 
-- Pada halaman Tambah Produk Baru, saat ini belum ada form untuk menambahkan Harga Tier per Kuantitas, tolong tambahkan form tersebut dan dibuat sama persis modelnya seperti saat user Edit produk, silahkan merefer ke halaman Edit Produk untuk melihat Harga Tier.
+- Aku ingin menambahkan fitur Hitung Orderan, fitur ini akan saya gunakan untuk menghitung estimasi orderan ke supplier, dengan cara memilih supplier, kemudian memilih barang yang akan di order, sediakan form pencarian nama barang, form pencariannya dilakukan dengan cara mencari keyword terbanyak misal ada tulisan Chocolatos Wafer Roll Chocolate 24g, maka ketika ditulis Chocolatos 24g langsung memunculkan semua list chocolatos dengan berat 24g, silahkan lihat referensi di halaman produk, gunakan algoritma yang sama untuk pencarian produk. Setelah produk dipilih, kemudian user bisa memilih satuan, qty dan akan terhitung otomatis total dari harga modal yang harus dibeli. Kemudian user bisa menambahkan produk lain yang akan di order dengan cara mencari produk, lalu menentukan qty dan satuan, lalu akan muncul total (qty*harga modal sesuai jenis kemasan yang dipilih), kemudian dipaling bawah akan ada informasi estimasi orderan totalnya habis berapa. Kemudian tambahkan tombol copas untuk mencopas semua data orderan, data ini akan digunakan untuk di copas ke whatsapp dengan format
+Nama Label Struk (Qty Satuan Kemasan), contoh :
+* Intermi Kaldu Ayam 60g (2 karton)
+* Sedaap Mi Goreng 90g (3 karton)
+* Bango Kecap Manis 265g (1 karton)
+* SB Garam Kasar 9kg (2 Pack)
+dan seterusnya, ketika di copas, pastikan tidak ada harga modal, cukup formatnya seperti yang saya tulis diatas. Tolong tambahkan menu Hitung Orderan ini diberanda, silahkan optimalkan fitur ini agar user friendly.
 
-- Pada halaman Input Barang, baik untuk Input Barang reguler maupun massal, saat ini form Harga Tier nya belum ada keterangan untuk Ecer Saja, Grosir Saja atau Ecer & Grosir seperti halnya yang ada di form Edit Produk, tolong tambahkan fitur ini agar ketika ada produk masuk dan ada harga tier, bisa langsung diinput oleh user. Dan apabila, di data sebelumnya, produk tersebut sudah ada harga tier yang ditentukan oleh user, tolong juga ditampilkan dan di load datanya di halaman Input Barang Reguler atau Input Barang Massal, sehingga user tidak perlu menginput kembali Harga Tier nya.
+- Pada halaman Edit Produk, ketika user ingin mengubah produk ke produk Multivarian, kemudian menggunakan referensi produk lain, pastikan barcode untuk setiap kemasan jangan di reset, tetap pertahankan barcode sebelumnya, saat ini ketika saya mengedit produk, kemudian menceklist produk referensi, barcodenya jadi hilang, padahal sebelumnya ada. Tolong cek dan perbaiki
 
-- Saat ini di halaman Input Barang Reguler atau Input Barang Massal, ketika user menginput harga tier, kemudian disimpan, harga tier nya tidak tersimpan, dan ketika saya cek detail produk, harga tier yang diinput di halaman Input Barang tidak masuk ke database produk, tolong cek dan perbaiki, pastikan lagi Harga Tiernya bisa tersimpan di data produk, selain itu pastikan Harga Tier juga bisa di load dan ditampilkan informasinya di halaman Input Barang, dan user bisa mengubahnya juga di halaman Input Barang.
+- Tambahkan fitur agar ketika offline, user level superadmin tetap bisa login, karena aplikasi ini sangat crusial, jadi harus bisa tetap pantau dan cek harga meskipun dalam keadaan offline. Ketika offline, jika di HP ada cache/cookies superadmin yang login, maka akan dibuat autologin saat offline tanpa harus login kembali.
+
+- Pada halaman Kasir POS, saat user mau mencari dan menghubungkan ke printer bluetooth thermal, akan muncul pop up modal dialog yang menampung list printer yang bisa dihubungkan, saat ini desain modal dialognya masih tidak mengikuti standar desain aplikasi, tolong ini dirapikan dan di desain agar lebih elegan, modern, dan sesuai standar desain aplikasi.
+
+- Pada halaman Kasir POS, tolong ketika sudah pernah ada printer thermal yang terhubung, saat aplikasi dibuka kembali akan otomatis terhubung, tanpa perlu pairing lagi. Saat ini setiap kali fitur POS digunakan, harus selalu menghubungkan ulang ke printer bluetooth, ini sangat tidak user friendly, tolong cek dan perbaiki. Demikian pula di fitur history penjualan, ketika invoicenya akan dicetak ulang, pastikan printer thermalnya auto connect.
+
+- Tolong cek seluruh kodingan, dan tambahkan limitasi untuk user level staff, diantaranya : Staff tidak bisa melihat omzet, hutang, dan catatan keuangan lainnya, tolong hide semua fitur yang berkaitan dengan hal finansial, baik omzet, catatan hutang maupun catatan keuangan lainnya. Yang bisa melihat hanya superadmin. Selain itu staff juga tidak boleh menghapus produk, atau mengedit produk. Tetapi staff bisa menambahkan produk baru, barangkali staff menggunakan fitur Kasir POS lalu mau menambahkan produk custom, maka ini bisa dilakukan.
+
+- Tolong pastikan geofencing aktif, staff tidak dapat membuka aplikasi jika berada diluar radius yang ditentukan oleh admin. Pastikan fitur ini benar benar bisa di tes dan benar benar bisa berjalan, jika ditentukan radius 5m, maka ketika lebih dari 5 meter dari titik lokasi yang ditentukan, maka akun staff akan auto logout dan muncul alert "Anda berada di luar radius yang ditentukan!", kemudian ketika staff mencoba login kembali, tetap akan gagal dan muncul alert yang sama.
+
+- Tambahkan fitur Dashboard untuk melihat summary dan statistik produk, penjualan, margin/markup, omzet, hutang, dan lain sebagainya yang sangat insightful. SIlahkan tambahkan menu Dashboard di Beranda. Aku ingin tahu dalam sebulan rata rata belanja berapa, omzetnya berapa, rata rata markup berapa, dan informasi lainnya. SIlahkan sajikan dalam bentuk card, chart, graph, atau apapun yang bisa bermanfaat untuk superadmin. FItur ini hanya tersedia untuk superadmin, tidak untuk staff.
+
+- Lakukan commit dan push ke github https://github.com/abtohi/alfarezmart.git untuk semua perubahannya
 
 
 

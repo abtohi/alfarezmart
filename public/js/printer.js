@@ -730,3 +730,133 @@ class ThermalPrinter {
 
 const thermalPrinter = new ThermalPrinter();
 window.thermalPrinter = thermalPrinter;
+
+/**
+ * Global app-styled chooser untuk pemilihan printer thermal.
+ * Mengganti dialog Web Bluetooth mentah dengan UI konsisten ala AlfarezMart.
+ *
+ * Pemakaian:
+ *   const ok = await openPrinterChooser(thermalPrinter);
+ *   if (ok) showToast('Printer terhubung: ' + thermalPrinter.device?.name, 'success');
+ *
+ * @returns {Promise<boolean>} true bila printer berhasil terhubung
+ */
+window.openPrinterChooser = function (tp) {
+    return new Promise((resolve) => {
+        if (!tp) { resolve(false); return; }
+
+        // Cleanup existing overlay (kalau dibuka 2x cepat)
+        const old = document.getElementById('printerChooserOverlay');
+        if (old) old.remove();
+
+        const saved = tp.lastConnectedDevice;
+        const overlay = document.createElement('div');
+        overlay.id = 'printerChooserOverlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;display:flex;align-items:flex-end;justify-content:center;padding:0;font-family:Inter,-apple-system,sans-serif;animation:fadeIn .25s ease;';
+
+        overlay.innerHTML = `
+            <div style="background:#16213e;border:1px solid #2a2a4a;border-top-left-radius:20px;border-top-right-radius:20px;width:100%;max-width:480px;padding:20px;box-shadow:0 -10px 40px rgba(0,0,0,0.6);animation:slideUp .3s cubic-bezier(.16,.86,.43,1);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:36px;height:36px;border-radius:10px;background:rgba(76,201,240,0.15);display:flex;align-items:center;justify-content:center;">
+                            <i class="bi bi-bluetooth" style="color:#4cc9f0;font-size:1.1rem;"></i>
+                        </div>
+                        <div>
+                            <div style="font-weight:700;color:#fff;font-size:0.95rem;">Pilih Printer Thermal</div>
+                            <div style="font-size:0.7rem;color:#94a3b8;">Bluetooth · Cetak Struk POS</div>
+                        </div>
+                    </div>
+                    <button id="pcCloseBtn" style="background:none;border:none;color:#94a3b8;font-size:1.4rem;cursor:pointer;padding:4px 8px;">&times;</button>
+                </div>
+
+                ${saved ? `
+                <div style="background:rgba(46,196,182,0.08);border:1px solid rgba(46,196,182,0.4);border-radius:12px;padding:14px;margin-bottom:12px;display:flex;align-items:center;gap:12px;">
+                    <div style="width:40px;height:40px;border-radius:10px;background:rgba(46,196,182,0.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="bi bi-printer-fill" style="color:#2ec4b6;font-size:1.1rem;"></i>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;color:#fff;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${saved.name || 'Printer Tersimpan'}</div>
+                        <div style="font-size:0.7rem;color:#2ec4b6;">Tersimpan di perangkat ini</div>
+                    </div>
+                </div>
+                <button id="pcReconnectBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#2ec4b6,#1a9d92);color:#fff;border:none;border-radius:12px;font-weight:600;font-size:0.9rem;cursor:pointer;margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:8px;">
+                    <i class="bi bi-arrow-clockwise"></i> Hubungkan ke Printer Tersimpan
+                </button>
+                ` : `
+                <div style="background:rgba(255,183,3,0.08);border:1px solid rgba(255,183,3,0.3);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center;color:#ffb703;font-size:0.8rem;">
+                    <i class="bi bi-info-circle"></i> Belum ada printer tersimpan. Klik tombol di bawah untuk memilih printer pertama kali.
+                </div>
+                `}
+
+                <button id="pcScanNewBtn" style="width:100%;padding:14px;background:${saved ? 'transparent;border:1px solid #2a2a4a;color:#cbd5e1' : 'linear-gradient(135deg,#e63946,#b8202e);border:none;color:#fff'};border-radius:12px;font-weight:600;font-size:0.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                    <i class="bi bi-search"></i> ${saved ? 'Cari Printer Lain' : 'Cari & Hubungkan Printer Bluetooth'}
+                </button>
+
+                ${saved ? `
+                <button id="pcForgetBtn" style="width:100%;margin-top:10px;padding:10px;background:none;border:none;color:#e63946;font-size:0.78rem;cursor:pointer;text-decoration:underline;">
+                    Lupakan printer tersimpan
+                </button>
+                ` : ''}
+
+                <div style="margin-top:14px;padding-top:14px;border-top:1px solid #2a2a4a;font-size:0.7rem;color:#94a3b8;line-height:1.5;">
+                    <i class="bi bi-shield-check" style="color:#4cc9f0;"></i> AlfarezMart hanya menampilkan dialog perangkat Bluetooth bawaan sistem saat mencari printer baru. Pemilihan dilakukan oleh OS Anda.
+                </div>
+            </div>
+        `;
+
+        // Inject animasi (sekali saja)
+        if (!document.getElementById('printerChooserStyle')) {
+            const style = document.createElement('style');
+            style.id = 'printerChooserStyle';
+            style.textContent = '@keyframes fadeIn{from{opacity:0}to{opacity:1}}@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}';
+            document.head.appendChild(style);
+        }
+
+        document.body.appendChild(overlay);
+
+        const cleanup = () => { try { overlay.remove(); } catch (e) {} };
+
+        document.getElementById('pcCloseBtn').onclick = () => { cleanup(); resolve(false); };
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) { cleanup(); resolve(false); } });
+
+        const btnReconnect = document.getElementById('pcReconnectBtn');
+        if (btnReconnect) {
+            btnReconnect.onclick = async () => {
+                btnReconnect.disabled = true;
+                btnReconnect.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Menghubungkan...';
+                try {
+                    const ok = await tp.tryAutoReconnect();
+                    if (ok) { cleanup(); resolve(true); return; }
+                    // Fallback: trigger picker
+                    btnReconnect.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Auto-reconnect gagal, buka pemilih...';
+                    await tp.connect(false);
+                    cleanup(); resolve(true);
+                } catch (e) {
+                    if (typeof showToast === 'function') showToast(e.message || 'Gagal menghubungkan', 'error');
+                    cleanup(); resolve(false);
+                }
+            };
+        }
+        document.getElementById('pcScanNewBtn').onclick = async () => {
+            const btn = document.getElementById('pcScanNewBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Membuka pemilih Bluetooth...';
+            try {
+                await tp.connect(true);
+                cleanup(); resolve(true);
+            } catch (e) {
+                if (typeof showToast === 'function') showToast(e.message || 'Gagal menghubungkan', 'error');
+                cleanup(); resolve(false);
+            }
+        };
+        const btnForget = document.getElementById('pcForgetBtn');
+        if (btnForget) {
+            btnForget.onclick = () => {
+                tp.clearLastDevice();
+                cleanup();
+                if (typeof showToast === 'function') showToast('Printer tersimpan dihapus.', 'info');
+                resolve(false);
+            };
+        }
+    });
+};

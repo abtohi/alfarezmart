@@ -511,11 +511,16 @@ function clearReference() {
 }
 
 function rebuildPackagingsFromReference(packagings) {
-    // Extract existing pkgIds to reuse them, preventing deletion errors for level 1
+    // Extract existing pkgIds + barcodes untuk dipertahankan.
+    // Saat user mengganti ke mode multivarian/referensi, barcode lama TETAP dipertahankan
+    // karena barcode wajib unik per kemasan dan kemungkinan sudah dicetak/ditempel di rak.
     const existingPkgs = [];
+    const existingBarcodes = [];
     document.querySelectorAll('.packaging-level').forEach(lv => {
         const pkgId = lv.getAttribute('data-pkg-id');
         if (pkgId) existingPkgs.push(pkgId);
+        const inp = lv.querySelector('.barcode-field');
+        existingBarcodes.push(inp ? (inp.value || '').trim() : '');
     });
 
     const container = document.getElementById('packagingContainer');
@@ -526,6 +531,7 @@ function rebuildPackagingsFromReference(packagings) {
     
     sorted.forEach((pk, i) => {
         const targetPkgId = existingPkgs[i] || null;
+        const preservedBarcode = existingBarcodes[i] || ''; // pertahankan barcode lama produk ini
         addPackagingLevel({
             pkgId: targetPkgId, 
             unit_id: pk.unit_id,
@@ -535,8 +541,8 @@ function rebuildPackagingsFromReference(packagings) {
             buy_price: pk.buy_price,
             sell_price_retail: pk.sell_price_retail,
             sell_price_wholesale: pk.sell_price_wholesale,
-            barcode: '', // Barcode must be unique, don't copy
-            qty_prices: pk.qty_prices ? [...pk.qty_prices] : [] // Copy qty_prices from reference, not empty
+            barcode: preservedBarcode, // <-- preserve existing barcode (jangan reset)
+            qty_prices: pk.qty_prices ? [...pk.qty_prices] : []
         });
     });
     
@@ -1203,13 +1209,32 @@ async function submitProduct(e) {
             }
         }
 
+    // Compose nama-nama dengan fallback aman supaya constraint full_name NOT NULL tidak gagal
+    let _fullNameSafe = (document.getElementById('namePreview').textContent || '').trim();
+    if (_fullNameSafe === '-' || _fullNameSafe === '') _fullNameSafe = '';
+    if (!_fullNameSafe) {
+        const _single = document.querySelector('[name="single_name"]')?.value?.trim() || '';
+        const _brand = brandSB ? (brandSB.getLabel() || '').trim() : '';
+        const _ptype = document.querySelector('[name="product_type"]')?.value?.trim() || '';
+        const _variant = document.querySelector('[name="variant"]')?.value?.trim() || '';
+        _fullNameSafe = _single || [_brand, _ptype, _variant].filter(Boolean).join(' ').trim();
+    }
+    if (!_fullNameSafe) {
+        showToast('Nama produk wajib diisi (Brand/Jenis/Varian atau Nama Produk).', 'warning');
+        btn.innerHTML = prevText;
+        btn.disabled = false;
+        return;
+    }
+    let _shortLabelSafe = document.getElementById('manualLabel').value.trim();
+    if (!_shortLabelSafe) _shortLabelSafe = _fullNameSafe.substring(0, 35);
+
     if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
         try {
             const productData = {
                 csrf_token: csrfTokenValue,
-                full_name: document.getElementById('namePreview').textContent,
-                short_label: document.getElementById('manualLabel').value.trim() || document.getElementById('namePreview').textContent.substring(0, 35),
-                invoice_name: document.getElementById('manualLabel').value.trim() || document.getElementById('namePreview').textContent.substring(0, 35),
+                full_name: _fullNameSafe,
+                short_label: _shortLabelSafe,
+                invoice_name: _shortLabelSafe,
                 is_custom_label: document.getElementById('isCustomLabel').checked ? 1 : 0,
                 product_type: isMulti ? (document.querySelector('[name="product_type"]')?.value?.trim() || '') : '',
                 variant: isMulti ? (document.querySelector('[name="variant"]')?.value?.trim() || '') : '',
@@ -1269,9 +1294,9 @@ async function submitProduct(e) {
     try {
         const productData = {
             csrf_token: csrfTokenValue,
-            full_name: document.getElementById('namePreview').textContent,
-            short_label: document.getElementById('manualLabel').value.trim() || document.getElementById('namePreview').textContent.substring(0, 35),
-            invoice_name: document.getElementById('manualLabel').value.trim() || document.getElementById('namePreview').textContent.substring(0, 35),
+            full_name: _fullNameSafe,
+            short_label: _shortLabelSafe,
+            invoice_name: _shortLabelSafe,
             is_custom_label: document.getElementById('isCustomLabel').checked ? 1 : 0,
             product_type: isMulti ? (document.querySelector('[name="product_type"]')?.value?.trim() || '') : '',
             variant: isMulti ? (document.querySelector('[name="variant"]')?.value?.trim() || '') : '',

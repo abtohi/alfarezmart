@@ -1000,7 +1000,19 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo) {
             try {
                 btnConnect.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menghubungkan...';
                 btnConnect.disabled = true;
-                await tp.connect();
+                // Pakai modal styled dulu (sesuai design system) — fallback OS picker
+                let connected = false;
+                if (typeof window.openPrinterChooser === 'function') {
+                    connected = await window.openPrinterChooser(tp);
+                } else {
+                    await tp.connect();
+                    connected = tp.isConnected();
+                }
+                if (!connected) {
+                    showDisconnected(tp.hasSavedDevice());
+                    setupConnectButton();
+                    return;
+                }
                 showConnected(tp.device?.name);
                 showToast('Printer Bluetooth terhubung dengan baik', 'success');
                 setupPrintButton();
@@ -1324,6 +1336,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (STORE_SETTINGS && typeof thermalPrinter !== 'undefined' && thermalPrinter.setStoreSettings) {
             thermalPrinter.setStoreSettings(STORE_SETTINGS);
         }
+
+        // Auto-reconnect printer thermal saat halaman POS dibuka — supaya kasir tidak perlu pairing ulang
+        // setiap kali. Berjalan diam-diam, hanya beri toast saat berhasil.
+        try {
+            const tpInit = getThermalPrinterSafe();
+            if (tpInit && !tpInit.isConnected() && (tpInit.device || tpInit.hasSavedDevice())) {
+                tpInit.tryAutoReconnect().then(ok => {
+                    if (ok) {
+                        showToast('Printer thermal terhubung otomatis: ' + (tpInit.device?.name || ''), 'success');
+                    }
+                }).catch(() => { /* silent */ });
+            }
+        } catch (e) { console.warn('[POS] auto-reconnect skip:', e); }
 
         initPosSearch();
 

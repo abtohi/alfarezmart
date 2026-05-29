@@ -6,25 +6,23 @@ let deferredInstallPrompt = null;
 // Auto-login from localStorage if available
 function checkAutoLogin() {
     const loggedIn = localStorage.getItem('alfarezmart_logged_in');
-    const currentPage = window.location.pathname.includes('/login');
-    
-    if (loggedIn === 'true' && !currentPage) {
-        // Already logged in, proceed
-        return;
-    }
-    
-    // If on login page but localStorage says logged in, redirect to dashboard
-    if (loggedIn === 'true' && currentPage) {
-        // Give server time to validate session, then redirect
+    const onLoginPage = window.location.pathname.includes('/login');
+
+    // Skenario 1: di halaman normal, sudah login → lanjut
+    if (loggedIn === 'true' && !onLoginPage) return;
+
+    // Skenario 2: di halaman login tapi flag bilang sudah login
+    if (loggedIn === 'true' && onLoginPage) {
+        if (!navigator.onLine) {
+            // Offline: SW akan serve cache, langsung redirect ke dashboard
+            window.location.href = BASE_URL;
+            return;
+        }
+        // Online: server validasi session dulu
         setTimeout(() => {
             fetch(`${BASE_URL}`, { credentials: 'same-origin' })
-                .then(r => {
-                    if (r.ok) window.location.href = BASE_URL;
-                })
-                .catch(() => {
-                    // If fetch fails (offline), trust localStorage and load app
-                    window.location.href = BASE_URL;
-                });
+                .then(r => { if (r.ok) window.location.href = BASE_URL; })
+                .catch(() => { window.location.href = BASE_URL; });
         }, 300);
     }
 }

@@ -1041,14 +1041,32 @@ async function submitProduct(e) {
     // Refresh formData with updated hidden fields
     const updatedData = new FormData(form);
     
-    // Set auto-generated names
-    data.set('full_name', document.getElementById('namePreview').textContent);
-    
+    // Compose & validate names. full_name is NOT NULL di DB,
+    // fallback aman: namePreview → manual label → single_name → brand+type+variant
+    let fullName = (document.getElementById('namePreview').textContent || '').trim();
+    if (fullName === '-' || fullName === '') fullName = '';
     let labelText = document.getElementById('manualLabel').value.trim();
-    if (!labelText) labelText = document.getElementById('namePreview').textContent.substring(0, 35);
-    
+    if (!fullName) {
+        const single = document.querySelector('[name="single_name"]')?.value?.trim() || '';
+        const brand = brandSB ? (brandSB.getLabel() || '').trim() : '';
+        const ptype = document.querySelector('[name="product_type"]')?.value?.trim() || '';
+        const variant = document.querySelector('[name="variant"]')?.value?.trim() || '';
+        fullName = single || labelText || [brand, ptype, variant].filter(Boolean).join(' ').trim();
+    }
+    if (!fullName) {
+        showToast('Nama produk wajib diisi (Brand/Jenis/Varian atau Nama Produk).', 'warning');
+        btn.innerHTML = prevText;
+        btn.disabled = false;
+        return;
+    }
+    if (!labelText) labelText = fullName.substring(0, 35);
+
+    data.set('full_name', fullName);
+    updatedData.set('full_name', fullName);
     data.set('short_label', labelText);
+    updatedData.set('short_label', labelText);
     data.set('invoice_name', labelText);
+    updatedData.set('invoice_name', labelText);
 
     if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
         try {

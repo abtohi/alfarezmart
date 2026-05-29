@@ -161,6 +161,12 @@ $router->get('/users', 'UserController@index');
 // Debts Web Routes
 $router->get('/debts', 'DebtController@index');
 
+// Hitung Orderan (Order Estimate Builder)
+$router->get('/hitung-orderan', 'OrderEstimateController@index');
+
+// Dashboard Summary (superadmin)
+$router->get('/dashboard/summary', 'DashboardController@summary');
+
 // Debts & Customers API Routes
 $router->get('/api/customers', 'ApiController@getCustomers');
 $router->post('/api/customers', 'ApiController@createCustomer');

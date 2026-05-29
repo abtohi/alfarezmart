@@ -122,6 +122,20 @@
         </a>
     </div>
 
+    <!-- Quick Actions Row 2 -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 24px;">
+        <a href="<?= BASE_URL ?>hitung-orderan" class="quick-action">
+            <div class="action-icon" style="background: var(--success-bg); color: var(--success);"><i class="bi bi-clipboard-check"></i></div>
+            <span class="action-label">Hitung Orderan</span>
+        </a>
+        <?php if (($currentUser['level'] ?? '') === 'superadmin'): ?>
+        <a href="<?= BASE_URL ?>dashboard/summary" class="quick-action">
+            <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-graph-up-arrow"></i></div>
+            <span class="action-label">Summary</span>
+        </a>
+        <?php endif; ?>
+    </div>
+
     <!-- Manajemen Data -->
     <div class="section-title">Manajemen Data</div>
     <ul class="menu-list" style="margin-bottom:24px;">

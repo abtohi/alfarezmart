@@ -329,6 +329,46 @@
         document.getElementById('errorMsg').style.display = 'none';
     }
 
+    async function _sha256(text) {
+        try {
+            const buf = new TextEncoder().encode(text);
+            const hash = await crypto.subtle.digest('SHA-256', buf);
+            return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function tryOfflineLogin(credential, password) {
+        // Hanya bekerja untuk superadmin: aplikasi sangat krusial — pemilik wajib bisa pantau & cek harga
+        // walau offline. Kredensial pernah dipakai login sukses online → disimpan sebagai hash di device.
+        try {
+            const raw = localStorage.getItem('alfarezmart_offline_creds');
+            if (!raw) return { ok: false, reason: 'Belum pernah login online di perangkat ini.' };
+            const creds = JSON.parse(raw);
+            if (!creds || creds.level !== 'superadmin') {
+                return { ok: false, reason: 'Login offline hanya tersedia untuk Superadmin.' };
+            }
+            const hash = await _sha256((credential || '') + '|' + (password || ''));
+            if (!hash || hash !== creds.hash) {
+                return { ok: false, reason: 'Email/No HP atau Password offline tidak cocok.' };
+            }
+            // Set hint supaya app.js skip redirect ke login
+            localStorage.setItem('alfarezmart_logged_in', 'true');
+            localStorage.setItem('alfarezmart_user', JSON.stringify({
+                id: creds.id,
+                name: creds.name,
+                email: creds.email,
+                level: creds.level,
+                login_time: new Date().toISOString(),
+                offline: true,
+            }));
+            return { ok: true, user: creds };
+        } catch (e) {
+            return { ok: false, reason: 'Gagal memproses kredensial offline.' };
+        }
+    }
+
     async function handleLogin(e) {
         e.preventDefault();
         hideError();
@@ -344,6 +384,21 @@
 
         if (!credential || !password) {
             showError('Silakan isi semua field');
+            btn.innerHTML = prevHTML;
+            btn.disabled = false;
+            return;
+        }
+
+        // Jika offline, langsung coba jalur login offline (superadmin)
+        if (!navigator.onLine) {
+            const offlineRes = await tryOfflineLogin(credential, password);
+            if (offlineRes.ok) {
+                btn.innerHTML = '<i class="bi bi-wifi-off"></i> Login Offline OK';
+                btn.style.background = 'var(--gradient-success)';
+                setTimeout(() => { window.location.href = '<?= BASE_URL ?>'; }, 500);
+                return;
+            }
+            showError('Mode Offline: ' + offlineRes.reason);
             btn.innerHTML = prevHTML;
             btn.disabled = false;
             return;
@@ -371,7 +426,25 @@
                     login_time: new Date().toISOString(),
                 }));
                 localStorage.setItem('alfarezmart_logged_in', 'true');
-                
+
+                // Cache kredensial offline KHUSUS untuk superadmin (aplikasi krusial)
+                if ((data.user?.level || '') === 'superadmin') {
+                    const hash = await _sha256(credential + '|' + password);
+                    if (hash) {
+                        localStorage.setItem('alfarezmart_offline_creds', JSON.stringify({
+                            id: data.user.id,
+                            name: data.user.name,
+                            email: data.user.email,
+                            level: data.user.level,
+                            hash: hash,
+                            saved_at: new Date().toISOString(),
+                        }));
+                    }
+                } else {
+                    // Hapus jejak superadmin lain jika sekarang login non-superadmin di device sama
+                    localStorage.removeItem('alfarezmart_offline_creds');
+                }
+
                 btn.innerHTML = '<i class="bi bi-check-circle"></i> Berhasil!';
                 btn.style.background = 'var(--gradient-success)';
                 setTimeout(() => {
@@ -383,7 +456,15 @@
                 btn.disabled = false;
             }
         } catch (err) {
-            showError('Terjadi kesalahan koneksi. Silakan coba lagi.');
+            // Server tak terjangkau → coba offline login otomatis
+            const offlineRes = await tryOfflineLogin(credential, password);
+            if (offlineRes.ok) {
+                btn.innerHTML = '<i class="bi bi-wifi-off"></i> Login Offline OK';
+                btn.style.background = 'var(--gradient-success)';
+                setTimeout(() => { window.location.href = '<?= BASE_URL ?>'; }, 500);
+                return;
+            }
+            showError('Tidak bisa terhubung ke server. ' + offlineRes.reason);
             btn.innerHTML = prevHTML;
             btn.disabled = false;
         }
