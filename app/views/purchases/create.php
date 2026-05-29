@@ -2648,7 +2648,7 @@ async function submitPurchase() {
 
         if (result.success) {
             showToast('✅ Pembelian berhasil disimpan!', 'success');
-            setTimeout(() => window.location.href = `${BASE_URL}purchases`, 1500);
+            setTimeout(() => window.location.reload(), 1500);
         } else {
             showToast('❌ ' + (result.error || 'Gagal menyimpan pembelian'), 'error');
             btn.innerHTML = prevText;
