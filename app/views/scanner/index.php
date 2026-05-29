@@ -97,50 +97,14 @@ async function lookupBarcode() {
 }
 
 function showProductResultOffline(data) {
-    const resultDiv = document.getElementById('scanResult');
-    const packagings = data.packagings || [];
-    
-    let priceHtml = packagings.map(p => {
-        const modal = parseFloat(p.buy_price) || 0;
-        const ecer = parseFloat(p.sell_price_retail) || 0;
-        const grosir = parseFloat(p.sell_price_wholesale) || 0;
-        const markup = ecer > 0 ? calcMarkup(modal, ecer) : 0;
-        
-        return `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border-color);">
-                <div>
-                    <div style="font-weight:600; font-size:var(--font-size-sm);">Per ${p.unit_name || 'Level '+p.level} <span class="badge" style="background:var(--surface-2);color:var(--text-muted);font-size:10px;margin-left:4px;">Offline</span></div>
-                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">Modal: ${formatRupiah(modal)}</div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="color:var(--success); font-weight:700;">${formatRupiah(ecer)}</div>
-                    ${grosir > 0 ? `<div style="font-size:var(--font-size-xs); color:var(--warning);">Grosir: ${formatRupiah(grosir)}</div>` : ''}
-                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">Markup: ${markup}%</div>
-                </div>
-            </div>
-        `;
-    }).join('');
-    
-    resultDiv.innerHTML = `
-        <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:20px; border:1px solid var(--border-color);">
-            <div style="display:flex; gap:14px; margin-bottom:16px;">
-                <div style="width:56px;height:56px;background:var(--primary-bg);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="bi bi-box-seam-fill" style="font-size:1.5rem;color:var(--primary);"></i>
-                </div>
-                <div style="flex:1; min-width:0;">
-                    <h3 style="font-size:var(--font-size-md); font-weight:700; margin-bottom:4px;">${data.full_name} <span class="badge" style="background:var(--warning);color:black;font-size:9px;">OFFLINE</span></h3>
-                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">${data.brand_name || ''} · ${data.category_name || ''}</div>
-                    ${data.short_label ? `<div style="font-size:var(--font-size-xs); color:var(--info); margin-top:2px;">Label: ${data.short_label}</div>` : ''}
-                </div>
-            </div>
-            <div class="divider"></div>
-            <div style="font-weight:600; font-size:var(--font-size-sm); margin-bottom:8px; color:var(--text-secondary);">Daftar Harga</div>
-            ${priceHtml || '<p style="color:var(--text-muted);font-size:var(--font-size-sm);">Belum ada harga</p>'}
-        </div>
-    `;
+    renderProductScanResult(data, true);
 }
 
 function showProductResult(data) {
+    renderProductScanResult(data, false);
+}
+
+function renderProductScanResult(data, isOffline) {
     const resultDiv = document.getElementById('scanResult');
     const packagings = data.packagings || [];
     
@@ -148,38 +112,76 @@ function showProductResult(data) {
         const modal = parseFloat(p.buy_price) || 0;
         const ecer = parseFloat(p.sell_price_retail) || 0;
         const grosir = parseFloat(p.sell_price_wholesale) || 0;
-        const markup = ecer > 0 ? calcMarkup(modal, ecer) : 0;
+        
+        // Tier pricing html
+        let tierHtml = '';
+        if (p.qty_prices && p.qty_prices.length > 0) {
+            tierHtml = `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-color);">
+                <div style="font-size:10px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Harga Tier / Kuantitas:</div>
+                ${p.qty_prices.map(t => {
+                    const tRet = parseFloat(t.price_retail) || 0;
+                    const tWho = parseFloat(t.price_wholesale) || 0;
+                    return `<div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:2px;">
+                        <span><i class="bi bi-layers" style="margin-right:4px;"></i>Min. ${t.min_qty} ${p.unit_name}</span>
+                        <span style="text-align:right;">
+                            ${tRet > 0 ? `<span style="color:var(--success);">Ecer: ${formatRupiah(tRet)}</span>` : ''}
+                            ${tRet > 0 && tWho > 0 ? '<span style="color:var(--text-muted);margin:0 4px;">|</span>' : ''}
+                            ${tWho > 0 ? `<span style="color:var(--warning);">Grosir: ${formatRupiah(tWho)}</span>` : ''}
+                        </span>
+                    </div>`;
+                }).join('')}
+            </div>`;
+        }
+
+        const baseQty = parseFloat(p.base_qty) || 1;
         
         return `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border-color);">
-                <div>
-                    <div style="font-weight:600; font-size:var(--font-size-sm);">Per ${p.unit_name || 'Level '+p.level}</div>
-                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">Modal: ${formatRupiah(modal)}</div>
+            <div style="padding:12px 0; border-bottom:1px solid var(--border-color);">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+                    <div>
+                        <div style="font-weight:700; font-size:var(--font-size-sm); color:var(--text-primary);">
+                            ${p.unit_name || 'Level '+p.level} 
+                            <span style="font-size:10px; font-weight:400; color:var(--text-muted); background:var(--surface-2); padding:2px 6px; border-radius:4px; margin-left:4px;">Isi ${baseQty} pcs</span>
+                        </div>
+                        <div style="font-size:9px; color:rgba(150, 150, 150, 0.4); margin-top:2px;">
+                            ${modal > 0 ? `Modal: ${formatRupiah(modal)}` : ''}
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="color:var(--success); font-weight:700; font-size:var(--font-size-base);">${formatRupiah(ecer)} <span style="font-size:9px;font-weight:400;color:var(--text-muted);">Ecer</span></div>
+                        ${grosir > 0 ? `<div style="color:var(--warning); font-weight:600; font-size:var(--font-size-sm); margin-top:2px;">${formatRupiah(grosir)} <span style="font-size:9px;font-weight:400;color:var(--text-muted);">Grosir</span></div>` : ''}
+                    </div>
                 </div>
-                <div style="text-align:right;">
-                    <div style="color:var(--success); font-weight:700;">${formatRupiah(ecer)}</div>
-                    ${grosir > 0 ? `<div style="font-size:var(--font-size-xs); color:var(--warning);">Grosir: ${formatRupiah(grosir)}</div>` : ''}
-                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">Markup: ${markup}%</div>
-                </div>
+                ${tierHtml}
             </div>
         `;
     }).join('');
     
     resultDiv.innerHTML = `
-        <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:20px; border:1px solid var(--border-color);">
+        <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; border:1px solid var(--border-color); box-shadow:0 4px 12px rgba(0,0,0,0.05);">
             <div style="display:flex; gap:14px; margin-bottom:16px;">
-                <div style="width:56px;height:56px;background:var(--primary-bg);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="bi bi-box-seam-fill" style="font-size:1.5rem;color:var(--primary);"></i>
+                <div style="width:50px;height:50px;background:var(--primary-bg);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-upc-scan" style="font-size:1.5rem;color:var(--primary);"></i>
                 </div>
                 <div style="flex:1; min-width:0;">
-                    <h3 style="font-size:var(--font-size-md); font-weight:700; margin-bottom:4px;">${data.full_name}</h3>
-                    <div style="font-size:var(--font-size-xs); color:var(--text-muted);">${data.brand_name || ''} · ${data.category_name || ''}</div>
-                    ${data.short_label ? `<div style="font-size:var(--font-size-xs); color:var(--info); margin-top:2px;">Label: ${data.short_label}</div>` : ''}
+                    <h3 style="font-size:var(--font-size-md); font-weight:700; margin-bottom:4px; line-height:1.2;">
+                        ${data.full_name} 
+                        ${isOffline ? `<span class="badge" style="background:var(--warning);color:black;font-size:9px;vertical-align:middle;margin-left:4px;">OFFLINE</span>` : ''}
+                    </h3>
+                    <div style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
+                        <i class="bi bi-tag-fill" style="color:var(--info);"></i>
+                        ${data.brand_name || 'Tanpa Brand'} · ${data.category_name || 'Tanpa Kategori'}
+                    </div>
+                    ${data.short_label ? `<div style="font-size:10px; color:var(--text-secondary); margin-top:4px; background:var(--surface-2); display:inline-block; padding:2px 8px; border-radius:10px;">Label: ${data.short_label}</div>` : ''}
                 </div>
             </div>
-            <div class="divider"></div>
-            <div style="font-weight:600; font-size:var(--font-size-sm); margin-bottom:8px; color:var(--text-secondary);">Daftar Harga</div>
-            ${priceHtml || '<p style="color:var(--text-muted);font-size:var(--font-size-sm);">Belum ada harga</p>'}
+            
+            <div style="background:var(--bg-default); border-radius:var(--radius-md); padding:12px; border:1px solid var(--border-color);">
+                <div style="font-weight:700; font-size:11px; margin-bottom:8px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">
+                    <i class="bi bi-list-ul" style="margin-right:4px;"></i> Harga per Kemasan
+                </div>
+                ${priceHtml || '<div style="color:var(--text-muted);font-size:var(--font-size-sm);text-align:center;padding:12px 0;">Belum ada harga</div>'}
+            </div>
         </div>
     `;
 }
