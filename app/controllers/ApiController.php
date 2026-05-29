@@ -1118,6 +1118,62 @@ class ApiController extends Controller
         }
     }
 
+    public function updatePurchase(int $id)
+    {
+        $this->validateCSRF();
+        try {
+            $model = new PurchaseModel();
+            
+            // Validate existing purchase
+            $existing = $model->getDetails($id);
+            if (!$existing) {
+                throw new Exception("Data pembelian tidak ditemukan");
+            }
+
+            $jsonBody = json_decode(file_get_contents('php://input'), true);
+            $items = $jsonBody['items'] ?? [];
+            
+            if (empty($items)) {
+                throw new Exception("Daftar barang tidak boleh kosong.");
+            }
+
+            $photoPath = null;
+            if (!empty($jsonBody['invoice_photo_base64'])) {
+                $base64 = $jsonBody['invoice_photo_base64'];
+                if (preg_match('/^data:image\/(\w+);base64,/', $base64, $type)) {
+                    $base64 = substr($base64, strpos($base64, ',') + 1);
+                    $type = strtolower($type[1]);
+                    if (in_array($type, ['jpg', 'jpeg', 'png', 'webp'])) {
+                        $base64 = base64_decode($base64);
+                        if ($base64 !== false) {
+                            $filename = 'inv_' . $existing['purchase_code'] . '_' . time() . '.' . $type;
+                            $filepath = STORAGE_PATH . '/uploads/invoice_photos/' . $filename;
+                            if (file_put_contents($filepath, $base64)) {
+                                $photoPath = 'storage/uploads/invoice_photos/' . $filename;
+                            }
+                        }
+                    }
+                }
+            }
+
+            $headerData = [
+                'purchase_code' => $existing['purchase_code'], // Keep original code
+                'supplier_id' => $jsonBody['supplier_id'] ?? $this->input('supplier_id'),
+                'sales_rep_id' => $jsonBody['sales_rep_id'] ?? $this->input('sales_rep_id'),
+                'purchase_date' => $jsonBody['purchase_date'] ?? $this->input('purchase_date') ?: date('Y-m-d'),
+                'total_amount' => $jsonBody['total_amount'] ?? $this->input('total_amount') ?: 0,
+                'grand_total' => $jsonBody['grand_total'] ?? $this->input('grand_total') ?: 0,
+                'invoice_photo' => $photoPath, // Will be coalesced in model if null
+                'notes' => $jsonBody['notes'] ?? $this->input('notes'),
+            ];
+
+            $model->updateWithDetails($id, $headerData, $items);
+            $this->json(['success' => true, 'message' => 'Pembelian berhasil diupdate']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function uploadInvoicePhoto(int $id) { 
         $this->json(['message' => 'Coming soon']); 
     }

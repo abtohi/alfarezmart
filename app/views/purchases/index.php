@@ -6,6 +6,19 @@
             <i class="bi bi-plus-lg"></i> Input Baru
         </a>
     </div>
+    
+    <input type="hidden" id="csrfToken" value="<?= $csrfToken ?? '' ?>">
+
+    <!-- Mass Action Toolbar -->
+    <div id="massActionToolbar" style="display:none; background:rgba(230,57,70,0.1); border-radius:var(--radius-md); padding:12px; margin-bottom:16px; align-items:center; justify-content:space-between; border:1px solid rgba(230,57,70,0.2);">
+        <label style="display:flex; align-items:center; gap:8px; font-size:var(--font-size-sm); font-weight:600; color:var(--danger); cursor:pointer;">
+            <input type="checkbox" id="chkSelectAll" style="width:16px; height:16px; accent-color:var(--danger);" onchange="toggleSelectAllPurchases(this)">
+            <span id="massSelectCount">0 Terpilih</span>
+        </label>
+        <button type="button" class="btn-primary-custom" style="background:var(--danger-bg); color:var(--danger); font-size:11px; padding:6px 12px; border-color:var(--danger);" onclick="deleteSelectedPurchases()">
+            <i class="bi bi-trash"></i> Hapus Terpilih
+        </button>
+    </div>
 
     <?php if (empty($purchases['data'])): ?>
         <div class="empty-state">
@@ -51,7 +64,7 @@
                         </button>
                         <div class="purchase-group-body purchase-supplier-body" style="display:<?= $dayIdx === 0 && $supIdx === 0 ? 'block' : 'none' ?>;">
                             <?php foreach ($sup['purchases'] as $p): ?>
-                            <a href="<?= BASE_URL ?>purchases/<?= (int)$p['id'] ?>" class="purchase-item-card">
+                            <a href="<?= BASE_URL ?>purchases/<?= (int)$p['id'] ?>" class="purchase-item-card" style="position:relative; padding-right:60px;">
                                 <div class="purchase-item-card__icon">
                                     <i class="bi bi-box-arrow-in-down"></i>
                                 </div>
@@ -67,7 +80,19 @@
                                         <?php endif; ?>
                                     </div>
                                 </div>
-                                <i class="bi bi-chevron-right purchase-item-card__chev"></i>
+                                <!-- Actions Container -->
+                                <div style="position:absolute; top:50%; right:12px; transform:translateY(-50%); display:flex; gap:12px; align-items:center;" onclick="event.preventDefault(); event.stopPropagation();">
+                                    <?php if (!empty($p['invoice_photo'])): ?>
+                                        <a href="<?= BASE_URL . htmlspecialchars($p['invoice_photo']) ?>" target="_blank" style="color:var(--info); font-size:1.2rem; cursor:pointer;" title="Lihat Foto Invoice">
+                                            <i class="bi bi-image"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                    <a href="<?= BASE_URL ?>purchases/<?= (int)$p['id'] ?>/edit" style="color:var(--primary); font-size:1.2rem; cursor:pointer;" title="Edit Pembelian">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </a>
+                                    <button type="button" onclick="deleteSinglePurchase(<?= (int)$p['id'] ?>, '<?= htmlspecialchars($p['purchase_code']) ?>')" style="background:none;border:none;color:var(--danger);font-size:1.2rem;cursor:pointer;padding:0;" title="Hapus Pembelian"><i class="bi bi-trash"></i></button>
+                                    <input type="checkbox" class="purchase-chk" value="<?= (int)$p['id'] ?>" style="width:18px;height:18px;accent-color:var(--danger);cursor:pointer;margin-left:4px;" onchange="updatePurchaseSelection()">
+                                </div>
                             </a>
                             <?php endforeach; ?>
                         </div>
@@ -125,5 +150,101 @@ function togglePurchaseGroup(btn) {
     btn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
     const chev = btn.querySelector('.purchase-group-toggle__chev');
     if (chev) chev.className = isOpen ? 'bi bi-chevron-down purchase-group-toggle__chev' : 'bi bi-chevron-up purchase-group-toggle__chev';
+}
+
+function updatePurchaseSelection() {
+    const checkboxes = document.querySelectorAll('.purchase-chk');
+    const checkedBoxes = Array.from(checkboxes).filter(c => c.checked);
+    const count = checkedBoxes.length;
+    
+    const toolbar = document.getElementById('massActionToolbar');
+    const countSpan = document.getElementById('massSelectCount');
+    const chkSelectAll = document.getElementById('chkSelectAll');
+    
+    if (toolbar) {
+        toolbar.style.display = count > 0 ? 'flex' : 'none';
+    }
+    if (countSpan) {
+        countSpan.textContent = `${count} Terpilih`;
+    }
+    if (chkSelectAll) {
+        chkSelectAll.checked = (count === checkboxes.length && checkboxes.length > 0);
+        chkSelectAll.indeterminate = (count > 0 && count < checkboxes.length);
+    }
+}
+
+function toggleSelectAllPurchases(masterChk) {
+    const checkboxes = document.querySelectorAll('.purchase-chk');
+    checkboxes.forEach(chk => {
+        // Only toggle if the group is visible? For now just toggle all available on page
+        chk.checked = masterChk.checked;
+    });
+    updatePurchaseSelection();
+}
+
+async function deleteSinglePurchase(id, code) {
+    await AppModal.show({
+        title: 'Hapus Pembelian',
+        icon: 'bi-trash',
+        iconColor: 'var(--danger-bg)',
+        iconAccent: 'var(--danger)',
+        bodyHTML: `
+            <p style="color:var(--text-secondary);font-size:var(--font-size-sm);line-height:1.7;">Yakin ingin menghapus nota <strong>${code}</strong>?</p>
+            <div style="background:var(--warning-bg);border:1px solid var(--warning);border-radius:var(--radius-sm);padding:10px 14px;margin-top:12px;font-size:11px;color:var(--warning);">
+                <i class="bi bi-exclamation-triangle-fill"></i> <strong>PERINGATAN:</strong> Semua stok barang dari nota ini akan DIBATALKAN. Pastikan barang belum terjual!
+            </div>
+        `,
+        submitText: 'Ya, Hapus & Kembalikan Stok',
+        cancelText: 'Batal',
+        onSubmit: async () => {
+            try {
+                const csrfToken = document.getElementById('csrfToken').value;
+                const res = await api(`<?= BASE_URL ?>api/purchases/${id}/delete`, 'POST', { csrf_token: csrfToken });
+                if (res.success) {
+                    showToast(res.message || 'Pembelian berhasil dihapus', 'success');
+                    setTimeout(() => window.location.reload(), 1000);
+                    return true;
+                }
+            } catch(e) { }
+            return false;
+        }
+    });
+}
+
+async function deleteSelectedPurchases() {
+    const checkboxes = document.querySelectorAll('.purchase-chk:checked');
+    if (checkboxes.length === 0) return;
+    
+    const count = checkboxes.length;
+    await AppModal.show({
+        title: `Hapus ${count} Pembelian`,
+        icon: 'bi-trash',
+        iconColor: 'var(--danger-bg)',
+        iconAccent: 'var(--danger)',
+        bodyHTML: `
+            <p style="color:var(--text-secondary);font-size:var(--font-size-sm);line-height:1.7;">Yakin ingin menghapus <strong>${count}</strong> nota pembelian sekaligus?</p>
+            <div style="background:var(--warning-bg);border:1px solid var(--warning);border-radius:var(--radius-sm);padding:10px 14px;margin-top:12px;font-size:11px;color:var(--warning);">
+                <i class="bi bi-exclamation-triangle-fill"></i> <strong>PERINGATAN:</strong> Stok dari semua nota yang dihapus akan DIBATALKAN.
+            </div>
+        `,
+        submitText: 'Ya, Hapus Semua',
+        cancelText: 'Batal',
+        onSubmit: async () => {
+            try {
+                const csrfToken = document.getElementById('csrfToken').value;
+                // Delete sequentially or via bulk API. We'll do it sequentially for simplicity and safety,
+                // or if there's a bulk delete API we can use that. Since we only have single delete, we loop.
+                let successCount = 0;
+                for (let chk of checkboxes) {
+                    const res = await api(`<?= BASE_URL ?>api/purchases/${chk.value}/delete`, 'POST', { csrf_token: csrfToken });
+                    if (res.success) successCount++;
+                }
+                showToast(`Berhasil menghapus ${successCount} pembelian`, 'success');
+                setTimeout(() => window.location.reload(), 1000);
+                return true;
+            } catch(e) { }
+            return false;
+        }
+    });
 }
 </script>

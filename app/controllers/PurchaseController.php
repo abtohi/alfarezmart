@@ -48,4 +48,26 @@ class PurchaseController extends Controller
             'purchase' => $purchase,
         ]);
     }
+
+    public function edit($id)
+    {
+        $model = new PurchaseModel();
+        $purchase = $model->getDetails($id);
+        
+        if (!$purchase) {
+            header('Location: ' . BASE_URL . 'purchases');
+            exit;
+        }
+
+        $supplierModel = new SupplierModel();
+        $salesRepModel = new SalesRepModel();
+
+        $this->view('purchases.edit', [
+            'title' => 'Edit Pembelian',
+            'activeNav' => 'purchase',
+            'purchase' => $purchase,
+            'salesReps' => $salesRepModel->getAllWithSupplier(),
+            'suppliers' => $supplierModel->all('name', 'ASC'),
+        ]);
+    }
 }

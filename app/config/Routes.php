@@ -30,6 +30,7 @@ $router->get('/products/{id}/edit', 'ProductController@edit');
 // Purchases (Barang Masuk)
 $router->get('/purchases', 'PurchaseController@index');
 $router->get('/purchases/create', 'PurchaseController@create');
+$router->get('/purchases/{id}/edit', 'PurchaseController@edit');
 $router->get('/purchases/{id}', 'PurchaseController@show');
 
 // Sales (Penjualan)
@@ -91,6 +92,7 @@ $router->post('/api/ai/scan-invoice', 'ApiController@scanInvoiceAI');
 $router->get('/api/purchases', 'ApiController@getPurchases');
 $router->post('/api/purchases', 'ApiController@createPurchase');
 $router->post('/api/purchases/{id}/photo', 'ApiController@uploadInvoicePhoto');
+$router->post('/api/purchases/{id}/update', 'ApiController@updatePurchase');
 $router->post('/api/purchases/{id}/delete', 'ApiController@deletePurchase');
 $router->get('/api/purchases/search-products', 'ApiController@searchProductsForPurchase');
 

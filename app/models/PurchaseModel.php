@@ -384,6 +384,207 @@ class PurchaseModel extends Model
         }
     }
 
+    public function updateWithDetails($id, $data, $items)
+    {
+        try {
+            $this->beginTransaction();
+
+            // 1. Get OLD purchase items & revert stock
+            $stmt = $this->db->prepare("SELECT * FROM purchase_items WHERE purchase_id = :id");
+            $stmt->execute([':id' => $id]);
+            $oldItems = $stmt->fetchAll();
+
+            $stmtStockOut = $this->db->prepare("
+                UPDATE stock 
+                SET current_qty_base = current_qty_base - :qty 
+                WHERE product_id = :id
+            ");
+            
+            $stmtMovementOut = $this->db->prepare("
+                INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, notes)
+                VALUES (:prod_id, 'out', :qty, 'purchase_edited_out', :ref, 'Revisi Stok - Edit Pembelian')
+            ");
+
+            foreach ($oldItems as $item) {
+                $pkgStmt = $this->db->prepare("SELECT base_qty FROM product_packagings WHERE id = :pid");
+                $pkgStmt->execute([':pid' => $item['packaging_id']]);
+                $pkg = $pkgStmt->fetch();
+                $baseQty = $pkg ? $pkg['base_qty'] : 1;
+                
+                $totalBaseQtyRevert = $item['quantity'] * $baseQty;
+
+                $stmtStockOut->execute([
+                    ':qty' => $totalBaseQtyRevert,
+                    ':id' => $item['product_id']
+                ]);
+
+                $stmtMovementOut->execute([
+                    ':prod_id' => $item['product_id'],
+                    ':qty' => $totalBaseQtyRevert,
+                    ':ref' => $id
+                ]);
+            }
+
+            // 2. Delete OLD items
+            $stmtDeleteItems = $this->db->prepare("DELETE FROM purchase_items WHERE purchase_id = :id");
+            $stmtDeleteItems->execute([':id' => $id]);
+
+            // 3. Update Purchase Header
+            $stmtUpdateHeader = $this->db->prepare("
+                UPDATE purchases 
+                SET supplier_id = :supplier, sales_rep_id = :sales_rep, purchase_date = :date, 
+                    total_amount = :total, grand_total = :grand, total_items = :items, 
+                    invoice_photo = COALESCE(:photo, invoice_photo), notes = :notes
+                WHERE id = :id
+            ");
+            $stmtUpdateHeader->execute([
+                ':id' => $id,
+                ':supplier' => $data['supplier_id'],
+                ':sales_rep' => $data['sales_rep_id'] ?? null,
+                ':date' => $data['purchase_date'],
+                ':total' => $data['total_amount'],
+                ':grand' => $data['grand_total'],
+                ':items' => count($items),
+                ':photo' => $data['invoice_photo'] ?? null,
+                ':notes' => $data['notes'] ?? ''
+            ]);
+
+            // 4. Insert NEW Items & Update Stock & Prices
+            $stmtItem = $this->db->prepare("
+                INSERT INTO purchase_items (purchase_id, product_id, packaging_id, quantity, buy_price, ppn_percent, discount_percent, discount_amount, nett_price, total_price, sell_price_retail, sell_price_wholesale)
+                VALUES (:pid, :prod_id, :pkg_id, :qty, :buy, :ppn, :disc_pct, :disc_amt, :nett, :total, :retail, :wholesale)
+            ");
+
+            $stmtUpdatePrice = $this->db->prepare("
+                UPDATE product_packagings 
+                SET buy_price = :buy, sell_price_retail = :retail, sell_price_wholesale = :wholesale, margin_retail = :margin_r, margin_wholesale = :margin_w
+                WHERE id = :pkg_id
+            ");
+
+            $stmtCheckStock = $this->db->prepare("SELECT id, current_qty_base FROM stock WHERE product_id = :id");
+            
+            $stmtInsertStock = $this->db->prepare("
+                INSERT INTO stock (product_id, current_qty_base, last_restock_date, last_restock_qty) 
+                VALUES (:id, :qty, CURRENT_DATE, :qty)
+            ");
+            
+            $stmtUpdateStock = $this->db->prepare("
+                UPDATE stock 
+                SET current_qty_base = current_qty_base + :qty, last_restock_date = CURRENT_DATE, last_restock_qty = :restock
+                WHERE product_id = :id
+            ");
+
+            $stmtMovementIn = $this->db->prepare("
+                INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, notes)
+                VALUES (:prod_id, 'in', :qty, 'purchase', :ref, :notes)
+            ");
+
+            $productModel = new ProductModel();
+            $spModel = new SupplierProductModel();
+
+            foreach ($items as $item) {
+                $packagings = $productModel->getPackagings($item['product_id']);
+                
+                $pkg = null;
+                $multiplier = 1;
+                foreach ($packagings as $p) {
+                    if ($p['level'] == $item['level']) {
+                        $pkg = $p;
+                        $multiplier = $p['base_qty'];
+                        break;
+                    }
+                }
+
+                if (!$pkg) throw new Exception("Kemasan level {$item['level']} tidak ditemukan untuk produk {$item['product_id']}");
+
+                $totalQtyBase = $item['quantity'] * $multiplier;
+
+                // Hitung margin
+                $marginR = $item['sell_price_retail'] > 0 ? (($item['sell_price_retail'] - $item['buy_price']) / $item['sell_price_retail'] * 100) : 0;
+                $marginW = $item['sell_price_wholesale'] > 0 ? (($item['sell_price_wholesale'] - $item['buy_price']) / $item['sell_price_wholesale'] * 100) : 0;
+
+                // PPN & Discount
+                $ppn = $item['ppn_pct'] ?? 0;
+                $discMode = $item['diskon_mode'] ?? 'rp';
+                $discVal = $item['diskon_value'] ?? 0;
+
+                $discAmt = 0;
+                $discPct = 0;
+                if ($discMode === 'pct') {
+                    $discPct = $discVal;
+                    $discAmt = $item['buy_price'] * ($discPct / 100);
+                } else {
+                    $discAmt = $discVal;
+                    $discPct = $item['buy_price'] > 0 ? ($discAmt / $item['buy_price'] * 100) : 0;
+                }
+
+                $nettPrice = $item['buy_price'] + ($item['buy_price'] * ($ppn / 100)) - $discAmt;
+                $totalPriceItem = $nettPrice * $item['quantity'];
+
+                $stmtItem->execute([
+                    ':pid' => $id,
+                    ':prod_id' => $item['product_id'],
+                    ':pkg_id' => $pkg['id'],
+                    ':qty' => $item['quantity'],
+                    ':buy' => $item['buy_price'],
+                    ':ppn' => $ppn,
+                    ':disc_pct' => $discPct,
+                    ':disc_amt' => $discAmt,
+                    ':nett' => $nettPrice,
+                    ':total' => $totalPriceItem,
+                    ':retail' => $item['sell_price_retail'],
+                    ':wholesale' => $item['sell_price_wholesale']
+                ]);
+
+                $stmtUpdatePrice->execute([
+                    ':buy' => $item['buy_price'],
+                    ':retail' => $item['sell_price_retail'],
+                    ':wholesale' => $item['sell_price_wholesale'],
+                    ':margin_r' => $marginR,
+                    ':margin_w' => $marginW,
+                    ':pkg_id' => $pkg['id']
+                ]);
+
+                if (isset($item['qty_prices']) && is_array($item['qty_prices'])) {
+                    $productModel->saveQtyPricesForPackaging($pkg['id'], $item['qty_prices']);
+                }
+
+                $stmtCheckStock->execute([':id' => $item['product_id']]);
+                $stock = $stmtCheckStock->fetch();
+
+                if ($stock) {
+                    $stmtUpdateStock->execute([
+                        ':qty' => $totalQtyBase,
+                        ':restock' => $totalQtyBase,
+                        ':id' => $item['product_id']
+                    ]);
+                } else {
+                    $stmtInsertStock->execute([
+                        ':id' => $item['product_id'],
+                        ':qty' => $totalQtyBase
+                    ]);
+                }
+
+                $stmtMovementIn->execute([
+                    ':prod_id' => $item['product_id'],
+                    ':qty' => $totalQtyBase,
+                    ':ref' => $id,
+                    ':notes' => 'Pembelian Direvisi: ' . $data['purchase_code']
+                ]);
+
+                if ($data['supplier_id']) {
+                    $spModel->addRelation($data['supplier_id'], $item['product_id']);
+                }
+            }
+
+            $this->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->rollback();
+            throw $e;
+        }
+    }
+
     public function getProductPurchaseHistory(int $productId)
     {
         $stmt = $this->db->prepare("

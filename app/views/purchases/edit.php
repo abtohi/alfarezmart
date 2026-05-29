@@ -3,7 +3,7 @@
 <div class="page-section">
     <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;">
         <div>
-            <h2 style="font-size:var(--font-size-lg); font-weight:700; margin-bottom:4px;">Input Barang Masuk</h2>
+            <h2 style="font-size:var(--font-size-lg); font-weight:700; margin-bottom:4px;">Edit Barang Masuk</h2>
             <p style="font-size:var(--font-size-sm); color:var(--text-muted);">Pilih sales, supplier terisi otomatis, lalu scan/cari produk</p>
         </div>
         <a href="<?= BASE_URL ?>purchases" class="btn-outline-custom" style="font-size:var(--font-size-xs); padding:6px 10px; text-decoration:none;">
@@ -38,13 +38,18 @@
                 <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Foto Invoice</label>
                 <input type="file" id="invoicePhotoCam" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event, true)">
                 <input type="file" id="invoicePhotoGal" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event, false)">
-                <div style="display:flex; gap:4px;">
+                <div style="display:flex; gap:4px; align-items:center;">
                     <button type="button" class="btn-outline-custom" id="btnPhotoCam" style="flex:1; padding:8px 4px; font-size:11px;" onclick="document.getElementById('invoicePhotoCam').click()">
                         <i class="bi bi-camera"></i> Kamera
                     </button>
                     <button type="button" class="btn-outline-custom" id="btnPhotoGal" style="flex:1; padding:8px 4px; font-size:11px;" onclick="document.getElementById('invoicePhotoGal').click()">
                         <i class="bi bi-image"></i> Galeri
                     </button>
+                    <?php if (!empty($purchase['invoice_photo'])): ?>
+                        <a href="<?= BASE_URL . $purchase['invoice_photo'] ?>" target="_blank" class="btn-outline-custom" style="padding:8px; font-size:11px; text-decoration:none;" title="Lihat Foto Lama">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    <?php endif; ?>
                 </div>
                 <div style="display:flex; gap:4px; margin-top:4px;">
                     <button type="button" class="btn-primary-custom" id="btnScanAI" style="flex:1; padding:8px 4px; font-size:11px; display:none;" onclick="scanInvoiceWithAI()">
@@ -165,7 +170,7 @@
     </div>
 
     <button id="btnSavePurchase" class="btn-primary-custom" style="width:100%; margin-top:16px; padding:14px; cursor:pointer;" onclick="submitPurchase()">
-        <i class="bi bi-check-circle"></i> Simpan Pembelian
+        <i class="bi bi-check-circle"></i> Simpan Perubahan
     </button>
 </div>
 
@@ -206,12 +211,16 @@ let currentSupplierId = null;
 let currentSupplierName = '';
 let currentSalesRepId = null;
 let currentSalesRepName = '';
-let currentSubtotal = 0;
-let currentGrandTotal = 0;
+let currentSubtotal = <?= (float)($purchase['total_amount'] ?? 0) ?>;
+let currentGrandTotal = <?= (float)($purchase['grand_total'] ?? 0) ?>;
 let filterBySupplierSales = true;
 let invoicePhotoBase64 = null;
 
 let originalPhotoImg = null;
+let purchaseId = <?= (int)($purchase['id'] ?? 0) ?>;
+
+// Inject Existing Data
+const existingItems = <?= json_encode($purchase['items'] ?? []) ?>;
 
 function handlePhotoSelect(e, isCamera) {
     const file = e.target.files[0];
@@ -427,11 +436,9 @@ document.addEventListener('DOMContentLoaded', () => {
         onAdd: () => addSalesRepModal(),
         onChange: (val, label) => {
             onSalesRepPicked(val, label);
-            saveDraft();
         },
         onClear: () => {
             clearSalesRepSelection();
-            saveDraft();
         }
     });
 
@@ -448,13 +455,65 @@ document.addEventListener('DOMContentLoaded', () => {
         if (q.length >= 2) searchInput.dispatchEvent(new Event('input'));
     });
 
-    document.getElementById('purchaseDate').addEventListener('change', saveDraft);
-    document.getElementById('invoiceDiscount').addEventListener('input', saveDraft);
-    document.getElementById('invoiceTax').addEventListener('input', saveDraft);
-
     initPurchaseProductSearch();
-    loadDraft();
+    loadExistingData();
 });
+
+function loadExistingData() {
+    const srId = <?= json_encode($purchase['sales_rep_id'] ?? null) ?>;
+    if (srId && salesRepsLookup[srId]) {
+        salesRepSB.setValue(String(srId), salesRepsLookup[srId].name);
+    } else {
+        const supId = <?= json_encode($purchase['supplier_id'] ?? null) ?>;
+        if (supId) {
+            salesRepSB.setValue('other', '📦 Other — belum tahu supplier/sales');
+            currentSupplierId = supId; // Retain supplier if mapped to other
+        }
+    }
+    document.getElementById('purchaseDate').value = <?= json_encode($purchase['purchase_date'] ?? date('Y-m-d')) ?>;
+    document.getElementById('invoiceDiscount').value = <?= json_encode($purchase['discount_amount'] ?? 0) ?>; // Wait, actually discount amount on header is not directly saved. We'll leave it 0 or load if we added it to model.
+    // For now we'll just populate items.
+    
+    existingItems.forEach(async (itemInfo) => {
+        try {
+            const data = await api(`${BASE_URL}api/products/${itemInfo.product_id}`);
+            if(data) {
+                addProductToCartExisting(data, itemInfo);
+            }
+        } catch(e) { console.warn('Gagal memuat item', e); }
+    });
+}
+
+function addProductToCartExisting(product, itemInfo) {
+    product.level = itemInfo.level;
+    product.quantity = parseFloat(itemInfo.quantity) || 1;
+    product.buy_price = parseFloat(itemInfo.buy_price) || 0;
+    product.ppn_pct = parseFloat(itemInfo.ppn_percent) || 0;
+    product.diskon_value = parseFloat(itemInfo.discount_amount) || 0;
+    if(itemInfo.discount_percent > 0) {
+        product.diskon_mode = 'pct';
+        product.diskon_value = parseFloat(itemInfo.discount_percent);
+    } else {
+        product.diskon_mode = 'rp';
+    }
+    
+    product.packagings.forEach(p => {
+        p.ppn_pct = product.ppn_pct;
+        p.diskon_mode = product.diskon_mode;
+        p.diskon_value = product.diskon_value;
+        if (p.level == product.level) {
+            p.buy_price = product.buy_price;
+            p.sell_price_retail = itemInfo.sell_price_retail;
+            p.sell_price_wholesale = itemInfo.sell_price_wholesale;
+            p.harga_nett = itemInfo.nett_price;
+        }
+    });
+    
+    product.total = product.quantity * product.buy_price;
+    purchaseItems.unshift(product);
+    renderCart();
+    calculateTotal();
+}
 
 function updateFilterHint() {
     const hint = document.getElementById('filterHint');
@@ -1642,57 +1701,12 @@ function calculateGrandTotal() {
     
     document.getElementById('purchaseSubtotal').textContent = formatRupiah(currentSubtotal);
     document.getElementById('purchaseGrandTotal').textContent = formatRupiah(currentGrandTotal);
-    saveDraft();
 }
 
 // ===== Draft and Mass Actions =====
-function saveDraft() {
-    // Collect draft data
-    const draft = {
-        salesRepId: currentSalesRepId,
-        supplierId: currentSupplierId,
-        isOtherMode: isOtherMode,
-        purchaseDate: document.getElementById('purchaseDate').value,
-        invoiceDiscount: document.getElementById('invoiceDiscount').value,
-        invoiceTax: document.getElementById('invoiceTax').value,
-        items: purchaseItems
-    };
-    try {
-        localStorage.setItem('alfarezmart_purchase_draft', JSON.stringify(draft));
-    } catch (e) {
-        console.warn('Gagal menyimpan draft ke localStorage', e);
-    }
-}
-
-function loadDraft() {
-    try {
-        const draftJson = localStorage.getItem('alfarezmart_purchase_draft');
-        if (!draftJson) return;
-        const draft = JSON.parse(draftJson);
-        
-        if (draft.purchaseDate) document.getElementById('purchaseDate').value = draft.purchaseDate;
-        if (draft.invoiceDiscount) document.getElementById('invoiceDiscount').value = draft.invoiceDiscount;
-        if (draft.invoiceTax) document.getElementById('invoiceTax').value = draft.invoiceTax;
-        
-        if (draft.isOtherMode) {
-            salesRepSB.setValue('other', '📦 Other — belum tahu supplier/sales');
-        } else if (draft.salesRepId) {
-            const sr = salesRepsLookup[draft.salesRepId];
-            if (sr) {
-                salesRepSB.setValue(draft.salesRepId, sr.name + (sr.supplier_name ? ' · ' + sr.supplier_name : ''));
-            }
-        }
-
-        if (Array.isArray(draft.items) && draft.items.length > 0) {
-            purchaseItems = draft.items;
-            renderCart();
-            calculateTotal();
-            showToast('Draft sebelumnya berhasil dimuat', 'info');
-        }
-    } catch (e) {
-        console.warn('Gagal memuat draft', e);
-    }
-}
+// Drafts disabled in edit mode
+function saveDraft() {}
+function loadDraft() {}
 
 async function clearAllDrafts() {
     if (purchaseItems.length === 0) return;
@@ -2599,7 +2613,7 @@ async function submitPurchase() {
 
     try {
         const payload = {
-            supplier_id: isOtherMode ? null : (currentSupplierId || null),
+            supplier_id: isOtherMode ? (currentSupplierId || null) : (currentSupplierId || null),
             sales_rep_id: isOtherMode ? null : (currentSalesRepId || null),
             notes: isOtherMode ? 'Other — supplier/sales belum diketahui' : '',
             purchase_date: document.getElementById('purchaseDate').value,
@@ -2607,7 +2621,7 @@ async function submitPurchase() {
             grand_total: currentGrandTotal,
             invoice_photo_base64: invoicePhotoBase64,
             items: purchaseItems.map(i => {
-                const itemNett = parseFloat(i.harga_nett) || parseFloat(i.buy_price) || 0;
+                const itemNett = calcItemNett(parseFloat(i.buy_price) || 0, parseFloat(i.ppn_pct) || 0, i.diskon_mode || 'rp', parseFloat(i.diskon_value) || 0);
                 return {
                     product_id: i.product_id,
                     level: i.level,
@@ -2618,7 +2632,6 @@ async function submitPurchase() {
                     ppn_pct: parseFloat(i.ppn_pct) || 0,
                     diskon_mode: i.diskon_mode || 'rp',
                     diskon_value: parseFloat(i.diskon_value) || 0,
-                    harga_nett: itemNett,
                     packagings: i.packagings.map(p => {
                         const pkgNett = calcItemNett(parseFloat(p.buy_price) || 0, parseFloat(p.ppn_pct) || 0, p.diskon_mode || 'rp', parseFloat(p.diskon_value) || 0);
                         return {
@@ -2636,21 +2649,12 @@ async function submitPurchase() {
             })
         };
 
-        const res = await fetch(`${BASE_URL}api/purchases`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfVal
-            },
-            body: JSON.stringify(payload)
-        });
-        const result = await res.json();
-
-        if (result.success) {
-            showToast('✅ Pembelian berhasil disimpan!', 'success');
-            setTimeout(() => window.location.href = `${BASE_URL}purchases`, 1500);
+        const res = await api(`${BASE_URL}api/purchases/${purchaseId}/update`, 'POST', payload);
+        if (res.success) {
+            showToast('Pembelian berhasil diperbarui!', 'success');
+            setTimeout(() => window.location.href = BASE_URL + 'purchases', 1500);
         } else {
-            showToast('❌ ' + (result.error || 'Gagal menyimpan pembelian'), 'error');
+            showToast('❌ ' + (res.error || 'Gagal menyimpan pembelian'), 'error');
             btn.innerHTML = prevText;
             btn.disabled = false;
         }

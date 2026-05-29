@@ -6,6 +6,19 @@
 
 ---
 
+## [2026-05-29] — Fitur Draft, Edit, dan Hapus Riwayat Pembelian
+
+**Tipe:** Mayor
+**Modul:** Pembelian (Purchases)
+**Dikerjakan oleh:** AI Agent
+
+### Perubahan
+- Menambahkan fungsionalitas Draft pada halaman Input Barang Masuk untuk menyimpan isian ke localStorage.
+- Menambahkan fitur "Kosongkan Semua" dan seleksi jamak "Hapus Terpilih" untuk item dalam cart di halaman Input Barang.
+- Mengimplementasikan fungsionalitas Hapus Pembelian pada Riwayat Pembelian, beserta kemampuan menghapus secara massal dengan update/rollback stok (deleteWithRevert).
+- Menambahkan fitur Edit Pembelian yang memungkinkan pengguna memuat ulang form input dengan nota yang ada dan mengubah harganya.
+- Menambahkan tombol pratinjau foto invoice untuk menampilkan gambar invoice lama pada halaman riwayat.
+
 ## Format Entri
 
 ```
