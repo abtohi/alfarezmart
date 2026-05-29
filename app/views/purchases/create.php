@@ -1349,15 +1349,22 @@ function openAllPackagingsModal(tempId) {
         let tierRowsHtml = tiers.map(t => {
             const totalH = Math.round((parseFloat(t.min_qty)||0) * (parseFloat(t.unit_price)||0));
             return `
-            <div class="tier-row" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:4px;margin-bottom:4px;align-items:center;">
-                <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;" placeholder="Min Qty" value="${t.min_qty}" min="1">
-                <input type="number" class="form-control-dark tier-total-harga" style="font-size:10px;padding:4px;color:var(--success);" placeholder="Total Harga" value="${totalH}" min="0" oninput="recalcTierHint(this)">
-                <select class="form-select-dark tier-mode" style="font-size:10px;padding:4px;">
-                    <option value="both" ${t.sale_mode==='both'?'selected':''}>Ecer & Grosir</option>
-                    <option value="retail" ${t.sale_mode==='retail'?'selected':''}>Ecer saja</option>
-                    <option value="wholesale" ${t.sale_mode==='wholesale'?'selected':''}>Grosir saja</option>
-                </select>
-                <button type="button" onclick="this.closest('.tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;"><i class="bi bi-x"></i></button>
+            <div class="tier-row" style="background:rgba(0,0,0,0.1);border-radius:6px;padding:6px;margin-bottom:6px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:4px;margin-bottom:4px;align-items:center;">
+                    <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;" placeholder="Min Qty" value="${t.min_qty}" min="1">
+                    <input type="number" class="form-control-dark tier-total-harga" style="font-size:10px;padding:4px;color:var(--success);" placeholder="Total Harga" value="${totalH}" min="0" oninput="recalcTierHint(this)">
+                    <button type="button" onclick="this.closest('.tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;"><i class="bi bi-x"></i></button>
+                </div>
+                <div style="margin-bottom:4px;">
+                    <select class="form-select-dark tier-mode" style="font-size:10px;padding:4px;width:100%;">
+                        <option value="both" ${t.sale_mode==='both'?'selected':''}>Ecer &amp; Grosir</option>
+                        <option value="retail" ${t.sale_mode==='retail'?'selected':''}>Ecer saja</option>
+                        <option value="wholesale" ${t.sale_mode==='wholesale'?'selected':''}>Grosir saja</option>
+                    </select>
+                </div>
+                <div>
+                    <input type="text" class="form-control-dark tier-label" value="${t.label||''}" placeholder="Label (opsional)" style="font-size:10px;padding:4px;width:100%;">
+                </div>
             </div>`;
         }).join('');
 
@@ -1430,7 +1437,6 @@ function openAllPackagingsModal(tempId) {
                     <span><i class="bi bi-layers"></i> Harga Spesial / Tier per Kuantitas</span>
                     <button type="button" onclick="addTierRow(this)" style="background:var(--info-bg);color:var(--info);border:none;border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;"><i class="bi bi-plus"></i> Tambah</button>
                 </div>
-                <div style="font-size:9px;color:var(--text-muted);margin-bottom:4px;display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:4px;"><span>Min Qty</span><span>Total Harga</span><span>Mode</span><span></span></div>
                 <div class="tier-rows-container">${tierRowsHtml}</div>
                 ${tiers.length===0 ? `<div class="tier-empty-hint" style="font-size:10px;color:var(--text-muted);text-align:center;padding:4px;"><i class="bi bi-info-circle"></i> Belum ada harga tier. Klik Tambah untuk menambahkan.</div>` : ''}
             </div>
@@ -1548,29 +1554,36 @@ function addTierRow(btn) {
     if (emptyHint) emptyHint.remove();
     const row = document.createElement('div');
     row.className = 'tier-row';
-    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:4px;margin-bottom:4px;align-items:center;';
+    row.style.cssText = 'background:rgba(0,0,0,0.1);border-radius:6px;padding:6px;margin-bottom:6px;';
     row.innerHTML = `
-        <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;" placeholder="Min Qty" min="1">
-        <input type="number" class="form-control-dark tier-total-harga" style="font-size:10px;padding:4px;color:var(--success);" placeholder="Total Harga" min="0" oninput="recalcTierHint(this)">
-        <select class="form-select-dark tier-mode" style="font-size:10px;padding:4px;">
-            <option value="both">Ecer & Grosir</option><option value="retail">Ecer saja</option><option value="wholesale">Grosir saja</option>
-        </select>
-        <button type="button" onclick="this.closest('.tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;"><i class="bi bi-x"></i></button>`;
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:4px;margin-bottom:4px;align-items:center;">
+            <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;" placeholder="Min Qty" min="1">
+            <input type="number" class="form-control-dark tier-total-harga" style="font-size:10px;padding:4px;color:var(--success);" placeholder="Total Harga" min="0" oninput="recalcTierHint(this)">
+            <button type="button" onclick="this.closest('.tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;"><i class="bi bi-x"></i></button>
+        </div>
+        <div style="margin-bottom:4px;">
+            <select class="form-select-dark tier-mode" style="font-size:10px;padding:4px;width:100%;">
+                <option value="both">Ecer &amp; Grosir</option><option value="retail">Ecer saja</option><option value="wholesale">Grosir saja</option>
+            </select>
+        </div>
+        <div>
+            <input type="text" class="form-control-dark tier-label" placeholder="Label (opsional)" style="font-size:10px;padding:4px;width:100%;">
+        </div>`;
     container.appendChild(row);
 }
 
 /** Show per-unit hint for tier total harga input */
 function recalcTierHint(el) {
-    const row = el.closest('.tier-row');
+    const row = el.closest('.tier-row') || el.closest('.drawer-tier-row');
     if (!row) return;
-    const minQty = parseFloat(row.querySelector('.tier-min-qty')?.value) || 0;
-    const totalH = parseFloat(el.value) || 0;
+    const minQty = parseFloat(row.querySelector('.tier-min-qty, .drawer-tier-min-qty')?.value) || 0;
+    const totalH = parseFloat(row.querySelector('.tier-total-harga, .drawer-tier-total')?.value) || 0;
     let hint = row.querySelector('.tier-hint');
     if (!hint) {
         hint = document.createElement('div');
         hint.className = 'tier-hint';
-        hint.style.cssText = 'font-size:9px;color:var(--text-muted);grid-column:1/-1;padding-left:2px;';
-        row.after(hint);
+        hint.style.cssText = 'font-size:9px;color:var(--text-muted);padding-left:2px;';
+        row.querySelector('.tier-mode, .drawer-tier-mode').parentElement.after(hint);
     }
     hint.textContent = (minQty > 0 && totalH > 0)
         ? `≈ Rp${Math.round(totalH/minQty).toLocaleString('id-ID')} / pcs`
@@ -1840,15 +1853,22 @@ function buildDrawerRowHtml(item, prefix) {
         const tiers = pkg.qty_prices || [];
         const tierRowsHtml = tiers.map(t => {
             const th = Math.round((parseFloat(t.min_qty)||0) * (parseFloat(t.unit_price)||0));
-            return `<div class="drawer-tier-row" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:4px;margin-bottom:4px;align-items:center;">
-                <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;" placeholder="Min Qty" value="${t.min_qty}" min="1">
-                <input type="number" class="form-control-dark drawer-tier-total" style="font-size:10px;padding:4px;color:var(--success);" placeholder="Total Harga" value="${th}" min="0" oninput="recalcTierHint(this)">
-                <select class="form-select-dark drawer-tier-mode" style="font-size:10px;padding:4px;">
-                    <option value="both" ${t.sale_mode==='both'?'selected':''}>Ecer & Grosir</option>
-                    <option value="retail" ${t.sale_mode==='retail'?'selected':''}>Ecer saja</option>
-                    <option value="wholesale" ${t.sale_mode==='wholesale'?'selected':''}>Grosir saja</option>
-                </select>
-                <button type="button" onclick="this.closest('.drawer-tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;"><i class="bi bi-x"></i></button>
+            return `<div class="drawer-tier-row" style="background:rgba(0,0,0,0.1);border-radius:6px;padding:6px;margin-bottom:6px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:4px;margin-bottom:4px;align-items:center;">
+                    <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;" placeholder="Min Qty" value="${t.min_qty}" min="1">
+                    <input type="number" class="form-control-dark drawer-tier-total" style="font-size:10px;padding:4px;color:var(--success);" placeholder="Total Harga" value="${th}" min="0" oninput="recalcTierHint(this)">
+                    <button type="button" onclick="this.closest('.drawer-tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;"><i class="bi bi-x"></i></button>
+                </div>
+                <div style="margin-bottom:4px;">
+                    <select class="form-select-dark drawer-tier-mode" style="font-size:10px;padding:4px;width:100%;">
+                        <option value="both" ${t.sale_mode==='both'?'selected':''}>Ecer &amp; Grosir</option>
+                        <option value="retail" ${t.sale_mode==='retail'?'selected':''}>Ecer saja</option>
+                        <option value="wholesale" ${t.sale_mode==='wholesale'?'selected':''}>Grosir saja</option>
+                    </select>
+                </div>
+                <div>
+                    <input type="text" class="form-control-dark drawer-tier-label" value="${t.label||''}" placeholder="Label (opsional)" style="font-size:10px;padding:4px;width:100%;">
+                </div>
             </div>`;
         }).join('');
 
@@ -1919,7 +1939,6 @@ function buildDrawerRowHtml(item, prefix) {
                     <span><i class="bi bi-layers"></i> Harga Tier / Kuantitas</span>
                     <button type="button" onclick="addDrawerTierRow(this)" style="background:var(--info-bg);color:var(--info);border:none;border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;"><i class="bi bi-plus"></i> Tambah</button>
                 </div>
-                <div style="font-size:9px;color:var(--text-muted);margin-bottom:3px;display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:4px;"><span>Min Qty</span><span>Total Harga</span><span>Mode</span><span></span></div>
                 <div class="drawer-tier-rows-container">${tierRowsHtml}</div>
                 ${tiers.length === 0 ? `<div class="drawer-tier-empty" style="font-size:9px;color:var(--text-muted);text-align:center;padding:4px;"><i class="bi bi-info-circle"></i> Belum ada harga tier. Klik Tambah.</div>` : ''}
             </div>
@@ -1976,14 +1995,21 @@ function addDrawerTierRow(btn) {
     if (emptyHint) emptyHint.remove();
     const row = document.createElement('div');
     row.className = 'drawer-tier-row';
-    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:4px;margin-bottom:4px;align-items:center;';
+    row.style.cssText = 'background:rgba(0,0,0,0.1);border-radius:6px;padding:6px;margin-bottom:6px;';
     row.innerHTML = `
-        <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;" placeholder="Min Qty" min="1">
-        <input type="number" class="form-control-dark drawer-tier-total" style="font-size:10px;padding:4px;color:var(--success);" placeholder="Total Harga" min="0" oninput="recalcTierHint(this)">
-        <select class="form-select-dark drawer-tier-mode" style="font-size:10px;padding:4px;">
-            <option value="both">Ecer & Grosir</option><option value="retail">Ecer saja</option><option value="wholesale">Grosir saja</option>
-        </select>
-        <button type="button" onclick="this.closest('.drawer-tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;"><i class="bi bi-x"></i></button>`;
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:4px;margin-bottom:4px;align-items:center;">
+            <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;" placeholder="Min Qty" min="1">
+            <input type="number" class="form-control-dark drawer-tier-total" style="font-size:10px;padding:4px;color:var(--success);" placeholder="Total Harga" min="0" oninput="recalcTierHint(this)">
+            <button type="button" onclick="this.closest('.drawer-tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 8px;cursor:pointer;font-size:12px;"><i class="bi bi-x"></i></button>
+        </div>
+        <div style="margin-bottom:4px;">
+            <select class="form-select-dark drawer-tier-mode" style="font-size:10px;padding:4px;width:100%;">
+                <option value="both">Ecer &amp; Grosir</option><option value="retail">Ecer saja</option><option value="wholesale">Grosir saja</option>
+            </select>
+        </div>
+        <div>
+            <input type="text" class="form-control-dark drawer-tier-label" placeholder="Label (opsional)" style="font-size:10px;padding:4px;width:100%;">
+        </div>`;
     container.appendChild(row);
 }
 
