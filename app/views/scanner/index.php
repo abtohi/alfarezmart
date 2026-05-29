@@ -54,15 +54,19 @@ async function lookupBarcode() {
                 }
                 const searchData = await OfflineDB.searchProducts(code);
                 if (searchData && searchData.length > 0) {
-                    resultDiv.innerHTML = searchData.map(prod => `
-                        <a href="${BASE_URL}products/${prod.id}" class="product-card">
-                            <div class="product-icon"><i class="bi bi-box-seam"></i></div>
-                            <div class="product-info">
-                                <div class="product-name">${prod.full_name}</div>
-                                <div class="product-category">${prod.brand_name || ''} · ${prod.category_name || ''}</div>
+                    if (searchData.length === 1) {
+                        showProductResultOffline(searchData[0]);
+                    } else {
+                        resultDiv.innerHTML = searchData.map(prod => `
+                            <div class="product-card" onclick='showProductResultOffline(${JSON.stringify(prod).replace(/'/g, "&#39;")})' style="cursor:pointer;">
+                                <div class="product-icon"><i class="bi bi-box-seam"></i></div>
+                                <div class="product-info">
+                                    <div class="product-name">${prod.full_name}</div>
+                                    <div class="product-category">${prod.brand_name || ''} · ${prod.category_name || ''}</div>
+                                </div>
                             </div>
-                        </a>
-                    `).join('');
+                        `).join('');
+                    }
                 } else {
                     resultDiv.innerHTML = '<div class="empty-state"><i class="bi bi-search"></i><h3>Tidak Ditemukan</h3><p>Produk dengan barcode/nama tersebut tidak ada di database lokal (Offline)</p></div>';
                 }
@@ -77,15 +81,17 @@ async function lookupBarcode() {
             const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/search?q=${encodeURIComponent(code)}`);
             if (!res.ok) throw new Error('Search failed');
             const searchData = await res.json();
-            if (searchData.length > 0) {
+            if (searchData.length === 1) {
+                fetchProductDetail(searchData[0].id);
+            } else if (searchData.length > 0) {
                 resultDiv.innerHTML = searchData.map(p => `
-                    <a href="<?= BASE_URL ?>products/${p.id}" class="product-card">
+                    <div class="product-card" onclick="fetchProductDetail(${p.id})" style="cursor:pointer;">
                         <div class="product-icon"><i class="bi bi-box-seam"></i></div>
                         <div class="product-info">
                             <div class="product-name">${p.full_name}</div>
                             <div class="product-category">${p.brand_name || ''} · ${p.category_name || ''}</div>
                         </div>
-                    </a>
+                    </div>
                 `).join('');
             } else {
                 resultDiv.innerHTML = '<div class="empty-state"><i class="bi bi-search"></i><h3>Tidak Ditemukan</h3><p>Produk dengan barcode/nama tersebut tidak ada di database</p></div>';
@@ -93,6 +99,20 @@ async function lookupBarcode() {
         } catch (e2) {
             resultDiv.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><h3>Error</h3><p>Gagal mencari produk</p></div>';
         }
+    }
+}
+
+async function fetchProductDetail(id) {
+    const resultDiv = document.getElementById('scanResult');
+    resultDiv.innerHTML = '<div style="text-align:center;padding:20px;"><div class="skeleton" style="width:100%;height:120px;"></div></div>';
+    
+    try {
+        const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/${id}`);
+        if (!res.ok) throw new Error('Not found');
+        const data = await res.json();
+        showProductResult(data);
+    } catch (e) {
+        resultDiv.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><h3>Error</h3><p>Gagal mengambil detail produk</p></div>';
     }
 }
 
