@@ -11,6 +11,20 @@ if ($userLevel === 'staff') {
     $geoLng = $settingModel->get('store_longitude', '');
     $geoRadius = $settingModel->get('store_radius_meters', '25');
 }
+
+/**
+ * Generate a secure URL to serve an invoice photo from storage.
+ * Photos are stored outside public_html, served via PHP endpoint.
+ * @param string $storedPath  e.g. "storage/uploads/invoice_photos/inv_PUR-XXXXXX.jpg"
+ * @return string  Full URL to the serving endpoint
+ */
+if (!function_exists('invoicePhotoUrl')) {
+    function invoicePhotoUrl(string $storedPath): string {
+        if (empty($storedPath)) return '';
+        $filename = basename($storedPath);
+        return BASE_URL . 'api/storage/invoice-photo?file=' . urlencode($filename);
+    }
+}
 ?>
 <html lang="id">
 <head>

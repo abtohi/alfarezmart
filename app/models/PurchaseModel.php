@@ -215,12 +215,14 @@ class PurchaseModel extends Model
         if (!$purchase) return null;
 
         $stmtItems = $this->db->prepare("
-            SELECT pi.*, pr.full_name as product_name, pr.short_label, u.name as unit_name
+            SELECT pi.*, pr.full_name as product_name, pr.short_label,
+                   u.name as unit_name, pkg.level as level
             FROM purchase_items pi
             JOIN products pr ON pi.product_id = pr.id
             JOIN product_packagings pkg ON pi.packaging_id = pkg.id
             JOIN units u ON pkg.unit_id = u.id
             WHERE pi.purchase_id = :id
+            ORDER BY pi.id ASC
         ");
         $stmtItems->execute([':id' => $id]);
         $purchase['items'] = $stmtItems->fetchAll();

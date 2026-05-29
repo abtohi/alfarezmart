@@ -1090,8 +1090,12 @@ class ApiController extends Controller
                     if (in_array($type, ['jpg', 'jpeg', 'png', 'webp'])) {
                         $base64 = base64_decode($base64);
                         if ($base64 !== false) {
+                            $dir = STORAGE_PATH . '/uploads/invoice_photos';
+                            if (!is_dir($dir)) {
+                                mkdir($dir, 0755, true);
+                            }
                             $filename = 'inv_' . $invoiceNumber . '_' . time() . '.' . $type;
-                            $filepath = STORAGE_PATH . '/uploads/invoice_photos/' . $filename;
+                            $filepath = $dir . '/' . $filename;
                             if (file_put_contents($filepath, $base64)) {
                                 $photoPath = 'storage/uploads/invoice_photos/' . $filename;
                             }
@@ -1146,8 +1150,12 @@ class ApiController extends Controller
                     if (in_array($type, ['jpg', 'jpeg', 'png', 'webp'])) {
                         $base64 = base64_decode($base64);
                         if ($base64 !== false) {
+                            $dir = STORAGE_PATH . '/uploads/invoice_photos';
+                            if (!is_dir($dir)) {
+                                mkdir($dir, 0755, true);
+                            }
                             $filename = 'inv_' . $existing['purchase_code'] . '_' . time() . '.' . $type;
-                            $filepath = STORAGE_PATH . '/uploads/invoice_photos/' . $filename;
+                            $filepath = $dir . '/' . $filename;
                             if (file_put_contents($filepath, $base64)) {
                                 $photoPath = 'storage/uploads/invoice_photos/' . $filename;
                             }
@@ -1176,6 +1184,50 @@ class ApiController extends Controller
 
     public function uploadInvoicePhoto(int $id) { 
         $this->json(['message' => 'Coming soon']); 
+    }
+
+    /**
+     * Serve invoice photo securely from STORAGE_PATH (outside public_html).
+     * Usage: GET /api/storage/invoice-photo?file=inv_PUR-XXXXXX.jpg
+     */
+    public function serveInvoicePhoto()
+    {
+        // Get filename from query string (only the basename, no paths)
+        $file = $_GET['file'] ?? '';
+
+        // Security: strip any path traversal attempts, keep only basename
+        $file = basename($file);
+
+        if (empty($file)) {
+            http_response_code(400);
+            echo 'Missing file parameter';
+            exit;
+        }
+
+        $filepath = STORAGE_PATH . '/uploads/invoice_photos/' . $file;
+
+        if (!file_exists($filepath) || !is_file($filepath)) {
+            http_response_code(404);
+            echo 'File not found';
+            exit;
+        }
+
+        // Detect MIME type and restrict to images only
+        $mime = mime_content_type($filepath);
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (!in_array($mime, $allowedMimes)) {
+            http_response_code(403);
+            echo 'Forbidden file type';
+            exit;
+        }
+
+        // Send image response with caching headers
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . filesize($filepath));
+        header('Cache-Control: private, max-age=86400');
+        header('X-Content-Type-Options: nosniff');
+        readfile($filepath);
+        exit;
     }
 
     // ===== SALES REPS =====

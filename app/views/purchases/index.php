@@ -83,7 +83,7 @@
                                 <!-- Actions Container -->
                                 <div style="position:absolute; top:50%; right:12px; transform:translateY(-50%); display:flex; gap:12px; align-items:center;" onclick="event.preventDefault(); event.stopPropagation();">
                                     <?php if (!empty($p['invoice_photo'])): ?>
-                                        <a href="<?= BASE_URL . htmlspecialchars($p['invoice_photo']) ?>" target="_blank" style="color:var(--info); font-size:1.2rem; cursor:pointer;" title="Lihat Foto Invoice">
+                                        <a href="<?= invoicePhotoUrl($p['invoice_photo']) ?>" target="_blank" style="color:var(--info); font-size:1.2rem; cursor:pointer;" title="Lihat Foto Invoice">
                                             <i class="bi bi-image"></i>
                                         </a>
                                     <?php endif; ?>

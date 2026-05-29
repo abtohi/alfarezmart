@@ -95,6 +95,8 @@ $router->post('/api/purchases/{id}/photo', 'ApiController@uploadInvoicePhoto');
 $router->post('/api/purchases/{id}/update', 'ApiController@updatePurchase');
 $router->post('/api/purchases/{id}/delete', 'ApiController@deletePurchase');
 $router->get('/api/purchases/search-products', 'ApiController@searchProductsForPurchase');
+// Serve invoice photo files securely from storage (outside public_html)
+$router->get('/api/storage/invoice-photo', 'ApiController@serveInvoicePhoto');
 
 // Reports API
 $router->get('/api/reports/product-history/{id}', 'ApiController@getProductHistory');

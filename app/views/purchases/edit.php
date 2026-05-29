@@ -46,7 +46,7 @@
                         <i class="bi bi-image"></i> Galeri
                     </button>
                     <?php if (!empty($purchase['invoice_photo'])): ?>
-                        <a href="<?= BASE_URL . $purchase['invoice_photo'] ?>" target="_blank" class="btn-outline-custom" style="padding:8px; font-size:11px; text-decoration:none;" title="Lihat Foto Lama">
+                        <a href="<?= invoicePhotoUrl($purchase['invoice_photo']) ?>" target="_blank" class="btn-outline-custom" style="padding:8px; font-size:11px; text-decoration:none;" title="Lihat Foto Lama">
                             <i class="bi bi-eye"></i>
                         </a>
                     <?php endif; ?>
