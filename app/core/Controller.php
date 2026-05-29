@@ -3,6 +3,14 @@
  * Base Controller
  */
 
+if (!function_exists('invoicePhotoUrl')) {
+    function invoicePhotoUrl(string $storedPath): string {
+        if (empty($storedPath)) return '';
+        $filename = basename($storedPath);
+        return BASE_URL . 'api/storage/invoice-photo?file=' . urlencode($filename);
+    }
+}
+
 if (!class_exists('Controller')) {
     class Controller
     {

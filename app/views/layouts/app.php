@@ -18,13 +18,7 @@ if ($userLevel === 'staff') {
  * @param string $storedPath  e.g. "storage/uploads/invoice_photos/inv_PUR-XXXXXX.jpg"
  * @return string  Full URL to the serving endpoint
  */
-if (!function_exists('invoicePhotoUrl')) {
-    function invoicePhotoUrl(string $storedPath): string {
-        if (empty($storedPath)) return '';
-        $filename = basename($storedPath);
-        return BASE_URL . 'api/storage/invoice-photo?file=' . urlencode($filename);
-    }
-}
+
 ?>
 <html lang="id">
 <head>
