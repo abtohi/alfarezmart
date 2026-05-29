@@ -1710,7 +1710,7 @@ function loadDraft() {}
 
 async function clearAllDrafts() {
     if (purchaseItems.length === 0) return;
-    const confirm = await AppModal.confirm({
+    const confirm = await AppModal.show({
         title: 'Kosongkan Inputan?',
         bodyHTML: 'Semua barang dalam daftar ini akan dihapus.',
         submitText: 'Ya, Kosongkan',
@@ -1753,7 +1753,7 @@ async function deleteSelectedItems() {
     const checkboxes = document.querySelectorAll('.item-select-chk:checked');
     if (checkboxes.length === 0) return;
     
-    const confirm = await AppModal.confirm({
+    const confirm = await AppModal.show({
         title: `Hapus ${checkboxes.length} Barang?`,
         bodyHTML: `Anda akan menghapus ${checkboxes.length} barang terpilih dari daftar.`,
         submitText: 'Hapus Terpilih',
