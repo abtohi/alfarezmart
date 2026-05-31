@@ -2627,22 +2627,32 @@ class ApiController extends Controller
                     }
                     
                     // ========== POIN 2: NAMA BARANG SUPPLIER (Supplier Invoice Name) ==========
-                    // 2. Exact supplier_invoice_name match — very high priority for precise matching
+                    // Support multi-nama: supplier_invoice_name bisa berisi banyak baris/nama
                     if (!empty($p['supplier_invoice_name'])) {
-                        $normInvName = strtolower(trim($p['supplier_invoice_name']));
+                        // Pecah menjadi array nama (per baris, atau koma)
+                        $rawInvNames = preg_split('/[\n\r,]+/', $p['supplier_invoice_name']);
+                        $invNames = array_filter(array_map('trim', $rawInvNames));
+                        
                         $normSuppInvName = strtolower(trim($extractedSuppInvName));
                         $normName = strtolower(trim($name));
                         
-                        // Try matching with extracted supplier_invoice_name first
-                        if (!empty($normSuppInvName) && $normSuppInvName === $normInvName) {
-                            $score += 95; // POIN 2: Nama supplier exact match
-                        } elseif (!empty($normName) && $normName === $normInvName) {
-                            $score += 90;
-                        } elseif (!empty($normSuppInvName) && (stripos($normInvName, $normSuppInvName) !== false || stripos($normSuppInvName, $normInvName) !== false)) {
-                            $score += 28; // Fuzzy match untuk supplier invoice name
-                        } elseif (!empty($normName) && (stripos($normInvName, $normName) !== false || stripos($normName, $normInvName) !== false)) {
-                            $score += 25;
+                        $poin2Score = 0;
+                        foreach ($invNames as $invNameEntry) {
+                            $normInvEntry = strtolower(trim($invNameEntry));
+                            if (empty($normInvEntry)) continue;
+                            
+                            // Exact match: extracted supplier_invoice_name vs each stored name
+                            if (!empty($normSuppInvName) && $normSuppInvName === $normInvEntry) {
+                                $poin2Score = max($poin2Score, 95); // POIN 2: Nama supplier exact match
+                            } elseif (!empty($normName) && $normName === $normInvEntry) {
+                                $poin2Score = max($poin2Score, 90);
+                            } elseif (!empty($normSuppInvName) && (stripos($normInvEntry, $normSuppInvName) !== false || stripos($normSuppInvName, $normInvEntry) !== false)) {
+                                $poin2Score = max($poin2Score, 28); // Fuzzy match
+                            } elseif (!empty($normName) && (stripos($normInvEntry, $normName) !== false || stripos($normName, $normInvEntry) !== false)) {
+                                $poin2Score = max($poin2Score, 25);
+                            }
                         }
+                        $score += $poin2Score;
                     }
                     
                     // ========== POIN 3: ANALISIS NAMA PRODUK (Product Name/Label Analysis) ==========
@@ -2665,10 +2675,16 @@ class ApiController extends Controller
                         $nameSimilarities[] = $simInv;
                     }
                     
-                    // Match against supplier_invoice_name (for fuzzy matching if not exact)
+                    // Match against supplier_invoice_name (for fuzzy matching if not exact) — support multi-nama
                     if (!empty($p['supplier_invoice_name'])) {
-                        similar_text(strtolower($name), strtolower($p['supplier_invoice_name']), $simSuppInv);
-                        $nameSimilarities[] = $simSuppInv;
+                        $invEntries = preg_split('/[\n\r,]+/', $p['supplier_invoice_name']);
+                        foreach ($invEntries as $invEntry) {
+                            $invEntry = trim($invEntry);
+                            if (!empty($invEntry)) {
+                                similar_text(strtolower($name), strtolower($invEntry), $simSuppInvX);
+                                $nameSimilarities[] = $simSuppInvX;
+                            }
+                        }
                     }
                     
                     $bestNameSim = max($nameSimilarities);

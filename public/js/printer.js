@@ -788,9 +788,11 @@ window.openPrinterChooser = function (tp) {
                 </div>
                 `}
 
-                <button id="pcScanNewBtn" style="width:100%;padding:14px;background:${saved ? 'transparent;border:1px solid #2a2a4a;color:#cbd5e1' : 'linear-gradient(135deg,#e63946,#b8202e);border:none;color:#fff'};border-radius:12px;font-weight:600;font-size:0.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-                    <i class="bi bi-search"></i> ${saved ? 'Cari Printer Lain' : 'Cari & Hubungkan Printer Bluetooth'}
+                ${saved ? '' : `
+                <button id="pcScanNewBtn" style="width:100%;padding:14px;background:linear-gradient(135deg,#e63946,#b8202e);border:none;color:#fff;border-radius:12px;font-weight:600;font-size:0.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                    <i class="bi bi-search"></i> Cari & Hubungkan Printer Bluetooth
                 </button>
+                `}
 
                 ${saved ? `
                 <button id="pcForgetBtn" style="width:100%;margin-top:10px;padding:10px;background:none;border:none;color:#e63946;font-size:0.78rem;cursor:pointer;text-decoration:underline;">
@@ -837,18 +839,20 @@ window.openPrinterChooser = function (tp) {
                 }
             };
         }
-        document.getElementById('pcScanNewBtn').onclick = async () => {
-            const btn = document.getElementById('pcScanNewBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Membuka pemilih Bluetooth...';
-            try {
-                await tp.connect(true);
-                cleanup(); resolve(true);
-            } catch (e) {
-                if (typeof showToast === 'function') showToast(e.message || 'Gagal menghubungkan', 'error');
-                cleanup(); resolve(false);
-            }
-        };
+        const btnScanNew = document.getElementById('pcScanNewBtn');
+        if (btnScanNew) {
+            btnScanNew.onclick = async () => {
+                btnScanNew.disabled = true;
+                btnScanNew.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Membuka pemilih Bluetooth...';
+                try {
+                    await tp.connect(true);
+                    cleanup(); resolve(true);
+                } catch (e) {
+                    if (typeof showToast === 'function') showToast(e.message || 'Gagal menghubungkan', 'error');
+                    cleanup(); resolve(false);
+                }
+            };
+        }
         const btnForget = document.getElementById('pcForgetBtn');
         if (btnForget) {
             btnForget.onclick = () => {

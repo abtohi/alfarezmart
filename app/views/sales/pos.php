@@ -525,6 +525,13 @@ function renderCart() {
             ? `<div class="cart-item-note" style="font-size:var(--font-size-xs);color:var(--info);margin-top:3px;">${escapeHtml(item.price_note)}</div>`
             : `<div class="cart-item-note" style="display:none;"></div>`;
 
+        // Harga modal samar (hanya terlihat oleh admin, sangat kecil & redup)
+        const curPkg = item.packagings?.find(p => p.level == item.level);
+        const buyPrice = parseFloat(curPkg?.buy_price) || 0;
+        const buyPriceBlock = buyPrice > 0
+            ? `<div style="font-size:9px;color:rgba(255,255,255,0.18);margin-top:2px;letter-spacing:0.3px;user-select:none;">M: ${formatRupiah(buyPrice)}/${escapeHtml(item.unit_name)}</div>`
+            : '';
+
         html += `
             <div data-cart-id="${item.id}" style="background:var(--surface-1);border-radius:var(--radius-md);padding:14px;margin-bottom:10px;border:1px solid var(--border-color);">
                 <div style="display:grid;grid-template-columns:1fr auto;gap:12px;margin-bottom:10px;">
@@ -532,6 +539,7 @@ function renderCart() {
                         <div style="font-weight:600;font-size:0.95rem;margin-bottom:3px;line-height:1.3;color:var(--text-primary);">${escapeHtml(item.name)}</div>
                         <div class="cart-item-unit-price" style="color:var(--text-muted);font-size:0.85rem;">${item.use_custom_price ? `${formatRupiah(item.unit_price)} / ${escapeHtml(item.unit_name)} (Total ${formatRupiah(item.total)})` : `${formatRupiah(item.unit_price)} / ${escapeHtml(item.unit_name)}`}</div>
                         ${noteBlock}
+                        ${buyPriceBlock}
                     </div>
                     <div class="cart-item-total" style="font-weight:700;font-size:1rem;text-align:right;color:var(--primary);">${formatRupiah(item.total)}</div>
                 </div>
@@ -973,26 +981,8 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo) {
         btnPrint.style.display = 'none';
         if (statusBar) statusBar.style.display = 'none';
 
-        if (hasSaved) {
-            let btnNew = document.getElementById('btnConnectNewPrinter');
-            if (!btnNew) {
-                btnNew = document.createElement('button');
-                btnNew.id = 'btnConnectNewPrinter';
-                btnNew.className = 'btn-outline-custom';
-                btnNew.innerHTML = '<i class="bi bi-search"></i> Cari Baru';
-                btnNew.style.marginLeft = '8px';
-                btnConnect.parentNode.appendChild(btnNew);
-            }
-            btnNew.style.display = 'flex';
-            btnNew.onclick = async () => {
-                tp.clearLastDevice();
-                showDisconnected(false);
-                btnConnect.click();
-            };
-        } else {
-            const btnNew = document.getElementById('btnConnectNewPrinter');
-            if (btnNew) btnNew.style.display = 'none';
-        }
+        const btnNew = document.getElementById('btnConnectNewPrinter');
+        if (btnNew) btnNew.style.display = 'none';
     }
 
     function setupConnectButton() {
@@ -1000,14 +990,9 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo) {
             try {
                 btnConnect.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menghubungkan...';
                 btnConnect.disabled = true;
-                // Pakai modal styled dulu (sesuai design system) — fallback OS picker
                 let connected = false;
-                if (typeof window.openPrinterChooser === 'function') {
-                    connected = await window.openPrinterChooser(tp);
-                } else {
-                    await tp.connect();
-                    connected = tp.isConnected();
-                }
+                await tp.connect();
+                connected = tp.isConnected();
                 if (!connected) {
                     showDisconnected(tp.hasSavedDevice());
                     setupConnectButton();

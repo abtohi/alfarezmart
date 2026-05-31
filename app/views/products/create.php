@@ -105,8 +105,9 @@
                     <input type="text" name="supplier_product_code" id="supplierProductCode" placeholder="Cth: CMY-125, INM-001 (kode di faktur supplier)" class="form-control-dark" style="width:100%;">
                 </div>
                 <div>
-                    <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Nama Barang di Invoice Supplier</label>
-                    <input type="text" name="supplier_invoice_name" id="supplierInvoiceName" placeholder="Cth: CIMORY UHT PORORO 125ML (nama persis di faktur)" class="form-control-dark" style="width:100%;">
+                    <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Nama Barang di Invoice Supplier (Multi-nama)</label>
+                    <textarea name="supplier_invoice_name" id="supplierInvoiceName" placeholder="Satu nama per baris. Cth:&#10;CIMORY UHT PORORO 125ML&#10;CIMORY PORORO CHOCO&#10;CMY UHT 125" class="form-control-dark" style="width:100%;min-height:72px;resize:vertical;font-size:var(--font-size-xs);"></textarea>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:4px;"><i class="bi bi-info-circle"></i> Tulis beberapa variasi nama produk (1 per baris) agar AI lebih akurat mengenali produk ini dari invoice supplier.</div>
                 </div>
             </div>
         </div>

@@ -40,12 +40,15 @@
         <label style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-bottom:6px; font-weight:600;">
             <i class="bi bi-building"></i> Supplier Tujuan
         </label>
-        <select id="supplierSelect" class="form-control" style="background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:10px; width:100%;">
-            <option value="">— Pilih supplier (opsional, untuk header WA) —</option>
-            <?php foreach ($suppliers as $s): ?>
-                <option value="<?= (int)$s['id'] ?>" data-name="<?= htmlspecialchars($s['name']) ?>"><?= htmlspecialchars($s['name']) ?></option>
-            <?php endforeach; ?>
-        </select>
+        <div style="position:relative;">
+            <input type="hidden" id="supplierSelect" value="">
+            <input type="hidden" id="supplierName" value="">
+            <div class="search-input-wrapper" style="width:100%;">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" id="supplierSearchInput" autocomplete="off" placeholder="Ketik nama supplier atau sales..." class="form-control" style="background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:10px 10px 10px 36px; width:100%; font-size:var(--font-size-sm);">
+            </div>
+            <div id="supplierSearchResults" style="position:absolute; top:100%; left:0; right:0; max-height:200px; overflow-y:auto; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-md); z-index:60; display:none; box-shadow:0 8px 24px rgba(0,0,0,0.4); margin-top:4px;"></div>
+        </div>
     </div>
 
     <!-- Product Search -->
@@ -134,6 +137,10 @@
     const elCount = document.getElementById('orderItemCount');
     const elTotal = document.getElementById('orderEstimateTotal');
     const elSupplier = document.getElementById('supplierSelect');
+    const elSupplierName = document.getElementById('supplierName');
+    const elSupplierInput = document.getElementById('supplierSearchInput');
+    const elSupplierResults = document.getElementById('supplierSearchResults');
+    let supplierSearchTimer = null;
 
     function fmtRp(n) { return 'Rp ' + (Math.round(n) || 0).toLocaleString('id-ID'); }
 
@@ -298,6 +305,68 @@
         renderList();
     }
 
+    // ── Supplier Search ──
+    elSupplierInput.addEventListener('input', () => {
+        const q = elSupplierInput.value.trim();
+        clearTimeout(supplierSearchTimer);
+        if (q.length < 1) { elSupplierResults.style.display = 'none'; return; }
+        supplierSearchTimer = setTimeout(() => doSupplierSearch(q), 250);
+    });
+    document.addEventListener('click', (e) => {
+        if (!elSupplierResults.contains(e.target) && e.target !== elSupplierInput) {
+            elSupplierResults.style.display = 'none';
+        }
+    });
+    elSupplierInput.addEventListener('change', () => {
+        if (!elSupplierInput.value.trim()) {
+            elSupplier.value = '';
+            elSupplierName.value = '';
+        }
+    });
+
+    async function doSupplierSearch(q) {
+        try {
+            const url = `<?= BASE_URL ?>api/suppliers/search?q=${encodeURIComponent(q)}`;
+            const res = await fetch(url, { credentials: 'same-origin' });
+            const data = await res.json();
+            const results = Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+            renderSupplierResults(results);
+        } catch (err) {
+            elSupplierResults.innerHTML = '<div style="padding:12px; color:var(--text-muted); text-align:center; font-size:11px;">Gagal mencari.</div>';
+            elSupplierResults.style.display = '';
+        }
+    }
+
+    function renderSupplierResults(results) {
+        if (!results || results.length === 0) {
+            elSupplierResults.innerHTML = '<div style="padding:12px; color:var(--text-muted); text-align:center; font-size:11px;">Tidak ditemukan.</div>';
+            elSupplierResults.style.display = '';
+            return;
+        }
+        const html = [];
+        results.forEach((s) => {
+            const isRep = typeof s.is_sales_rep !== 'undefined' ? s.is_sales_rep : (s.sales_rep_id ? true : false);
+            const supName = s.supplier_name || s.name;
+            const subText = isRep ? `Sales: ${s.name} (${s.phone || '-'})` : (s.type_name || 'Distributor');
+            html.push(`<div class="search-result-row" data-id="${s.supplier_id || s.id}" data-name="${escapeHtml(supName)}">
+                <div style="flex:1; min-width:0;">
+                    <div class="res-name">${escapeHtml(supName)}</div>
+                    <div class="res-meta">${escapeHtml(subText)}</div>
+                </div>
+            </div>`);
+        });
+        elSupplierResults.innerHTML = html.join('');
+        elSupplierResults.style.display = '';
+        Array.from(elSupplierResults.querySelectorAll('.search-result-row')).forEach(row => {
+            row.addEventListener('click', () => {
+                elSupplier.value = row.dataset.id;
+                elSupplierName.value = row.dataset.name;
+                elSupplierInput.value = row.dataset.name;
+                elSupplierResults.style.display = 'none';
+            });
+        });
+    }
+
     // ── Copy to WhatsApp ──
     document.getElementById('btnCopyOrder').addEventListener('click', async () => {
         if (orderItems.length === 0) {
@@ -305,7 +374,7 @@
             return;
         }
         const lines = [];
-        const supplierName = elSupplier.value ? (elSupplier.options[elSupplier.selectedIndex].dataset.name || '') : '';
+        const supplierName = elSupplierName.value || elSupplierInput.value.trim();
         const today = new Date().toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
         lines.push('*ORDER BARANG*');
         if (supplierName) lines.push(`Supplier: ${supplierName}`);

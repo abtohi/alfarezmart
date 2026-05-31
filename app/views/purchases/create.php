@@ -2647,6 +2647,7 @@ async function submitPurchase() {
         const result = await res.json();
 
         if (result.success) {
+            localStorage.removeItem('alfarezmart_purchase_draft'); // Hapus draft agar form kosong
             showToast('✅ Pembelian berhasil disimpan!', 'success');
             setTimeout(() => window.location.reload(), 1500);
         } else {

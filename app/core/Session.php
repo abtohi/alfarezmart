@@ -9,7 +9,8 @@ if (!class_exists('Session')) {
         public function start()
         {
             if (session_status() === PHP_SESSION_NONE) {
-                $lifetime = defined('SESSION_LIFETIME') ? (int)SESSION_LIFETIME : 7200;
+                $lifetime = defined('SESSION_LIFETIME') ? (int)SESSION_LIFETIME : 604800; // 1 week
+                ini_set('session.gc_maxlifetime', $lifetime);
                 
                 session_set_cookie_params([
                     'lifetime' => $lifetime,

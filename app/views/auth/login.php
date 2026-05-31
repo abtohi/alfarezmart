@@ -137,16 +137,20 @@
             display: flex;
             align-items: center;
         }
-        .input-wrapper i {
+        .input-wrapper > i:first-of-type {
             position: absolute;
             left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
             color: var(--text-muted);
             font-size: 1.1rem;
+            pointer-events: none;
             transition: color var(--transition-fast);
+            z-index: 1;
         }
         .input-wrapper input {
             width: 100%;
-            padding: 14px 14px 14px 44px;
+            padding: 14px 44px 14px 44px;
             background: var(--bg-input);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
@@ -160,8 +164,8 @@
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(230,57,70,0.15);
         }
-        .input-wrapper input:focus + i,
-        .input-wrapper input:focus ~ i {
+        .input-wrapper input:focus ~ i,
+        .input-wrapper input:focus + i {
             color: var(--primary);
         }
         .input-wrapper input::placeholder {
@@ -171,14 +175,21 @@
 
         .toggle-password {
             position: absolute;
-            right: 14px;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             background: none;
             border: none;
             color: var(--text-muted);
             cursor: pointer;
             font-size: 1.1rem;
-            padding: 4px;
+            padding: 0;
             transition: color var(--transition-fast);
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
         }
         .toggle-password:hover {
             color: var(--text-primary);
@@ -274,20 +285,20 @@
                 <div class="form-group">
                     <label for="credential">Email atau Nomor HP</label>
                     <div class="input-wrapper">
+                        <i class="bi bi-person"></i>
                         <input type="text" id="credential" name="credential" 
                                placeholder="contoh@email.com atau 08xx" 
                                autocomplete="username" required>
-                        <i class="bi bi-person"></i>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label for="password">Password</label>
                     <div class="input-wrapper">
+                        <i class="bi bi-lock"></i>
                         <input type="password" id="password" name="password" 
                                placeholder="Masukkan password" 
                                autocomplete="current-password" required>
-                        <i class="bi bi-lock"></i>
                         <button type="button" class="toggle-password" onclick="togglePassword()" aria-label="Toggle password">
                             <i class="bi bi-eye" id="eyeIcon"></i>
                         </button>
