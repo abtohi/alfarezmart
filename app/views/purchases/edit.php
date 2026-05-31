@@ -2147,7 +2147,7 @@ function addDrawerTierRow(btn) {
     row.innerHTML = `
         <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
             <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" min="1">
-            <input type="number" class="form-control-dark drawer-tier-total" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" value="${th}" min="0" oninput="recalcTierHint(this)">
+            <input type="number" class="form-control-dark drawer-tier-total" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" value="" min="0" oninput="recalcTierHint(this)">
             <select class="form-select-dark drawer-tier-mode" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;">
                 <option value="both">E+G</option><option value="retail">Ecer</option><option value="wholesale">Grosir</option>
             </select>
@@ -2161,13 +2161,27 @@ function addDrawerTierRow(btn) {
 function refreshDrawerRowMargin(rowEl) {
     const buy   = parseFloat(rowEl.querySelector('.drawer-pkg-buy')?.value) || 0;
     const ppn   = parseFloat(rowEl.closest('[data-item-ppn]')?.dataset.itemPpn || rowEl.closest('.item-card')?.dataset.ppn || 0);
-    const nett  = calcItemNett(buy, ppn, 'rp', 0); // simplified; the row shows nett from badges
+    // Include discount if available, but simplified here; get exact nett from the item state if possible
+    let nett = calcItemNett(buy, ppn, 'rp', 0);
+    
+    // Attempt to get exact nett from the UI badge or dataset if available to include discounts correctly
+    const uid = rowEl.closest('[id^="drawer_"]')?.id.split('_')[1];
+    if (uid) {
+        let item = typeof purchaseItems !== 'undefined' ? purchaseItems.find(i => i.id == uid) : null;
+        if (!item && typeof bulkItems !== 'undefined') item = bulkItems.find(b => b.id == uid);
+        if (item) {
+            const level = parseInt(rowEl.dataset.level || 1, 10);
+            const pkg = item.packagings.find(p => p.level == level);
+            if (pkg) nett = pkg.harga_nett || calcItemNett(buy, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
+        }
+    }
+
     const ret   = parseFloat(rowEl.querySelector('.drawer-pkg-ret')?.value) || 0;
     const who   = parseFloat(rowEl.querySelector('.drawer-pkg-who')?.value) || 0;
     const rEl   = rowEl.querySelector('.drawer-margin-retail');
     const wEl   = rowEl.querySelector('.drawer-margin-wholesale');
-    if (rEl) rEl.innerHTML = formatMarginWithProfit('Ecer', buy, ret);
-    if (wEl) wEl.innerHTML = formatMarginWithProfit('Grosir', buy, who);
+    if (rEl) rEl.innerHTML = formatMarginWithProfit('Ecer', nett, ret);
+    if (wEl) wEl.innerHTML = formatMarginWithProfit('Grosir', nett, who);
 }
 
 /**
