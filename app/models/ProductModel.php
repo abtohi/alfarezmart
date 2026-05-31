@@ -310,17 +310,10 @@ class ProductModel extends Model
         // Fetch product with smallest level packaging info
         $stmt = $this->db->prepare("
             SELECT p.*, b.name as brand_name, c.name as category_name,
-                   pp1.sell_price_retail as price_small_retail,
-                   pp1.sell_price_wholesale as price_small_wholesale,
-                   pp1.buy_price as buy_price_small,
-                   u1.name as unit_small_name,
-                   s.current_qty_base
+                   (SELECT current_qty_base FROM stock WHERE product_id = p.id LIMIT 1) as current_qty_base
             FROM products p
             LEFT JOIN brands b ON p.brand_id = b.id
             LEFT JOIN categories c ON p.category_id = c.id
-            LEFT JOIN product_packagings pp1 ON pp1.product_id = p.id AND pp1.level = 1
-            LEFT JOIN units u1 ON pp1.unit_id = u1.id
-            LEFT JOIN stock s ON s.product_id = p.id
             {$where}
             ORDER BY p.updated_at DESC, p.full_name ASC
             LIMIT :limit OFFSET :offset
@@ -376,6 +369,16 @@ class ProductModel extends Model
         foreach ($products as &$p) {
             $pid = (int)$p['id'];
             $p['packagings'] = $byProduct[$pid] ?? [];
+            
+            if (!empty($p['packagings'])) {
+                if (!isset($p['price_small_retail'])) {
+                    $p['price_small_retail'] = $p['packagings'][0]['sell_price_retail'];
+                    $p['price_small_wholesale'] = $p['packagings'][0]['sell_price_wholesale'];
+                    $p['buy_price_small'] = $p['packagings'][0]['buy_price'];
+                    $p['unit_small_name'] = $p['packagings'][0]['unit_name'];
+                }
+            }
+            
             if (empty($p['packagings']) && !empty($p['price_small_retail'])) {
                 $p['packagings'] = [[
                     'level' => 1,
