@@ -538,17 +538,36 @@ class PurchaseModel extends Model
                     ':wholesale' => $item['sell_price_wholesale']
                 ]);
 
-                $stmtUpdatePrice->execute([
-                    ':buy' => $item['buy_price'],
-                    ':retail' => $item['sell_price_retail'],
-                    ':wholesale' => $item['sell_price_wholesale'],
-                    ':margin_r' => $marginR,
-                    ':margin_w' => $marginW,
-                    ':pkg_id' => $pkg['id']
-                ]);
+                if (isset($item['packagings']) && is_array($item['packagings'])) {
+                    foreach ($item['packagings'] as $pUpdate) {
+                        foreach ($packagings as $pDb) {
+                            if ($pDb['level'] == $pUpdate['level']) {
+                                $m_r = $pUpdate['sell_price_retail'] > 0 ? Helper::calculateMargin($pUpdate['buy_price'], $pUpdate['sell_price_retail']) : 0;
+                                $m_w = $pUpdate['sell_price_wholesale'] > 0 ? Helper::calculateMargin($pUpdate['buy_price'], $pUpdate['sell_price_wholesale']) : 0;
+                                $stmtUpdatePrice->execute([
+                                    ':buy' => $pUpdate['buy_price'],
+                                    ':retail' => $pUpdate['sell_price_retail'],
+                                    ':wholesale' => $pUpdate['sell_price_wholesale'],
+                                    ':margin_r' => $m_r,
+                                    ':margin_w' => $m_w,
+                                    ':pkg_id' => $pDb['id']
+                                ]);
 
-                if (isset($item['qty_prices']) && is_array($item['qty_prices'])) {
-                    $productModel->saveQtyPricesForPackaging($pkg['id'], $item['qty_prices']);
+                                if (isset($pUpdate['qty_prices'])) {
+                                    $productModel->saveQtyPricesForPackaging($pDb['id'], $pUpdate['qty_prices']);
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    $stmtUpdatePrice->execute([
+                        ':buy' => $item['buy_price'],
+                        ':retail' => $item['sell_price_retail'],
+                        ':wholesale' => $item['sell_price_wholesale'],
+                        ':margin_r' => $marginR,
+                        ':margin_w' => $marginW,
+                        ':pkg_id' => $pkg['id']
+                    ]);
                 }
 
                 $stmtCheckStock->execute([':id' => $item['product_id']]);

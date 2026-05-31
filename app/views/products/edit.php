@@ -254,8 +254,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof PackagingPriceSync !== 'undefined') PackagingPriceSync.init();
 
     // Auto-expand supplier collapsible if already filled
-    const supCode = '<?= htmlspecialchars($product['supplier_product_code'] ?? '', ENT_QUOTES) ?>';
-    const supName = '<?= htmlspecialchars($product['supplier_invoice_name'] ?? '', ENT_QUOTES) ?>';
+    const supCode = <?= json_encode($product['supplier_product_code'] ?? '') ?>;
+    const supName = <?= json_encode($product['supplier_invoice_name'] ?? '') ?>;
     initInvoiceNameList(supName);
     if (supCode || supName) {
         toggleSupplierInfo();
