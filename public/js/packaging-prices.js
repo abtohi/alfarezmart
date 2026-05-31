@@ -132,6 +132,42 @@ const PackagingPriceSync = {
                 this.syncFromInput(input, field);
             }
         });
+        
+        // Propagate PPN and Diskon
+        const ppnInp = level1.querySelector('.ppn-input');
+        if (ppnInp) this.syncTaxFromLevel1(ppnInp);
+    },
+    
+    syncTaxFromLevel1(inputEl) {
+        if (this.isSyncing) return;
+        const levelEl = inputEl.closest('.packaging-level, .packaging-level-edit');
+        const levels = this.getLevels();
+        const index = levels.indexOf(levelEl);
+        
+        // Only Level 1 can propagate PPN/Diskon
+        if (index !== 0) {
+            this.updateMargins(levelEl);
+            return;
+        }
+
+        const ppn = levelEl.querySelector('.ppn-input')?.value || '';
+        const dMode = levelEl.querySelector('.discount-mode')?.value || 'rp';
+        const dVal = levelEl.querySelector('.discount-value')?.value || '';
+
+        this.isSyncing = true;
+        levels.forEach((lv, i) => {
+            if (i === 0) return;
+            const targetPpn = lv.querySelector('.ppn-input');
+            const targetDMode = lv.querySelector('.discount-mode');
+            const targetDVal = lv.querySelector('.discount-value');
+            
+            if (targetPpn) targetPpn.value = ppn;
+            if (targetDMode) targetDMode.value = dMode;
+            if (targetDVal) targetDVal.value = dVal;
+            
+            this.updateMargins(lv);
+        });
+        this.isSyncing = false;
     },
 
     bindLevel(levelEl) {
@@ -148,6 +184,20 @@ const PackagingPriceSync = {
                     this.syncFromInput(inp, field);
                     if (!this.isSyncing) this.updateMargins(levelEl);
                 });
+            });
+        });
+
+        // Bind PPN & Diskon to sync from Level 1 (both 'input' and 'change' for select elements)
+        ['.ppn-input', '.discount-mode', '.discount-value'].forEach(sel => {
+            levelEl.querySelectorAll(sel).forEach(inp => {
+                if (inp.dataset.taxSyncBound) return;
+                inp.dataset.taxSyncBound = '1';
+                const handler = () => {
+                    this.syncTaxFromLevel1(inp);
+                    if (!this.isSyncing) this.updateMargins(levelEl);
+                };
+                inp.addEventListener('input', handler);
+                inp.addEventListener('change', handler); // needed for <select> elements
             });
         });
 

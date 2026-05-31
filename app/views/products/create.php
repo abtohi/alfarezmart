@@ -590,7 +590,20 @@ function initQtyTiers(levelDiv, tiers = []) {
     if (!list || !btn) return;
     list.innerHTML = '';
     tiers.forEach(t => addQtyTierRow(list, t));
-    btn.onclick = () => addQtyTierRow(list);
+    
+    // Gunakan removeEventListener untuk mencegah duplikasi event listener
+    const clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    
+    clone.addEventListener('click', function(e) {
+        e.preventDefault();
+        try {
+            addQtyTierRow(list);
+        } catch(err) {
+            console.error('Error adding tier row:', err);
+            alert('Terjadi kesalahan: ' + err.message);
+        }
+    });
 }
 
 function collectQtyTiers(levelDiv) {

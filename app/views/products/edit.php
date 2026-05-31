@@ -247,6 +247,9 @@ document.addEventListener('DOMContentLoaded', () => {
         sell_price_retail: pk.sell_price_retail,
         sell_price_wholesale: pk.sell_price_wholesale,
         barcode: pk.barcode || '',
+        ppn_pct: pk.ppn_pct || 0,
+        discount_mode: pk.discount_mode || 'rp',
+        discount_value: pk.discount_value || 0,
         qty_prices: pk.qty_prices || []
     }));
     if (sorted.length === 0) addPackagingLevel();
@@ -1032,6 +1035,7 @@ const QTY_MODE_OPTS = [
     { v: 'wholesale', l: 'Grosir saja' },
 ];
 
+
 function addQtyTierRow(listEl, data = {}) {
     const row = document.createElement('div');
     row.className = 'qty-tier-row';
@@ -1065,7 +1069,13 @@ function initQtyTiers(levelDiv, tiers = []) {
     if (!list || !btn) return;
     list.innerHTML = '';
     tiers.forEach(t => addQtyTierRow(list, t));
-    btn.onclick = () => addQtyTierRow(list);
+    
+    const clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    clone.addEventListener('click', function(e) {
+        e.preventDefault();
+        try { addQtyTierRow(list); } catch(err) { console.error(err); alert('Error: ' + err.message); }
+    });
 }
 
 function collectQtyTiers(levelDiv) {
