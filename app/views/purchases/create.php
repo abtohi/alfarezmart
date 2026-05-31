@@ -1383,7 +1383,7 @@ function openAllPackagingsModal(tempId) {
             return `
             <div class="tier-row" style="margin-bottom:6px;">
                 <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
-                    <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" value="${t.min_qty}" min="1">
+                    <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" value="${t.min_qty}" min="1" oninput="recalcTierHint(this)">
                     <input type="number" class="form-control-dark tier-total-harga" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" value="${totalH}" min="0" oninput="recalcTierHint(this)">
                     <select class="form-select-dark tier-mode" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;">
                         <option value="both" ${t.sale_mode==='both'?'selected':''}>E+G</option>
@@ -1585,7 +1585,7 @@ function addTierRow(btn) {
     row.style.cssText = 'margin-bottom:6px;';
     row.innerHTML = `
         <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
-            <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" min="1">
+            <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" min="1" oninput="recalcTierHint(this)">
             <input type="number" class="form-control-dark tier-total-harga" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" min="0" oninput="recalcTierHint(this)">
             <select class="form-select-dark tier-mode" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;">
                 <option value="both">E+G</option><option value="retail">Ecer</option><option value="wholesale">Grosir</option>
@@ -1606,12 +1606,36 @@ function recalcTierHint(el) {
     if (!hint) {
         hint = document.createElement('div');
         hint.className = 'tier-hint';
-        hint.style.cssText = 'font-size:9px;color:var(--text-muted);padding-left:2px;';
+        hint.style.cssText = 'font-size:10px;color:var(--text-muted);padding-left:2px;margin-top:4px;width:100%;';
         row.querySelector('.tier-mode, .drawer-tier-mode').parentElement.after(hint);
     }
-    hint.textContent = (minQty > 0 && totalH > 0)
-        ? `≈ Rp${Math.round(totalH/minQty).toLocaleString('id-ID')} / pcs`
-        : '';
+    
+    if (minQty > 0 && totalH > 0) {
+        const pricePerUnit = totalH / minQty;
+        let text = `≈ Rp${Math.round(pricePerUnit).toLocaleString('id-ID')}/satuan`;
+        
+        const lvEl = row.closest('.packaging-level-edit');
+        if (lvEl) {
+            const buy = parseFloat(lvEl.querySelector('.pkg-buy, .buy-price')?.value) || 0;
+            const ppn = parseFloat(lvEl.querySelector('.pkg-ppn')?.value) || 0;
+            const diskonMode = lvEl.querySelector('.pkg-diskon-mode')?.value || 'rp';
+            const diskonVal = parseFloat(lvEl.querySelector('.pkg-diskon-value')?.value) || 0;
+            
+            const nett = typeof calcItemNett === 'function' ? calcItemNett(buy, ppn, diskonMode, diskonVal) : buy;
+            
+            if (nett > 0) {
+                const profit = pricePerUnit - nett;
+                const marginPct = (profit / nett * 100);
+                const color = profit >= 0 ? 'var(--success)' : 'var(--danger)';
+                const icon = profit >= 0 ? '<i class="bi bi-graph-up-arrow"></i>' : '<i class="bi bi-graph-down-arrow"></i>';
+                text += ` <span style="margin-left:8px;color:${color};font-weight:600;">${icon} Margin: ${marginPct.toFixed(1)}% (Selisih: Rp${Math.round(profit).toLocaleString('id-ID')})</span>`;
+            }
+        }
+        
+        hint.innerHTML = text;
+    } else {
+        hint.innerHTML = '';
+    }
 }
 
 

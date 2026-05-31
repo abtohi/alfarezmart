@@ -2405,10 +2405,16 @@ class ApiController extends Controller
 "  • `total_price`: Total harga baris (sebelum diskon)\n" .
 "  • CONTOH: Jika invoice \"4 Karton × Rp 150.000 = Rp 600.000\", maka: qty=4, unit=\"Karton\", unit_price=150000, total_price=600000\n" .
 "\n" .
+"========== KEMAMPUAN TAMBAHAN ==========\n" .
+"  • TULISAN TANGAN & FORMAT ACAK: Baca dengan teliti invoice tulisan tangan, buram, atau berformat kolom terbalik (harga duluan baru nama).\n" .
+"  • VALIDASI TOTAL HARGA: JIKA di bagian bawah invoice terdapat total pembayaran/grand total, hitung total harga semua item yang kamu deteksi. Pastikan jumlahnya sama atau mendekati grand total di invoice. Jika tidak ada grand total di foto, abaikan validasi ini.\n" .
+"  • PPN & DISKON: Deteksi jika ada PPN atau diskon, dan kalkulasi unit_price & total_price secara proporsional. Pastikan total_price merefleksikan harga final barang tersebut setelah diskon. Isi kolom diskon jika secara spesifik tertera potongan per item.\n" .
+"  • MAPPING KEMASAN: Petakan singkatan satuan ke nama standar jika jelas (Misal: RCG -> Renceng, KRT -> Karton).\n" .
+"\n" .
 "========== INSTRUKSI TEKNIS ==========\n" .
 "1. OUTPUT HARUS JSON VALID! Tidak boleh ada Markdown (```json) atau teks apapun sebelum/sesudah array.\n" .
 "2. JANGAN tambahkan penjelasan, HANYA array JSON.\n" .
-"3. Ekstrak maksimal 15-20 item (jika terlalu banyak, ambil yang terpenting/terjelas).\n" .
+"3. Ekstrak semua item yang terbaca dengan baik.\n" .
 "4. Semua harga: ANGKA MURNI saja (tanpa titik, koma, atau simbol Rp).\n" .
 "5. Untuk SETIAP item, WAJIB centang 4-poin: Kode? Nama supplier? Analisis nama? Unit+price? \n" .
 "\n" .
@@ -2629,8 +2635,8 @@ class ApiController extends Controller
                     // ========== POIN 2: NAMA BARANG SUPPLIER (Supplier Invoice Name) ==========
                     // Support multi-nama: supplier_invoice_name bisa berisi banyak baris/nama
                     if (!empty($p['supplier_invoice_name'])) {
-                        // Pecah menjadi array nama (per baris, atau koma)
-                        $rawInvNames = preg_split('/[\n\r,]+/', $p['supplier_invoice_name']);
+                        // Pecah menjadi array nama (per baris, koma, atau titik koma)
+                        $rawInvNames = preg_split('/[\n\r,;]+/', $p['supplier_invoice_name']);
                         $invNames = array_filter(array_map('trim', $rawInvNames));
                         
                         $normSuppInvName = strtolower(trim($extractedSuppInvName));

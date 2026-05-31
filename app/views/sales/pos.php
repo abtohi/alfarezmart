@@ -763,22 +763,14 @@ async function checkout() {
 
     try {
         const endpoint = editSaleId ? `${BASE_URL}api/sales/update/${editSaleId}` : `${BASE_URL}api/sales`;
-        const res = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': payload.csrf_token,
-            },
-            body: JSON.stringify(payload),
-        });
-        const result = await res.json();
+        const result = await api(endpoint, 'POST', payload);
 
         if (result.success) {
             showToast('Transaksi Berhasil!', 'success');
 
             const printCart = cart.map(i => ({ ...i }));
             const printTotal = calculateTotal();
-            const invoiceNo = result.invoice;
+            const invoiceNo = result.invoice || result.id || ('OFF-' + Date.now());
 
             // Clear current draft if checkout success
             if (currentDraftId) {

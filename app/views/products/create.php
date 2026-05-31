@@ -106,8 +106,12 @@
                 </div>
                 <div>
                     <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Nama Barang di Invoice Supplier (Multi-nama)</label>
-                    <textarea name="supplier_invoice_name" id="supplierInvoiceName" placeholder="Satu nama per baris. Cth:&#10;CIMORY UHT PORORO 125ML&#10;CIMORY PORORO CHOCO&#10;CMY UHT 125" class="form-control-dark" style="width:100%;min-height:72px;resize:vertical;font-size:var(--font-size-xs);"></textarea>
-                    <div style="font-size:10px;color:var(--text-muted);margin-top:4px;"><i class="bi bi-info-circle"></i> Tulis beberapa variasi nama produk (1 per baris) agar AI lebih akurat mengenali produk ini dari invoice supplier.</div>
+                    <div id="invoiceNameList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px;"></div>
+                    <button type="button" onclick="addInvoiceName()" style="width:100%;border:1px dashed var(--border-color);background:transparent;color:var(--info);padding:6px;border-radius:var(--radius-sm);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;">
+                        <i class="bi bi-plus-circle"></i> Tambah Nama Invoice
+                    </button>
+                    <input type="hidden" name="supplier_invoice_name" id="supplierInvoiceName" value="">
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:4px;"><i class="bi bi-info-circle"></i> Tambahkan semua variasi nama di invoice supplier agar AI Scan lebih akurat mengenali produk ini.</div>
                 </div>
             </div>
         </div>
@@ -235,6 +239,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Init first packaging level
     addPackagingLevel();
     if (typeof PackagingPriceSync !== 'undefined') PackagingPriceSync.init();
+    
+    // Init invoice name list (1 empty input)
+    initInvoiceNameList('');
 
     // Reference mode toggle
     document.getElementById('useReferenceMode')?.addEventListener('change', (e) => {
@@ -1069,7 +1076,11 @@ async function submitProduct(e) {
     data.set('invoice_name', labelText);
     updatedData.set('invoice_name', labelText);
 
-    if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+        // Update supplier invoice name from dynamic list
+        const collectedNames = collectInvoiceNames();
+        updatedData.set('supplier_invoice_name', collectedNames);
+        
+        if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
         try {
             const payload = {};
             updatedData.forEach((value, key) => {
@@ -1125,5 +1136,36 @@ function toggleSupplierInfo() {
     const isOpen = panel.style.display !== 'none';
     panel.style.display = isOpen ? 'none' : 'block';
     icon.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+function initInvoiceNameList(namesStr) {
+    const list = document.getElementById('invoiceNameList');
+    if (!list) return;
+    list.innerHTML = '';
+    const names = (namesStr || '').split(/[;\n]/).map(n => n.trim()).filter(n => n);
+    if (names.length === 0) {
+        addInvoiceName();
+    } else {
+        names.forEach(n => addInvoiceName(n));
+    }
+}
+
+function addInvoiceName(val = '') {
+    const list = document.getElementById('invoiceNameList');
+    if (!list) return;
+    const div = document.createElement('div');
+    div.style.display = 'flex';
+    div.style.gap = '6px';
+    div.innerHTML = `
+        <input type="text" class="form-control-dark invoice-name-item" placeholder="Cth: CIMORY UHT PORORO" style="flex:1;" value="${escapeHtml(val)}">
+        <button type="button" onclick="this.parentElement.remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:0 12px;cursor:pointer;"><i class="bi bi-x-lg"></i></button>
+    `;
+    list.appendChild(div);
+}
+
+function collectInvoiceNames() {
+    const inputs = document.querySelectorAll('.invoice-name-item');
+    const names = Array.from(inputs).map(inp => inp.value.trim()).filter(v => v);
+    return names.join(';');
 }
 </script>
