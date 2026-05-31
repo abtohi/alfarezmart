@@ -58,12 +58,15 @@ async function lookupBarcode() {
                         showProductResultOffline(searchData[0]);
                     } else {
                         resultDiv.innerHTML = searchData.map(prod => `
-                            <div class="product-card" onclick='showProductResultOffline(${JSON.stringify(prod).replace(/'/g, "&#39;")})' style="cursor:pointer;">
-                                <div class="product-icon"><i class="bi bi-box-seam"></i></div>
-                                <div class="product-info">
-                                    <div class="product-name">${prod.full_name}</div>
-                                    <div class="product-category">${prod.brand_name || ''} · ${prod.category_name || ''}</div>
+                            <div class="product-card" onclick='showProductResultOffline(${JSON.stringify(prod).replace(/'/g, "&#39;")})' style="cursor:pointer; flex-direction:column; align-items:stretch;">
+                                <div style="display:flex; align-items:center;">
+                                    <div class="product-icon"><i class="bi bi-box-seam"></i></div>
+                                    <div class="product-info" style="flex:1;">
+                                        <div class="product-name">${prod.full_name}</div>
+                                        <div class="product-category">${prod.brand_name || ''} · ${prod.category_name || ''}</div>
+                                    </div>
                                 </div>
+                                ${renderPackagingsForList(prod.packagings)}
                             </div>
                         `).join('');
                     }
@@ -85,12 +88,15 @@ async function lookupBarcode() {
                 fetchProductDetail(searchData[0].id);
             } else if (searchData.length > 0) {
                 resultDiv.innerHTML = searchData.map(p => `
-                    <div class="product-card" onclick="fetchProductDetail(${p.id})" style="cursor:pointer;">
-                        <div class="product-icon"><i class="bi bi-box-seam"></i></div>
-                        <div class="product-info">
-                            <div class="product-name">${p.full_name}</div>
-                            <div class="product-category">${p.brand_name || ''} · ${p.category_name || ''}</div>
+                    <div class="product-card" onclick="fetchProductDetail(${p.id})" style="cursor:pointer; flex-direction:column; align-items:stretch;">
+                        <div style="display:flex; align-items:center;">
+                            <div class="product-icon"><i class="bi bi-box-seam"></i></div>
+                            <div class="product-info" style="flex:1;">
+                                <div class="product-name">${p.full_name}</div>
+                                <div class="product-category">${p.brand_name || ''} · ${p.category_name || ''}</div>
+                            </div>
                         </div>
+                        ${renderPackagingsForList(p.packagings)}
                     </div>
                 `).join('');
             } else {
@@ -100,6 +106,32 @@ async function lookupBarcode() {
             resultDiv.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><h3>Error</h3><p>Gagal mencari produk</p></div>';
         }
     }
+}
+
+function renderPackagingsForList(packagings) {
+    if (!packagings || packagings.length === 0) return '';
+    return '<div style="margin-top:10px; border-top:1px dashed var(--border-color); padding-top:10px;">' +
+        packagings.map(pkg => {
+            const jenis = pkg.unit_name || ('Level ' + pkg.level);
+            const qty = pkg.base_qty || 1;
+            const ecer = parseFloat(pkg.sell_price_retail) || 0;
+            const grosir = parseFloat(pkg.sell_price_wholesale) || 0;
+            const modal = parseFloat(pkg.buy_price) || 0;
+            
+            return `
+                <div style="margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                        <div style="font-weight:700; font-size:11px; color:var(--text-primary);">${jenis} <span style="font-weight:400; color:var(--text-muted); font-size:9px;">(Isi ${qty})</span></div>
+                        <div style="font-size:9px; color:rgba(150, 150, 150, 0.4);">${modal > 0 ? 'Modal: ' + formatRupiah(modal) : ''}</div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px;">
+                        <div>${ecer > 0 ? `<span style="color:var(--text-muted); font-size:9px;">Ecer:</span> <span style="color:var(--success); font-weight:700;">${formatRupiah(ecer)}</span>` : ''}</div>
+                        <div>${grosir > 0 ? `<span style="color:var(--text-muted); font-size:9px;">Grosir:</span> <span style="color:var(--warning); font-weight:600;">${formatRupiah(grosir)}</span>` : ''}</div>
+                    </div>
+                </div>
+            `;
+        }).join('') +
+    '</div>';
 }
 
 async function fetchProductDetail(id) {
