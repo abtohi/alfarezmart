@@ -342,7 +342,8 @@ async function openExportModal() {
     AppModal.show({
         title: 'Export Data Produk',
         bodyHTML: html,
-        hideFooter: true
+        hideFooter: true,
+        centered: true
     });
 
     try {

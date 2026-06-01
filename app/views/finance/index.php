@@ -776,13 +776,32 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         });
 
+        const catOptions = categoriesData.map(c => ({value: c.name, label: c.name}));
+        if (!catOptions.find(c => c.value.toLowerCase() === 'omzet')) {
+            catOptions.push({value: 'Omzet', label: 'Omzet'});
+        }
+
+        const logDetailBox = new SearchBox(document.getElementById('logDetailContainer'), {
+            options: catOptions,
+            placeholder: '-- Pilih Kategori --',
+            name: 'logDetail',
+            onAdd: () => { AppModal.close(); setTimeout(() => manageCategories(), 300); },
+            addLabel: 'Kelola Kategori',
+            icon: 'bi-tags'
+        });
+
         new SearchBox(document.getElementById('logCategoryContainer'), {
             options: [
                 {value: 'Pemasukan', label: 'Pemasukan (Uang Masuk)'},
                 {value: 'Pengeluaran', label: 'Pengeluaran (Uang Keluar)'}
             ],
             value: 'Pengeluaran',
-            name: 'logCategory'
+            name: 'logCategory',
+            onChange: (val) => {
+                if (val === 'Pemasukan') {
+                    logDetailBox.setValue('Omzet', 'Omzet');
+                }
+            }
         });
 
         new SearchBox(document.getElementById('logBalanceTypeContainer'), {
@@ -792,15 +811,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             onAdd: () => { AppModal.close(); setTimeout(() => manageAccounts(), 300); },
             addLabel: 'Kelola POS Keuangan',
             icon: 'bi-wallet2'
-        });
-
-        new SearchBox(document.getElementById('logDetailContainer'), {
-            options: categoriesData.map(c => ({value: c.name, label: c.name})),
-            placeholder: '-- Pilih Kategori --',
-            name: 'logDetail',
-            onAdd: () => { AppModal.close(); setTimeout(() => manageCategories(), 300); },
-            addLabel: 'Kelola Kategori',
-            icon: 'bi-tags'
         });
 
         await modalPromise;
@@ -905,13 +915,33 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         });
 
+        const editCatOptions = categoriesData.map(c => ({value: c.name, label: c.name}));
+        if (!editCatOptions.find(c => c.value.toLowerCase() === 'omzet')) {
+            editCatOptions.push({value: 'Omzet', label: 'Omzet'});
+        }
+
+        const editLogDetailBox = new SearchBox(document.getElementById('editLogDetailContainer'), {
+            options: editCatOptions,
+            placeholder: '-- Pilih Kategori --',
+            value: log.detail,
+            name: 'editLogDetail',
+            onAdd: () => { AppModal.close(); setTimeout(() => manageCategories(), 300); },
+            addLabel: 'Kelola Kategori',
+            icon: 'bi-tags'
+        });
+
         new SearchBox(document.getElementById('editLogCategoryContainer'), {
             options: [
                 {value: 'Pemasukan', label: 'Pemasukan (Uang Masuk)'},
                 {value: 'Pengeluaran', label: 'Pengeluaran (Uang Keluar)'}
             ],
             value: log.category,
-            name: 'editLogCategory'
+            name: 'editLogCategory',
+            onChange: (val) => {
+                if (val === 'Pemasukan') {
+                    editLogDetailBox.setValue('Omzet', 'Omzet');
+                }
+            }
         });
 
         new SearchBox(document.getElementById('editLogBalanceTypeContainer'), {
@@ -922,16 +952,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             onAdd: () => { AppModal.close(); setTimeout(() => manageAccounts(), 300); },
             addLabel: 'Kelola POS Keuangan',
             icon: 'bi-wallet2'
-        });
-
-        new SearchBox(document.getElementById('editLogDetailContainer'), {
-            options: categoriesData.map(c => ({value: c.name, label: c.name})),
-            placeholder: '-- Pilih Kategori --',
-            value: log.detail,
-            name: 'editLogDetail',
-            onAdd: () => { AppModal.close(); setTimeout(() => manageCategories(), 300); },
-            addLabel: 'Kelola Kategori',
-            icon: 'bi-tags'
         });
 
         await modalPromise;

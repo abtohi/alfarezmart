@@ -26,7 +26,7 @@ class ApiController extends Controller
                 $dateFrom = isset($_GET['date_from']) ? $_GET['date_from'] : '';
                 $dateTo = isset($_GET['date_to']) ? $_GET['date_to'] : '';
                 
-                $sql = "SELECT p.barcode, p.full_name as 'Nama Produk', c.name as 'Kategori', b.name as 'Brand', 
+                $sql = "SELECT p.code as 'Kode', p.full_name as 'Nama Produk', c.name as 'Kategori', b.name as 'Brand', 
                         sp.buy_price as 'Harga Beli Terakhir', sp.updated_at as 'Tanggal Update' 
                         FROM supplier_products sp 
                         JOIN products p ON sp.product_id = p.id 
@@ -56,19 +56,33 @@ class ApiController extends Controller
                 $productName = isset($_GET['product_name']) ? $_GET['product_name'] : '';
                 $supplierId = isset($_GET['supplier_id']) ? (int)$_GET['supplier_id'] : 0;
                 
-                $sql = "SELECT p.barcode, p.full_name as 'Nama Produk', c.name as 'Kategori', b.name as 'Brand',
+                $sql = "SELECT p.code as 'Kode', p.full_name as 'Nama Produk', c.name as 'Kategori', b.name as 'Brand',
                         (SELECT name FROM suppliers s JOIN supplier_products sp2 ON s.id = sp2.supplier_id WHERE sp2.product_id = p.id ORDER BY sp2.updated_at DESC LIMIT 1) as 'Supplier Terakhir',
-                        p.base_price as 'Harga Dasar', p.sell_price as 'Harga Jual', p.stock as 'Stok'
+                        (SELECT buy_price FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1) as 'Harga Beli Dasar',
+                        (SELECT sell_price_retail FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1) as 'Harga Jual Eceran',
+                        (SELECT current_qty_base FROM stock WHERE product_id = p.id LIMIT 1) as 'Stok Dasar'
                         FROM products p 
                         LEFT JOIN categories c ON p.category_id = c.id
                         LEFT JOIN brands b ON p.brand_id = b.id
-                        WHERE 1=1";
+                        WHERE p.is_active = 1";
                 
                 $params = [];
                 
+                // MULTI KEYWORD SEARCH ALGORITHM
                 if (!empty($productName)) {
-                    $sql .= " AND p.full_name LIKE :name";
-                    $params[':name'] = "%{$productName}%";
+                    $words = array_filter(explode(' ', trim($productName)));
+                    foreach ($words as $i => $word) {
+                        $p_name  = ":p_name_$i";
+                        $p_label = ":p_label_$i";
+                        $p_brand = ":p_brand_$i";
+                        $p_bar   = ":p_bar_$i";
+                        $sql .= " AND (p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR b.name LIKE $p_brand OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
+                        $like = "%{$word}%";
+                        $params[$p_name]  = $like;
+                        $params[$p_label] = $like;
+                        $params[$p_brand] = $like;
+                        $params[$p_bar]   = $like;
+                    }
                 }
                 
                 if ($supplierId > 0) {

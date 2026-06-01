@@ -78,6 +78,13 @@ const AppModal = {
         const submitBtn = document.getElementById('appModalSubmitBtn');
         const cancelBtn = document.getElementById('appModalCancelBtn');
 
+        // Handle centered option
+        if (config.centered) {
+            this._overlay.classList.add('modal-centered');
+        } else {
+            this._overlay.classList.remove('modal-centered');
+        }
+
         // Set content
         title.textContent = config.title || '';
         subtitle.textContent = config.subtitle || '';
@@ -300,9 +307,14 @@ class SearchBox {
     }
 
     _renderOptions(filter = '') {
-        const filtered = filter
-            ? this.options.filter(o => o.label.toLowerCase().includes(filter))
-            : this.options;
+        let filtered = this.options;
+        if (filter) {
+            const words = filter.split(' ').filter(w => w);
+            filtered = this.options.filter(o => {
+                const lowerLabel = o.label.toLowerCase();
+                return words.every(w => lowerLabel.includes(w));
+            });
+        }
 
         if (filtered.length === 0) {
             this._optionsList.innerHTML = `<div class="searchbox-empty"><i class="bi bi-inbox"></i> Tidak ditemukan</div>`;
@@ -329,8 +341,16 @@ class SearchBox {
 
     _highlight(text, filter) {
         if (!filter) return text;
-        const regex = new RegExp(`(${filter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-        return text.replace(regex, '<strong style="color:var(--primary)">$1</strong>');
+        const words = filter.split(' ').filter(w => w);
+        if (words.length === 0) return text;
+        
+        let highlighted = text;
+        words.forEach(word => {
+            const regex = new RegExp(`(${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            highlighted = highlighted.replace(regex, '___HIGHLIGHT_START___$1___HIGHLIGHT_END___');
+        });
+        
+        return highlighted.replace(/___HIGHLIGHT_START___/g, '<strong style="color:var(--primary)">').replace(/___HIGHLIGHT_END___/g, '</strong>');
     }
 
     _navigateOptions(direction) {
