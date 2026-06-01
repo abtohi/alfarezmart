@@ -27,7 +27,7 @@ class ApiController extends Controller
                 $dateTo = isset($_GET['date_to']) ? $_GET['date_to'] : '';
                 
                 $sql = "SELECT p.code as 'Kode', p.full_name as 'Nama Produk', c.name as 'Kategori', b.name as 'Brand', 
-                        sp.buy_price as 'Harga Beli Terakhir', sp.updated_at as 'Tanggal Update' 
+                        sp.last_buy_price as 'Harga Beli Terakhir', sp.updated_at as 'Tanggal Update' 
                         FROM supplier_products sp 
                         JOIN products p ON sp.product_id = p.id 
                         LEFT JOIN categories c ON p.category_id = c.id
