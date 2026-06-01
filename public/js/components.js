@@ -390,11 +390,11 @@ class SearchBox {
         this._dropdown.classList.add('open');
         setTimeout(() => this._searchInput.focus(), 50);
 
-        // Add backdrop
+        // Add backdrop (pointer-events:none so it doesn't block clicks inside modal stacking contexts)
         if (!this._backdrop) {
             this._backdrop = document.createElement('div');
             this._backdrop.className = 'searchbox-backdrop active';
-            this._backdrop.addEventListener('click', () => this.close());
+            this._backdrop.style.pointerEvents = 'none';
             document.body.appendChild(this._backdrop);
         } else {
             this._backdrop.classList.add('active');
