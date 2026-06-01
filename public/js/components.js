@@ -253,6 +253,9 @@ class SearchBox {
         this._addBtn = this._dropdown.querySelector('.searchbox-add-btn');
         this._clearBtn = this._trigger.querySelector('.sb-clear');
 
+        // Move dropdown to body to avoid CSS transform containing block issues
+        document.body.appendChild(this._dropdown);
+
         this._renderOptions();
         this._syncClearButton();
     }
@@ -596,6 +599,10 @@ class SearchBox {
         if (this._backdrop) {
             this._backdrop.remove();
             this._backdrop = null;
+        }
+        if (this._dropdown) {
+            this._dropdown.remove();
+            this._dropdown = null;
         }
         this.container.innerHTML = '';
         this.container.classList.remove('searchbox-wrapper');
