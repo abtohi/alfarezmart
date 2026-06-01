@@ -526,7 +526,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             </div>
             
             <div class="modal-form-group">
-                <label>Pos Keuangan *</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label style="margin:0;">Pos Keuangan *</label>
+                    <button class="btn-primary-custom" type="button" onclick="AppModal.close(); setTimeout(() => manageAccounts(), 300);" style="padding: 2px 8px; font-size: 10px; border-radius: var(--radius-sm);"><i class="bi bi-gear-fill"></i> Kelola</button>
+                </div>
                 <select id="logBalanceType" class="form-select-dark">
                     ${posOptions}
                 </select>
@@ -534,10 +537,13 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             <div class="modal-form-group">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <label style="margin:0;">Detail Kategori Transaksi (SearchBox) *</label>
-                    <button class="btn-primary-custom" type="button" onclick="manageCategories()" style="padding: 2px 8px; font-size: 10px; border-radius: var(--radius-sm);"><i class="bi bi-gear-fill"></i> Kelola</button>
+                    <label style="margin:0;">Kategori Transaksi *</label>
+                    <button class="btn-primary-custom" type="button" onclick="AppModal.close(); setTimeout(() => manageCategories(), 300);" style="padding: 2px 8px; font-size: 10px; border-radius: var(--radius-sm);"><i class="bi bi-gear-fill"></i> Kelola</button>
                 </div>
-                <input type="text" id="logDetail" list="categoryDatalist" class="form-control-dark" placeholder="Pilih atau Ketik Kategori Transaksi Baru">
+                <select id="logDetail" class="form-select-dark">
+                    <option value="">-- Pilih Kategori --</option>
+                    ${categoriesData.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('')}
+                </select>
             </div>
 
             <div class="modal-form-group">
@@ -636,7 +642,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             </div>
             
             <div class="modal-form-group">
-                <label>Pos Keuangan *</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label style="margin:0;">Pos Keuangan *</label>
+                    <button class="btn-primary-custom" type="button" onclick="AppModal.close(); setTimeout(() => manageAccounts(), 300);" style="padding: 2px 8px; font-size: 10px; border-radius: var(--radius-sm);"><i class="bi bi-gear-fill"></i> Kelola</button>
+                </div>
                 <select id="editLogBalanceType" class="form-select-dark">
                     ${posOptions}
                 </select>
@@ -644,10 +653,13 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             <div class="modal-form-group">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <label style="margin:0;">Detail Kategori Transaksi (SearchBox) *</label>
-                    <button class="btn-primary-custom" type="button" onclick="manageCategories()" style="padding: 2px 8px; font-size: 10px; border-radius: var(--radius-sm);"><i class="bi bi-gear-fill"></i> Kelola</button>
+                    <label style="margin:0;">Kategori Transaksi *</label>
+                    <button class="btn-primary-custom" type="button" onclick="AppModal.close(); setTimeout(() => manageCategories(), 300);" style="padding: 2px 8px; font-size: 10px; border-radius: var(--radius-sm);"><i class="bi bi-gear-fill"></i> Kelola</button>
                 </div>
-                <input type="text" id="editLogDetail" list="categoryDatalist" class="form-control-dark" placeholder="Ketik atau Pilih Kategori" value="${escapeHtml(log.detail)}">
+                <select id="editLogDetail" class="form-select-dark">
+                    <option value="">-- Pilih Kategori --</option>
+                    ${categoriesData.map(c => `<option value="${escapeHtml(c.name)}" ${log.detail === c.name ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+                </select>
             </div>
 
             <div class="modal-form-group">
