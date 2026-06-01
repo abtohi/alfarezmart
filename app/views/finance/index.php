@@ -407,19 +407,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         const html = `
             <div style="margin-bottom: 15px; background: var(--surface-2); padding: 12px; border-radius: var(--radius-md);">
                 <div style="margin-bottom: 8px; font-weight: 600; font-size: 12px;">Tambah POS Baru</div>
-                <div style="display:flex; gap: 8px; align-items:center; margin-bottom: 8px;">
-                    <input type="text" id="newAccountName" class="form-control-dark" placeholder="Nama POS (misal: Uang Gas)">
-                </div>
-                <div style="display:flex; gap: 8px; align-items:center;">
-                    <select id="newAccountDepType" class="form-select-dark" style="width: auto; font-size: 11px;" onchange="document.getElementById('newAccountDepTarget').style.display = this.value === 'dependent' ? 'block' : 'none'">
-                        <option value="independent">Independent</option>
-                        <option value="dependent">Dependent</option>
-                    </select>
-                    <select id="newAccountDepTarget" class="form-select-dark" style="display: none; font-size: 11px; flex:1;">
-                        <option value="">-- Pilih Tujuan --</option>
-                        ${accountsData.map(acc => `<option value="${acc.id}">${escapeHtml(acc.name)}</option>`).join('')}
-                    </select>
-                    <button class="btn-primary-custom" onclick="saveNewAccount()" style="padding: 6px 12px; border-radius:var(--radius-md); font-size: 11px;"><i class="bi bi-plus-lg"></i> Tambah</button>
+                <div style="display:flex; flex-direction:column; gap: 8px; margin-bottom: 8px;">
+                    <input type="text" id="newAccountName" class="form-control-dark" placeholder="Nama POS (misal: Uang Gas)" style="width: 100%;">
+                    <div style="display:flex; gap: 8px; align-items:center;">
+                        <select id="newAccountDepType" class="form-select-dark" style="flex: 1; font-size: 11px;" onchange="document.getElementById('newAccountDepTarget').style.display = this.value === 'dependent' ? 'block' : 'none'">
+                            <option value="independent">Independent</option>
+                            <option value="dependent">Dependent</option>
+                        </select>
+                        <select id="newAccountDepTarget" class="form-select-dark" style="display: none; font-size: 11px; flex:1;">
+                            <option value="">-- Pilih Tujuan --</option>
+                            ${accountsData.map(acc => `<option value="${acc.id}">${escapeHtml(acc.name)}</option>`).join('')}
+                        </select>
+                        <button class="btn-primary-custom" onclick="saveNewAccount()" style="padding: 6px 12px; border-radius:var(--radius-md); font-size: 11px; white-space:nowrap;"><i class="bi bi-plus-lg"></i> Tambah</button>
+                    </div>
                 </div>
             </div>
             <div style="font-size: 10px; color: var(--info); margin-bottom: 15px;"><i class="bi bi-info-circle"></i> Jika "Dependent" dipilih, maka pengeluaran dari POS tersebut akan otomatis tercatat juga sebagai pemasukan+pengeluaran di pos tujuan tanpa memotong saldo aslinya.</div>
@@ -761,13 +761,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         const html = `
             <div style="margin-bottom: 15px; background: var(--surface-2); padding: 12px; border-radius: var(--radius-md);">
                 <div style="margin-bottom: 8px; font-weight: 600; font-size: 12px;">Tambah Kategori Baru</div>
-                <div style="display:flex; gap: 8px; align-items:center;">
-                    <select id="newCatType" class="form-select-dark" style="width: auto; font-size: 11px;">
-                        <option value="Pemasukan">Pemasukan</option>
-                        <option value="Pengeluaran" selected>Pengeluaran</option>
-                    </select>
-                    <input type="text" id="newCatName" class="form-control-dark" style="flex:1;" placeholder="Nama (Misal: Uang Makan)">
-                    <button class="btn-primary-custom" onclick="saveNewCategory()" style="padding: 6px 12px; border-radius:var(--radius-md); font-size: 11px;"><i class="bi bi-plus-lg"></i> Tambah</button>
+                <div style="display:flex; flex-direction:column; gap: 8px;">
+                    <input type="text" id="newCatName" class="form-control-dark" placeholder="Nama Kategori (Misal: Uang Makan)" style="width: 100%;">
+                    <div style="display:flex; gap: 8px; align-items:center;">
+                        <select id="newCatType" class="form-select-dark" style="flex:1; font-size: 11px;">
+                            <option value="Pemasukan">Pemasukan</option>
+                            <option value="Pengeluaran" selected>Pengeluaran</option>
+                        </select>
+                        <button class="btn-primary-custom" onclick="saveNewCategory()" style="padding: 6px 12px; border-radius:var(--radius-md); font-size: 11px; white-space:nowrap;"><i class="bi bi-plus-lg"></i> Tambah</button>
+                    </div>
                 </div>
             </div>
             <div style="max-height: 300px; overflow-y: auto; background: var(--surface-2); border-radius: var(--radius-md); padding: 10px;">
