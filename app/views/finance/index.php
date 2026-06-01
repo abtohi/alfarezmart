@@ -432,7 +432,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     // Render Logs
                     logs.forEach(log => {
                         const amount = parseFloat(log.amount);
-                        const isSelectable = !log.reference_type;
+                        const isSelectable = true; // FORCE UNLOCK: allow selecting system logs
                         const isChecked = selectedLogs.has(log.id);
 
                         html += `
@@ -461,17 +461,17 @@ document.addEventListener('DOMContentLoaded', async function() {
                                         </div>
                                     </div>
                                     
-                                    <!-- Actions (Only show for manual logs without ref) -->
-                                    ${!log.reference_type ? `
+                                    <!-- Actions -->
                                     <div style="display: flex; flex-direction: column; gap: 4px;">
+                                        ${!log.reference_type ? `
                                         <button onclick="editLog(${JSON.stringify(log).replace(/"/g, '&quot;')})" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px; font-size: 13px;" title="Ubah">
                                             <i class="bi bi-pencil-square" style="color: var(--info);"></i>
                                         </button>
-                                        <button onclick="deleteLog(${log.id})" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px; font-size: 13px;" title="Hapus">
+                                        ` : ''}
+                                        <button onclick="deleteLog(${log.id})" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px; font-size: 13px;" title="Hapus (Force)">
                                             <i class="bi bi-trash-fill" style="color: var(--primary);"></i>
                                         </button>
                                     </div>
-                                    ` : ''}
                                 </div>
                             </div>
                         `;

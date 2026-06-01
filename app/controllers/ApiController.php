@@ -2575,8 +2575,7 @@ class ApiController extends Controller
             $deletedCount = 0;
             foreach ($ids as $id) {
                 $log = $model->findLog((int)$id);
-                // Only allow deleting manual logs (no reference_type)
-                if ($log && empty($log['reference_type'])) {
+                if ($log) {
                     $model->deleteLog((int)$id);
                     $deletedCount++;
                 }
