@@ -893,6 +893,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+    };
 
     // Manage Debt Sources
     window.manageDebtSources = async function() {

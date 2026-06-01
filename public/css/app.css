@@ -54,6 +54,7 @@ body {
 /* Elegant App Loader */
 .elegant-loader {
     display: flex;
+    justify-content: center;
     gap: 8px;
 }
 .elegant-loader .dot {

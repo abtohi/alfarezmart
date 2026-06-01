@@ -23,7 +23,11 @@ if (!class_exists('Autoloader')) {
         {
             foreach (self::$directories as $dir) {
                 $file = BASE_PATH . '/' . $dir . $className . '.php';
+                clearstatcache(true, $file);
                 if (file_exists($file)) {
+                    if (function_exists('opcache_invalidate')) {
+                        opcache_invalidate($file, true);
+                    }
                     require_once $file;
                     return true;
                 }
