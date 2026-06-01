@@ -33,17 +33,17 @@ Klasifikasikan task ini sebelum mulai:
 
 ## Task
 
-- Pada halaman Kelola POS Keuangan, saat saya mencoba Tambah POS Baru, ada tulisan Invalid CSRF token, tolong cek dan perbaiki kenapa ini bisa gagal.
+- Saat ini kenapa semua searchBox dropdownlistnya ketika di klik tiba tiba menscroll layar ke halaman paling atas, dan posisi opsi dari searchbox dropdownlistnya posisinya berada jauh di bawah form (ada gap), tidak tepat berada di bawah form. Tolong perbaiki agar posisi dropdown berada tepat di bawah form dan ukurannya juga menyesuaikan lebar form. Pastikan ketika form berada di bawah, ketika di klik form untuk search item tertentu, ketika tombol keyboard muncul, opsi dari dropdown tidak tertutup oleh keyboard. Ini perbaikannya berlaku menyeluruh untuk semua dropdownlist tipe searchBox, jadi perbaiki pada script utama atau library yang digunakan untuk searchBox dropdownlistnya.
 
-- Pada halaman Keuangan Harian, di DAFTAR TRANSAKSI, saat ini belum ada fitur untuk menghapus transaksi, dan belum bisa menyeleksi transaksi untuk bisa hapus lebih dari satu, belum ada juga fitur edit untuk mengedit transaksi yang telah disubmit, selain itu list transaksinya juga belum di GROUPED BY date, jenis transaksi, dan pos keuangan, tolong implementasikan dan pastikan teraplikasikan di mobile app.
+- Ketika saya membuka menu Export Data, loadingnya sangat lama, muncul tulisan memuat data, bisakah ini dipercepat lagi prosesnya tanpa delay.
 
-- Pada halaman Kasir POS, saat mode offline masih belum bisa mengklik tombol Bayar Sekarang untuk menggunakan printer,  ada tulisan Error: Koneksi terputus dan sistem offline tidak siap. Tolong perbaiki ini agar saat mode offline tetap bisa ngeprint.
+- Pada halaman Export Data Produk by Produk, nama produknya masih belum muncul, tolong ini jadi concern serius untuk bisa diperbaiki dengan sempurna.
 
-- Tambahkan satu fitur baru bernama Export Data, masukkan ke AKSI CEPAT, fitur ini bisa digunakan untuk mendownload data berbagai macam macam data, diantaranya adalah :
-1. Data Produk berdasarkan Supplier, jadi user bisa memilih Supplier, kemudian sistem akan memfilter semua produk yang pernah dibeli dari supplier tersebut, lalu bisa di download file .xlsx nya, didalam datanya informasi produknya lengkap mulai dari tgl pembelian, barcode level 1, nama produk, harga modal, qty pembelian, jenis kemasan pembelian, harga jual (ada opsi checkbox mau ditampilkan atau tidak), dan total harga pembelian (qty * harga modal). Di halaman ini juga ada opsi untuk memilih tanggal pembelian, tulis dalam bentuk range tanggal.
-2. Data Produk berdasarkan nama produk, pada pilihan ini, user bisa memilih nama produk, kemudian sistem akan memfilter semua produk yang pernah dibeli dengan nama produk tersebut beserta nama suppliernya. Di fitur ini, suppliernya bisa lebih dari satu, karena sistemnya fokus ke produk bukan ke supplier, data yang terdownload nanti akan berisi Nama Produk akan menjadi tittle, kemudian akan ada tabel berisi tgl pembelian, nama supplier, harga modal, qty pembelian, jenis kemasan, harga total (qty * harga modal)
+- Pada halaman Keuangan harian, saat saya menginput Pemasukkan Uang Rokok, kenapa justru masuknya ke Saldo Utama, seharusnya masuknya ke Saldo Rokok, karena Uang Rokok dependensinya ke Saldo Rokok bukan saldo utama, tolong cek lagi dan perbaiki. Begitu pula untuk pengeluaran Uang Rokok, seharusnya tercatat di Pemasukan Saldo Rokok dan Pengeluaran Saldo Rokok, bukan Saldo Utama, tolong ini cek lagi algoritmanya dan perbaiki.
 
-Pada fitur ini, pastikan opsi untuk download data masih bisa ditambah jenisnya, selain 2 jenis diatas.
+- Tolong cek secara menyeluruh libray aplikasi ini untuk mobile app, pastikan kenyamanan user tetap terjaga dan responsive, termasuk untuk dropdownlist, searchbox, kecepatan proses, penginputan data, ketika posisi form ada di bawah layar, kemudian ketika form diklik yang berisi searchbox, jangan tiba tiba layarnya ke scroll ke paling atas dan posisi dropdownlistnya jadi diatas, ini sangat mengganggu kenyamanan user, tolong perbaiki ini.
+
+- Pada halaman Input Barang, saat menggunakan fitur scan AI otomatis, kemudian semua item sudah berhasil terdeteksi dan terseleksi, saat Total Harga Pembelian produk ternyata mengalami kenaikan atau penurunan harga dari harga sebelumnya, kenapa di Harga Modal untuk panel kemasan (setelah panel kemasan di expand) tidak menyesuaikan otomatis dengan harga modal yang baru, melainkan tetap tertulis harga modal yang lama, tolong ini diperbaiki, agar ketika harga modal naik atau turun (hasil scan AI), di setiap panel kemasan juga disesuaikan dengan harga modal yang baru menyesuaikan harga jenis kemasannya.
 
 ## Konteks Tambahan (opsional)
 

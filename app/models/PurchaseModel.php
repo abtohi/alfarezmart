@@ -639,7 +639,7 @@ class PurchaseModel extends Model
 
     public function getProductSupplierComparison(int $productId)
     {
-        // Get all purchase records for this product grouped by supplier
+        // Get all purchase records for this product grouped by supplier with latest price in single query
         $stmt = $this->db->prepare("
             SELECT 
                 COALESCE(s.id, 0) as supplier_id, 
@@ -647,7 +647,16 @@ class PurchaseModel extends Model
                 MAX(p.purchase_date) as last_purchase_date,
                 AVG(pi.buy_price / pkg.base_qty) as avg_price,
                 MIN(pi.buy_price / pkg.base_qty) as min_price,
-                MAX(pi.buy_price / pkg.base_qty) as max_price
+                MAX(pi.buy_price / pkg.base_qty) as max_price,
+                (SELECT (pi2.buy_price / pkg2.base_qty)
+                 FROM purchase_items pi2
+                 JOIN purchases p2 ON pi2.purchase_id = p2.id
+                 JOIN product_packagings pkg2 ON pi2.packaging_id = pkg2.id
+                 WHERE pi2.product_id = :pid 
+                   AND p2.supplier_id = COALESCE(s.id, 0)
+                 ORDER BY p2.purchase_date DESC, p2.id DESC
+                 LIMIT 1
+                ) as latest_price
             FROM purchase_items pi
             JOIN purchases p ON pi.purchase_id = p.id
             LEFT JOIN suppliers s ON p.supplier_id = s.id
@@ -659,20 +668,9 @@ class PurchaseModel extends Model
         $stmt->execute([':pid' => $productId]);
         $results = $stmt->fetchAll();
         
-        // Get latest price for each supplier separately to avoid subquery issues
+        // Ensure latest_price is float
         foreach ($results as &$row) {
-            $latestStmt = $this->db->prepare("
-                SELECT (pi2.buy_price / pkg2.base_qty) as latest_price
-                FROM purchase_items pi2
-                JOIN purchases p2 ON pi2.purchase_id = p2.id
-                JOIN product_packagings pkg2 ON pi2.packaging_id = pkg2.id
-                WHERE pi2.product_id = :pid AND p2.supplier_id = :sid
-                ORDER BY p2.purchase_date DESC, p2.id DESC
-                LIMIT 1
-            ");
-            $latestStmt->execute([':pid' => $productId, ':sid' => $row['supplier_id']]);
-            $latest = $latestStmt->fetchColumn();
-            $row['latest_price'] = $latest ? floatval($latest) : $row['avg_price'];
+            $row['latest_price'] = $row['latest_price'] ? floatval($row['latest_price']) : floatval($row['avg_price']);
         }
         
         return $results;

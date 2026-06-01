@@ -56,21 +56,37 @@ try {
     }
     echo "✅ Migrated finance accounts.\n";
 
-    // 4. Setup Default Dependencies (Uang Laci -> Saldo Utama, Uang Rokok Belum dihitung -> Saldo Rokok)
-    // Actually the user mentioned "Uang Rokok Belum dihitung" so let's make sure it's in the list
-    $insertAccStmt->execute([':name' => 'Uang Rokok Belum dihitung']);
-    
+    // 4. Setup Default Dependencies
     // Uang Laci -> Saldo Utama
     $db->exec("UPDATE finance_accounts a 
                JOIN finance_accounts target ON target.name = 'Saldo Utama'
                SET a.dependency_account_id = target.id 
-               WHERE a.name = 'Uang Laci'");
+               WHERE a.name = 'Uang Laci' AND a.dependency_account_id IS NULL");
                
-    // Uang Rokok Belum dihitung -> Saldo Rokok
+    // Uang Rokok -> Saldo Rokok (Main mapping)
     $db->exec("UPDATE finance_accounts a 
                JOIN finance_accounts target ON target.name = 'Saldo Rokok'
                SET a.dependency_account_id = target.id 
-               WHERE a.name = 'Uang Rokok Belum dihitung'");
+               WHERE a.name = 'Uang Rokok' AND a.dependency_account_id IS NULL");
+               
+    // Uang Pulsa -> Saldo Pulsa (if Saldo Pulsa exists, otherwise not set)
+    $checkSaldoPulsa = $db->query("SELECT id FROM finance_accounts WHERE name = 'Saldo Pulsa' LIMIT 1");
+    if ($checkSaldoPulsa->fetch()) {
+        $db->exec("UPDATE finance_accounts a 
+                   JOIN finance_accounts target ON target.name = 'Saldo Pulsa'
+                   SET a.dependency_account_id = target.id 
+                   WHERE a.name = 'Uang Pulsa' AND a.dependency_account_id IS NULL");
+    }
+    
+    // Uang Beras -> Saldo Beras (if Saldo Beras exists, otherwise not set)
+    $checkSaldoBeras = $db->query("SELECT id FROM finance_accounts WHERE name = 'Saldo Beras' LIMIT 1");
+    if ($checkSaldoBeras->fetch()) {
+        $db->exec("UPDATE finance_accounts a 
+                   JOIN finance_accounts target ON target.name = 'Saldo Beras'
+                   SET a.dependency_account_id = target.id 
+                   WHERE a.name = 'Uang Beras' AND a.dependency_account_id IS NULL");
+    }
+    
     echo "✅ Setup default dependencies.\n";
 
     // 5. Migrate distinct categories from finance_logs

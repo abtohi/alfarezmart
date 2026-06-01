@@ -366,7 +366,23 @@ async function openExportModal() {
 
     // Now safely init SearchBoxes - DOM is ready
     const supOptions = exportSupplierData.map(s => ({ value: s.id.toString(), label: s.name }));
-    const prodOptions = exportProductData.map(p => ({ value: p.full_name || p.name || '', label: p.full_name || p.name || '' })).filter(o => o.value);
+    const prodOptions = exportProductData
+        .map(p => {
+            const name = p.full_name || p.short_label || p.name || '';
+            return {
+                value: name,
+                label: name,
+                brand: p.brand_name ? ` (${p.brand_name})` : ''
+            };
+        })
+        .filter(o => o.value);
+
+    // Display data counts for debugging
+    console.log(`Export Data Loaded: ${supOptions.length} suppliers, ${prodOptions.length} products`);
+    
+    if (prodOptions.length === 0) {
+        showToast('Perhatian: Data produk kosong atau gagal dimuat', 'warning');
+    }
 
     window.exportSearchBox1 = new SearchBox(document.getElementById('exportSupplierSearchContainer1'), {
         options: supOptions, placeholder: '-- Ketik/Pilih Supplier --', name: 'exportSupplier1', icon: 'bi-truck'
@@ -375,7 +391,7 @@ async function openExportModal() {
         options: supOptions, placeholder: '-- Semua Supplier --', name: 'exportSupplier2', icon: 'bi-truck'
     });
     window.exportProductBox = new SearchBox(document.getElementById('exportProductSearchContainer'), {
-        options: prodOptions, placeholder: '-- Ketik Nama Produk --', name: 'exportProductName', icon: 'bi-box'
+        options: prodOptions, placeholder: `-- Ketik Nama Produk (${prodOptions.length} produk) --`, name: 'exportProductName', icon: 'bi-box'
     });
 }
 

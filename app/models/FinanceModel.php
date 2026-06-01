@@ -107,39 +107,44 @@ class FinanceModel extends Model
         $this->db->beginTransaction();
 
         try {
-            // Cek dependensi konversi otomatis
+            // Check if balance_type has a dependency account
             $stmtCheck = $this->db->prepare("
-                SELECT target.name as target_name
+                SELECT a.id, a.name, a.dependency_account_id, target.name as target_name
                 FROM finance_accounts a
-                JOIN finance_accounts target ON a.dependency_account_id = target.id
+                LEFT JOIN finance_accounts target ON a.dependency_account_id = target.id
                 WHERE a.name = :name AND a.is_active = 1
             ");
             $stmtCheck->execute([':name' => $data['balance_type']]);
-            $dependency = $stmtCheck->fetch();
+            $account = $stmtCheck->fetch();
 
-            if ($dependency) {
-                $targetPos = $dependency['target_name'];
+            $stmtInsert = $this->db->prepare("
+                INSERT INTO finance_logs (log_date, period_yyyymm, amount, balance_type, category, detail, description, reference_type, reference_id)
+                VALUES (:log_date, :period, :amount, :balance_type, :category, :detail, :description, :ref_type, :ref_id)
+            ");
+
+            if ($account && $account['dependency_account_id']) {
+                $targetPos = $account['target_name'];
+                $sourcePos = $data['balance_type'];
                 
-                $stmtInsert = $this->db->prepare("
-                    INSERT INTO finance_logs (log_date, period_yyyymm, amount, balance_type, category, detail, description, reference_type, reference_id)
-                    VALUES (:log_date, :period, :amount, :balance_type, :category, :detail, :description, :ref_type, :ref_id)
-                ");
-
-                if ($data['category'] === 'Pengeluaran') {
-                    // 1. Catat Pemasukan ke POS Target (Uang masuk dari laci)
+                // LOGIC: Dependent account always records to target account
+                // Input to Uang Rokok -> Records to Saldo Rokok
+                // Expense from Uang Rokok -> Records as expense in Saldo Rokok
+                
+                if ($data['category'] === 'Pemasukan') {
+                    // Record income to target account
                     $stmtInsert->execute([
                         ':log_date' => $data['log_date'],
                         ':period' => $period,
                         ':amount' => $data['amount'],
                         ':balance_type' => $targetPos,
                         ':category' => 'Pemasukan',
-                        ':detail' => 'Konversi Otomatis dari ' . $data['balance_type'],
-                        ':description' => 'Konversi otomatis (Dependensi POS)',
-                        ':ref_type' => 'auto_conversion',
-                        ':ref_id' => null
+                        ':detail' => $data['detail'] ?? null,
+                        ':description' => ($data['description'] ? $data['description'] . ' ' : '') . "(dari {$sourcePos})",
+                        ':ref_type' => $data['reference_type'] ?? null,
+                        ':ref_id' => $data['reference_id'] ?? null
                     ]);
-
-                    // 2. Catat Pengeluaran dari POS Target (Belanja sebenarnya)
+                } else if ($data['category'] === 'Pengeluaran') {
+                    // Record expense to target account
                     $stmtInsert->execute([
                         ':log_date' => $data['log_date'],
                         ':period' => $period,
@@ -147,31 +152,18 @@ class FinanceModel extends Model
                         ':balance_type' => $targetPos,
                         ':category' => 'Pengeluaran',
                         ':detail' => $data['detail'] ?? null,
-                        ':description' => $data['description'] ?? null,
-                        ':ref_type' => $data['reference_type'] ?? null,
-                        ':ref_id' => $data['reference_id'] ?? null
-                    ]);
-                } else if ($data['category'] === 'Pemasukan') {
-                    // Hanya catat pemasukan ke POS Target
-                    $stmtInsert->execute([
-                        ':log_date' => $data['log_date'],
-                        ':period' => $period,
-                        ':amount' => $data['amount'],
-                        ':balance_type' => $targetPos,
-                        ':category' => 'Pemasukan',
-                        ':detail' => $data['detail'] ?? null,
-                        ':description' => ($data['description'] ? $data['description'] . ' ' : '') . '(via ' . $data['balance_type'] . ')',
+                        ':description' => ($data['description'] ? $data['description'] . ' ' : '') . "(dari {$sourcePos})",
                         ':ref_type' => $data['reference_type'] ?? null,
                         ':ref_id' => $data['reference_id'] ?? null
                     ]);
                 }
-
+                
                 $lastId = $this->db->lastInsertId();
                 $this->db->commit();
                 return $lastId;
             }
 
-            // Jika tidak ada dependensi, lakukan insert normal
+            // No dependency - record normally to the specified balance_type
             $stmt = $this->db->prepare("
                 INSERT INTO finance_logs (log_date, period_yyyymm, amount, balance_type, category, detail, description, reference_type, reference_id)
                 VALUES (:log_date, :period, :amount, :balance_type, :category, :detail, :description, :ref_type, :ref_id)

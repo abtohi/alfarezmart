@@ -411,7 +411,15 @@ class SearchBox {
         this._positionDropdown();
 
         this._dropdown.classList.add('open');
-        setTimeout(() => this._searchInput.focus(), 50);
+        
+        // Delay focus to prevent browser auto-scroll + listen for keyboard changes
+        this._setupKeyboardDetection();
+        setTimeout(() => {
+            // Only focus if dropdown still open (user might have closed it)
+            if (this.isOpen && this._searchInput) {
+                this._searchInput.focus();
+            }
+        }, 100);
 
         // Add backdrop (pointer-events:none so it doesn't block clicks inside modal stacking contexts)
         if (!this._backdrop) {
@@ -424,90 +432,135 @@ class SearchBox {
         }
     }
 
+    _setupKeyboardDetection() {
+        // For mobile: detect virtual keyboard and reposition if needed
+        if (!('visualViewport' in window)) return;
+        
+        const visualViewport = window.visualViewport;
+        let lastHeight = visualViewport.height;
+        
+        const handler = () => {
+            const currentHeight = visualViewport.height;
+            // If viewport height decreased, keyboard likely appeared
+            if (currentHeight < lastHeight) {
+                lastHeight = currentHeight;
+                if (this.isOpen) {
+                    setTimeout(() => this._repositionForKeyboard(), 50);
+                }
+            } else {
+                lastHeight = currentHeight;
+            }
+        };
+        
+        visualViewport.addEventListener('resize', handler);
+        // Store handler reference for cleanup
+        if (!this._keyboardHandler) {
+            this._keyboardHandler = handler;
+        }
+    }
+
+    _repositionForKeyboard() {
+        if (!this.isOpen || !this._dropdown) return;
+        
+        const rect = this._trigger.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const visualViewport = window.visualViewport;
+        const availableHeight = visualViewport ? visualViewport.height : window.innerHeight;
+        
+        // Calculate space available below trigger
+        const spaceBelow = availableHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const dropdownHeight = Math.min(260, this._dropdown.scrollHeight);
+        
+        // Ensure minimum space above keyboard
+        const keyboardBuffer = 16;
+        
+        if (spaceBelow < dropdownHeight + keyboardBuffer && spaceAbove > dropdownHeight + keyboardBuffer) {
+            // Open upwards
+            const topValue = rect.top - dropdownHeight - 8;
+            this._dropdown.style.top = Math.max(8, topValue) + 'px';
+            this._dropdown.style.bottom = 'auto';
+        } else {
+            // Open downwards
+            this._dropdown.style.top = (rect.bottom + 8) + 'px';
+            this._dropdown.style.bottom = 'auto';
+        }
+    }
+
     _positionDropdown() {
         const rect = this._trigger.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
+        const visualViewport = window.visualViewport;
+        const viewportHeight = visualViewport ? visualViewport.height : window.innerHeight;
         
-        // Mobile layout: position it absolute below trigger
-        if (viewportWidth <= 480) {
-            this._dropdown.style.position = 'absolute';
-            this._dropdown.style.left = '0px';
-            this._dropdown.style.right = 'auto';
-            this._dropdown.style.width = '100%';
-            this._dropdown.style.maxWidth = '100%';
-            this._dropdown.style.maxHeight = '200px';
-            this._dropdown.style.borderRadius = 'var(--radius-md)';
-            this._dropdown.style.border = '1px solid var(--border-color)';
-            this._dropdown.style.boxShadow = 'var(--shadow-lg)';
-            
-            // Check if there is enough space below the trigger
-            const spaceBelow = viewportHeight - rect.bottom;
-            const spaceAbove = rect.top;
-            const dropdownHeight = 200;
-
-            if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
-                // Open upwards
-                this._dropdown.style.top = 'auto';
-                this._dropdown.style.bottom = '100%';
-                this._dropdown.style.transform = 'translateY(-4px)';
-            } else {
-                // Open downwards
-                this._dropdown.style.top = '100%';
-                this._dropdown.style.bottom = 'auto';
-                this._dropdown.style.transform = 'translateY(4px)';
-            }
-            
-            // Force reflow for animation
-            void this._dropdown.offsetWidth;
-            if (this._backdrop) {
-                this._backdrop.style.background = 'transparent';
-                this._backdrop.style.backdropFilter = 'none';
-                this._backdrop.style.webkitBackdropFilter = 'none';
-            }
-            return;
-        }
-
-        // Desktop layout
-        const dropdownWidth = Math.min(320, Math.max(200, rect.width, viewportWidth - 32));
+        // Use fixed positioning for both mobile and desktop (consistency)
+        this._dropdown.style.position = 'fixed';
         
+        // Set width to match trigger width (or min/max bounds)
+        let width = Math.max(rect.width, 200);
+        width = Math.min(width, viewportWidth - 16);
+        this._dropdown.style.width = width + 'px';
+        this._dropdown.style.maxWidth = 'none';
+        
+        // Calculate horizontal position
         let left = rect.left;
-        // Clamp so it doesn't go off-screen right
-        if (left + dropdownWidth > viewportWidth - 16) {
-            left = viewportWidth - dropdownWidth - 16;
+        if (left + width > viewportWidth - 8) {
+            left = viewportWidth - width - 8;
         }
-        if (left < 16) left = 16;
-
-        let top = rect.bottom + 4;
-        let maxHeight = 260;
-
-        // If it goes off the bottom of the screen, open it upwards
-        if (top + maxHeight > viewportHeight - 16 && rect.top > maxHeight + 16) {
-            this._dropdown.style.top = 'auto';
-            this._dropdown.style.bottom = (viewportHeight - rect.top + 4) + 'px';
-            this._dropdown.style.maxHeight = maxHeight + 'px';
-        } else {
-            this._dropdown.style.bottom = 'auto';
-            this._dropdown.style.top = top + 'px';
-            
-            // If it still overflows, restrict max height
-            if (top + maxHeight > viewportHeight - 16) {
-                maxHeight = Math.max(150, viewportHeight - top - 16);
-            }
-            this._dropdown.style.maxHeight = maxHeight + 'px';
-        }
-
+        if (left < 8) left = 8;
         this._dropdown.style.left = left + 'px';
-        this._dropdown.style.width = dropdownWidth + 'px';
-        this._dropdown.style.maxWidth = (viewportWidth - 32) + 'px';
+        this._dropdown.style.right = 'auto';
+        
+        // Calculate vertical position with keyboard awareness
+        const dropdownHeight = 260;
+        const spaceBelow = viewportHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const gapSize = 8;
+        const keyboardBuffer = 16;
+        
+        // Try to open downwards if enough space
+        let shouldOpenBelow = spaceBelow >= dropdownHeight + keyboardBuffer;
+        
+        // If not enough space below, check if can open above
+        if (!shouldOpenBelow && spaceAbove > spaceBelow) {
+            shouldOpenBelow = false;
+        } else if (!shouldOpenBelow) {
+            // Not enough space either direction - default to below
+            shouldOpenBelow = true;
+        }
+        
+        if (shouldOpenBelow) {
+            this._dropdown.style.top = (rect.bottom + gapSize) + 'px';
+            this._dropdown.style.bottom = 'auto';
+        } else {
+            this._dropdown.style.top = 'auto';
+            this._dropdown.style.bottom = (viewportHeight - rect.top + gapSize) + 'px';
+        }
+        
+        // Set max-height based on available space
+        let maxHeight = dropdownHeight;
+        if (shouldOpenBelow) {
+            maxHeight = Math.max(150, viewportHeight - rect.bottom - gapSize - keyboardBuffer);
+        } else {
+            maxHeight = Math.max(150, rect.top - gapSize - keyboardBuffer);
+        }
+        this._dropdown.style.maxHeight = maxHeight + 'px';
+        
+        // Styling
         this._dropdown.style.borderRadius = 'var(--radius-md)';
         this._dropdown.style.border = '1px solid var(--border-color)';
         this._dropdown.style.boxShadow = 'var(--shadow-lg)';
+        this._dropdown.style.zIndex = 'calc(var(--z-modal) + 10)';
+        
+        // Animation transform
         this._dropdown.style.transform = 'translateY(-8px)';
-        void this._dropdown.offsetWidth;
+        void this._dropdown.offsetWidth; // Force reflow
+        
         if (this.isOpen) {
             this._dropdown.style.transform = 'translateY(0)';
         }
+        
+        // Setup backdrop
         if (this._backdrop) {
             this._backdrop.style.background = 'transparent';
             this._backdrop.style.backdropFilter = 'none';
@@ -520,6 +573,13 @@ class SearchBox {
         this._trigger.classList.remove('active');
         this._dropdown.classList.remove('open');
         this._dropdown.style.transform = '';
+        
+        // Cleanup keyboard handler
+        if (this._keyboardHandler && 'visualViewport' in window) {
+            window.visualViewport.removeEventListener('resize', this._keyboardHandler);
+            this._keyboardHandler = null;
+        }
+        
         if (this._backdrop) {
             this._backdrop.classList.remove('active');
             this._backdrop.style.background = 'transparent';
@@ -596,6 +656,12 @@ class SearchBox {
 
     /** Destroy and clean up */
     destroy() {
+        // Cleanup keyboard handler
+        if (this._keyboardHandler && 'visualViewport' in window) {
+            window.visualViewport.removeEventListener('resize', this._keyboardHandler);
+            this._keyboardHandler = null;
+        }
+        
         if (this._backdrop) {
             this._backdrop.remove();
             this._backdrop = null;
