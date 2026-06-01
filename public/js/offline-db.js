@@ -2,7 +2,7 @@
  * AlfarezMart PWA - Offline IndexedDB
  */
 
-const OfflineDB = (function() {
+window.OfflineDB = (function() {
     const DB_NAME = 'alfarezmart_offline';
     const DB_VERSION = 3; // Upgraded for full offline support
     const STORE_PRODUCTS = 'products';

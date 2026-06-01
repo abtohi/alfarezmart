@@ -12,6 +12,83 @@ class ApiController extends Controller
         $this->db = Database::getInstance()->getConnection();
     }
 
+    public function exportProducts()
+    {
+        try {
+            $mode = isset($_GET['mode']) ? (int)$_GET['mode'] : 1;
+            
+            $db = Database::getInstance()->getConnection();
+            $data = [];
+            
+            if ($mode === 1) {
+                // By Supplier
+                $supplierId = isset($_GET['supplier_id']) ? (int)$_GET['supplier_id'] : 0;
+                $dateFrom = isset($_GET['date_from']) ? $_GET['date_from'] : '';
+                $dateTo = isset($_GET['date_to']) ? $_GET['date_to'] : '';
+                
+                $sql = "SELECT p.barcode, p.full_name as 'Nama Produk', c.name as 'Kategori', b.name as 'Brand', 
+                        sp.buy_price as 'Harga Beli Terakhir', sp.updated_at as 'Tanggal Update' 
+                        FROM supplier_products sp 
+                        JOIN products p ON sp.product_id = p.id 
+                        LEFT JOIN categories c ON p.category_id = c.id
+                        LEFT JOIN brands b ON p.brand_id = b.id
+                        WHERE sp.supplier_id = :sup_id";
+                        
+                $params = [':sup_id' => $supplierId];
+                
+                if (!empty($dateFrom)) {
+                    $sql .= " AND DATE(sp.updated_at) >= :from";
+                    $params[':from'] = $dateFrom;
+                }
+                if (!empty($dateTo)) {
+                    $sql .= " AND DATE(sp.updated_at) <= :to";
+                    $params[':to'] = $dateTo;
+                }
+                
+                $sql .= " ORDER BY p.full_name ASC";
+                
+                $stmt = $db->prepare($sql);
+                $stmt->execute($params);
+                $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+            } else {
+                // By Product Name & Multi Supplier filter
+                $productName = isset($_GET['product_name']) ? $_GET['product_name'] : '';
+                $supplierId = isset($_GET['supplier_id']) ? (int)$_GET['supplier_id'] : 0;
+                
+                $sql = "SELECT p.barcode, p.full_name as 'Nama Produk', c.name as 'Kategori', b.name as 'Brand',
+                        (SELECT name FROM suppliers s JOIN supplier_products sp2 ON s.id = sp2.supplier_id WHERE sp2.product_id = p.id ORDER BY sp2.updated_at DESC LIMIT 1) as 'Supplier Terakhir',
+                        p.base_price as 'Harga Dasar', p.sell_price as 'Harga Jual', p.stock as 'Stok'
+                        FROM products p 
+                        LEFT JOIN categories c ON p.category_id = c.id
+                        LEFT JOIN brands b ON p.brand_id = b.id
+                        WHERE 1=1";
+                
+                $params = [];
+                
+                if (!empty($productName)) {
+                    $sql .= " AND p.full_name LIKE :name";
+                    $params[':name'] = "%{$productName}%";
+                }
+                
+                if ($supplierId > 0) {
+                    $sql .= " AND p.id IN (SELECT product_id FROM supplier_products WHERE supplier_id = :sup_id)";
+                    $params[':sup_id'] = $supplierId;
+                }
+                
+                $sql .= " ORDER BY p.full_name ASC";
+                
+                $stmt = $db->prepare($sql);
+                $stmt->execute($params);
+                $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+            
+            $this->json(['success' => true, 'data' => $data]);
+        } catch (Exception $e) {
+            $this->json(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
     public function getProducts()
     {
         $model = new ProductModel();

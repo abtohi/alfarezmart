@@ -103,7 +103,7 @@
 
     <!-- Quick Actions -->
     <div class="section-title">Aksi Cepat</div>
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 24px;">
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 24px; text-align: center;">
         <a href="<?= BASE_URL ?>scanner" class="quick-action">
             <div class="action-icon" style="background: var(--danger-bg); color: var(--primary);"><i class="bi bi-upc-scan"></i></div>
             <span class="action-label">Scan Harga</span>
@@ -119,6 +119,10 @@
         <a href="<?= BASE_URL ?>sales" class="quick-action">
             <div class="action-icon" style="background: var(--primary-bg); color: var(--primary);"><i class="bi bi-clock-history"></i></div>
             <span class="action-label">Riwayat</span>
+        </a>
+        <a href="javascript:void(0)" onclick="openExportModal()" class="quick-action">
+            <div class="action-icon" style="background: rgba(46, 196, 182, 0.1); color: var(--success);"><i class="bi bi-file-earmark-excel"></i></div>
+            <span class="action-label">Export Data</span>
         </a>
     </div>
 
@@ -286,4 +290,132 @@ function showComingSoon(title, desc, icon) {
         onSubmit: async () => true
     });
 }
+
+// Modal Export JS Logic
+let exportSupplierData = [];
+async function openExportModal() {
+    const html = `
+        <style>
+            .export-tab { padding: 8px; font-size: 11px; font-weight: 600; text-align: center; border-radius: var(--radius-md); cursor: pointer; flex: 1; transition: 0.2s; }
+            .export-tab.active { background: var(--primary); color: white; }
+            .export-tab.inactive { background: var(--surface-2); color: var(--text-muted); }
+            .export-panel { display: none; margin-top: 15px; }
+            .export-panel.active { display: block; }
+        </style>
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <div id="tabExport1" class="export-tab active" onclick="switchExportTab(1)">By Supplier</div>
+            <div id="tabExport2" class="export-tab inactive" onclick="switchExportTab(2)">By Produk</div>
+        </div>
+        
+        <div id="panelExport1" class="export-panel active">
+            <div class="modal-form-group" style="margin-bottom: 12px; text-align: left;">
+                <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Pilih Supplier *</label>
+                <div id="exportSupplierSearchContainer1"></div>
+            </div>
+            <div class="modal-form-group" style="margin-bottom: 12px; text-align: left;">
+                <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Tgl Masuk Dari (Opsional)</label>
+                <input type="date" id="exportDateFrom1" class="form-control-dark">
+            </div>
+            <div class="modal-form-group" style="margin-bottom: 12px; text-align: left;">
+                <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Tgl Masuk Sampai (Opsional)</label>
+                <input type="date" id="exportDateTo1" class="form-control-dark">
+            </div>
+            <button class="btn-primary-custom" onclick="executeExport(1)" style="width: 100%; padding: 10px; border-radius: var(--radius-md);"><i class="bi bi-download"></i> Download .xlsx</button>
+        </div>
+        
+        <div id="panelExport2" class="export-panel">
+            <div class="modal-form-group" style="margin-bottom: 12px; text-align: left;">
+                <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Cari Nama Produk (Kosong = Semua)</label>
+                <input type="text" id="exportProductName" class="form-control-dark" placeholder="Nama produk..." autocomplete="off">
+            </div>
+            <div class="modal-form-group" style="margin-bottom: 12px; text-align: left;">
+                <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Filter Supplier (Opsional)</label>
+                <div id="exportSupplierSearchContainer2"></div>
+            </div>
+            <button class="btn-primary-custom" onclick="executeExport(2)" style="width: 100%; padding: 10px; border-radius: var(--radius-md);"><i class="bi bi-download"></i> Download .xlsx</button>
+        </div>
+    `;
+
+    const modalPromise = AppModal.show({
+        title: 'Export Data Produk',
+        content: html,
+        showCloseBtn: true
+    });
+
+    // Fetch supplier data for searchbox
+    try {
+        const res = await api(`${BASE_URL}api/suppliers`);
+        if (res.success) {
+            exportSupplierData = res.data;
+        }
+    } catch (e) {
+        console.error("Gagal load supplier", e);
+    }
+
+    const supOptions = exportSupplierData.map(s => ({ value: s.id.toString(), label: s.name }));
+    
+    window.exportSearchBox1 = new SearchBox(document.getElementById('exportSupplierSearchContainer1'), {
+        options: supOptions,
+        placeholder: '-- Ketik/Pilih Supplier --',
+        name: 'exportSupplier1',
+        icon: 'bi-truck'
+    });
+
+    window.exportSearchBox2 = new SearchBox(document.getElementById('exportSupplierSearchContainer2'), {
+        options: supOptions,
+        placeholder: '-- Semua Supplier --',
+        name: 'exportSupplier2',
+        icon: 'bi-truck'
+    });
+}
+
+window.switchExportTab = function(tabIdx) {
+    document.getElementById('tabExport1').className = (tabIdx === 1) ? 'export-tab active' : 'export-tab inactive';
+    document.getElementById('tabExport2').className = (tabIdx === 2) ? 'export-tab active' : 'export-tab inactive';
+    document.getElementById('panelExport1').className = (tabIdx === 1) ? 'export-panel active' : 'export-panel';
+    document.getElementById('panelExport2').className = (tabIdx === 2) ? 'export-panel active' : 'export-panel';
+};
+
+window.executeExport = async function(mode) {
+    let payload = { mode: mode };
+    if (mode === 1) {
+        const supId = document.querySelector('input[name="exportSupplier1"]').value;
+        if (!supId) {
+            showToast("Pilih supplier terlebih dahulu!", "warning");
+            return;
+        }
+        payload.supplier_id = supId;
+        payload.date_from = document.getElementById('exportDateFrom1').value;
+        payload.date_to = document.getElementById('exportDateTo1').value;
+    } else {
+        payload.product_name = document.getElementById('exportProductName').value.trim();
+        const supId2 = document.querySelector('input[name="exportSupplier2"]').value;
+        if(supId2) payload.supplier_id = supId2;
+    }
+
+    try {
+        const query = new URLSearchParams(payload).toString();
+        showToast("Mempersiapkan data ekspor...", "info");
+        const res = await api(`${BASE_URL}api/products/export?${query}`);
+        
+        if (res.success && res.data && res.data.length > 0) {
+            if (typeof XLSX === 'undefined') {
+                showToast("Library XLSX belum termuat. Pastikan koneksi internet aktif untuk mendownload library.", "error");
+                return;
+            }
+            const ws = XLSX.utils.json_to_sheet(res.data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Data Produk");
+            
+            const filename = `Export_Produk_${new Date().toISOString().slice(0,10)}.xlsx`;
+            XLSX.writeFile(wb, filename);
+            showToast("Berhasil didownload!", "success");
+            AppModal.close();
+        } else {
+            showToast(res.message || "Tidak ada data ditemukan untuk kriteria ini.", "warning");
+        }
+    } catch (e) {
+        showToast(e.message, 'error');
+    }
+};
 </script>

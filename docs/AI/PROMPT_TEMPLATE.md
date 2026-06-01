@@ -33,11 +33,17 @@ Klasifikasikan task ini sebelum mulai:
 
 ## Task
 
-- Di halaman Catatan Hutang & Piutang, Hutang Toko tidak selalu terhadap supplier, bisa juga toko punya hutang ke uang tabungan lain misalnya, atau pinjaman ke orang tua, jadi tolong di halaman Hutang Toko disesuaikan lagi agar tidak hanya ada pilihan untuk supplier, tetapi bisa juga ke sumber lain, buatkan form dropdownlist untuk memilih opsi sumber hutang, dan pastikan opsi nya di desain yang menarik tampilannya mengikuti tema website, selain itu opsinya juga bisa di tambah, edit dan hapus. List Supplier juga tolong di desain agar lebih menarik dan sesuai tema website.
+- Pada halaman Kelola POS Keuangan, saat saya mencoba Tambah POS Baru, ada tulisan Invalid CSRF token, tolong cek dan perbaiki kenapa ini bisa gagal.
 
-- Tolong perbaiki juga agar user jangan terlalu sering keluar otomatis dari aplikasi, saat ini sering kali pengguna smartphone tiba tiba logout sendiri, padahal sedang ada aktivitas menginput barang, aku tidak mau itu terjadi, tolong hapus saja session timeout, sekali login bisa dipakai sampai lama tanpa logout otomatis, kecuali user memang menghendaki untuk logout atau jika aplikasi di install ulang atau jika cache/cookies terhapus, maka baru user bisa login kembali.
+- Pada halaman Keuangan Harian, di DAFTAR TRANSAKSI, saat ini belum ada fitur untuk menghapus transaksi, dan belum bisa menyeleksi transaksi untuk bisa hapus lebih dari satu, belum ada juga fitur edit untuk mengedit transaksi yang telah disubmit, selain itu list transaksinya juga belum di GROUPED BY date, jenis transaksi, dan pos keuangan, tolong implementasikan dan pastikan teraplikasikan di mobile app.
 
-- Saat aplikasi start di HP, tolong jangan tampilkan gambar mobile_icon.png, tetapi tampilkan animasi bertuliskan Alfarez Mart, karena tampilan icon mobile_icon.png membuat aplikasi tidak elegan saat loading start.
+- Pada halaman Kasir POS, saat mode offline masih belum bisa mengklik tombol Bayar Sekarang untuk menggunakan printer,  ada tulisan Error: Koneksi terputus dan sistem offline tidak siap. Tolong perbaiki ini agar saat mode offline tetap bisa ngeprint.
+
+- Tambahkan satu fitur baru bernama Export Data, masukkan ke AKSI CEPAT, fitur ini bisa digunakan untuk mendownload data berbagai macam macam data, diantaranya adalah :
+1. Data Produk berdasarkan Supplier, jadi user bisa memilih Supplier, kemudian sistem akan memfilter semua produk yang pernah dibeli dari supplier tersebut, lalu bisa di download file .xlsx nya, didalam datanya informasi produknya lengkap mulai dari tgl pembelian, barcode level 1, nama produk, harga modal, qty pembelian, jenis kemasan pembelian, harga jual (ada opsi checkbox mau ditampilkan atau tidak), dan total harga pembelian (qty * harga modal). Di halaman ini juga ada opsi untuk memilih tanggal pembelian, tulis dalam bentuk range tanggal.
+2. Data Produk berdasarkan nama produk, pada pilihan ini, user bisa memilih nama produk, kemudian sistem akan memfilter semua produk yang pernah dibeli dengan nama produk tersebut beserta nama suppliernya. Di fitur ini, suppliernya bisa lebih dari satu, karena sistemnya fokus ke produk bukan ke supplier, data yang terdownload nanti akan berisi Nama Produk akan menjadi tittle, kemudian akan ada tabel berisi tgl pembelian, nama supplier, harga modal, qty pembelian, jenis kemasan, harga total (qty * harga modal)
+
+Pada fitur ini, pastikan opsi untuk download data masih bisa ditambah jenisnya, selain 2 jenis diatas.
 
 ## Konteks Tambahan (opsional)
 

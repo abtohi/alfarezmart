@@ -47,7 +47,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS -->
-    <?php $v = '?v=7.2'; ?>
+    <?php $v = '?v=7.3'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -222,6 +222,7 @@ if ($userLevel === 'staff') {
     <script src="<?= BASE_URL ?>public/js/packaging-prices.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/qty-pricing.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/components.js<?= $v ?>"></script>
+    <script src="<?= BASE_URL ?>public/js/xlsx.full.min.js"></script>
     <script>
         // Injeksi konfigurasi geofencing untuk staff
         window.GEO_CONFIG = {
@@ -238,7 +239,7 @@ if ($userLevel === 'staff') {
     
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '7.2'; // Update this to force client reloads
+    const APP_VERSION = '7.3'; // Update this to force client reloads
     
     // Self-healing cache buster
     if (localStorage.getItem('app_version') !== APP_VERSION) {

@@ -15,12 +15,6 @@ if (!class_exists('Security')) {
                 $this->regenerateCSRFToken();
             }
 
-            // Regenerate if expired
-            $lifetime = defined('CSRF_TOKEN_LIFETIME') ? (int)CSRF_TOKEN_LIFETIME : 3600;
-            if (time() - $_SESSION['csrf_token_time'] > $lifetime) {
-                $this->regenerateCSRFToken();
-            }
-
             return $_SESSION['csrf_token'];
         }
 
@@ -35,6 +29,7 @@ if (!class_exists('Security')) {
 
         /**
          * Validate CSRF token
+         * @param string $token
          */
         public function validateCSRFToken($token)
         {
@@ -44,6 +39,7 @@ if (!class_exists('Security')) {
 
         /**
          * Sanitize string input (XSS prevention)
+         * @param mixed $input
          */
         public static function sanitize($input)
         {
@@ -81,6 +77,7 @@ if (!class_exists('Security')) {
 
         /**
          * Sanitize filename
+         * @param string $filename
          */
         public static function sanitizeFilename($filename)
         {

@@ -63,6 +63,7 @@ $router->get('/reports/product-history/export/{id}', 'ReportController@exportPro
 // Products API
 $router->get('/api/sync/all', 'ApiController@syncAllData');
 $router->get('/api/products/sync', 'ApiController@syncProducts');
+$router->get('/api/products/export', 'ApiController@exportProducts');
 $router->get('/api/products', 'ApiController@getProducts');
 $router->get('/api/products/search', 'ApiController@searchProducts');
 $router->get('/api/products/barcode/{code}', 'ApiController@getByBarcode');
