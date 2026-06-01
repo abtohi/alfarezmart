@@ -116,19 +116,19 @@ class SaleModel extends Model
                 ]);
             }
 
-            // Insert Finance Log if it's Lunas
-            if (($data['payment_status'] ?? 'Lunas') === 'Lunas') {
-                $stmtFinance = $this->db->prepare("
-                    INSERT INTO finance_logs (log_date, period_yyyymm, amount, balance_type, category, detail, description, reference_type, reference_id)
-                    VALUES (CURRENT_DATE, :period, :amount, 'Saldo Utama', 'Pemasukan', 'Omzet Toko', :desc, 'sale', :ref)
-                ");
-                $stmtFinance->execute([
-                    ':period' => date('Ym'),
-                    ':amount' => $data['total_amount'],
-                    ':desc' => 'Pembayaran ' . $data['invoice_number'],
-                    ':ref' => $transactionId
-                ]);
-            }
+            // [DISABLED by request] Insert Finance Log if it's Lunas
+            // if (($data['payment_status'] ?? 'Lunas') === 'Lunas') {
+            //     $stmtFinance = $this->db->prepare("
+            //         INSERT INTO finance_logs (log_date, period_yyyymm, amount, balance_type, category, detail, description, reference_type, reference_id)
+            //         VALUES (CURRENT_DATE, :period, :amount, 'Saldo Utama', 'Pemasukan', 'Omzet Toko', :desc, 'sale', :ref)
+            //     ");
+            //     $stmtFinance->execute([
+            //         ':period' => date('Ym'),
+            //         ':amount' => $data['total_amount'],
+            //         ':desc' => 'Pembayaran ' . $data['invoice_number'],
+            //         ':ref' => $transactionId
+            //     ]);
+            // }
 
             $this->db->commit();
             return $transactionId;
