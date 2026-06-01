@@ -404,31 +404,44 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Modal untuk Kelola POS Keuangan
     window.manageAccounts = async function() {
-        let optionsHtml = '';
-        accountsData.forEach(acc => {
-            optionsHtml += `<option value="${acc.id}">${escapeHtml(acc.name)}</option>`;
-        });
-
         const html = `
-            <div style="margin-bottom: 15px; display:flex; gap: 8px; align-items:center;">
-                <input type="text" id="newAccountName" class="form-control-dark" placeholder="Nama POS Baru (misal: Uang Gas)">
-                <button class="btn-primary-custom" onclick="saveNewAccount()" style="padding: 10px; border-radius:var(--radius-md);"><i class="bi bi-plus-lg"></i></button>
+            <div style="margin-bottom: 15px; background: var(--surface-2); padding: 12px; border-radius: var(--radius-md);">
+                <div style="margin-bottom: 8px; font-weight: 600; font-size: 12px;">Tambah POS Baru</div>
+                <div style="display:flex; gap: 8px; align-items:center; margin-bottom: 8px;">
+                    <input type="text" id="newAccountName" class="form-control-dark" placeholder="Nama POS (misal: Uang Gas)">
+                </div>
+                <div style="display:flex; gap: 8px; align-items:center;">
+                    <select id="newAccountDepType" class="form-select-dark" style="width: auto; font-size: 11px;" onchange="document.getElementById('newAccountDepTarget').style.display = this.value === 'dependent' ? 'block' : 'none'">
+                        <option value="independent">Independent</option>
+                        <option value="dependent">Dependent</option>
+                    </select>
+                    <select id="newAccountDepTarget" class="form-select-dark" style="display: none; font-size: 11px; flex:1;">
+                        <option value="">-- Pilih Tujuan --</option>
+                        ${accountsData.map(acc => `<option value="${acc.id}">${escapeHtml(acc.name)}</option>`).join('')}
+                    </select>
+                    <button class="btn-primary-custom" onclick="saveNewAccount()" style="padding: 6px 12px; border-radius:var(--radius-md); font-size: 11px;"><i class="bi bi-plus-lg"></i> Tambah</button>
+                </div>
             </div>
-            <div style="font-size: 10px; color: var(--info); margin-bottom: 15px;"><i class="bi bi-info-circle"></i> Jika Anda mengatur "Tujuan Konversi", maka pengeluaran dari POS ini akan otomatis dicatat sebagai pemasukan+pengeluaran di tujuan konversi tersebut tanpa memotong uang di POS asli.</div>
+            <div style="font-size: 10px; color: var(--info); margin-bottom: 15px;"><i class="bi bi-info-circle"></i> Jika "Dependent" dipilih, maka pengeluaran dari POS tersebut akan otomatis tercatat juga sebagai pemasukan+pengeluaran di pos tujuan tanpa memotong saldo aslinya.</div>
             <div style="max-height: 300px; overflow-y: auto; background: var(--surface-2); border-radius: var(--radius-md); padding: 10px;">
                 ${accountsData.map(acc => `
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border-color);">
                         <div style="flex: 1;">
-                            <div style="font-weight: 600; font-size: 12px;">${escapeHtml(acc.name)}</div>
-                            <div style="display: flex; gap: 5px; margin-top: 4px;">
-                                <span style="font-size: 9px; color: var(--text-muted);">Tujuan Konversi:</span>
-                                <select onchange="updateAccountDependency(${acc.id}, this.value)" class="form-select-dark" style="font-size: 9px; padding: 2px 16px 2px 4px; height: auto;">
-                                    <option value="">-- Tidak Ada --</option>
-                                    ${accountsData.map(d => d.id !== acc.id ? `<option value="${d.id}" ${acc.dependency_account_id === d.id ? 'selected' : ''}>${escapeHtml(d.name)}</option>` : '').join('')}
+                            <div style="display: flex; gap: 5px; align-items: center;">
+                                <input type="text" id="editAccName_${acc.id}" value="${escapeHtml(acc.name)}" class="form-control-dark" style="font-size: 12px; padding: 4px; height: auto;">
+                            </div>
+                            <div style="display: flex; gap: 5px; margin-top: 4px; align-items: center;">
+                                <span style="font-size: 9px; color: var(--text-muted);">Sifat:</span>
+                                <select id="editAccDep_${acc.id}" class="form-select-dark" style="font-size: 9px; padding: 2px 16px 2px 4px; height: auto;">
+                                    <option value="">Independent</option>
+                                    ${accountsData.map(d => d.id !== acc.id ? `<option value="${d.id}" ${acc.dependency_account_id === d.id ? 'selected' : ''}>Dependent ke: ${escapeHtml(d.name)}</option>` : '').join('')}
                                 </select>
                             </div>
                         </div>
-                        <button onclick="deleteAccount(${acc.id})" style="background: transparent; border: none; color: var(--primary); padding: 4px; margin-left:10px;"><i class="bi bi-trash"></i></button>
+                        <div style="display: flex; gap: 5px; margin-left: 10px;">
+                            <button onclick="updateAccount(${acc.id})" style="background: transparent; border: none; color: var(--info); padding: 4px;" title="Simpan Perubahan"><i class="bi bi-save"></i></button>
+                            <button onclick="deleteAccount(${acc.id})" style="background: transparent; border: none; color: var(--primary); padding: 4px;" title="Hapus"><i class="bi bi-trash"></i></button>
+                        </div>
                     </div>
                 `).join('')}
             </div>
@@ -436,7 +449,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         await AppModal.show({
             title: 'Kelola POS Keuangan',
-            subtitle: 'Tambah, hapus, atau atur konversi otomatis',
+            subtitle: 'Tambah, ubah nama, hapus, atau atur konversi otomatis',
             icon: 'bi-gear-fill',
             bodyHTML: html,
             hideSubmit: true,
@@ -446,9 +459,15 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     window.saveNewAccount = async function() {
         const name = document.getElementById('newAccountName').value.trim();
+        const type = document.getElementById('newAccountDepType').value;
+        let depId = null;
+        if (type === 'dependent') {
+            depId = document.getElementById('newAccountDepTarget').value;
+        }
+        
         if(!name) return;
         try {
-            const res = await api(`${BASE_URL}api/finance/accounts`, 'POST', { csrf_token: csrfVal, name: name });
+            const res = await api(`${BASE_URL}api/finance/accounts`, 'POST', { csrf_token: csrfVal, name: name, dependency_account_id: depId });
             if(res.success) {
                 showToast("Berhasil ditambahkan", "success");
                 await loadMasterData();
@@ -458,16 +477,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch(e) { showToast(e.message, 'error'); }
     };
 
-    window.updateAccountDependency = async function(id, depId) {
+    window.updateAccount = async function(id) {
         try {
-            const acc = accountsData.find(a => a.id === id);
+            const name = document.getElementById(`editAccName_${id}`).value.trim();
+            const depId = document.getElementById(`editAccDep_${id}`).value;
+            
             const res = await api(`${BASE_URL}api/finance/accounts/${id}/update`, 'POST', { 
                 csrf_token: csrfVal, 
-                name: acc.name,
-                dependency_account_id: depId 
+                name: name,
+                dependency_account_id: depId || null
             });
             if(res.success) {
-                showToast("Dependensi diperbarui", "success");
+                showToast("Berhasil diperbarui", "success");
                 await loadMasterData();
             }
         } catch(e) { showToast(e.message, 'error'); }
@@ -512,7 +533,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             </div>
 
             <div class="modal-form-group">
-                <label>Detail Kategori Transaksi (SearchBox) *</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label style="margin:0;">Detail Kategori Transaksi (SearchBox) *</label>
+                    <button class="btn-primary-custom" type="button" onclick="manageCategories()" style="padding: 2px 8px; font-size: 10px; border-radius: var(--radius-sm);"><i class="bi bi-gear-fill"></i> Kelola</button>
+                </div>
                 <input type="text" id="logDetail" list="categoryDatalist" class="form-control-dark" placeholder="Pilih atau Ketik Kategori Transaksi Baru">
             </div>
 
@@ -619,7 +643,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             </div>
 
             <div class="modal-form-group">
-                <label>Detail Kategori Transaksi (SearchBox) *</label>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label style="margin:0;">Detail Kategori Transaksi (SearchBox) *</label>
+                    <button class="btn-primary-custom" type="button" onclick="manageCategories()" style="padding: 2px 8px; font-size: 10px; border-radius: var(--radius-sm);"><i class="bi bi-gear-fill"></i> Kelola</button>
+                </div>
                 <input type="text" id="editLogDetail" list="categoryDatalist" class="form-control-dark" placeholder="Ketik atau Pilih Kategori" value="${escapeHtml(log.detail)}">
             </div>
 
@@ -727,6 +754,93 @@ document.addEventListener('DOMContentLoaded', async function() {
                 return false;
             }
         });
+    };
+
+    // Modal untuk Kelola Kategori Transaksi
+    window.manageCategories = async function() {
+        const html = `
+            <div style="margin-bottom: 15px; background: var(--surface-2); padding: 12px; border-radius: var(--radius-md);">
+                <div style="margin-bottom: 8px; font-weight: 600; font-size: 12px;">Tambah Kategori Baru</div>
+                <div style="display:flex; gap: 8px; align-items:center;">
+                    <select id="newCatType" class="form-select-dark" style="width: auto; font-size: 11px;">
+                        <option value="Pemasukan">Pemasukan</option>
+                        <option value="Pengeluaran" selected>Pengeluaran</option>
+                    </select>
+                    <input type="text" id="newCatName" class="form-control-dark" style="flex:1;" placeholder="Nama (Misal: Uang Makan)">
+                    <button class="btn-primary-custom" onclick="saveNewCategory()" style="padding: 6px 12px; border-radius:var(--radius-md); font-size: 11px;"><i class="bi bi-plus-lg"></i> Tambah</button>
+                </div>
+            </div>
+            <div style="max-height: 300px; overflow-y: auto; background: var(--surface-2); border-radius: var(--radius-md); padding: 10px;">
+                ${categoriesData.map(cat => `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border-color);">
+                        <div style="flex: 1; display:flex; gap: 5px; align-items: center;">
+                            <select id="editCatType_${cat.id}" class="form-select-dark" style="font-size: 11px; padding: 4px; width: auto; height: auto;">
+                                <option value="Pemasukan" ${cat.type === 'Pemasukan' ? 'selected' : ''}>Pemasukan</option>
+                                <option value="Pengeluaran" ${cat.type === 'Pengeluaran' ? 'selected' : ''}>Pengeluaran</option>
+                            </select>
+                            <input type="text" id="editCatName_${cat.id}" value="${escapeHtml(cat.name)}" class="form-control-dark" style="font-size: 12px; padding: 4px; height: auto; flex:1;">
+                        </div>
+                        <div style="display: flex; gap: 5px; margin-left: 10px;">
+                            <button onclick="updateCategory(${cat.id})" style="background: transparent; border: none; color: var(--info); padding: 4px;" title="Simpan Perubahan"><i class="bi bi-save"></i></button>
+                            <button onclick="deleteCategory(${cat.id})" style="background: transparent; border: none; color: var(--primary); padding: 4px;" title="Hapus"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        await AppModal.show({
+            title: 'Kelola Kategori Transaksi',
+            subtitle: 'Tambah, ubah nama, atau hapus kategori untuk form autocomplete',
+            icon: 'bi-tags-fill',
+            bodyHTML: html,
+            hideSubmit: true,
+            cancelText: 'Tutup'
+        });
+    };
+
+    window.saveNewCategory = async function() {
+        const type = document.getElementById('newCatType').value;
+        const name = document.getElementById('newCatName').value.trim();
+        if(!name) return;
+        try {
+            const res = await api(`${BASE_URL}api/finance/categories`, 'POST', { csrf_token: csrfVal, name: name, type: type });
+            if(res.success) {
+                showToast("Kategori ditambahkan", "success");
+                await loadMasterData();
+                AppModal.close();
+                setTimeout(() => manageCategories(), 300);
+            }
+        } catch(e) { showToast(e.message, 'error'); }
+    };
+
+    window.updateCategory = async function(id) {
+        try {
+            const type = document.getElementById(`editCatType_${id}`).value;
+            const name = document.getElementById(`editCatName_${id}`).value.trim();
+            const res = await api(`${BASE_URL}api/finance/categories/${id}/update`, 'POST', { 
+                csrf_token: csrfVal, 
+                name: name,
+                type: type 
+            });
+            if(res.success) {
+                showToast("Kategori diperbarui", "success");
+                await loadMasterData();
+            }
+        } catch(e) { showToast(e.message, 'error'); }
+    };
+
+    window.deleteCategory = async function(id) {
+        if(!confirm("Yakin ingin menghapus kategori ini? (Riwayat transaksi tidak akan terhapus)")) return;
+        try {
+            const res = await api(`${BASE_URL}api/finance/categories/${id}/delete`, 'POST', { csrf_token: csrfVal });
+            if(res.success) {
+                showToast("Kategori dihapus", "success");
+                await loadMasterData();
+                AppModal.close();
+                setTimeout(() => manageCategories(), 300);
+            }
+        } catch(e) { showToast(e.message, 'error'); }
     };
 
     function escapeHtml(text) {
