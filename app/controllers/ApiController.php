@@ -2171,11 +2171,28 @@ class ApiController extends Controller
             }
             
             $db = Database::getInstance()->getConnection();
-            $stmt = $db->prepare("INSERT INTO finance_accounts (name, dependency_account_id) VALUES (:name, :dep)");
-            $stmt->execute([
-                ':name' => $name,
-                ':dep' => empty($depId) ? null : (int)$depId
-            ]);
+            
+            $checkStmt = $db->prepare("SELECT id, is_active FROM finance_accounts WHERE name = :name");
+            $checkStmt->execute([':name' => $name]);
+            $existing = $checkStmt->fetch();
+            
+            if ($existing) {
+                if ($existing['is_active'] == 1) {
+                    throw new Exception("POS Keuangan dengan nama tersebut sudah ada");
+                } else {
+                    $updateStmt = $db->prepare("UPDATE finance_accounts SET is_active = 1, dependency_account_id = :dep WHERE id = :id");
+                    $updateStmt->execute([
+                        ':dep' => empty($depId) ? null : (int)$depId,
+                        ':id' => $existing['id']
+                    ]);
+                }
+            } else {
+                $stmt = $db->prepare("INSERT INTO finance_accounts (name, dependency_account_id) VALUES (:name, :dep)");
+                $stmt->execute([
+                    ':name' => $name,
+                    ':dep' => empty($depId) ? null : (int)$depId
+                ]);
+            }
             
             $this->json(['success' => true, 'message' => 'POS Keuangan berhasil ditambahkan']);
         } catch (Exception $e) {
@@ -2455,6 +2472,37 @@ class ApiController extends Controller
         }
     }
 
+    public function bulkDeleteFinanceLogs()
+    {
+        $this->requireSuperadmin();
+        $this->validateCSRF();
+        try {
+            $ids = $this->input('ids');
+            if (empty($ids) || !is_array($ids)) {
+                throw new Exception("Tidak ada data yang dipilih");
+            }
+
+            $model = new FinanceModel();
+            $deletedCount = 0;
+            foreach ($ids as $id) {
+                $log = $model->findLog((int)$id);
+                // Only allow deleting manual logs (no reference_type)
+                if ($log && empty($log['reference_type'])) {
+                    $model->deleteLog((int)$id);
+                    $deletedCount++;
+                }
+            }
+
+            $this->json([
+                'success' => true,
+                'message' => "$deletedCount catatan keuangan berhasil dihapus"
+            ]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+
     // ==========================================
     // APP SETTINGS API
     // ==========================================
@@ -2544,9 +2592,8 @@ class ApiController extends Controller
             error_log("SCAN_AI_TRACE: Read php://input length: " . strlen($rawInput));
             $rawJson = json_decode($rawInput, true);
             if (!is_array($rawJson)) {
-                // Fallback: try cached _jsonData from Controller::input()
-                $this->input('_init_cache_'); // force cache
-                $rawJson = $this->_jsonData ?? [];
+                // Fallback: decode directly again or just use empty array
+                $rawJson = [];
             }
             $imageB64 = $rawJson['image_base64'] ?? '';
             if (empty($imageB64)) {
@@ -2673,8 +2720,9 @@ class ApiController extends Controller
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $err = curl_error($ch);
-            curl_close($ch);
+            // curl_close is deprecated in PHP 8.0+ when using CurlHandle objects
             
+
             error_log("SCAN_AI_TRACE: Curl finished with code: " . $httpCode);
             file_put_contents('c:\\xampp\\htdocs\\AlfarezMart\\logs\\ai_crash.log', date('Y-m-d H:i:s') . " Trace: Curl finished, code: $httpCode, err: $err\n", FILE_APPEND);
 

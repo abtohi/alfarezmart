@@ -194,9 +194,11 @@ $router->get('/finance', 'FinanceController@index');
 // Finance API Routes
 $router->get('/api/finance/summary', 'ApiController@getFinanceSummary');
 $router->get('/api/finance/logs', 'ApiController@getFinanceLogs');
-$router->post('/api/finance/logs', 'ApiController@createFinanceLog');
-$router->post('/api/finance/logs/{id}/update', 'ApiController@updateFinanceLog');
-$router->post('/api/finance/logs/{id}/delete', 'ApiController@deleteFinanceLog');
+    $router->post('/api/finance/logs', 'ApiController@createFinanceLog');
+    $router->post('/api/finance/logs/bulk-delete', 'ApiController@bulkDeleteFinanceLogs');
+    $router->post('/api/finance/logs/{id}/update', 'ApiController@updateFinanceLog');
+    $router->post('/api/finance/logs/{id}/delete', 'ApiController@deleteFinanceLog');
+
 
 // Finance Accounts & Categories API
 $router->get('/api/finance/accounts', 'ApiController@getFinanceAccounts');

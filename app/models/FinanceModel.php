@@ -59,24 +59,34 @@ class FinanceModel extends Model
         $accounts = $this->getActiveAccounts();
         
         $result = [];
+        foreach ($accounts as $acc) {
+            $post = $acc['name'];
+            $result[$post] = ['income' => 0, 'expense' => 0, 'net' => 0];
+        }
+        
         $stmt = $this->db->prepare("
             SELECT 
+                balance_type,
                 COALESCE(SUM(CASE WHEN category = 'Pemasukan' THEN amount ELSE 0 END), 0) as income,
                 COALESCE(SUM(CASE WHEN category = 'Pengeluaran' THEN amount ELSE 0 END), 0) as expense
             FROM finance_logs
-            WHERE log_date = :date AND balance_type = :post
+            WHERE log_date = :date
+            GROUP BY balance_type
         ");
         
-        foreach ($accounts as $acc) {
-            $post = $acc['name'];
-            $stmt->execute([':date' => $date, ':post' => $post]);
-            $row = $stmt->fetch();
-            $result[$post] = [
-                'income' => (float)$row['income'],
-                'expense' => (float)$row['expense'],
-                'net' => (float)$row['income'] - (float)$row['expense']
-            ];
+        $stmt->execute([':date' => $date]);
+        $rows = $stmt->fetchAll();
+        
+        foreach ($rows as $row) {
+            $post = $row['balance_type'];
+            if (!isset($result[$post])) {
+                $result[$post] = ['income' => 0, 'expense' => 0, 'net' => 0];
+            }
+            $result[$post]['income'] = (float)$row['income'];
+            $result[$post]['expense'] = (float)$row['expense'];
+            $result[$post]['net'] = (float)$row['income'] - (float)$row['expense'];
         }
+        
         return $result;
     }
 

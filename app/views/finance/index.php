@@ -85,6 +85,20 @@
                 <!-- Options akan digenerate disini -->
             </select>
         </div>
+        
+        <div id="bulkActionBar" style="display: none; background: var(--surface-2); padding: 10px 14px; border-radius: var(--radius-md); margin-bottom: 12px; align-items: center; justify-content: space-between; border: 1px solid var(--primary);">
+            <div style="font-size: var(--font-size-sm); font-weight: 700; color: var(--primary);">
+                <span id="selectedCountText">0</span> transaksi terpilih
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn-primary-custom" onclick="bulkDeleteSelected()" style="background: var(--primary); padding: 6px 12px; border-radius: var(--radius-sm); font-size: var(--font-size-xs);">
+                    <i class="bi bi-trash-fill"></i> Hapus Terpilih
+                </button>
+                <button class="btn-primary-custom" onclick="clearSelection()" style="background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: var(--radius-sm); font-size: var(--font-size-xs);">
+                    Batal
+                </button>
+            </div>
+        </div>
 
         <div id="transactionsList">
             <div class="elegant-loader" style="margin: 20px auto;">
@@ -125,6 +139,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     let currentLogs = [];
     let accountsData = [];
     let categoriesData = [];
+    let selectedLogs = new Set();
 
     // Helper: Colors for dynamically generated POS cards
     const posColors = [
@@ -342,65 +357,166 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <p>${activePostFilter ? `Tidak ada catatan di pos ${activePostFilter}` : 'Mulai catat pemasukan atau pengeluaran'}</p>
                 </div>
             `;
+            updateBulkActionBar();
             return;
         }
 
-        let html = '';
+        // Grouping: Date -> Category (Pemasukan/Pengeluaran) -> Balance Type (POS Keuangan)
+        let grouped = {};
         filtered.forEach(log => {
-            const isIncome = log.category === 'Pemasukan';
-            const amount = parseFloat(log.amount);
+            const dateStr = log.log_date || 'Tanggal Tidak Diketahui';
+            const typeStr = log.category || 'Lainnya';
+            const posStr = log.balance_type || 'Lainnya';
             
-            // Find index of account for styling
-            let accIndex = accountsData.findIndex(a => a.name === log.balance_type);
-            if(accIndex < 0) accIndex = 0; // fallback
-            const style = getPosStyle(accIndex);
-
-            html += `
-                <div class="product-card" style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; padding: 12px 14px;">
-                    <div style="display: flex; align-items: center; min-width: 0; flex: 1; gap: 12px;">
-                        <div class="product-icon" style="background: ${isIncome ? 'rgba(46, 196, 182, 0.15)' : 'rgba(230, 57, 70, 0.15)'}; color: ${isIncome ? 'var(--success)' : 'var(--primary)'}; flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                            <i class="bi ${isIncome ? 'bi-plus-lg' : 'bi-dash-lg'}" style="font-size: 14px; font-weight: 800;"></i>
-                        </div>
-                        <div style="min-width: 0; flex: 1;">
-                            <div style="font-weight: 700; font-size: var(--font-size-sm); color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
-                                ${escapeHtml(log.detail)}
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap;">
-                                <span class="badge-custom" style="background: ${style.bg}; color: ${style.icon}; font-size: 9px; padding: 1px 6px;">
-                                    ${escapeHtml(log.balance_type)}
-                                </span>
-                                ${log.description ? `<span style="font-size: 10px; color: var(--text-muted); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${escapeHtml(log.description)}">${escapeHtml(log.description)}</span>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="text-align: right; margin-left: 12px; flex-shrink: 0; display: flex; align-items: center; gap: 10px;">
-                        <div>
-                            <div style="font-weight: 800; font-size: var(--font-size-sm); color: ${isIncome ? 'var(--success)' : 'var(--text-primary)'};">
-                                ${isIncome ? '+' : '-'} ${formatRupiah(amount)}
-                            </div>
-                            <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">
-                                ${log.reference_type === 'auto_conversion' ? `<span style="color: var(--info); font-weight:600;"><i class="bi bi-arrow-repeat"></i> AUTO</span>` : (log.reference_type ? `<span style="color: var(--info); font-weight:600;"><i class="bi bi-link-45deg"></i> POS</span>` : 'Manual')}
-                            </div>
-                        </div>
-                        
-                        <!-- Actions (Only show for manual logs without ref) -->
-                        ${!log.reference_type ? `
-                        <div style="display: flex; flex-direction: column; gap: 4px;">
-                            <button onclick="editLog(${JSON.stringify(log).replace(/"/g, '&quot;')})" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px; font-size: 13px;" title="Ubah">
-                                <i class="bi bi-pencil-square" style="color: var(--info);"></i>
-                            </button>
-                            <button onclick="deleteLog(${log.id})" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px; font-size: 13px;" title="Hapus">
-                                <i class="bi bi-trash-fill" style="color: var(--primary);"></i>
-                            </button>
-                        </div>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
+            if(!grouped[dateStr]) grouped[dateStr] = {};
+            if(!grouped[dateStr][typeStr]) grouped[dateStr][typeStr] = {};
+            if(!grouped[dateStr][typeStr][posStr]) grouped[dateStr][typeStr][posStr] = [];
+            
+            grouped[dateStr][typeStr][posStr].push(log);
         });
+
+        let html = '';
+
+        // Iterate through Date
+        for (const [dateStr, types] of Object.entries(grouped)) {
+            html += `
+                <div style="margin-bottom: 20px;">
+                    <div style="background: var(--surface-2); padding: 8px 14px; border-radius: var(--radius-md); font-weight: 800; font-size: var(--font-size-sm); color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                        <i class="bi bi-calendar-event"></i> ${dateStr}
+                    </div>
+            `;
+
+            // Iterate through Type (Pemasukan / Pengeluaran)
+            for (const [typeStr, poses] of Object.entries(types)) {
+                const isIncome = typeStr === 'Pemasukan';
+                const typeColor = isIncome ? 'var(--success)' : 'var(--primary)';
+                const typeIcon = isIncome ? 'bi-arrow-down-circle-fill' : 'bi-arrow-up-circle-fill';
+                
+                html += `
+                    <div style="margin-left: 10px; border-left: 2px solid ${typeColor}; padding-left: 12px; margin-bottom: 16px;">
+                        <div style="font-weight: 700; font-size: var(--font-size-xs); color: ${typeColor}; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                            <i class="bi ${typeIcon}"></i> ${typeStr}
+                        </div>
+                `;
+
+                // Iterate through POS
+                for (const [posStr, logs] of Object.entries(poses)) {
+                    let accIndex = accountsData.findIndex(a => a.name === posStr);
+                    if(accIndex < 0) accIndex = 0;
+                    const style = getPosStyle(accIndex);
+
+                    html += `
+                        <div style="margin-bottom: 12px;">
+                            <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                                <span style="display: inline-block; width: 6px; height: 6px; background: ${style.icon}; border-radius: 50%;"></span> ${posStr}
+                            </div>
+                    `;
+
+                    // Render Logs
+                    logs.forEach(log => {
+                        const amount = parseFloat(log.amount);
+                        const isSelectable = !log.reference_type;
+                        const isChecked = selectedLogs.has(log.id);
+
+                        html += `
+                            <div class="product-card" style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; ${isChecked ? 'border-color: var(--primary);' : ''}">
+                                <div style="display: flex; align-items: center; min-width: 0; flex: 1; gap: 12px;">
+                                    <!-- Checkbox for selection -->
+                                    <div style="flex-shrink: 0;">
+                                        <input type="checkbox" class="form-check-input" ${isSelectable ? '' : 'disabled'} ${isChecked ? 'checked' : ''} onchange="toggleLogSelection(${log.id}, this.checked)" style="width: 1.2em; height: 1.2em; cursor: ${isSelectable ? 'pointer' : 'not-allowed'};">
+                                    </div>
+
+                                    <div style="min-width: 0; flex: 1;">
+                                        <div style="font-weight: 700; font-size: var(--font-size-sm); color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                                            ${escapeHtml(log.detail)}
+                                        </div>
+                                        ${log.description ? `<div style="font-size: 10px; color: var(--text-muted); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; margin-top: 2px;" title="${escapeHtml(log.description)}">${escapeHtml(log.description)}</div>` : ''}
+                                    </div>
+                                </div>
+                                
+                                <div style="text-align: right; margin-left: 12px; flex-shrink: 0; display: flex; align-items: center; gap: 10px;">
+                                    <div>
+                                        <div style="font-weight: 800; font-size: var(--font-size-sm); color: ${typeColor};">
+                                            ${isIncome ? '+' : '-'} ${formatRupiah(amount)}
+                                        </div>
+                                        <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">
+                                            ${log.reference_type === 'auto_conversion' ? `<span style="color: var(--info); font-weight:600;"><i class="bi bi-arrow-repeat"></i> AUTO</span>` : (log.reference_type ? `<span style="color: var(--info); font-weight:600;"><i class="bi bi-link-45deg"></i> POS</span>` : 'Manual')}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Actions (Only show for manual logs without ref) -->
+                                    ${!log.reference_type ? `
+                                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                                        <button onclick="editLog(${JSON.stringify(log).replace(/"/g, '&quot;')})" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px; font-size: 13px;" title="Ubah">
+                                            <i class="bi bi-pencil-square" style="color: var(--info);"></i>
+                                        </button>
+                                        <button onclick="deleteLog(${log.id})" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px; font-size: 13px;" title="Hapus">
+                                            <i class="bi bi-trash-fill" style="color: var(--primary);"></i>
+                                        </button>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += `</div>`; // Close POS group
+                }
+                html += `</div>`; // Close Type group
+            }
+            html += `</div>`; // Close Date group
+        }
+        
         container.innerHTML = html;
+        updateBulkActionBar();
     }
+
+    // Bulk Selection Logic
+    window.toggleLogSelection = function(id, isChecked) {
+        if (isChecked) {
+            selectedLogs.add(id);
+        } else {
+            selectedLogs.delete(id);
+        }
+        renderTransactions(); // Re-render to update highlights if needed, though simple DOM update is faster. But re-rendering is fine for now.
+    };
+
+    window.clearSelection = function() {
+        selectedLogs.clear();
+        renderTransactions();
+    };
+
+    window.updateBulkActionBar = function() {
+        const bar = document.getElementById('bulkActionBar');
+        const countText = document.getElementById('selectedCountText');
+        if (selectedLogs.size > 0) {
+            countText.innerText = selectedLogs.size;
+            bar.style.display = 'flex';
+        } else {
+            bar.style.display = 'none';
+        }
+    };
+
+    window.bulkDeleteSelected = async function() {
+        if (selectedLogs.size === 0) return;
+        if (!confirm(\`Yakin ingin menghapus \${selectedLogs.size} transaksi terpilih?\`)) return;
+
+        try {
+            const idsArray = Array.from(selectedLogs);
+            const res = await api(\`\${BASE_URL}api/finance/logs/bulk-delete\`, 'POST', {
+                csrf_token: csrfVal,
+                ids: idsArray
+            });
+
+            if (res.success) {
+                showToast(\`\${selectedLogs.size} transaksi berhasil dihapus\`, 'success');
+                selectedLogs.clear();
+                loadFinanceData();
+            }
+        } catch (e) {
+            showToast(e.message, 'error');
+        }
+    };
 
     // Modal untuk Kelola POS Keuangan
     window.manageAccounts = async function() {
