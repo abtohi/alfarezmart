@@ -293,6 +293,7 @@ function showComingSoon(title, desc, icon) {
 
 // Modal Export JS Logic
 let exportSupplierData = [];
+let exportProductData = [];
 async function openExportModal() {
     const html = `
         <style>
@@ -312,13 +313,15 @@ async function openExportModal() {
                 <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Pilih Supplier *</label>
                 <div id="exportSupplierSearchContainer1"></div>
             </div>
-            <div class="modal-form-group" style="margin-bottom: 12px; text-align: left;">
-                <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Tgl Masuk Dari (Opsional)</label>
-                <input type="date" id="exportDateFrom1" class="form-control-dark">
-            </div>
-            <div class="modal-form-group" style="margin-bottom: 12px; text-align: left;">
-                <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Tgl Masuk Sampai (Opsional)</label>
-                <input type="date" id="exportDateTo1" class="form-control-dark">
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                <div class="modal-form-group" style="flex: 1; text-align: left;">
+                    <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Tgl Dari (Opsional)</label>
+                    <input type="date" id="exportDateFrom1" class="form-control-dark" value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div class="modal-form-group" style="flex: 1; text-align: left;">
+                    <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Tgl Sampai (Opsional)</label>
+                    <input type="date" id="exportDateTo1" class="form-control-dark" value="${new Date().toISOString().split('T')[0]}">
+                </div>
             </div>
             <button class="btn-primary-custom" onclick="executeExport(1)" style="width: 100%; padding: 10px; border-radius: var(--radius-md);"><i class="bi bi-download"></i> Download .xlsx</button>
         </div>
@@ -326,7 +329,7 @@ async function openExportModal() {
         <div id="panelExport2" class="export-panel">
             <div class="modal-form-group" style="margin-bottom: 12px; text-align: left;">
                 <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Cari Nama Produk (Kosong = Semua)</label>
-                <input type="text" id="exportProductName" class="form-control-dark" placeholder="Nama produk..." autocomplete="off">
+                <div id="exportProductSearchContainer"></div>
             </div>
             <div class="modal-form-group" style="margin-bottom: 12px; text-align: left;">
                 <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Filter Supplier (Opsional)</label>
@@ -336,36 +339,35 @@ async function openExportModal() {
         </div>
     `;
 
-    const modalPromise = AppModal.show({
+    AppModal.show({
         title: 'Export Data Produk',
         bodyHTML: html,
         hideFooter: true
     });
 
-    // Fetch supplier data for searchbox
     try {
         const res = await api(`${BASE_URL}api/suppliers`);
-        if (res.success) {
-            exportSupplierData = res.data;
-        }
-    } catch (e) {
-        console.error("Gagal load supplier", e);
-    }
+        exportSupplierData = res.success ? res.data : (Array.isArray(res) ? res : []);
+    } catch (e) { console.error("Gagal load supplier", e); }
+    
+    try {
+        const res = await api(`${BASE_URL}api/products`);
+        exportProductData = res.success ? res.data : (Array.isArray(res) ? res : []);
+    } catch (e) { console.error("Gagal load produk", e); }
 
     const supOptions = exportSupplierData.map(s => ({ value: s.id.toString(), label: s.name }));
+    const prodOptions = exportProductData.map(p => ({ value: p.name, label: p.name }));
     
     window.exportSearchBox1 = new SearchBox(document.getElementById('exportSupplierSearchContainer1'), {
-        options: supOptions,
-        placeholder: '-- Ketik/Pilih Supplier --',
-        name: 'exportSupplier1',
-        icon: 'bi-truck'
+        options: supOptions, placeholder: '-- Ketik/Pilih Supplier --', name: 'exportSupplier1', icon: 'bi-truck'
     });
 
     window.exportSearchBox2 = new SearchBox(document.getElementById('exportSupplierSearchContainer2'), {
-        options: supOptions,
-        placeholder: '-- Semua Supplier --',
-        name: 'exportSupplier2',
-        icon: 'bi-truck'
+        options: supOptions, placeholder: '-- Semua Supplier --', name: 'exportSupplier2', icon: 'bi-truck'
+    });
+    
+    window.exportProductBox = new SearchBox(document.getElementById('exportProductSearchContainer'), {
+        options: prodOptions, placeholder: '-- Ketik Nama Produk --', name: 'exportProductName', icon: 'bi-box'
     });
 }
 
