@@ -23,8 +23,10 @@ class ProductController extends Controller
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $search = isset($_GET['q']) ? Security::sanitize($_GET['q']) : '';
         $categoryId = isset($_GET['category']) ? (int)$_GET['category'] : null;
+        $minPrice = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? max(0, (float)$_GET['min_price']) : null;
+        $maxPrice = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? max(0, (float)$_GET['max_price']) : null;
 
-        $products = $this->productModel->getProductsWithPrices($page, 20, $search, $categoryId);
+        $products = $this->productModel->getProductsWithPrices($page, 20, $search, $categoryId, $minPrice, $maxPrice);
         $categories = $this->categoryModel->all('name', 'ASC');
 
         $this->view('products.index', [
@@ -34,6 +36,8 @@ class ProductController extends Controller
             'categories' => $categories,
             'search' => $search,
             'selectedCategory' => $categoryId,
+            'minPrice' => $minPrice,
+            'maxPrice' => $maxPrice,
         ]);
     }
 

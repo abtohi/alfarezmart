@@ -272,7 +272,7 @@ class ProductModel extends Model
         return $this->attachQtyPricesToPackagings($rows);
     }
 
-    public function getProductsWithPrices($page = 1, $perPage = 20, $search = '', $categoryId = null)
+    public function getProductsWithPrices($page = 1, $perPage = 20, $search = '', $categoryId = null, $minPrice = null, $maxPrice = null)
     {
         $where = "WHERE p.is_active = 1";
         $params = [];
@@ -294,6 +294,15 @@ class ProductModel extends Model
         if ($categoryId) {
             $where .= " AND p.category_id = :cat_id";
             $params[':cat_id'] = $categoryId;
+        }
+        // Filter by price range (smallest packaging retail price)
+        if ($minPrice !== null && $minPrice >= 0) {
+            $where .= " AND (SELECT sell_price_retail FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1) >= :min_price";
+            $params[':min_price'] = (float)$minPrice;
+        }
+        if ($maxPrice !== null && $maxPrice > 0) {
+            $where .= " AND (SELECT sell_price_retail FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1) <= :max_price";
+            $params[':max_price'] = (float)$maxPrice;
         }
 
         $countStmt = $this->db->prepare("

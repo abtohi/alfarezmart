@@ -5,17 +5,35 @@
  * @var array $categories
  * @var string $search
  * @var int|null $selectedCategory
+ * @var float|null $minPrice
+ * @var float|null $maxPrice
  */
+$hasPriceFilter = ($minPrice !== null || $maxPrice !== null);
+// Build URL keeping current filters except search (used for clear-search link)
+$clearSearchUrl = BASE_URL . 'products';
+$clearSearchParts = [];
+if ($selectedCategory) $clearSearchParts[] = 'category=' . (int)$selectedCategory;
+if ($minPrice !== null) $clearSearchParts[] = 'min_price=' . urlencode($minPrice);
+if ($maxPrice !== null) $clearSearchParts[] = 'max_price=' . urlencode($maxPrice);
+if ($clearSearchParts) $clearSearchUrl .= '?' . implode('&', $clearSearchParts);
+// Build URL keeping current filters except price (used for clear-price link)
+$clearPriceUrl = BASE_URL . 'products';
+$clearPriceParts = [];
+if ($selectedCategory) $clearPriceParts[] = 'category=' . (int)$selectedCategory;
+if (!empty($search)) $clearPriceParts[] = 'q=' . urlencode($search);
+if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
 ?>
 <div class="page-section">
     <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;min-width:0;">
         <form method="GET" action="/products" style="flex:1;min-width:0;" id="productSearchForm">
             <input type="hidden" name="category" value="<?= htmlspecialchars($selectedCategory ?? '') ?>">
+            <input type="hidden" name="min_price" value="<?= htmlspecialchars($minPrice ?? '') ?>">
+            <input type="hidden" name="max_price" value="<?= htmlspecialchars($maxPrice ?? '') ?>">
             <div class="search-input-wrapper">
                 <i class="bi bi-search"></i>
                 <input type="text" name="q" id="productSearchInput" class="no-track" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Cari produk..." autocomplete="off">
                 <?php if (!empty($search)): ?>
-                    <a href="<?= BASE_URL ?>products<?= $selectedCategory ? '?category=' . (int)$selectedCategory : '' ?>" style="color:var(--text-muted);text-decoration:none;flex-shrink:0;"><i class="bi bi-x-lg"></i></a>
+                    <a href="<?= $clearSearchUrl ?>" style="color:var(--text-muted);text-decoration:none;flex-shrink:0;"><i class="bi bi-x-lg"></i></a>
                 <?php endif; ?>
             </div>
         </form>
@@ -24,8 +42,33 @@
             <i class="bi bi-upc-scan"></i>
         </button>
     </div>
-    <div style="margin-bottom:12px;">
+    <div style="margin-bottom:8px;">
         <div id="categoryFilterSearchBox"></div>
+    </div>
+    <div style="margin-bottom:12px;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:nowrap;">
+            <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;">💰</span>
+            <input type="number" id="filterMinPrice" placeholder="Harga min" min="0" step="1000"
+                   value="<?= htmlspecialchars($minPrice !== null ? (int)$minPrice : '') ?>"
+                   style="flex:1;min-width:0;background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:8px 10px;font-size:var(--font-size-xs);outline:none;-moz-appearance:textfield;"
+                   onkeydown="if(event.key==='Enter') applyPriceFilter()">
+            <span style="color:var(--text-muted);flex-shrink:0;font-size:12px;">—</span>
+            <input type="number" id="filterMaxPrice" placeholder="Harga max" min="0" step="1000"
+                   value="<?= htmlspecialchars($maxPrice !== null ? (int)$maxPrice : '') ?>"
+                   style="flex:1;min-width:0;background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:8px 10px;font-size:var(--font-size-xs);outline:none;-moz-appearance:textfield;"
+                   onkeydown="if(event.key==='Enter') applyPriceFilter()">
+            <button type="button" onclick="applyPriceFilter()"
+                    title="Terapkan filter harga"
+                    style="background:var(--primary);color:white;border:none;border-radius:var(--radius-md);padding:8px 11px;cursor:pointer;font-size:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
+                <i class="bi bi-funnel-fill"></i>
+            </button>
+            <?php if ($hasPriceFilter): ?>
+            <a href="<?= $clearPriceUrl ?>" title="Reset filter harga"
+               style="color:var(--text-muted);text-decoration:none;flex-shrink:0;font-size:16px;display:flex;align-items:center;">
+                <i class="bi bi-x-circle"></i>
+            </a>
+            <?php endif; ?>
+        </div>
     </div>
 
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;min-width:0;">
@@ -118,6 +161,8 @@
                 $currentPage = $products['page'] ?? 1;
                 $qStr = urlencode($search ?? '');
                 $catStr = $selectedCategory ? '&category=' . (int)$selectedCategory : '';
+                $catStr .= ($minPrice !== null) ? '&min_price=' . urlencode($minPrice) : '';
+                $catStr .= ($maxPrice !== null) ? '&max_price=' . urlencode($maxPrice) : '';
                 $buildUrl = function($p) use ($qStr, $catStr) {
                     return BASE_URL . "products?page={$p}&q={$qStr}{$catStr}";
                 };
@@ -350,10 +395,27 @@ async function bulkDeleteSelected() {
 
 function filterByCategory(val) {
     const q = document.getElementById('productSearchInput')?.value?.trim() || '';
-    let url = '<?= BASE_URL ?>products?';
-    if (val) url += 'category=' + encodeURIComponent(val) + '&';
-    if (q) url += 'q=' + encodeURIComponent(q);
-    window.location.href = url;
+    const minP = document.getElementById('filterMinPrice')?.value?.trim() || '';
+    const maxP = document.getElementById('filterMaxPrice')?.value?.trim() || '';
+    const parts = [];
+    if (val) parts.push('category=' + encodeURIComponent(val));
+    if (q) parts.push('q=' + encodeURIComponent(q));
+    if (minP) parts.push('min_price=' + encodeURIComponent(minP));
+    if (maxP) parts.push('max_price=' + encodeURIComponent(maxP));
+    window.location.href = '<?= BASE_URL ?>products' + (parts.length ? '?' + parts.join('&') : '');
+}
+
+function applyPriceFilter() {
+    const q = document.getElementById('productSearchInput')?.value?.trim() || '';
+    const minP = document.getElementById('filterMinPrice')?.value?.trim() || '';
+    const maxP = document.getElementById('filterMaxPrice')?.value?.trim() || '';
+    const catVal = '<?= htmlspecialchars($selectedCategory ?? '') ?>';
+    const parts = [];
+    if (catVal) parts.push('category=' + encodeURIComponent(catVal));
+    if (q) parts.push('q=' + encodeURIComponent(q));
+    if (minP) parts.push('min_price=' + encodeURIComponent(minP));
+    if (maxP) parts.push('max_price=' + encodeURIComponent(maxP));
+    window.location.href = '<?= BASE_URL ?>products' + (parts.length ? '?' + parts.join('&') : '');
 }
 
 function scanProductBarcode() {

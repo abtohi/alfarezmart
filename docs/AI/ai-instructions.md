@@ -239,6 +239,16 @@ Semua token lengkap di `public/css/variables.css`.
 - Update dokumentasi relevan jika ada.
 - Cek `.gitignore`.
 - Cleanup file temporary hanya jika aman.
+- **🧹 Wajib File Cleanup**: Setelah setiap task selesai, scan direktori project (terutama root, `scratch/`, `public/`, dan direktori lain yang mungkin kotor) untuk mencari file-file berikut yang **tidak lagi digunakan**:
+  - File test: `test_*.php`, `test*.js`, `*_test.php`, dsb.
+  - File backup: `*.bak`, `*_backup.*`, `*_old.*`, `*_copy.*`
+  - File debug: `debug_*.php`, `check_*.php`, `find_*.php`
+  - File scratch/temp: semua file di folder `scratch/` yang fungsinya satu kali pakai
+  - File diff/patch: `*.diff`, `*.patch`
+  - File ekstrak/utilitas sementara: `extract*.php`, `extract*.js`
+  - File .md di luar folder `docs/`: hapus jika bukan dokumentasi aktif
+  - Sebelum hapus: **verifikasi file tidak direferensikan** di route, controller, model, view, config, JS, atau deployment. Jika ragu, laporkan sebagai `perlu review manual`.
+  - Catat file yang dihapus di ringkasan task (poin 🧹).
 
 ---
 
@@ -299,8 +309,15 @@ Setelah task selesai:
 
 - Cek dan update `.gitignore` jika diperlukan.
 - Tambahkan file/folder sensitif, credential, cache, temporary, log, generated files, env file, atau file lokal yang tidak boleh masuk repository.
-- **Wajib Clean Code**: Di akhir setiap task, selalu lakukan pengecekan direktori untuk mencari file-file sampah yang tidak digunakan (misalnya: file `test_*.php`, `backup_*.sql`, `*.bak`, script `debug_*`, atau `update_*.php`).
-- Hapus file-file sampah tersebut secara proaktif untuk menjaga *clean code*, namun dengan syarat **wajib memastikan keamanannya terlebih dahulu** (cek referensi/dependensi agar sistem tidak rusak).
+- **Wajib Clean Code**: Di akhir setiap task, selalu lakukan pengecekan direktori untuk mencari file-file sampah yang tidak digunakan:
+  - `test_*.php`, `test*.js`, `*_test.*` — file testing satu kali pakai
+  - `*.bak`, `*_backup.*`, `*_old.*` — file backup
+  - `debug_*.php`, `check_*.php`, `find_*.php` — file debug
+  - `extract*.php`, `extract*.js`, `*.diff`, `*.patch` — file sementara
+  - `*.txt` yang bukan dokumentasi aktif — file catatan sementara
+  - Semua file di folder `scratch/` yang merupakan script satu kali pakai
+  - File `.md` di luar folder `docs/` yang tidak aktif digunakan
+- Hapus file-file sampah tersebut secara proaktif, namun dengan syarat **wajib memastikan keamanannya terlebih dahulu** (cek referensi/dependensi agar sistem tidak rusak).
 
 ---
 
@@ -318,7 +335,7 @@ Akhiri setiap task dengan ringkasan singkat:
 3. ✔️ Validasi yang dilakukan
 4. 📝 Update CHANGE_LOG.md: [ya/tidak + keterangan singkat]
 5. 📝 Update CURRENT_STATE.md: [ya/tidak + keterangan singkat]
-6. 🧹 Pembersihan File Sampah: [sebutkan jika ada file test/debug/backup yang dihapus]
-7. ⚠️ File perlu review manual: [jika ada]
+6. 🧹 Pembersihan File Sampah: [daftar file test/debug/backup/scratch yang dihapus, atau 'tidak ada']
+7. ⚠️ File perlu review manual: [jika ada file yang tidak yakin aman dihapus]
 8. 🚨 Catatan penting / risiko: [jika ada]
 ```

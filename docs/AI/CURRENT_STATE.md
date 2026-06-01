@@ -15,13 +15,28 @@
 | **Versi Asset** | `?v=4.9` (di `app/views/layouts/app.php`) |
 | **PHP Version** | XAMPP (cek `php -v`) |
 | **Timezone** | Asia/Jakarta (GMT+7) |
-| **Last Updated** | 2026-05-29 |
+| **Last Updated** | 2026-06-01 |
 
 ---
 
 ## Pekerjaan Terakhir
 
-### Sesi: 2026-05-29 — Fix Dashboard Summary (Statistik Bulanan Superadmin)
+### Sesi: 2026-06-01 — Filter Harga Jual di Halaman Produk & Cleanup File
+**Yang dikerjakan:**
+1. **Filter Range Harga Jual** — Ditambahkan filter harga di halaman Produk, di bawah filter kategori. Filter bekerja berdasarkan harga jual ecer kemasan terkecil (level 1). Menggunakan subquery di `ProductModel::getProductsWithPrices()` sehingga berlaku di count query maupun data query. UI: dua input (min/max), tombol terapkan (🔫), tombol reset (✕) yang muncul jika filter aktif. Semua param dipertahankan saat search, ganti kategori, dan pagination.
+2. **Update ai-instructions.md** — Ditambahkan instruksi wajib file cleanup yang lebih detail di bagian Workflow Rules (Setelah Implementasi) dan Gitignore & Cleanup Rules, mencakup pola file yang harus dicari: `test_*`, `debug_*`, `check_*`, `extract*`, `*.diff`, `*.patch`, `.md` di luar `docs/`, scratch scripts.
+3. **Cleanup 16 File** — Dihapus semua file tidak berguna yang tidak direferensikan oleh kode aktif:
+   - Root: `test_search.php`, `test_search2.php`, `implementation_plan.md`, `ESC_POS_SPECIFICATION.md`, `PRINTER_SETUP_GUIDE.md`
+   - `scratch/`: `check_db.php`, `delete_ai_prompt.php`, `extract.js`, `extract.php`, `extract2.php`, `find_fn.php`, `migrate_supplier_fields.php`, `revert_diff.diff`, `test.js`, `test2.js`, `update_invoice_column.php`
+
+**Catatan Teknis:**
+- Filter harga subquery: `(SELECT sell_price_retail FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1)` — tidak memerlukan JOIN tambahan.
+- Folder `scratch/` kini kosong.
+- `filterByCategory()` di view diupdate agar tidak menghapus filter harga saat user ganti kategori.
+
+---
+
+### Sesi: 2026-05-30 — Fix Dashboard Summary (Statistik Bulanan Superadmin)
 **Yang dikerjakan:**
 1. **Bug Identified & Fixed** — Fitur Dashboard Summary halaman statistik bulanan superadmin (`/dashboard/summary`) tidak dapat diakses karena error pada query Top 10 Produk Laris.
    - **Root Cause**: Query menggunakan kolom `si.invoice_name` yang tidak ada di tabel `sale_items`. Kolom yang seharusnya digunakan adalah `si.custom_name` (untuk produk custom).
@@ -324,7 +339,7 @@
 |-------|--------|---------|
 | Auth (Login/Logout) | ✅ Stabil | Session-based, CSRF protected |
 | Dashboard | ✅ Stabil | Grid menu, statistik, API stats |
-| Produk | ✅ Stabil | CRUD, packaging, tier pricing, foto, label, stok |
+| Produk | ✅ Stabil | CRUD, packaging, tier pricing, foto, label, stok, filter kategori & harga |
 | Barang Masuk (Purchase) | ✅ Stabil | Bulk input, foto invoice, harga terakhir supplier |
 | Kasir POS | ✅ Stabil | Barcode scan, cart, tier pricing, thermal print |
 | Supplier | ✅ Stabil | CRUD supplier & sales rep, real-time search |

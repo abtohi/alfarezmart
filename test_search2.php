@@ -1,1 +1,0 @@
-<?php require_once 'app/config/config.php'; require_once 'app/core/Database.php'; require_once 'app/core/Model.php'; require_once 'app/models/ProductModel.php'; $m = new ProductModel(); print_r($m->getProductsWithPrices(1, 10, 'Choc'));

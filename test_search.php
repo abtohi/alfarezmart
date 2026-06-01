@@ -1,1 +1,0 @@
-<?php $uri='/AlfarezMart/api/products/search?q=Choc'; $isStaticFile=false; $isPublicRoute=true; require 'app/core/Autoloader.php'; Autoloader::register(); require 'app/config/App.php'; $db = Database::getInstance()->getConnection(); $m = new ProductModel(); print_r($m->searchProducts('Choc', 5));

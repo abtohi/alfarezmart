@@ -6,6 +6,32 @@
 
 ---
 
+## [2026-06-01] — Filter Harga Jual di Halaman Produk & Pembersihan File
+
+**Tipe:** Minor
+**Modul:** Products (ProductModel, ProductController, products/index.php), docs/AI
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Filter Range Harga Jual** — Halaman Produk kini memiliki filter harga jual di bawah filter kategori. Filter bekerja pada harga jual ecer kemasan terkecil (level 1). User dapat mengisi min/max harga dan menekan tombol 🔫 (atau Enter) untuk menerapkan. Tombol ✕ muncul jika filter aktif untuk reset. Semua parameter (kategori, pencarian, harga) dipertahankan saat navigasi halaman dan pagination.
+- **Update ai-instructions.md** — Memperkuat aturan wajib file cleanup setelah setiap task: diperluas dengan daftar pola file yang harus dicari dan dihapus (test, backup, debug, scratch, diff, extract, .md di luar docs). Format ringkasan task juga diperbarui agar lebih eksplisit.
+- **Pembersihan File** — Menghapus 16 file tidak berguna:
+  - Root: `test_search.php`, `test_search2.php`, `implementation_plan.md`, `ESC_POS_SPECIFICATION.md`, `PRINTER_SETUP_GUIDE.md`
+  - Scratch: `check_db.php`, `delete_ai_prompt.php`, `extract.js`, `extract.php`, `extract2.php`, `find_fn.php`, `migrate_supplier_fields.php`, `revert_diff.diff`, `test.js`, `test2.js`, `update_invoice_column.php`
+
+### File yang Diubah/Dibuat
+- `app/models/ProductModel.php` — Tambah param `$minPrice`, `$maxPrice` di `getProductsWithPrices()` dengan subquery filter ke `product_packagings`
+- `app/controllers/ProductController.php` — Parse `min_price`/`max_price` dari `$_GET`, teruskan ke model dan view
+- `app/views/products/index.php` — UI filter harga (2 input + tombol terapkan + tombol reset), update `filterByCategory()` + tambah `applyPriceFilter()`, update `$buildUrl` pagination
+- `docs/AI/ai-instructions.md` — Perkuat aturan file cleanup di Workflow Rules & Gitignore Rules
+
+### Catatan
+- Filter harga menggunakan subquery `(SELECT sell_price_retail FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1)` — aman untuk count query dan data query tanpa JOIN tambahan.
+- Folder `scratch/` kini kosong sepenuhnya.
+- File .md yang dihapus (`ESC_POS_SPECIFICATION.md`, `PRINTER_SETUP_GUIDE.md`, `implementation_plan.md`) tidak direferensikan oleh kode manapun.
+
+---
+
 ## [2026-05-30] — Hitung Orderan, Dashboard Summary, Offline Auto-Login, Staff Role Limits, Geofencing, Printer Modal
 
 **Tipe:** Mayor
