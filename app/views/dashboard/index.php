@@ -338,8 +338,8 @@ async function openExportModal() {
 
     const modalPromise = AppModal.show({
         title: 'Export Data Produk',
-        content: html,
-        showCloseBtn: true
+        bodyHTML: html,
+        hideFooter: true
     });
 
     // Fetch supplier data for searchbox

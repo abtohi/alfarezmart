@@ -2398,7 +2398,11 @@ class ApiController extends Controller
     {
         $this->requireSuperadmin();
         try {
-            $date = $this->input('date') ?: date('Y-m-d');
+            $date = isset($_GET['date']) ? $_GET['date'] : (isset($_POST['date']) ? $_POST['date'] : date('Y-m-d'));
+            // Validate date format
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+                $date = date('Y-m-d');
+            }
             $model = new FinanceModel();
             $summary = $model->getDailySummary($date);
             $breakdown = $model->getDailySummaryByPost($date);
@@ -2421,7 +2425,11 @@ class ApiController extends Controller
     {
         $this->requireSuperadmin();
         try {
-            $date = $this->input('date') ?: date('Y-m-d');
+            $date = isset($_GET['date']) ? $_GET['date'] : (isset($_POST['date']) ? $_POST['date'] : date('Y-m-d'));
+            // Validate date format
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+                $date = date('Y-m-d');
+            }
             $model = new FinanceModel();
             $logs = $model->getLogsByDate($date);
             $this->json([
@@ -2450,8 +2458,12 @@ class ApiController extends Controller
             if ($amount <= 0) {
                 throw new Exception("Nominal harus lebih besar dari 0");
             }
-            if (empty($balanceType) || !in_array($balanceType, ['Uang Laci', 'Uang Pulsa', 'Uang Beras', 'Uang Rokok'])) {
-                throw new Exception("Pos keuangan tidak valid");
+            // Validasi balance_type dari DB (bukan whitelist hardcoded)
+            $db = Database::getInstance()->getConnection();
+            $chk = $db->prepare("SELECT id FROM finance_accounts WHERE name = :name AND is_active = 1");
+            $chk->execute([':name' => $balanceType]);
+            if (!$chk->fetch()) {
+                throw new Exception("Pos keuangan tidak valid atau tidak aktif");
             }
             if (empty($category) || !in_array($category, ['Pemasukan', 'Pengeluaran'])) {
                 throw new Exception("Kategori tidak valid");

@@ -1,135 +1,4 @@
-<?php
-/**
- * Daily Finance Index View
- * 
- * @var string $csrfToken
- */
-?>
 
-<div class="page-section" style="padding-bottom: 80px;">
-    <!-- Date Navigation Header -->
-    <div style="background: var(--gradient-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-            <div>
-                <h4 style="font-weight: 700; font-size: var(--font-size-md); margin: 0;">Keuangan Harian</h4>
-                <p style="font-size: var(--font-size-xs); color: var(--text-muted); margin: 4px 0 0 0;">Catat & bandingkan pendapatan/pengeluaran</p>
-            </div>
-            <button class="btn-primary-custom" style="padding: 10px 14px; cursor: pointer; border-radius: var(--radius-md);" onclick="showAddLogModal()">
-                <i class="bi bi-plus-lg"></i> Transaksi
-            </button>
-        </div>
-        
-        <!-- Date Selector -->
-        <div style="background: var(--bg-primary); padding: 10px 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color); display: flex; align-items: center; gap: 8px;">
-            <i class="bi bi-calendar3" style="color: var(--text-muted); font-size: 14px;"></i>
-            <span style="font-size: var(--font-size-xs); color: var(--text-muted); font-weight: 600;">Tanggal:</span>
-            <input type="date" id="selectedDate" value="<?= date('Y-m-d') ?>" style="flex: 1; border: none; background: transparent; color: var(--text-primary); font-size: var(--font-size-sm); font-weight: 700; outline: none; padding: 2px 4px; color-scheme: dark;">
-        </div>
-    </div>
-
-    <!-- Hidden CSRF Token -->
-    <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
-
-    <!-- Visual Comparison Card (Net Balance & Bar) -->
-    <div class="app-card" style="padding: 20px; margin-bottom: 20px;">
-        <div style="text-align: center; margin-bottom: 16px;">
-            <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Selisih Hari Ini (Net)</span>
-            <h2 id="netBalanceValue" style="font-size: 1.8rem; font-weight: 800; margin: 4px 0; color: var(--text-primary);">Rp 0</h2>
-            <div id="netStatusBadge" style="display: inline-block; font-size: 9px; padding: 2px 8px; border-radius: 20px; font-weight: 700; text-transform: uppercase;">SEIMBANG</div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; border-top: 1px solid var(--border-color); padding-top: 16px;">
-            <div>
-                <span style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">Total Pemasukan</span>
-                <span id="totalIncomeValue" style="font-weight: 800; font-size: var(--font-size-md); color: var(--success);">Rp 0</span>
-            </div>
-            <div style="text-align: right; border-left: 1px solid var(--border-color); padding-left: 12px;">
-                <span style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px;">Total Pengeluaran</span>
-                <span id="totalExpenseValue" style="font-weight: 800; font-size: var(--font-size-md); color: var(--primary);">Rp 0</span>
-            </div>
-        </div>
-
-        <!-- Progress Bar Comparison -->
-        <div style="position: relative; height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; display: flex;">
-            <div id="incomeBar" style="height: 100%; width: 50%; background: var(--success); transition: width 0.3s ease;"></div>
-            <div id="expenseBar" style="height: 100%; width: 50%; background: var(--primary); transition: width 0.3s ease;"></div>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size: 9px; color: var(--text-muted); margin-top: 6px;">
-            <span id="incomePercentage">Pemasukan: 0%</span>
-            <span id="expensePercentage">Pengeluaran: 0%</span>
-        </div>
-    </div>
-
-    <!-- Grid POS Keuangan Dinamis -->
-    <div style="margin-bottom: 24px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <div class="section-title" style="margin-bottom: 0;">Sumber Keuangan (Pos)</div>
-            <button onclick="manageAccounts()" style="background: transparent; border: none; color: var(--info); cursor: pointer; font-size: var(--font-size-xs); font-weight: 600;">
-                <i class="bi bi-gear-fill"></i> Kelola POS
-            </button>
-        </div>
-        <div id="posGridContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <!-- POS Cards akan digenerate disini oleh JS -->
-            <div class="elegant-loader" style="margin: 20px auto; grid-column: span 2;">
-                <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Filter and Transaction List -->
-    <div>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <div class="section-title" style="margin-bottom: 0;">Daftar Transaksi</div>
-            <select id="filterPost" class="form-select-dark-sm" style="width: auto; min-width: 120px;">
-                <option value="">Semua Pos</option>
-                <!-- Options akan digenerate disini -->
-            </select>
-        </div>
-        
-        <div id="bulkActionBar" style="display: none; background: var(--surface-2); padding: 10px 14px; border-radius: var(--radius-md); margin-bottom: 12px; align-items: center; justify-content: space-between; border: 1px solid var(--primary);">
-            <div style="font-size: var(--font-size-sm); font-weight: 700; color: var(--primary);">
-                <span id="selectedCountText">0</span> transaksi terpilih
-            </div>
-            <div style="display: flex; gap: 8px;">
-                <button class="btn-primary-custom" onclick="bulkDeleteSelected()" style="background: var(--primary); padding: 6px 12px; border-radius: var(--radius-sm); font-size: var(--font-size-xs);">
-                    <i class="bi bi-trash-fill"></i> Hapus Terpilih
-                </button>
-                <button class="btn-primary-custom" onclick="clearSelection()" style="background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: var(--radius-sm); font-size: var(--font-size-xs);">
-                    Batal
-                </button>
-            </div>
-        </div>
-
-        <div id="transactionsList">
-            <div class="elegant-loader" style="margin: 20px auto;">
-                <div class="dot"></div><div class="dot"></div><div class="dot"></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<style>
-.post-card.active {
-    border-color: var(--info) !important;
-    background: var(--bg-primary) !important;
-}
-.modal-form-group {
-    margin-bottom: 12px;
-    text-align: left;
-}
-.modal-form-group label {
-    font-size: var(--font-size-xs);
-    font-weight: 600;
-    color: var(--text-muted);
-    margin-bottom: 4px;
-    display: block;
-}
-</style>
-
-<!-- Datalist untuk Autocomplete Kategori/Jenis Transaksi -->
-<datalist id="categoryDatalist"></datalist>
-
-<script>
 document.addEventListener('DOMContentLoaded', async function() {
     const csrfVal = document.getElementById('csrfToken').value;
     const dateInput = document.getElementById('selectedDate');
@@ -521,7 +390,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Modal untuk Kelola POS Keuangan
     window.manageAccounts = async function() {
-        const html = /* html */ `
+        const html = `
             <style>
                 .compact-searchbox .searchbox-trigger { min-height: 32px !important; padding: 6px 10px !important; }
                 .compact-searchbox .sb-value { font-size: 11px !important; }
@@ -529,7 +398,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             <div style="margin-bottom: 15px; background: var(--surface-2); padding: 12px; border-radius: var(--radius-md);">
                 <div style="margin-bottom: 8px; font-weight: 600; font-size: 12px;">Tambah POS Baru</div>
                 <div style="display:flex; flex-direction:column; gap: 8px; margin-bottom: 8px;">
-                    <input type="text" id="newAccountName" class="form-control-dark" placeholder="Nama POS (misal: Uang Gas)" style="width: 100%;" />
+                    <input type="text" id="newAccountName" class="form-control-dark" placeholder="Nama POS (misal: Uang Gas)" style="width: 100%;">
                     <div style="display:flex; gap: 8px; align-items:center;">
                         <div id="newAccountDepTypeContainer" class="compact-searchbox" style="flex: 1;"></div>
                         <div id="newAccountDepTargetContainer" class="compact-searchbox" style="display: none; flex:1;"></div>
@@ -543,7 +412,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border-color);">
                         <div style="flex: 1;">
                             <div style="display: flex; gap: 5px; align-items: center;">
-                                <input type="text" id="editAccName_${acc.id}" value="${escapeHtml(acc.name)}" class="form-control-dark" style="font-size: 12px; padding: 4px; height: auto;" />
+                                <input type="text" id="editAccName_${acc.id}" value="${escapeHtml(acc.name)}" class="form-control-dark" style="font-size: 12px; padding: 4px; height: auto;">
                             </div>
                             <div style="display: flex; gap: 5px; margin-top: 4px; align-items: center; width: 100%;">
                                 <span style="font-size: 9px; color: var(--text-muted); width: 30px;">Sifat:</span>
@@ -1053,4 +922,4 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadFinanceData();
 
 });
-</script>
+

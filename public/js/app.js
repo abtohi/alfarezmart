@@ -353,10 +353,23 @@ async function syncPendingChanges() {
                 const response = await fetch(change.endpoint, config);
                 if (response.ok) {
                     await window.OfflineDB.removePendingChange(change.id);
+                    // Clear retry counter on success
+                    localStorage.removeItem(`sync_fail_${change.id}`);
                     successCount++;
                 } else {
-                    failCount++;
-                    console.error("Gagal sinkron data ID:", change.id);
+                    // Track retries per change via localStorage
+                    const failKey = `sync_fail_${change.id}`;
+                    const retries = parseInt(localStorage.getItem(failKey) || '0') + 1;
+                    if (retries >= 3) {
+                        // Auto-remove stuck change after 3 failed attempts
+                        await window.OfflineDB.removePendingChange(change.id);
+                        localStorage.removeItem(failKey);
+                        console.warn("Menghapus antrian gagal permanen, ID:", change.id);
+                    } else {
+                        localStorage.setItem(failKey, retries);
+                        failCount++;
+                        console.error("Gagal sinkron data ID:", change.id, `(percobaan ${retries}/3)`);
+                    }
                 }
             } catch (e) {
                 console.error("Error saat sinkron data ID:", change.id, e);
