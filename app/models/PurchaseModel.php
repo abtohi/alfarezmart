@@ -3,7 +3,7 @@ class PurchaseModel extends Model
 {
     protected $table = 'purchases';
 
-    public function createWithDetails($data, $items)
+    public function createWithDetails(array $data, array $items)
     {
         try {
             $this->db->beginTransaction();
@@ -207,7 +207,7 @@ class PurchaseModel extends Model
         }
     }
 
-    public function getDetails($id)
+    public function getDetails(int $id)
     {
         $stmt = $this->db->prepare("
             SELECT p.*, s.name as supplier_name, sr.name as sales_rep_name
@@ -317,7 +317,7 @@ class PurchaseModel extends Model
         return $result;
     }
 
-    public function getDailyStats($date)
+    public function getDailyStats(string $date)
     {
         $stmt = $this->db->prepare("
             SELECT 
@@ -335,7 +335,7 @@ class PurchaseModel extends Model
         ];
     }
 
-    public function deleteWithRevert($id)
+    public function deleteWithRevert(int $id)
     {
         try {
             $this->beginTransaction();
@@ -393,7 +393,7 @@ class PurchaseModel extends Model
         }
     }
 
-    public function updateWithDetails($id, $data, $items)
+    public function updateWithDetails(int $id, array $data, array $items)
     {
         try {
             $this->beginTransaction();
@@ -607,8 +607,8 @@ class PurchaseModel extends Model
                 // Update Product timestamp so it rises to the top of product list
                 $stmtUpdateProductTimestamp->execute([':id' => $item['product_id']]);
 
-                if ($data['supplier_id']) {
-                    $spModel->addRelation($data['supplier_id'], $item['product_id']);
+                if (!empty($data['supplier_id'])) {
+                    $spModel->trackSupplierProduct($data['supplier_id'], $item['product_id']);
                 }
             }
 
