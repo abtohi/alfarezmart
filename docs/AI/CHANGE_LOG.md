@@ -13,6 +13,7 @@
 **Dikerjakan oleh:** AI Agent (Antigravity)
 
 ### Perubahan
+- **Fix Bug Pagination (Service Worker)** — Memperbaiki bug di mana pagination (seperti pada Riwayat Barang Masuk) tidak berfungsi dan selalu kembali ke halaman pertama. Ini disebabkan oleh konfigurasi Service Worker (`sw.js`) yang mengabaikan parameter URL (`ignoreSearch: true`) saat memuat dari *cache*. Versi SW juga telah ditingkatkan agar *browser* memuat ulang *cache* yang benar.
 - **Update Timestamp Produk via Pembelian** — Saat user menyimpan form Input Barang Masuk (setelah mendistribusikan diskon/PPN ke harga modal), sistem kini akan otomatis memperbarui nilai `updated_at` pada produk-produk yang bersangkutan. Hal ini membuat produk yang baru saja diinput/didistribusikan harganya otomatis naik ke posisi teratas pada daftar halaman Produk.
 - **Filter Range Harga Jual** — Halaman Produk kini memiliki filter harga jual di bawah filter kategori. Filter bekerja pada harga jual ecer kemasan terkecil (level 1). User dapat mengisi min/max harga dan menekan tombol 🔫 (atau Enter) untuk menerapkan. Tombol ✕ muncul jika filter aktif untuk reset. Semua parameter (kategori, pencarian, harga) dipertahankan saat navigasi halaman dan pagination.
 - **Fix Bug Filter Harga** — Memperbaiki bug dimana angka `0` pada input Max Price tertolak/diabaikan oleh sistem.
