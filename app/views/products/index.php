@@ -413,8 +413,8 @@ function applyPriceFilter() {
     const parts = [];
     if (catVal) parts.push('category=' + encodeURIComponent(catVal));
     if (q) parts.push('q=' + encodeURIComponent(q));
-    if (minP) parts.push('min_price=' + encodeURIComponent(minP));
-    if (maxP) parts.push('max_price=' + encodeURIComponent(maxP));
+    if (minP !== '') parts.push('min_price=' + encodeURIComponent(minP));
+    if (maxP !== '') parts.push('max_price=' + encodeURIComponent(maxP));
     window.location.href = '<?= BASE_URL ?>products' + (parts.length ? '?' + parts.join('&') : '');
 }
 

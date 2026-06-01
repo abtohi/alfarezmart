@@ -300,7 +300,7 @@ class ProductModel extends Model
             $where .= " AND (SELECT sell_price_retail FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1) >= :min_price";
             $params[':min_price'] = (float)$minPrice;
         }
-        if ($maxPrice !== null && $maxPrice > 0) {
+        if ($maxPrice !== null && $maxPrice >= 0) {
             $where .= " AND (SELECT sell_price_retail FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1) <= :max_price";
             $params[':max_price'] = (float)$maxPrice;
         }
