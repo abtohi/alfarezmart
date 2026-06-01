@@ -33,15 +33,11 @@ Klasifikasikan task ini sebelum mulai:
 
 ## Task
 
-- Saat ini kenapa semua searchBox dropdownlistnya ketika di klik tiba tiba menscroll layar ke halaman paling atas, dan posisi opsi dari searchbox dropdownlistnya posisinya berada jauh di bawah form (ada gap), tidak tepat berada di bawah form. Tolong perbaiki agar posisi dropdown berada tepat di bawah form dan ukurannya juga menyesuaikan lebar form. Pastikan ketika form berada di bawah, ketika di klik form untuk search item tertentu, ketika tombol keyboard muncul, opsi dari dropdown tidak tertutup oleh keyboard. Ini perbaikannya berlaku menyeluruh untuk semua dropdownlist tipe searchBox, jadi perbaiki pada script utama atau library yang digunakan untuk searchBox dropdownlistnya.
-
 - Ketika saya membuka menu Export Data, loadingnya sangat lama, muncul tulisan memuat data, bisakah ini dipercepat lagi prosesnya tanpa delay.
 
-- Pada halaman Export Data Produk by Produk, nama produknya masih belum muncul, tolong ini jadi concern serius untuk bisa diperbaiki dengan sempurna.
+- Pada halaman Export Data Produk by Produk, nama produknya masih belum muncul, tolong ini jadi concern serius untuk bisa diperbaiki dengan sempurna. Data produk kosong atau gagal di muat
 
-- Pada halaman Keuangan harian, saat saya menginput Pemasukkan Uang Rokok, kenapa justru masuknya ke Saldo Utama, seharusnya masuknya ke Saldo Rokok, karena Uang Rokok dependensinya ke Saldo Rokok bukan saldo utama, tolong cek lagi dan perbaiki. Begitu pula untuk pengeluaran Uang Rokok, seharusnya tercatat di Pemasukan Saldo Rokok dan Pengeluaran Saldo Rokok, bukan Saldo Utama, tolong ini cek lagi algoritmanya dan perbaiki.
-
-- Tolong cek secara menyeluruh libray aplikasi ini untuk mobile app, pastikan kenyamanan user tetap terjaga dan responsive, termasuk untuk dropdownlist, searchbox, kecepatan proses, penginputan data, ketika posisi form ada di bawah layar, kemudian ketika form diklik yang berisi searchbox, jangan tiba tiba layarnya ke scroll ke paling atas dan posisi dropdownlistnya jadi diatas, ini sangat mengganggu kenyamanan user, tolong perbaiki ini.
+- Pada halaman Keuangan harian, saat saya menginput Pemasukkan Uang Rokok, kenapa justru masuknya ke Saldo Utama, seharusnya masuknya ke Saldo Rokok, karena Uang Rokok dependensinya ke Saldo Rokok bukan saldo utama, tolong cek lagi dan perbaiki. Begitu pula untuk pengeluaran Uang Rokok, seharusnya tercatat di Pemasukan Saldo Rokok dan Pengeluaran Saldo Rokok, bukan Saldo Utama, tolong ini cek lagi algoritmanya dan perbaiki. Di bagian SUMBER KEUANGAN (POS), Saldo Rokok masih 0, padahal di DAFTAR TRANSAKSI ada Pemasukan dan pengeluaran saldo rokok, tolong ini di cek dan diperbaiki
 
 - Pada halaman Input Barang, saat menggunakan fitur scan AI otomatis, kemudian semua item sudah berhasil terdeteksi dan terseleksi, saat Total Harga Pembelian produk ternyata mengalami kenaikan atau penurunan harga dari harga sebelumnya, kenapa di Harga Modal untuk panel kemasan (setelah panel kemasan di expand) tidak menyesuaikan otomatis dengan harga modal yang baru, melainkan tetap tertulis harga modal yang lama, tolong ini diperbaiki, agar ketika harga modal naik atau turun (hasil scan AI), di setiap panel kemasan juga disesuaikan dengan harga modal yang baru menyesuaikan harga jenis kemasannya.
 

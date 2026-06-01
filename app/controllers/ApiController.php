@@ -119,6 +119,12 @@ class ApiController extends Controller
         $this->json($result);
     }
 
+    public function getProductNames()
+    {
+        $model = new ProductModel();
+        $this->json(['success' => true, 'data' => $model->getProductNames()]);
+    }
+
     public function syncAllData()
     {
         $limit = 500; // Limit payload size

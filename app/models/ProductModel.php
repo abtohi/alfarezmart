@@ -573,6 +573,19 @@ class ProductModel extends Model
         return $stmt->fetchAll();
     }
 
+    public function getProductNames()
+    {
+        $stmt = $this->db->prepare("
+            SELECT p.id, p.full_name as name, p.short_label, b.name as brand_name
+            FROM products p
+            LEFT JOIN brands b ON p.brand_id = b.id
+            WHERE p.is_active = 1
+            ORDER BY p.full_name ASC
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
     public function getStats()
     {
         $stats = [];

@@ -15,11 +15,37 @@
 | **Versi Asset** | `?v=4.9` (di `app/views/layouts/app.php`) |
 | **PHP Version** | XAMPP (cek `php -v`) |
 | **Timezone** | Asia/Jakarta (GMT+7) |
-| **Last Updated** | 2026-06-01 |
+| **Last Updated** | 2026-06-02 |
 
 ---
 
 ## Pekerjaan Terakhir
+
+### Sesi: 2026-06-02 — Fix AI Scan Harga Modal, Finance Routing Uang Rokok, Export Performance
+
+**Yang dikerjakan:**
+1. **Fix AI Scan Harga Modal tidak ter-update di Panel Kemasan** — Bug di `purchases/create.php`: setelah AI scan menambahkan item ke keranjang dan mengubah `bestPkg.buy_price = item.unit_price`, nilai baru tidak di-propagate ke semua level kemasan lain. Akibatnya saat user membuka drawer kemasan, semua level non-selected masih menampilkan harga lama dari DB.
+   - **Root Cause**: Setelah `addProductToCart`, kode hanya mengupdate `addedItem.quantity` dan `addedItem.total`, tanpa memanggil `propagateFromMainInputs()`.
+   - **Fix**: Tambahkan `addedItem.buy_price = item.unit_price` (eksplisit), lalu panggil `propagateFromMainInputs(addedItem)`, `syncSellPricesWhenBuyPriceChanges(addedItem)`, dan recalculate `harga_nett`. Kini semua packaging level (pcs, renceng, karton, dll.) otomatis ter-update dengan harga modal dari hasil scan AI.
+
+2. **Fix Finance Uang Rokok masuk ke Saldo Utama** (sesi sebelumnya) — Diperbaiki routing dependency di tabel `finance_accounts`. Kolom `dependency_account_id` untuk akun "Uang Rokok" di-set ke ID akun "Saldo Rokok" via script PHP (`scratch/fix_db.php`). Logika `FinanceModel::addLog()` sudah benar — `dependency_account_id` menentukan saldo mana yang terpengaruh.
+
+3. **Fix Export Modal Performance** (sesi sebelumnya) — Endpoint baru `/api/products/names` ditambahkan untuk menggantikan fetch full dataset (`?page=1&per_page=9999`) saat modal Export dibuka. Payload minimal (id, full_name, short_label, brand_name) sehingga loading jauh lebih cepat.
+
+**File yang Diubah:**
+- `app/views/purchases/create.php` — Tambah `propagateFromMainInputs`, `syncSellPricesWhenBuyPriceChanges`, dan recalc `harga_nett` setelah AI scan item masuk ke cart.
+- `app/models/ProductModel.php` — Tambah `getProductNames()` untuk endpoint ringan.
+- `app/controllers/ApiController.php` — Tambah handler endpoint `/api/products/names`.
+- `app/config/Routes.php` — Daftarkan route `/api/products/names`.
+- `app/views/dashboard/index.php` — Update `openExportModal()` untuk fetch dari endpoint baru.
+- `scratch/fix_db.php` — Script one-shot fix `dependency_account_id` Uang Rokok (sudah dieksekusi).
+
+**Catatan Teknis:**
+- `propagateFromMainInputs(item)` menghitung `buyPerPcs = item.buy_price / selPkg.base_qty`, lalu menerapkan ke semua pkg. Benar untuk semua level (termasuk jika AI memilih level non-1 seperti Karton).
+- Jika produk sudah ada di keranjang (duplicate), `addProductToCart` menambah qty +1 dan tidak memanggil propagate — untuk kasus AI scan ini tidak terjadi karena produk baru.
+- `scratch/fix_db.php` dan `scratch/check_db.php` masih ada di folder scratch — **wajib dihapus** setelah session ini.
+
+---
 
 ### Sesi: 2026-06-01 — Filter Harga Jual di Halaman Produk & Cleanup File
 **Yang dikerjakan:**

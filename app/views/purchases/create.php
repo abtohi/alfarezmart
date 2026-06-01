@@ -387,11 +387,27 @@ async function scanInvoiceWithAI() {
                             // Add to cart with the specific level pre-selected
                             addProductToCart(productData, bestPkg ? bestPkg.level : 1);
                             
-                            // Immediately update the added item's quantity and total
+                            // Immediately update the added item's quantity, buy_price, and total
                             const addedItem = purchaseItems[0]; // addProductToCart unshifts to the front
                             if (addedItem && addedItem.product_id == item.product_id) {
-                                addedItem.quantity = item.qty;
-                                addedItem.total = item.qty * item.unit_price;
+                                addedItem.quantity  = item.qty;
+                                addedItem.buy_price = item.unit_price;
+                                addedItem.total     = item.qty * item.unit_price;
+
+                                // Propagate AI buy_price to ALL packaging levels (so drawer/panel
+                                // kemasan juga menampilkan Harga Modal yang benar, bukan harga lama DB)
+                                propagateFromMainInputs(addedItem);
+
+                                // Also sync sell prices based on new buy price (maintain margin)
+                                syncSellPricesWhenBuyPriceChanges(addedItem);
+
+                                // Recalculate nett price for the selected level
+                                addedItem.harga_nett = calcItemNett(
+                                    addedItem.buy_price,
+                                    addedItem.ppn_pct || 0,
+                                    addedItem.diskon_mode || 'rp',
+                                    addedItem.diskon_value || 0
+                                );
                             }
                         }
                     } catch(e) {

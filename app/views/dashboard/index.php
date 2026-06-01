@@ -301,7 +301,7 @@ async function openExportModal() {
     try {
         const [supRes, prodRes] = await Promise.all([
             api(`${BASE_URL}api/suppliers`),
-            api(`${BASE_URL}api/products?page=1&per_page=9999`)
+            api(`${BASE_URL}api/products/names`)
         ]);
         exportSupplierData = supRes.success ? supRes.data : (Array.isArray(supRes) ? supRes : []);
         const rawProd = prodRes.success ? (prodRes.data.data || prodRes.data) : (Array.isArray(prodRes) ? prodRes : []);
