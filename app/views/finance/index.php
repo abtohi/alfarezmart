@@ -405,19 +405,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Modal untuk Kelola POS Keuangan
     window.manageAccounts = async function() {
         const html = `
+            <style>
+                .compact-searchbox .searchbox-trigger { min-height: 32px !important; padding: 6px 10px !important; }
+                .compact-searchbox .sb-value { font-size: 11px !important; }
+            </style>
             <div style="margin-bottom: 15px; background: var(--surface-2); padding: 12px; border-radius: var(--radius-md);">
                 <div style="margin-bottom: 8px; font-weight: 600; font-size: 12px;">Tambah POS Baru</div>
                 <div style="display:flex; flex-direction:column; gap: 8px; margin-bottom: 8px;">
                     <input type="text" id="newAccountName" class="form-control-dark" placeholder="Nama POS (misal: Uang Gas)" style="width: 100%;">
                     <div style="display:flex; gap: 8px; align-items:center;">
-                        <select id="newAccountDepType" class="form-select-dark" style="flex: 1; font-size: 11px;" onchange="document.getElementById('newAccountDepTarget').style.display = this.value === 'dependent' ? 'block' : 'none'">
-                            <option value="independent">Independent</option>
-                            <option value="dependent">Dependent</option>
-                        </select>
-                        <select id="newAccountDepTarget" class="form-select-dark" style="display: none; font-size: 11px; flex:1;">
-                            <option value="">-- Pilih Tujuan --</option>
-                            ${accountsData.map(acc => `<option value="${acc.id}">${escapeHtml(acc.name)}</option>`).join('')}
-                        </select>
+                        <div id="newAccountDepTypeContainer" class="compact-searchbox" style="flex: 1;"></div>
+                        <div id="newAccountDepTargetContainer" class="compact-searchbox" style="display: none; flex:1;"></div>
                         <button class="btn-primary-custom" onclick="saveNewAccount()" style="padding: 6px 12px; border-radius:var(--radius-md); font-size: 11px; white-space:nowrap;"><i class="bi bi-plus-lg"></i> Tambah</button>
                     </div>
                 </div>
@@ -447,7 +445,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             </div>
         `;
 
-        await AppModal.show({
+        const modalPromise = AppModal.show({
             title: 'Kelola POS Keuangan',
             subtitle: 'Tambah, ubah nama, hapus, atau atur konversi otomatis',
             icon: 'bi-gear-fill',
@@ -455,14 +453,33 @@ document.addEventListener('DOMContentLoaded', async function() {
             hideSubmit: true,
             cancelText: 'Tutup'
         });
+
+        new SearchBox(document.getElementById('newAccountDepTypeContainer'), {
+            options: [
+                {value: 'independent', label: 'Independent'},
+                {value: 'dependent', label: 'Dependent'}
+            ],
+            value: 'independent',
+            name: 'newAccountDepType',
+            onChange: (val) => {
+                document.getElementById('newAccountDepTargetContainer').style.display = val === 'dependent' ? 'block' : 'none';
+            }
+        });
+        new SearchBox(document.getElementById('newAccountDepTargetContainer'), {
+            options: accountsData.map(acc => ({value: acc.id, label: acc.name})),
+            placeholder: '-- Pilih Tujuan --',
+            name: 'newAccountDepTarget'
+        });
+        
+        await modalPromise;
     };
 
     window.saveNewAccount = async function() {
         const name = document.getElementById('newAccountName').value.trim();
-        const type = document.getElementById('newAccountDepType').value;
+        const type = document.querySelector('input[name="newAccountDepType"]').value;
         let depId = null;
         if (type === 'dependent') {
-            depId = document.getElementById('newAccountDepTarget').value;
+            depId = document.querySelector('input[name="newAccountDepTarget"]').value;
         }
         
         if(!name) return;
@@ -518,32 +535,18 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         const html = `
             <div class="modal-form-group">
-                <label>Jenis Transaksi (Pemasukan/Pengeluaran) *</label>
-                <select id="logCategory" class="form-select-dark">
-                    <option value="Pemasukan">Pemasukan (Uang Masuk)</option>
-                    <option value="Pengeluaran" selected>Pengeluaran (Uang Keluar)</option>
-                </select>
+                <label style="margin-bottom: 4px; display: block;">Jenis Transaksi *</label>
+                <div id="logCategoryContainer"></div>
             </div>
             
             <div class="modal-form-group">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <label style="margin:0;">Pos Keuangan *</label>
-                    <button class="btn-primary-custom" type="button" onclick="AppModal.close(); setTimeout(() => manageAccounts(), 300);" style="padding: 2px 8px; font-size: 10px; border-radius: var(--radius-sm);"><i class="bi bi-gear-fill"></i> Kelola</button>
-                </div>
-                <select id="logBalanceType" class="form-select-dark">
-                    ${posOptions}
-                </select>
+                <label style="margin-bottom: 4px; display: block;">Pos Keuangan *</label>
+                <div id="logBalanceTypeContainer"></div>
             </div>
 
             <div class="modal-form-group">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <label style="margin:0;">Kategori Transaksi *</label>
-                    <button class="btn-primary-custom" type="button" onclick="AppModal.close(); setTimeout(() => manageCategories(), 300);" style="padding: 2px 8px; font-size: 10px; border-radius: var(--radius-sm);"><i class="bi bi-gear-fill"></i> Kelola</button>
-                </div>
-                <select id="logDetail" class="form-select-dark">
-                    <option value="">-- Pilih Kategori --</option>
-                    ${categoriesData.map(c => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join('')}
-                </select>
+                <label style="margin-bottom: 4px; display: block;">Kategori Transaksi *</label>
+                <div id="logDetailContainer"></div>
             </div>
 
             <div class="modal-form-group">
@@ -562,7 +565,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             </div>
         `;
 
-        await AppModal.show({
+        const modalPromise = AppModal.show({
             title: 'Catat Transaksi Keuangan',
             subtitle: 'Tambahkan pemasukan atau pengeluaran harian',
             icon: 'bi-wallet2',
@@ -571,11 +574,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             bodyHTML: html,
             submitText: 'Simpan Catatan',
             onSubmit: async () => {
-                const cat = document.getElementById('logCategory').value;
-                const pos = document.getElementById('logBalanceType').value;
+                const cat = document.querySelector('input[name="logCategory"]').value;
+                const pos = document.querySelector('input[name="logBalanceType"]').value;
                 const amt = parseFloat(document.getElementById('logAmount').value);
                 const date = document.getElementById('logDate').value;
-                const detail = document.getElementById('logDetail').value.trim();
+                const detail = document.querySelector('input[name="logDetail"]').value.trim();
                 const desc = document.getElementById('logDescription').value.trim();
 
                 if (isNaN(amt) || amt <= 0) {
@@ -624,6 +627,35 @@ document.addEventListener('DOMContentLoaded', async function() {
                 return false;
             }
         });
+
+        new SearchBox(document.getElementById('logCategoryContainer'), {
+            options: [
+                {value: 'Pemasukan', label: 'Pemasukan (Uang Masuk)'},
+                {value: 'Pengeluaran', label: 'Pengeluaran (Uang Keluar)'}
+            ],
+            value: 'Pengeluaran',
+            name: 'logCategory'
+        });
+
+        new SearchBox(document.getElementById('logBalanceTypeContainer'), {
+            options: accountsData.map(acc => ({value: acc.name, label: acc.name})),
+            placeholder: '-- Pilih Pos Keuangan --',
+            name: 'logBalanceType',
+            onAdd: () => { AppModal.close(); setTimeout(() => manageAccounts(), 300); },
+            addLabel: 'Kelola POS Keuangan',
+            icon: 'bi-wallet2'
+        });
+
+        new SearchBox(document.getElementById('logDetailContainer'), {
+            options: categoriesData.map(c => ({value: c.name, label: c.name})),
+            placeholder: '-- Pilih Kategori --',
+            name: 'logDetail',
+            onAdd: () => { AppModal.close(); setTimeout(() => manageCategories(), 300); },
+            addLabel: 'Kelola Kategori',
+            icon: 'bi-tags'
+        });
+
+        await modalPromise;
     };
 
     window.editLog = async function(log) {
@@ -634,32 +666,18 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         const html = `
             <div class="modal-form-group">
-                <label>Jenis Transaksi / Kategori *</label>
-                <select id="editLogCategory" class="form-select-dark">
-                    <option value="Pemasukan" ${log.category === 'Pemasukan' ? 'selected' : ''}>Pemasukan (Uang Masuk)</option>
-                    <option value="Pengeluaran" ${log.category === 'Pengeluaran' ? 'selected' : ''}>Pengeluaran (Uang Keluar)</option>
-                </select>
+                <label style="margin-bottom: 4px; display: block;">Jenis Transaksi *</label>
+                <div id="editLogCategoryContainer"></div>
             </div>
             
             <div class="modal-form-group">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <label style="margin:0;">Pos Keuangan *</label>
-                    <button class="btn-primary-custom" type="button" onclick="AppModal.close(); setTimeout(() => manageAccounts(), 300);" style="padding: 2px 8px; font-size: 10px; border-radius: var(--radius-sm);"><i class="bi bi-gear-fill"></i> Kelola</button>
-                </div>
-                <select id="editLogBalanceType" class="form-select-dark">
-                    ${posOptions}
-                </select>
+                <label style="margin-bottom: 4px; display: block;">Pos Keuangan *</label>
+                <div id="editLogBalanceTypeContainer"></div>
             </div>
 
             <div class="modal-form-group">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                    <label style="margin:0;">Kategori Transaksi *</label>
-                    <button class="btn-primary-custom" type="button" onclick="AppModal.close(); setTimeout(() => manageCategories(), 300);" style="padding: 2px 8px; font-size: 10px; border-radius: var(--radius-sm);"><i class="bi bi-gear-fill"></i> Kelola</button>
-                </div>
-                <select id="editLogDetail" class="form-select-dark">
-                    <option value="">-- Pilih Kategori --</option>
-                    ${categoriesData.map(c => `<option value="${escapeHtml(c.name)}" ${log.detail === c.name ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
-                </select>
+                <label style="margin-bottom: 4px; display: block;">Kategori Transaksi *</label>
+                <div id="editLogDetailContainer"></div>
             </div>
 
             <div class="modal-form-group">
@@ -678,7 +696,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             </div>
         `;
 
-        await AppModal.show({
+        const modalPromise = AppModal.show({
             title: 'Ubah Transaksi Keuangan',
             subtitle: 'Perbarui pencatatan pemasukan/pengeluaran',
             icon: 'bi-pencil-square',
@@ -687,11 +705,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             bodyHTML: html,
             submitText: 'Perbarui Catatan',
             onSubmit: async () => {
-                const cat = document.getElementById('editLogCategory').value;
-                const pos = document.getElementById('editLogBalanceType').value;
+                const cat = document.querySelector('input[name="editLogCategory"]').value;
+                const pos = document.querySelector('input[name="editLogBalanceType"]').value;
                 const amt = parseFloat(document.getElementById('editLogAmount').value);
                 const date = document.getElementById('editLogDate').value;
-                const detail = document.getElementById('editLogDetail').value.trim();
+                const detail = document.querySelector('input[name="editLogDetail"]').value.trim();
                 const desc = document.getElementById('editLogDescription').value.trim();
 
                 if (isNaN(amt) || amt <= 0) {
@@ -738,6 +756,37 @@ document.addEventListener('DOMContentLoaded', async function() {
                 return false;
             }
         });
+
+        new SearchBox(document.getElementById('editLogCategoryContainer'), {
+            options: [
+                {value: 'Pemasukan', label: 'Pemasukan (Uang Masuk)'},
+                {value: 'Pengeluaran', label: 'Pengeluaran (Uang Keluar)'}
+            ],
+            value: log.category,
+            name: 'editLogCategory'
+        });
+
+        new SearchBox(document.getElementById('editLogBalanceTypeContainer'), {
+            options: accountsData.map(acc => ({value: acc.name, label: acc.name})),
+            placeholder: '-- Pilih Pos Keuangan --',
+            value: log.balance_type,
+            name: 'editLogBalanceType',
+            onAdd: () => { AppModal.close(); setTimeout(() => manageAccounts(), 300); },
+            addLabel: 'Kelola POS Keuangan',
+            icon: 'bi-wallet2'
+        });
+
+        new SearchBox(document.getElementById('editLogDetailContainer'), {
+            options: categoriesData.map(c => ({value: c.name, label: c.name})),
+            placeholder: '-- Pilih Kategori --',
+            value: log.detail,
+            name: 'editLogDetail',
+            onAdd: () => { AppModal.close(); setTimeout(() => manageCategories(), 300); },
+            addLabel: 'Kelola Kategori',
+            icon: 'bi-tags'
+        });
+
+        await modalPromise;
     };
 
     window.deleteLog = async function(id) {
