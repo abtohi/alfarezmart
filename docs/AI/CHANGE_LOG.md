@@ -6,6 +6,28 @@
 
 ---
 
+## [2026-06-01] — Fitur POS Keuangan Dinamis & Auto-Konversi Dependensi
+
+**Tipe:** Mayor
+**Modul:** Finance (FinanceModel, ApiController, finance/index.php)
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Database Skema Baru** — Menambahkan tabel `finance_accounts` (untuk daftar POS) dan `finance_categories` (untuk daftar Jenis Transaksi). Migrasi data lama dari `finance_logs` berhasil dilakukan sehingga data historis aman.
+- **UI Grid POS Dinamis** — Kotak ringkasan POS (Uang Laci, dll) di halaman Keuangan Harian kini di-render secara dinamis dari database, mendukung warna/ikon acak untuk POS baru.
+- **Manajemen POS & Konversi Otomatis** — Ditambahkan modal Kelola POS untuk tambah/hapus POS, serta mengatur "Tujuan Konversi". Jika "Uang Laci" diset konversi ke "Saldo Utama", maka pengeluaran di Uang Laci otomatis dialihkan sebagai Pemasukan & Pengeluaran di Saldo Utama.
+- **SearchBox Kategori (Datalist)** — Form input Jenis Transaksi sekarang menggunakan elemen `<datalist>` yang mendukung pemilihan dari dropdown atau pengetikan kategori baru. Kategori baru akan otomatis tersimpan ke master data kategori.
+
+### File yang Diubah/Dibuat
+- `database/migrate_finance_dynamic.php` — Script migrasi skema tabel baru & seeder data.
+- `app/models/FinanceModel.php` — Refactor logic konversi otomatis di `addLog` & tambah method CRUD untuk accounts/categories.
+- `app/controllers/ApiController.php` — Penambahan 8 endpoint REST API baru untuk CRUD accounts/categories.
+- `app/config/Routes.php` — Routing endpoint finance accounts & categories.
+- `app/views/finance/index.php` — Rewrite total JavaScript logic dan UI Grid untuk menggunakan data dinamis (AJAX ke API master data).
+- Menghapus file test `test_db.php`.
+
+---
+
 ## [2026-06-01] — Filter Harga Jual di Halaman Produk & Pembersihan File
 
 **Tipe:** Minor

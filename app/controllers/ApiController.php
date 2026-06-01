@@ -2122,6 +2122,160 @@ class ApiController extends Controller
     }
 
     // ===== FINANCE LOGS API =====
+    // ===== FINANCE ACCOUNTS & CATEGORIES API =====
+    public function getFinanceAccounts()
+    {
+        $this->requireSuperadmin();
+        try {
+            $model = new FinanceModel();
+            $accounts = $model->getActiveAccounts();
+            $this->json(['success' => true, 'data' => $accounts]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function createFinanceAccount()
+    {
+        $this->requireSuperadmin();
+        $this->validateCSRF();
+        try {
+            $name = $this->input('name');
+            $depId = $this->input('dependency_account_id');
+            if (empty($name)) {
+                throw new Exception("Nama POS Keuangan wajib diisi");
+            }
+            
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("INSERT INTO finance_accounts (name, dependency_account_id) VALUES (:name, :dep)");
+            $stmt->execute([
+                ':name' => $name,
+                ':dep' => empty($depId) ? null : (int)$depId
+            ]);
+            
+            $this->json(['success' => true, 'message' => 'POS Keuangan berhasil ditambahkan']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateFinanceAccount(int $id)
+    {
+        $this->requireSuperadmin();
+        $this->validateCSRF();
+        try {
+            $name = $this->input('name');
+            $depId = $this->input('dependency_account_id');
+            if (empty($name)) {
+                throw new Exception("Nama POS Keuangan wajib diisi");
+            }
+            
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("UPDATE finance_accounts SET name = :name, dependency_account_id = :dep WHERE id = :id");
+            $stmt->execute([
+                ':name' => $name,
+                ':dep' => empty($depId) ? null : (int)$depId,
+                ':id' => $id
+            ]);
+            
+            $this->json(['success' => true, 'message' => 'POS Keuangan berhasil diperbarui']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteFinanceAccount(int $id)
+    {
+        $this->requireSuperadmin();
+        $this->validateCSRF();
+        try {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("UPDATE finance_accounts SET is_active = 0 WHERE id = :id");
+            $stmt->execute([':id' => $id]);
+            
+            $this->json(['success' => true, 'message' => 'POS Keuangan berhasil dihapus (soft delete)']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function getFinanceCategories()
+    {
+        $this->requireSuperadmin();
+        try {
+            $type = $this->input('type');
+            $model = new FinanceModel();
+            $categories = $model->getActiveCategories($type);
+            $this->json(['success' => true, 'data' => $categories]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function createFinanceCategory()
+    {
+        $this->requireSuperadmin();
+        $this->validateCSRF();
+        try {
+            $name = $this->input('name');
+            $type = $this->input('type');
+            if (empty($name) || empty($type)) {
+                throw new Exception("Nama dan Tipe wajib diisi");
+            }
+            
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("INSERT INTO finance_categories (name, type) VALUES (:name, :type) ON DUPLICATE KEY UPDATE is_active = 1");
+            $stmt->execute([
+                ':name' => $name,
+                ':type' => $type
+            ]);
+            
+            $this->json(['success' => true, 'message' => 'Kategori berhasil ditambahkan']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateFinanceCategory(int $id)
+    {
+        $this->requireSuperadmin();
+        $this->validateCSRF();
+        try {
+            $name = $this->input('name');
+            $type = $this->input('type');
+            if (empty($name) || empty($type)) {
+                throw new Exception("Nama dan Tipe wajib diisi");
+            }
+            
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("UPDATE finance_categories SET name = :name, type = :type WHERE id = :id");
+            $stmt->execute([
+                ':name' => $name,
+                ':type' => $type,
+                ':id' => $id
+            ]);
+            
+            $this->json(['success' => true, 'message' => 'Kategori berhasil diperbarui']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteFinanceCategory(int $id)
+    {
+        $this->requireSuperadmin();
+        $this->validateCSRF();
+        try {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("UPDATE finance_categories SET is_active = 0 WHERE id = :id");
+            $stmt->execute([':id' => $id]);
+            
+            $this->json(['success' => true, 'message' => 'Kategori berhasil dihapus (soft delete)']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function getFinanceSummary()
     {
         $this->requireSuperadmin();

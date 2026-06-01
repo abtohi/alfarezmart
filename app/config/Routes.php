@@ -193,5 +193,16 @@ $router->post('/api/finance/logs', 'ApiController@createFinanceLog');
 $router->post('/api/finance/logs/{id}/update', 'ApiController@updateFinanceLog');
 $router->post('/api/finance/logs/{id}/delete', 'ApiController@deleteFinanceLog');
 
+// Finance Accounts & Categories API
+$router->get('/api/finance/accounts', 'ApiController@getFinanceAccounts');
+$router->post('/api/finance/accounts', 'ApiController@createFinanceAccount');
+$router->post('/api/finance/accounts/{id}/update', 'ApiController@updateFinanceAccount');
+$router->post('/api/finance/accounts/{id}/delete', 'ApiController@deleteFinanceAccount');
+
+$router->get('/api/finance/categories', 'ApiController@getFinanceCategories');
+$router->post('/api/finance/categories', 'ApiController@createFinanceCategory');
+$router->post('/api/finance/categories/{id}/update', 'ApiController@updateFinanceCategory');
+$router->post('/api/finance/categories/{id}/delete', 'ApiController@deleteFinanceCategory');
+
 // Database Setup (only in development)
 $router->get('/setup', 'SettingController@setupDatabase');

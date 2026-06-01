@@ -60,68 +60,18 @@
         </div>
     </div>
 
-    <!-- Grid 4 Pos Keuangan -->
+    <!-- Grid POS Keuangan Dinamis -->
     <div style="margin-bottom: 24px;">
-        <div class="section-title" style="margin-bottom: 12px;">Sumber Keuangan (Pos)</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <!-- Pos Uang Laci -->
-            <div class="app-card post-card" data-post="Uang Laci" style="padding: 14px; position: relative; cursor: pointer; transition: transform 0.2s;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-size: var(--font-size-xs); font-weight: 700; color: var(--text-primary);">Uang Laci</span>
-                    <div style="width: 24px; height: 24px; background: rgba(76, 201, 240, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #4cc9f0;">
-                        <i class="bi bi-inbox" style="font-size: 11px;"></i>
-                    </div>
-                </div>
-                <div id="netLaci" style="font-size: var(--font-size-sm); font-weight: 800; color: var(--text-primary);">Rp 0</div>
-                <div style="font-size: 8px; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between;">
-                    <span>Masuk: <span id="incLaci" style="color: var(--success);">Rp 0</span></span>
-                    <span>Keluar: <span id="expLaci" style="color: var(--primary);">Rp 0</span></span>
-                </div>
-            </div>
-
-            <!-- Pos Uang Pulsa -->
-            <div class="app-card post-card" data-post="Uang Pulsa" style="padding: 14px; position: relative; cursor: pointer; transition: transform 0.2s;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-size: var(--font-size-xs); font-weight: 700; color: var(--text-primary);">Uang Pulsa</span>
-                    <div style="width: 24px; height: 24px; background: rgba(255, 183, 3, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #ffb703;">
-                        <i class="bi bi-phone" style="font-size: 11px;"></i>
-                    </div>
-                </div>
-                <div id="netPulsa" style="font-size: var(--font-size-sm); font-weight: 800; color: var(--text-primary);">Rp 0</div>
-                <div style="font-size: 8px; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between;">
-                    <span>Masuk: <span id="incPulsa" style="color: var(--success);">Rp 0</span></span>
-                    <span>Keluar: <span id="expPulsa" style="color: var(--primary);">Rp 0</span></span>
-                </div>
-            </div>
-
-            <!-- Pos Uang Beras -->
-            <div class="app-card post-card" data-post="Uang Beras" style="padding: 14px; position: relative; cursor: pointer; transition: transform 0.2s;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-size: var(--font-size-xs); font-weight: 700; color: var(--text-primary);">Uang Beras</span>
-                    <div style="width: 24px; height: 24px; background: rgba(46, 196, 182, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #2ec4b6;">
-                        <i class="bi bi-cup-hot" style="font-size: 11px;"></i>
-                    </div>
-                </div>
-                <div id="netBeras" style="font-size: var(--font-size-sm); font-weight: 800; color: var(--text-primary);">Rp 0</div>
-                <div style="font-size: 8px; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between;">
-                    <span>Masuk: <span id="incBeras" style="color: var(--success);">Rp 0</span></span>
-                    <span>Keluar: <span id="expBeras" style="color: var(--primary);">Rp 0</span></span>
-                </div>
-            </div>
-
-            <!-- Pos Uang Rokok -->
-            <div class="app-card post-card" data-post="Uang Rokok" style="padding: 14px; position: relative; cursor: pointer; transition: transform 0.2s;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-size: var(--font-size-xs); font-weight: 700; color: var(--text-primary);">Uang Rokok</span>
-                    <div style="width: 24px; height: 24px; background: rgba(230, 57, 70, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #e63946;">
-                        <i class="bi bi-fire" style="font-size: 11px;"></i>
-                    </div>
-                </div>
-                <div id="netRokok" style="font-size: var(--font-size-sm); font-weight: 800; color: var(--text-primary);">Rp 0</div>
-                <div style="font-size: 8px; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between;">
-                    <span>Masuk: <span id="incRokok" style="color: var(--success);">Rp 0</span></span>
-                    <span>Keluar: <span id="expRokok" style="color: var(--primary);">Rp 0</span></span>
-                </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div class="section-title" style="margin-bottom: 0;">Sumber Keuangan (Pos)</div>
+            <button onclick="manageAccounts()" style="background: transparent; border: none; color: var(--info); cursor: pointer; font-size: var(--font-size-xs); font-weight: 600;">
+                <i class="bi bi-gear-fill"></i> Kelola POS
+            </button>
+        </div>
+        <div id="posGridContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <!-- POS Cards akan digenerate disini oleh JS -->
+            <div class="elegant-loader" style="margin: 20px auto; grid-column: span 2;">
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div>
             </div>
         </div>
     </div>
@@ -132,18 +82,13 @@
             <div class="section-title" style="margin-bottom: 0;">Daftar Transaksi</div>
             <select id="filterPost" class="form-select-dark-sm" style="width: auto; min-width: 120px;">
                 <option value="">Semua Pos</option>
-                <option value="Uang Laci">Uang Laci</option>
-                <option value="Uang Pulsa">Uang Pulsa</option>
-                <option value="Uang Beras">Uang Beras</option>
-                <option value="Uang Rokok">Uang Rokok</option>
+                <!-- Options akan digenerate disini -->
             </select>
         </div>
 
         <div id="transactionsList">
             <div class="elegant-loader" style="margin: 20px auto;">
-                <div class="dot"></div>
-                <div class="dot"></div>
-                <div class="dot"></div>
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div>
             </div>
         </div>
     </div>
@@ -167,16 +112,122 @@
 }
 </style>
 
+<!-- Datalist untuk Autocomplete Kategori/Jenis Transaksi -->
+<datalist id="categoryDatalist"></datalist>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     const csrfVal = document.getElementById('csrfToken').value;
     const dateInput = document.getElementById('selectedDate');
     const filterPost = document.getElementById('filterPost');
     
     let activePostFilter = '';
     let currentLogs = [];
+    let accountsData = [];
+    let categoriesData = [];
+
+    // Helper: Colors for dynamically generated POS cards
+    const posColors = [
+        { bg: 'rgba(76, 201, 240, 0.1)', icon: '#4cc9f0', bi: 'bi-inbox' },
+        { bg: 'rgba(255, 183, 3, 0.1)', icon: '#ffb703', bi: 'bi-phone' },
+        { bg: 'rgba(46, 196, 182, 0.1)', icon: '#2ec4b6', bi: 'bi-cup-hot' },
+        { bg: 'rgba(230, 57, 70, 0.1)', icon: '#e63946', bi: 'bi-fire' },
+        { bg: 'rgba(114, 9, 183, 0.1)', icon: '#7209b7', bi: 'bi-wallet' },
+        { bg: 'rgba(67, 97, 238, 0.1)', icon: '#4361ee', bi: 'bi-safe' },
+        { bg: 'rgba(247, 37, 133, 0.1)', icon: '#f72585', bi: 'bi-bank' },
+        { bg: 'rgba(181, 228, 140, 0.1)', icon: '#b5e48c', bi: 'bi-cash-coin' }
+    ];
+
+    function getPosStyle(index) {
+        return posColors[index % posColors.length];
+    }
+
+    // Load Master Data (Accounts & Categories)
+    async function loadMasterData() {
+        try {
+            const accRes = await api(`${BASE_URL}api/finance/accounts`);
+            if (accRes.success) accountsData = accRes.data;
+
+            const catRes = await api(`${BASE_URL}api/finance/categories`);
+            if (catRes.success) categoriesData = catRes.data;
+
+            renderPosGrid();
+            updateFilterOptions();
+            updateCategoryDatalist();
+        } catch (e) {
+            console.error("Gagal memuat data master keuangan:", e);
+        }
+    }
+
+    function renderPosGrid() {
+        const container = document.getElementById('posGridContainer');
+        if (!accountsData || accountsData.length === 0) {
+            container.innerHTML = `<div style="grid-column: span 2; text-align:center; font-size:12px; color:var(--text-muted);">Belum ada POS Keuangan</div>`;
+            return;
+        }
+
+        let html = '';
+        accountsData.forEach((acc, index) => {
+            const style = getPosStyle(index);
+            const safeName = escapeHtml(acc.name);
+            const shortId = `pos_${index}`;
+            
+            html += `
+            <div class="app-card post-card ${activePostFilter === acc.name ? 'active' : ''}" data-post="${safeName}" data-index="${index}" style="padding: 14px; position: relative; cursor: pointer; transition: transform 0.2s;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="font-size: var(--font-size-xs); font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;">${safeName}</span>
+                    <div style="width: 24px; height: 24px; background: ${style.bg}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: ${style.icon}; flex-shrink: 0;">
+                        <i class="bi ${style.bi}" style="font-size: 11px;"></i>
+                    </div>
+                </div>
+                <div id="net_${shortId}" style="font-size: var(--font-size-sm); font-weight: 800; color: var(--text-primary);">Rp 0</div>
+                <div style="font-size: 8px; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between;">
+                    <span>Masuk: <span id="inc_${shortId}" style="color: var(--success);">Rp 0</span></span>
+                    <span>Keluar: <span id="exp_${shortId}" style="color: var(--primary);">Rp 0</span></span>
+                </div>
+                ${acc.dependency_name ? `<div style="font-size: 7px; color: var(--info); margin-top: 4px; text-align: right;"><i class="bi bi-link"></i> ${escapeHtml(acc.dependency_name)}</div>` : ''}
+            </div>
+            `;
+        });
+        container.innerHTML = html;
+
+        // Re-attach listeners
+        document.querySelectorAll('.post-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const clickedPost = this.dataset.post;
+                if (activePostFilter === clickedPost) {
+                    activePostFilter = '';
+                    filterPost.value = '';
+                    this.classList.remove('active');
+                } else {
+                    activePostFilter = clickedPost;
+                    filterPost.value = clickedPost;
+                    document.querySelectorAll('.post-card').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                }
+                renderTransactions();
+            });
+        });
+    }
+
+    function updateFilterOptions() {
+        let html = '<option value="">Semua Pos</option>';
+        accountsData.forEach(acc => {
+            html += `<option value="${escapeHtml(acc.name)}" ${activePostFilter === acc.name ? 'selected' : ''}>${escapeHtml(acc.name)}</option>`;
+        });
+        filterPost.innerHTML = html;
+    }
+
+    function updateCategoryDatalist() {
+        let html = '';
+        categoriesData.forEach(cat => {
+            html += `<option value="${escapeHtml(cat.name)}">[${cat.type}] ${escapeHtml(cat.name)}</option>`;
+        });
+        document.getElementById('categoryDatalist').innerHTML = html;
+    }
 
     // Initialize Page
+    await loadMasterData();
     loadFinanceData();
 
     // Date changes trigger reload
@@ -187,7 +238,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Post filter dropdown changes
     filterPost.addEventListener('change', function() {
         activePostFilter = this.value;
-        // Visual indicator on cards
         document.querySelectorAll('.post-card').forEach(card => {
             if (card.dataset.post === activePostFilter) {
                 card.classList.add('active');
@@ -196,24 +246,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         renderTransactions();
-    });
-
-    // Clicking post card filters the list
-    document.querySelectorAll('.post-card').forEach(card => {
-        card.addEventListener('click', function() {
-            const clickedPost = this.dataset.post;
-            if (activePostFilter === clickedPost) {
-                activePostFilter = '';
-                filterPost.value = '';
-                this.classList.remove('active');
-            } else {
-                activePostFilter = clickedPost;
-                filterPost.value = clickedPost;
-                document.querySelectorAll('.post-card').forEach(c => c.classList.remove('active'));
-                this.classList.add('active');
-            }
-            renderTransactions();
-        });
     });
 
     async function loadFinanceData() {
@@ -266,14 +298,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Progress Bar
         const total = summary.income + summary.expense;
-        let incPct = 50;
-        let expPct = 50;
+        let incPct = 50, expPct = 50;
         if (total > 0) {
             incPct = (summary.income / total) * 100;
             expPct = (summary.expense / total) * 100;
         } else {
-            incPct = 0;
-            expPct = 0;
+            incPct = 0; expPct = 0;
         }
 
         document.getElementById('incomeBar').style.width = `${incPct}%`;
@@ -281,26 +311,25 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('incomePercentage').innerText = `Pemasukan: ${Math.round(incPct)}%`;
         document.getElementById('expensePercentage').innerText = `Pengeluaran: ${Math.round(expPct)}%`;
 
-        // Update Pos Cards
-        const posts = {
-            'Uang Laci': 'Laci',
-            'Uang Pulsa': 'Pulsa',
-            'Uang Beras': 'Beras',
-            'Uang Rokok': 'Rokok'
-        };
-
-        for (const [fullName, shortName] of Object.entries(posts)) {
-            const postData = breakdown[fullName] || { income: 0, expense: 0, net: 0 };
-            document.getElementById(`net${shortName}`).innerText = formatRupiah(postData.net);
-            document.getElementById(`inc${shortName}`).innerText = formatRupiah(postData.income);
-            document.getElementById(`exp${shortName}`).innerText = formatRupiah(postData.expense);
-        }
+        // Update Dynamic Pos Cards
+        accountsData.forEach((acc, index) => {
+            const shortId = `pos_${index}`;
+            const postData = breakdown[acc.name] || { income: 0, expense: 0, net: 0 };
+            
+            const netEl = document.getElementById(`net_${shortId}`);
+            const incEl = document.getElementById(`inc_${shortId}`);
+            const expEl = document.getElementById(`exp_${shortId}`);
+            
+            if(netEl) netEl.innerText = formatRupiah(postData.net);
+            if(incEl) incEl.innerText = formatRupiah(postData.income);
+            if(expEl) expEl.innerText = formatRupiah(postData.expense);
+        });
     }
 
     function renderTransactions() {
         const container = document.getElementById('transactionsList');
-        
         let filtered = currentLogs;
+        
         if (activePostFilter) {
             filtered = currentLogs.filter(log => log.balance_type === activePostFilter);
         }
@@ -321,19 +350,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const isIncome = log.category === 'Pemasukan';
             const amount = parseFloat(log.amount);
             
-            // Format post classes/icons
-            let badgeBg = 'var(--info-bg)';
-            let badgeText = 'var(--info)';
-            if (log.balance_type === 'Uang Pulsa') {
-                badgeBg = 'rgba(255, 183, 3, 0.15)';
-                badgeText = '#ffb703';
-            } else if (log.balance_type === 'Uang Beras') {
-                badgeBg = 'rgba(46, 196, 182, 0.15)';
-                badgeText = '#2ec4b6';
-            } else if (log.balance_type === 'Uang Rokok') {
-                badgeBg = 'rgba(230, 57, 70, 0.15)';
-                badgeText = '#e63946';
-            }
+            // Find index of account for styling
+            let accIndex = accountsData.findIndex(a => a.name === log.balance_type);
+            if(accIndex < 0) accIndex = 0; // fallback
+            const style = getPosStyle(accIndex);
 
             html += `
                 <div class="product-card" style="margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; padding: 12px 14px;">
@@ -346,8 +366,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 ${escapeHtml(log.detail)}
                             </div>
                             <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap;">
-                                <span class="badge-custom" style="background: ${badgeBg}; color: ${badgeText}; font-size: 9px; padding: 1px 6px;">
-                                    ${log.balance_type}
+                                <span class="badge-custom" style="background: ${style.bg}; color: ${style.icon}; font-size: 9px; padding: 1px 6px;">
+                                    ${escapeHtml(log.balance_type)}
                                 </span>
                                 ${log.description ? `<span style="font-size: 10px; color: var(--text-muted); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${escapeHtml(log.description)}">${escapeHtml(log.description)}</span>` : ''}
                             </div>
@@ -360,11 +380,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                 ${isIncome ? '+' : '-'} ${formatRupiah(amount)}
                             </div>
                             <div style="font-size: 9px; color: var(--text-muted); margin-top: 2px;">
-                                ${log.reference_type ? `<span style="color: var(--info); font-weight:600;"><i class="bi bi-link-45deg"></i> POS</span>` : 'Manual'}
+                                ${log.reference_type === 'auto_conversion' ? `<span style="color: var(--info); font-weight:600;"><i class="bi bi-arrow-repeat"></i> AUTO</span>` : (log.reference_type ? `<span style="color: var(--info); font-weight:600;"><i class="bi bi-link-45deg"></i> POS</span>` : 'Manual')}
                             </div>
                         </div>
                         
-                        <!-- Actions (Only show for manual logs) -->
+                        <!-- Actions (Only show for manual logs without ref) -->
                         ${!log.reference_type ? `
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <button onclick="editLog(${JSON.stringify(log).replace(/"/g, '&quot;')})" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 2px; font-size: 13px;" title="Ubah">
@@ -382,11 +402,102 @@ document.addEventListener('DOMContentLoaded', function() {
         container.innerHTML = html;
     }
 
+    // Modal untuk Kelola POS Keuangan
+    window.manageAccounts = async function() {
+        let optionsHtml = '';
+        accountsData.forEach(acc => {
+            optionsHtml += `<option value="${acc.id}">${escapeHtml(acc.name)}</option>`;
+        });
+
+        const html = `
+            <div style="margin-bottom: 15px; display:flex; gap: 8px; align-items:center;">
+                <input type="text" id="newAccountName" class="form-control-dark" placeholder="Nama POS Baru (misal: Uang Gas)">
+                <button class="btn-primary-custom" onclick="saveNewAccount()" style="padding: 10px; border-radius:var(--radius-md);"><i class="bi bi-plus-lg"></i></button>
+            </div>
+            <div style="font-size: 10px; color: var(--info); margin-bottom: 15px;"><i class="bi bi-info-circle"></i> Jika Anda mengatur "Tujuan Konversi", maka pengeluaran dari POS ini akan otomatis dicatat sebagai pemasukan+pengeluaran di tujuan konversi tersebut tanpa memotong uang di POS asli.</div>
+            <div style="max-height: 300px; overflow-y: auto; background: var(--surface-2); border-radius: var(--radius-md); padding: 10px;">
+                ${accountsData.map(acc => `
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border-color);">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; font-size: 12px;">${escapeHtml(acc.name)}</div>
+                            <div style="display: flex; gap: 5px; margin-top: 4px;">
+                                <span style="font-size: 9px; color: var(--text-muted);">Tujuan Konversi:</span>
+                                <select onchange="updateAccountDependency(${acc.id}, this.value)" class="form-select-dark" style="font-size: 9px; padding: 2px 16px 2px 4px; height: auto;">
+                                    <option value="">-- Tidak Ada --</option>
+                                    ${accountsData.map(d => d.id !== acc.id ? `<option value="${d.id}" ${acc.dependency_account_id === d.id ? 'selected' : ''}>${escapeHtml(d.name)}</option>` : '').join('')}
+                                </select>
+                            </div>
+                        </div>
+                        <button onclick="deleteAccount(${acc.id})" style="background: transparent; border: none; color: var(--primary); padding: 4px; margin-left:10px;"><i class="bi bi-trash"></i></button>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        await AppModal.show({
+            title: 'Kelola POS Keuangan',
+            subtitle: 'Tambah, hapus, atau atur konversi otomatis',
+            icon: 'bi-gear-fill',
+            bodyHTML: html,
+            hideSubmit: true,
+            cancelText: 'Tutup'
+        });
+    };
+
+    window.saveNewAccount = async function() {
+        const name = document.getElementById('newAccountName').value.trim();
+        if(!name) return;
+        try {
+            const res = await api(`${BASE_URL}api/finance/accounts`, 'POST', { csrf_token: csrfVal, name: name });
+            if(res.success) {
+                showToast("Berhasil ditambahkan", "success");
+                await loadMasterData();
+                AppModal.close();
+                setTimeout(() => manageAccounts(), 300);
+            }
+        } catch(e) { showToast(e.message, 'error'); }
+    };
+
+    window.updateAccountDependency = async function(id, depId) {
+        try {
+            const acc = accountsData.find(a => a.id === id);
+            const res = await api(`${BASE_URL}api/finance/accounts/${id}/update`, 'POST', { 
+                csrf_token: csrfVal, 
+                name: acc.name,
+                dependency_account_id: depId 
+            });
+            if(res.success) {
+                showToast("Dependensi diperbarui", "success");
+                await loadMasterData();
+            }
+        } catch(e) { showToast(e.message, 'error'); }
+    };
+
+    window.deleteAccount = async function(id) {
+        if(!confirm("Yakin ingin menghapus POS ini?")) return;
+        try {
+            const res = await api(`${BASE_URL}api/finance/accounts/${id}/delete`, 'POST', { csrf_token: csrfVal });
+            if(res.success) {
+                showToast("Dihapus", "success");
+                await loadMasterData();
+                AppModal.close();
+                setTimeout(() => manageAccounts(), 300);
+            }
+        } catch(e) { showToast(e.message, 'error'); }
+    };
+
     window.showAddLogModal = async function() {
         const currentDate = dateInput.value;
+        
+        // Build Select Options for POS
+        let posOptions = '';
+        accountsData.forEach(acc => {
+            posOptions += `<option value="${escapeHtml(acc.name)}">${escapeHtml(acc.name)}</option>`;
+        });
+
         const html = `
             <div class="modal-form-group">
-                <label>Jenis Transaksi / Kategori *</label>
+                <label>Jenis Transaksi (Pemasukan/Pengeluaran) *</label>
                 <select id="logCategory" class="form-select-dark">
                     <option value="Pemasukan">Pemasukan (Uang Masuk)</option>
                     <option value="Pengeluaran" selected>Pengeluaran (Uang Keluar)</option>
@@ -396,11 +507,13 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="modal-form-group">
                 <label>Pos Keuangan *</label>
                 <select id="logBalanceType" class="form-select-dark">
-                    <option value="Uang Laci">Uang Laci</option>
-                    <option value="Uang Pulsa">Uang Pulsa</option>
-                    <option value="Uang Beras">Uang Beras</option>
-                    <option value="Uang Rokok">Uang Rokok</option>
+                    ${posOptions}
                 </select>
+            </div>
+
+            <div class="modal-form-group">
+                <label>Detail Kategori Transaksi (SearchBox) *</label>
+                <input type="text" id="logDetail" list="categoryDatalist" class="form-control-dark" placeholder="Pilih atau Ketik Kategori Transaksi Baru">
             </div>
 
             <div class="modal-form-group">
@@ -411,11 +524,6 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="modal-form-group">
                 <label>Tanggal *</label>
                 <input type="date" id="logDate" class="form-control-dark" value="${currentDate}">
-            </div>
-
-            <div class="modal-form-group">
-                <label>Detail / Jenis Transaksi *</label>
-                <input type="text" id="logDetail" class="form-control-dark" placeholder="Cth: Beli sabun pel, Bayar tagihan wifi, Pulsa XL">
             </div>
 
             <div class="modal-form-group">
@@ -449,11 +557,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     return false;
                 }
                 if (!detail) {
-                    showToast('Detail/Jenis transaksi wajib diisi', 'warning');
+                    showToast('Detail kategori transaksi wajib diisi', 'warning');
                     return false;
                 }
 
                 try {
+                    // Check if category exists, if not, create it on the fly
+                    const existingCat = categoriesData.find(c => c.name.toLowerCase() === detail.toLowerCase());
+                    if (!existingCat) {
+                        await api(`${BASE_URL}api/finance/categories`, 'POST', { csrf_token: csrfVal, name: detail, type: cat });
+                        // Reload categories silently in background
+                        loadMasterData(); 
+                    }
+
                     const res = await api(`${BASE_URL}api/finance/logs`, 'POST', {
                         csrf_token: csrfVal,
                         category: cat,
@@ -466,8 +582,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     if (res.success) {
                         showToast(res.message || 'Transaksi berhasil disimpan', 'success');
-                        
-                        // If date is different from selected date, redirect selectedDate to new logDate
                         if (dateInput.value !== date) {
                             dateInput.value = date;
                         }
@@ -483,6 +597,11 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     window.editLog = async function(log) {
+        let posOptions = '';
+        accountsData.forEach(acc => {
+            posOptions += `<option value="${escapeHtml(acc.name)}" ${log.balance_type === acc.name ? 'selected' : ''}>${escapeHtml(acc.name)}</option>`;
+        });
+
         const html = `
             <div class="modal-form-group">
                 <label>Jenis Transaksi / Kategori *</label>
@@ -495,11 +614,13 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="modal-form-group">
                 <label>Pos Keuangan *</label>
                 <select id="editLogBalanceType" class="form-select-dark">
-                    <option value="Uang Laci" ${log.balance_type === 'Uang Laci' ? 'selected' : ''}>Uang Laci</option>
-                    <option value="Uang Pulsa" ${log.balance_type === 'Uang Pulsa' ? 'selected' : ''}>Uang Pulsa</option>
-                    <option value="Uang Beras" ${log.balance_type === 'Uang Beras' ? 'selected' : ''}>Uang Beras</option>
-                    <option value="Uang Rokok" ${log.balance_type === 'Uang Rokok' ? 'selected' : ''}>Uang Rokok</option>
+                    ${posOptions}
                 </select>
+            </div>
+
+            <div class="modal-form-group">
+                <label>Detail Kategori Transaksi (SearchBox) *</label>
+                <input type="text" id="editLogDetail" list="categoryDatalist" class="form-control-dark" placeholder="Ketik atau Pilih Kategori" value="${escapeHtml(log.detail)}">
             </div>
 
             <div class="modal-form-group">
@@ -510,11 +631,6 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="modal-form-group">
                 <label>Tanggal *</label>
                 <input type="date" id="editLogDate" class="form-control-dark" value="${log.log_date}">
-            </div>
-
-            <div class="modal-form-group">
-                <label>Detail / Jenis Transaksi *</label>
-                <input type="text" id="editLogDetail" class="form-control-dark" placeholder="Cth: Beli sabun pel" value="${escapeHtml(log.detail)}">
             </div>
 
             <div class="modal-form-group">
@@ -553,6 +669,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 try {
+                    const existingCat = categoriesData.find(c => c.name.toLowerCase() === detail.toLowerCase());
+                    if (!existingCat) {
+                        await api(`${BASE_URL}api/finance/categories`, 'POST', { csrf_token: csrfVal, name: detail, type: cat });
+                        loadMasterData(); 
+                    }
+
                     const res = await api(`${BASE_URL}api/finance/logs/${log.id}/update`, 'POST', {
                         csrf_token: csrfVal,
                         category: cat,
@@ -616,7 +738,7 @@ document.addEventListener('DOMContentLoaded', function() {
             '"': '&quot;',
             "'": '&#039;'
         };
-        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
     }
 });
 </script>
