@@ -352,12 +352,12 @@ async function openExportModal() {
     } catch (e) { console.error("Gagal load supplier", e); }
     
     try {
-        const res = await api(`${BASE_URL}api/products`);
-        exportProductData = res.success ? res.data : (Array.isArray(res) ? res : []);
+        const res = await api(`${BASE_URL}api/products?page=1&per_page=1000`); // Fetch all products for export options
+        exportProductData = res.success ? (res.data.data || res.data) : (Array.isArray(res) ? res : []);
     } catch (e) { console.error("Gagal load produk", e); }
 
     const supOptions = exportSupplierData.map(s => ({ value: s.id.toString(), label: s.name }));
-    const prodOptions = exportProductData.map(p => ({ value: p.name, label: p.name }));
+    const prodOptions = (Array.isArray(exportProductData) ? exportProductData : []).map(p => ({ value: p.full_name, label: p.full_name }));
     
     window.exportSearchBox1 = new SearchBox(document.getElementById('exportSupplierSearchContainer1'), {
         options: supOptions, placeholder: '-- Ketik/Pilih Supplier --', name: 'exportSupplier1', icon: 'bi-truck'

@@ -26,12 +26,13 @@ class ApiController extends Controller
                 $dateFrom = isset($_GET['date_from']) ? $_GET['date_from'] : '';
                 $dateTo = isset($_GET['date_to']) ? $_GET['date_to'] : '';
                 
-                $sql = "SELECT p.code as 'Kode', p.full_name as 'Nama Produk', c.name as 'Kategori', b.name as 'Brand', 
-                        sp.last_buy_price as 'Harga Beli Terakhir', sp.updated_at as 'Tanggal Update' 
+                $sql = "SELECT p.full_name as 'Nama Produk', 
+                        (SELECT COALESCE(SUM(pi.quantity), 0) FROM purchase_items pi JOIN purchases pu ON pi.purchase_id = pu.id WHERE pi.product_id = p.id AND pu.supplier_id = sp.supplier_id) as 'Qty Pembelian',
+                        (SELECT u.name FROM purchase_items pi JOIN purchases pu ON pi.purchase_id = pu.id JOIN product_packagings pp ON pi.packaging_id = pp.id JOIN units u ON pp.unit_id = u.id WHERE pi.product_id = p.id AND pu.supplier_id = sp.supplier_id ORDER BY pu.purchase_date DESC LIMIT 1) as 'Jenis Kemasan',
+                        sp.last_buy_price as 'Harga Beli Terakhir', 
+                        sp.updated_at as 'Tanggal Update' 
                         FROM supplier_products sp 
                         JOIN products p ON sp.product_id = p.id 
-                        LEFT JOIN categories c ON p.category_id = c.id
-                        LEFT JOIN brands b ON p.brand_id = b.id
                         WHERE sp.supplier_id = :sup_id";
                         
                 $params = [':sup_id' => $supplierId];
@@ -107,9 +108,10 @@ class ApiController extends Controller
     {
         $model = new ProductModel();
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $perPage = isset($_GET['per_page']) ? (int)$_GET['per_page'] : 20;
         $search = isset($_GET['q']) ? Security::sanitize($_GET['q']) : '';
         $catId = isset($_GET['category']) ? (int)$_GET['category'] : null;
-        $result = $model->getProductsWithPrices($page, 20, $search, $catId);
+        $result = $model->getProductsWithPrices($page, $perPage, $search, $catId);
         $this->json($result);
     }
 
