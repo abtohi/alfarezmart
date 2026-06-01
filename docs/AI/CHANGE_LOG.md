@@ -15,8 +15,8 @@
 ### Perubahan
 - **Database Skema Baru** — Menambahkan tabel `finance_accounts` (untuk daftar POS) dan `finance_categories` (untuk daftar Jenis Transaksi). Migrasi data lama dari `finance_logs` berhasil dilakukan sehingga data historis aman.
 - **UI Grid POS Dinamis** — Kotak ringkasan POS (Uang Laci, dll) di halaman Keuangan Harian kini di-render secara dinamis dari database, mendukung warna/ikon acak untuk POS baru.
-- **Manajemen POS & Konversi Otomatis** — Ditambahkan modal Kelola POS untuk tambah/hapus POS, serta mengatur "Tujuan Konversi". Jika "Uang Laci" diset konversi ke "Saldo Utama", maka pengeluaran di Uang Laci otomatis dialihkan sebagai Pemasukan & Pengeluaran di Saldo Utama.
-- **SearchBox Kategori (Datalist)** — Form input Jenis Transaksi sekarang menggunakan elemen `<datalist>` yang mendukung pemilihan dari dropdown atau pengetikan kategori baru. Kategori baru akan otomatis tersimpan ke master data kategori.
+- **Manajemen POS & Konversi Otomatis** — Ditambahkan opsi *Dependent / Independent* eksplisit pada UI Tambah POS. Jika "Dependent" dipilih, akan muncul dropdown untuk memilih tujuan konversi (misal: "Saldo Utama"). Jika diset dependent, pengeluaran di POS asal otomatis ter-redirect sebagai Pemasukan & Pengeluaran di POS tujuan.
+- **Manajemen Kategori Transaksi** — Ditambahkan tombol ⚙️ Kelola di sebelah input Jenis Transaksi. Form kini memunculkan modal khusus untuk **Menambah, Mengedit, dan Menghapus** list dropdown kategori transaksi secara manual. Kategori baru tetap bisa ditambahkan otomatis jika langsung diketik, dan kini Anda memegang kendali penuh atas daftarnya.
 
 ### File yang Diubah/Dibuat
 - `database/migrate_finance_dynamic.php` — Script migrasi skema tabel baru & seeder data.
