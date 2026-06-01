@@ -13,11 +13,14 @@ class DebtController extends Controller
         $debtModel = new DebtModel();
         $customerTypes = $debtModel->getCustomerTypes();
 
+        $debtSources = $debtModel->getDebtSources();
+
         $this->view('debts.index', [
             'title' => 'Catatan Hutang',
-            'activeNav' => 'home', // Keeps home menu active in bottom-nav since it's an extension of dashboard
+            'activeNav' => 'home',
             'suppliers' => $suppliers,
-            'customerTypes' => $customerTypes
+            'customerTypes' => $customerTypes,
+            'debtSources' => $debtSources
         ]);
     }
 }

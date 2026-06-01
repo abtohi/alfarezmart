@@ -55,13 +55,23 @@ if ($userLevel === 'staff') {
 <body>
 
     <!-- Elegant App Loader -->
+    <style>
+        @keyframes pulse-glow {
+            0% { opacity: 0.8; transform: scale(0.98); text-shadow: 0 0 10px rgba(var(--primary-rgb), 0.2); }
+            50% { opacity: 1; transform: scale(1.02); text-shadow: 0 0 25px rgba(var(--primary-rgb), 0.6); }
+            100% { opacity: 0.8; transform: scale(0.98); text-shadow: 0 0 10px rgba(var(--primary-rgb), 0.2); }
+        }
+        .splash-text {
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+    </style>
     <div id="appInitLoader" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg-default);z-index:99999;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 0.5s ease;">
         <div class="elegant-loader">
             <div class="dot"></div>
             <div class="dot"></div>
             <div class="dot"></div>
         </div>
-        <div style="margin-top:20px;font-weight:700;font-size:1.2rem;letter-spacing:1px;color:var(--text-primary);">Alfarez<span style="color:var(--primary);">Mart</span></div>
+        <div class="splash-text" style="margin-top:20px;font-weight:800;font-size:1.8rem;letter-spacing:1px;color:var(--text-primary);">Alfarez<span style="color:var(--primary);">Mart</span></div>
     </div>
     <script>
     function hideAppLoader() {

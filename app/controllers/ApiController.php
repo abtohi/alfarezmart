@@ -2971,5 +2971,52 @@ class ApiController extends Controller
             $this->json(['error' => 'Fatal internal error: ' . $err->getMessage()], 500);
         }
     }
+
+    // ===== DEBT SOURCES =====
+    public function getDebtSources()
+    {
+        $model = new DebtModel();
+        $this->json($model->getDebtSources());
+    }
+
+    public function createDebtSource()
+    {
+        $this->validateCSRF();
+        try {
+            $name = $this->input('name');
+            if (empty($name)) throw new Exception('Nama sumber hutang wajib diisi');
+            $model = new DebtModel();
+            $id = $model->createDebtSource($name);
+            $this->json(['success' => true, 'id' => $id, 'name' => $name, 'message' => 'Sumber hutang berhasil ditambahkan']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateDebtSource(int $id)
+    {
+        $this->validateCSRF();
+        try {
+            $name = $this->input('name');
+            if (empty($name)) throw new Exception('Nama sumber hutang wajib diisi');
+            $model = new DebtModel();
+            $model->updateDebtSource($id, $name);
+            $this->json(['success' => true, 'message' => 'Sumber hutang berhasil diupdate']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteDebtSource(int $id)
+    {
+        $this->validateCSRF();
+        try {
+            $model = new DebtModel();
+            $model->deleteDebtSource($id);
+            $this->json(['success' => true, 'message' => 'Sumber hutang berhasil dihapus']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
 }
 

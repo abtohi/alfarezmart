@@ -140,9 +140,11 @@ class DebtModel extends Model
     {
         $sql = "SELECT sd.*, 
                        s.name as supplier_name, 
+                       ds.name as source_name,
                        p.purchase_code
                 FROM shop_debts sd
                 LEFT JOIN suppliers s ON sd.supplier_id = s.id
+                LEFT JOIN debt_sources ds ON sd.debt_source_id = ds.id
                 LEFT JOIN purchases p ON sd.purchase_id = p.id
                 WHERE 1=1";
         $params = [];
@@ -154,6 +156,7 @@ class DebtModel extends Model
 
         if ($search !== '') {
             $sql .= " AND (s.name LIKE :search 
+                        OR ds.name LIKE :search 
                         OR sd.supplier_name_fallback LIKE :search 
                         OR sd.notes LIKE :search 
                         OR p.purchase_code LIKE :search)";
@@ -170,9 +173,11 @@ class DebtModel extends Model
     {
         $sql = "SELECT sd.*, 
                        s.name as supplier_name, 
+                       ds.name as source_name,
                        p.purchase_code
                 FROM shop_debts sd
                 LEFT JOIN suppliers s ON sd.supplier_id = s.id
+                LEFT JOIN debt_sources ds ON sd.debt_source_id = ds.id
                 LEFT JOIN purchases p ON sd.purchase_id = p.id
                 WHERE sd.id = :id LIMIT 1";
         $stmt = $this->db->prepare($sql);
@@ -316,5 +321,35 @@ class DebtModel extends Model
         $stmt = $this->db->prepare("SELECT * FROM customer_types ORDER BY name ASC");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // ==========================================
+    // DEBT SOURCES (SUMBER HUTANG)
+    // ==========================================
+
+    public function getDebtSources()
+    {
+        $stmt = $this->db->prepare("SELECT * FROM debt_sources ORDER BY name ASC");
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function createDebtSource($name)
+    {
+        $stmt = $this->db->prepare("INSERT INTO debt_sources (name) VALUES (:name)");
+        $stmt->execute([':name' => $name]);
+        return $this->db->lastInsertId();
+    }
+
+    public function updateDebtSource($id, $name)
+    {
+        $stmt = $this->db->prepare("UPDATE debt_sources SET name = :name WHERE id = :id");
+        return $stmt->execute([':name' => $name, ':id' => $id]);
+    }
+
+    public function deleteDebtSource($id)
+    {
+        $stmt = $this->db->prepare("DELETE FROM debt_sources WHERE id = :id");
+        return $stmt->execute([':id' => $id]);
     }
 }

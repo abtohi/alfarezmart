@@ -33,11 +33,11 @@ Klasifikasikan task ini sebelum mulai:
 
 ## Task
 
-Saat ini fitur Summary yang ada di halaman Beranda masih belum dapat digunakan, tolong cek dan perbaiki, pastikan user bisa melihat statistik dari produk, penjualan, omzet, hutang, dan lain sebagainya, sebelumnya saya meminta agent untuk menambahkan fitur ini dengan prompt sebagai berikut :
+- Di halaman Catatan Hutang & Piutang, Hutang Toko tidak selalu terhadap supplier, bisa juga toko punya hutang ke uang tabungan lain misalnya, atau pinjaman ke orang tua, jadi tolong di halaman Hutang Toko disesuaikan lagi agar tidak hanya ada pilihan untuk supplier, tetapi bisa juga ke sumber lain, buatkan form dropdownlist untuk memilih opsi sumber hutang, dan pastikan opsi nya di desain yang menarik tampilannya mengikuti tema website, selain itu opsinya juga bisa di tambah, edit dan hapus. List Supplier juga tolong di desain agar lebih menarik dan sesuai tema website.
 
-"Tambahkan fitur Dashboard untuk melihat summary dan statistik produk, penjualan, margin/markup, omzet, hutang, dan lain sebagainya yang sangat insightful. SIlahkan tambahkan menu Dashboard di Beranda. Aku ingin tahu dalam sebulan rata rata belanja berapa, omzetnya berapa, rata rata markup berapa, dan informasi lainnya. SIlahkan sajikan dalam bentuk card, chart, graph, atau apapun yang bisa bermanfaat untuk superadmin. FItur ini hanya tersedia untuk superadmin, tidak untuk staff"
+- Tolong perbaiki juga agar user jangan terlalu sering keluar otomatis dari aplikasi, saat ini sering kali pengguna smartphone tiba tiba logout sendiri, padahal sedang ada aktivitas menginput barang, aku tidak mau itu terjadi, tolong hapus saja session timeout, sekali login bisa dipakai sampai lama tanpa logout otomatis, kecuali user memang menghendaki untuk logout atau jika aplikasi di install ulang atau jika cache/cookies terhapus, maka baru user bisa login kembali.
 
-Tolong cek dan perbaiki agar bisa digunakan, kamu tinggal menyempurnakan
+- Saat aplikasi start di HP, tolong jangan tampilkan gambar mobile_icon.png, tetapi tampilkan animasi bertuliskan Alfarez Mart, karena tampilan icon mobile_icon.png membuat aplikasi tidak elegan saat loading start.
 
 ## Konteks Tambahan (opsional)
 

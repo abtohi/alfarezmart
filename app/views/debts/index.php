@@ -163,6 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Static variables from PHP variables
     const suppliers = <?= json_encode($suppliers) ?>;
     const customerTypes = <?= json_encode($customerTypes) ?>;
+    const debtSources = <?= json_encode($debtSources ?? []) ?>;
 
     // State Variables
     let currentTab = 'customer-debts';
@@ -603,6 +604,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
                                     <div style="font-weight:700; font-size:var(--font-size-sm); color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
                                         ${name}
+                                        ${d.source_name ? `<span class="badge-custom badge-info" style="font-size:9px; margin-left:4px;">${d.source_name}</span>` : ''}
                                     </div>
                                     <span class="badge-custom ${isLunas ? 'badge-success' : 'badge-warning'}" style="font-size:10px; padding:2px 6px;">
                                         ${isLunas ? 'Lunas' : 'Belum Lunas'}
@@ -748,18 +750,26 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     window.showAddShopDebtModal = async function() {
-        let supplierOptions = '<option value="">-- Pilih Supplier --</option>';
+        let supplierOptions = '<optgroup label="Supplier">';
         suppliers.forEach(s => {
-            supplierOptions += `<option value="${s.id}">${s.name}</option>`;
+            supplierOptions += `<option value="SUP_${s.id}">${s.name}</option>`;
         });
+        supplierOptions += '</optgroup><optgroup label="Sumber Lain">';
+        debtSources.forEach(ds => {
+            supplierOptions += `<option value="SRC_${ds.id}">${ds.name}</option>`;
+        });
+        supplierOptions += '</optgroup>';
 
         const html = `
             <div class="modal-form-group">
-                <label>Supplier / Kreditur *</label>
-                <select id="newShopSupplierId" class="form-select-dark" onchange="toggleSupplierFallback(this.value)">
-                    ${supplierOptions}
-                    <option value="NEW_SUP">-- input nama manual (Pihak Lain) --</option>
-                </select>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <label style="margin:0;">Sumber Hutang / Kreditur *</label>
+                    <button onclick="manageDebtSources()" class="btn-primary-custom" style="padding:4px 8px; font-size:10px; border-radius:4px;"><i class="bi bi-gear"></i> Kelola Opsi</button>
+                </div>
+                <!-- Using component SearchBox for elegance -->
+                <div id="shopDebtSourceSearch" class="search-box-component"></div>
+                <input type="hidden" id="newShopSupplierId">
+                <input type="hidden" id="newShopDebtSourceId">
             </div>
             
             <div class="modal-form-group" id="manualSupplierGroup" style="display:none;">
@@ -803,6 +813,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitText: 'Catat Hutang',
             onSubmit: async () => {
                 const supId = document.getElementById('newShopSupplierId').value;
+                const sourceId = document.getElementById('newShopDebtSourceId').value;
                 const fallback = document.getElementById('newShopSupplierFallback').value.trim();
                 const amt = parseFloat(document.getElementById('newShopAmount').value);
                 const date = document.getElementById('newShopDate').value;
@@ -810,12 +821,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const notes = document.getElementById('newShopNotes').value.trim();
                 const purchaseId = document.getElementById('newShopPurchaseId').value;
 
-                if (!supId) {
-                    showToast('Harap pilih supplier atau input manual', 'warning');
-                    return false;
-                }
-                if (supId === 'NEW_SUP' && !fallback) {
-                    showToast('Nama kreditur wajib diisi', 'warning');
+                if (!supId && !sourceId && !fallback) {
+                    showToast('Harap pilih sumber hutang atau input manual', 'warning');
                     return false;
                 }
                 if (isNaN(amt) || amt <= 0) {
@@ -828,16 +835,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 try {
-                    const res = await api(`${BASE_URL}api/debts/shop`, 'POST', {
+                    const payload = {
                         csrf_token: csrfVal,
-                        supplier_id: supId !== 'NEW_SUP' ? supId : '',
-                        supplier_name_fallback: supId === 'NEW_SUP' ? fallback : '',
                         amount: amt,
                         debt_date: date,
                         due_date: dueDate,
                         notes: notes,
                         purchase_id: purchaseId
-                    });
+                    };
+                    
+                    if (supId) payload.supplier_id = supId;
+                    if (sourceId) payload.debt_source_id = sourceId;
+                    if (fallback) payload.supplier_name_fallback = fallback;
+
+                    const res = await api(`${BASE_URL}api/debts/shop`, 'POST', payload);
 
                     if (res.success) {
                         showToast(res.message || 'Hutang toko berhasil dicatat', 'success');
@@ -851,15 +862,124 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        window.toggleSupplierFallback = function(val) {
-            const manualGroup = document.getElementById('manualSupplierGroup');
-            if (val === 'NEW_SUP') {
-                manualGroup.style.display = 'block';
-                document.getElementById('newShopSupplierFallback').focus();
-            } else {
-                manualGroup.style.display = 'none';
+        // Initialize SearchBox Component for Debt Sources
+        let optionsList = [];
+        suppliers.forEach(s => optionsList.push({ id: 'SUP_'+s.id, name: s.name, group: 'Supplier' }));
+        debtSources.forEach(ds => optionsList.push({ id: 'SRC_'+ds.id, name: ds.name, group: 'Sumber Hutang Lain' }));
+        optionsList.push({ id: 'NEW_MANUAL', name: '+ Input Manual', group: 'Lainnya' });
+        
+        SearchBox.init('shopDebtSourceSearch', optionsList, {
+            placeholder: 'Pilih Sumber Hutang...',
+            onChange: (selected) => {
+                const supEl = document.getElementById('newShopSupplierId');
+                const srcEl = document.getElementById('newShopDebtSourceId');
+                const fallbackGrp = document.getElementById('manualSupplierGroup');
+                const fallbackInput = document.getElementById('newShopSupplierFallback');
+                
+                supEl.value = '';
+                srcEl.value = '';
+                fallbackGrp.style.display = 'none';
+                fallbackInput.value = '';
+                
+                if (!selected) return;
+                
+                if (selected.id === 'NEW_MANUAL') {
+                    fallbackGrp.style.display = 'block';
+                    fallbackInput.focus();
+                } else if (selected.id.startsWith('SUP_')) {
+                    supEl.value = selected.id.replace('SUP_', '');
+                } else if (selected.id.startsWith('SRC_')) {
+                    srcEl.value = selected.id.replace('SRC_', '');
+                }
             }
-        };
+        });
+
+    // Manage Debt Sources
+    window.manageDebtSources = async function() {
+        AppModal.hide(); // Hide current modal
+        
+        let dsListHtml = '';
+        debtSources.forEach(ds => {
+            dsListHtml += `
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--surface-2); padding:10px; border-radius:var(--radius-sm); margin-bottom:8px;">
+                    <div style="font-size:13px; font-weight:600; color:var(--text-primary);">${ds.name}</div>
+                    <div style="display:flex; gap:6px;">
+                        <button onclick="editDebtSource(${ds.id}, '${ds.name.replace(/'/g, "\\'")}')" class="btn-icon" style="color:var(--info); padding:4px;"><i class="bi bi-pencil-square"></i></button>
+                        <button onclick="deleteDebtSource(${ds.id}, '${ds.name.replace(/'/g, "\\'")}')" class="btn-icon" style="color:var(--danger); padding:4px;"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        if (debtSources.length === 0) {
+            dsListHtml = `<div style="text-align:center; padding:16px; color:var(--text-muted); font-size:12px;">Belum ada opsi tambahan</div>`;
+        }
+        
+        const html = `
+            <div style="margin-bottom:16px;">
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="newDsName" class="form-control-dark" placeholder="Nama sumber hutang baru..." style="flex:1;">
+                    <button onclick="addDebtSource()" class="btn-primary-custom" style="padding:0 16px;"><i class="bi bi-plus-lg"></i></button>
+                </div>
+            </div>
+            <div style="max-height:300px; overflow-y:auto;" id="dsListContainer">
+                ${dsListHtml}
+            </div>
+        `;
+        
+        await AppModal.show({
+            title: 'Kelola Opsi Sumber Hutang',
+            subtitle: 'Tambah opsi sumber hutang selain supplier',
+            icon: 'bi-list-ul',
+            iconColor: 'var(--info-bg)',
+            iconAccent: 'var(--info)',
+            bodyHTML: html,
+            submitText: 'Tutup',
+            onSubmit: () => {
+                location.reload(); // Reload to reflect changes in variables safely
+                return true;
+            }
+        });
+    };
+    
+    window.addDebtSource = async function() {
+        const name = document.getElementById('newDsName').value.trim();
+        if (!name) return showToast('Nama tidak boleh kosong', 'warning');
+        try {
+            const res = await api(BASE_URL + 'api/debts/sources', 'POST', { csrf_token: csrfVal, name });
+            if (res.success) {
+                showToast(res.message, 'success');
+                debtSources.push({id: res.id, name: res.name});
+                manageDebtSources();
+            }
+        } catch (e) { showToast(e.message, 'error'); }
+    };
+    
+    window.editDebtSource = async function(id, oldName) {
+        const newName = prompt('Ubah Nama Sumber Hutang:', oldName);
+        if (!newName || newName.trim() === '' || newName === oldName) return;
+        try {
+            const res = await api(`${BASE_URL}api/debts/sources/${id}`, 'POST', { csrf_token: csrfVal, name: newName.trim() });
+            if (res.success) {
+                showToast(res.message, 'success');
+                const idx = debtSources.findIndex(d => d.id == id);
+                if (idx > -1) debtSources[idx].name = newName.trim();
+                manageDebtSources();
+            }
+        } catch (e) { showToast(e.message, 'error'); }
+    };
+    
+    window.deleteDebtSource = async function(id, name) {
+        if (!confirm(`Hapus sumber hutang '${name}'?`)) return;
+        try {
+            const res = await api(`${BASE_URL}api/debts/sources/${id}/delete`, 'POST', { csrf_token: csrfVal });
+            if (res.success) {
+                showToast(res.message, 'success');
+                const idx = debtSources.findIndex(d => d.id == id);
+                if (idx > -1) debtSources.splice(idx, 1);
+                manageDebtSources();
+            }
+        } catch (e) { showToast(e.message, 'error'); }
     };
 
 

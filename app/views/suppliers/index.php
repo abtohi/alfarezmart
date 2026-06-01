@@ -35,23 +35,31 @@
         </div>
     <?php else: ?>
         <?php foreach ($suppliers as $s): ?>
-            <div class="product-card" style="margin-bottom:12px; cursor:default;" id="supplier-card-<?= $s['id'] ?>">
-                <div class="product-icon" style="background:var(--info-bg);color:var(--info);"><i class="bi bi-building"></i></div>
-                <div class="product-info" style="flex:1;">
-                    <div class="product-name" style="display:flex;justify-content:space-between;">
-                        <span><?= htmlspecialchars($s['name']) ?></span>
-                        <div style="display:flex;gap:8px;">
-                            <button onclick="showEditSupplier(<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>)" class="btn-icon" style="color:var(--text-primary);"><i class="bi bi-pencil-square"></i></button>
-                            <button onclick="deleteSupplier(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['name']), ENT_QUOTES, 'UTF-8') ?>')" class="btn-icon" style="color:var(--danger);"><i class="bi bi-trash"></i></button>
+            <div class="product-card" style="margin-bottom:12px; cursor:default; border:1px solid var(--border-color); background:var(--bg-primary); transition:all 0.3s ease; box-shadow:0 4px 15px rgba(0,0,0,0.1);" id="supplier-card-<?= $s['id'] ?>">
+                <div class="product-icon" style="background:linear-gradient(135deg, var(--info-bg), rgba(0,200,255,0.15)); color:var(--info); border-radius:12px; width:48px; height:48px; font-size:1.4rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <i class="bi bi-building"></i>
+                </div>
+                <div class="product-info" style="flex:1; min-width:0; margin-left:12px;">
+                    <div class="product-name" style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="flex:1; min-width:0; padding-right:8px;">
+                            <div style="font-weight:800; font-size:var(--font-size-md); letter-spacing:0.3px; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+                                <?= htmlspecialchars($s['name']) ?>
+                            </div>
+                            <div style="font-size:var(--font-size-xs); color:var(--text-muted); margin-top:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                <span class="badge-custom badge-info" style="font-size:9px; padding:3px 6px; text-transform:uppercase; letter-spacing:0.5px;">
+                                    <?= htmlspecialchars($s['type_name'] ?? 'Supplier') ?>
+                                </span>
+                                <?= $s['is_consignment'] ? '<span class="badge-custom badge-warning" style="font-size:9px; padding:3px 6px; background:rgba(255,193,7,0.15); color:#ffc107;">🏷️ Konsinyasi</span>' : '' ?>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:2px; background:var(--surface-2); border-radius:30px; padding:2px; flex-shrink:0;">
+                            <button onclick="showEditSupplier(<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>)" class="btn-icon" style="color:var(--text-primary); padding:6px; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><i class="bi bi-pencil-square" style="font-size:13px;"></i></button>
+                            <button onclick="deleteSupplier(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['name']), ENT_QUOTES, 'UTF-8') ?>')" class="btn-icon" style="color:var(--danger); padding:6px; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><i class="bi bi-trash" style="font-size:13px;"></i></button>
                         </div>
                     </div>
-                    <div class="product-category">
-                        <?= htmlspecialchars($s['type_name'] ?? '') ?>
-                        <?= $s['is_consignment'] ? ' · 🏷️ Konsinyasi' : '' ?>
-                    </div>
-                    <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;">
-                        <span onclick="showSalesReps(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['name'])) ?>')" style="color:var(--primary);cursor:pointer;padding:4px;background:var(--primary-bg);border-radius:4px;"><i class="bi bi-people"></i> Kelola Sales</span>
-                        <span onclick="showSupplierProducts(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['name'])) ?>')" style="color:var(--success);cursor:pointer;padding:4px;background:var(--success-bg);border-radius:4px;"><i class="bi bi-box-seam"></i> Kelola Produk</span>
+                    <div style="margin-top:12px; display:flex; gap:8px;">
+                        <button onclick="showSalesReps(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['name'])) ?>')" style="flex:1; border:none; background:var(--primary-bg); color:var(--primary); padding:8px 0; border-radius:var(--radius-sm); font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:transform 0.1s;"><i class="bi bi-people-fill"></i> Kelola Sales</button>
+                        <button onclick="showSupplierProducts(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['name'])) ?>')" style="flex:1; border:none; background:var(--success-bg); color:var(--success); padding:8px 0; border-radius:var(--radius-sm); font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:transform 0.1s;"><i class="bi bi-box-seam-fill"></i> Kelola Produk</button>
                     </div>
                 </div>
             </div>
