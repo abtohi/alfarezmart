@@ -428,12 +428,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                             <div style="display: flex; gap: 5px; align-items: center;">
                                 <input type="text" id="editAccName_${acc.id}" value="${escapeHtml(acc.name)}" class="form-control-dark" style="font-size: 12px; padding: 4px; height: auto;">
                             </div>
-                            <div style="display: flex; gap: 5px; margin-top: 4px; align-items: center;">
-                                <span style="font-size: 9px; color: var(--text-muted);">Sifat:</span>
-                                <select id="editAccDep_${acc.id}" class="form-select-dark" style="font-size: 9px; padding: 2px 16px 2px 4px; height: auto;">
-                                    <option value="">Independent</option>
-                                    ${accountsData.map(d => d.id !== acc.id ? `<option value="${d.id}" ${acc.dependency_account_id === d.id ? 'selected' : ''}>Dependent ke: ${escapeHtml(d.name)}</option>` : '').join('')}
-                                </select>
+                            <div style="display: flex; gap: 5px; margin-top: 4px; align-items: center; width: 100%;">
+                                <span style="font-size: 9px; color: var(--text-muted); width: 30px;">Sifat:</span>
+                                <div id="editAccDepContainer_${acc.id}" class="compact-searchbox" style="flex: 1; max-width: 250px;"></div>
                             </div>
                         </div>
                         <div style="display: flex; gap: 5px; margin-left: 10px;">
@@ -471,6 +468,21 @@ document.addEventListener('DOMContentLoaded', async function() {
             name: 'newAccountDepTarget'
         });
         
+        accountsData.forEach(acc => {
+            const options = [{value: '', label: 'Independent'}];
+            accountsData.forEach(d => {
+                if (d.id !== acc.id) {
+                    options.push({value: d.id, label: 'Dependent ke: ' + d.name});
+                }
+            });
+            new SearchBox(document.getElementById(`editAccDepContainer_${acc.id}`), {
+                options: options,
+                value: acc.dependency_account_id || '',
+                name: `editAccDep_${acc.id}`,
+                placeholder: 'Sifat'
+            });
+        });
+        
         await modalPromise;
     };
 
@@ -497,7 +509,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     window.updateAccount = async function(id) {
         try {
             const name = document.getElementById(`editAccName_${id}`).value.trim();
-            const depId = document.getElementById(`editAccDep_${id}`).value;
+            const depInput = document.querySelector(`input[name="editAccDep_${id}"]`);
+            const depId = depInput ? depInput.value : '';
             
             const res = await api(`${BASE_URL}api/finance/accounts/${id}/update`, 'POST', { 
                 csrf_token: csrfVal, 
