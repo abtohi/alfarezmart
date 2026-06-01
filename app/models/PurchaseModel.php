@@ -56,6 +56,10 @@ class PurchaseModel extends Model
                 VALUES (:prod_id, 'in', :qty, 'purchase', :ref, :notes)
             ");
 
+            $stmtUpdateProductTimestamp = $this->db->prepare("
+                UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE id = :id
+            ");
+
             $productModel = new ProductModel();
             $spModel = new SupplierProductModel();
 
@@ -178,6 +182,9 @@ class PurchaseModel extends Model
                     ':ref' => $purchaseId,
                     ':notes' => "Pembelian " . $data['purchase_code']
                 ]);
+
+                // 2.5 Update Product timestamp so it rises to the top of product list
+                $stmtUpdateProductTimestamp->execute([':id' => $item['product_id']]);
 
                 // 3. Auto-track supplier-product relationship (skip if supplier unknown)
                 if (!empty($data['supplier_id'])) {
@@ -481,6 +488,10 @@ class PurchaseModel extends Model
                 VALUES (:prod_id, 'in', :qty, 'purchase', :ref, :notes)
             ");
 
+            $stmtUpdateProductTimestamp = $this->db->prepare("
+                UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE id = :id
+            ");
+
             $productModel = new ProductModel();
             $spModel = new SupplierProductModel();
 
@@ -592,6 +603,9 @@ class PurchaseModel extends Model
                     ':ref' => $id,
                     ':notes' => 'Pembelian Direvisi: ' . $data['purchase_code']
                 ]);
+
+                // Update Product timestamp so it rises to the top of product list
+                $stmtUpdateProductTimestamp->execute([':id' => $item['product_id']]);
 
                 if ($data['supplier_id']) {
                     $spModel->addRelation($data['supplier_id'], $item['product_id']);

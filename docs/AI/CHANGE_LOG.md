@@ -13,7 +13,9 @@
 **Dikerjakan oleh:** AI Agent (Antigravity)
 
 ### Perubahan
+- **Update Timestamp Produk via Pembelian** — Saat user menyimpan form Input Barang Masuk (setelah mendistribusikan diskon/PPN ke harga modal), sistem kini akan otomatis memperbarui nilai `updated_at` pada produk-produk yang bersangkutan. Hal ini membuat produk yang baru saja diinput/didistribusikan harganya otomatis naik ke posisi teratas pada daftar halaman Produk.
 - **Filter Range Harga Jual** — Halaman Produk kini memiliki filter harga jual di bawah filter kategori. Filter bekerja pada harga jual ecer kemasan terkecil (level 1). User dapat mengisi min/max harga dan menekan tombol 🔫 (atau Enter) untuk menerapkan. Tombol ✕ muncul jika filter aktif untuk reset. Semua parameter (kategori, pencarian, harga) dipertahankan saat navigasi halaman dan pagination.
+- **Fix Bug Filter Harga** — Memperbaiki bug dimana angka `0` pada input Max Price tertolak/diabaikan oleh sistem.
 - **Update ai-instructions.md** — Memperkuat aturan wajib file cleanup setelah setiap task: diperluas dengan daftar pola file yang harus dicari dan dihapus (test, backup, debug, scratch, diff, extract, .md di luar docs). Format ringkasan task juga diperbarui agar lebih eksplisit.
 - **Pembersihan File** — Menghapus 16 file tidak berguna:
   - Root: `test_search.php`, `test_search2.php`, `implementation_plan.md`, `ESC_POS_SPECIFICATION.md`, `PRINTER_SETUP_GUIDE.md`
