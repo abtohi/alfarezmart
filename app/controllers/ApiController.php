@@ -1920,8 +1920,20 @@ class ApiController extends Controller
             $search = isset($_GET['q']) ? Security::sanitize($_GET['q']) : '';
             $debts = $model->getCustomerDebts($status, $search);
             
+            $debtIds = array_column($debts, 'id');
+            $paymentsByDebtId = [];
+            if (!empty($debtIds)) {
+                $inQuery = implode(',', array_fill(0, count($debtIds), '?'));
+                $stmt = $this->db->prepare("SELECT * FROM customer_debt_payments WHERE debt_id IN ($inQuery) ORDER BY payment_date DESC, id DESC");
+                $stmt->execute($debtIds);
+                $allPayments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($allPayments as $p) {
+                    $paymentsByDebtId[$p['debt_id']][] = $p;
+                }
+            }
+
             foreach ($debts as &$d) {
-                $d['payments'] = $model->getCustomerDebtPayments($d['id']);
+                $d['payments'] = $paymentsByDebtId[$d['id']] ?? [];
             }
             unset($d);
 
@@ -2025,8 +2037,20 @@ class ApiController extends Controller
             $search = isset($_GET['q']) ? Security::sanitize($_GET['q']) : '';
             $debts = $model->getShopDebts($status, $search);
 
+            $debtIds = array_column($debts, 'id');
+            $paymentsByDebtId = [];
+            if (!empty($debtIds)) {
+                $inQuery = implode(',', array_fill(0, count($debtIds), '?'));
+                $stmt = $this->db->prepare("SELECT * FROM shop_debt_payments WHERE debt_id IN ($inQuery) ORDER BY payment_date DESC, id DESC");
+                $stmt->execute($debtIds);
+                $allPayments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($allPayments as $p) {
+                    $paymentsByDebtId[$p['debt_id']][] = $p;
+                }
+            }
+
             foreach ($debts as &$d) {
-                $d['payments'] = $model->getShopDebtPayments($d['id']);
+                $d['payments'] = $paymentsByDebtId[$d['id']] ?? [];
             }
             unset($d);
 
