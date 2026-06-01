@@ -295,6 +295,24 @@ function showComingSoon(title, desc, icon) {
 let exportSupplierData = [];
 let exportProductData = [];
 async function openExportModal() {
+    // Load data first, THEN show modal (fixes race condition)
+    showToast('Memuat data...', 'info');
+    
+    try {
+        const [supRes, prodRes] = await Promise.all([
+            api(`${BASE_URL}api/suppliers`),
+            api(`${BASE_URL}api/products?page=1&per_page=9999`)
+        ]);
+        exportSupplierData = supRes.success ? supRes.data : (Array.isArray(supRes) ? supRes : []);
+        const rawProd = prodRes.success ? (prodRes.data.data || prodRes.data) : (Array.isArray(prodRes) ? prodRes : []);
+        exportProductData = Array.isArray(rawProd) ? rawProd : [];
+    } catch (e) {
+        console.error('Gagal load data untuk export', e);
+        exportSupplierData = [];
+        exportProductData = [];
+    }
+
+    const today = new Date().toISOString().split('T')[0];
     const html = `
         <style>
             .export-tab { padding: 8px; font-size: 11px; font-weight: 600; text-align: center; border-radius: var(--radius-md); cursor: pointer; flex: 1; transition: 0.2s; }
@@ -316,11 +334,11 @@ async function openExportModal() {
             <div style="display: flex; gap: 8px; margin-bottom: 12px;">
                 <div class="modal-form-group" style="flex: 1; text-align: left;">
                     <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Tgl Dari (Opsional)</label>
-                    <input type="date" id="exportDateFrom1" class="form-control-dark" value="${new Date().toISOString().split('T')[0]}">
+                    <input type="date" id="exportDateFrom1" class="form-control-dark" value="${today}">
                 </div>
                 <div class="modal-form-group" style="flex: 1; text-align: left;">
                     <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Tgl Sampai (Opsional)</label>
-                    <input type="date" id="exportDateTo1" class="form-control-dark" value="${new Date().toISOString().split('T')[0]}">
+                    <input type="date" id="exportDateTo1" class="form-control-dark" value="${today}">
                 </div>
             </div>
             <button class="btn-primary-custom" onclick="executeExport(1)" style="width: 100%; padding: 10px; border-radius: var(--radius-md);"><i class="bi bi-download"></i> Download .xlsx</button>
@@ -328,7 +346,7 @@ async function openExportModal() {
         
         <div id="panelExport2" class="export-panel">
             <div class="modal-form-group" style="margin-bottom: 12px; text-align: left;">
-                <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Cari Nama Produk (Kosong = Semua)</label>
+                <label style="font-size: var(--font-size-xs); color: var(--text-muted);">Cari Nama Produk (Kosong = Semua Produk)</label>
                 <div id="exportProductSearchContainer"></div>
             </div>
             <div class="modal-form-group" style="margin-bottom: 12px; text-align: left;">
@@ -346,27 +364,16 @@ async function openExportModal() {
         centered: true
     });
 
-    try {
-        const res = await api(`${BASE_URL}api/suppliers`);
-        exportSupplierData = res.success ? res.data : (Array.isArray(res) ? res : []);
-    } catch (e) { console.error("Gagal load supplier", e); }
-    
-    try {
-        const res = await api(`${BASE_URL}api/products?page=1&per_page=1000`); // Fetch all products for export options
-        exportProductData = res.success ? (res.data.data || res.data) : (Array.isArray(res) ? res : []);
-    } catch (e) { console.error("Gagal load produk", e); }
-
+    // Now safely init SearchBoxes - DOM is ready
     const supOptions = exportSupplierData.map(s => ({ value: s.id.toString(), label: s.name }));
-    const prodOptions = (Array.isArray(exportProductData) ? exportProductData : []).map(p => ({ value: p.full_name, label: p.full_name }));
-    
+    const prodOptions = exportProductData.map(p => ({ value: p.full_name || p.name || '', label: p.full_name || p.name || '' })).filter(o => o.value);
+
     window.exportSearchBox1 = new SearchBox(document.getElementById('exportSupplierSearchContainer1'), {
         options: supOptions, placeholder: '-- Ketik/Pilih Supplier --', name: 'exportSupplier1', icon: 'bi-truck'
     });
-
     window.exportSearchBox2 = new SearchBox(document.getElementById('exportSupplierSearchContainer2'), {
         options: supOptions, placeholder: '-- Semua Supplier --', name: 'exportSupplier2', icon: 'bi-truck'
     });
-    
     window.exportProductBox = new SearchBox(document.getElementById('exportProductSearchContainer'), {
         options: prodOptions, placeholder: '-- Ketik Nama Produk --', name: 'exportProductName', icon: 'bi-box'
     });
@@ -391,9 +398,10 @@ window.executeExport = async function(mode) {
         payload.date_from = document.getElementById('exportDateFrom1').value;
         payload.date_to = document.getElementById('exportDateTo1').value;
     } else {
-        payload.product_name = document.getElementById('exportProductName').value.trim();
-        const supId2 = document.querySelector('input[name="exportSupplier2"]').value;
-        if(supId2) payload.supplier_id = supId2;
+        const productNameInput = document.querySelector('input[name="exportProductName"]');
+        payload.product_name = productNameInput ? productNameInput.value.trim() : '';
+        const supInput2 = document.querySelector('input[name="exportSupplier2"]');
+        if(supInput2 && supInput2.value) payload.supplier_id = supInput2.value;
     }
 
     try {

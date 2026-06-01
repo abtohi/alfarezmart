@@ -57,14 +57,19 @@ class ApiController extends Controller
                 $productName = isset($_GET['product_name']) ? $_GET['product_name'] : '';
                 $supplierId = isset($_GET['supplier_id']) ? (int)$_GET['supplier_id'] : 0;
                 
-                $sql = "SELECT p.code as 'Kode', p.full_name as 'Nama Produk', c.name as 'Kategori', b.name as 'Brand',
-                        (SELECT name FROM suppliers s JOIN supplier_products sp2 ON s.id = sp2.supplier_id WHERE sp2.product_id = p.id ORDER BY sp2.updated_at DESC LIMIT 1) as 'Supplier Terakhir',
-                        (SELECT buy_price FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1) as 'Harga Beli Dasar',
-                        (SELECT sell_price_retail FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1) as 'Harga Jual Eceran',
-                        (SELECT current_qty_base FROM stock WHERE product_id = p.id LIMIT 1) as 'Stok Dasar'
-                        FROM products p 
-                        LEFT JOIN categories c ON p.category_id = c.id
-                        LEFT JOIN brands b ON p.brand_id = b.id
+                $sql = "SELECT p.full_name as 'Nama Produk',
+                        pi.quantity as 'Qty Pembelian',
+                        u.name as 'Satuan atau jenis kemasan',
+                        pi.buy_price as 'Harga Beli (Satuan)',
+                        pi.total_price as 'Harga Total',
+                        s.name as 'Supplier',
+                        pu.purchase_date as 'Tanggal Pembelian'
+                        FROM purchase_items pi
+                        JOIN purchases pu ON pi.purchase_id = pu.id
+                        JOIN products p ON pi.product_id = p.id
+                        JOIN product_packagings pp ON pi.packaging_id = pp.id
+                        JOIN units u ON pp.unit_id = u.id
+                        LEFT JOIN suppliers s ON pu.supplier_id = s.id
                         WHERE p.is_active = 1";
                 
                 $params = [];
@@ -77,21 +82,20 @@ class ApiController extends Controller
                         $p_label = ":p_label_$i";
                         $p_brand = ":p_brand_$i";
                         $p_bar   = ":p_bar_$i";
-                        $sql .= " AND (p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR b.name LIKE $p_brand OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
+                        $sql .= " AND (p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.id IN (SELECT product_id FROM product_packagings WHERE barcode LIKE $p_bar))";
                         $like = "%{$word}%";
                         $params[$p_name]  = $like;
                         $params[$p_label] = $like;
-                        $params[$p_brand] = $like;
                         $params[$p_bar]   = $like;
                     }
                 }
                 
                 if ($supplierId > 0) {
-                    $sql .= " AND p.id IN (SELECT product_id FROM supplier_products WHERE supplier_id = :sup_id)";
+                    $sql .= " AND pu.supplier_id = :sup_id";
                     $params[':sup_id'] = $supplierId;
                 }
                 
-                $sql .= " ORDER BY p.full_name ASC";
+                $sql .= " ORDER BY pu.purchase_date DESC, p.full_name ASC";
                 
                 $stmt = $db->prepare($sql);
                 $stmt->execute($params);
