@@ -22,6 +22,8 @@ if ($userLevel === 'staff') {
 ?>
 <html lang="id">
 <head>
+    <!-- ⚡ Apply theme IMMEDIATELY before CSS renders to prevent dark flash -->
+    <script>!function(){var t=localStorage.getItem('alfarezmart_theme')||'dark';document.documentElement.setAttribute('data-theme',t);}();</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="AlfarezMart - Sistem Manajemen Stok Toko">
