@@ -11,8 +11,8 @@
 | Item | Nilai |
 |------|-------|
 | **Status** | Aktif dikembangkan (Production-ready, fitur lanjutan sedang ditambah) |
-| **Versi Cache SW** | `alfarezmart-v4.9` |
-| **Versi Asset** | `?v=4.9` (di `app/views/layouts/app.php`) |
+| **Versi Cache SW** | `alfarezmart-v9.0` |
+| **Versi Asset** | `?v=9.0` (di `app/views/layouts/app.php`) |
 | **PHP Version** | XAMPP (cek `php -v`) |
 | **Timezone** | Asia/Jakarta (GMT+7) |
 | **Last Updated** | 2026-06-02 |
@@ -20,6 +20,17 @@
 ---
 
 ## Pekerjaan Terakhir
+
+### Sesi: 2026-06-02 — Fix Light Mode di Mobile PWA (Cache Busting v9.0)
+
+**Yang dikerjakan:**
+1. **Root Cause Ditemukan** — Light theme sudah benar di `variables.css`, namun tidak tampil di mobile karena versi tidak sinkron: `APP_VERSION` di `app.php` masih `8.1`, sedangkan `sw.js` sudah `v8.3`, dan CSS `?v=8.5`. Karena `APP_VERSION` tidak berubah, mekanisme cache-clearing tidak terpicu di mobile sehingga Service Worker terus menyajikan `variables.css` lama dari cache.
+2. **Fix** — Semua versi disinkronkan ke `9.0`:
+   - `sw.js`: `CACHE_NAME = 'alfarezmart-v9.0'`
+   - `app.php`: `APP_VERSION = '9.0'` dan `$v = '?v=9.0'`
+3. **SW STATIC_ASSETS Diperbaiki** — Ditambahkan `offline-db.js` dan `components.js` ke daftar pre-cache agar semua JS utama ter-cache dengan benar.
+
+---
 
 ### Sesi: 2026-06-02 — Tema Light Mode & PWA Theme Toggle
 
