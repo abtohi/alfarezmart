@@ -29,12 +29,12 @@
             <div id="supplierDisplay" style="padding:10px 12px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); font-size:var(--font-size-sm); font-weight:600; color:var(--text-primary);">—</div>
         </div>
 
-        <div style="display:flex; gap:8px; align-items:flex-end;">
-            <div style="flex:1;">
+        <div style="display:flex; gap:8px;">
+            <div style="flex:1; display:flex; flex-direction:column;">
                 <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Tanggal *</label>
                 <input type="date" id="purchaseDate" value="<?= date('Y-m-d') ?>" class="form-control-dark" style="width:100%; height:44px;">
             </div>
-            <div style="flex:1;">
+            <div style="flex:1; display:flex; flex-direction:column; justify-content:flex-end;">
                 <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Foto Invoice</label>
                 <input type="file" id="invoicePhotoCam" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event, true)">
                 <input type="file" id="invoicePhotoGal" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event, false)">
