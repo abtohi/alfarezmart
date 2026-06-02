@@ -44,10 +44,14 @@ class FinanceModel extends Model
     {
         $stmt = $this->db->prepare("
             SELECT 
-                COALESCE(SUM(CASE WHEN category = 'Pemasukan' THEN amount ELSE 0 END), 0) as income,
-                COALESCE(SUM(CASE WHEN category = 'Pengeluaran' THEN amount ELSE 0 END), 0) as expense
+                COALESCE(SUM(CASE WHEN log_date = :date AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) as income,
+                COALESCE(SUM(CASE WHEN log_date = :date AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0) as expense,
+                (
+                    COALESCE(SUM(CASE WHEN log_date <= :date AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) -
+                    COALESCE(SUM(CASE WHEN log_date <= :date AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0)
+                ) as accumulative_net
             FROM finance_logs
-            WHERE log_date = :date
+            WHERE log_date <= :date
         ");
         $stmt->execute([':date' => $date]);
         return $stmt->fetch();
@@ -67,10 +71,14 @@ class FinanceModel extends Model
         $stmt = $this->db->prepare("
             SELECT 
                 balance_type,
-                COALESCE(SUM(CASE WHEN category = 'Pemasukan' THEN amount ELSE 0 END), 0) as income,
-                COALESCE(SUM(CASE WHEN category = 'Pengeluaran' THEN amount ELSE 0 END), 0) as expense
+                COALESCE(SUM(CASE WHEN log_date = :date AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) as income,
+                COALESCE(SUM(CASE WHEN log_date = :date AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0) as expense,
+                (
+                    COALESCE(SUM(CASE WHEN log_date <= :date AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) -
+                    COALESCE(SUM(CASE WHEN log_date <= :date AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0)
+                ) as accumulative_net
             FROM finance_logs
-            WHERE log_date = :date
+            WHERE log_date <= :date
             GROUP BY balance_type
         ");
         
@@ -84,7 +92,7 @@ class FinanceModel extends Model
             }
             $result[$post]['income'] = (float)$row['income'];
             $result[$post]['expense'] = (float)$row['expense'];
-            $result[$post]['net'] = (float)$row['income'] - (float)$row['expense'];
+            $result[$post]['net'] = (float)$row['accumulative_net'];
         }
         
         return $result;

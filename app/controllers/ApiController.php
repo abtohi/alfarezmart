@@ -2438,7 +2438,7 @@ class ApiController extends Controller
                 'summary' => [
                     'income' => (float)($summary['income'] ?? 0),
                     'expense' => (float)($summary['expense'] ?? 0),
-                    'net' => (float)($summary['income'] ?? 0) - (float)($summary['expense'] ?? 0)
+                    'net' => (float)($summary['accumulative_net'] ?? 0)
                 ],
                 'breakdown' => $breakdown
             ]);

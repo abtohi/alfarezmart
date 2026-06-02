@@ -29,6 +29,7 @@
 3. **Logika Dependent POS (Finance)** — Memperbaiki pencatatan transaksi akun yang saling dependen (contoh: Uang Laci -> Saldo Utama) di `FinanceModel.php`.
    - **Fix**: Jika Uang Laci mencatat *Pemasukan*, otomatis mencatat *Pemasukan* di Saldo Utama (1 record).
    - **Fix**: Jika Uang Laci mencatat *Pengeluaran*, otomatis mencatat **Pemasukan** sekaligus **Pengeluaran** di Saldo Utama (2 record).
+4. **Akumulasi Saldo Keuangan Harian** — Mengubah perhitungan `net` di dashboard keuangan agar menampilkan saldo *akumulatif* (dari semua tanggal sebelum atau sama dengan hari terpilih), sementara Pemasukan/Pengeluaran harian tetap menunjukkan mutasi hari itu. Modifikasi dilakukan pada `getDailySummary` dan `getDailySummaryByPost` dengan menambahkan agregasi `log_date <= :date` untuk `accumulative_net`.
 3. **Catatan Hutang & Piutang (Debts SearchBox)** — Memperbaiki instansiasi komponen `SearchBox` di halaman Hutang (`debts/index.php`).
    - **Root Cause**: Komponen `SearchBox` dipanggil menggunakan `SearchBox.init()` yang tidak eksis.
    - **Fix**: Menggunakan instansiasi class `new SearchBox()` dengan syntax yang benar dan dibungkus `setTimeout` untuk memastikan DOM Modal sudah dirender sepenuhnya sebelum mengikat events UI.
