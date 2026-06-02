@@ -1396,6 +1396,7 @@ class ApiController extends Controller
                 'visit_day' => $this->input('visit_day', ''),
                 'delivery_day' => $this->input('delivery_day', ''),
                 'notes' => $this->input('notes', ''),
+                'status' => $this->input('status', 'Aktif'),
             ]);
             $salesRep = $model->findWithSupplier($id);
             $this->json(['success' => true, 'id' => $id, 'name' => $name, 'sales_rep' => $salesRep]);
@@ -1418,6 +1419,7 @@ class ApiController extends Controller
                 'visit_day' => $this->input('visit_day', ''),
                 'delivery_day' => $this->input('delivery_day', ''),
                 'notes' => $this->input('notes', ''),
+                'status' => $this->input('status', 'Aktif'),
                 'updated_at' => date('Y-m-d H:i:s')
             ]);
             $salesRep = $model->findWithSupplier($id);

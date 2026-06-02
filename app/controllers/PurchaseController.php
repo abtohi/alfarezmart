@@ -66,7 +66,7 @@ class PurchaseController extends Controller
             'title' => 'Edit Pembelian',
             'activeNav' => 'purchase',
             'purchase' => $purchase,
-            'salesReps' => $salesRepModel->getAllWithSupplier(),
+            'salesReps' => $salesRepModel->getAllWithSupplier($purchase['sales_rep_id']),
             'suppliers' => $supplierModel->all('name', 'ASC'),
         ]);
     }

@@ -214,6 +214,15 @@ async function deleteSupplier(id, name) {
 // SALES REPS MANAGEMENT
 // ==========================================
 
+function formatWAPhone(phone) {
+    if (!phone) return '';
+    let num = phone.replace(/[^0-9]/g, '');
+    if (num.startsWith('0')) {
+        num = '62' + num.substring(1);
+    }
+    return num;
+}
+
 async function showSalesReps(supplierId, supplierName) {
     // Load sales reps first
     let salesReps = [];
@@ -232,10 +241,11 @@ async function showSalesReps(supplierId, supplierName) {
             listHTML += `
                 <div style="background:var(--surface-2);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
                     <div>
-                        <div style="font-weight:600;font-size:13px;">${sr.name}</div>
+                        <div style="font-weight:600;font-size:13px;">${sr.name} ${sr.status === 'Non-Aktif' ? '<span class="badge-custom badge-warning" style="font-size:9px;padding:2px 4px;margin-left:4px;">Non-Aktif</span>' : ''}</div>
                         <div style="font-size:11px;color:var(--text-muted);">${sr.phone || '-'} | Kunjungan: ${sr.visit_day || '-'}</div>
                     </div>
                     <div style="display:flex;gap:4px;">
+                        ${sr.phone ? `<a href="https://wa.me/${formatWAPhone(sr.phone)}" target="_blank" class="btn-icon" style="color:#25D366;text-decoration:none;display:flex;align-items:center;justify-content:center;" title="Chat WhatsApp"><i class="bi bi-whatsapp"></i></a>` : ''}
                         <button class="btn-icon" style="color:var(--warning);" onclick="AppModal.close(); setTimeout(() => showEditSalesRep(\'${encodeURIComponent(JSON.stringify(sr))}\', ${supplierId}, \'${supplierName.replace(/'/g, "\\'")}\'), 300)"><i class="bi bi-pencil-square"></i></button>
                         <button class="btn-icon" style="color:var(--danger);" onclick="AppModal.close(); setTimeout(() => deleteSalesRep(${sr.id}, \'${sr.name.replace(/'/g, "\\'")}\', ${supplierId}, \'${supplierName.replace(/'/g, "\\'")}\'), 300)"><i class="bi bi-trash"></i></button>
                     </div>
@@ -289,6 +299,13 @@ function getSalesRepFormHTML(sr = {}) {
             <label>Catatan</label>
             <input type="text" class="form-control-dark" id="modalSalesNotes" value="${sr.notes || ''}" placeholder="..." autocomplete="off">
         </div>
+        <div class="modal-form-group">
+            <label>Status</label>
+            <select class="form-select-dark" id="modalSalesStatus">
+                <option value="Aktif" ${sr.status !== 'Non-Aktif' ? 'selected' : ''}>Aktif</option>
+                <option value="Non-Aktif" ${sr.status === 'Non-Aktif' ? 'selected' : ''}>Non-Aktif</option>
+            </select>
+        </div>
     `;
 }
 
@@ -299,6 +316,7 @@ function getSalesRepFormData() {
         visit_day: document.getElementById('modalSalesVisit').value.trim(),
         delivery_day: document.getElementById('modalSalesDelivery').value.trim(),
         notes: document.getElementById('modalSalesNotes').value.trim(),
+        status: document.getElementById('modalSalesStatus').value
     };
 }
 

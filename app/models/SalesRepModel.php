@@ -9,32 +9,49 @@ class SalesRepModel extends Model
     /**
      * Get all sales reps for a specific supplier
      */
-    public function getBySupplier($supplierId)
+    public function getBySupplier($supplierId, $activeOnly = false)
     {
-        $stmt = $this->db->prepare("
+        $sql = "
             SELECT sr.*, s.name as supplier_name
             FROM sales_reps sr
             LEFT JOIN suppliers s ON sr.supplier_id = s.id
-            WHERE sr.supplier_id = :sid AND sr.status = 'Aktif'
-            ORDER BY sr.name ASC
-        ");
+            WHERE sr.supplier_id = :sid
+        ";
+        if ($activeOnly) {
+            $sql .= " AND sr.status = 'Aktif'";
+        }
+        $sql .= " ORDER BY sr.status ASC, sr.name ASC";
+
+        $stmt = $this->db->prepare($sql);
         $stmt->execute([':sid' => $supplierId]);
         return $stmt->fetchAll();
     }
 
     /**
-     * Get all active sales reps with supplier name
+     * Get all active sales reps with supplier name, and optionally include a specific ID even if inactive
      */
-    public function getAllWithSupplier()
+    public function getAllWithSupplier($includeId = null)
     {
-        $stmt = $this->db->prepare("
+        $sql = "
             SELECT sr.*, s.name as supplier_name
             FROM sales_reps sr
             LEFT JOIN suppliers s ON sr.supplier_id = s.id
-            WHERE sr.status = 'Aktif'
-            ORDER BY s.name ASC, sr.name ASC
-        ");
-        $stmt->execute();
+            WHERE (sr.status = 'Aktif'";
+            
+        if ($includeId) {
+            $sql .= " OR sr.id = :include_id";
+        }
+        
+        $sql .= ") ORDER BY s.name ASC, sr.name ASC";
+
+        $stmt = $this->db->prepare($sql);
+        
+        $params = [];
+        if ($includeId) {
+            $params[':include_id'] = $includeId;
+        }
+        
+        $stmt->execute($params);
         return $stmt->fetchAll();
     }
 
