@@ -29,25 +29,25 @@
             <div id="supplierDisplay" style="padding:10px 12px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); font-size:var(--font-size-sm); font-weight:600; color:var(--text-primary);">—</div>
         </div>
 
-        <div style="display:flex; gap:8px;">
+        <div style="display:flex; gap:8px; align-items:flex-end;">
             <div style="flex:1;">
                 <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Tanggal *</label>
-                <input type="date" id="purchaseDate" value="<?= date('Y-m-d') ?>" class="form-control-dark" style="width:100%;">
+                <input type="date" id="purchaseDate" value="<?= date('Y-m-d') ?>" class="form-control-dark" style="width:100%; height:44px;">
             </div>
             <div style="flex:1;">
                 <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Foto Invoice</label>
                 <input type="file" id="invoicePhotoCam" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event, true)">
                 <input type="file" id="invoicePhotoGal" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event, false)">
                 <div style="display:flex; gap:4px;">
-                    <button type="button" class="btn-outline-custom" id="btnPhotoCam" style="flex:1; padding:8px 4px; font-size:11px;" onclick="document.getElementById('invoicePhotoCam').click()">
+                    <button type="button" class="btn-outline-custom" id="btnPhotoCam" style="flex:1; padding:12px 4px; font-size:11px; height:44px;" onclick="document.getElementById('invoicePhotoCam').click()">
                         <i class="bi bi-camera"></i> Kamera
                     </button>
-                    <button type="button" class="btn-outline-custom" id="btnPhotoGal" style="flex:1; padding:8px 4px; font-size:11px;" onclick="document.getElementById('invoicePhotoGal').click()">
+                    <button type="button" class="btn-outline-custom" id="btnPhotoGal" style="flex:1; padding:12px 4px; font-size:11px; height:44px;" onclick="document.getElementById('invoicePhotoGal').click()">
                         <i class="bi bi-image"></i> Galeri
                     </button>
                 </div>
                 <div style="display:flex; gap:4px; margin-top:4px;">
-                    <button type="button" class="btn-primary-custom" id="btnScanAI" style="flex:1; padding:8px 4px; font-size:11px; display:none;" onclick="scanInvoiceWithAI()">
+                    <button type="button" class="btn-primary-custom" id="btnScanAI" style="flex:1; padding:12px 4px; font-size:11px; display:none; height:44px;" onclick="scanInvoiceWithAI()">
                         <i class="bi bi-robot"></i> Scan dengan AI (Otomatis)
                     </button>
                 </div>
