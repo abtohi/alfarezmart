@@ -21,6 +21,15 @@
 
 ## Pekerjaan Terakhir
 
+### Sesi: 2026-06-02 — Tema Light Mode & PWA Theme Toggle
+
+**Yang dikerjakan:**
+1. **Light Mode Theme** — Menerapkan skema warna Light Mode di `variables.css`. Menggunakan kombinasi gradien merah (`#e63946`) dan biru (`#1e40af`) pada header, sesuai gaya visual logo `mobile_icon.png`. Latar belakang menggunakan warna putih (`#ffffff`) dengan default teks berwarna hitam (`#0b0b0d`).
+2. **Header Kontras** — Memaksa `.header-title` dan `.header-btn` berwarna putih murni (`#ffffff`) di `app.css` agar kontras tetap optimal baik di Dark maupun Light mode.
+3. **Theme Toggle UI** — Tombol icon Matahari/Bulan sudah terintegrasi di header (`app.php`) menggunakan LocalStorage (`alfarezmart_theme`) untuk persistent mode.
+
+---
+
 ### Sesi: 2026-06-02 — POS Auto-Pricing Tier, Saldo Rokok Dashboard, Debts SearchBox, ExcelJS Formatting
 
 **Yang dikerjakan:**

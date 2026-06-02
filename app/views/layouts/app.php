@@ -47,7 +47,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS -->
-    <?php $v = '?v=8.4'; ?>
+    <?php $v = '?v=8.5'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -103,6 +103,9 @@ if ($userLevel === 'staff') {
                 <h1 class="header-title"><?= htmlspecialchars($title ?? 'AlfarezMart') ?></h1>
             </div>
             <div class="header-right">
+                <button class="header-btn" id="btnTheme" aria-label="Ubah tema" onclick="toggleTheme()" title="Ubah tema Dark/Light">
+                    <i class="bi bi-sun" id="themeIcon" data-icon="sun"></i>
+                </button>
                 <button class="header-btn" id="btnSync" aria-label="Sinkronisasi" onclick="triggerSync()" oncontextmenu="openSyncSettings(event)" ontouchstart="startSyncSettingsTimer(event)" ontouchend="clearSyncSettingsTimer(event)" title="Tahan untuk Pengaturan Sync">
                     <i class="bi bi-arrow-repeat" id="syncIcon"></i>
                     <span class="notif-badge" id="offlineSyncBadge" style="display:none">0</span>
@@ -124,6 +127,7 @@ if ($userLevel === 'staff') {
             </div>
         </div>
     </header>
+
 
     <!-- Search Overlay -->
     <div class="search-overlay" id="searchOverlay">
@@ -236,8 +240,48 @@ if ($userLevel === 'staff') {
             logoutUrl: '<?= BASE_URL ?>auth/logout'
         };
     </script>
+
+    <script>
+        // Theme toggle (dark/light)
+        (function(){
+            const THEME_KEY = 'alfarezmart_theme';
+            function applyTheme(theme){
+                const root = document.documentElement;
+                root.setAttribute('data-theme', theme);
+            }
+            window.toggleTheme = function(){
+                const current = localStorage.getItem(THEME_KEY) || 'dark';
+                const next = current === 'dark' ? 'light' : 'dark';
+                localStorage.setItem(THEME_KEY, next);
+                applyTheme(next);
+                try { navigator.vibrate && navigator.vibrate(10); } catch(e) {}
+            };
+            function syncThemeIcon(theme){
+                const iconEl = document.getElementById('themeIcon');
+                if(!iconEl) return;
+                const next = theme === 'light' ? 'moon' : 'sun';
+                iconEl.dataset.icon = next;
+                iconEl.className = `bi bi-${next}`;
+                iconEl.id = 'themeIcon';
+            }
+
+            document.addEventListener('DOMContentLoaded', function(){
+                const saved = localStorage.getItem(THEME_KEY) || 'dark';
+                applyTheme(saved);
+                syncThemeIcon(saved);
+            });
+
+            const _origApplyTheme = applyTheme;
+            applyTheme = function(theme){
+                _origApplyTheme(theme);
+                syncThemeIcon(theme);
+            };
+        })();
+    </script>
+
     <script src="<?= BASE_URL ?>public/js/geofencing.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/app.js<?= $v ?>"></script>
+
     
     <!-- Service Worker Registration & Cache Buster -->
     <script>
