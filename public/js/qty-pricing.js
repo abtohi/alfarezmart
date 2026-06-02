@@ -38,14 +38,17 @@ const QtyPricing = {
         return this.getBaseUnitPrice(pkg, saleMode);
     },
 
-    calculateTotalPrice(pkg, saleMode, quantity, useCustom, customLineTotal, allPackagings = null) {
+    getPricingBreakdown(pkg, saleMode, quantity, useCustom, customLineTotal, allPackagings = null) {
+        let result = { total: 0, breakdown: [] };
         if (useCustom) {
             const c = parseFloat(customLineTotal);
-            return Number.isFinite(c) && c >= 0 ? c : 0;
+            result.total = Number.isFinite(c) && c >= 0 ? c : 0;
+            result.breakdown.push({ note: 'Harga custom', price: result.total });
+            return result;
         }
         
         let qty = parseFloat(quantity) || 0;
-        if (qty <= 0) return 0;
+        if (qty <= 0) return result;
 
         if (!allPackagings || !Array.isArray(allPackagings) || allPackagings.length === 0) {
             allPackagings = [pkg];
@@ -58,12 +61,14 @@ const QtyPricing = {
         allPackagings.forEach(p => {
             const pBaseQty = parseFloat(p.base_qty) || 1;
             const basePrice = this.getBaseUnitPrice(p, saleMode);
+            const unitName = p.unit_name || 'Unit';
             if (basePrice > 0) {
-                // Base packaging chunk (e.g. 1 slop = 10 units)
                 chunks.push({
                     chunk_size: pBaseQty,
                     chunk_price: basePrice,
-                    price_per_base_unit: basePrice / pBaseQty
+                    price_per_base_unit: basePrice / pBaseQty,
+                    name: `1 ${unitName}`,
+                    is_tier: false
                 });
             }
             
@@ -72,15 +77,16 @@ const QtyPricing = {
                     const tMode = t.sale_mode || 'both';
                     if (tMode === 'both' || tMode === saleMode) {
                         const tMin = parseFloat(t.min_qty) || 0;
-                        const tPrice = parseFloat(t.unit_price) || 0; // tPrice is PER UNIT
+                        const tPrice = parseFloat(t.unit_price) || 0;
                         if (tMin > 0 && tPrice > 0) {
-                            // Tier chunk (e.g. min 5 units -> chunk size is 5 * pBaseQty)
                             const chunkSize = pBaseQty * tMin;
-                            const chunkPrice = tPrice * tMin; // total price for this tier chunk
+                            const chunkPrice = tPrice * tMin;
                             chunks.push({
                                 chunk_size: chunkSize,
                                 chunk_price: chunkPrice,
-                                price_per_base_unit: chunkPrice / chunkSize
+                                price_per_base_unit: chunkPrice / chunkSize,
+                                name: `${tMin} ${unitName} (Tier)`,
+                                is_tier: true
                             });
                         }
                     }
@@ -88,7 +94,6 @@ const QtyPricing = {
             }
         });
 
-        // Sort chunks by cheapest price_per_base_unit, then by largest chunk_size
         chunks.sort((a, b) => {
             if (Math.abs(a.price_per_base_unit - b.price_per_base_unit) > 0.0001) {
                 return a.price_per_base_unit - b.price_per_base_unit;
@@ -96,42 +101,55 @@ const QtyPricing = {
             return b.chunk_size - a.chunk_size;
         });
 
-        let total = 0;
-
-        // Greedy algorithm: take as many of the cheapest/largest chunks as possible
         for (const chunk of chunks) {
             if (remainingBaseQty >= chunk.chunk_size - 0.001) {
                 const applyCount = Math.floor((remainingBaseQty + 0.001) / chunk.chunk_size);
-                total += applyCount * chunk.chunk_price;
+                const lineTotal = applyCount * chunk.chunk_price;
+                result.total += lineTotal;
                 remainingBaseQty -= (applyCount * chunk.chunk_size);
+                
+                let countPrefix = applyCount > 1 ? `${applyCount}x ` : '';
+                result.breakdown.push({ note: `${countPrefix}${chunk.name}`, price: lineTotal });
             }
         }
 
-        // If there's still remainder (due to fractions or no small chunks), calculate fractionally using the smallest base chunk
         if (remainingBaseQty >= 0.001) {
             const fallbackChunks = chunks.sort((a, b) => a.chunk_size - b.chunk_size);
             if (fallbackChunks.length > 0) {
                 const smallest = fallbackChunks[0];
-                total += (remainingBaseQty / smallest.chunk_size) * smallest.chunk_price;
+                const fractionalTotal = (remainingBaseQty / smallest.chunk_size) * smallest.chunk_price;
+                result.total += fractionalTotal;
+                
+                const fractionalQty = remainingBaseQty / (parseFloat(pkg.base_qty) || 1);
+                result.breakdown.push({ note: `${fractionalQty} ${pkg.unit_name || 'Unit'} (Pecahan)`, price: fractionalTotal });
             }
         }
 
-        return Math.round(total);
+        result.total = Math.round(result.total);
+        return result;
+    },
+
+    calculateTotalPrice(pkg, saleMode, quantity, useCustom, customLineTotal, allPackagings = null) {
+        return this.getPricingBreakdown(pkg, saleMode, quantity, useCustom, customLineTotal, allPackagings).total;
     },
 
     getPriceNote(pkg, saleMode, quantity, useCustom, allPackagings = null) {
         if (useCustom) return 'Harga custom';
+        const breakdown = this.getPricingBreakdown(pkg, saleMode, quantity, false, null, allPackagings);
         
-        let qty = parseFloat(quantity) || 0;
-        if (qty <= 0) return '';
+        if (breakdown.breakdown.length > 1) {
+            const formula = breakdown.breakdown.map(b => b.note).join(' + ');
+            return `Otomatis: ${formula}`;
+        }
         
+        // Cek jika harga base unit turun karena beli banyak/kemasan besar tanpa pecah
+        const qty = parseFloat(quantity) || 0;
         const basePrice = this.getBaseUnitPrice(pkg, saleMode);
         const normalTotal = Math.round(basePrice * qty);
-        const actualTotal = this.calculateTotalPrice(pkg, saleMode, quantity, false, null, allPackagings);
-        
-        if (actualTotal < normalTotal) {
-            return 'Otomatis kemasan besar / grosir';
+        if (breakdown.total < normalTotal) {
+            return `Otomatis: ${breakdown.breakdown.map(b => b.note).join(' + ')}`;
         }
+        
         return '';
     }
 };

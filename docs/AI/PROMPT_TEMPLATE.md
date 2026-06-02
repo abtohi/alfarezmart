@@ -33,16 +33,8 @@ Klasifikasikan task ini sebelum mulai:
 
 ## Task
 
-- Pada halaman kasir POS, ketika user menginput barang dengan satuan level 1, dan qty nya mencapai jumlah satuan di level 2, tolong harganya secara otomatis dibuat level 2. Sehingga user tidak perlu menambahkan di harga tier. Contohnya, misal level 1 harganya 15000 per pcs, kemudian level 2 isinya 10 pcs harganya 138000, maka ketika user menginput barang 10 pcs, maka harga nya otomatis 138000. Begitupun seterusnya.
+- Pada halaman kasir POS, ketika user menginput barang dengan satuan level 1, dan qty nya mencapai jumlah satuan di level 2, tolong harganya secara otomatis dibuat level 2. Sehingga user tidak perlu menambahkan di harga tier. Contohnya, misal level 1 harganya 15000 per bungkus, kemudian level 2 isinya 10 bungkus harganya 138000, maka ketika user menginput barang 10 bungkus, maka harga nya berubah menjadi 138000 tetapi satuannya tetap menggunakan level 1, misal level 1 satuannya bungkus, level 2 satuannya slop, maka ketika user menginput 10 bungkus, satuannya tetap 10 bungkus, hanya harganya yang berubah menjadi harga 1 slop. Sehingga ketika user menginput 11 bungkus, maka yang 10 bungkus terhitung sebagai harga 1 slop, dan 1 bungkus terhitung harga perbungkus, dan juga berlaku jika ada harga tier, misal untuk pembelian 5 maka harga tiernya adalah 5 bungkus = 70.000, maka ketika user menginput 15 bungkus, maka harga yang tertulis adalah 138.000+70.000 = 208.000, ketika user menginput 16 bungkus, maka harganya akan menjadi 1 slop + 5 bungkus harga tier + 1 harga satuan, sehingga 16 bungkus = 138.000+70.000+15.000=223.000. Begitupun seterusnya, tolong implementasikan analogi ini.
 
-- Pada halaman Keuangan Harian, Saldo Rokok sebenarnya ada pencatatan di DAFTAR TRANSAKSI, tetapi di bagian dashboardnya SUMBER KEUANGAN (POS), Saldo Rokok tidak ada, malah tercatat di Saldo Utama, tolong ini perbaiki, silahkan lihat lampiran gambar.
-
-- Pada halaman Catatan Hutang & Piutang, di bagian tab Hutang Toko, saat saya membuka modal dialog Tambah Hutang Toko, tombol Kelola Opsi masih belum bisa di klik, tolong ini diperbaiki.
-
-- Pada halaman Export Data, saat ini hasil downloadnya sudah rapi kolomnya, namun belum ada formatting yang kamu buat sehingga tampilan datanya lebih menarik, berikut detail formatting tabel hasil downloadnya yang saya inginkan. Warna Background tabel header gunakan warna #963634, dan untuk font nya menggunakan Arial Narrow, untuk font nama kolomnya warna putih dan di bold, dengan font size 10pt, dan untuk isi tabelnya gunakan font Arial Narrow dengan font size 10pt tanpa bold, tolong rapikan juga lebar kolom agar lebih rapi, dan untuk nama kolom "Satuan atau jenis kemasan" diubah aja menjadi "Satuan" agar tidak terlalu panjang. Untuk format Harga beli tambahkan format Rp dengan delimiter titik (.), contoh format Rp 145.000. Begitupun dengan format harga-harga lainnya.
-
-
-- Jangan ada session timeout, ketika user sudah login, jangan tiba tiba logout sendiri, user harus logout manual. Tolong diperbaiki session timeout nya.
 
 ## Konteks Tambahan (opsional)
 
