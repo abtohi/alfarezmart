@@ -24,10 +24,8 @@
 ### Sesi: 2026-06-02 — POS Auto-Pricing Tier, Saldo Rokok Dashboard, Debts SearchBox, ExcelJS Formatting
 
 **Yang dikerjakan:**
-1. **POS Auto-Pricing Tier** — Implementasi logika otomatis switch kemasan level atas (tier) pada Kasir POS jika qty diinputkan mencapai `base_qty` level tersebut (contoh: 15pcs -> otomatis beralih harga renceng jika 1 renceng = 10 pcs, walau di contoh case user ingin merubah total harga tier, switch otomatis lebih baik menggunakan `QtyPricing` yang sudah ada, dibantu helper `autoSwitchPackagingLevel` di `pos.php`).
-2. **Dashboard Saldo Rokok (Finance)** — Memperbaiki issue dimana Saldo Rokok tidak muncul di Grid Dashboard Keuangan (`finance/index.php`).
-   - **Root Cause**: Adanya hardcode filter `allowedPos = ['Saldo Utama', 'Saldo Rokok', 'Saldo Pulsa']` yang mungkin tidak selaras dengan data di `finance_accounts` database (seperti Uang Laci, dsb).
-   - **Fix**: Menghapus filter `allowedPos` sehingga semua account POS yang terdaftar akan ditampilkan secara dinamis di grid (responsive grid menangani jumlah cards berapapun).
+1. **POS Auto-Pricing Tier (Greedy Chunking)** — Merevisi algoritma di `qty-pricing.js` agar mendukung chunking harga (analogi "uang pas"). Jika qty = 16 (1 slop = 10, tier = 5), maka dihitung otomatis: `1 slop + 1 tier + 1 satuan` tanpa mengubah level kemasan (`unit_name`) yang terlihat di UI. Fungsi `autoSwitchPackagingLevel` di `pos.php` dihapus agar satuan tidak melompat.
+2. **Dashboard Saldo Rokok (Finance)** — Mengembalikan filter `allowedPos = ['Saldo Utama', 'Saldo Rokok', 'Saldo Pulsa']` di `finance/index.php` sesuai permintaan agar POS lain (seperti Uang Laci, dll) tidak muncul di dashboard.
 3. **Catatan Hutang & Piutang (Debts SearchBox)** — Memperbaiki instansiasi komponen `SearchBox` di halaman Hutang (`debts/index.php`).
    - **Root Cause**: Komponen `SearchBox` dipanggil menggunakan `SearchBox.init()` yang tidak eksis.
    - **Fix**: Menggunakan instansiasi class `new SearchBox()` dengan syntax yang benar dan dibungkus `setTimeout` untuk memastikan DOM Modal sudah dirender sepenuhnya sebelum mengikat events UI.
