@@ -181,7 +181,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        let visibleAccounts = accountsData;
+        const allowedPos = ['Saldo Utama', 'Saldo Rokok', 'Saldo Pulsa'];
+        let visibleAccounts = accountsData.filter(a => allowedPos.includes(a.name));
 
         let html = '';
         visibleAccounts.forEach((acc, index) => {

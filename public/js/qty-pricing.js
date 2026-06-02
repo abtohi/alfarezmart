@@ -54,15 +54,15 @@ const QtyPricing = {
         const targetBaseQty = qty * (parseFloat(pkg.base_qty) || 1);
         let remainingBaseQty = targetBaseQty;
         
-        let bundles = [];
+        let chunks = [];
         allPackagings.forEach(p => {
             const pBaseQty = parseFloat(p.base_qty) || 1;
             const basePrice = this.getBaseUnitPrice(p, saleMode);
             if (basePrice > 0) {
-                bundles.push({
-                    base_qty_size: pBaseQty,
-                    min_bundles: 1,
-                    price_per_bundle: basePrice,
+                // Base packaging chunk (e.g. 1 slop = 10 units)
+                chunks.push({
+                    chunk_size: pBaseQty,
+                    chunk_price: basePrice,
                     price_per_base_unit: basePrice / pBaseQty
                 });
             }
@@ -72,13 +72,15 @@ const QtyPricing = {
                     const tMode = t.sale_mode || 'both';
                     if (tMode === 'both' || tMode === saleMode) {
                         const tMin = parseFloat(t.min_qty) || 0;
-                        const tPrice = parseFloat(t.unit_price) || 0;
+                        const tPrice = parseFloat(t.unit_price) || 0; // tPrice is PER UNIT
                         if (tMin > 0 && tPrice > 0) {
-                            bundles.push({
-                                base_qty_size: pBaseQty,
-                                min_bundles: tMin,
-                                price_per_bundle: tPrice,
-                                price_per_base_unit: tPrice / pBaseQty
+                            // Tier chunk (e.g. min 5 units -> chunk size is 5 * pBaseQty)
+                            const chunkSize = pBaseQty * tMin;
+                            const chunkPrice = tPrice * tMin; // total price for this tier chunk
+                            chunks.push({
+                                chunk_size: chunkSize,
+                                chunk_price: chunkPrice,
+                                price_per_base_unit: chunkPrice / chunkSize
                             });
                         }
                     }
@@ -86,46 +88,32 @@ const QtyPricing = {
             }
         });
 
-        bundles.sort((a, b) => {
+        // Sort chunks by cheapest price_per_base_unit, then by largest chunk_size
+        chunks.sort((a, b) => {
             if (Math.abs(a.price_per_base_unit - b.price_per_base_unit) > 0.0001) {
                 return a.price_per_base_unit - b.price_per_base_unit;
             }
-            return (b.base_qty_size * b.min_bundles) - (a.base_qty_size * a.min_bundles);
+            return b.chunk_size - a.chunk_size;
         });
 
         let total = 0;
-        let lastRemaining = remainingBaseQty;
 
-        while (remainingBaseQty >= 0.001) {
-            let bestBundle = null;
-            for (const b of bundles) {
-                if (remainingBaseQty >= (b.base_qty_size * b.min_bundles) - 0.001) {
-                    bestBundle = b;
-                    break;
-                }
+        // Greedy algorithm: take as many of the cheapest/largest chunks as possible
+        for (const chunk of chunks) {
+            if (remainingBaseQty >= chunk.chunk_size - 0.001) {
+                const applyCount = Math.floor((remainingBaseQty + 0.001) / chunk.chunk_size);
+                total += applyCount * chunk.chunk_price;
+                remainingBaseQty -= (applyCount * chunk.chunk_size);
             }
+        }
 
-            if (!bestBundle) {
-                const fallbackBundles = bundles.filter(b => b.min_bundles === 1);
-                if (fallbackBundles.length > 0) {
-                    bestBundle = fallbackBundles.sort((a, b) => a.base_qty_size - b.base_qty_size)[0];
-                } else {
-                    break; 
-                }
+        // If there's still remainder (due to fractions or no small chunks), calculate fractionally using the smallest base chunk
+        if (remainingBaseQty >= 0.001) {
+            const fallbackChunks = chunks.sort((a, b) => a.chunk_size - b.chunk_size);
+            if (fallbackChunks.length > 0) {
+                const smallest = fallbackChunks[0];
+                total += (remainingBaseQty / smallest.chunk_size) * smallest.chunk_price;
             }
-
-            const applyCount = Math.floor((remainingBaseQty + 0.001) / bestBundle.base_qty_size);
-            if (applyCount <= 0) {
-                // If even the smallest bundle cannot fit, just charge fractionally
-                total += (remainingBaseQty / bestBundle.base_qty_size) * bestBundle.price_per_bundle;
-                break;
-            }
-
-            total += applyCount * bestBundle.price_per_bundle;
-            remainingBaseQty -= (applyCount * bestBundle.base_qty_size);
-
-            if (remainingBaseQty >= lastRemaining) break;
-            lastRemaining = remainingBaseQty;
         }
 
         return Math.round(total);

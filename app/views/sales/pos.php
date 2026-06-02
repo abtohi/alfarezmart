@@ -477,8 +477,6 @@ function updateQty(id, delta) {
             item.custom_line_total = item.unit_price * item.quantity;
             item.custom_price_draft = String(item.custom_line_total);
         }
-        // Auto-switch ke kemasan lebih besar jika qty mencapai kelipatan tepat
-        autoSwitchPackagingLevel(item);
         recalcItemPrice(item);
     }
     renderCart();
@@ -497,45 +495,6 @@ function changeLevel(id, newLevel) {
         recalcItemPrice(item);
         renderCart();
     }
-}
-
-/**
- * Auto-switch packaging level berdasarkan total qty base unit.
- * Contoh: user input 10 Pcs, level 2 = Dus (base_qty=10) → switch ke 1 Dus.
- * Jika tidak ada level yang pas, tetap di level saat ini.
- * Hanya berlaku jika item belum menggunakan harga custom.
- */
-function autoSwitchPackagingLevel(item) {
-    if (!item || item.use_custom_price) return false;
-    if (!item.packagings || item.packagings.length <= 1) return false;
-
-    const currentPkg = item.packagings.find(p => p.level == item.level);
-    if (!currentPkg) return false;
-
-    // Hitung total base unit (pcs) dari qty saat ini
-    const currentBaseQty = parseFloat(currentPkg.base_qty) || 1;
-    const totalBaseUnits = item.quantity * currentBaseQty;
-
-    // Urutkan packaging dari level tertinggi ke terendah
-    const sortedPkgs = [...item.packagings].sort((a, b) => (parseFloat(b.base_qty) || 1) - (parseFloat(a.base_qty) || 1));
-
-    // Cari level terbesar yang totalBaseUnits bisa dibagi habis
-    for (const pkg of sortedPkgs) {
-        const pkgBaseQty = parseFloat(pkg.base_qty) || 1;
-        if (pkgBaseQty <= 1) continue; // Skip level 1 (Pcs)
-        if (pkg.level == item.level) continue; // Skip level saat ini
-        
-        // Cek apakah total base unit bisa dibagi habis dengan level ini
-        if (totalBaseUnits >= pkgBaseQty && totalBaseUnits % pkgBaseQty < 0.001) {
-            // Switch ke level ini
-            const newQty = Math.round(totalBaseUnits / pkgBaseQty);
-            item.level = parseInt(pkg.level, 10);
-            item.unit_name = pkg.unit_name;
-            item.quantity = newQty;
-            return true; // Switched
-        }
-    }
-    return false; // No switch
 }
 
 function calculateTotal() {
