@@ -33,13 +33,17 @@ Klasifikasikan task ini sebelum mulai:
 
 ## Task
 
-- Ketika saya membuka menu Export Data, loadingnya sangat lama, muncul tulisan memuat data, bisakah ini dipercepat lagi prosesnya tanpa delay.
+- Pada halaman kasir POS, ketika user menginput barang dengan satuan level 1, dan qty nya mencapai jumlah satuan di level 2, tolong harganya secara otomatis dibuat level 2. Sehingga user tidak perlu menambahkan di harga tier. Contohnya, misal level 1 harganya 15000 per pcs, kemudian level 2 isinya 10 pcs harganya 138000, maka ketika user menginput barang 10 pcs, maka harga nya otomatis 138000. Begitupun seterusnya.
 
-- Pada halaman Export Data Produk by Produk, nama produknya masih belum muncul, tolong ini jadi concern serius untuk bisa diperbaiki dengan sempurna. Data produk kosong atau gagal di muat
+- Pada halaman Keuangan Harian, Saldo Rokok sebenarnya ada pencatatan di DAFTAR TRANSAKSI, tetapi di bagian dashboardnya SUMBER KEUANGAN (POS), Saldo Rokok tidak ada, malah tercatat di Saldo Utama, tolong ini perbaiki, silahkan lihat lampiran gambar.
 
-- Pada halaman Keuangan harian, saat saya menginput Pemasukkan Uang Rokok, kenapa justru masuknya ke Saldo Utama, seharusnya masuknya ke Saldo Rokok, karena Uang Rokok dependensinya ke Saldo Rokok bukan saldo utama, tolong cek lagi dan perbaiki. Begitu pula untuk pengeluaran Uang Rokok, seharusnya tercatat di Pemasukan Saldo Rokok dan Pengeluaran Saldo Rokok, bukan Saldo Utama, tolong ini cek lagi algoritmanya dan perbaiki. Di bagian SUMBER KEUANGAN (POS), Saldo Rokok masih 0, padahal di DAFTAR TRANSAKSI ada Pemasukan dan pengeluaran saldo rokok, tolong ini di cek dan diperbaiki
+- Pada halaman Catatan Hutang & Piutang, di bagian tab Hutang Toko, saat saya membuka modal dialog Tambah Hutang Toko, tombol Kelola Opsi masih belum bisa di klik, tolong ini diperbaiki.
 
-- Pada halaman Input Barang, saat menggunakan fitur scan AI otomatis, kemudian semua item sudah berhasil terdeteksi dan terseleksi, saat Total Harga Pembelian produk ternyata mengalami kenaikan atau penurunan harga dari harga sebelumnya, kenapa di Harga Modal untuk panel kemasan (setelah panel kemasan di expand) tidak menyesuaikan otomatis dengan harga modal yang baru, melainkan tetap tertulis harga modal yang lama, tolong ini diperbaiki, agar ketika harga modal naik atau turun (hasil scan AI), di setiap panel kemasan juga disesuaikan dengan harga modal yang baru menyesuaikan harga jenis kemasannya.
+- Pada halaman Export Data, tolong hasil download filenya di desain yang lebih menarik, font nya juga dipilihkan yang mudah dibaca user, dan background nya juga tolong dibuat lebih menarik. Termasuk lebar kolom dibuat menyesuaikan dengan jumlah karakter di setiap kolom, cari proporsi yang pas agar tidak terlalu kecil atau terlalu besar. Ini berlaku untuk semua fitur export data, baik by Supplier maupun by Produk.
+
+- Pada halaman Hitung Orderan, tolong ketika user kembali ke menu yang lain, data yang sudah dimasukkan tidak hilang, ketika dibuka kembali masih tetap ada, dan tambahkan tombol Simpan, ketika sudah di simpan maka akan hilang dari list, tetapi bisa dibuka kembali dan bisa di edit dan dihapus, tolong diperbaiki. 
+
+- Jangan ada session timeout, ketika user sudah login, jangan tiba tiba logout sendiri, user harus logout manual. Tolong diperbaiki session timeout nya.
 
 ## Konteks Tambahan (opsional)
 

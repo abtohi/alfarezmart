@@ -111,10 +111,10 @@ function recalcItemPrice(item) {
     let basePricePerUnit = 0;
     let rawTotal = 0;
     if (typeof QtyPricing !== 'undefined' && typeof QtyPricing.calculateTotalPrice === 'function') {
-        rawTotal = QtyPricing.calculateTotalPrice(pkg, saleMode, qty, false, null);
+        rawTotal = QtyPricing.calculateTotalPrice(pkg, saleMode, qty, false, null, item.packagings);
         basePricePerUnit = qty > 0 ? rawTotal / qty : 0;
         item.price_note = typeof QtyPricing.getPriceNote === 'function'
-            ? QtyPricing.getPriceNote(pkg, saleMode, qty, false) : '';
+            ? QtyPricing.getPriceNote(pkg, saleMode, qty, false, item.packagings) : '';
     } else {
         // Fallback: direct unit price (no tier pricing)
         basePricePerUnit = saleMode === 'wholesale'

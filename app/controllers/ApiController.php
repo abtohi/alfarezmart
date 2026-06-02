@@ -3204,5 +3204,65 @@ class ApiController extends Controller
             $this->json(['error' => $e->getMessage()], 500);
         }
     }
+
+    // ===== ORDER ESTIMATES (Hitung Orderan) =====
+    public function getOrderEstimates()
+    {
+        require_once __DIR__ . '/../models/OrderEstimateModel.php';
+        $model = new OrderEstimateModel();
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+        $this->json(['success' => true, 'data' => $model->getAll($limit)]);
+    }
+
+    public function getOrderEstimateDetails(int $id)
+    {
+        require_once __DIR__ . '/../models/OrderEstimateModel.php';
+        $model = new OrderEstimateModel();
+        $estimate = $model->getDetails($id);
+        if (!$estimate) {
+            $this->json(['success' => false, 'error' => 'Draft tidak ditemukan'], 404);
+            return;
+        }
+        $this->json(['success' => true, 'data' => $estimate]);
+    }
+
+    public function saveOrderEstimate()
+    {
+        $this->validateCSRF();
+        try {
+            $data = json_decode(file_get_contents('php://input'), true);
+            if (!$data) throw new Exception('Invalid payload');
+            if (empty($data['title'])) throw new Exception('Judul draft wajib diisi');
+            if (empty($data['items']) || !is_array($data['items'])) throw new Exception('Item kosong');
+
+            require_once __DIR__ . '/../models/OrderEstimateModel.php';
+            $model = new OrderEstimateModel();
+
+            $id = null;
+            if (!empty($data['id'])) {
+                $id = (int)$data['id'];
+                $model->updateWithItems($id, $data, $data['items']);
+            } else {
+                $id = $model->createWithItems($data, $data['items']);
+            }
+
+            $this->json(['success' => true, 'id' => $id, 'message' => 'Draft berhasil disimpan']);
+        } catch (Exception $e) {
+            $this->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function deleteOrderEstimate(int $id)
+    {
+        $this->validateCSRF();
+        try {
+            require_once __DIR__ . '/../models/OrderEstimateModel.php';
+            $model = new OrderEstimateModel();
+            $model->delete($id);
+            $this->json(['success' => true, 'message' => 'Draft berhasil dihapus']);
+        } catch (Exception $e) {
+            $this->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
 }
 

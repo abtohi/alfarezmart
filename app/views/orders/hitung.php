@@ -10,14 +10,14 @@
 
     <!-- Header Card -->
     <div style="background:var(--gradient-card); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:20px; margin-bottom:16px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
             <div>
                 <h4 style="font-weight:700; font-size:var(--font-size-md); margin:0;">Hitung Orderan</h4>
                 <p style="font-size:var(--font-size-xs); color:var(--text-muted); margin:4px 0 0 0;">Susun daftar belanja ke supplier &amp; copy ke WhatsApp</p>
             </div>
-            <div style="width:40px; height:40px; background:var(--success-bg); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--success);">
-                <i class="bi bi-clipboard-check" style="font-size:1.2rem;"></i>
-            </div>
+            <button type="button" class="btn-outline-custom" onclick="openOrderDrafts()" style="padding:8px 14px; border-radius:var(--radius-md); font-size:var(--font-size-xs); background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                <i class="bi bi-journal-bookmark"></i> <span>Draft</span>
+            </button>
         </div>
 
         <!-- Summary -->
@@ -80,8 +80,11 @@
 
     <!-- Action Buttons -->
     <div style="position:fixed; bottom:70px; left:0; right:0; padding:12px; background:var(--bg-primary); border-top:1px solid var(--border-color); display:flex; gap:8px; max-width:480px; margin:0 auto; z-index:40;">
+        <button id="btnSaveOrder" type="button" class="btn-outline-custom" onclick="saveOrderDraft()" style="padding:12px; font-weight:700; border:1px solid var(--border-color); border-radius:var(--radius-md); cursor:pointer; background:var(--surface-2); color:var(--text-primary); flex:0.4;">
+            <i class="bi bi-save"></i> Simpan
+        </button>
         <button id="btnCopyOrder" type="button" class="btn-primary-custom" style="flex:1; padding:12px; font-weight:700; border:none; border-radius:var(--radius-md); cursor:pointer; background:linear-gradient(135deg,#25d366,#128c7e); color:white;">
-            <i class="bi bi-whatsapp"></i> Copy Pesan WhatsApp
+            <i class="bi bi-whatsapp"></i> Copy WA
         </button>
     </div>
 </div>
@@ -126,7 +129,9 @@
 (function() {
     'use strict';
 
-    const orderItems = []; // { product_id, packaging_id, name, short_label, unit_name, buy_price, qty, base_qty }
+    let orderItems = []; // { product_id, packaging_id, name, short_label, unit_name, buy_price, qty, base_qty }
+    let currentDraftId = null;
+    let draftTitle = '';
     let searchTimer = null;
     let lastResults = [];
 
@@ -397,6 +402,171 @@
             window.open(url, '_blank');
         }
     });
+
+    window.saveOrderDraft = function() {
+        if (orderItems.length === 0) {
+            if (typeof showToast === 'function') showToast('Daftar orderan kosong', 'warning');
+            return;
+        }
+
+        const defaultName = draftTitle || `Draft ${new Date().toLocaleTimeString('id-ID')}`;
+
+        AppModal.show({
+            title: 'Simpan Draft Order',
+            subtitle: `${orderItems.length} item`,
+            icon: 'bi-save',
+            bodyHTML: `
+                <div class="modal-form-group">
+                    <label>Judul / Nama Draft</label>
+                    <input type="text" class="form-control-dark" id="orderDraftNameInput" value="${escapeHtml(defaultName)}" 
+                           placeholder="Cth: Pesanan Grosir A..." autocomplete="off">
+                </div>
+            `,
+            submitText: 'Simpan',
+            onSubmit: async () => {
+                const name = document.getElementById('orderDraftNameInput')?.value?.trim() || defaultName;
+                const total = orderItems.reduce((acc, it) => acc + (parseFloat(it.buy_price) || 0) * (parseFloat(it.qty) || 0), 0);
+                const supplierId = elSupplier.value ? parseInt(elSupplier.value, 10) : null;
+                
+                const payload = {
+                    id: currentDraftId,
+                    title: name,
+                    supplier_id: supplierId,
+                    total_amount: total,
+                    items: orderItems
+                };
+                
+                try {
+                    const csrf = document.getElementById('csrfToken')?.value || '';
+                    const res = await fetch(`<?= BASE_URL ?>api/orders/estimates`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    if (!data.success) throw new Error(data.error || 'Gagal menyimpan');
+                    
+                    showToast(data.message, 'success');
+                    currentDraftId = data.id;
+                    draftTitle = name;
+                    return true;
+                } catch(e) {
+                    showToast(e.message, 'error');
+                    return false;
+                }
+            }
+        });
+    };
+
+    window.openOrderDrafts = async function() {
+        try {
+            const res = await fetch(`<?= BASE_URL ?>api/orders/estimates`);
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            const drafts = data.data || [];
+            
+            if (drafts.length === 0) {
+                showToast('Tidak ada draft tersimpan', 'info');
+                return;
+            }
+            
+            const listHtml = drafts.map(d => {
+                const total = parseFloat(d.total_amount) || 0;
+                return `
+                <div style="background:var(--surface-2);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;border:1px solid var(--border-color);">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-weight:700;font-size:var(--font-size-sm);color:var(--text-primary);margin-bottom:4px;">${escapeHtml(d.title)}</div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                                <span style="font-size:var(--font-size-xs);color:var(--text-muted);"><i class="bi bi-clock"></i> ${new Date(d.updated_at).toLocaleDateString('id-ID')}</span>
+                                ${d.supplier_name ? `<span style="font-size:10px;color:var(--info);"><i class="bi bi-building"></i> ${escapeHtml(d.supplier_name)}</span>` : ''}
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-weight:800;font-size:var(--font-size-base);color:var(--primary);">${fmtRp(total)}</div>
+                            <div style="font-size:10px;color:var(--text-muted);">${d.total_items || 0} item</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button type="button" onclick="loadOrderDraft(${d.id})" class="btn-primary-custom" style="flex:1;padding:10px;font-size:var(--font-size-xs);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600;border:none;cursor:pointer;">
+                            <i class="bi bi-box-arrow-in-right"></i> Muat Draft
+                        </button>
+                        <button type="button" onclick="deleteOrderDraft(${d.id})" style="padding:10px 14px;background:var(--danger-bg);color:var(--danger);border:none;border-radius:var(--radius-md);cursor:pointer;font-size:var(--font-size-xs);display:flex;align-items:center;gap:4px;">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            AppModal.show({
+                title: 'Draft Orderan',
+                subtitle: `${drafts.length} draft tersedia`,
+                icon: 'bi-journal-bookmark',
+                bodyHTML: `<div id="orderDraftListContainer" style="max-height:55vh;overflow-y:auto;">${listHtml}</div>`,
+                hideFooter: true,
+                cancelText: 'Tutup'
+            });
+        } catch(e) {
+            showToast('Gagal memuat daftar draft', 'error');
+        }
+    };
+
+    window.loadOrderDraft = async function(id) {
+        if (orderItems.length > 0 && !confirm('Daftar saat ini tidak kosong. Timpa dengan draft?')) return;
+        try {
+            const res = await fetch(`<?= BASE_URL ?>api/orders/estimates/${id}`);
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            const d = data.data;
+            
+            orderItems = d.items.map(it => ({
+                product_id: parseInt(it.product_id, 10) || 0,
+                packaging_id: parseInt(it.packaging_id, 10) || 0,
+                name: it.product_name,
+                short_label: it.product_name,
+                unit_name: it.unit_name,
+                buy_price: parseFloat(it.buy_price) || 0,
+                qty: parseFloat(it.quantity) || 0,
+                base_qty: 1 
+            }));
+            
+            currentDraftId = d.id;
+            draftTitle = d.title;
+            
+            elSupplier.value = d.supplier_id || '';
+            elSupplierName.value = d.supplier_name || '';
+            elSupplierInput.value = d.supplier_name || '';
+            
+            renderList();
+            AppModal.close();
+            showToast('Draft dimuat', 'success');
+        } catch(e) {
+            showToast(e.message, 'error');
+        }
+    };
+
+    window.deleteOrderDraft = async function(id) {
+        if (!confirm('Hapus draft ini?')) return;
+        try {
+            const csrf = document.getElementById('csrfToken')?.value || '';
+            const res = await fetch(`<?= BASE_URL ?>api/orders/estimates/${id}/delete`, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': csrf }
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error);
+            
+            if (currentDraftId == id) {
+                currentDraftId = null;
+                draftTitle = '';
+            }
+            AppModal.close();
+            setTimeout(window.openOrderDrafts, 300);
+            showToast('Draft dihapus', 'success');
+        } catch(e) {
+            showToast(e.message, 'error');
+        }
+    };
 
     recompute();
 })();

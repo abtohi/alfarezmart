@@ -897,7 +897,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Manage Debt Sources
     window.manageDebtSources = async function() {
-        AppModal.hide(); // Hide current modal
+        AppModal.close(); // Hide current modal
         
         let dsListHtml = '';
         debtSources.forEach(ds => {

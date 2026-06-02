@@ -431,6 +431,22 @@ window.executeExport = async function(mode) {
                 return;
             }
             const ws = XLSX.utils.json_to_sheet(res.data);
+            
+            // Lebar kolom menyesuaikan isi
+            const max_widths = {};
+            const keys = Object.keys(res.data[0]);
+            keys.forEach(key => max_widths[key] = key.length);
+            
+            res.data.forEach(row => {
+                keys.forEach(key => {
+                    const val = row[key];
+                    const len = (val !== null && val !== undefined) ? val.toString().length : 0;
+                    if (len > max_widths[key]) max_widths[key] = len;
+                });
+            });
+            
+            ws['!cols'] = keys.map(key => ({ wch: Math.min(max_widths[key] + 2, 80) }));
+            
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Data Produk");
             
