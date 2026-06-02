@@ -124,10 +124,6 @@
             <div class="action-icon" style="background: rgba(46, 196, 182, 0.1); color: var(--success);"><i class="bi bi-file-earmark-excel"></i></div>
             <span class="action-label">Export Data</span>
         </a>
-    </div>
-
-    <!-- Quick Actions Row 2 -->
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-bottom: 24px;">
         <a href="<?= BASE_URL ?>hitung-orderan" class="quick-action">
             <div class="action-icon" style="background: var(--success-bg); color: var(--success);"><i class="bi bi-clipboard-check"></i></div>
             <span class="action-label">Hitung Orderan</span>
