@@ -26,6 +26,9 @@
 **Yang dikerjakan:**
 1. **POS Auto-Pricing Tier (Greedy Chunking)** — Merevisi algoritma di `qty-pricing.js` agar mendukung chunking harga (analogi "uang pas"). Jika qty = 16 (1 slop = 10, tier = 5), maka dihitung otomatis: `1 slop + 1 tier + 1 satuan` tanpa mengubah level kemasan (`unit_name`) yang terlihat di UI. Fungsi `autoSwitchPackagingLevel` di `pos.php` dihapus agar satuan tidak melompat.
 2. **Dashboard Saldo Rokok (Finance)** — Mengembalikan filter `allowedPos = ['Saldo Utama', 'Saldo Rokok', 'Saldo Pulsa']` di `finance/index.php` sesuai permintaan agar POS lain (seperti Uang Laci, dll) tidak muncul di dashboard.
+3. **Logika Dependent POS (Finance)** — Memperbaiki pencatatan transaksi akun yang saling dependen (contoh: Uang Laci -> Saldo Utama) di `FinanceModel.php`.
+   - **Fix**: Jika Uang Laci mencatat *Pemasukan*, otomatis mencatat *Pemasukan* di Saldo Utama (1 record).
+   - **Fix**: Jika Uang Laci mencatat *Pengeluaran*, otomatis mencatat **Pemasukan** sekaligus **Pengeluaran** di Saldo Utama (2 record).
 3. **Catatan Hutang & Piutang (Debts SearchBox)** — Memperbaiki instansiasi komponen `SearchBox` di halaman Hutang (`debts/index.php`).
    - **Root Cause**: Komponen `SearchBox` dipanggil menggunakan `SearchBox.init()` yang tidak eksis.
    - **Fix**: Menggunakan instansiasi class `new SearchBox()` dengan syntax yang benar dan dibungkus `setTimeout` untuk memastikan DOM Modal sudah dirender sepenuhnya sebelum mengikat events UI.

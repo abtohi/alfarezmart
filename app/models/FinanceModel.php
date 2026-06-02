@@ -144,7 +144,22 @@ class FinanceModel extends Model
                         ':ref_id' => $data['reference_id'] ?? null
                     ]);
                 } else if ($data['category'] === 'Pengeluaran') {
-                    // Record expense to target account
+                    // Record BOTH Pemasukan and Pengeluaran to target account
+                    
+                    // 1. Pemasukan
+                    $stmtInsert->execute([
+                        ':log_date' => $data['log_date'],
+                        ':period' => $period,
+                        ':amount' => $data['amount'],
+                        ':balance_type' => $targetPos,
+                        ':category' => 'Pemasukan',
+                        ':detail' => $data['detail'] ?? null,
+                        ':description' => "Pemasukan sistem (untuk Pengeluaran dari {$sourcePos})",
+                        ':ref_type' => $data['reference_type'] ?? null,
+                        ':ref_id' => $data['reference_id'] ?? null
+                    ]);
+                    
+                    // 2. Pengeluaran
                     $stmtInsert->execute([
                         ':log_date' => $data['log_date'],
                         ':period' => $period,
