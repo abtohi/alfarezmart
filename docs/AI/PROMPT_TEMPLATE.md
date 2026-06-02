@@ -39,9 +39,8 @@ Klasifikasikan task ini sebelum mulai:
 
 - Pada halaman Catatan Hutang & Piutang, di bagian tab Hutang Toko, saat saya membuka modal dialog Tambah Hutang Toko, tombol Kelola Opsi masih belum bisa di klik, tolong ini diperbaiki.
 
-- Pada halaman Export Data, tolong hasil download filenya di desain yang lebih menarik, font nya juga dipilihkan yang mudah dibaca user, dan background nya juga tolong dibuat lebih menarik. Termasuk lebar kolom dibuat menyesuaikan dengan jumlah karakter di setiap kolom, cari proporsi yang pas agar tidak terlalu kecil atau terlalu besar. Ini berlaku untuk semua fitur export data, baik by Supplier maupun by Produk.
+- Pada halaman Export Data, saat ini hasil downloadnya sudah rapi kolomnya, namun belum ada formatting yang kamu buat sehingga tampilan datanya lebih menarik, berikut detail formatting tabel hasil downloadnya yang saya inginkan. Warna Background tabel header gunakan warna #963634, dan untuk font nya menggunakan Arial Narrow, untuk font nama kolomnya warna putih dan di bold, dengan font size 10pt, dan untuk isi tabelnya gunakan font Arial Narrow dengan font size 10pt tanpa bold, tolong rapikan juga lebar kolom agar lebih rapi, dan untuk nama kolom "Satuan atau jenis kemasan" diubah aja menjadi "Satuan" agar tidak terlalu panjang. Untuk format Harga beli tambahkan format Rp dengan delimiter titik (.), contoh format Rp 145.000. Begitupun dengan format harga-harga lainnya.
 
-- Pada halaman Hitung Orderan, tolong ketika user kembali ke menu yang lain, data yang sudah dimasukkan tidak hilang, ketika dibuka kembali masih tetap ada, dan tambahkan tombol Simpan, ketika sudah di simpan maka akan hilang dari list, tetapi bisa dibuka kembali dan bisa di edit dan dihapus, tolong diperbaiki. 
 
 - Jangan ada session timeout, ketika user sudah login, jangan tiba tiba logout sendiri, user harus logout manual. Tolong diperbaiki session timeout nya.
 

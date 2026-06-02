@@ -426,32 +426,90 @@ window.executeExport = async function(mode) {
         const res = await api(`${BASE_URL}api/products/export?${query}`);
         
         if (res.success && res.data && res.data.length > 0) {
-            if (typeof XLSX === 'undefined') {
-                showToast("Library XLSX belum termuat. Pastikan koneksi internet aktif untuk mendownload library.", "error");
+            if (typeof ExcelJS === 'undefined') {
+                showToast("Library ExcelJS belum termuat. Pastikan koneksi internet aktif.", "error");
                 return;
             }
-            const ws = XLSX.utils.json_to_sheet(res.data);
-            
-            // Lebar kolom menyesuaikan isi
-            const max_widths = {};
-            const keys = Object.keys(res.data[0]);
-            keys.forEach(key => max_widths[key] = key.length);
-            
-            res.data.forEach(row => {
-                keys.forEach(key => {
-                    const val = row[key];
-                    const len = (val !== null && val !== undefined) ? val.toString().length : 0;
-                    if (len > max_widths[key]) max_widths[key] = len;
+
+            // ─── Rename kolom "Satuan atau jenis kemasan" → "Satuan" ───
+            const renameMap = { 'Satuan atau jenis kemasan': 'Satuan' };
+            const priceKeys = ['Harga Beli Terakhir', 'Harga Beli (Satuan)', 'Harga Total'];
+
+            const rawData = res.data;
+            const originalKeys = Object.keys(rawData[0]);
+            const renamedKeys = originalKeys.map(k => renameMap[k] || k);
+
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Data Produk', {
+                views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }]
+            });
+
+            // Set Headers
+            worksheet.columns = renamedKeys.map((key, index) => {
+                const origKey = originalKeys[index];
+                
+                // Hitung lebar kolom dinamis
+                let maxLen = key.length;
+                rawData.forEach(row => {
+                    const val = row[origKey];
+                    const len = val !== null && val !== undefined ? String(val).length : 0;
+                    if (len > maxLen) maxLen = len;
+                });
+                
+                return {
+                    header: key,
+                    key: key,
+                    width: Math.min(Math.max(maxLen + 2, 8), 40)
+                };
+            });
+
+            // Style Header Row
+            const headerRow = worksheet.getRow(1);
+            headerRow.eachCell((cell) => {
+                cell.font = { name: 'Arial Narrow', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF963634' } };
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    bottom: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    left: { style: 'thin', color: { argb: 'FFFFFFFF' } },
+                    right: { style: 'thin', color: { argb: 'FFFFFFFF' } }
+                };
+            });
+
+            // Add Data
+            rawData.forEach(row => {
+                const newRow = {};
+                originalKeys.forEach((k, i) => { newRow[renamedKeys[i]] = row[k]; });
+                const addedRow = worksheet.addRow(newRow);
+                
+                // Style Data Row
+                addedRow.eachCell((cell, colNumber) => {
+                    const colKey = renamedKeys[colNumber - 1];
+                    const isPrice = priceKeys.includes(colKey);
+                    
+                    cell.font = { name: 'Arial Narrow', size: 10 };
+                    cell.alignment = { vertical: 'top' };
+                    
+                    if (isPrice && typeof cell.value === 'number') {
+                        cell.numFmt = '"Rp "#,##0';
+                        cell.alignment = { vertical: 'top', horizontal: 'right' };
+                    }
                 });
             });
-            
-            ws['!cols'] = keys.map(key => ({ wch: Math.min(max_widths[key] + 2, 80) }));
-            
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Data Produk");
+
+            // Trigger Download
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             
             const filename = `Export_Produk_${new Date().toISOString().slice(0,10)}.xlsx`;
-            XLSX.writeFile(wb, filename);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
             showToast("Berhasil didownload!", "success");
             AppModal.close();
         } else {

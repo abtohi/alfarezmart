@@ -803,7 +803,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
 
-        await AppModal.show({
+        AppModal.show({
             title: 'Tambah Hutang Toko',
             subtitle: 'Catat hutang toko ke pihak ketiga/supplier',
             icon: 'bi-shop-window',
@@ -862,37 +862,46 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Initialize SearchBox Component for Debt Sources
-        let optionsList = [];
-        suppliers.forEach(s => optionsList.push({ id: 'SUP_'+s.id, name: s.name, group: 'Supplier' }));
-        debtSources.forEach(ds => optionsList.push({ id: 'SRC_'+ds.id, name: ds.name, group: 'Sumber Hutang Lain' }));
-        optionsList.push({ id: 'NEW_MANUAL', name: '+ Input Manual', group: 'Lainnya' });
-        
-        SearchBox.init('shopDebtSourceSearch', optionsList, {
-            placeholder: 'Pilih Sumber Hutang...',
-            onChange: (selected) => {
-                const supEl = document.getElementById('newShopSupplierId');
-                const srcEl = document.getElementById('newShopDebtSourceId');
-                const fallbackGrp = document.getElementById('manualSupplierGroup');
-                const fallbackInput = document.getElementById('newShopSupplierFallback');
-                
-                supEl.value = '';
-                srcEl.value = '';
-                fallbackGrp.style.display = 'none';
-                fallbackInput.value = '';
-                
-                if (!selected) return;
-                
-                if (selected.id === 'NEW_MANUAL') {
-                    fallbackGrp.style.display = 'block';
-                    fallbackInput.focus();
-                } else if (selected.id.startsWith('SUP_')) {
-                    supEl.value = selected.id.replace('SUP_', '');
-                } else if (selected.id.startsWith('SRC_')) {
-                    srcEl.value = selected.id.replace('SRC_', '');
+        // Initialize SearchBox Component for Debt Sources (using correct new SearchBox() API)
+        setTimeout(() => {
+            const searchContainer = document.getElementById('shopDebtSourceSearch');
+            if (!searchContainer) return;
+            
+            const optionsList = [];
+            suppliers.forEach(s => optionsList.push({ value: 'SUP_' + s.id, label: s.name }));
+            debtSources.forEach(ds => optionsList.push({ value: 'SRC_' + ds.id, label: ds.name }));
+            optionsList.push({ value: 'NEW_MANUAL', label: '+ Input Manual' });
+            
+            new SearchBox(searchContainer, {
+                options: optionsList,
+                placeholder: 'Ketik / pilih sumber hutang...',
+                icon: 'bi-building',
+                clearable: true,
+                onSelect: (value, label) => {
+                    const supEl = document.getElementById('newShopSupplierId');
+                    const srcEl = document.getElementById('newShopDebtSourceId');
+                    const fallbackGrp = document.getElementById('manualSupplierGroup');
+                    const fallbackInput = document.getElementById('newShopSupplierFallback');
+                    
+                    if (!supEl || !srcEl) return;
+                    supEl.value = '';
+                    srcEl.value = '';
+                    fallbackGrp.style.display = 'none';
+                    fallbackInput.value = '';
+                    
+                    if (!value) return;
+                    
+                    if (value === 'NEW_MANUAL') {
+                        fallbackGrp.style.display = 'block';
+                        fallbackInput.focus();
+                    } else if (value.startsWith('SUP_')) {
+                        supEl.value = value.replace('SUP_', '');
+                    } else if (value.startsWith('SRC_')) {
+                        srcEl.value = value.replace('SRC_', '');
+                    }
                 }
-            }
-        });
+            });
+        }, 100);
     };
 
     // Manage Debt Sources

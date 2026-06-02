@@ -181,9 +181,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        const allowedPos = ['Saldo Utama', 'Saldo Rokok', 'Saldo Pulsa'];
-        let visibleAccounts = accountsData.filter(a => allowedPos.includes(a.name));
-        if (visibleAccounts.length === 0) visibleAccounts = accountsData; // Fallback jika tidak ada yang cocok
+        let visibleAccounts = accountsData;
 
         let html = '';
         visibleAccounts.forEach((acc, index) => {
@@ -333,7 +331,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Update Dynamic Pos Cards
         accountsData.forEach((acc, index) => {
-            const shortId = `pos_${index}`;
+            const shortId = `pos_${acc.id}`;
             const postData = breakdown[acc.name] || { income: 0, expense: 0, net: 0 };
             
             const netEl = document.getElementById(`net_${shortId}`);
