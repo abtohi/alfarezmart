@@ -138,6 +138,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     let activePostFilter = '';
     let currentLogs = [];
     let accountsData = [];
+    let currentBreakdown = {};
     let categoriesData = [];
     let selectedLogs = new Set();
 
@@ -271,6 +272,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             // 1. Fetch Summary
             const summaryRes = await api(`${BASE_URL}api/finance/summary?date=${date}`);
             if (summaryRes.success) {
+                currentBreakdown = summaryRes.breakdown;
                 updateSummaryUI(summaryRes.summary, summaryRes.breakdown);
             }
 
@@ -499,6 +501,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         updateBulkActionBar();
     };
 
+    window.updateBalanceInfo = function(val, containerId) {
+        const infoEl = document.getElementById(containerId);
+        if (!infoEl) return;
+        const allowed = ['Saldo Utama', 'Saldo Rokok', 'Saldo Pulsa'];
+        if (allowed.includes(val) && currentBreakdown[val]) {
+            infoEl.innerText = `Total Saldo Saat Ini: ${formatRupiah(currentBreakdown[val].net)}`;
+            infoEl.style.display = 'block';
+        } else {
+            infoEl.style.display = 'none';
+        }
+    };
+
     window.clearSelection = function() {
         selectedLogs.clear();
         renderTransactions();
@@ -701,6 +715,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             <div class="modal-form-group">
                 <label style="margin-bottom: 4px; display: block;">Pos Keuangan *</label>
                 <div id="logBalanceTypeContainer"></div>
+                <div id="logBalanceInfo" style="font-size: 11px; color: var(--info); margin-top: 6px; font-weight: 600; display: none;"></div>
             </div>
 
             <div class="modal-form-group">
@@ -829,7 +844,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             name: 'logBalanceType',
             onAdd: () => { AppModal.close(); setTimeout(() => manageAccounts(), 300); },
             addLabel: 'Kelola POS Keuangan',
-            icon: 'bi-wallet2'
+            icon: 'bi-wallet2',
+            onChange: (val) => { updateBalanceInfo(val, 'logBalanceInfo'); }
         });
 
         await modalPromise;
@@ -850,6 +866,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             <div class="modal-form-group">
                 <label style="margin-bottom: 4px; display: block;">Pos Keuangan *</label>
                 <div id="editLogBalanceTypeContainer"></div>
+                <div id="editLogBalanceInfo" style="font-size: 11px; color: var(--info); margin-top: 6px; font-weight: 600; display: none;"></div>
             </div>
 
             <div class="modal-form-group">
@@ -977,12 +994,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         new SearchBox(document.getElementById('editLogBalanceTypeContainer'), {
             options: accountsData.map(acc => ({value: acc.name, label: acc.name})),
             placeholder: '-- Pilih Pos Keuangan --',
-            value: log.balance_type,
             name: 'editLogBalanceType',
+            value: log.balance_type,
             onAdd: () => { AppModal.close(); setTimeout(() => manageAccounts(), 300); },
             addLabel: 'Kelola POS Keuangan',
-            icon: 'bi-wallet2'
+            icon: 'bi-wallet2',
+            onChange: (val) => { updateBalanceInfo(val, 'editLogBalanceInfo'); }
         });
+        updateBalanceInfo(log.balance_type, 'editLogBalanceInfo');
 
         await modalPromise;
     };
