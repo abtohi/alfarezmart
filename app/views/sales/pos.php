@@ -380,7 +380,31 @@ async function performSearch(q) {
         sug.innerHTML = items.map(p => {
             const name = escapeHtml(p.short_label || p.full_name);
             const brand = escapeHtml(p.brand_name || '');
-            return `<div data-id="${p.id}" style="padding:10px;background:var(--surface-2);margin:4px 0;cursor:pointer;border-left:3px solid var(--primary);border-radius:var(--radius-sm);" onclick="selectProduct(${p.id})">${name}${brand ? ` (${brand})` : ''}</div>`;
+            
+            let priceText = '';
+            if (p.packagings && p.packagings.length > 0) {
+                const defPkg = p.packagings.find(pkg => pkg.level == 1) || p.packagings[0];
+                const price = saleMode === 'wholesale' 
+                    ? (parseFloat(defPkg.sell_price_wholesale) || parseFloat(defPkg.sell_price_retail) || 0)
+                    : (parseFloat(defPkg.sell_price_retail) || 0);
+                if (price > 0) {
+                    priceText = `<div style="font-weight:700; color:var(--primary); font-size:0.85rem; margin-top:2px;">${formatRupiah(price)} <span style="font-size:0.7rem; color:var(--text-muted); font-weight:normal;">/ ${escapeHtml(defPkg.unit_name)}</span></div>`;
+                }
+            }
+
+            return `
+            <div data-id="${p.id}" style="padding:10px 12px; background:var(--surface-1); margin-bottom:6px; cursor:pointer; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; align-items:center; gap:12px; transition:all 0.2s; box-shadow:var(--shadow-sm);" onclick="selectProduct(${p.id})" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
+                <div style="width:36px; height:36px; background:var(--primary-bg); border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; color:var(--primary);">
+                    <i class="bi bi-box-seam" style="font-size:1.1rem;"></i>
+                </div>
+                <div style="flex:1; min-width:0;">
+                    <div style="font-weight:600; font-size:0.9rem; color:var(--text-primary); line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</div>
+                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${brand ? brand : 'Tanpa Merek'}</div>
+                </div>
+                <div style="text-align:right;">
+                    ${priceText}
+                </div>
+            </div>`;
         }).join('');
     } catch (e) {
         console.error('POS search error:', e);
