@@ -501,12 +501,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         updateBulkActionBar();
     };
 
-    window.updateBalanceInfo = function(val, containerId) {
+    window.updateBalanceInfo = function(val, containerId, category, amount) {
         const infoEl = document.getElementById(containerId);
         if (!infoEl) return;
         const allowed = ['Saldo Utama', 'Saldo Rokok', 'Saldo Pulsa'];
         if (allowed.includes(val) && currentBreakdown[val]) {
-            infoEl.innerText = `Total Saldo Saat Ini: ${formatRupiah(currentBreakdown[val].net)}`;
+            const currentNet = currentBreakdown[val].net;
+            let html = `<span style="display:block;"><i class="bi bi-wallet2" style="margin-right:4px;"></i>Saldo Saat Ini: <strong>${formatRupiah(currentNet)}</strong></span>`;
+            const amt = parseFloat(amount);
+            if (!isNaN(amt) && amt > 0 && category) {
+                const updated = category === 'Pemasukan' ? currentNet + amt : currentNet - amt;
+                const color = updated >= 0 ? 'var(--success)' : 'var(--primary)';
+                const icon = category === 'Pemasukan' ? 'bi-arrow-up-circle-fill' : 'bi-arrow-down-circle-fill';
+                html += `<span style="display:block; margin-top:4px; color:${color};"><i class="bi ${icon}" style="margin-right:4px;"></i>Saldo Setelah Transaksi: <strong>${formatRupiah(updated)}</strong></span>`;
+            }
+            infoEl.innerHTML = html;
             infoEl.style.display = 'block';
         } else {
             infoEl.style.display = 'none';
@@ -833,6 +842,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             name: 'logCategory',
             onChange: (val) => {
                 updateCategoryOptions(val);
+                const pos = document.querySelector('input[name="logBalanceType"]')?.value;
+                const amt = document.getElementById('logAmount')?.value;
+                if (pos) updateBalanceInfo(pos, 'logBalanceInfo', val, amt);
             }
         });
 
@@ -845,7 +857,18 @@ document.addEventListener('DOMContentLoaded', async function() {
             onAdd: () => { AppModal.close(); setTimeout(() => manageAccounts(), 300); },
             addLabel: 'Kelola POS Keuangan',
             icon: 'bi-wallet2',
-            onChange: (val) => { updateBalanceInfo(val, 'logBalanceInfo'); }
+            onChange: (val) => {
+                const cat = document.querySelector('input[name="logCategory"]')?.value;
+                const amt = document.getElementById('logAmount')?.value;
+                updateBalanceInfo(val, 'logBalanceInfo', cat, amt);
+            }
+        });
+
+        // Realtime update on amount change
+        document.getElementById('logAmount')?.addEventListener('input', function() {
+            const pos = document.querySelector('input[name="logBalanceType"]')?.value;
+            const cat = document.querySelector('input[name="logCategory"]')?.value;
+            if (pos) updateBalanceInfo(pos, 'logBalanceInfo', cat, this.value);
         });
 
         await modalPromise;
@@ -986,6 +1009,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             name: 'editLogCategory',
             onChange: (val) => {
                 updateEditCategoryOptions(val);
+                const pos = document.querySelector('input[name="editLogBalanceType"]')?.value;
+                const amt = document.getElementById('editLogAmount')?.value;
+                if (pos) updateBalanceInfo(pos, 'editLogBalanceInfo', val, amt);
             }
         });
 
@@ -999,9 +1025,20 @@ document.addEventListener('DOMContentLoaded', async function() {
             onAdd: () => { AppModal.close(); setTimeout(() => manageAccounts(), 300); },
             addLabel: 'Kelola POS Keuangan',
             icon: 'bi-wallet2',
-            onChange: (val) => { updateBalanceInfo(val, 'editLogBalanceInfo'); }
+            onChange: (val) => {
+                const cat = document.querySelector('input[name="editLogCategory"]')?.value;
+                const amt = document.getElementById('editLogAmount')?.value;
+                updateBalanceInfo(val, 'editLogBalanceInfo', cat, amt);
+            }
         });
-        updateBalanceInfo(log.balance_type, 'editLogBalanceInfo');
+        updateBalanceInfo(log.balance_type, 'editLogBalanceInfo', log.category, log.amount);
+
+        // Realtime update on amount change
+        document.getElementById('editLogAmount')?.addEventListener('input', function() {
+            const pos = document.querySelector('input[name="editLogBalanceType"]')?.value;
+            const cat = document.querySelector('input[name="editLogCategory"]')?.value;
+            if (pos) updateBalanceInfo(pos, 'editLogBalanceInfo', cat, this.value);
+        });
 
         await modalPromise;
     };
