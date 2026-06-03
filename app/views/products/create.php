@@ -578,7 +578,8 @@ function addQtyTierRow(listEl, data = {}) {
         </div>
         <div><label style="font-size:9px;color:var(--text-muted);">Mode</label>
             <select class="form-control-dark tier-sale-mode" style="width:100%;padding:6px;font-size:11px;">${modeOpts}</select></div>
-        <button type="button" title="Hapus tier" style="border:none;background:var(--danger-bg);color:var(--danger);padding:8px;border-radius:6px;cursor:pointer;margin-bottom:2px;" onclick="this.closest('.qty-tier-row').remove()"><i class="bi bi-trash"></i></button>
+        <div><label style="font-size:9px;visibility:hidden;">X</label>
+            <button type="button" title="Hapus tier" style="border:none;background:var(--danger-bg);color:var(--danger);padding:8px;border-radius:6px;cursor:pointer;margin-bottom:2px;display:block;width:100%;" onclick="this.closest('.qty-tier-row').remove()"><i class="bi bi-trash"></i></button></div>
         <div style="grid-column:1/-1;"><label style="font-size:9px;color:var(--text-muted);">Label (opsional)</label>
             <input type="text" class="form-control-dark tier-label" value="${data && data.label ? data.label : ''}" placeholder="Cth: 3 renceng = Rp 10.000" style="width:100%;padding:6px;font-size:11px;"></div>
     `;
