@@ -219,3 +219,6 @@ $router->post('/api/finance/categories/{id}/delete', 'ApiController@deleteFinanc
 
 // Database Setup (only in development)
 $router->get('/setup', 'SettingController@setupDatabase');
+
+// Offline Sync
+$router->get('/api/sync/all', 'ApiController@syncAllData');

@@ -33,8 +33,21 @@ Klasifikasikan task ini sebelum mulai:
 
 ## Task
 
-- Tambahkan di halaman utama icon bulan dan matahari untuk mengubah mode tema aplikasi, dark dan light. Tema yang saat ini digunakan adalah dark, dan tolong buatkan tema versi light, dan untuk warna light warna containernya putih, kemudian untuk headernya warna merah, dan ada kombinasi dengan warna biru agar seragam dengan warna pada logo mobile_icon.png, pastikan logo aplikasi tidak tertutup warna, pastikan tetap terlihat dan kontras dengan warna background. Gunakan kombinasi warna seperti warna logo mobile_icon.png, biru, putih, merah, namun kamu boleh menambahkan juga warna hitam, dan kuning barangkali ada font yang bisa menggunakan warna itu. Untuk warna font defaultnya hitam.
+- Pada halaman Beranda di bagian AKSI CEPAT tambahkan icon untuk mendownload aplikasi offline mode, sehingga ketika user mengklik download, maka aplikasi bisa sepenuhnya berjalan secara offline, database akan didownload semua secara offline dan apabila aplikasi online, maka data akan disinkronkan otomatis, baik sinkron dari offline ke online maupun dari online ke offline, dan semua proses sinkronasi akan terjadi di background tanpa mengganggu user, dan data yang belum sinkron akan muncul count badge nya di icon sync. Jika sudah sinkron semuanya, antara di server dan di local sudah sama, baik database, UI, layout, konten, dan lainnya, maka badge sync akan hilang atau menjadi nol, dan ketika user offline, semua fitur tetap berjalan normal, termasuk fitur update harga, upload foto, jika dalam mode offline, maka aplikasi tetap bisa melakukan update dan upload, hanya saja sementara akan tersimpan di local, setelah aplikasi online baru akan sinkron otomatis ke server.
 
+- Pada halaman login tambahkan juga fitur offline mode, jika user offline maka akan otomatis masuk ke mode offline dan bisa login dengan user dan password yang sama seperti online, namun untuk loginnya tidak perlu melakukan request ke server, melainkan langsung login dengan data yang sudah tersimpan di local, dan ketika aplikasi online baru akan sinkron otomatis ke server.
+
+- Pada halaman Keuangan Harian, saat user memilih Jenis Transaksi Pengeluaran, tolong pada bagian Kategori Transaksi dibuat Default terpilih "Belanja Toko", tetapi user tetap bisa menggantinya.
+
+- pada halaman Keuangan Harian, opsi Kategori Transaksi tolong dibuat dependen terhadap Jenis Transaksi. Jika Pemasukan, maka opsi yang ditampilkan hanya yang Pemasukan, dan jika Pengeluaran, maka opsi yang ditampilkan hanya yang Pengeluaran, jangan ditampilkan semuanya.
+
+- Pada halaman Input Barang Masuk, tampilan form Tanggal kalau di aplikasi Android sudah rapi dan presisi, namun di iphone kenapa masih berantakan ya, form tanggal masih terlalu tinggi ukuran formnya dan bertabrakan dengan icon Kamera, tolong ini diperbaiki.
+
+- Pada halaman Input Barang Masuk, title "Input Barang Masuk" pada bagian atas sebetulnya tidak perlu ditampilkan lagi, karena sudah ada judul halaman di header aplikasi, jadi tolong dihapus saja title tersebut agar tampilan lebih rapi dan ringkas.
+
+- Pada halaman Keuangan Harian, di bagian DAFTAR TRANSAKSI, saat user menyeleksi lebih dari satu transaksi, kemudian mencoba menghapus item yang terseleksi saat ini masih gagal, tolong diperbaiki agar bisa menghapus item yang terseleksi. Saat ini hanya berhasil menghapus 1 item saja tanpa proses seleksi. Saat di select, kemudian klik tombol Hapus Terpilih, muncul error Server mengembalikan respons kosong. Kemungkinan timeout atau error internal, tolong perbaiki.Dan tolong ketika di klik tombol Hapus Terpilih, kemudian muncul dialog konfirmasi hapus, dialog konfirmasinya di desain agar lebih menarik menyesuaikan tema website, saat ini desainnya polos tidak ada seni nya, tolong dibuat lebih elegan dan modern sesuai tema websitenya.
+
+- Pada halaman Keuangan Harian, saat ini ketika user mengklik icon Edit, kemudian mengubah Transaksi Keuangan, ketika diperbaharui Catatan, muncul error pos keuangan tidak valid. Tolong perbaiki ini agar transaksi bisa di edit dan berhasil diperbaharui.
 
 ## Konteks Tambahan (opsional)
 

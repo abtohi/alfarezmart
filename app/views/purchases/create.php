@@ -3,8 +3,7 @@
 <div class="page-section">
     <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;">
         <div>
-            <h2 style="font-size:var(--font-size-lg); font-weight:700; margin-bottom:4px;">Input Barang Masuk</h2>
-            <p style="font-size:var(--font-size-sm); color:var(--text-muted);">Pilih sales, supplier terisi otomatis, lalu scan/cari produk</p>
+            <p style="font-size:var(--font-size-sm); color:var(--text-muted); margin-top:4px;">Pilih sales, supplier terisi otomatis, lalu scan/cari produk</p>
         </div>
         <a href="<?= BASE_URL ?>purchases" class="btn-outline-custom" style="font-size:var(--font-size-xs); padding:6px 10px; text-decoration:none;">
             <i class="bi bi-clock-history"></i> Riwayat
@@ -29,25 +28,25 @@
             <div id="supplierDisplay" style="padding:10px 12px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); font-size:var(--font-size-sm); font-weight:600; color:var(--text-primary);">—</div>
         </div>
 
-        <div style="display:flex; gap:8px;">
-            <div style="flex:1; display:flex; flex-direction:column;">
+        <div style="display:flex; gap:12px; flex-direction:column;">
+            <div>
                 <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Tanggal *</label>
-                <input type="date" id="purchaseDate" value="<?= date('Y-m-d') ?>" class="form-control-dark" style="width:100%; height:44px;">
+                <input type="date" id="purchaseDate" value="<?= date('Y-m-d') ?>" class="form-control-dark" style="width:100%; height:44px; appearance:none; -webkit-appearance:none;">
             </div>
-            <div style="flex:1; display:flex; flex-direction:column; justify-content:flex-end;">
+            <div>
                 <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Foto Invoice</label>
                 <input type="file" id="invoicePhotoCam" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event, true)">
                 <input type="file" id="invoicePhotoGal" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event, false)">
-                <div style="display:flex; gap:4px;">
-                    <button type="button" class="btn-outline-custom" id="btnPhotoCam" style="flex:1; padding:12px 4px; font-size:11px; height:44px;" onclick="document.getElementById('invoicePhotoCam').click()">
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn-outline-custom" id="btnPhotoCam" style="flex:1; padding:10px 4px; font-size:12px; height:44px;" onclick="document.getElementById('invoicePhotoCam').click()">
                         <i class="bi bi-camera"></i> Kamera
                     </button>
-                    <button type="button" class="btn-outline-custom" id="btnPhotoGal" style="flex:1; padding:12px 4px; font-size:11px; height:44px;" onclick="document.getElementById('invoicePhotoGal').click()">
+                    <button type="button" class="btn-outline-custom" id="btnPhotoGal" style="flex:1; padding:10px 4px; font-size:12px; height:44px;" onclick="document.getElementById('invoicePhotoGal').click()">
                         <i class="bi bi-image"></i> Galeri
                     </button>
                 </div>
-                <div style="display:flex; gap:4px; margin-top:4px;">
-                    <button type="button" class="btn-primary-custom" id="btnScanAI" style="flex:1; padding:12px 4px; font-size:11px; display:none; height:44px;" onclick="scanInvoiceWithAI()">
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <button type="button" class="btn-primary-custom" id="btnScanAI" style="flex:1; padding:10px 4px; font-size:12px; display:none; height:44px;" onclick="scanInvoiceWithAI()">
                         <i class="bi bi-robot"></i> Scan dengan AI (Otomatis)
                     </button>
                 </div>

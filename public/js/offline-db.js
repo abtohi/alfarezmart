@@ -4,13 +4,14 @@
 
 window.OfflineDB = (function() {
     const DB_NAME = 'alfarezmart_offline';
-    const DB_VERSION = 3; // Upgraded for full offline support
+    const DB_VERSION = 4; // Upgraded for full offline support + categories
     const STORE_PRODUCTS = 'products';
     const STORE_SALES = 'sales';
     const STORE_SUPPLIERS = 'suppliers';
     const STORE_PURCHASES = 'purchases';
     const STORE_DEBTS = 'debts';
     const STORE_FINANCE = 'finance';
+    const STORE_CATEGORIES = 'categories';
     const STORE_PENDING = 'pending_changes';
     const STORE_AUTH = 'auth_cache';
 
@@ -42,7 +43,7 @@ window.OfflineDB = (function() {
                 }
 
                 // New stores for full offline mode
-                [STORE_SALES, STORE_SUPPLIERS, STORE_PURCHASES, STORE_DEBTS, STORE_FINANCE].forEach(storeName => {
+                [STORE_SALES, STORE_SUPPLIERS, STORE_PURCHASES, STORE_DEBTS, STORE_FINANCE, STORE_CATEGORIES].forEach(storeName => {
                     if (!db.objectStoreNames.contains(storeName)) {
                         db.createObjectStore(storeName, { keyPath: 'id' });
                     }
@@ -79,12 +80,36 @@ window.OfflineDB = (function() {
         try {
             const data = await api(`${BASE_URL}api/sync/all?_t=` + Date.now());
             if (data) {
-                if (data.products) await _saveAll(STORE_PRODUCTS, data.products);
-                if (data.sales) await _saveAll(STORE_SALES, data.sales);
-                if (data.suppliers) await _saveAll(STORE_SUPPLIERS, data.suppliers);
-                if (data.purchases) await _saveAll(STORE_PURCHASES, data.purchases);
-                if (data.debts) await _saveAll(STORE_DEBTS, data.debts);
-                if (data.finance) await _saveAll(STORE_FINANCE, data.finance);
+                // Products
+                if (data.products && Array.isArray(data.products)) {
+                    await _saveAll(STORE_PRODUCTS, data.products);
+                }
+                // Suppliers
+                if (data.suppliers && Array.isArray(data.suppliers)) {
+                    await _saveAll(STORE_SUPPLIERS, data.suppliers);
+                }
+                // Categories
+                if (data.categories && Array.isArray(data.categories)) {
+                    await _saveAll(STORE_CATEGORIES, data.categories);
+                }
+                // Finance: server returns {accounts: [], categories: []}
+                // Store as flat array with type prefix for the finance store
+                if (data.finance) {
+                    const financeItems = [];
+                    if (Array.isArray(data.finance.accounts)) {
+                        data.finance.accounts.forEach(a => financeItems.push({ ...a, _type: 'account', id: 'acc_' + a.id }));
+                    }
+                    if (Array.isArray(data.finance.categories)) {
+                        data.finance.categories.forEach(c => financeItems.push({ ...c, _type: 'finance_cat', id: 'fcat_' + c.id }));
+                    }
+                    if (financeItems.length > 0) {
+                        await _saveAll(STORE_FINANCE, financeItems);
+                    }
+                }
+                // Legacy data (sales, purchases, debts) — may not be in response, ignore
+                if (data.sales && Array.isArray(data.sales)) await _saveAll(STORE_SALES, data.sales);
+                if (data.purchases && Array.isArray(data.purchases)) await _saveAll(STORE_PURCHASES, data.purchases);
+                if (data.debts && Array.isArray(data.debts)) await _saveAll(STORE_DEBTS, data.debts);
                 return true;
             }
             return false;
@@ -279,15 +304,54 @@ window.OfflineDB = (function() {
             const store = transaction.objectStore(STORE_AUTH);
             const request = store.get(key);
 
-            request.onsuccess = () => resolve(request.result ? request.result.data : null);
+        request.onsuccess = () => resolve(request.result ? request.result.data : null);
             request.onerror = (e) => reject(e.target.error);
         });
+    }
+
+    /**
+     * Save data from a pre-fetched /api/sync/all payload.
+     * onStep(stepKey) is called before saving each entity group.
+     * Allows dashboard to show per-step progress without double-fetching.
+     */
+    async function saveFromPayload(data, onStep) {
+        if (!db) await init();
+
+        const call = (key) => { if (typeof onStep === 'function') onStep(key); };
+
+        if (data.products && Array.isArray(data.products)) {
+            call('products');
+            await _saveAll(STORE_PRODUCTS, data.products);
+        }
+        if (data.suppliers && Array.isArray(data.suppliers)) {
+            call('suppliers');
+            await _saveAll(STORE_SUPPLIERS, data.suppliers);
+        }
+        if (data.categories && Array.isArray(data.categories)) {
+            call('categories');
+            await _saveAll(STORE_CATEGORIES, data.categories);
+        }
+        if (data.finance) {
+            call('finance');
+            const financeItems = [];
+            if (Array.isArray(data.finance.accounts)) {
+                data.finance.accounts.forEach(a => financeItems.push({ ...a, _type: 'account', id: 'acc_' + a.id }));
+            }
+            if (Array.isArray(data.finance.categories)) {
+                data.finance.categories.forEach(c => financeItems.push({ ...c, _type: 'finance_cat', id: 'fcat_' + c.id }));
+            }
+            if (financeItems.length > 0) {
+                await _saveAll(STORE_FINANCE, financeItems);
+            }
+        }
+        return true;
     }
 
     return {
         init,
         syncProductsFromServer,
         syncAllDataFromServer,
+        saveFromPayload,
         getAllProducts,
         getAllSales,
         getAllSuppliers,

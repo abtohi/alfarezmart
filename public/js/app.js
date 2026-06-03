@@ -58,6 +58,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         if (typeof OfflineDB !== 'undefined') {
             await OfflineDB.init();
+
+            // Update badge immediately
+            await updateSyncBadge();
             
             // Background sync if online
             if (navigator.onLine) {
@@ -67,13 +70,59 @@ document.addEventListener('DOMContentLoaded', async () => {
                     } else if (typeof OfflineDB.syncProductsFromServer === 'function') {
                         OfflineDB.syncProductsFromServer().catch(e => console.error('Background sync failed:', e));
                     }
-                }, 5000);
+                    // Also flush pending outbox
+                    syncPendingChanges().catch(e => console.error('Pending sync failed:', e));
+                }, 4000);
             }
         }
     } catch (e) {
         console.error('Offline DB init failed:', e);
     }
+
+    // Manage offline banner visibility
+    _updateOfflineBanner();
+
+    // Register online/offline listeners
+    window.addEventListener('online', async () => {
+        _updateOfflineBanner();
+        showToast('Koneksi kembali! Menyinkronkan data...', 'success', 3000);
+        try {
+            if (typeof OfflineDB !== 'undefined') {
+                await syncPendingChanges();
+                await updateSyncBadge();
+            }
+        } catch(e) { console.error('Auto sync on reconnect failed:', e); }
+    });
+
+    window.addEventListener('offline', () => {
+        _updateOfflineBanner();
+        showToast('Koneksi terputus. Aplikasi beralih ke mode offline.', 'warning', 4000);
+    });
 });
+
+function _updateOfflineBanner() {
+    // Inject spin keyframes if not present
+    if (!document.getElementById('spinKeyframes')) {
+        const style = document.createElement('style');
+        style.id = 'spinKeyframes';
+        style.innerHTML = `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`;
+        document.head.appendChild(style);
+    }
+
+    const banner = document.getElementById('offlineBanner');
+    if (!banner) return;
+    if (!navigator.onLine) {
+        banner.style.display = 'block';
+        // Push content down so banner doesn't cover header
+        const header = document.getElementById('appHeader');
+        if (header) header.style.top = banner.offsetHeight + 'px';
+    } else {
+        banner.style.display = 'none';
+        const header = document.getElementById('appHeader');
+        if (header) header.style.top = '';
+    }
+}
+
 
 async function triggerSync() {
     const btn = document.getElementById('btnSync');
@@ -397,48 +446,6 @@ async function syncPendingChanges() {
         console.error("Sync process failed", e);
     }
 }
-
-// Listen for connection changes
-window.addEventListener('online', function() {
-    document.getElementById('offlineBanner').style.display = 'none';
-    if (localStorage.getItem('alfarezmart_sync_mode') !== 'manual') {
-        showToast('Koneksi internet kembali. Menyinkronkan data...', 'success');
-        syncPendingChanges();
-    } else {
-        showToast('Koneksi internet kembali. Sinkronisasi manual aktif.', 'info');
-    }
-});
-
-window.addEventListener('offline', function() {
-    document.getElementById('offlineBanner').style.display = 'block';
-    showToast('Koneksi terputus. Beralih ke mode offline.', 'warning');
-});
-
-// Initial badge check
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject spin keyframes if not exists
-    if (!document.getElementById('spinKeyframes')) {
-        const style = document.createElement('style');
-        style.id = 'spinKeyframes';
-        style.innerHTML = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
-        document.head.appendChild(style);
-    }
-
-    if (!navigator.onLine) {
-        const banner = document.getElementById('offlineBanner');
-        if (banner) banner.style.display = 'block';
-    }
-
-    if (window.OfflineDB) {
-        window.OfflineDB.init().then(() => {
-            updateSyncBadge();
-            // Sync on load if online
-            if (navigator.onLine && localStorage.getItem('alfarezmart_sync_mode') !== 'manual') {
-                syncPendingChanges();
-            }
-        }).catch(e => console.error("DB Init failed on load", e));
-    }
-});
 
 // ==========================================
 // SYNC SETTINGS MODAL & LONG PRESS LOGIC

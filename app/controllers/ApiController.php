@@ -2540,8 +2540,12 @@ class ApiController extends Controller
             if ($amount <= 0) {
                 throw new Exception("Nominal harus lebih besar dari 0");
             }
-            if (empty($balanceType) || !in_array($balanceType, ['Uang Laci', 'Uang Pulsa', 'Uang Beras', 'Uang Rokok'])) {
-                throw new Exception("Pos keuangan tidak valid");
+            // Validasi balance_type dari DB (bukan whitelist hardcoded)
+            $db = Database::getInstance()->getConnection();
+            $chk = $db->prepare("SELECT id FROM finance_accounts WHERE name = :name AND is_active = 1");
+            $chk->execute([':name' => $balanceType]);
+            if (!$chk->fetch()) {
+                throw new Exception("Pos keuangan tidak valid atau tidak aktif");
             }
             if (empty($category) || !in_array($category, ['Pemasukan', 'Pengeluaran'])) {
                 throw new Exception("Kategori tidak valid");
@@ -2594,7 +2598,8 @@ class ApiController extends Controller
         $this->requireSuperadmin();
         $this->validateCSRF();
         try {
-            $ids = $this->input('ids');
+            $jsonBody = json_decode(file_get_contents('php://input'), true);
+            $ids = $jsonBody['ids'] ?? [];
             if (empty($ids) || !is_array($ids)) {
                 throw new Exception("Tidak ada data yang dipilih");
             }
@@ -3264,6 +3269,52 @@ class ApiController extends Controller
             $this->json(['success' => true, 'message' => 'Draft berhasil dihapus']);
         } catch (Exception $e) {
             $this->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    // ===== OFFLINE SYNC =====
+    public function syncAllData()
+    {
+        try {
+            // Load required models
+            require_once __DIR__ . '/../models/ProductModel.php';
+            require_once __DIR__ . '/../models/SupplierModel.php';
+            require_once __DIR__ . '/../models/CategoryModel.php';
+            require_once __DIR__ . '/../models/FinanceModel.php';
+
+            $prodModel = new ProductModel();
+            $supModel = new SupplierModel();
+            $catModel = new CategoryModel();
+            $finModel = new FinanceModel();
+
+            // 1. Fetch Products
+            $products = $prodModel->allWithDetails();
+            $prodModel->attachPackagingsForProductList($products);
+
+            // 2. Fetch Suppliers
+            $suppliers = $supModel->getAllWithType();
+
+            // 3. Fetch Categories
+            $categories = $catModel->all();
+
+            // 4. Fetch Finance Accounts & Categories
+            $financeAccounts = $finModel->getActiveAccounts();
+            $financeCategories = $finModel->getActiveCategories();
+
+            // Construct response
+            $data = [
+                'products' => $products,
+                'suppliers' => $suppliers,
+                'categories' => $categories,
+                'finance' => [
+                    'accounts' => $financeAccounts,
+                    'categories' => $financeCategories
+                ]
+            ];
+
+            $this->json($data);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
         }
     }
 }

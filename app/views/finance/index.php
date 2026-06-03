@@ -517,7 +517,13 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     window.bulkDeleteSelected = async function() {
         if (selectedLogs.size === 0) return;
-        if (!confirm(`Yakin ingin menghapus ${selectedLogs.size} transaksi terpilih?`)) return;
+        
+        const confirmed = await AppModal.confirm(
+            'Konfirmasi Hapus',
+            `Yakin ingin menghapus ${selectedLogs.size} transaksi terpilih?`,
+            'Ya, Hapus'
+        );
+        if (!confirmed) return;
 
         try {
             const idsArray = Array.from(selectedLogs);
@@ -659,7 +665,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     };
 
     window.deleteAccount = async function(id) {
-        if(!confirm("Yakin ingin menghapus POS ini?")) return;
+        const confirmed = await AppModal.confirm(
+            'Hapus POS Keuangan',
+            'Yakin ingin menghapus pos keuangan ini?',
+            'Ya, Hapus'
+        );
+        if(!confirmed) return;
+        
         try {
             const res = await api(`${BASE_URL}api/finance/accounts/${id}/delete`, 'POST', { csrf_token: csrfVal });
             if(res.success) {
@@ -775,13 +787,21 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         });
 
-        const catOptions = categoriesData.map(c => ({value: c.name, label: c.name}));
-        if (!catOptions.find(c => c.value.toLowerCase() === 'omzet')) {
-            catOptions.push({value: 'Omzet', label: 'Omzet'});
+        function updateCategoryOptions(type) {
+            let filtered = categoriesData.filter(c => c.type === type).map(c => ({value: c.name, label: c.name}));
+            if (type === 'Pemasukan' && !filtered.find(c => c.value.toLowerCase() === 'omzet')) {
+                filtered.unshift({value: 'Omzet', label: 'Omzet'});
+            }
+            if (type === 'Pengeluaran' && !filtered.find(c => c.value.toLowerCase() === 'belanja toko')) {
+                filtered.unshift({value: 'Belanja Toko', label: 'Belanja Toko'});
+            }
+            logDetailBox.setOptions(filtered);
+            if (type === 'Pemasukan') logDetailBox.setValue('Omzet', 'Omzet');
+            else if (type === 'Pengeluaran') logDetailBox.setValue('Belanja Toko', 'Belanja Toko');
         }
 
         const logDetailBox = new SearchBox(document.getElementById('logDetailContainer'), {
-            options: catOptions,
+            options: [],
             placeholder: '-- Pilih Kategori --',
             name: 'logDetail',
             onAdd: () => { AppModal.close(); setTimeout(() => manageCategories(), 300); },
@@ -797,11 +817,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             value: 'Pengeluaran',
             name: 'logCategory',
             onChange: (val) => {
-                if (val === 'Pemasukan') {
-                    logDetailBox.setValue('Omzet', 'Omzet');
-                }
+                updateCategoryOptions(val);
             }
         });
+
+        updateCategoryOptions('Pengeluaran');
 
         new SearchBox(document.getElementById('logBalanceTypeContainer'), {
             options: accountsData.map(acc => ({value: acc.name, label: acc.name})),
@@ -914,15 +934,26 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         });
 
-        const editCatOptions = categoriesData.map(c => ({value: c.name, label: c.name}));
-        if (!editCatOptions.find(c => c.value.toLowerCase() === 'omzet')) {
-            editCatOptions.push({value: 'Omzet', label: 'Omzet'});
+        function updateEditCategoryOptions(type, initialValue = null) {
+            let filtered = categoriesData.filter(c => c.type === type).map(c => ({value: c.name, label: c.name}));
+            if (type === 'Pemasukan' && !filtered.find(c => c.value.toLowerCase() === 'omzet')) {
+                filtered.unshift({value: 'Omzet', label: 'Omzet'});
+            }
+            if (type === 'Pengeluaran' && !filtered.find(c => c.value.toLowerCase() === 'belanja toko')) {
+                filtered.unshift({value: 'Belanja Toko', label: 'Belanja Toko'});
+            }
+            editLogDetailBox.setOptions(filtered);
+            if (initialValue) {
+                editLogDetailBox.setValue(initialValue, initialValue);
+            } else {
+                if (type === 'Pemasukan') editLogDetailBox.setValue('Omzet', 'Omzet');
+                else if (type === 'Pengeluaran') editLogDetailBox.setValue('Belanja Toko', 'Belanja Toko');
+            }
         }
 
         const editLogDetailBox = new SearchBox(document.getElementById('editLogDetailContainer'), {
-            options: editCatOptions,
+            options: [],
             placeholder: '-- Pilih Kategori --',
-            value: log.detail,
             name: 'editLogDetail',
             onAdd: () => { AppModal.close(); setTimeout(() => manageCategories(), 300); },
             addLabel: 'Kelola Kategori',
@@ -937,11 +968,11 @@ document.addEventListener('DOMContentLoaded', async function() {
             value: log.category,
             name: 'editLogCategory',
             onChange: (val) => {
-                if (val === 'Pemasukan') {
-                    editLogDetailBox.setValue('Omzet', 'Omzet');
-                }
+                updateEditCategoryOptions(val);
             }
         });
+
+        updateEditCategoryOptions(log.category, log.detail);
 
         new SearchBox(document.getElementById('editLogBalanceTypeContainer'), {
             options: accountsData.map(acc => ({value: acc.name, label: acc.name})),
@@ -1061,7 +1092,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     };
 
     window.deleteCategory = async function(id) {
-        if(!confirm("Yakin ingin menghapus kategori ini? (Riwayat transaksi tidak akan terhapus)")) return;
+        const confirmed = await AppModal.confirm(
+            'Hapus Kategori',
+            'Yakin ingin menghapus kategori ini? (Riwayat transaksi tidak akan terhapus)',
+            'Ya, Hapus'
+        );
+        if(!confirmed) return;
+        
         try {
             const res = await api(`${BASE_URL}api/finance/categories/${id}/delete`, 'POST', { csrf_token: csrfVal });
             if(res.success) {

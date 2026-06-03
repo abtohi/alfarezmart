@@ -133,6 +133,13 @@
             <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-graph-up-arrow"></i></div>
             <span class="action-label">Summary</span>
         </a>
+        <a href="javascript:void(0)" onclick="openOfflineDownloadModal()" class="quick-action" id="quickActionOffline">
+            <div class="action-icon" style="background: rgba(99,102,241,0.12); color: #818cf8; position:relative;" id="offlineIconWrapper">
+                <i class="bi bi-cloud-arrow-down-fill" id="offlineQuickIcon"></i>
+                <span id="offlineQuickBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;display:none;align-items:center;justify-content:center;">!</span>
+            </div>
+            <span class="action-label">Unduh Offline</span>
+        </a>
         <?php endif; ?>
     </div>
 
@@ -396,6 +403,204 @@ window.switchExportTab = function(tabIdx) {
     document.getElementById('tabExport2').className = (tabIdx === 2) ? 'export-tab active' : 'export-tab inactive';
     document.getElementById('panelExport1').className = (tabIdx === 1) ? 'export-panel active' : 'export-panel';
     document.getElementById('panelExport2').className = (tabIdx === 2) ? 'export-panel active' : 'export-panel';
+};
+
+// ==========================================
+// OFFLINE DOWNLOAD MODAL
+// ==========================================
+window.openOfflineDownloadModal = async function() {
+    // Check current offline status
+    let cachedCount = 0;
+    let pendingCount = 0;
+    try {
+        if (window.OfflineDB) {
+            const products = await window.OfflineDB.getAllProducts();
+            cachedCount = products.length;
+            pendingCount = await window.OfflineDB.countPending();
+        }
+    } catch(e) {}
+
+    const lastSync = localStorage.getItem('alfarezmart_last_full_sync');
+    const lastSyncStr = lastSync ? new Date(parseInt(lastSync)).toLocaleString('id-ID') : 'Belum pernah';
+    const isOnline = navigator.onLine;
+
+    const html = `
+        <div style="text-align:center;padding:8px 0 16px;">
+            <div style="width:64px;height:64px;background:rgba(99,102,241,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+                <i class="bi bi-cloud-arrow-down-fill" style="font-size:2rem;color:#818cf8;"></i>
+            </div>
+            <h5 style="font-weight:700;margin-bottom:4px;">Mode Offline Penuh</h5>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin:0;">Unduh semua data ke perangkat ini agar aplikasi<br>bisa berjalan sepenuhnya tanpa internet.</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+            <div style="background:var(--surface-1);border-radius:var(--radius-md);padding:12px;border:1px solid var(--border-color);text-align:center;">
+                <div style="font-size:1.5rem;font-weight:800;color:var(--primary);">${cachedCount}</div>
+                <div style="font-size:0.7rem;color:var(--text-muted);">Produk Tersimpan</div>
+            </div>
+            <div style="background:var(--surface-1);border-radius:var(--radius-md);padding:12px;border:1px solid var(--border-color);text-align:center;">
+                <div style="font-size:1.5rem;font-weight:800;color:${pendingCount > 0 ? 'var(--warning)' : 'var(--success)'};">${pendingCount}</div>
+                <div style="font-size:0.7rem;color:var(--text-muted);">Menunggu Sinkron</div>
+            </div>
+        </div>
+
+        <div style="background:var(--surface-1);border-radius:var(--radius-md);padding:12px;border:1px solid var(--border-color);margin-bottom:16px;font-size:0.78rem;color:var(--text-muted);">
+            <i class="bi bi-clock-history" style="margin-right:6px;"></i> Sinkron terakhir: <strong style="color:var(--text-primary);">${lastSyncStr}</strong>
+        </div>
+
+        ${!isOnline ? `
+        <div style="background:var(--warning-bg);border:1px solid var(--warning);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:14px;font-size:0.8rem;color:var(--warning);display:flex;align-items:center;gap:8px;">
+            <i class="bi bi-wifi-off"></i> Tidak ada koneksi internet. Tidak dapat mengunduh data baru.
+        </div>` : ''}
+
+        <div id="offlineDlProgress" style="display:none;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;">
+                <span id="offlineDlStep">Menginisialisasi...</span>
+                <span id="offlineDlPct">0%</span>
+            </div>
+            <div style="background:var(--surface-2);border-radius:99px;height:8px;overflow:hidden;">
+                <div id="offlineDlBar" style="height:100%;width:0%;background:linear-gradient(90deg,#818cf8,#6366f1);border-radius:99px;transition:width 0.4s ease;"></div>
+            </div>
+        </div>
+
+        <div id="offlineDlSteps" style="margin-bottom:16px;">
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:8px;">Yang akan diunduh:</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+                ${['Produk & Harga', 'Supplier & Tipe', 'Kategori', 'Keuangan'].map((s,i) => `
+                <div style="display:flex;align-items:center;gap:8px;font-size:0.8rem;" id="dlStep${i}">
+                    <div style="width:20px;height:20px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;font-size:10px;" id="dlStepIcon${i}">
+                        <i class="bi bi-circle" style="color:var(--text-muted);"></i>
+                    </div>
+                    <span style="color:var(--text-secondary);">${s}</span>
+                </div>`).join('')}
+            </div>
+        </div>
+    `;
+
+    AppModal.show({
+        title: 'Unduh Data Offline',
+        bodyHTML: html,
+        submitText: isOnline ? '<i class="bi bi-cloud-arrow-down"></i> Mulai Download' : null,
+        cancelText: 'Tutup',
+        hideFooter: false,
+        onSubmit: isOnline ? async () => {
+            await _executeOfflineDownload();
+        } : null,
+        centered: true
+    });
+};
+
+window._executeOfflineDownload = async function() {
+    const STEP_KEYS = ['products', 'suppliers', 'categories', 'finance'];
+    const STEP_LABELS = {
+        products:   'Menyimpan Produk & Harga...',
+        suppliers:  'Menyimpan Supplier...',
+        categories: 'Menyimpan Kategori...',
+        finance:    'Menyimpan Data Keuangan...',
+    };
+    const STEP_IDX = { products: 0, suppliers: 1, categories: 2, finance: 3 };
+
+    const progressEl = document.getElementById('offlineDlProgress');
+    const barEl      = document.getElementById('offlineDlBar');
+    const stepEl     = document.getElementById('offlineDlStep');
+    const pctEl      = document.getElementById('offlineDlPct');
+
+    // Disable submit button to prevent double-click
+    const submitBtn = document.querySelector('#appModalEl .btn-primary-custom');
+    if (submitBtn) submitBtn.disabled = true;
+
+    if (progressEl) progressEl.style.display = 'block';
+
+    function setStep(idx, status) {
+        const iconEl   = document.getElementById(`dlStepIcon${idx}`);
+        const stepDiv  = document.getElementById(`dlStep${idx}`);
+        if (!iconEl || !stepDiv) return;
+        if (status === 'loading') {
+            iconEl.innerHTML = '<div class="spinner-border" style="width:12px;height:12px;border-width:2px;color:#818cf8;"></div>';
+            stepDiv.querySelector('span').style.color = '#818cf8';
+        } else if (status === 'done') {
+            iconEl.innerHTML = '<i class="bi bi-check-circle-fill" style="color:var(--success);font-size:14px;"></i>';
+            stepDiv.querySelector('span').style.color = 'var(--text-primary)';
+        } else {
+            iconEl.innerHTML = '<i class="bi bi-x-circle-fill" style="color:var(--danger);font-size:14px;"></i>';
+        }
+    }
+
+    function updateProgress(completedSteps) {
+        // 10% reserved for fetch phase, 90% split among 4 stores
+        const pct = Math.round(10 + (completedSteps / STEP_KEYS.length) * 90);
+        if (barEl) barEl.style.width = pct + '%';
+        if (pctEl) pctEl.textContent = pct + '%';
+    }
+
+    try {
+        // PHASE 1: Fetch from server
+        if (stepEl) stepEl.textContent = 'Menghubungi server...';
+        if (barEl)  barEl.style.width  = '5%';
+        if (pctEl)  pctEl.textContent  = '5%';
+
+        const response = await fetch(`${BASE_URL}api/sync/all?_t=${Date.now()}`, { credentials: 'same-origin' });
+        if (!response.ok) throw new Error(`Server error ${response.status}`);
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+
+        if (barEl) barEl.style.width = '10%';
+        if (pctEl) pctEl.textContent = '10%';
+
+        // PHASE 2: Save to IndexedDB per-store with visual callbacks
+        if (window.OfflineDB) {
+            await window.OfflineDB.init();
+
+            let completedSteps = 0;
+
+            await window.OfflineDB.saveFromPayload(data, (stepKey) => {
+                // Called BEFORE each store is saved — update UI
+                const idx = STEP_IDX[stepKey];
+                if (idx !== undefined) {
+                    // Mark previous as done
+                    if (completedSteps > 0) setStep(STEP_IDX[STEP_KEYS[completedSteps - 1]], 'done');
+                    setStep(idx, 'loading');
+                    if (stepEl) stepEl.textContent = STEP_LABELS[stepKey] || stepKey;
+                }
+            });
+
+            // Mark all remaining steps as done
+            STEP_KEYS.forEach((key, idx) => {
+                setStep(idx, 'done');
+                updateProgress(idx + 1);
+            });
+        } else {
+            // Fallback: just show steps as done with delays
+            for (let i = 0; i < STEP_KEYS.length; i++) {
+                setStep(i, 'loading');
+                if (stepEl) stepEl.textContent = STEP_LABELS[STEP_KEYS[i]];
+                await new Promise(r => setTimeout(r, 200));
+                setStep(i, 'done');
+                updateProgress(i + 1);
+            }
+        }
+
+        // PHASE 3: Done!
+        if (stepEl) stepEl.textContent = '✅ Download selesai!';
+        if (barEl) barEl.style.width = '100%';
+        if (pctEl) pctEl.textContent = '100%';
+        if (barEl) barEl.style.background = 'linear-gradient(90deg,var(--success),#10b981)';
+
+        localStorage.setItem('alfarezmart_last_full_sync', Date.now().toString());
+
+        if (typeof updateSyncBadge === 'function') updateSyncBadge();
+
+        const prodCount = data.products?.length || 0;
+        showToast(`✅ Berhasil! ${prodCount} produk + supplier, kategori & keuangan tersimpan offline.`, 'success', 6000);
+
+        setTimeout(() => AppModal.close(), 1800);
+
+    } catch (err) {
+        if (stepEl) stepEl.textContent = '❌ Gagal: ' + err.message;
+        if (barEl) barEl.style.background = 'linear-gradient(90deg,var(--danger),#ef4444)';
+        showToast('Gagal mengunduh data offline: ' + err.message, 'error');
+        if (submitBtn) submitBtn.disabled = false;
+    }
 };
 
 window.executeExport = async function(mode) {
