@@ -572,8 +572,9 @@ function addQtyTierRow(listEl, data = {}) {
         <div><label style="font-size:9px;color:var(--text-muted);">Untuk Qty</label>
             <input type="number" class="form-control-dark tier-min-qty" min="1" step="1" value="${minQty}" placeholder="1" style="width:100%;padding:6px;font-size:12px;" oninput="this.closest('.qty-tier-row').querySelector('.tier-total-price').dispatchEvent(new Event('input'))"></div>
         <div><label style="font-size:9px;color:var(--text-muted);">Total Harga</label>
-            <input type="number" class="form-control-dark tier-total-price" min="0" step="any" value="${totalPrice}" placeholder="10000" style="width:100%;padding:6px;font-size:12px;" oninput="const r=this.closest('.qty-tier-row'); const q=r.querySelector('.tier-min-qty').value; if(q>0) r.querySelector('.tier-unit-price').value=(this.value/q).toFixed(2);">
+            <input type="number" class="form-control-dark tier-total-price" min="0" step="any" value="${totalPrice}" placeholder="10000" style="width:100%;padding:6px;font-size:12px;" oninput="const r=this.closest('.qty-tier-row'); const q=r.querySelector('.tier-min-qty').value; if(q>0) r.querySelector('.tier-unit-price').value=(this.value/q).toFixed(2); r.querySelector('.tier-unit-price').dispatchEvent(new Event('change'));">
             <input type="hidden" class="tier-unit-price" value="${unitPrice}">
+            <div class="tier-margin-info" style="font-size:9px;color:var(--text-muted);margin-top:2px;min-height:14px;"></div>
         </div>
         <div><label style="font-size:9px;color:var(--text-muted);">Mode</label>
             <select class="form-control-dark tier-sale-mode" style="width:100%;padding:6px;font-size:11px;">${modeOpts}</select></div>
@@ -582,6 +583,16 @@ function addQtyTierRow(listEl, data = {}) {
             <input type="text" class="form-control-dark tier-label" value="${data && data.label ? data.label : ''}" placeholder="Cth: 3 renceng = Rp 10.000" style="width:100%;padding:6px;font-size:11px;"></div>
     `;
     listEl.appendChild(row);
+
+    const unitPriceEl = row.querySelector('.tier-unit-price');
+    if (unitPriceEl) {
+        unitPriceEl.addEventListener('change', () => {
+            if (typeof calcMarginForLevel === 'function') calcMarginForLevel(row.closest('.packaging-level'));
+        });
+    }
+    if (unitPrice) {
+        setTimeout(() => { if (typeof calcMarginForLevel === 'function') calcMarginForLevel(row.closest('.packaging-level')); }, 50);
+    }
 }
 
 function initQtyTiers(levelDiv, tiers = []) {
@@ -954,6 +965,21 @@ function calcMarginForLevel(div) {
             finalNoteEl.innerHTML = '';
         }
     }
+
+    // Kalkulasi markup untuk tier pricing di level ini
+    div.querySelectorAll('.qty-tier-row').forEach(row => {
+        const infoEl = row.querySelector('.tier-margin-info');
+        if (!infoEl) return;
+        const tierUnit = parseFloat(row.querySelector('.tier-unit-price')?.value) || 0;
+        if (finalBuy > 0 && tierUnit > 0) {
+            const m = ((tierUnit - finalBuy) / finalBuy * 100).toFixed(1);
+            const profit = tierUnit - finalBuy;
+            const color = m >= 5 ? 'var(--success)' : (m >= 0 ? 'var(--warning)' : 'var(--danger)');
+            infoEl.innerHTML = `Mkp: <strong style="color:${color}">${m}%</strong> <span style="font-size:9px;color:var(--text-muted);">(${profit > 0 ? '+' : ''}${formatRp(profit)})</span>`;
+        } else {
+            infoEl.innerHTML = '';
+        }
+    });
 }
 
 // Auto-generate name preview

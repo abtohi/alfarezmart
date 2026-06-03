@@ -1629,22 +1629,39 @@ function recalcTierHint(el) {
         const pricePerUnit = totalH / minQty;
         let text = `≈ Rp${Math.round(pricePerUnit).toLocaleString('id-ID')}/satuan`;
         
+        let nett = 0;
         const lvEl = row.closest('.packaging-level-edit');
+        const drawerEl = row.closest('.drawer-pkg-row');
+        
         if (lvEl) {
             const buy = parseFloat(lvEl.querySelector('.pkg-buy, .buy-price')?.value) || 0;
             const ppn = parseFloat(lvEl.querySelector('.pkg-ppn')?.value) || 0;
             const diskonMode = lvEl.querySelector('.pkg-diskon-mode')?.value || 'rp';
             const diskonVal = parseFloat(lvEl.querySelector('.pkg-diskon-value')?.value) || 0;
+            nett = typeof calcItemNett === 'function' ? calcItemNett(buy, ppn, diskonMode, diskonVal) : buy;
+        } else if (drawerEl) {
+            const buy = parseFloat(drawerEl.querySelector('.drawer-pkg-buy')?.value) || 0;
+            const ppn = parseFloat(drawerEl.closest('[data-item-ppn]')?.dataset.itemPpn || drawerEl.closest('.item-card')?.dataset.ppn || 0);
+            nett = typeof calcItemNett === 'function' ? calcItemNett(buy, ppn, 'rp', 0) : buy;
             
-            const nett = typeof calcItemNett === 'function' ? calcItemNett(buy, ppn, diskonMode, diskonVal) : buy;
-            
-            if (nett > 0) {
-                const profit = pricePerUnit - nett;
-                const marginPct = (profit / nett * 100);
-                const color = profit >= 0 ? 'var(--success)' : 'var(--danger)';
-                const icon = profit >= 0 ? '<i class="bi bi-graph-up-arrow"></i>' : '<i class="bi bi-graph-down-arrow"></i>';
-                text += ` <span style="margin-left:8px;color:${color};font-weight:600;">${icon} Margin: ${marginPct.toFixed(1)}% (Selisih: Rp${Math.round(profit).toLocaleString('id-ID')})</span>`;
+            const uid = drawerEl.closest('[id^="drawer_"]')?.id.split('_')[1];
+            if (uid) {
+                let item = typeof purchaseItems !== 'undefined' ? purchaseItems.find(i => i.id == uid) : null;
+                if (!item && typeof bulkItems !== 'undefined') item = bulkItems.find(b => b.id == uid);
+                if (item) {
+                    const level = parseInt(drawerEl.dataset.level || 1, 10);
+                    const pkg = item.packagings.find(p => p.level == level);
+                    if (pkg) nett = pkg.harga_nett || (typeof calcItemNett === 'function' ? calcItemNett(buy, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value) : buy);
+                }
             }
+        }
+        
+        if (nett > 0) {
+            const profit = pricePerUnit - nett;
+            const marginPct = (profit / nett * 100);
+            const color = marginPct >= 5 ? 'var(--success)' : (marginPct >= 0 ? 'var(--warning)' : 'var(--danger)');
+            const formatRp = (num) => 'Rp ' + Math.round(num).toLocaleString('id-ID');
+            text += ` <span style="margin-left:8px;">Mkp: <strong style="color:${color}">${marginPct.toFixed(1)}%</strong> <span style="font-size:9px;color:var(--text-muted);">(${profit > 0 ? '+' : ''}${formatRp(profit)})</span></span>`;
         }
         
         hint.innerHTML = text;
@@ -2422,7 +2439,7 @@ function renderCart() {
         const selBaseQty = parseFloat(selPkg?.base_qty) || 1;
         const totalVal  = Math.round((item.quantity || 1) * (item.buy_price || 0));
         const hasPkgs   = item.packagings.length > 1;
-        const drawerHtml  = hasPkgs ? buildDrawerRowHtml(item, 'item') : '';
+        const drawerHtml  = buildDrawerRowHtml(item, 'item');
 
         // Simple per-unit price summary
         const buyPrice = parseFloat(selPkg?.buy_price) || 0;
@@ -2502,7 +2519,6 @@ function renderCart() {
             <!-- ── Trend Banner (OUTSIDE drawer) ── -->
             <div class="item-trend-banner">${buildTrendBannerHtml(item)}</div>
 
-            ${hasPkgs ? `
             <!-- ── Drawer Toggle Button ── -->
             <button id="drawer_btn_${item.id}" type="button" onclick="toggleItemDrawer(${item.id})"
                     style="width:100%;margin-top:10px;background:var(--surface-2);color:var(--primary);border:1px dashed var(--border-color);padding:9px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;">
@@ -2516,7 +2532,7 @@ function renderCart() {
                 </div>
                 <!-- Per-packaging detail editors -->
                 ${drawerHtml}
-            </div>` : ''}
+            </div>
         </div>`;
     });
 
@@ -2796,7 +2812,7 @@ async function openBulkInputModal() {
             `<option value="${p.level}" ${p.level == item.level ? 'selected' : ''}>${p.unit_name} (Isi ${p.base_qty})</option>`
         ).join('');
         const hasPkgs    = item.packagings.length > 1;
-        const drawerHtml  = hasPkgs ? buildDrawerRowHtml(item, 'bulk') : '';
+        const drawerHtml  = buildDrawerRowHtml(item, 'bulk');
 
         // Simple per-unit price summary (instead of full table)
         const selPkg = item.packagings.find(p => p.level == item.level) || item.packagings[0];
@@ -2874,7 +2890,6 @@ async function openBulkInputModal() {
             <!-- ── Trend Banner (OUTSIDE drawer) ── -->
             <div class="bulk-trend-banner">${buildTrendBannerHtml(item)}</div>
 
-            ${hasPkgs ? `
             <!-- ── Drawer Toggle ── -->
             <button class="bulk-drawer-btn" type="button" onclick="toggleBulkDrawer('${item.id}', this)"
                     style="width:100%;margin-top:8px;background:var(--surface-1);color:var(--primary);border:1px dashed var(--border-color);padding:7px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;">
@@ -2887,7 +2902,7 @@ async function openBulkInputModal() {
                 </div>
                 <!-- Per-packaging detail editors -->
                 ${drawerHtml}
-            </div>` : ''}
+            </div>
         </div>`;
     }).join('');
 

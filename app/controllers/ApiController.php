@@ -2724,64 +2724,7 @@ class ApiController extends Controller
             $settingModel = new SettingModel();
             $apiKey = $settingModel->get('ai_api_key');
             $modelName = $settingModel->get('ai_model', 'google/gemini-2.5-flash');
-            $defaultPrompt = "Kamu adalah AI asisten untuk AlfarezMart (Toko Retail/Grosir).\nTugasmu: Ekstrak data dari gambar invoice/faktur supplier menjadi array JSON valid sesuai ALGORITMA 4-POIN SCANNING.\n\n" .
-"========== ALGORITMA 4-POIN SCANNING ==========\n" .
-"POIN 1 - KODE BARANG SUPPLIER (supplier_product_code):\n" .
-"  • Cari kode barang yang tertera di invoice (misal [CMY-125], #12345, atau kode lain yang terstruktur)\n" .
-"  • WAJIB: Ekstrak EXACTLY apa adanya dari invoice (case-sensitive, spasi sensitive)\n" .
-"  • Jika ADA kode, masukkan ke field `supplier_product_code`\n" .
-"  • Jika TIDAK ADA kode, biarkan kosong string: \"\"\n" .
-"\nPOIN 2 - NAMA BARANG SUPPLIER (supplier_invoice_name):\n" .
-"  • Ambil nama barang EXACTLY seperti tertera di invoice\n" .
-"  • Jangan terjemahkan, jangan singkat, AMBIL APA ADANYA\n" .
-"  • Contoh: Jika invoice tulis \"Lbl Coklat 100gr\", ekstrak: \"Lbl Coklat 100gr\"\n" .
-"  • Masukkan ke field `supplier_invoice_name`\n" .
-"\nPOIN 3 - ANALISIS NAMA PRODUK (name, brand, variant, type, size):\n" .
-"  • Ekstrak komponen nama produk untuk fuzzy matching di backend\n" .
-"  • `name`: Nama produk lengkap dari invoice (bisa sama dengan supplier_invoice_name)\n" .
-"  • `brand`: Brand/merek jika terdeteksi (Cth: \"Nestle\", \"Indomie\")\n" .
-"  • `variant`: Varian rasa/warna jika ada (Cth: \"Pedas\", \"Coklat\", \"Hijau\")\n" .
-"  • `product_type`: Tipe produk jika terdeteksi (Cth: \"Mie\", \"Minuman\", \"Snack\")\n" .
-"  • `size`: Ukuran/packaging info jika ada (Cth: \"100gr\", \"500ml\", \"1DZ\", \"12pcs\")\n" .
-"\nPOIN 4 - ANALISIS UNIT KEMASAN (qty, unit, unit_price, total_price):\n" .
-"  • Reverse-engineer unit dari qty dan pricing\n" .
-"  • `qty`: Jumlah unit yang dibeli (angka murni)\n" .
-"  • `unit`: Satuan unit (DETEKSI: PCS, KARTON/KRT/CTN, RENCENG/RCG/RTG, PACK/PCK, BOX, SLOP, dll)\n" .
-"  • `unit_price`: Harga per satuan = total_price / qty. WAJIB kalkulasi dengan akurat.\n" .
-"  • `total_price`: Total harga baris (sebelum diskon)\n" .
-"  • CONTOH: Jika invoice \"4 Karton × Rp 150.000 = Rp 600.000\", maka: qty=4, unit=\"Karton\", unit_price=150000, total_price=600000\n" .
-"\n" .
-"========== KEMAMPUAN TAMBAHAN ==========\n" .
-"  • TULISAN TANGAN & FORMAT ACAK: Baca dengan teliti invoice tulisan tangan, buram, atau berformat kolom terbalik (harga duluan baru nama).\n" .
-"  • VALIDASI TOTAL HARGA: JIKA di bagian bawah invoice terdapat total pembayaran/grand total, hitung total harga semua item yang kamu deteksi. Pastikan jumlahnya sama atau mendekati grand total di invoice. Jika tidak ada grand total di foto, abaikan validasi ini.\n" .
-"  • PPN & DISKON: Deteksi jika ada PPN atau diskon, dan kalkulasi unit_price & total_price secara proporsional. Pastikan total_price merefleksikan harga final barang tersebut setelah diskon. Isi kolom diskon jika secara spesifik tertera potongan per item.\n" .
-"  • MAPPING KEMASAN: Petakan singkatan satuan ke nama standar jika jelas (Misal: RCG -> Renceng, KRT -> Karton).\n" .
-"\n" .
-"========== INSTRUKSI TEKNIS ==========\n" .
-"1. OUTPUT HARUS JSON VALID! Tidak boleh ada Markdown (```json) atau teks apapun sebelum/sesudah array.\n" .
-"2. JANGAN tambahkan penjelasan, HANYA array JSON.\n" .
-"3. Ekstrak semua item yang terbaca dengan baik.\n" .
-"4. Semua harga: ANGKA MURNI saja (tanpa titik, koma, atau simbol Rp).\n" .
-"5. Untuk SETIAP item, WAJIB centang 4-poin: Kode? Nama supplier? Analisis nama? Unit+price? \n" .
-"\n" .
-"========== FORMAT JSON OUTPUT YANG WAJIB ==========\n" .
-"[\n" .
-"  {\n" .
-"    \"supplier_product_code\": \"KODE123\",\n" .
-"    \"supplier_invoice_name\": \"Nama Barang Seperti Di Invoice\",\n" .
-"    \"name\": \"Nama Produk Lengkap\",\n" .
-"    \"brand\": \"Brand\",\n" .
-"    \"variant\": \"Varian\",\n" .
-"    \"product_type\": \"Tipe\",\n" .
-"    \"size\": \"Ukuran\",\n" .
-"    \"qty\": 4,\n" .
-"    \"unit\": \"Karton\",\n" .
-"    \"unit_price\": 150000,\n" .
-"    \"total_price\": 600000,\n" .
-"    \"discount\": 0\n" .
-"  }\n" .
-"]";
-            $prompt = $settingModel->get('ai_invoice_prompt', $defaultPrompt);
+            $prompt = $settingModel->get('ai_invoice_prompt', 'Tugasmu: Ekstrak data dari gambar invoice/faktur supplier menjadi array JSON valid.');
 
             if (empty($apiKey)) {
                 throw new \Exception("API Key AI belum dikonfigurasi di Pengaturan Aplikasi");

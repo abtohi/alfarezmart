@@ -35,8 +35,19 @@
                 
                 <div style="margin-bottom:12px;">
                     <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Model AI</label>
-                    <input id="ai_model" name="ai_model" type="text" value="<?= htmlspecialchars($aiModel ?? 'google/gemini-2.5-flash') ?>" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="contoh: google/gemini-2.5-flash" required />
-                    <small style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-top:4px;">Model dari OpenRouter yang digunakan.</small>
+                    <input id="ai_model" list="openrouter_models" name="ai_model" type="text" value="<?= htmlspecialchars($aiModel ?? 'google/gemini-2.5-flash') ?>" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="Pilih atau ketik ID model OpenRouter" required />
+                    <datalist id="openrouter_models">
+                        <option value="google/gemini-2.5-flash">Google Gemini 2.5 Flash</option>
+                        <option value="google/gemini-2.5-pro">Google Gemini 2.5 Pro</option>
+                        <option value="anthropic/claude-3.5-sonnet">Anthropic Claude 3.5 Sonnet</option>
+                        <option value="anthropic/claude-3.5-haiku">Anthropic Claude 3.5 Haiku</option>
+                        <option value="openai/gpt-4o-mini">OpenAI GPT-4o Mini</option>
+                        <option value="openai/gpt-4o">OpenAI GPT-4o</option>
+                        <option value="meta-llama/llama-3.3-70b-instruct">Meta Llama 3.3 70B</option>
+                        <option value="deepseek/deepseek-chat">DeepSeek V3 (Chat)</option>
+                        <option value="deepseek/deepseek-r1">DeepSeek R1</option>
+                    </datalist>
+                    <small style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-top:4px;">Pilih dari daftar atau ketik ID model OpenRouter secara manual.</small>
                 </div>
 
                 <div style="margin-bottom:12px;">

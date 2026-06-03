@@ -129,6 +129,36 @@
                 • <strong>Scan Barcode:</strong> Bisa scan barcode langsung di halaman Perbandingan Harga untuk mencari produk.
             </div>
         </details>
+
+        <!-- Mode Offline PWA -->
+        <details style="margin-bottom:10px; border:1px solid var(--border-color); border-radius:var(--radius-md); overflow:hidden;">
+            <summary style="padding:12px 14px; font-weight:600; font-size:13px; cursor:pointer; background:var(--surface-2);"><i class="bi bi-wifi-off" style="color:var(--success); margin-right:6px;"></i> Mode Offline PWA & Sync</summary>
+            <div style="padding:12px 14px; font-size:12px; line-height:1.8;">
+                • <strong>Offline Database:</strong> Aplikasi menyimpan cache dari database secara lokal di perangkat Anda (menggunakan IndexedDB).<br>
+                • <strong>Transaksi Offline:</strong> Anda tetap bisa membuat transaksi kasir (POS), menambah produk, dan menyimpan barang masuk walaupun tidak ada internet.<br>
+                • <strong>Sinkronisasi (Sync):</strong> Saat koneksi internet kembali aktif, sistem akan otomatis mengirim antrean data Anda ke server (Background Sync).<br>
+                • <strong>Download Data:</strong> Untuk performa maksimal saat offline, gunakan fitur <strong>Unduh Data Offline</strong> di layar Dashboard agar Anda punya stok dan produk terbaru.
+            </div>
+        </details>
+
+        <!-- AI Scanner -->
+        <details style="margin-bottom:10px; border:1px solid var(--border-color); border-radius:var(--radius-md); overflow:hidden;">
+            <summary style="padding:12px 14px; font-weight:600; font-size:13px; cursor:pointer; background:var(--surface-2);"><i class="bi bi-robot" style="color:var(--info); margin-right:6px;"></i> AI Nota Scanner</summary>
+            <div style="padding:12px 14px; font-size:12px; line-height:1.8;">
+                • <strong>Fungsi:</strong> Fitur Input Barang Massal mendukung AI Scanner (menggunakan OpenRouter API) untuk membaca foto nota/faktur supplier dan mengonversinya menjadi input tabel secara otomatis.<br>
+                • <strong>Pengaturan API:</strong> Anda harus memasukkan API Key OpenRouter dan memilih Model (misal: Gemini 2.5 Flash, Claude 3.5) di menu <strong>Lainnya → Pengaturan → AI Agent</strong>.<br>
+                • <strong>Prompt Dinamis:</strong> Anda bisa menyesuaikan instruksi prompt agar AI membaca format nota supplier spesifik Anda dengan lebih baik.
+            </div>
+        </details>
+
+        <!-- Geofencing -->
+        <details style="margin-bottom:10px; border:1px solid var(--border-color); border-radius:var(--radius-md); overflow:hidden;">
+            <summary style="padding:12px 14px; font-weight:600; font-size:13px; cursor:pointer; background:var(--surface-2);"><i class="bi bi-geo-alt" style="color:var(--danger); margin-right:6px;"></i> Geofencing (Pembatasan Lokasi)</summary>
+            <div style="padding:12px 14px; font-size:12px; line-height:1.8;">
+                • <strong>Fungsi:</strong> Staff kasir hanya bisa mengakses dan login ke dalam sistem aplikasi jika mereka secara fisik berada di dalam radius toko Anda.<br>
+                • <strong>Pengaturan:</strong> Superadmin dapat menyetel Titik Koordinat (Latitude & Longitude) toko beserta radius maksimal akses (dalam meter) di <strong>Lainnya → Pengaturan → Geofencing</strong>.
+            </div>
+        </details>
     </div>
 
     <!-- Section: Istilah -->
@@ -326,7 +356,7 @@
     </div>
 
     <div style="text-align:center; padding:16px; font-size:11px; color:var(--text-muted);">
-        <i class="bi bi-heart-fill" style="color:var(--danger);"></i> AlfarezMart PWA v3.5 — Sistem Manajemen Stok Toko<br>
-        <span style="font-size:10px;">Pembaruan: Dashboard Kategorikal, Tren Harga Supplier, Auto-Suggest Realtime</span>
+        <i class="bi bi-heart-fill" style="color:var(--danger);"></i> AlfarezMart PWA v4.0 — Sistem Manajemen Stok Toko<br>
+        <span style="font-size:10px;">Pembaruan: Offline Sync, AI Scanner Nota, Geofencing Staff, Perhitungan Markup Berjenjang</span>
     </div>
 </div>

@@ -76,7 +76,7 @@
             <i class="bi bi-eye" style="color:var(--info);"></i> Preview Struk Thermal
         </div>
         <div style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-lg); max-width:320px; margin:0 auto; box-shadow:var(--shadow-md); overflow:hidden;">
-            <div id="receiptPreview" style="font-family:'Courier New', monospace; font-size:11px; line-height:1.5; color:#000; padding:16px 12px; white-space:pre-wrap; word-break:break-word; text-align:center;">
+            <div id="receiptPreview" style="font-family:'Courier New', monospace; font-size:11px; line-height:1.5; color:#000; padding:16px 12px; white-space:pre-wrap; word-break:break-word; text-align:left;">
                 <!-- Rendered by JS -->
             </div>
         </div>
