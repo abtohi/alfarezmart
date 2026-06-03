@@ -372,6 +372,12 @@ async function performSearch(q) {
             }
         }
         
+        const currentInput = document.getElementById('posSearch');
+        if (!currentInput || currentInput.value.trim().length < 2) {
+            sug.innerHTML = '';
+            return;
+        }
+
         if (!Array.isArray(items) || items.length === 0) {
             sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Tidak ada</div>';
             return;

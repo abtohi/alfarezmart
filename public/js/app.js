@@ -203,6 +203,7 @@ function initSearch() {
             if (window.location.href.includes('/suppliers')) {
                 // Search Suppliers / Sales
                 const data = await api(`${BASE_URL}api/suppliers/search?q=${encodeURIComponent(q)}`);
+                if (input.value.trim().length < 2) { results.innerHTML = ''; return; }
                 if (data.length === 0) {
                     results.innerHTML = '<div class="empty-state" style="padding:24px"><i class="bi bi-search"></i><p>Supplier/Sales tidak ditemukan</p></div>';
                     return;
@@ -224,11 +225,13 @@ function initSearch() {
                 // Default Product Search
                 try {
                     const data = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
+                    if (input.value.trim().length < 2) { results.innerHTML = ''; return; }
                     renderProductSearch(data, results);
                 } catch (apiErr) {
                     // Fallback to offline DB
                     if (typeof OfflineDB !== 'undefined') {
                         const data = await OfflineDB.searchProducts(q);
+                        if (input.value.trim().length < 2) { results.innerHTML = ''; return; }
                         renderProductSearch(data, results);
                     } else {
                         throw apiErr;

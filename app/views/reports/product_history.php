@@ -139,6 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
     searchInput.addEventListener('input', function(e) {
         var query = e.target.value.trim();
         if (query.length < 1) {
+            clearTimeout(searchTimeout);
             searchResults.style.display = 'none';
             if (currentSearchAbortController) currentSearchAbortController.abort();
             return;
