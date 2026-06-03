@@ -205,7 +205,7 @@ window.OfflineDB = (function() {
 
                     return nameMatch || brandMatch || codeMatch || barcodeMatch;
                 });
-            }).slice(0, 15);
+            }).slice(0, 100);
         } catch (e) {
             console.error("Offline search failed", e);
             return [];

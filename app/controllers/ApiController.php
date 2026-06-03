@@ -136,13 +136,13 @@ class ApiController extends Controller
         if (isset($productsResult['data'])) {
             foreach ($productsResult['data'] as $p) {
                 $products[] = [
-                    'id' => (int)$p['id'],
-                    'short_label' => $p['short_label'],
-                    'full_name' => $p['full_name'],
-                    'brand_name' => $p['brand_name'],
+                    'id'            => (int)$p['id'],
+                    'short_label'   => $p['short_label'],
+                    'full_name'     => $p['full_name'],
+                    'brand_name'    => $p['brand_name'],
                     'category_name' => $p['category_name'],
-                    'code' => $p['code'],
-                    'packagings' => $p['packagings']
+                    'code'          => $p['code'],
+                    'packagings'    => $p['packagings']
                 ];
             }
         }
@@ -164,16 +164,32 @@ class ApiController extends Controller
         $purchasesResult = $purchaseModel->getList(1, $limit);
         $purchases = $purchasesResult['data'] ?? [];
 
+        // Product Categories (brands & categories)
+        require_once __DIR__ . '/../models/CategoryModel.php';
+        $categoryModel = new CategoryModel();
+        $categories = $categoryModel->getAll() ?? [];
+
+        // Finance Accounts & Categories
+        require_once __DIR__ . '/../models/FinanceModel.php';
+        $financeModel = new FinanceModel();
+        $financeAccounts    = $financeModel->getActiveAccounts() ?? [];
+        $financeCategories  = $financeModel->getActiveCategories() ?? [];
+
         $this->json([
-            'success' => true,
-            'products' => $products,
-            'sales' => $sales,
+            'success'   => true,
+            'products'  => $products,
+            'sales'     => $sales,
             'suppliers' => $suppliers,
             'purchases' => $purchases,
-            'debts' => [],
-            'finance' => []
+            'categories' => $categories,
+            'debts'     => [],
+            'finance'   => [
+                'accounts'   => $financeAccounts,
+                'categories' => $financeCategories,
+            ]
         ]);
     }
+
 
     public function syncProducts()
     {

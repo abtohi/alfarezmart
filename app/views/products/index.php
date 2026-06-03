@@ -95,6 +95,7 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
         </div>
     </div>
 
+    <div id="productListContainer">
     <?php if (empty($products['data'])): ?>
         <div class="empty-state">
             <i class="bi bi-box-seam"></i>
@@ -203,6 +204,7 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
             </div>
         <?php endif; ?>
     <?php endif; ?>
+    </div>
 </div>
 
 <style>
@@ -513,7 +515,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     input.addEventListener('keypress', e => {
-        if (e.key === 'Enter') { resultsDiv.style.display = 'none'; document.getElementById('productSearchForm').submit(); }
+        if (e.key === 'Enter') {
+            resultsDiv.style.display = 'none';
+            e.preventDefault(); // Prevent default immediately
+            if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+                doOfflineSearch(input.value);
+            } else {
+                document.getElementById('productSearchForm').submit();
+            }
+        }
+    });
+    
+    // Also intercept the form submit itself (if submitted via other means)
+    document.getElementById('productSearchForm').addEventListener('submit', function(e) {
+        if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+            e.preventDefault();
+            resultsDiv.style.display = 'none';
+            doOfflineSearch(input.value);
+        }
     });
 
     document.addEventListener('click', (e) => {
@@ -521,4 +540,122 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsDiv.style.display = 'none';
     });
 })();
+
+// OFFLINE SEARCH EXECUTION
+async function doOfflineSearch(query) {
+    const container = document.getElementById('productListContainer');
+    if (!container) return;
+
+    container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner-border text-primary"></div><div style="margin-top:10px;font-size:12px;color:var(--text-muted);">Mencari di data offline...</div></div>';
+    
+    try {
+        let items = [];
+        if (!query || query.trim() === '') {
+            // Get all products
+            items = await OfflineDB.getAllProducts();
+        } else {
+            items = await OfflineDB.searchProducts(query);
+        }
+
+        // Apply Price Filters & Category Filters Client-Side (Optional enhancements)
+        const catFilter = document.getElementById('categoryFilterSearchBox') ? document.querySelector('#categoryFilterSearchBox input[type="hidden"]')?.value : null;
+        const minP = parseFloat(document.getElementById('filterMinPrice')?.value);
+        const maxP = parseFloat(document.getElementById('filterMaxPrice')?.value);
+        
+        if (catFilter || !isNaN(minP) || !isNaN(maxP)) {
+            items = items.filter(p => {
+                let match = true;
+                // Since OfflineDB only has category_name, not category_id, we can't easily filter by ID unless we map it. 
+                // But we'll do price at least:
+                const price = p.price_small_retail ? parseFloat(p.price_small_retail) : (p.packagings && p.packagings.length > 0 ? parseFloat(p.packagings[0].sell_price_retail) : 0);
+                if (!isNaN(minP) && price < minP) match = false;
+                if (!isNaN(maxP) && price > maxP) match = false;
+                return match;
+            });
+        }
+
+        if (items.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-box-seam"></i>
+                    <h3>Produk Tidak Ditemukan</h3>
+                    <p>Tidak ada produk yang cocok dengan pencarian (Offline Mode).</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        items.forEach(p => {
+            const name = (p.full_name || p.short_label || '-').replace(/</g, '&lt;');
+            const brandCat = `${p.brand_name || ''} ${p.brand_name && p.category_name ? '·' : ''} ${p.category_name || ''}`;
+            const price = p.price_small_retail ? parseFloat(p.price_small_retail) : (p.packagings && p.packagings.length > 0 ? parseFloat(p.packagings[0].sell_price_retail) : 0);
+            const priceWs = p.price_small_wholesale ? parseFloat(p.price_small_wholesale) : (p.packagings && p.packagings.length > 0 ? parseFloat(p.packagings[0].sell_price_wholesale) : 0);
+            
+            html += `
+            <div class="product-card" data-id="${p.id}" style="position:relative;display:block;">
+                ${!ROLE_IS_STAFF ? `<input type="checkbox" class="product-checkbox" value="${p.id}" style="display:none;position:absolute;top:16px;left:16px;width:20px;height:20px;accent-color:var(--primary);z-index:2;">` : ''}
+                <a href="${BASE_URL}products/${p.id}" class="product-card-link" style="display:flex;text-decoration:none;color:inherit;width:100%;">
+                    <div class="product-icon"><i class="bi bi-box-seam"></i></div>
+                    <div class="product-info" style="width:100%;">
+                        <div class="product-name">${name}</div>
+                        <div class="product-category">${brandCat}</div>
+                        <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px;">
+                            <div>
+                                ${price ? `<span class="product-price">Rp${price.toLocaleString('id-ID')}</span>` : ''}
+                                ${priceWs ? `<span class="product-price-wholesale" style="margin-left:6px;">Rp${priceWs.toLocaleString('id-ID')}</span>` : ''}
+                            </div>
+                        </div>`;
+            
+            if (p.packagings && p.packagings.length > 1) {
+                html += `<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border-color);display:flex;flex-direction:column;gap:4px;">`;
+                p.packagings.forEach((pkg, idx) => {
+                    if (idx === 0) return;
+                    const spR = parseFloat(pkg.sell_price_retail);
+                    const spW = parseFloat(pkg.sell_price_wholesale);
+                    html += `
+                        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;">
+                            <span style="color:var(--text-muted);font-weight:600;"><i class="bi bi-box2"></i> ${pkg.unit_name}</span>
+                            <div style="text-align:right;">
+                                <span style="color:var(--success);">Rp${spR.toLocaleString('id-ID')}</span>
+                                ${spW > 0 ? `<span style="color:var(--warning);margin-left:4px;">(G: Rp${spW.toLocaleString('id-ID')})</span>` : ''}
+                            </div>
+                        </div>`;
+                });
+                html += `</div>`;
+            }
+
+            html += `
+                    </div>
+                </a>
+            </div>`;
+        });
+        
+        // Update product list and count
+        container.innerHTML = html;
+        const totalText = document.getElementById('totalProductsText');
+        if (totalText) totalText.textContent = `${items.length} produk (Offline)`;
+        
+        // Re-attach long press listeners for newly rendered items
+        if (typeof attachProductCardListeners === 'function') attachProductCardListeners();
+        
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--danger);">Terjadi kesalahan saat memuat data offline.</div>';
+    }
+}
+
+// Auto-run offline search if we load the page without internet and there is a ?q= in the URL
+document.addEventListener('DOMContentLoaded', () => {
+    if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        const q = urlParams.get('q');
+        if (q) {
+            doOfflineSearch(q);
+        } else if (document.querySelectorAll('.product-card').length === 0) {
+             // If completely empty (perhaps SW loaded empty HTML), load everything
+             doOfflineSearch('');
+        }
+    }
+});
 </script>
