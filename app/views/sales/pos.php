@@ -261,9 +261,17 @@ function initPosSearch() {
         const q = this.value.trim();
         if (q.length < 2) {
             sug.innerHTML = '';
+            if (window.posSearchAbortController) window.posSearchAbortController.abort();
             return;
         }
         performSearch(q);
+    });
+
+    // Click outside to hide suggestions
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-input-wrapper') && !e.target.closest('#posSuggestions')) {
+            sug.innerHTML = '';
+        }
     });
 
     // Enter key for barcode inside the input
@@ -350,11 +358,19 @@ async function performSearch(q) {
     
     sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Mencari...</div>';
     
+    if (window.posSearchAbortController) {
+        window.posSearchAbortController.abort();
+    }
+    window.posSearchAbortController = new AbortController();
+    
     try {
         let items = [];
         try {
             if (navigator.onLine) {
-                const resp = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' });
+                const resp = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`, { 
+                    credentials: 'same-origin',
+                    signal: window.posSearchAbortController.signal
+                });
                 if (!resp.ok) {
                     if (resp.status === 503) throw new Error("Offline");
                     sug.innerHTML = '<div style="padding:12px;text-align:center;color:#f59e0b;">Gagal memuat. Refresh halaman atau login ulang.</div>';
@@ -365,6 +381,7 @@ async function performSearch(q) {
                 throw new Error("Offline");
             }
         } catch (e) {
+            if (e.name === 'AbortError') return;
             if (typeof OfflineDB !== 'undefined') {
                 items = await OfflineDB.searchProducts(q);
             } else {
