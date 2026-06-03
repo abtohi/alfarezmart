@@ -161,11 +161,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Load Master Data (Accounts & Categories)
     async function loadMasterData() {
         try {
-            const accRes = await api(`${BASE_URL}api/finance/accounts`);
-            if (accRes.success) accountsData = accRes.data;
+            if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+                const financeData = await OfflineDB.getAllFinance();
+                accountsData = financeData.filter(x => x._type === 'account');
+                categoriesData = financeData.filter(x => x._type === 'finance_cat');
+            } else {
+                const accRes = await api(`${BASE_URL}api/finance/accounts`);
+                if (accRes.success) accountsData = accRes.data;
 
-            const catRes = await api(`${BASE_URL}api/finance/categories`);
-            if (catRes.success) categoriesData = catRes.data;
+                const catRes = await api(`${BASE_URL}api/finance/categories`);
+                if (catRes.success) categoriesData = catRes.data;
+            }
 
             renderPosGrid();
             updateFilterOptions();
@@ -269,24 +275,52 @@ document.addEventListener('DOMContentLoaded', async function() {
         listContainer.innerHTML = `<div class="elegant-loader" style="margin:20px auto;"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
 
         try {
-            // 1. Fetch Summary
-            const summaryRes = await api(`${BASE_URL}api/finance/summary?date=${date}`);
-            if (summaryRes.success) {
-                currentBreakdown = summaryRes.breakdown;
-                updateSummaryUI(summaryRes.summary, summaryRes.breakdown);
-            }
+            if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+                const allLogs = await OfflineDB.getAllFinanceLogs();
+                const todayLogs = allLogs.filter(log => log.log_date === date);
+                currentLogs = todayLogs;
 
-            // 2. Fetch Logs
-            const logsRes = await api(`${BASE_URL}api/finance/logs?date=${date}`);
-            if (logsRes.success) {
-                currentLogs = logsRes.logs;
+                const summary = { income: 0, expense: 0, net: 0 };
+                const breakdown = {};
+                accountsData.forEach(a => breakdown[a.name] = { income: 0, expense: 0, net: 0 });
+
+                todayLogs.forEach(log => {
+                    const amt = parseFloat(log.amount) || 0;
+                    const pos = log.balance_type;
+                    if (!breakdown[pos]) breakdown[pos] = { income: 0, expense: 0, net: 0 };
+                    
+                    if (log.category === 'Pemasukan') {
+                        summary.income += amt;
+                        breakdown[pos].income += amt;
+                    } else if (log.category === 'Pengeluaran') {
+                        summary.expense += amt;
+                        breakdown[pos].expense += amt;
+                    }
+                    summary.net = summary.income - summary.expense;
+                    breakdown[pos].net = breakdown[pos].income - breakdown[pos].expense;
+                });
+                
+                currentBreakdown = breakdown;
+                updateSummaryUI(summary, breakdown);
                 renderTransactions();
             } else {
-                // Clear spinner if no success flag
-                listContainer.innerHTML = `<div class="empty-state" style="padding:30px 10px;"><i class="bi bi-wallet2" style="font-size:2rem;color:var(--text-muted);opacity:0.5;"></i><h3>Gagal Memuat Data</h3><p>Coba refresh halaman ini.</p></div>`;
+                // 1. Fetch Summary
+                const summaryRes = await api(`${BASE_URL}api/finance/summary?date=${date}`);
+                if (summaryRes.success) {
+                    currentBreakdown = summaryRes.breakdown;
+                    updateSummaryUI(summaryRes.summary, summaryRes.breakdown);
+                }
+
+                // 2. Fetch Logs
+                const logsRes = await api(`${BASE_URL}api/finance/logs?date=${date}`);
+                if (logsRes.success) {
+                    currentLogs = logsRes.logs;
+                    renderTransactions();
+                } else {
+                    listContainer.innerHTML = `<div class="empty-state" style="padding:30px 10px;"><i class="bi bi-wallet2" style="font-size:2rem;color:var(--text-muted);opacity:0.5;"></i><h3>Gagal Memuat Data</h3><p>Coba refresh halaman ini.</p></div>`;
+                }
             }
         } catch (e) {
-            // Always clear the spinner on error
             listContainer.innerHTML = `<div class="empty-state" style="padding:30px 10px;"><i class="bi bi-exclamation-circle" style="font-size:2rem;color:var(--primary);opacity:0.7;"></i><h3>Gagal Memuat Data</h3><p>${e.message || 'Periksa koneksi internet Anda.'}</p></div>`;
             showToast(e.message, 'error');
         }
@@ -780,10 +814,40 @@ document.addEventListener('DOMContentLoaded', async function() {
                 try {
                     // Check if category exists, if not, create it on the fly
                     const existingCat = categoriesData.find(c => c.name.toLowerCase() === detail.toLowerCase());
-                    if (!existingCat) {
+                    if (!existingCat && navigator.onLine) {
                         await api(`${BASE_URL}api/finance/categories`, 'POST', { csrf_token: csrfVal, name: detail, type: cat });
-                        // Reload categories silently in background
                         loadMasterData(); 
+                    } else if (!existingCat) {
+                        categoriesData.push({ id: Date.now(), name: detail, type: cat, _type: 'finance_cat' });
+                    }
+
+                    if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+                        const fakeId = Date.now();
+                        const newLog = {
+                            id: fakeId,
+                            category: cat,
+                            balance_type: pos,
+                            amount: amt,
+                            log_date: date,
+                            detail: detail,
+                            description: desc,
+                            period_yyyymm: date.substring(0,7).replace('-',''),
+                            reference_type: null,
+                            created_at: new Date().toISOString().replace('T',' ').substring(0,19)
+                        };
+
+                        await OfflineDB.addPendingChange('finance/logs', 'POST', {
+                            csrf_token: csrfVal, category: cat, balance_type: pos, amount: amt, log_date: date, detail: detail, description: desc
+                        });
+                        
+                        await OfflineDB.saveFinanceLog(newLog);
+                        showToast('Transaksi disimpan offline', 'success');
+                        
+                        if (dateInput.value !== date) {
+                            dateInput.value = date;
+                        }
+                        loadFinanceData();
+                        return true;
                     }
 
                     const res = await api(`${BASE_URL}api/finance/logs`, 'POST', {

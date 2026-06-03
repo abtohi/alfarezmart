@@ -11,6 +11,7 @@ window.OfflineDB = (function() {
     const STORE_PURCHASES = 'purchases';
     const STORE_DEBTS = 'debts';
     const STORE_FINANCE = 'finance';
+    const STORE_FINANCE_LOGS = 'finance_logs';
     const STORE_CATEGORIES = 'categories';
     const STORE_PENDING = 'pending_changes';
     const STORE_AUTH = 'auth_cache';
@@ -43,7 +44,7 @@ window.OfflineDB = (function() {
                 }
 
                 // New stores for full offline mode
-                [STORE_SALES, STORE_SUPPLIERS, STORE_PURCHASES, STORE_DEBTS, STORE_FINANCE, STORE_CATEGORIES].forEach(storeName => {
+                [STORE_SALES, STORE_SUPPLIERS, STORE_PURCHASES, STORE_DEBTS, STORE_FINANCE, STORE_FINANCE_LOGS, STORE_CATEGORIES].forEach(storeName => {
                     if (!db.objectStoreNames.contains(storeName)) {
                         db.createObjectStore(storeName, { keyPath: 'id' });
                     }
@@ -105,6 +106,10 @@ window.OfflineDB = (function() {
                     if (financeItems.length > 0) {
                         await _saveAll(STORE_FINANCE, financeItems);
                     }
+                }
+                // Finance Logs
+                if (data.finance_logs && Array.isArray(data.finance_logs)) {
+                    await _saveAll(STORE_FINANCE_LOGS, data.finance_logs);
                 }
                 // Legacy data (sales, purchases, debts) — may not be in response, ignore
                 if (data.sales && Array.isArray(data.sales)) await _saveAll(STORE_SALES, data.sales);
@@ -170,6 +175,18 @@ window.OfflineDB = (function() {
     function getAllPurchases() { return _getAll(STORE_PURCHASES); }
     function getAllDebts() { return _getAll(STORE_DEBTS); }
     function getAllFinance() { return _getAll(STORE_FINANCE); }
+    function getAllFinanceLogs() { return _getAll(STORE_FINANCE_LOGS); }
+
+    function saveFinanceLog(log) {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("DB not initialized");
+            const transaction = db.transaction([STORE_FINANCE_LOGS], 'readwrite');
+            const store = transaction.objectStore(STORE_FINANCE_LOGS);
+            const request = store.put(log);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
 
     function getProductById(id) {
         return new Promise((resolve, reject) => {
@@ -344,6 +361,10 @@ window.OfflineDB = (function() {
                 await _saveAll(STORE_FINANCE, financeItems);
             }
         }
+        if (data.finance_logs && Array.isArray(data.finance_logs)) {
+            call('finance_logs');
+            await _saveAll(STORE_FINANCE_LOGS, data.finance_logs);
+        }
         return true;
     }
 
@@ -358,6 +379,8 @@ window.OfflineDB = (function() {
         getAllPurchases,
         getAllDebts,
         getAllFinance,
+        getAllFinanceLogs,
+        saveFinanceLog,
         saveProduct,
         getProductById,
         searchProducts,

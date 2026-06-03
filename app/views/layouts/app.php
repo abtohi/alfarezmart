@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS -->
-    <?php $v = '?v=9.7'; ?>
+    <?php $v = '?v=9.8'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -93,8 +93,8 @@ if ($userLevel === 'staff') {
     <div class="status-bar-overlay"></div>
 
     <!-- Offline Banner -->
-    <div id="offlineBanner" style="display:none; background:var(--warning-bg); color:var(--warning); padding:8px 16px; text-align:center; font-size:12px; font-weight:600; width:100%; position:fixed; top:env(safe-area-inset-top, 0px); left:0; z-index:9999; border-bottom:1px solid var(--warning);">
-        <i class="bi bi-wifi-off" style="margin-right:6px;"></i> Mode Offline. Menampilkan data tersimpan.
+    <div id="offlineBanner" style="display:none; text-align:center; padding:4px; font-size:10px; color:var(--warning); font-weight:700;">
+        <i class="bi bi-wifi-off" style="margin-right:4px;"></i> Mode Offline
     </div>
 
     <!-- App Header -->
@@ -220,7 +220,10 @@ if ($userLevel === 'staff') {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- App JS -->
-    <script>const BASE_URL = '<?= BASE_URL ?>';</script>
+    <script>
+        const BASE_URL = '<?= BASE_URL ?>';
+        const version = '9.8';
+    </script>
     <script src="<?= BASE_URL ?>public/js/utils.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/offline-db.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/printer.js<?= $v ?>"></script>
@@ -287,7 +290,7 @@ if ($userLevel === 'staff') {
     
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '9.7'; // Update this to force client reloads
+    const APP_VERSION = '9.8'; // Update this to force client reloads
     
     // Self-healing cache buster
     if (localStorage.getItem('app_version') !== APP_VERSION) {

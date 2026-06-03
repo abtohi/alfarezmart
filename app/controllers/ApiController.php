@@ -175,6 +175,12 @@ class ApiController extends Controller
         $financeAccounts    = $financeModel->getActiveAccounts() ?? [];
         $financeCategories  = $financeModel->getActiveCategories() ?? [];
 
+        // Fetch recent finance logs (last 30 days) for offline use
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT * FROM finance_logs WHERE log_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) ORDER BY log_date DESC, id DESC");
+        $stmt->execute();
+        $financeLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
         $this->json([
             'success'   => true,
             'products'  => $products,
@@ -186,7 +192,8 @@ class ApiController extends Controller
             'finance'   => [
                 'accounts'   => $financeAccounts,
                 'categories' => $financeCategories,
-            ]
+            ],
+            'finance_logs' => $financeLogs
         ]);
     }
 

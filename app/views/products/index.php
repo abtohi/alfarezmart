@@ -487,12 +487,16 @@ document.addEventListener('DOMContentLoaded', () => {
         timer = setTimeout(async () => {
             try {
                 let items = [];
-                try {
-                    const res = await fetch(`<?= BASE_URL ?>api/products/search?q=${encodeURIComponent(q)}`);
-                    items = await res.json();
-                } catch (apiErr) {
-                    if (typeof OfflineDB !== 'undefined') {
-                        items = await OfflineDB.searchProducts(q);
+                if (!navigator.onLine) {
+                    if (typeof OfflineDB !== 'undefined') items = await OfflineDB.searchProducts(q);
+                } else {
+                    try {
+                        const res = await fetch(`<?= BASE_URL ?>api/products/search?q=${encodeURIComponent(q)}`);
+                        items = await res.json();
+                    } catch (apiErr) {
+                        if (typeof OfflineDB !== 'undefined') {
+                            items = await OfflineDB.searchProducts(q);
+                        }
                     }
                 }
 
