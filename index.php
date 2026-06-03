@@ -203,6 +203,11 @@ $router = new Router();
 // Load routes
 require_once APP_PATH . '/config/Routes.php';
 
+// Release session lock for GET API requests to prevent hanging/timeouts
+if (strpos($uri, '/api/') === 0 && $_SERVER['REQUEST_METHOD'] === 'GET') {
+    session_write_close();
+}
+
 // Dispatch request
 $router->dispatch();
 
