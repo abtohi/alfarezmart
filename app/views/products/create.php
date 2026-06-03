@@ -560,7 +560,7 @@ const QTY_MODE_OPTS = [
 function addQtyTierRow(listEl, data = {}) {
     const row = document.createElement('div');
     row.className = 'qty-tier-row';
-    row.style.cssText = 'display:grid;grid-template-columns:minmax(56px,0.8fr) minmax(80px,1fr) minmax(90px,1fr) auto;gap:6px;align-items:end;margin-bottom:6px;';
+    row.style.cssText = 'display:grid;grid-template-columns:minmax(56px,0.8fr) minmax(80px,1fr) minmax(90px,1fr) auto;gap:6px;align-items:start;margin-bottom:6px;';
     const mode = data.sale_mode || 'both';
     const modeOpts = QTY_MODE_OPTS.map(o => `<option value="${o.v}" ${mode === o.v ? 'selected' : ''}>${o.l}</option>`).join('');
     

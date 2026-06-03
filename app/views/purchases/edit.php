@@ -1441,7 +1441,7 @@ function openAllPackagingsModal(tempId) {
             const totalH = Math.round((parseFloat(t.min_qty)||0) * (parseFloat(t.unit_price)||0));
             return `
             <div class="tier-row" style="margin-bottom:6px;">
-                <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
+                <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:start;">
                     <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" value="${t.min_qty}" min="1">
                     <input type="number" class="form-control-dark tier-total-harga" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" value="${totalH}" min="0" oninput="recalcTierHint(this)">
                     <select class="form-select-dark tier-mode" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;">
@@ -1643,7 +1643,7 @@ function addTierRow(btn) {
     row.className = 'tier-row';
     row.style.cssText = 'margin-bottom:6px;';
     row.innerHTML = `
-        <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
+        <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:start;">
             <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" min="1">
             <input type="number" class="form-control-dark tier-total-harga" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" min="0" oninput="recalcTierHint(this)">
             <select class="form-select-dark tier-mode" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;">
@@ -2006,7 +2006,7 @@ function buildDrawerRowHtml(item, prefix) {
         const tierRowsHtml = tiers.map(t => {
             const th = Math.round((parseFloat(t.min_qty)||0) * (parseFloat(t.unit_price)||0));
             return `<div class="drawer-tier-row" style="margin-bottom:6px;">
-                <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
+                <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:start;">
                     <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" value="${t.min_qty}" min="1">
                     <input type="number" class="form-control-dark drawer-tier-total" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" value="${th}" min="0" oninput="recalcTierHint(this)">
                     <select class="form-select-dark drawer-tier-mode" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;">
@@ -2145,7 +2145,7 @@ function addDrawerTierRow(btn) {
     row.className = 'drawer-tier-row';
     row.style.cssText = 'margin-bottom:6px;';
     row.innerHTML = `
-        <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
+        <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:start;">
             <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" min="1">
             <input type="number" class="form-control-dark drawer-tier-total" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" value="" min="0" oninput="recalcTierHint(this)">
             <select class="form-select-dark drawer-tier-mode" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;">
