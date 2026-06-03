@@ -1,4 +1,14 @@
 <!-- Receipt Settings View -->
+<?php
+$settingModel = new \App\Models\SettingModel();
+$storeName = $settingModel->get('store_name', 'AlfarezMart');
+$storeAddress = $settingModel->get('store_address', '');
+$storePhone = $settingModel->get('store_phone', '');
+$printerWidth = $settingModel->get('thermal_printer_width', '58');
+$header = $settingModel->get('receipt_header', '');
+$footer = $settingModel->get('receipt_footer', '');
+$logo = $settingModel->get('store_logo', '');
+?>
 <div class="page-section">
     <div style="margin-bottom:20px;">
         <h2 style="font-size:var(--font-size-lg); font-weight:700; margin-bottom:4px;">Pengaturan Struk</h2>
@@ -15,24 +25,24 @@
             
             <div style="margin-bottom:12px;text-align:center;">
                 <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:8px; text-align:left;">Logo Toko (Muncul di Cetak Browser/iOS)</label>
-                <img id="logo_preview" src="<?= BASE_URL ?>public/images/Icon.png" style="max-width:80px;max-height:80px;border-radius:8px;margin-bottom:8px;border:1px solid var(--border-color);object-fit:contain;">
+                <img id="logo_preview" src="<?= $logo ? $logo : BASE_URL . 'public/images/Icon.png' ?>" style="max-width:80px;max-height:80px;border-radius:8px;margin-bottom:8px;border:1px solid var(--border-color);object-fit:contain;">
                 <input type="file" id="store_logo_input" accept="image/*" style="display:block;width:100%;font-size:12px;" onchange="previewLogo(this)">
-                <input type="hidden" id="store_logo_base64" name="store_logo">
+                <input type="hidden" id="store_logo_base64" name="store_logo" value="<?= htmlspecialchars($logo) ?>">
             </div>
             
             <div style="margin-bottom:12px;">
                 <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Nama Toko</label>
-                <input id="store_name" name="store_name" type="text" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="Nama Toko" required />
+                <input id="store_name" name="store_name" type="text" value="<?= htmlspecialchars($storeName) ?>" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="Nama Toko" required />
             </div>
 
             <div style="margin-bottom:12px;">
                 <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Alamat Toko</label>
-                <textarea id="store_address" name="store_address" rows="2" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm); resize:none;" placeholder="Alamat Toko"></textarea>
+                <textarea id="store_address" name="store_address" rows="2" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm); resize:none;" placeholder="Alamat Toko"><?= htmlspecialchars($storeAddress) ?></textarea>
             </div>
 
             <div>
                 <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Telepon Toko</label>
-                <input id="store_phone" name="store_phone" type="text" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="08xxxxxxx" />
+                <input id="store_phone" name="store_phone" type="text" value="<?= htmlspecialchars($storePhone) ?>" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="08xxxxxxx" />
             </div>
         </div>
 
@@ -43,8 +53,8 @@
             <div>
                 <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Lebar Printer (mm)</label>
                 <select id="thermal_printer_width" name="thermal_printer_width" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);">
-                    <option value="58">58mm (32 karakter)</option>
-                    <option value="80">80mm (48 karakter)</option>
+                    <option value="58" <?= $printerWidth == '58' ? 'selected' : '' ?>>58mm (32 karakter)</option>
+                    <option value="80" <?= $printerWidth == '80' ? 'selected' : '' ?>>80mm (48 karakter)</option>
                 </select>
             </div>
         </div>
@@ -55,13 +65,13 @@
             
             <div style="margin-bottom:12px;">
                 <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Header Struk (opsional)</label>
-                <textarea id="receipt_header" name="receipt_header" rows="3" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm); resize:none;" placeholder="Tambahkan pesan atau judul di atas detail transaksi"></textarea>
+                <textarea id="receipt_header" name="receipt_header" rows="3" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm); resize:none;" placeholder="Tambahkan pesan atau judul di atas detail transaksi"><?= htmlspecialchars($header) ?></textarea>
                 <small style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-top:4px;">Ditampilkan setelah nama toko</small>
             </div>
 
             <div>
                 <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Footer Struk (opsional)</label>
-                <textarea id="receipt_footer" name="receipt_footer" rows="3" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm); resize:none;" placeholder="Catatan atau syarat &amp; ketentuan di bawah total"></textarea>
+                <textarea id="receipt_footer" name="receipt_footer" rows="3" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm); resize:none;" placeholder="Catatan atau syarat &amp; ketentuan di bawah total"><?= htmlspecialchars($footer) ?></textarea>
                 <small style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-top:4px;">Ditampilkan setelah total pembayaran</small>
             </div>
         </div>
@@ -75,8 +85,8 @@
         <div style="font-weight:700; font-size:var(--font-size-md); margin-bottom:12px; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
             <i class="bi bi-eye" style="color:var(--info);"></i> Preview Struk Thermal
         </div>
-        <div style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-lg); max-width:320px; margin:0 auto; box-shadow:var(--shadow-md); overflow:hidden;">
-            <div id="receiptPreview" style="font-family:'Courier New', monospace; font-size:11px; line-height:1.5; color:#000; padding:16px 12px; white-space:pre-wrap; word-break:break-word; text-align:left;">
+        <div style="background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-lg); max-width:320px; margin:0 auto; box-shadow:var(--shadow-md); overflow:hidden; text-align:center;">
+            <div id="receiptPreview" style="display:inline-block; font-family:'Courier New', monospace; font-size:11px; line-height:1.5; color:#000; padding:16px 12px; white-space:pre-wrap; word-break:break-word; text-align:left;">
                 <!-- Rendered by JS -->
             </div>
         </div>
@@ -89,25 +99,9 @@
 <script>
     const csrfToken = document.getElementById('csrfToken').value;
 
-    // ── Load settings from API ──────────────────────────────────────
-    async function loadReceiptSettings() {
-        try {
-            const data = await api('<?= BASE_URL ?>api/settings/receipt', 'GET');
-            document.getElementById('store_name').value = data.store_name || '';
-            document.getElementById('store_address').value = data.store_address || '';
-            document.getElementById('store_phone').value = data.store_phone || '';
-            document.getElementById('thermal_printer_width').value = data.thermal_printer_width || 58;
-            document.getElementById('receipt_header').value = data.receipt_header || '';
-            document.getElementById('receipt_footer').value = data.receipt_footer || '';
-            if (data.store_logo) {
-                document.getElementById('store_logo_base64').value = data.store_logo;
-                document.getElementById('logo_preview').src = data.store_logo;
-            }
-            renderPreview();
-        } catch (error) {
-            console.error('Error loading settings:', error);
-            showToast('Gagal memuat pengaturan struk.', 'error');
-        }
+    // ── Load settings from PHP injection ────────────────────────────
+    function loadReceiptSettings() {
+        renderPreview();
     }
 
     // ── Save settings ───────────────────────────────────────────────

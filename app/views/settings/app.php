@@ -35,19 +35,28 @@
                 
                 <div style="margin-bottom:12px;">
                     <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Model AI</label>
-                    <input id="ai_model" list="openrouter_models" name="ai_model" type="text" value="<?= htmlspecialchars($aiModel ?? 'google/gemini-2.5-flash') ?>" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="Pilih atau ketik ID model OpenRouter" required />
-                    <datalist id="openrouter_models">
-                        <option value="google/gemini-2.5-flash">Google Gemini 2.5 Flash</option>
-                        <option value="google/gemini-2.5-pro">Google Gemini 2.5 Pro</option>
-                        <option value="anthropic/claude-3.5-sonnet">Anthropic Claude 3.5 Sonnet</option>
-                        <option value="anthropic/claude-3.5-haiku">Anthropic Claude 3.5 Haiku</option>
-                        <option value="openai/gpt-4o-mini">OpenAI GPT-4o Mini</option>
-                        <option value="openai/gpt-4o">OpenAI GPT-4o</option>
-                        <option value="meta-llama/llama-3.3-70b-instruct">Meta Llama 3.3 70B</option>
-                        <option value="deepseek/deepseek-chat">DeepSeek V3 (Chat)</option>
-                        <option value="deepseek/deepseek-r1">DeepSeek R1</option>
-                    </datalist>
-                    <small style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-top:4px;">Pilih dari daftar atau ketik ID model OpenRouter secara manual.</small>
+                    <select id="ai_model" name="ai_model" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" required>
+                        <optgroup label="Google">
+                            <option value="google/gemini-2.5-flash" <?= ($aiModel ?? '') === 'google/gemini-2.5-flash' ? 'selected' : '' ?>>Google Gemini 2.5 Flash</option>
+                            <option value="google/gemini-2.5-pro" <?= ($aiModel ?? '') === 'google/gemini-2.5-pro' ? 'selected' : '' ?>>Google Gemini 2.5 Pro</option>
+                        </optgroup>
+                        <optgroup label="Anthropic">
+                            <option value="anthropic/claude-3.5-sonnet" <?= ($aiModel ?? '') === 'anthropic/claude-3.5-sonnet' ? 'selected' : '' ?>>Anthropic Claude 3.5 Sonnet</option>
+                            <option value="anthropic/claude-3.5-haiku" <?= ($aiModel ?? '') === 'anthropic/claude-3.5-haiku' ? 'selected' : '' ?>>Anthropic Claude 3.5 Haiku</option>
+                        </optgroup>
+                        <optgroup label="OpenAI">
+                            <option value="openai/gpt-4o-mini" <?= ($aiModel ?? '') === 'openai/gpt-4o-mini' ? 'selected' : '' ?>>OpenAI GPT-4o Mini</option>
+                            <option value="openai/gpt-4o" <?= ($aiModel ?? '') === 'openai/gpt-4o' ? 'selected' : '' ?>>OpenAI GPT-4o</option>
+                        </optgroup>
+                        <optgroup label="Meta">
+                            <option value="meta-llama/llama-3.3-70b-instruct" <?= ($aiModel ?? '') === 'meta-llama/llama-3.3-70b-instruct' ? 'selected' : '' ?>>Meta Llama 3.3 70B</option>
+                        </optgroup>
+                        <optgroup label="DeepSeek">
+                            <option value="deepseek/deepseek-chat" <?= ($aiModel ?? '') === 'deepseek/deepseek-chat' ? 'selected' : '' ?>>DeepSeek V3 (Chat)</option>
+                            <option value="deepseek/deepseek-r1" <?= ($aiModel ?? '') === 'deepseek/deepseek-r1' ? 'selected' : '' ?>>DeepSeek R1</option>
+                        </optgroup>
+                    </select>
+                    <small style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-top:4px;">Pilih model AI dari OpenRouter.</small>
                 </div>
 
                 <div style="margin-bottom:12px;">
