@@ -3271,51 +3271,5 @@ class ApiController extends Controller
             $this->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
     }
-
-    // ===== OFFLINE SYNC =====
-    public function syncAllData()
-    {
-        try {
-            // Load required models
-            require_once __DIR__ . '/../models/ProductModel.php';
-            require_once __DIR__ . '/../models/SupplierModel.php';
-            require_once __DIR__ . '/../models/CategoryModel.php';
-            require_once __DIR__ . '/../models/FinanceModel.php';
-
-            $prodModel = new ProductModel();
-            $supModel = new SupplierModel();
-            $catModel = new CategoryModel();
-            $finModel = new FinanceModel();
-
-            // 1. Fetch Products
-            $products = $prodModel->allWithDetails();
-            $prodModel->attachPackagingsForProductList($products);
-
-            // 2. Fetch Suppliers
-            $suppliers = $supModel->getAllWithType();
-
-            // 3. Fetch Categories
-            $categories = $catModel->all();
-
-            // 4. Fetch Finance Accounts & Categories
-            $financeAccounts = $finModel->getActiveAccounts();
-            $financeCategories = $finModel->getActiveCategories();
-
-            // Construct response
-            $data = [
-                'products' => $products,
-                'suppliers' => $suppliers,
-                'categories' => $categories,
-                'finance' => [
-                    'accounts' => $financeAccounts,
-                    'categories' => $financeCategories
-                ]
-            ];
-
-            $this->json($data);
-        } catch (Exception $e) {
-            $this->json(['error' => $e->getMessage()], 500);
-        }
-    }
 }
 
