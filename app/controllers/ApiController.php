@@ -167,7 +167,7 @@ class ApiController extends Controller
         // Product Categories (brands & categories)
         require_once __DIR__ . '/../models/CategoryModel.php';
         $categoryModel = new CategoryModel();
-        $categories = $categoryModel->getAll() ?? [];
+        $categories = $categoryModel->all() ?? [];
 
         // Finance Accounts & Categories
         require_once __DIR__ . '/../models/FinanceModel.php';
