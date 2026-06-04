@@ -1921,6 +1921,8 @@ function buildMiniPricingTableHtml(item) {
 
         const mR = (nett > 0 && ret > 0) ? ((ret - nett) / ret * 100) : null;
         const mW = (nett > 0 && who > 0) ? ((who - nett) / who * 100) : null;
+        const profitR = ret > 0 ? (ret - nett) : null;
+        const profitW = who > 0 ? (who - nett) : null;
         const cR = mR !== null ? (mR >= 10 ? 'var(--success)' : mR >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
         const cW = mW !== null ? (mW >= 5  ? 'var(--success)' : mW >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
         const isSelected = (pkg.level == item.level);
@@ -1936,11 +1938,11 @@ function buildMiniPricingTableHtml(item) {
             </td>
             <td style="padding:5px 6px;font-size:10px;text-align:right;">
                 <span style="color:var(--success);font-weight:600;">${ret > 0 ? 'Rp' + ret.toLocaleString('id-ID') : '—'}</span>
-                ${mR !== null ? `<div style="color:${cR};font-size:8px;">${mR.toFixed(1)}%</div>` : ''}
+                ${mR !== null ? `<div style="color:${cR};font-size:8px;">${mR.toFixed(1)}% <span style="opacity:0.7">(Rp${Math.round(profitR).toLocaleString('id-ID')})</span></div>` : ''}
             </td>
             <td style="padding:5px 6px;font-size:10px;text-align:right;">
                 <span style="color:var(--warning);font-weight:600;">${who > 0 ? 'Rp' + who.toLocaleString('id-ID') : '—'}</span>
-                ${mW !== null ? `<div style="color:${cW};font-size:8px;">${mW.toFixed(1)}%</div>` : ''}
+                ${mW !== null ? `<div style="color:${cW};font-size:8px;">${mW.toFixed(1)}% <span style="opacity:0.7">(Rp${Math.round(profitW).toLocaleString('id-ID')})</span></div>` : ''}
             </td>
         </tr>`;
     }).join('');
