@@ -714,7 +714,7 @@ function addPackagingLevel(prefill = null) {
                         <input type="number" placeholder="Total Rp" step="any" class="form-control-dark calc-total" style="width:90px;font-size:12px;padding:4px;">
                         <span style="color:var(--text-muted);"></span>
                         <input type="number" placeholder="Qty" value="1" class="form-control-dark calc-qty" style="width:50px;font-size:12px;padding:4px;">
-                        <button type="button" class="btn-primary-custom" style="padding:4px 8px;font-size:12px;border-radius:4px;" onclick="const p=this.parentElement; const t=p.querySelector('.calc-total').value; const q=p.querySelector('.calc-qty').value; if(t&&q>0){ const inp=p.closest('label').parentElement.querySelector('.buy-price'); inp.value=(parseFloat(t)/parseFloat(q)).toFixed(2); inp.dispatchEvent(new Event('input')); p.style.display='none'; }"><i class="bi bi-check2"></i> Hitung</button>
+                        <button type="button" class="btn-primary-custom" style="padding:4px 8px;font-size:12px;border-radius:4px;" onclick="const p=this.parentElement; const t=p.querySelector('.calc-total').value; const q=p.querySelector('.calc-qty').value; if(t&&q>0){ const inp=p.closest('label').parentElement.querySelector('.buy-price'); const calculatedVal = parseFloat(t)/parseFloat(q); inp.value=Number.isInteger(calculatedVal) ? calculatedVal : parseFloat(calculatedVal.toFixed(2)); inp.dispatchEvent(new Event('input')); p.style.display='none'; }"><i class="bi bi-check2"></i> Hitung</button>
                     </div>
                 </label>
                 <input type="number" name="buy_price[]" placeholder="0" step="0.01" class="form-control-dark price-input buy-price" style="width:100%;" required value="${prefill ? prefill.buy_price : ''}">
@@ -1060,7 +1060,8 @@ function addQtyTierRow(listEl, data = {}) {
     
     const minQty = data.min_qty || '';
     const unitPrice = data.unit_price || '';
-    const totalPrice = (minQty && unitPrice) ? Math.round(minQty * unitPrice) : '';
+    const calculatedTotal = (minQty && unitPrice) ? (minQty * unitPrice) : '';
+    const totalPrice = calculatedTotal ? (Number.isInteger(calculatedTotal) ? calculatedTotal : parseFloat(calculatedTotal.toFixed(2))) : '';
 
     row.innerHTML = `
         <div><label style="font-size:9px;color:var(--text-muted);">Untuk Qty</label>

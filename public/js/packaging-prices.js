@@ -114,7 +114,9 @@ const PackagingPriceSync = {
                 if (isBuy && buyCustom) return;   // skip — user set custom buy price
                 if (isSell && sellCustom) return;  // skip — user set custom sell price
 
-                const newVal = Math.round(unitPrice * (baseQtys[i] || 1));
+                // Use parseFloat with toFixed(2) to preserve up to 2 decimal places instead of Math.round
+                const calculatedVal = unitPrice * (baseQtys[i] || 1);
+                const newVal = Number.isInteger(calculatedVal) ? calculatedVal : parseFloat(calculatedVal.toFixed(2));
                 target.value = newVal > 0 ? newVal : '';
             }
         });
