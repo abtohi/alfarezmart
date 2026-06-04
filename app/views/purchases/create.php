@@ -101,6 +101,16 @@
                 <input type="text" id="productSearch" placeholder="Scan barcode atau ketik nama produk..." 
                        style="flex:1;border:none;background:transparent;padding:12px 10px;color:var(--text-primary);font-size:var(--font-size-base);outline:none;font-family:var(--font-family);" autocomplete="off">
             </div>
+            
+            <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--font-size-sm);font-weight:600;color:var(--text-primary);">
+                    <input type="checkbox" id="chkGlobalPpn" style="width:16px;height:16px;accent-color:var(--primary);" onchange="toggleGlobalPpn()">
+                    PPN (%)
+                </label>
+                <input type="number" id="globalPpnInput" placeholder="Misal: 11" class="form-control-dark" style="width:100px; height:32px; font-size:var(--font-size-sm);" disabled oninput="applyGlobalPpn()">
+                <div style="font-size:10px; color:var(--text-muted);">Terapkan PPN ke semua barang di keranjang</div>
+            </div>
+
             <div id="productSuggestions" style="margin-top:8px;"></div>
         </div>
     </div>
@@ -481,6 +491,29 @@ function updateFilterHint() {
     } else {
         hint.textContent = 'Semua produk akan muncul saat diketik namanya';
     }
+}
+
+function toggleGlobalPpn() {
+    const isChecked = document.getElementById('chkGlobalPpn').checked;
+    const input = document.getElementById('globalPpnInput');
+    input.disabled = !isChecked;
+    if (isChecked) {
+        input.focus();
+    } else {
+        input.value = '';
+        applyGlobalPpn();
+    }
+}
+
+function applyGlobalPpn() {
+    const val = parseFloat(document.getElementById('globalPpnInput').value) || 0;
+    purchaseItems.forEach(item => {
+        item.ppn_pct = val;
+        item.harga_nett = calcItemNett(item.buy_price, val, item.diskon_mode, item.diskon_value);
+    });
+    if (typeof renderCart === 'function') renderCart();
+    if (typeof calculateTotal === 'function') calculateTotal();
+    saveDraft();
 }
 
 function clearSalesRepSelection() {

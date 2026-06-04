@@ -1067,7 +1067,7 @@ function addQtyTierRow(listEl, data = {}) {
         <div><label style="font-size:9px;color:var(--text-muted);">Untuk Qty</label>
             <input type="number" class="form-control-dark tier-min-qty" min="1" step="1" value="${minQty}" placeholder="1" style="width:100%;padding:6px;font-size:12px;" oninput="this.closest('.qty-tier-row').querySelector('.tier-total-price').dispatchEvent(new Event('input'))"></div>
         <div><label style="font-size:9px;color:var(--text-muted);">Total Harga</label>
-            <input type="number" class="form-control-dark tier-total-price" min="0" step="any" value="${totalPrice}" placeholder="10000" style="width:100%;padding:6px;font-size:12px;" oninput="const r=this.closest('.qty-tier-row'); const q=r.querySelector('.tier-min-qty').value; if(q>0) r.querySelector('.tier-unit-price').value=(this.value/q).toFixed(2); r.querySelector('.tier-unit-price').dispatchEvent(new Event('change'));">
+            <input type="number" class="form-control-dark tier-total-price" min="0" step="any" value="${totalPrice}" placeholder="10000" style="width:100%;padding:6px;font-size:12px;" oninput="const r=this.closest('.qty-tier-row'); const q=r.querySelector('.tier-min-qty').value; if(q>0) r.querySelector('.tier-unit-price').value=parseFloat((this.value/q).toFixed(2)); r.querySelector('.tier-unit-price').dispatchEvent(new Event('change'));">
             <input type="hidden" class="tier-unit-price" value="${unitPrice}">
             <div class="tier-margin-info" style="font-size:9px;color:var(--text-muted);margin-top:2px;min-height:14px;"></div>
         </div>

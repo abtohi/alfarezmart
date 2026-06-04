@@ -41,112 +41,66 @@
                     </label>
 
                     <!-- Hidden input that stores the actual value -->
-                    <input type="hidden" id="ai_model" name="ai_model" value="<?= htmlspecialchars($aiModel ?? 'google/gemini-2.5-flash') ?>">
+                    <input type="hidden" id="ai_model" name="ai_model" value="<?= htmlspecialchars($aiModel ?? 'openrouter/auto') ?>">
 
-                    <!-- Provider Group: Google -->
+                    <!-- OpenRouter Free Models -->
                     <div style="margin-bottom:10px;">
                         <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; padding-left:2px;">
-                            <span style="color:#4285F4;">●</span> Google
+                            <span style="color:var(--success);">●</span> Gratis & Sepuasnya (No Limit)
                         </div>
                         <div class="model-cards-grid">
-                            <div class="model-card <?= ($aiModel ?? '') === 'google/gemini-2.5-flash' || !$aiModel ? 'selected' : '' ?>" onclick="selectModel('google/gemini-2.5-flash', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#34A853);">G</div>
+                            <div class="model-card <?= ($aiModel ?? '') === 'openrouter/auto' || !$aiModel ? 'selected' : '' ?>" onclick="selectModel('openrouter/auto', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">A</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Gemini 2.5 Flash</div>
-                                    <div class="model-card-meta">Cepat &amp; Efisien</div>
+                                    <div class="model-card-name">Auto Model</div>
+                                    <div class="model-card-meta">Otomatis Terbaik</div>
                                 </div>
-                                <span class="model-badge model-badge-free">Recommended</span>
+                                <span class="model-badge model-badge-pro">Default</span>
                             </div>
-                            <div class="model-card <?= ($aiModel ?? '') === 'google/gemini-2.5-pro' ? 'selected' : '' ?>" onclick="selectModel('google/gemini-2.5-pro', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#34A853,#FBBC04);">G</div>
+                            
+                            <div class="model-card <?= ($aiModel ?? '') === 'openrouter/free' ? 'selected' : '' ?>" onclick="selectModel('openrouter/free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">F</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Gemini 2.5 Pro</div>
-                                    <div class="model-card-meta">Akurasi Tinggi</div>
-                                </div>
-                                <span class="model-badge model-badge-pro">Pro</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Provider Group: Anthropic -->
-                    <div style="margin-bottom:10px;">
-                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; padding-left:2px;">
-                            <span style="color:#D4A574;">●</span> Anthropic
-                        </div>
-                        <div class="model-cards-grid">
-                            <div class="model-card <?= ($aiModel ?? '') === 'anthropic/claude-sonnet-4-5' ? 'selected' : '' ?>" onclick="selectModel('anthropic/claude-sonnet-4-5', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#D4A574,#C96442);">A</div>
-                                <div class="model-card-info">
-                                    <div class="model-card-name">Claude Sonnet 4.5</div>
-                                    <div class="model-card-meta">Seimbang &amp; Cerdas</div>
-                                </div>
-                                <span class="model-badge model-badge-pro">Pro</span>
-                            </div>
-                            <div class="model-card <?= ($aiModel ?? '') === 'anthropic/claude-opus-4-5' ? 'selected' : '' ?>" onclick="selectModel('anthropic/claude-opus-4-5', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#C96442,#8B2500);">A</div>
-                                <div class="model-card-info">
-                                    <div class="model-card-name">Claude Opus 4.5</div>
-                                    <div class="model-card-meta">Paling Canggih</div>
-                                </div>
-                                <span class="model-badge model-badge-ultra">Ultra</span>
-                            </div>
-                            <div class="model-card <?= ($aiModel ?? '') === 'anthropic/claude-haiku-4-5' ? 'selected' : '' ?>" onclick="selectModel('anthropic/claude-haiku-4-5', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#E8C99A,#D4A574);">A</div>
-                                <div class="model-card-info">
-                                    <div class="model-card-name">Claude Haiku 4.5</div>
-                                    <div class="model-card-meta">Ringan &amp; Cepat</div>
-                                </div>
-                                <span class="model-badge model-badge-free">Hemat</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Provider Group: OpenAI -->
-                    <div style="margin-bottom:10px;">
-                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; padding-left:2px;">
-                            <span style="color:#10a37f;">●</span> OpenAI
-                        </div>
-                        <div class="model-cards-grid">
-                            <div class="model-card <?= ($aiModel ?? '') === 'openai/gpt-4o-mini' ? 'selected' : '' ?>" onclick="selectModel('openai/gpt-4o-mini', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#10a37f,#1a7f64);">O</div>
-                                <div class="model-card-info">
-                                    <div class="model-card-name">GPT-4o Mini</div>
-                                    <div class="model-card-meta">Efisien &amp; Hemat</div>
-                                </div>
-                                <span class="model-badge model-badge-free">Hemat</span>
-                            </div>
-                            <div class="model-card <?= ($aiModel ?? '') === 'openai/gpt-4o' ? 'selected' : '' ?>" onclick="selectModel('openai/gpt-4o', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#1a7f64,#0d5c47);">O</div>
-                                <div class="model-card-info">
-                                    <div class="model-card-name">GPT-4o</div>
-                                    <div class="model-card-meta">Multimodal Kuat</div>
-                                </div>
-                                <span class="model-badge model-badge-pro">Pro</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Provider Group: Meta & DeepSeek -->
-                    <div style="margin-bottom:4px;">
-                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; padding-left:2px;">
-                            <span style="color:#0668E1;">●</span> Lainnya
-                        </div>
-                        <div class="model-cards-grid">
-                            <div class="model-card <?= ($aiModel ?? '') === 'meta-llama/llama-3.3-70b-instruct' ? 'selected' : '' ?>" onclick="selectModel('meta-llama/llama-3.3-70b-instruct', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#0668E1,#034799);">M</div>
-                                <div class="model-card-info">
-                                    <div class="model-card-name">Llama 3.3 70B</div>
-                                    <div class="model-card-meta">Meta · Open Source</div>
+                                    <div class="model-card-name">Free Router</div>
+                                    <div class="model-card-meta">Model Gratis</div>
                                 </div>
                                 <span class="model-badge model-badge-free">Gratis</span>
                             </div>
-                            <div class="model-card <?= ($aiModel ?? '') === 'deepseek/deepseek-chat' ? 'selected' : '' ?>" onclick="selectModel('deepseek/deepseek-chat', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#1a6b8a,#0d3f52);">D</div>
+
+                            <div class="model-card <?= ($aiModel ?? '') === 'meta-llama/llama-3.3-70b-instruct:free' ? 'selected' : '' ?>" onclick="selectModel('meta-llama/llama-3.3-70b-instruct:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#0668E1,#034799);">M</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">DeepSeek V3</div>
-                                    <div class="model-card-meta">Analitik Mendalam</div>
+                                    <div class="model-card-name">Llama 3.3 70B</div>
+                                    <div class="model-card-meta">Meta · Gratis</div>
                                 </div>
-                                <span class="model-badge model-badge-free">Hemat</span>
+                                <span class="model-badge model-badge-free">Gratis</span>
+                            </div>
+
+                            <div class="model-card <?= ($aiModel ?? '') === 'qwen/qwen3-coder:free' ? 'selected' : '' ?>" onclick="selectModel('qwen/qwen3-coder:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#1a6b8a,#0d3f52);">Q</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Qwen3 Coder 480B</div>
+                                    <div class="model-card-meta">Qwen · Gratis</div>
+                                </div>
+                                <span class="model-badge model-badge-free">Gratis</span>
+                            </div>
+                            
+                            <div class="model-card <?= ($aiModel ?? '') === 'google/gemma-4-31b-it:free' ? 'selected' : '' ?>" onclick="selectModel('google/gemma-4-31b-it:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#34A853);">G</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Gemma 4 31B</div>
+                                    <div class="model-card-meta">Google · Gratis</div>
+                                </div>
+                                <span class="model-badge model-badge-free">Gratis</span>
+                            </div>
+
+                            <div class="model-card <?= ($aiModel ?? '') === 'openai/gpt-oss-120b:free' ? 'selected' : '' ?>" onclick="selectModel('openai/gpt-oss-120b:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#10a37f,#1a7f64);">O</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">GPT-OSS 120B</div>
+                                    <div class="model-card-meta">OpenAI · Gratis</div>
+                                </div>
+                                <span class="model-badge model-badge-free">Gratis</span>
                             </div>
                         </div>
                     </div>
@@ -315,15 +269,12 @@
 
     // ── Model Card Names Map ──────────────────────────────────────────
     const MODEL_NAMES = {
-        'google/gemini-2.5-flash': 'Google Gemini 2.5 Flash',
-        'google/gemini-2.5-pro': 'Google Gemini 2.5 Pro',
-        'anthropic/claude-sonnet-4-5': 'Anthropic Claude Sonnet 4.5',
-        'anthropic/claude-opus-4-5': 'Anthropic Claude Opus 4.5',
-        'anthropic/claude-haiku-4-5': 'Anthropic Claude Haiku 4.5',
-        'openai/gpt-4o-mini': 'OpenAI GPT-4o Mini',
-        'openai/gpt-4o': 'OpenAI GPT-4o',
-        'meta-llama/llama-3.3-70b-instruct': 'Meta Llama 3.3 70B',
-        'deepseek/deepseek-chat': 'DeepSeek V3 Chat',
+        'openrouter/auto': 'Auto Model',
+        'openrouter/free': 'Free Router',
+        'meta-llama/llama-3.3-70b-instruct:free': 'Meta Llama 3.3 70B',
+        'qwen/qwen3-coder:free': 'Qwen3 Coder 480B',
+        'google/gemma-4-31b-it:free': 'Google Gemma 4 31B',
+        'openai/gpt-oss-120b:free': 'OpenAI GPT-OSS 120B'
     };
 
     function selectModel(modelId, cardEl) {
