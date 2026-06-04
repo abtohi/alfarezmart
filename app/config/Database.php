@@ -40,15 +40,23 @@ class Database
                 $pass = defined('DB_PASSWORD') ? DB_PASSWORD : '';
 
                 $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
-                $this->pdo = new PDO($dsn, $user, $pass);
+                $options = [
+                    PDO::ATTR_PERSISTENT => true,
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false
+                ];
+                $this->pdo = new PDO($dsn, $user, $pass, $options);
                 
                 // Set Timezone MySQL ke WIB (GMT+7)
                 $this->pdo->exec("SET time_zone = '+07:00'");
             }
 
-            $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-            $this->pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+            if ($driver === 'sqlite') {
+                $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $this->pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+                $this->pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+            }
 
         } catch (PDOException $e) {
             if (defined('APP_DEBUG') && APP_DEBUG === 'true') {
