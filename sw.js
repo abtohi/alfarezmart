@@ -2,7 +2,7 @@
  * AlfarezMart PWA - Service Worker
  * Cache Strategy: Cache First for assets, Network First for API
  */
-const CACHE_NAME = 'alfarezmart-v7.1';
+const CACHE_NAME = 'alfarezmart-v7.2';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -33,9 +33,19 @@ const STATIC_ASSETS = [
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-            // Bypass HTTP cache when installing to get freshest files
-            const requests = STATIC_ASSETS.map(url => new Request(url, { cache: 'no-cache' }));
-            return cache.addAll(requests).catch(err => console.log('Cache addAll error:', err));
+            // Cache each asset individually so one failure doesn't stop the rest
+            return Promise.all(
+                STATIC_ASSETS.map(url => {
+                    return fetch(url, { cache: 'no-cache', credentials: 'same-origin' })
+                        .then(response => {
+                            if (!response.ok && response.type !== 'opaque') {
+                                throw new Error('Request failed for ' + url);
+                            }
+                            return cache.put(url, response);
+                        })
+                        .catch(err => console.log('Failed to cache:', url, err));
+                })
+            );
         })
     );
     self.skipWaiting();
