@@ -247,9 +247,9 @@ document.addEventListener('DOMContentLoaded', () => {
         sell_price_retail: pk.sell_price_retail,
         sell_price_wholesale: pk.sell_price_wholesale,
         barcode: pk.barcode || '',
-        ppn_pct: pk.ppn_pct || 0,
-        discount_mode: pk.discount_mode || 'rp',
-        discount_value: pk.discount_value || 0,
+        ppn_pct: 0,           // PPN sudah tercermin di buy_price, jangan reload ke form
+        discount_mode: 'rp',  // Reset diskon, sudah tercermin di buy_price
+        discount_value: 0,    // Reset diskon, sudah tercermin di buy_price
         qty_prices: pk.qty_prices || []
     }));
     if (sorted.length === 0) addPackagingLevel();

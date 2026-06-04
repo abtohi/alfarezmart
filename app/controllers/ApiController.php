@@ -782,7 +782,10 @@ class ApiController extends Controller
                     sell_price_wholesale = :wholesale,
                     margin_retail = :mr, 
                     margin_wholesale = :mw,
-                    barcode = :barcode
+                    barcode = :barcode,
+                    ppn_pct = 0,
+                    discount_mode = 'rp',
+                    discount_value = 0
                 WHERE id = :id
             ");
             $params = [

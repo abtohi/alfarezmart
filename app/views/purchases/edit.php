@@ -485,9 +485,12 @@ function loadExistingData() {
 }
 
 function addProductToCartExisting(product, itemInfo) {
+    const realProductId = product.id; // Save actual product ID
+    product.id = Date.now() + Math.random(); // Temp ID for cart array (must be unique)
+    product.product_id = realProductId;  // Real product ID for backend
     product.name = product.full_name || product.short_label || 'Produk';
     product.is_manual_price = false;
-    product.level = itemInfo.level;
+    product.level = parseInt(itemInfo.level) || 1;
     product.quantity = parseFloat(itemInfo.quantity) || 1;
     product.buy_price = parseFloat(itemInfo.buy_price) || 0;
     product.ppn_pct = parseFloat(itemInfo.ppn_percent) || 0;
@@ -516,6 +519,7 @@ function addProductToCartExisting(product, itemInfo) {
     renderCart();
     calculateTotal();
 }
+
 
 function updateFilterHint() {
     const hint = document.getElementById('filterHint');
