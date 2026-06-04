@@ -485,6 +485,8 @@ function loadExistingData() {
 }
 
 function addProductToCartExisting(product, itemInfo) {
+    product.name = product.full_name || product.short_label || 'Produk';
+    product.is_manual_price = false;
     product.level = itemInfo.level;
     product.quantity = parseFloat(itemInfo.quantity) || 1;
     product.buy_price = parseFloat(itemInfo.buy_price) || 0;
@@ -881,6 +883,7 @@ function addProductToCart(product, defaultLevel = 1) {
             id: Date.now(),
             product_id: product.id,
             name: product.full_name || product.short_label,
+            is_manual_price: false,
             packagings: product.packagings,
             level: selectedPkg.level,
             unit_name: selectedPkg.unit_name,
@@ -925,6 +928,7 @@ function updateItem(tempId, field, value) {
     if (!item) return;
     const numValue = parseFloat(value) || 0;
     item[field] = numValue;
+    if (field === 'buy_price') item.is_manual_price = true;
     
     // Sync with the packagings array so we don't lose the edit if user changes level
     const pkg = item.packagings.find(p => p.level == item.level);
@@ -1779,6 +1783,7 @@ function distributeAdjustments() {
     const ratio = currentGrandTotal / currentSubtotal;
     
     purchaseItems.forEach(item => {
+        if (item.is_manual_price) return;
         // Adjust the buy_price proportionally
         item.buy_price = Math.round(item.buy_price * ratio);
         item.total = item.quantity * item.buy_price;
@@ -2448,7 +2453,7 @@ function renderCart() {
             <div style="margin-bottom:10px;">
                 <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Total Harga Pembelian</label>
                 <input type="number" id="main_total_${item.id}" class="form-control-dark" style="width:100%;padding:8px;font-size:13px;font-weight:600;color:var(--info);"
-                       value="${totalVal > 0 ? totalVal : ''}" placeholder="Masukkan total harga..."
+                       value="${totalVal > 0 ? totalVal : ''}" placeholder="Masukkan total harga..." step="any"
                        oninput="onMainInputChange(${item.id}, 'total', this.value)">
             </div>
 

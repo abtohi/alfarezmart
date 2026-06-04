@@ -837,6 +837,7 @@ function addProductToCart(product, defaultLevel = 1) {
             id: Date.now(),
             product_id: product.id,
             name: product.full_name || product.short_label,
+            is_manual_price: false,
             packagings: product.packagings,
             level: selectedPkg.level,
             unit_name: selectedPkg.unit_name,
@@ -881,6 +882,7 @@ function updateItem(tempId, field, value) {
     if (!item) return;
     const numValue = parseFloat(value) || 0;
     item[field] = numValue;
+    if (field === 'buy_price') item.is_manual_price = true;
     
     // Sync with the packagings array so we don't lose the edit if user changes level
     const pkg = item.packagings.find(p => p.level == item.level);
@@ -1821,6 +1823,7 @@ function distributeAdjustments() {
     const ratio = currentGrandTotal / currentSubtotal;
     
     purchaseItems.forEach(item => {
+        if (item.is_manual_price) return;
         // Adjust the buy_price proportionally
         item.buy_price = Math.round(item.buy_price * ratio);
         item.total = item.quantity * item.buy_price;

@@ -52,6 +52,7 @@
                 <div style="display:flex;flex-direction:column;gap:4px;">
                     <span class="pos-checkout-bar__summary-label">Total Belanja</span>
                     <span id="cartTotal" class="pos-checkout-bar__total">Rp0</span>
+                    <span id="cartProfit" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;"></span>
                 </div>
                 <div style="font-size:var(--font-size-xs);color:var(--text-muted);">
                     <span id="cartCount">0</span> item
@@ -150,13 +151,10 @@ function recalcItemPrice(item) {
     item.total = Math.round(finalUnitPrice * qty);
     item.unit_price = qty > 0 ? item.total / qty : 0;
 
-    // Add PPN & Diskon info to price_note
-    if (ppnPct > 0 || discountAmount > 0) {
+    // Add Diskon info to price_note (Hide PPN per task rules)
+    if (discountAmount > 0) {
         let extraNote = [];
-        if (ppnPct > 0) extraNote.push(`+PPN ${ppnPct}%`);
-        if (discountAmount > 0) {
-            extraNote.push(`-Diskon ${dMode === 'pct' ? dVal + '%' : 'Rp' + dVal}`);
-        }
+        extraNote.push(`-Diskon ${dMode === 'pct' ? dVal + '%' : 'Rp' + dVal}`);
         item.price_note = (item.price_note ? item.price_note + ' | ' : '') + extraNote.join(' ');
     }
 }
@@ -406,23 +404,25 @@ async function performSearch(q) {
             
             let priceText = '';
             if (p.packagings && p.packagings.length > 0) {
-                const defPkg = p.packagings.find(pkg => pkg.level == 1) || p.packagings[0];
-                const price = saleMode === 'wholesale' 
-                    ? (parseFloat(defPkg.sell_price_wholesale) || parseFloat(defPkg.sell_price_retail) || 0)
-                    : (parseFloat(defPkg.sell_price_retail) || 0);
-                if (price > 0) {
-                    priceText = `<div style="font-weight:700; color:var(--primary); font-size:0.85rem; margin-top:2px;">${formatRupiah(price)} <span style="font-size:0.7rem; color:var(--text-muted); font-weight:normal;">/ ${escapeHtml(defPkg.unit_name)}</span></div>`;
+                const pkgsHtml = p.packagings.map(pkg => {
+                    const price = saleMode === 'wholesale' 
+                        ? (parseFloat(pkg.sell_price_wholesale) || parseFloat(pkg.sell_price_retail) || 0)
+                        : (parseFloat(pkg.sell_price_retail) || 0);
+                    return price > 0 ? `<div style="font-size:0.75rem; margin-top:2px;">${formatRupiah(price)} <span style="font-size:0.65rem; color:var(--text-muted);">/ ${escapeHtml(pkg.unit_name)}</span></div>` : '';
+                }).join('');
+                if (pkgsHtml) {
+                    priceText = `<div style="font-weight:600; color:var(--primary); text-align:right;">${pkgsHtml}</div>`;
                 }
             }
 
             return `
-            <div data-id="${p.id}" style="padding:10px 12px; background:var(--surface-1); margin-bottom:6px; cursor:pointer; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; align-items:center; gap:12px; transition:all 0.2s; box-shadow:var(--shadow-sm);" onclick="selectProduct(${p.id})" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
-                <div style="width:36px; height:36px; background:var(--primary-bg); border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; color:var(--primary);">
+            <div data-id="${p.id}" style="padding:10px 12px; background:var(--surface-1); margin-bottom:6px; cursor:pointer; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; align-items:flex-start; gap:12px; transition:all 0.2s; box-shadow:var(--shadow-sm);" onclick="selectProduct(${p.id})" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
+                <div style="width:36px; height:36px; background:var(--primary-bg); border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; color:var(--primary); flex-shrink:0;">
                     <i class="bi bi-box-seam" style="font-size:1.1rem;"></i>
                 </div>
                 <div style="flex:1; min-width:0;">
-                    <div style="font-weight:600; font-size:0.9rem; color:var(--text-primary); line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</div>
-                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">${brand ? brand : 'Tanpa Merek'}</div>
+                    <div style="font-weight:600; font-size:0.8rem; color:var(--text-primary); line-height:1.3; word-break:break-word; white-space:normal;">${name}</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${brand ? brand : 'Tanpa Merek'}</div>
                 </div>
                 <div style="text-align:right;">
                     ${priceText}
@@ -546,8 +546,20 @@ function changeLevel(id, newLevel) {
 
 function calculateTotal() {
     let sum = 0;
-    cart.forEach(i => sum += i.total);
+    let profit = 0;
+    cart.forEach(i => {
+        sum += i.total;
+        const curPkg = i.packagings?.find(p => p.level == i.level);
+        const buyPrice = parseFloat(curPkg?.buy_price) || 0;
+        if (buyPrice > 0) {
+            profit += i.total - (buyPrice * i.quantity);
+        }
+    });
     cartTotalEl.textContent = formatRupiah(sum);
+    const cartProfitEl = document.getElementById('cartProfit');
+    if (cartProfitEl) {
+        cartProfitEl.textContent = profit > 0 ? `Estimasi Profit: ${formatRupiah(profit)}` : '';
+    }
     cartCountEl.textContent = cart.length;
     btnCheckout.disabled = cart.length === 0;
     if (btnSaveDraft) btnSaveDraft.disabled = cart.length === 0;
@@ -572,11 +584,12 @@ function renderCart() {
             ? `<div class="cart-item-note" style="font-size:var(--font-size-xs);color:var(--info);margin-top:3px;">${escapeHtml(item.price_note)}</div>`
             : `<div class="cart-item-note" style="display:none;"></div>`;
 
-        // Harga modal samar (hanya terlihat oleh admin, sangat kecil & redup)
+        // Harga modal samar & profit item
         const curPkg = item.packagings?.find(p => p.level == item.level);
         const buyPrice = parseFloat(curPkg?.buy_price) || 0;
+        const profitItem = buyPrice > 0 ? item.total - (buyPrice * item.quantity) : 0;
         const buyPriceBlock = buyPrice > 0
-            ? `<div style="font-size:9px;color:rgba(255,255,255,0.18);margin-top:2px;letter-spacing:0.3px;user-select:none;">M: ${formatRupiah(buyPrice)}/${escapeHtml(item.unit_name)}</div>`
+            ? `<div style="font-size:9px;color:rgba(255,255,255,0.18);margin-top:2px;letter-spacing:0.3px;user-select:none;">M: ${formatRupiah(buyPrice)}/${escapeHtml(item.unit_name)} &middot; P: ${formatRupiah(profitItem)}</div>`
             : '';
 
         html += `

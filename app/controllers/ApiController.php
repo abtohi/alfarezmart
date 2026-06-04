@@ -2778,7 +2778,6 @@ class ApiController extends Controller
                         ]
                     ]
                 ],
-                "response_format" => ["type" => "json_object"], // Assuming the model supports it or at least guides it
                 "max_tokens" => 4000
             ];
 

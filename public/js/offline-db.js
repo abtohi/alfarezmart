@@ -4,7 +4,7 @@
 
 window.OfflineDB = (function() {
     const DB_NAME = 'alfarezmart_offline';
-    const DB_VERSION = 4; // Upgraded for full offline support + categories
+    const DB_VERSION = 5; // Upgraded to ensure all stores exist
     const STORE_PRODUCTS = 'products';
     const STORE_SALES = 'sales';
     const STORE_SUPPLIERS = 'suppliers';
@@ -79,6 +79,7 @@ window.OfflineDB = (function() {
 
     async function syncAllDataFromServer() {
         try {
+            if (!db) await init();
             const data = await api(`${BASE_URL}api/sync/all?_t=` + Date.now());
             if (data) {
                 // Products

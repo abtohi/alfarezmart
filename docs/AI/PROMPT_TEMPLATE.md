@@ -33,18 +33,90 @@ Klasifikasikan task ini sebelum mulai:
 
 ## Task
 
-- Pada halaman Produk, saat user melakukan tambah produk maupun edit produk, tolong dibawah form Harga Tier / kuantitas juga ditambahkan informasi berapa persen markupnya dari harga modal, dan juga berapa selisih harga tier dari harga modal. 
-
-- Pada halaman Input Barang Masuk, baik barang masuk reguler maupun input massal, saat user memasukkan harga membuka panel atur harga kemasan lainnya, dan ketika ada harga tier diinput oleh user, tolong dibawah form Harga Tier / kuantitas juga ditambahkan informasi berapa persen markupnya dari harga modal, dan juga berapa selisih harga tier dari harga modal.
-
-- Pada halaman input barang masuk, baik yang input barang masuk reguler maupun input massal, ketika level kemasan cuma 1, tidak ada level 2 dan 3, tolong user juga diberi form untuk input harga jualnya, tetap ada tombol atur harga kemasan lainnya meskipun cuma 1 level, sehingga user tetap bisa menyesuaikan harga jualnya
-
-- Pada halaman Pengaturan Sistem & AI, tolong Model AI nya dibuat searchBox dropdownlist dan tambahkan semua list model yang bisa digunakan dari openrouter, kemudian di backend juga modelnya akan merefer ke model yang di pilih user di halaman ini, kemudian tolong juga update promptnya dengan prompt terbaru yang saat ini berjalan di backend, sehingga portal promptnya semua akan mengacu ke prompt yang diinput di halaman Pengaturan Sistem & AI, tidak ada prompt yang ditanam di backend. Tolong update promptnya dengan prompt terbaru, pastikan model apapun yang dipilih user tetap bisa berjalan dan tidak ada error di backend karena telah disesuaikan semuanya.
-
-- Pada halaman Pengaturan Struk, tolong data pengaturan struk yang tersimpan di database saat ini juga di load di form Pengaturan Struk, sehingga user tau saat ini kondisi struk yang tercetak seperti apa dan terlihat di preview, kemudian tampilan di preview tolong dibuat agar sama persis seperti real struknya, dibuat benar benar center, saat ini sepertinya posisi tulisan di preview terlalu ke kanan tidak sesuai struk aslinya.
-
-- Update dan perbaharui Pusat Bantuan dan Panduan sesuai dengan kondisi terupdate aplikasi saat ini, semuanya harus dirangkum disana dan memberikan panduan yang detail dan jelas untuk user.
-
+[ ] Pada halaman riwayat barang masuk, saat salah satu riwayat di edit (di klik icon pencil), kemudian masuk ke halaman Edit Barang Masuk, nama produk menjadi undefined, seharusnya tampil nama produk sesuai di riwayat, tolong ini diperbaiki agar riwayat barang masuk bisa di edit
+[ ] Pada halaman Kasir POS, saat user search produk, produk list yang ditampilkan font nya terlalu besar, dan namanya terpotong, aku mau kamu mengubah ukuran font agar lebih kecil, dan ketika nama produknya terlalu panjang jangan dibuat titik titik ... tetapi tampilkan secara full dan boleh dibuat menyambung ke bawahnya jika length melebihi border panel options. Selain itu saat search juga tolong tampilkan informasi detail harga perkemasan, jika user user memilih ecer, maka harga yang ditampilkan adalah harga ecer, jika memilih grosir maka harga yang ditampilkan yang grosir, sehingga user langsung tahu produk yang di search yang mana sebelum user mengklik / memilih produk.
+[ ] Pada halaman kasir POS juga tolong tampilkan informasi Estimasi Profit, dibawah Total Belanja, namun hanya muncul ditampilan UI, jangan ikut ke cetak ke struk. Selain itu, di setiap produk yang terpilih, selain informasi harga produk, di samping kanan harga produk juga tampilkan profit (selisih harga modal dan harga jualnya) dalam bentuk shadow juga seperti tampilan harga modal, sehingga nantinya akan begini ex : M: Rp15.600/bks P:Rp1.400, untuk profit langsung dihitung profit berdasarkan kuantitasnya, misal perbungkus profitnya 1400, jika user menulis qty nya ada 2, maka profit akan tertulis 2800.
+[ ] Pada halaman Pengaturan Sistem & AI, saat user memilih model lain selain Google Gemini 2.5 Flash, saat digunakan untuk scan AI otomatis masih gagal dan muncul tulisan endpoint tidak ditemukan, tolong ini diperbaiki agar semua model yang ada bisa dipakai, dan endpointnya bisa menyesuaikan
+[ ] Pada halaman Pengaturan Sistem & AI, saat memilih model AI, tampilan UI modal nya masih jadul dan belum modern menyesuaikan tema aplikasi, tolong ini desainnya diperbaiki agar lebih elegan, modern dan sesuai dengan tema aplikasi. Samakan model panelnya seperti panel opsi lainnya di halaman ini agar selaras dengan layout aplikasi
+[ ] Pada halaman Unduh Data Offline saat ini masih gagal, sebelumnya aku memintamu agar ketika mode offline, semua fitur tetap bisa digunakan, termasuk input Pemasukan dan Pengeluaran, input barang masuk, edit produk, tambah produk, hanya saja bedanya ketika offline, data tidak akan langsung sinkron ke server, melainkan akan tersimpan di lokal terlebih dahulu, karena fitur Unduh Offline ini akan mengunduh semua layout, UI, aplikasi front end, back end, framework, database, semua tabel yang ada, alert, animasi, kecuali yang tidak bisa digunakan hanya scan AI otomatis, selain itu fitur search juga seharusnya bisa berjalan menampilkan list dengan multi keywords. Saat ini saya saya klik Unduh Offline muncul error "Gagal mengunduh data offline: Failed to execute 'transaction' on 'IDBDatabase': One of the specified object stores was not found", tolong periksa dan perbaiki ini sampai tuntas.
+[ ] Pada halaman Kasir POS, jika ada produk yang ada PPN nya, tolong jangan tampilkan PPNnya, cukup harga finalnya saja
+[ ] Pada halaman Input Barang Masuk, saat ini setelah melalui proses scan AI, kemudian user mengubah Total Harga Pembelian, ketika user mengklik tombol Distribusikan ke Harga Modal Barang, kenapa Total Harga Pembelian berubah lagi menjadi harga yang sebelum saya edit (yang hasil scan AI), seharusnya tombol Distribusikan ke Harga Modal tidak akan mengubah data yang sudah di edit, tolong perbaiki ini
+[ ] Pada halaman Edit Produk dan Tambah Produk, tolong untuk setiap harga modal di setiap kemasan, juga dipertimbangkan angka desimal, jangan langsung digenapkan ke bilangan bulat, baik hasil penggunaan kalkukator, harga perkalian atau pembagian ke jenis kemasan lain, jika memang ada desimal, tolong tampilkan desimalnya, maksimal 2 digit desimal, namun jika memang harga modalnya bilangan bulat, tolong desimalnya jangan ditampilkan.
+[ ] Pada halaman Input Barang Masuk, untuk setiap panel produk, pada bagian tabel informasi yang berisi Kemasan, Modal Nett, Jual Ecer, Jual Grosir, di bagian informasi harga Jual Ecer dan Jual Grosir, selain dibawahnya ada informasi markup nya berapa persen, tolong juga tambahkan selisih harganya dengan harga modal, agar lebih informatif.
+[ ] Tolong perbaiki semua error ini
+[{
+ "resource": "/c:/xampp/htdocs/AlfarezMart/app/views/settings/app.php",
+ "owner": "_generated_diagnostic_collection_name_#4",
+ "code": "P1008",
+ "severity": 8,
+ "message": "Undefined variable '$csrfToken'.",
+ "source": "intelephense",
+ "startLineNumber": 25,
+ "startColumn": 52,
+ "endLineNumber": 25,
+ "endColumn": 62,
+ "origin": "extHost1"
+},{
+ "resource": "/c:/xampp/htdocs/AlfarezMart/app/views/settings/receipt.php",
+ "owner": "_generated_diagnostic_collection_name_#4",
+ "code": "P1009",
+ "severity": 8,
+ "message": "Undefined type 'App\\Models\\SettingModel'.",
+ "source": "intelephense",
+ "startLineNumber": 3,
+ "startColumn": 21,
+ "endLineNumber": 3,
+ "endColumn": 45,
+ "origin": "extHost1"
+},{
+ "resource": "/c:/xampp/htdocs/AlfarezMart/app/views/settings/receipt.php",
+ "owner": "_generated_diagnostic_collection_name_#4",
+ "code": "P1008",
+ "severity": 8,
+ "message": "Undefined variable '$csrfToken'.",
+ "source": "intelephense",
+ "startLineNumber": 18,
+ "startColumn": 52,
+ "endLineNumber": 18,
+ "endColumn": 62,
+ "origin": "extHost1"
+},{
+ "resource": "/c:/xampp/htdocs/AlfarezMart/app/views/settings/receipt.php",
+ "owner": "_generated_diagnostic_collection_name_#6",
+ "code": "PHP0413",
+ "severity": 4,
+ "message": "Use of unknown class: 'App\\Models\\SettingModel'",
+ "source": "PHP",
+ "startLineNumber": 3,
+ "startColumn": 21,
+ "endLineNumber": 3,
+ "endColumn": 45,
+ "origin": "extHost1"
+},{
+ "resource": "/c:/xampp/htdocs/AlfarezMart/app/views/products/index.php",
+ "owner": "_generated_diagnostic_collection_name_#4",
+ "code": "vendorPrefix",
+ "severity": 4,
+ "message": "Also define the standard property 'appearance' for compatibility",
+ "source": "css",
+ "startLineNumber": 53,
+ "startColumn": 226,
+ "endLineNumber": 53,
+ "endColumn": 241,
+ "origin": "extHost1"
+},{
+ "resource": "/c:/xampp/htdocs/AlfarezMart/app/views/products/index.php",
+ "owner": "_generated_diagnostic_collection_name_#4",
+ "code": "vendorPrefix",
+ "severity": 4,
+ "message": "Also define the standard property 'appearance' for compatibility",
+ "source": "css",
+ "startLineNumber": 58,
+ "startColumn": 226,
+ "endLineNumber": 58,
+ "endColumn": 241,
+ "origin": "extHost1"
+}]
 ## Konteks Tambahan (opsional)
 
 - Modul terkait: [nama modul]

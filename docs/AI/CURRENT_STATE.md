@@ -15,13 +15,37 @@
 | **Versi Asset** | `?v=9.0` (di `app/views/layouts/app.php`) |
 | **PHP Version** | XAMPP (cek `php -v`) |
 | **Timezone** | Asia/Jakarta (GMT+7) |
-| **Last Updated** | 2026-06-02 |
+| **Last Updated** | 2026-06-04 |
 
 ---
 
 ## Pekerjaan Terakhir
 
-### Sesi: 2026-06-02 — Fix Light Mode di Mobile PWA (Cache Busting v9.0)
+### Sesi: 2026-06-04 — Fix Riwayat Barang Masuk + POS UI + Estimasi Profit + AI Fix + Offline Fix
+
+**Yang dikerjakan:**
+1. **Fix Nama Produk Undefined di Edit Barang Masuk** — Saat klik icon edit di halaman Riwayat Barang Masuk, nama produk tampil "undefined". Root cause: `addProductToCartExisting` di `purchases/edit.php` tidak meng-assign field `name` ke objek item. **Fix**: Tambahkan `product.name = itemInfo.name || itemInfo.full_name` sebelum item masuk ke `purchaseItems`.
+
+2. **Optimasi UI Pencarian POS** — List produk di POS search menggunakan font terlalu besar dan nama terpotong. **Fix** di `pos.php`: font lebih kecil, layout flex, `word-break: break-word`, tampilkan semua harga kemasan (ecer/grosir) per item sebagai pilihan langsung.
+
+3. **Estimasi Profit di POS** — Menambahkan estimasi profit total di checkout bar (`#cartProfit`) dan per-item di cart (samar di bawah info harga modal). `calculateTotal()` diupdate untuk menghitung `profit = total - (buy_price × qty)` per item. Info PPN disembunyikan dari `price_note` (sesuai task "Sembunyikan PPN di POS").
+
+4. **Fix Error Model AI Non-Gemini** — `response_format: {type: "json_object"}` di payload API menyebabkan error pada model non-OpenAI (Claude, Llama, DeepSeek). **Fix**: Hapus key `response_format` dari payload di `ApiController.php`. Model tetap dipandu via system prompt untuk output JSON.
+
+5. **Fix Unduh Data Offline (IDB Error)** — Error "Failed to execute 'transaction' on 'IDBDatabase'" terjadi karena `syncAllDataFromServer()` dipanggil sebelum `db` diinisialisasi. **Fix** di `offline-db.js`: Tambah `if (!db) await init()` di awal `syncAllDataFromServer()`. Juga bump `DB_VERSION` ke 5 untuk memastikan schema upgrade ter-trigger.
+
+6. **Desimal di Harga Modal (Barang Masuk)** — Input "Total Harga Pembelian" di cart Edit Barang Masuk tidak accept desimal. **Fix**: Tambah `step="any"` ke input. Modal buy price di drawer sudah punya `step="0.01"`.
+
+7. **Fix Distribusi Harga Modal** — Fungsi distribusi harga (adjust) menimpa input manual user. **Fix**: Tambah flag `is_manual_price` pada item. `distributeAdjustments` di `edit.php` dan `create.php` skip item yang flagged.
+
+**File yang Diubah:**
+- `app/views/purchases/edit.php` — Fix undefined name, flag is_manual_price, step="any" di total input
+- `app/views/purchases/create.php` — Flag is_manual_price di distributeAdjustments
+- `app/views/sales/pos.php` — UI search, estimasi profit, hide PPN dari price_note, cartProfit element
+- `app/controllers/ApiController.php` — Hapus response_format dari AI API payload
+- `public/js/offline-db.js` — Add await init() di syncAllDataFromServer, bump DB_VERSION ke 5
+
+---
 
 **Yang dikerjakan:**
 1. **Root Cause Ditemukan** — Light theme sudah benar di `variables.css`, namun tidak tampil di mobile karena versi tidak sinkron: `APP_VERSION` di `app.php` masih `8.1`, sedangkan `sw.js` sudah `v8.3`, dan CSS `?v=8.5`. Karena `APP_VERSION` tidak berubah, mekanisme cache-clearing tidak terpicu di mobile sehingga Service Worker terus menyajikan `variables.css` lama dari cache.
