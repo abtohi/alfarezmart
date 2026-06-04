@@ -843,6 +843,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                         await OfflineDB.saveFinanceLog(newLog);
                         showToast('Transaksi disimpan offline', 'success');
                         
+                        if (typeof updateSyncBadge === 'function') updateSyncBadge();
+
                         if (dateInput.value !== date) {
                             dateInput.value = date;
                         }

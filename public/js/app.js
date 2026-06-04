@@ -408,6 +408,7 @@ async function syncPendingChanges() {
                     // Clear retry counter on success
                     localStorage.removeItem(`sync_fail_${change.id}`);
                     successCount++;
+                    updateSyncBadge(); // Update UI badge one by one
                 } else {
                     // Track retries per change via localStorage
                     const failKey = `sync_fail_${change.id}`;

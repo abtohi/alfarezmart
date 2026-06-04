@@ -2,7 +2,7 @@
  * AlfarezMart PWA - Service Worker
  * Cache Strategy: Cache First for assets, Network First for API
  */
-const CACHE_NAME = 'alfarezmart-v6.22';
+const CACHE_NAME = 'alfarezmart-v7.1';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -104,7 +104,7 @@ self.addEventListener('fetch', event => {
             let isResolved = false;
             const timeoutId = setTimeout(() => {
                 if (!isResolved) {
-                    caches.match(event.request).then(cached => {
+                    caches.match(event.request, { ignoreSearch: true }).then(cached => {
                         if (cached) {
                             isResolved = true;
                             resolve(cached);
@@ -127,16 +127,36 @@ self.addEventListener('fetch', event => {
                     clearTimeout(timeoutId);
                     if (!isResolved) {
                         isResolved = true;
-                        caches.match(event.request).then(cached => {
+                        
+                        // Try to match cache without search params (so /finance?tab=1 matches /finance)
+                        caches.match(event.request, { ignoreSearch: true }).then(cached => {
                             if (cached) {
                                 resolve(cached);
                             } else {
-                                caches.match(BASE_URL).then(baseCached => {
-                                    resolve(baseCached || new Response('<html><body><h1>Offline</h1><p>Mohon periksa koneksi internet Anda.</p></body></html>', { 
-                                        status: 200, 
-                                        headers: {'Content-Type': 'text/html'} 
-                                    }));
-                                });
+                                // Strip trailing slash for matching just in case
+                                const urlObj = new URL(event.request.url);
+                                if (urlObj.pathname.endsWith('/') && urlObj.pathname.length > BASE_URL.length) {
+                                    urlObj.pathname = urlObj.pathname.slice(0, -1);
+                                    caches.match(urlObj.href, { ignoreSearch: true }).then(cachedNoSlash => {
+                                        if (cachedNoSlash) {
+                                            resolve(cachedNoSlash);
+                                        } else {
+                                            caches.match(BASE_URL).then(baseCached => {
+                                                resolve(baseCached || new Response('<html><body><h1>Offline</h1><p>Mohon periksa koneksi internet Anda.</p></body></html>', { 
+                                                    status: 200, 
+                                                    headers: {'Content-Type': 'text/html'} 
+                                                }));
+                                            });
+                                        }
+                                    });
+                                } else {
+                                    caches.match(BASE_URL).then(baseCached => {
+                                        resolve(baseCached || new Response('<html><body><h1>Offline</h1><p>Mohon periksa koneksi internet Anda.</p></body></html>', { 
+                                            status: 200, 
+                                            headers: {'Content-Type': 'text/html'} 
+                                        }));
+                                    });
+                                }
                             }
                         });
                     }

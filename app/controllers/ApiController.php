@@ -2750,6 +2750,16 @@ class ApiController extends Controller
             $settingModel = new SettingModel();
             $apiKey = $settingModel->get('ai_api_key');
             $modelName = $settingModel->get('ai_model', 'google/gemini-2.5-flash');
+            
+            // Backward compatibility map for models that OpenRouter renamed/removed
+            $modelMap = [
+                'anthropic/claude-3.5-sonnet' => 'anthropic/claude-sonnet-4-5',
+                'anthropic/claude-3.5-haiku' => 'anthropic/claude-haiku-4-5'
+            ];
+            if (isset($modelMap[$modelName])) {
+                $modelName = $modelMap[$modelName];
+            }
+
             $prompt = $settingModel->get('ai_invoice_prompt', 'Tugasmu: Ekstrak data dari gambar invoice/faktur supplier menjadi array JSON valid.');
 
             if (empty($apiKey)) {

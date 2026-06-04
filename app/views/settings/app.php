@@ -28,35 +28,134 @@
     <!-- AI Agent Tab -->
     <div id="tabContent-ai" style="display:block;">
         <form id="ai-settings-form">
+            <!-- OpenRouter API Config Panel -->
             <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
-                <div style="font-weight:600; margin-bottom:12px; color:var(--text-primary);">
-                    <i class="bi bi-cpu" style="color:var(--info); margin-right:8px;"></i> OpenRouter API Config
+                <div style="font-weight:600; margin-bottom:16px; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+                    <i class="bi bi-cpu" style="color:var(--info);"></i> OpenRouter API Config
                 </div>
-                
-                <div style="margin-bottom:12px;">
-                    <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Model AI</label>
-                    <select id="ai_model" name="ai_model" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" required>
-                        <optgroup label="Google">
-                            <option value="google/gemini-2.5-flash" <?= ($aiModel ?? '') === 'google/gemini-2.5-flash' ? 'selected' : '' ?>>Google Gemini 2.5 Flash</option>
-                            <option value="google/gemini-2.5-pro" <?= ($aiModel ?? '') === 'google/gemini-2.5-pro' ? 'selected' : '' ?>>Google Gemini 2.5 Pro</option>
-                        </optgroup>
-                        <optgroup label="Anthropic">
-                            <option value="anthropic/claude-3.5-sonnet" <?= ($aiModel ?? '') === 'anthropic/claude-3.5-sonnet' ? 'selected' : '' ?>>Anthropic Claude 3.5 Sonnet</option>
-                            <option value="anthropic/claude-3.5-haiku" <?= ($aiModel ?? '') === 'anthropic/claude-3.5-haiku' ? 'selected' : '' ?>>Anthropic Claude 3.5 Haiku</option>
-                        </optgroup>
-                        <optgroup label="OpenAI">
-                            <option value="openai/gpt-4o-mini" <?= ($aiModel ?? '') === 'openai/gpt-4o-mini' ? 'selected' : '' ?>>OpenAI GPT-4o Mini</option>
-                            <option value="openai/gpt-4o" <?= ($aiModel ?? '') === 'openai/gpt-4o' ? 'selected' : '' ?>>OpenAI GPT-4o</option>
-                        </optgroup>
-                        <optgroup label="Meta">
-                            <option value="meta-llama/llama-3.3-70b-instruct" <?= ($aiModel ?? '') === 'meta-llama/llama-3.3-70b-instruct' ? 'selected' : '' ?>>Meta Llama 3.3 70B</option>
-                        </optgroup>
-                        <optgroup label="DeepSeek">
-                            <option value="deepseek/deepseek-chat" <?= ($aiModel ?? '') === 'deepseek/deepseek-chat' ? 'selected' : '' ?>>DeepSeek V3 (Chat)</option>
-                            <option value="deepseek/deepseek-r1" <?= ($aiModel ?? '') === 'deepseek/deepseek-r1' ? 'selected' : '' ?>>DeepSeek R1</option>
-                        </optgroup>
-                    </select>
-                    <small style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-top:4px;">Pilih model AI dari OpenRouter.</small>
+
+                <!-- Model Selector (Card-based) -->
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;">
+                        <i class="bi bi-cpu-fill" style="color:var(--primary); margin-right:4px;"></i> Model AI
+                    </label>
+
+                    <!-- Hidden input that stores the actual value -->
+                    <input type="hidden" id="ai_model" name="ai_model" value="<?= htmlspecialchars($aiModel ?? 'google/gemini-2.5-flash') ?>">
+
+                    <!-- Provider Group: Google -->
+                    <div style="margin-bottom:10px;">
+                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; padding-left:2px;">
+                            <span style="color:#4285F4;">●</span> Google
+                        </div>
+                        <div class="model-cards-grid">
+                            <div class="model-card <?= ($aiModel ?? '') === 'google/gemini-2.5-flash' || !$aiModel ? 'selected' : '' ?>" onclick="selectModel('google/gemini-2.5-flash', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#34A853);">G</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Gemini 2.5 Flash</div>
+                                    <div class="model-card-meta">Cepat &amp; Efisien</div>
+                                </div>
+                                <span class="model-badge model-badge-free">Recommended</span>
+                            </div>
+                            <div class="model-card <?= ($aiModel ?? '') === 'google/gemini-2.5-pro' ? 'selected' : '' ?>" onclick="selectModel('google/gemini-2.5-pro', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#34A853,#FBBC04);">G</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Gemini 2.5 Pro</div>
+                                    <div class="model-card-meta">Akurasi Tinggi</div>
+                                </div>
+                                <span class="model-badge model-badge-pro">Pro</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Provider Group: Anthropic -->
+                    <div style="margin-bottom:10px;">
+                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; padding-left:2px;">
+                            <span style="color:#D4A574;">●</span> Anthropic
+                        </div>
+                        <div class="model-cards-grid">
+                            <div class="model-card <?= ($aiModel ?? '') === 'anthropic/claude-sonnet-4-5' ? 'selected' : '' ?>" onclick="selectModel('anthropic/claude-sonnet-4-5', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#D4A574,#C96442);">A</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Claude Sonnet 4.5</div>
+                                    <div class="model-card-meta">Seimbang &amp; Cerdas</div>
+                                </div>
+                                <span class="model-badge model-badge-pro">Pro</span>
+                            </div>
+                            <div class="model-card <?= ($aiModel ?? '') === 'anthropic/claude-opus-4-5' ? 'selected' : '' ?>" onclick="selectModel('anthropic/claude-opus-4-5', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#C96442,#8B2500);">A</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Claude Opus 4.5</div>
+                                    <div class="model-card-meta">Paling Canggih</div>
+                                </div>
+                                <span class="model-badge model-badge-ultra">Ultra</span>
+                            </div>
+                            <div class="model-card <?= ($aiModel ?? '') === 'anthropic/claude-haiku-4-5' ? 'selected' : '' ?>" onclick="selectModel('anthropic/claude-haiku-4-5', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#E8C99A,#D4A574);">A</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Claude Haiku 4.5</div>
+                                    <div class="model-card-meta">Ringan &amp; Cepat</div>
+                                </div>
+                                <span class="model-badge model-badge-free">Hemat</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Provider Group: OpenAI -->
+                    <div style="margin-bottom:10px;">
+                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; padding-left:2px;">
+                            <span style="color:#10a37f;">●</span> OpenAI
+                        </div>
+                        <div class="model-cards-grid">
+                            <div class="model-card <?= ($aiModel ?? '') === 'openai/gpt-4o-mini' ? 'selected' : '' ?>" onclick="selectModel('openai/gpt-4o-mini', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#10a37f,#1a7f64);">O</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">GPT-4o Mini</div>
+                                    <div class="model-card-meta">Efisien &amp; Hemat</div>
+                                </div>
+                                <span class="model-badge model-badge-free">Hemat</span>
+                            </div>
+                            <div class="model-card <?= ($aiModel ?? '') === 'openai/gpt-4o' ? 'selected' : '' ?>" onclick="selectModel('openai/gpt-4o', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#1a7f64,#0d5c47);">O</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">GPT-4o</div>
+                                    <div class="model-card-meta">Multimodal Kuat</div>
+                                </div>
+                                <span class="model-badge model-badge-pro">Pro</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Provider Group: Meta & DeepSeek -->
+                    <div style="margin-bottom:4px;">
+                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; padding-left:2px;">
+                            <span style="color:#0668E1;">●</span> Lainnya
+                        </div>
+                        <div class="model-cards-grid">
+                            <div class="model-card <?= ($aiModel ?? '') === 'meta-llama/llama-3.3-70b-instruct' ? 'selected' : '' ?>" onclick="selectModel('meta-llama/llama-3.3-70b-instruct', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#0668E1,#034799);">M</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Llama 3.3 70B</div>
+                                    <div class="model-card-meta">Meta · Open Source</div>
+                                </div>
+                                <span class="model-badge model-badge-free">Gratis</span>
+                            </div>
+                            <div class="model-card <?= ($aiModel ?? '') === 'deepseek/deepseek-chat' ? 'selected' : '' ?>" onclick="selectModel('deepseek/deepseek-chat', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#1a6b8a,#0d3f52);">D</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">DeepSeek V3</div>
+                                    <div class="model-card-meta">Analitik Mendalam</div>
+                                </div>
+                                <span class="model-badge model-badge-free">Hemat</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Currently selected indicator -->
+                    <div id="selectedModelLabel" style="margin-top:10px; padding:8px 12px; background:rgba(230,57,70,0.08); border:1px solid rgba(230,57,70,0.2); border-radius:var(--radius-sm); font-size:var(--font-size-xs); color:var(--primary); display:flex; align-items:center; gap:6px;">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <span id="selectedModelName">Memuat...</span>
+                    </div>
                 </div>
 
                 <div style="margin-bottom:12px;">
@@ -142,34 +241,135 @@
     <a href="<?= BASE_URL ?>settings" class="btn-outline-custom" style="width:100%; padding:12px; text-align:center; display:block; font-weight:600;">Kembali ke Pengaturan</a>
 </div>
 
+<style>
+/* ── Model Card Selector ─────────────────────────────── */
+.model-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+@media (max-width: 340px) {
+    .model-cards-grid { grid-template-columns: 1fr; }
+}
+.model-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg-primary);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: border-color 200ms ease, background 200ms ease, box-shadow 200ms ease;
+    position: relative;
+    overflow: hidden;
+}
+.model-card:hover {
+    border-color: rgba(230,57,70,0.4);
+    background: rgba(230,57,70,0.04);
+}
+.model-card.selected {
+    border-color: var(--primary);
+    background: rgba(230,57,70,0.08);
+    box-shadow: 0 0 0 2px rgba(230,57,70,0.15);
+}
+.model-card.selected::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px; height: 100%;
+    background: var(--primary);
+    border-radius: 3px 0 0 3px;
+}
+.model-card-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 14px; color: #fff;
+    flex-shrink: 0;
+    font-family: 'Inter', sans-serif;
+}
+.model-card-info { flex: 1; min-width: 0; }
+.model-card-name {
+    font-size: 12px; font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.model-card-meta {
+    font-size: 10px; color: var(--text-muted);
+    margin-top: 1px;
+}
+.model-badge {
+    font-size: 9px; font-weight: 700;
+    padding: 2px 5px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+    flex-shrink: 0; align-self: flex-start;
+}
+.model-badge-free { background: rgba(46,196,182,0.15); color: var(--success); }
+.model-badge-pro  { background: rgba(76,201,240,0.15); color: var(--info); }
+.model-badge-ultra{ background: rgba(255,183,3,0.15); color: var(--warning); }
+</style>
+
 <script>
     const csrfToken = document.getElementById('csrfToken').value;
 
+    // ── Model Card Names Map ──────────────────────────────────────────
+    const MODEL_NAMES = {
+        'google/gemini-2.5-flash': 'Google Gemini 2.5 Flash',
+        'google/gemini-2.5-pro': 'Google Gemini 2.5 Pro',
+        'anthropic/claude-sonnet-4-5': 'Anthropic Claude Sonnet 4.5',
+        'anthropic/claude-opus-4-5': 'Anthropic Claude Opus 4.5',
+        'anthropic/claude-haiku-4-5': 'Anthropic Claude Haiku 4.5',
+        'openai/gpt-4o-mini': 'OpenAI GPT-4o Mini',
+        'openai/gpt-4o': 'OpenAI GPT-4o',
+        'meta-llama/llama-3.3-70b-instruct': 'Meta Llama 3.3 70B',
+        'deepseek/deepseek-chat': 'DeepSeek V3 Chat',
+    };
+
+    function selectModel(modelId, cardEl) {
+        // Deselect all cards
+        document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
+        // Select clicked
+        if (cardEl) cardEl.classList.add('selected');
+        // Update hidden input
+        document.getElementById('ai_model').value = modelId;
+        // Update label
+        const lbl = document.getElementById('selectedModelName');
+        if (lbl) lbl.textContent = (MODEL_NAMES[modelId] || modelId) + ' dipilih';
+    }
+
+    // Init label on page load
+    (function() {
+        const currentVal = document.getElementById('ai_model').value;
+        const lbl = document.getElementById('selectedModelName');
+        if (lbl) lbl.textContent = (MODEL_NAMES[currentVal] || currentVal) + ' dipilih';
+    })();
+
     function switchTab(tab) {
         // Toggle Buttons
-        document.getElementById('tabBtn-ai').style.borderBottomColor = 'transparent';
-        document.getElementById('tabBtn-ai').style.color = 'var(--text-muted)';
-        document.getElementById('tabBtn-ai').style.fontWeight = '600';
-        
-        document.getElementById('tabBtn-geo').style.borderBottomColor = 'transparent';
-        document.getElementById('tabBtn-geo').style.color = 'var(--text-muted)';
-        document.getElementById('tabBtn-geo').style.fontWeight = '600';
-        
-        document.getElementById('tabBtn-pwd').style.borderBottomColor = 'transparent';
-        document.getElementById('tabBtn-pwd').style.color = 'var(--text-muted)';
-        document.getElementById('tabBtn-pwd').style.fontWeight = '600';
+        ['ai','geo','pwd'].forEach(t => {
+            const btn = document.getElementById('tabBtn-' + t);
+            if (btn) {
+                btn.style.borderBottomColor = 'transparent';
+                btn.style.color = 'var(--text-muted)';
+                btn.style.fontWeight = '600';
+            }
+        });
         
         const activeBtn = document.getElementById('tabBtn-' + tab);
-        activeBtn.style.borderBottomColor = 'var(--primary)';
-        activeBtn.style.color = 'var(--primary)';
-        activeBtn.style.fontWeight = '700';
+        if (activeBtn) {
+            activeBtn.style.borderBottomColor = 'var(--primary)';
+            activeBtn.style.color = 'var(--primary)';
+            activeBtn.style.fontWeight = '700';
+        }
 
         // Toggle Content
-        document.getElementById('tabContent-ai').style.display = 'none';
-        document.getElementById('tabContent-geo').style.display = 'none';
-        document.getElementById('tabContent-pwd').style.display = 'none';
-        
-        document.getElementById('tabContent-' + tab).style.display = 'block';
+        ['ai','geo','pwd'].forEach(t => {
+            const el = document.getElementById('tabContent-' + t);
+            if (el) el.style.display = 'none';
+        });
+        const target = document.getElementById('tabContent-' + tab);
+        if (target) target.style.display = 'block';
     }
 
     function getLocation() {
@@ -199,14 +399,13 @@
             const data = {
                 csrf_token: csrfToken,
                 ai_model: document.getElementById('ai_model').value,
-                ai_api_key: document.getElementById('ai_api_key').value, // can be empty to skip updating
+                ai_api_key: document.getElementById('ai_api_key').value,
                 ai_invoice_prompt: document.getElementById('ai_invoice_prompt').value
             };
             
             const result = await api('<?= BASE_URL ?>api/settings/app', 'POST', data);
             showToast(result.message || 'Pengaturan AI berhasil disimpan', 'success');
             
-            // clear api key field so user knows it's saved but hidden
             if (data.ai_api_key) {
                 document.getElementById('ai_api_key').value = '';
                 document.getElementById('ai_api_key').placeholder = '(Tersimpan - Diubah untuk mengganti)';
@@ -279,8 +478,6 @@
             
             const result = await api('<?= BASE_URL ?>api/users/change-password', 'POST', data);
             showToast(result.message || 'Password berhasil diubah', 'success');
-            
-            // Clear form
             this.reset();
         } catch (err) {
             console.error('Error changing password:', err);
