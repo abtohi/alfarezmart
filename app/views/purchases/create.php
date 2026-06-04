@@ -508,11 +508,9 @@ function toggleGlobalPpn() {
 function applyGlobalPpn() {
     const val = parseFloat(document.getElementById('globalPpnInput').value) || 0;
     purchaseItems.forEach(item => {
-        item.ppn_pct = val;
-        item.harga_nett = calcItemNett(item.buy_price, val, item.diskon_mode, item.diskon_value);
+        onMainInputChange(item.id, 'ppn', val);
     });
     if (typeof renderCart === 'function') renderCart();
-    if (typeof calculateTotal === 'function') calculateTotal();
     saveDraft();
 }
 
