@@ -27,27 +27,23 @@
     <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
     <!-- AI Agent Tab -->
     <div id="tabContent-ai" style="display:block;">
+        
+        <!-- SECTION 1: AI INVOICE SCANNER -->
         <form id="ai-settings-form">
-            <!-- OpenRouter API Config Panel -->
             <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
                 <div style="font-weight:600; margin-bottom:16px; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
-                    <i class="bi bi-cpu" style="color:var(--info);"></i> OpenRouter API Config
+                    <i class="bi bi-receipt-cutoff" style="color:var(--info);"></i> 1. AI Invoice Scanner
                 </div>
 
                 <!-- Model Selector (Card-based) -->
                 <div style="margin-bottom:16px;">
                     <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;">
-                        <i class="bi bi-cpu-fill" style="color:var(--primary); margin-right:4px;"></i> Model AI
+                        <i class="bi bi-cpu-fill" style="color:var(--primary); margin-right:4px;"></i> Model AI Scanner
                     </label>
 
-                    <!-- Hidden input that stores the actual value -->
                     <input type="hidden" id="ai_model" name="ai_model" value="<?= htmlspecialchars($aiModel ?? 'openrouter/auto') ?>">
 
-                    <!-- OpenRouter Free Models -->
                     <div style="margin-bottom:10px;">
-                        <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px; padding-left:2px;">
-                            <span style="color:var(--success);">●</span> Gratis & Sepuasnya (No Limit)
-                        </div>
                         <div class="model-cards-grid">
                             <div class="model-card <?= ($aiModel ?? '') === 'openrouter/auto' || !$aiModel ? 'selected' : '' ?>" onclick="selectModel('openrouter/auto', this)">
                                 <div class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">A</div>
@@ -66,65 +62,93 @@
                                 </div>
                                 <span class="model-badge model-badge-free">Gratis</span>
                             </div>
+                        </div>
+                    </div>
+                </div>
 
-                            <div class="model-card <?= ($aiModel ?? '') === 'meta-llama/llama-3.3-70b-instruct:free' ? 'selected' : '' ?>" onclick="selectModel('meta-llama/llama-3.3-70b-instruct:free', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#0668E1,#034799);">M</div>
-                                <div class="model-card-info">
-                                    <div class="model-card-name">Llama 3.3 70B</div>
-                                    <div class="model-card-meta">Meta · Gratis</div>
-                                </div>
-                                <span class="model-badge model-badge-free">Gratis</span>
-                            </div>
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">API Key Scanner (OpenRouter)</label>
+                    <input id="ai_api_key" name="ai_api_key" type="password" value="<?= htmlspecialchars($aiApiKey ?? '') ?>" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="sk-or-v1-..." />
+                </div>
 
-                            <div class="model-card <?= ($aiModel ?? '') === 'qwen/qwen3-coder:free' ? 'selected' : '' ?>" onclick="selectModel('qwen/qwen3-coder:free', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#1a6b8a,#0d3f52);">Q</div>
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">System Prompt Scanner</label>
+                    <textarea id="ai_invoice_prompt" name="ai_invoice_prompt" rows="3" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm); resize:none;" placeholder="Prompt untuk menganalisa nota" required><?= htmlspecialchars($aiPrompt ?? '') ?></textarea>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary-custom" style="width:100%; padding:12px; font-weight:600; margin-bottom:24px;">💾 Simpan Pengaturan Scanner</button>
+        </form>
+
+        <!-- SECTION 2: AI CHAT ASSISTANT -->
+        <?php 
+            $settingModel = new SettingModel();
+            $aiChatEnabled = $settingModel->get('ai_chat_enabled', '1');
+            $aiChatModel = $settingModel->get('ai_chat_model', 'openrouter/auto');
+            $aiChatApiKey = $settingModel->get('ai_chat_api_key', '');
+        ?>
+        <form id="chat-settings-form">
+            <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
+                <div style="font-weight:600; margin-bottom:16px; color:var(--text-primary); display:flex; align-items:center; justify-content:space-between;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <i class="bi bi-chat-dots" style="color:var(--primary);"></i> 2. AI Chat Assistant
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="ai_chat_enabled" name="ai_chat_enabled" value="1" <?= $aiChatEnabled === '1' ? 'checked' : '' ?> style="cursor:pointer;">
+                        <label class="form-check-label" for="ai_chat_enabled" style="font-size:var(--font-size-xs); cursor:pointer;">Aktif</label>
+                    </div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.05em;">
+                        <i class="bi bi-cpu-fill" style="color:var(--primary); margin-right:4px;"></i> Model AI Chat
+                    </label>
+
+                    <input type="hidden" id="ai_chat_model" name="ai_chat_model" value="<?= htmlspecialchars($aiChatModel) ?>">
+
+                    <div style="margin-bottom:10px;">
+                        <div class="model-cards-grid">
+                            <div class="model-card <?= $aiChatModel === 'openrouter/auto' ? 'selected' : '' ?>" onclick="selectChatModel('openrouter/auto', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">A</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Qwen3 Coder 480B</div>
-                                    <div class="model-card-meta">Qwen · Gratis</div>
+                                    <div class="model-card-name">Auto Model</div>
+                                    <div class="model-card-meta">Otomatis</div>
                                 </div>
-                                <span class="model-badge model-badge-free">Gratis</span>
                             </div>
                             
-                            <div class="model-card <?= ($aiModel ?? '') === 'google/gemma-4-31b-it:free' ? 'selected' : '' ?>" onclick="selectModel('google/gemma-4-31b-it:free', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#34A853);">G</div>
+                            <div class="model-card <?= $aiChatModel === 'deepseek/deepseek-chat:free' ? 'selected' : '' ?>" onclick="selectChatModel('deepseek/deepseek-chat:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#0052CC,#003d99);">D</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Gemma 4 31B</div>
-                                    <div class="model-card-meta">Google · Gratis</div>
+                                    <div class="model-card-name">DeepSeek V3</div>
+                                    <div class="model-card-meta">Terbaik Gratis</div>
                                 </div>
-                                <span class="model-badge model-badge-free">Gratis</span>
                             </div>
 
-                            <div class="model-card <?= ($aiModel ?? '') === 'openai/gpt-oss-120b:free' ? 'selected' : '' ?>" onclick="selectModel('openai/gpt-oss-120b:free', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#10a37f,#1a7f64);">O</div>
+                            <div class="model-card <?= $aiChatModel === 'google/gemini-2.0-flash-001' ? 'selected' : '' ?>" onclick="selectChatModel('google/gemini-2.0-flash-001', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#34A853);">G</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">GPT-OSS 120B</div>
-                                    <div class="model-card-meta">OpenAI · Gratis</div>
+                                    <div class="model-card-name">Gemini 2.0 Flash</div>
+                                    <div class="model-card-meta">Pro Terjangkau</div>
                                 </div>
-                                <span class="model-badge model-badge-free">Gratis</span>
+                            </div>
+
+                            <div class="model-card <?= $aiChatModel === 'anthropic/claude-3.5-sonnet' ? 'selected' : '' ?>" onclick="selectChatModel('anthropic/claude-3.5-sonnet', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#d97757,#b35f42);">C</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Claude 3.5 Sonnet</div>
+                                    <div class="model-card-meta">Pro Terbaik</div>
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Currently selected indicator -->
-                    <div id="selectedModelLabel" style="margin-top:10px; padding:8px 12px; background:rgba(230,57,70,0.08); border:1px solid rgba(230,57,70,0.2); border-radius:var(--radius-sm); font-size:var(--font-size-xs); color:var(--primary); display:flex; align-items:center; gap:6px;">
-                        <i class="bi bi-check-circle-fill"></i>
-                        <span id="selectedModelName">Memuat...</span>
-                    </div>
                 </div>
 
                 <div style="margin-bottom:12px;">
-                    <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">API Key (OpenRouter)</label>
-                    <input id="ai_api_key" name="ai_api_key" type="password" value="<?= htmlspecialchars($aiApiKey ?? '') ?>" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="sk-or-v1-..." />
-                    <small style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-top:4px;">Kunci API dari OpenRouter. Biarkan kosong jika tidak diubah (disensor demi keamanan).</small>
-                </div>
-
-                <div style="margin-bottom:12px;">
-                    <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">System Prompt (Invoice Scanner)</label>
-                    <textarea id="ai_invoice_prompt" name="ai_invoice_prompt" rows="5" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm); resize:none;" placeholder="Prompt untuk menganalisa nota" required><?= htmlspecialchars($aiPrompt ?? '') ?></textarea>
-                    <small style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-top:4px;">Prompt instruksi AI agar menghasilkan JSON berisi produk (name, qty, price).</small>
+                    <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">API Key Chat (OpenRouter)</label>
+                    <input id="ai_chat_api_key" name="ai_chat_api_key" type="password" value="<?= htmlspecialchars($aiChatApiKey) ?>" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="sk-or-v1-..." />
+                    <small style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-top:4px;">Kosongkan jika ingin menggunakan API Key yang sama dengan Scanner.</small>
                 </div>
             </div>
-            <button type="submit" class="btn-primary-custom" style="width:100%; padding:12px; font-weight:600; margin-bottom:8px;">💾 Simpan Pengaturan AI</button>
+            <button type="submit" class="btn-primary-custom" style="width:100%; padding:12px; font-weight:600; margin-bottom:8px;">💾 Simpan Pengaturan Chat</button>
         </form>
     </div>
 
@@ -261,43 +285,24 @@
 }
 .model-badge-free { background: rgba(46,196,182,0.15); color: var(--success); }
 .model-badge-pro  { background: rgba(76,201,240,0.15); color: var(--info); }
-.model-badge-ultra{ background: rgba(255,183,3,0.15); color: var(--warning); }
 </style>
 
 <script>
     const csrfToken = document.getElementById('csrfToken').value;
 
-    // ── Model Card Names Map ──────────────────────────────────────────
-    const MODEL_NAMES = {
-        'openrouter/auto': 'Auto Model',
-        'openrouter/free': 'Free Router',
-        'meta-llama/llama-3.3-70b-instruct:free': 'Meta Llama 3.3 70B',
-        'qwen/qwen3-coder:free': 'Qwen3 Coder 480B',
-        'google/gemma-4-31b-it:free': 'Google Gemma 4 31B',
-        'openai/gpt-oss-120b:free': 'OpenAI GPT-OSS 120B'
-    };
-
     function selectModel(modelId, cardEl) {
-        // Deselect all cards
-        document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
-        // Select clicked
+        document.querySelectorAll('#ai-settings-form .model-card').forEach(c => c.classList.remove('selected'));
         if (cardEl) cardEl.classList.add('selected');
-        // Update hidden input
         document.getElementById('ai_model').value = modelId;
-        // Update label
-        const lbl = document.getElementById('selectedModelName');
-        if (lbl) lbl.textContent = (MODEL_NAMES[modelId] || modelId) + ' dipilih';
     }
 
-    // Init label on page load
-    (function() {
-        const currentVal = document.getElementById('ai_model').value;
-        const lbl = document.getElementById('selectedModelName');
-        if (lbl) lbl.textContent = (MODEL_NAMES[currentVal] || currentVal) + ' dipilih';
-    })();
+    function selectChatModel(modelId, cardEl) {
+        document.querySelectorAll('#chat-settings-form .model-card').forEach(c => c.classList.remove('selected'));
+        if (cardEl) cardEl.classList.add('selected');
+        document.getElementById('ai_chat_model').value = modelId;
+    }
 
     function switchTab(tab) {
-        // Toggle Buttons
         ['ai','geo','pwd'].forEach(t => {
             const btn = document.getElementById('tabBtn-' + t);
             if (btn) {
@@ -314,7 +319,6 @@
             activeBtn.style.fontWeight = '700';
         }
 
-        // Toggle Content
         ['ai','geo','pwd'].forEach(t => {
             const el = document.getElementById('tabContent-' + t);
             if (el) el.style.display = 'none';
@@ -337,60 +341,79 @@
         }
     }
 
-    // ── Save AI Settings ──────────────────────────────────────────────
+    // Save AI Scanner Settings
     document.getElementById('ai-settings-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         const btn = this.querySelector('button[type="submit"]');
         const originalText = btn.textContent;
-        
         try {
             btn.disabled = true;
             btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
-            
             const data = {
                 csrf_token: csrfToken,
                 ai_model: document.getElementById('ai_model').value,
                 ai_api_key: document.getElementById('ai_api_key').value,
                 ai_invoice_prompt: document.getElementById('ai_invoice_prompt').value
             };
-            
             const result = await api('<?= BASE_URL ?>api/settings/app', 'POST', data);
-            showToast(result.message || 'Pengaturan AI berhasil disimpan', 'success');
-            
+            showToast(result.message || 'Pengaturan Scanner berhasil disimpan', 'success');
             if (data.ai_api_key) {
                 document.getElementById('ai_api_key').value = '';
                 document.getElementById('ai_api_key').placeholder = '(Tersimpan - Diubah untuk mengganti)';
             }
         } catch (err) {
-            console.error('Error saving AI settings:', err);
-            showToast(err.message || 'Gagal menyimpan pengaturan AI', 'error');
+            showToast(err.message || 'Gagal menyimpan pengaturan', 'error');
         } finally {
             btn.disabled = false;
             btn.textContent = originalText;
         }
     });
 
-    // ── Save Geo Settings ──────────────────────────────────────────────
+    // Save AI Chat Settings
+    document.getElementById('chat-settings-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = this.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
+            const data = {
+                csrf_token: csrfToken,
+                ai_chat_enabled: document.getElementById('ai_chat_enabled').checked ? '1' : '0',
+                ai_chat_model: document.getElementById('ai_chat_model').value,
+                ai_chat_api_key: document.getElementById('ai_chat_api_key').value
+            };
+            const result = await api('<?= BASE_URL ?>api/settings/chat', 'POST', data);
+            showToast(result.message || 'Pengaturan Chat berhasil disimpan', 'success');
+            if (data.ai_chat_api_key) {
+                document.getElementById('ai_chat_api_key').value = '';
+                document.getElementById('ai_chat_api_key').placeholder = '(Tersimpan - Diubah untuk mengganti)';
+            }
+        } catch (err) {
+            showToast(err.message || 'Gagal menyimpan pengaturan chat', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    });
+
+    // Save Geo Settings
     document.getElementById('geo-settings-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         const btn = this.querySelector('button[type="submit"]');
         const originalText = btn.textContent;
-        
         try {
             btn.disabled = true;
             btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
-            
             const data = {
                 csrf_token: csrfToken,
                 store_latitude: document.getElementById('store_latitude').value,
                 store_longitude: document.getElementById('store_longitude').value,
                 store_radius_meters: document.getElementById('store_radius_meters').value
             };
-            
             const result = await api('<?= BASE_URL ?>api/settings/app', 'POST', data);
             showToast(result.message || 'Pengaturan Lokasi berhasil disimpan', 'success');
         } catch (err) {
-            console.error('Error saving Geo settings:', err);
             showToast(err.message || 'Gagal menyimpan pengaturan Lokasi', 'error');
         } finally {
             btn.disabled = false;
@@ -398,40 +421,26 @@
         }
     });
 
-    // ── Change Password ─────────────────────────────────────────────
+    // Change Password
     document.getElementById('password-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         const btn = this.querySelector('button[type="submit"]');
         const originalText = btn.textContent;
-        
         const oldPwd = document.getElementById('old_password').value;
         const newPwd = document.getElementById('new_password').value;
         const confPwd = document.getElementById('confirm_password').value;
         
-        if (newPwd !== confPwd) {
-            showToast('Konfirmasi password baru tidak cocok', 'error');
-            return;
-        }
-        if (newPwd.length < 6) {
-            showToast('Password baru minimal 6 karakter', 'error');
-            return;
-        }
+        if (newPwd !== confPwd) return showToast('Konfirmasi password baru tidak cocok', 'error');
+        if (newPwd.length < 6) return showToast('Password baru minimal 6 karakter', 'error');
         
         try {
             btn.disabled = true;
             btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Memproses...';
-            
-            const data = {
-                csrf_token: csrfToken,
-                old_password: oldPwd,
-                new_password: newPwd
-            };
-            
+            const data = { csrf_token: csrfToken, old_password: oldPwd, new_password: newPwd };
             const result = await api('<?= BASE_URL ?>api/users/change-password', 'POST', data);
             showToast(result.message || 'Password berhasil diubah', 'success');
             this.reset();
         } catch (err) {
-            console.error('Error changing password:', err);
             showToast(err.message || 'Gagal mengubah password', 'error');
         } finally {
             btn.disabled = false;

@@ -222,3 +222,10 @@ $router->get('/setup', 'SettingController@setupDatabase');
 
 // Offline Sync
 $router->get('/api/sync/all', 'ApiController@syncAllData');
+
+// AI Chat Routes
+$router->get('/chat', 'AiChatController@index');
+$router->post('/api/chat', 'AiChatController@sendMessage');
+$router->get('/api/chat/history', 'AiChatController@getHistory');
+$router->post('/api/chat/clear', 'AiChatController@clearHistory');
+$router->post('/api/settings/chat', 'ApiController@saveChatSettings');

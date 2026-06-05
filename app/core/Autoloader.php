@@ -12,6 +12,7 @@ if (!class_exists('Autoloader')) {
             'app/models/',
             'app/controllers/',
             'app/config/',
+            'app/services/',
         ];
 
         public static function register()

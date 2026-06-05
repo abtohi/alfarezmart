@@ -2,7 +2,7 @@
  * AlfarezMart PWA - Service Worker
  * Cache Strategy: Cache First for assets, Network First for API
  */
-const CACHE_NAME = 'alfarezmart-v7.2';
+const CACHE_NAME = 'alfarezmart-v7.3';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -23,6 +23,8 @@ const STATIC_ASSETS = [
     BASE_URL + 'public/js/dexie.min.js',
     BASE_URL + 'public/js/db.js',
     BASE_URL + 'public/js/app.js',
+    BASE_URL + 'public/js/chat.js',
+    BASE_URL + 'chat',
     BASE_URL + 'manifest.json',
     BASE_URL + 'public/images/mobile_icon.png',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',

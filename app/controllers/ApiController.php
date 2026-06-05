@@ -2685,7 +2685,32 @@ class ApiController extends Controller
 
             $this->json(['success' => true, 'message' => 'Pengaturan aplikasi berhasil disimpan']);
         } catch (\Exception $e) {
-            $this->json(['error' => $e->getMessage()], 500);
+            $this->json(['error' => 'Gagal menyimpan pengaturan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function saveChatSettings()
+    {
+        $this->validateCSRF();
+        if (AuthController::currentUser()['level'] !== 'superadmin' && AuthController::currentUser()['level'] !== 'admin') {
+            $this->json(['error' => 'Akses ditolak'], 403);
+            return;
+        }
+
+        try {
+            $settingModel = new SettingModel();
+            $fields = ['ai_chat_enabled', 'ai_chat_model', 'ai_chat_api_key', 'ai_chat_context_months', 'ai_chat_max_history'];
+            
+            foreach ($fields as $field) {
+                $val = $this->input($field);
+                if ($val !== null && $val !== '') {
+                    $settingModel->set($field, $val);
+                }
+            }
+
+            $this->json(['success' => true, 'message' => 'Pengaturan AI Chat berhasil disimpan']);
+        } catch (\Exception $e) {
+            $this->json(['error' => 'Gagal menyimpan pengaturan chat: ' . $e->getMessage()], 500);
         }
     }
 

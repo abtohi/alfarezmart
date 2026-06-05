@@ -150,6 +150,19 @@ if ($userLevel === 'staff') {
         <?= $content ?? '' ?>
     </main>
 
+    <!-- Floating AI Chat Button -->
+    <?php if (!isset($active_menu) || $active_menu !== 'chat'): ?>
+        <?php 
+            // Check if feature is enabled (avoid DB call if possible, maybe rely on session or just default true)
+            // It's a view, so we will just show it and handle the check in Controller
+        ?>
+        <a href="<?= BASE_URL ?>chat" class="floating-chat-btn" title="Tanya AI">
+            <div class="chat-icon-wrapper">
+                🤖
+            </div>
+        </a>
+    <?php endif; ?>
+
     <!-- Bottom Navigation Bar (Android-style) -->
     <nav class="bottom-nav" id="bottomNav">
         <a href="<?= BASE_URL ?>" class="nav-item <?= ($activeNav ?? '') === 'home' ? 'active' : '' ?>" id="navHome">
