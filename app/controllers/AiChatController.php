@@ -19,8 +19,8 @@ class AiChatController extends Controller
      */
     public function index()
     {
-        // Pastikan login
-        if (!$this->isLoggedIn()) {
+        $user = AuthController::currentUser();
+        if (!$user) {
             header('Location: ' . BASE_URL . 'login');
             exit;
         }
@@ -36,7 +36,7 @@ class AiChatController extends Controller
 
         $data = [
             'title' => 'AI Assistant - AlfarezMart',
-            'currentUser' => $this->getCurrentUser(),
+            'currentUser' => $user,
             'csrfToken' => CsrfHelper::generateToken()
         ];
         
@@ -55,12 +55,11 @@ class AiChatController extends Controller
     {
         $this->validateCSRF();
 
-        if (!$this->isLoggedIn()) {
+        $user = AuthController::currentUser();
+        if (!$user) {
             echo json_encode(['success' => false, 'error' => 'Unauthorized']);
             exit;
         }
-
-        $user = $this->getCurrentUser();
         $message = trim((string)$this->input('message'));
         $sessionId = trim((string)$this->input('session_id'));
 
@@ -167,12 +166,11 @@ class AiChatController extends Controller
      */
     public function getHistory()
     {
-        if (!$this->isLoggedIn()) {
+        $user = AuthController::currentUser();
+        if (!$user) {
             echo json_encode(['success' => false, 'error' => 'Unauthorized']);
             exit;
         }
-
-        $user = $this->getCurrentUser();
         $sessionId = trim((string)$this->input('session_id', 'get'));
         
         if (empty($sessionId)) {
@@ -192,12 +190,11 @@ class AiChatController extends Controller
     {
         $this->validateCSRF();
         
-        if (!$this->isLoggedIn()) {
+        $user = AuthController::currentUser();
+        if (!$user) {
             echo json_encode(['success' => false, 'error' => 'Unauthorized']);
             exit;
         }
-
-        $user = $this->getCurrentUser();
         $sessionId = trim((string)$this->input('session_id'));
         
         if (!empty($sessionId)) {
