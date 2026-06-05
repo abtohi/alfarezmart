@@ -1028,32 +1028,34 @@ function updateNamePreview() {
     let fullName = baseName;
     let shortLabel = shortBaseName;
 
-    // Point 7: Packaging chain for all levels (e.g. 10 x 10 x 16btg)
-    const levels = document.querySelectorAll('.packaging-level');
-    const qtyChain = [];
-    if (levels.length > 1) {
-        for (let i = levels.length - 1; i >= 1; i--) {
-            const qty = parseInt(levels[i].querySelector('input[name="contained_qty[]"]')?.value) || 0;
-            if (qty > 0) qtyChain.push(qty);
+    if (isMulti) {
+        // Point 7: Packaging chain for all levels (e.g. 10 x 10 x 16btg)
+        const levels = document.querySelectorAll('.packaging-level');
+        const qtyChain = [];
+        if (levels.length > 1) {
+            for (let i = levels.length - 1; i >= 1; i--) {
+                const qty = parseInt(levels[i].querySelector('input[name="contained_qty[]"]')?.value) || 0;
+                if (qty > 0) qtyChain.push(qty);
+            }
         }
-    }
 
-    if (qtyChain.length > 0) {
-        const chainStr = qtyChain.join(' x ');
+        if (qtyChain.length > 0) {
+            const chainStr = qtyChain.join(' x ');
+            if (formattedWeight && wUnit) {
+                fullName += ` (${chainStr} x ${formattedWeight}${wUnit})`;
+                shortLabel += ` ${formattedWeight}${wUnit}`;
+                formattedWeight = ''; // clear so it doesn't get added twice
+            } else {
+                const unitSB = levels[0].querySelector('.unit-searchbox-instance')?._searchbox;
+                const baseUnit = unitSB ? unitSB.getLabel() || 'pcs' : 'pcs';
+                fullName += ` (${chainStr} x 1${baseUnit})`;
+            }
+        }
+
         if (formattedWeight && wUnit) {
-            fullName += ` (${chainStr} x ${formattedWeight}${wUnit})`;
-            shortLabel += ` ${formattedWeight}${wUnit}`;
-            formattedWeight = ''; // clear so it doesn't get added twice
-        } else {
-            const unitSB = levels[0].querySelector('.unit-searchbox-instance')?._searchbox;
-            const baseUnit = unitSB ? unitSB.getLabel() || 'pcs' : 'pcs';
-            fullName += ` (${chainStr} x 1${baseUnit})`;
+            fullName += ' ' + formattedWeight + wUnit;
+            shortLabel += ' ' + formattedWeight + wUnit;
         }
-    }
-
-    if (formattedWeight && wUnit) {
-        fullName += ' ' + formattedWeight + wUnit;
-        shortLabel += ' ' + formattedWeight + wUnit;
     }
 
     if (shortLabel.length > 35) shortLabel = shortLabel.substring(0, 32) + '...';

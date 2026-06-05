@@ -4,7 +4,10 @@
  */
 class AiChatController extends Controller
 {
+    /** @var AiChatModel */
     private $aiChatModel;
+
+    /** @var SettingModel */
     private $settingModel;
 
     public function __construct()
@@ -36,8 +39,7 @@ class AiChatController extends Controller
 
         $this->view('chat/index', [
             'title' => 'AI Assistant - AlfarezMart',
-            'active_menu' => 'chat',
-            'csrfToken' => CsrfHelper::generateToken()
+            'active_menu' => 'chat'
         ]);
     }
 
@@ -122,7 +124,6 @@ class AiChatController extends Controller
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
-        curl_close($ch);
 
         if ($response === false) {
             echo json_encode(['success' => false, 'error' => 'Koneksi ke OpenRouter gagal: ' . $curlError]);
