@@ -34,17 +34,10 @@ class AiChatController extends Controller
             exit;
         }
 
-        $data = [
+        $this->view('chat/index', [
             'title' => 'AI Assistant - AlfarezMart',
-            'currentUser' => $user,
+            'active_menu' => 'chat',
             'csrfToken' => CsrfHelper::generateToken()
-        ];
-        
-        $this->view('layouts/app', [
-            'title' => $data['title'],
-            'content' => $this->view('chat/index', $data, true),
-            'currentUser' => $data['currentUser'],
-            'active_menu' => 'chat'
         ]);
     }
 
