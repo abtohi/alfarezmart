@@ -103,11 +103,11 @@
             </div>
             
             <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--font-size-sm);font-weight:600;color:var(--text-primary);">
-                    <input type="checkbox" id="chkGlobalPpn" style="width:16px;height:16px;accent-color:var(--primary);" onchange="toggleGlobalPpn()">
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text-primary);">
+                    <input type="checkbox" id="chkGlobalPpn" style="width:13px;height:13px;accent-color:var(--primary);" onchange="toggleGlobalPpn()">
                     PPN (%)
                 </label>
-                <input type="number" id="globalPpnInput" placeholder="Misal: 11" class="form-control-dark" style="width:100px; height:32px; font-size:var(--font-size-sm);" disabled oninput="applyGlobalPpn()">
+                <input type="number" id="globalPpnInput" placeholder="Misal: 11" class="form-control-dark" style="width:80px; height:26px; font-size:11px; padding:4px 8px;" disabled oninput="applyGlobalPpn()">
                 <div style="font-size:10px; color:var(--text-muted);">Terapkan PPN ke semua barang di keranjang</div>
             </div>
 
@@ -1950,8 +1950,8 @@ function buildMiniPricingTableHtml(item) {
         const ret  = parseFloat(pkg.sell_price_retail) || 0;
         const who  = parseFloat(pkg.sell_price_wholesale) || 0;
 
-        const mR = (nett > 0 && ret > 0) ? ((ret - nett) / ret * 100) : null;
-        const mW = (nett > 0 && who > 0) ? ((who - nett) / who * 100) : null;
+        const mR = (nett > 0 && ret > 0) ? ((ret - nett) / nett * 100) : null;
+        const mW = (nett > 0 && who > 0) ? ((who - nett) / nett * 100) : null;
         const profitR = ret > 0 ? (ret - nett) : null;
         const profitW = who > 0 ? (who - nett) : null;
         const cR = mR !== null ? (mR >= 10 ? 'var(--success)' : mR >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
