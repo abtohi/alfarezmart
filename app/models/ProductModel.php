@@ -324,7 +324,7 @@ class ProductModel extends Model
             LEFT JOIN brands b ON p.brand_id = b.id
             LEFT JOIN categories c ON p.category_id = c.id
             {$where}
-            ORDER BY p.updated_at DESC, p.full_name ASC
+            ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.full_name ASC
             LIMIT :limit OFFSET :offset
         ");
         

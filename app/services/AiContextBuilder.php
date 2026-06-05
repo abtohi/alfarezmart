@@ -128,14 +128,17 @@ class AiContextBuilder
 
         // Menambahkan Skema Database agar AI bisa membuat SQL Query
         $context['schema_database'] = $this->getDatabaseSchema();
+        
+        // Katalog ringkas (semua produk + modal + harga jual) agar AI hafal semua produk
+        $context['katalog_semua_produk'] = $this->getFullCatalogCompressed();
 
         $contextJson = json_encode($context, JSON_UNESCAPED_UNICODE);
 
         // System prompt dengan feature guide + rules ketat
         $prompt  = "Kamu adalah AI Asisten AlfarezMart v3.0 dengan akses PENUH ke seluruh database toko.\n\n";
         $prompt .= "=== ATURAN WAJIB ===\n";
-        $prompt .= "1. INTERNAL FIRST: Selalu gunakan DATA_TOKO sebagai sumber utama. JANGAN cari dari internet.\n";
-        $prompt .= "2. Jika 'produk_dicari' tersedia: gunakan data itu untuk menjawab pertanyaan produk (harga, stok, supplier, dll).\n";
+        $prompt .= "1. INTERNAL FIRST: Selalu gunakan DATA_TOKO sebagai sumber utama. JANGAN PERNAH memberikan asumsi harga pasaran dari internet.\n";
+        $prompt .= "2. Jika ditanya soal produk/harga: cek 'katalog_semua_produk' atau 'produk_dicari'. Jika produk tidak ada, katakan 'Produk belum tersedia di toko' dan JANGAN menebak harganya.\n";
         $prompt .= "3. Jika 'pengetahuan_toko' tersedia: itu adalah koreksi/fakta yang sudah diverifikasi user, gunakan sebagai kebenaran.\n";
         $prompt .= "4. AGENTIC SQL: Jika data historis TIDAK ADA di DATA_TOKO, jalankan query ke database dengan membalas menggunakan format persis ini: [SQL_QUERY] SELECT * FROM tabel LIMIT 50 [/SQL_QUERY]. Kamu HANYA BOLEH menggunakan SELECT. Hasilnya akan diberikan di pesan berikutnya.\n";
         $prompt .= "5. Format jawaban: Markdown. Angka penting = **bold**. Tabel jika data banyak.\n";
@@ -940,6 +943,37 @@ class AiContextBuilder
             return $schema;
         } catch (Throwable $e) {
             return ['error' => 'Schema tidak tersedia'];
+        }
+    }
+
+    /**
+     * Mengambil katalog produk lengkap (nama, modal, jual, stok) dalam format yang sangat padat
+     * agar AI tahu semua produk namun tidak boros token.
+     */
+    private function getFullCatalogCompressed(): string
+    {
+        try {
+            $stmt = $this->db->query("
+                SELECT p.full_name, p.code,
+                       COALESCE((SELECT buy_price FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1), 0) AS modal,
+                       COALESCE((SELECT sell_price_retail FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1), 0) AS jual,
+                       COALESCE(s.current_qty_base, 0) AS stok
+                FROM products p
+                LEFT JOIN stock s ON p.id = s.product_id
+                WHERE p.is_active = 1 AND p.code != 'CUSTOM'
+                ORDER BY p.full_name ASC
+            ");
+            $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if (empty($products)) return "Kosong";
+
+            // Format padat: "Nama(Kode)|Modal|Jual|Stok;"
+            $compressed = "";
+            foreach ($products as $p) {
+                $compressed .= "{$p['full_name']}({$p['code']})|M:{$p['modal']}|J:{$p['jual']}|S:{$p['stok']}; ";
+            }
+            return trim($compressed);
+        } catch (Throwable $e) {
+            return "Error memuat katalog";
         }
     }
 }
