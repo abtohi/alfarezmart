@@ -55,9 +55,44 @@ $pkgsJson = json_encode($packagings, JSON_UNESCAPED_UNICODE);
                 </label>
             </div>
             
+            <?php
+            $singleName = $product['full_name'] ?? '';
+            $qtyChain = [];
+            $levelsArr = $packagings ?? [];
+            usort($levelsArr, function($a, $b) { return $a['level'] <=> $b['level']; });
+            if (count($levelsArr) > 1) {
+                for ($i = count($levelsArr) - 1; $i >= 1; $i--) {
+                    $qty = (int)($levelsArr[$i]['contained_qty'] ?? 0);
+                    if ($qty > 0) $qtyChain[] = $qty;
+                }
+            }
+            $chainStr = implode(' x ', $qtyChain);
+            $rawW = $product['weight_value'] ?? '';
+            $wU = $product['weight_unit'] ?? '';
+            $fmtW = ($rawW !== '') ? (string)(float)$rawW : '';
+            
+            $suf1 = ''; $suf2 = '';
+            if (count($qtyChain) > 0) {
+                if ($fmtW !== '' && $wU !== '') {
+                    $suf1 = " ($chainStr x {$fmtW}{$wU})";
+                } else {
+                    $bUnit = $levelsArr[0]['unit_name'] ?? 'pcs';
+                    $suf1 = " ($chainStr x 1{$bUnit})";
+                }
+            }
+            if ($fmtW !== '' && $wU !== '') {
+                $suf2 = " {$fmtW}{$wU}";
+            }
+            
+            if ($suf1 !== '' && substr($singleName, -strlen($suf1)) === $suf1) {
+                $singleName = substr($singleName, 0, -strlen($suf1));
+            } elseif ($suf2 !== '' && substr($singleName, -strlen($suf2)) === $suf2) {
+                $singleName = substr($singleName, 0, -strlen($suf2));
+            }
+            ?>
             <div id="singleVariantPanel" style="display:none; margin-bottom:12px;">
                 <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Nama Produk *</label>
-                <input type="text" name="single_name" id="singleNameInput" placeholder="Cth: Sapu Lidi Pendek" class="form-control-dark" style="width:100%;" value="<?= htmlspecialchars($product['full_name'] ?? '') ?>">
+                <input type="text" name="single_name" id="singleNameInput" placeholder="Cth: Sapu Lidi Pendek" class="form-control-dark" style="width:100%;" value="<?= htmlspecialchars($singleName) ?>">
             </div>
 
             <div id="multiVariantPanel">
