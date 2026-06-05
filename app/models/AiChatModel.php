@@ -54,7 +54,7 @@ class AiChatModel extends Model
         $checked = true;
     }
 
-    public function saveMessage($userId, $sessionId, $role, $content, $tokenCount = 0)
+    public function saveMessage(int $userId, string $sessionId, string $role, string $content, int $tokenCount = 0): bool
     {
         $stmt = $this->db->prepare("
             INSERT INTO chat_history (user_id, session_id, role, content, token_count, created_at)
@@ -69,7 +69,7 @@ class AiChatModel extends Model
         ]);
     }
 
-    public function getHistory($userId, $sessionId, $limit = 20)
+    public function getHistory(int $userId, string $sessionId, int $limit = 20): array
     {
         $stmt = $this->db->prepare("
             SELECT * FROM (
@@ -89,7 +89,7 @@ class AiChatModel extends Model
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function clearHistory($userId, $sessionId)
+    public function clearHistory(int $userId, string $sessionId): bool
     {
         $stmt = $this->db->prepare("DELETE FROM chat_history WHERE user_id = :user_id AND session_id = :session_id");
         return $stmt->execute([

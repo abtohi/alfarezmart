@@ -46,8 +46,10 @@ class AiChatController extends Controller
     /**
      * API: Kirim pesan ke OpenRouter dengan RAG Context
      */
-    public function sendMessage()
+    public function sendMessage(): void
     {
+        header('Content-Type: application/json; charset=utf-8');
+
         $this->validateCSRF();
 
         $user = AuthController::currentUser();
@@ -55,6 +57,7 @@ class AiChatController extends Controller
             echo json_encode(['success' => false, 'error' => 'Unauthorized']);
             exit;
         }
+
         $message = trim((string)$this->input('message'));
         $sessionId = trim((string)$this->input('session_id'));
 
@@ -63,10 +66,9 @@ class AiChatController extends Controller
             exit;
         }
 
-        // Cek API Key khusus Chat
+        // Cek API Key khusus Chat, fallback ke API Key utama
         $apiKey = $this->settingModel->get('ai_chat_api_key');
         if (empty($apiKey)) {
-            // Fallback ke API Key utama jika chat key kosong
             $apiKey = $this->settingModel->get('ai_api_key');
             if (empty($apiKey)) {
                 echo json_encode(['success' => false, 'error' => 'API Key OpenRouter belum dikonfigurasi. Hubungi Admin.']);
@@ -76,125 +78,141 @@ class AiChatController extends Controller
 
         $model = $this->settingModel->get('ai_chat_model', 'openrouter/auto');
 
-        // 1. Simpan pesan user
-        $this->aiChatModel->saveMessage($user['id'], $sessionId, 'user', $message);
+        try {
+            // 1. Simpan pesan user
+            $this->aiChatModel->saveMessage((int)$user['id'], $sessionId, 'user', $message);
 
-        // 2. Ambil riwayat chat sebelumnya (Max 10 pesan terakhir)
-        $history = $this->aiChatModel->getHistory($user['id'], $sessionId, 10);
+            // 2. Ambil riwayat chat sebelumnya (Max 10 pesan terakhir)
+            $history = $this->aiChatModel->getHistory((int)$user['id'], $sessionId, 10);
 
-        // 3. Bangun Context (RAG)
-        $contextBuilder = new AiContextBuilder();
-        $systemPrompt = $contextBuilder->buildSystemPrompt($message);
+            // 3. Bangun Context (RAG) — bungkus agar SQL error di AiContextBuilder tidak crash
+            $systemPrompt = '';
+            try {
+                $contextBuilder = new AiContextBuilder();
+                $systemPrompt = $contextBuilder->buildSystemPrompt($message);
+            } catch (Throwable $ctxErr) {
+                // Fallback system prompt jika RAG gagal
+                $systemPrompt = "Kamu adalah AI Asisten untuk toko AlfarezMart. Jawab pertanyaan pengguna dalam Bahasa Indonesia secara ringkas dan profesional. (Catatan: data konteks toko tidak tersedia saat ini.)";
+            }
 
-        // 4. Susun pesan untuk OpenRouter
-        $messages = [
-            ['role' => 'system', 'content' => $systemPrompt]
-        ];
-
-        // Tambahkan histori chat (tidak termasuk system prompt)
-        foreach ($history as $h) {
-            $messages[] = [
-                'role' => $h['role'],
-                'content' => $h['content']
+            // 4. Susun pesan untuk OpenRouter
+            $messages = [
+                ['role' => 'system', 'content' => $systemPrompt]
             ];
+            foreach ($history as $h) {
+                $messages[] = ['role' => $h['role'], 'content' => $h['content']];
+            }
+
+            // 5. Kirim ke OpenRouter via cURL
+            $url = 'https://openrouter.ai/api/v1/chat/completions';
+            $postData = [
+                'model'       => $model,
+                'messages'    => $messages,
+                'temperature' => 0.3,
+            ];
+
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER,  true);
+            curl_setopt($ch, CURLOPT_POST,            true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS,      json_encode($postData));
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT,  10);  // max 10 detik untuk koneksi
+            curl_setopt($ch, CURLOPT_TIMEOUT,         60);  // max 60 detik untuk respons
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer ' . $apiKey,
+                'Content-Type: application/json',
+                'HTTP-Referer: ' . BASE_URL,
+                'X-Title: AlfarezMart AI Chat',
+            ]);
+
+            $response  = curl_exec($ch);
+            $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($response === false) {
+                echo json_encode(['success' => false, 'error' => 'Koneksi ke OpenRouter gagal: ' . $curlError]);
+                exit;
+            }
+
+            $resData = json_decode($response, true);
+
+            if ($httpCode >= 400 || isset($resData['error'])) {
+                $errMsg = $resData['error']['message'] ?? ('Gagal memproses request AI (HTTP ' . $httpCode . ')');
+                echo json_encode(['success' => false, 'error' => $errMsg]);
+                exit;
+            }
+
+            $aiResponse = $resData['choices'][0]['message']['content'] ?? '';
+            $tokens     = $resData['usage']['total_tokens'] ?? 0;
+
+            // 6. Simpan respons AI
+            if (!empty($aiResponse)) {
+                $this->aiChatModel->saveMessage((int)$user['id'], $sessionId, 'assistant', $aiResponse, $tokens);
+            }
+
+            echo json_encode([
+                'success' => true,
+                'data'    => ['response' => $aiResponse, 'tokens' => $tokens],
+            ]);
+
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'error' => 'Terjadi kesalahan server: ' . $e->getMessage()]);
         }
-
-        // Pastikan pesan terbaru ada di akhir (opsional, karena histori sudah urut dari lama ke baru dan mencakup pesan user terbaru yang baru di-save)
-
-        // 5. Kirim ke OpenRouter via cURL
-        $url = 'https://openrouter.ai/api/v1/chat/completions';
-        
-        $postData = [
-            'model' => $model,
-            'messages' => $messages,
-            'temperature' => 0.3 // Rendah agar jawaban lebih faktual sesuai data
-        ];
-
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Authorization: Bearer ' . $apiKey,
-            'Content-Type: application/json',
-            'HTTP-Referer: ' . BASE_URL,
-            'X-Title: AlfarezMart AI Chat'
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-
-        if ($response === false) {
-            echo json_encode(['success' => false, 'error' => 'Koneksi ke OpenRouter gagal: ' . $curlError]);
-            exit;
-        }
-
-        $resData = json_decode($response, true);
-
-        if ($httpCode >= 400 || isset($resData['error'])) {
-            $errMsg = isset($resData['error']['message']) ? $resData['error']['message'] : 'Gagal memproses request AI (HTTP ' . $httpCode . ')';
-            echo json_encode(['success' => false, 'error' => $errMsg]);
-            exit;
-        }
-
-        $aiResponse = $resData['choices'][0]['message']['content'] ?? '';
-        $tokens = $resData['usage']['total_tokens'] ?? 0;
-
-        // 6. Simpan respon AI
-        if (!empty($aiResponse)) {
-            $this->aiChatModel->saveMessage($user['id'], $sessionId, 'assistant', $aiResponse, $tokens);
-        }
-
-        echo json_encode([
-            'success' => true,
-            'data' => [
-                'response' => $aiResponse,
-                'tokens' => $tokens
-            ]
-        ]);
     }
 
     /**
      * API: Ambil histori chat
      */
-    public function getHistory()
+    public function getHistory(): void
     {
+        header('Content-Type: application/json; charset=utf-8');
+
         $user = AuthController::currentUser();
         if (!$user) {
             echo json_encode(['success' => false, 'error' => 'Unauthorized']);
             exit;
         }
-        $sessionId = trim((string)$this->input('session_id', 'get'));
-        
+
+        // session_id dikirim via query string (?session_id=...) bukan POST body
+        $sessionId = trim((string)$this->query('session_id'));
+
         if (empty($sessionId)) {
             echo json_encode(['success' => false, 'data' => []]);
             exit;
         }
 
-        $history = $this->aiChatModel->getHistory($user['id'], $sessionId, 50); // ambil 50 pesan terakhir
-        
-        echo json_encode(['success' => true, 'data' => $history]);
+        try {
+            $history = $this->aiChatModel->getHistory((int)$user['id'], $sessionId, 50);
+            echo json_encode(['success' => true, 'data' => $history]);
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'error' => 'Gagal memuat riwayat: ' . $e->getMessage()]);
+        }
     }
 
     /**
      * API: Hapus histori chat
      */
-    public function clearHistory()
+    public function clearHistory(): void
     {
+        header('Content-Type: application/json; charset=utf-8');
+
         $this->validateCSRF();
-        
+
         $user = AuthController::currentUser();
         if (!$user) {
             echo json_encode(['success' => false, 'error' => 'Unauthorized']);
             exit;
         }
+
         $sessionId = trim((string)$this->input('session_id'));
-        
-        if (!empty($sessionId)) {
-            $this->aiChatModel->clearHistory($user['id'], $sessionId);
+
+        try {
+            if (!empty($sessionId)) {
+                $this->aiChatModel->clearHistory((int)$user['id'], $sessionId);
+            }
+            echo json_encode(['success' => true, 'message' => 'Riwayat chat dibersihkan']);
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'error' => 'Gagal menghapus riwayat: ' . $e->getMessage()]);
         }
-        
-        echo json_encode(['success' => true, 'message' => 'Riwayat chat dibersihkan']);
     }
 }
