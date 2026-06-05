@@ -109,6 +109,7 @@ class AiChatController extends Controller
                 'model'       => $model,
                 'messages'    => $messages,
                 'temperature' => 0.3,
+                'max_tokens'  => 1024, // Batasi respons agar tidak melebihi kredit gratis
             ];
 
             $ch = curl_init($url);

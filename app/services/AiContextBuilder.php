@@ -52,17 +52,13 @@ class AiContextBuilder
             $context['latest_purchases'] = $this->getLatestPurchases();
         }
 
-        $contextJson = json_encode($context, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        // Encode konteks dalam format kompak (tanpa pretty print) untuk hemat token
+        $contextJson = json_encode($context, JSON_UNESCAPED_UNICODE);
 
-        $prompt = "Kamu adalah AI Asisten pintar untuk toko AlfarezMart.\n";
-        $prompt .= "Kamu memiliki akses ke snapshot data toko secara real-time yang diberikan di bawah ini.\n";
-        $prompt .= "Gunakan data tersebut untuk menjawab pertanyaan pengguna dengan akurat, ringkas, informatif, dan profesional.\n";
-        $prompt .= "Berikan analisis atau insight bisnis jika relevan (misal: margin profit, saran stok).\n";
-        $prompt .= "Format jawabanmu menggunakan Markdown. Gunakan tebal (bold) untuk angka penting, dan list bullet/tabel jika datanya banyak.\n";
-        $prompt .= "Jawab dalam Bahasa Indonesia. Jika data yang diminta tidak ada di snapshot, katakan bahwa data tersebut tidak tersedia di konteks saat ini.\n\n";
-        $prompt .= "=== DATA TOKO SAAT INI ===\n";
-        $prompt .= $contextJson . "\n";
-        $prompt .= "=========================\n";
+        $prompt  = "Kamu adalah AI Asisten toko AlfarezMart. Jawab berdasarkan data toko di bawah ini.\n";
+        $prompt .= "Gunakan Markdown, jawab ringkas & profesional dalam Bahasa Indonesia.\n";
+        $prompt .= "Jika data tidak ada di konteks, katakan tidak tersedia.\n\n";
+        $prompt .= "DATA_TOKO=" . $contextJson . "\n";
 
         return $prompt;
     }
