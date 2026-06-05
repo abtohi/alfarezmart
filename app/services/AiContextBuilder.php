@@ -5,10 +5,15 @@
  */
 class AiContextBuilder
 {
+    /** @var \PDO */
     private $db;
+    /** @var FinanceModel */
     private $financeModel;
+    /** @var ProductModel */
     private $productModel;
+    /** @var PurchaseModel */
     private $purchaseModel;
+    /** @var SaleModel */
     private $saleModel;
 
     public function __construct()

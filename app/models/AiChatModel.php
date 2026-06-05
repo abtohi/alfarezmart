@@ -21,19 +21,35 @@ class AiChatModel extends Model
             // Cek apakah tabel ada
             $this->db->query("SELECT 1 FROM chat_history LIMIT 1");
         } catch (PDOException $e) {
-            // Buat tabel jika belum ada
-            $sql = "CREATE TABLE IF NOT EXISTS chat_history (
-                id INT PRIMARY KEY AUTO_INCREMENT,
-                user_id INT NOT NULL,
-                session_id VARCHAR(64) NOT NULL,
-                role ENUM('user','assistant') NOT NULL,
-                content TEXT NOT NULL,
-                token_count INT DEFAULT 0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_user_session (user_id, session_id),
-                INDEX idx_created_at (created_at)
-            )";
-            $this->db->exec($sql);
+            $driver = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
+            if ($driver === 'sqlite') {
+                $sql = "CREATE TABLE IF NOT EXISTS chat_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    session_id TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    content TEXT NOT NULL,
+                    token_count INTEGER DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )";
+                $this->db->exec($sql);
+                $this->db->exec("CREATE INDEX IF NOT EXISTS idx_user_session_chat ON chat_history (user_id, session_id)");
+                $this->db->exec("CREATE INDEX IF NOT EXISTS idx_created_at_chat ON chat_history (created_at)");
+            } else {
+                // Buat tabel MySQL
+                $sql = "CREATE TABLE IF NOT EXISTS chat_history (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    user_id INT NOT NULL,
+                    session_id VARCHAR(64) NOT NULL,
+                    role ENUM('user','assistant') NOT NULL,
+                    content TEXT NOT NULL,
+                    token_count INT DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_user_session (user_id, session_id),
+                    INDEX idx_created_at (created_at)
+                )";
+                $this->db->exec($sql);
+            }
         }
         $checked = true;
     }
