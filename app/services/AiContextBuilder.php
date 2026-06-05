@@ -68,7 +68,7 @@ class AiContextBuilder
         $firstDayOfMonth = date('Y-m-01');
 
         // Omzet Hari ini
-        $stmt1 = $this->db->prepare("SELECT COALESCE(SUM(total_amount), 0) as omzet FROM sales WHERE DATE(created_at) = :today");
+        $stmt1 = $this->db->prepare("SELECT COALESCE(SUM(total_amount), 0) as omzet FROM sale_transactions WHERE DATE(created_at) = :today");
         $stmt1->execute([':today' => $today]);
         $omzetToday = $stmt1->fetchColumn();
 
@@ -110,7 +110,7 @@ class AiContextBuilder
         $stmt = $this->db->prepare("
             SELECT p.full_name, SUM(si.quantity) as total_sold
             FROM sale_items si
-            JOIN sales s ON si.sale_id = s.id
+            JOIN sale_transactions s ON si.transaction_id = s.id
             JOIN products p ON si.product_id = p.id
             WHERE s.created_at >= :start_date
             GROUP BY p.id
@@ -123,20 +123,8 @@ class AiContextBuilder
 
     private function getSalesSchedule()
     {
-        // Jadwal sales 7 hari ke depan
-        $today = date('Y-m-d');
-        $nextWeek = date('Y-m-d', strtotime('+7 days'));
-        
-        $stmt = $this->db->prepare("
-            SELECT sr.name as sales_name, sup.name as supplier_name, sr.phone_number, v.visit_date
-            FROM sales_rep_visits v
-            JOIN sales_reps sr ON v.sales_rep_id = sr.id
-            JOIN suppliers sup ON sr.supplier_id = sup.id
-            WHERE v.visit_date BETWEEN :today AND :next_week
-            ORDER BY v.visit_date ASC
-        ");
-        $stmt->execute([':today' => $today, ':next_week' => $nextWeek]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Fitur jadwal sales belum tersedia di DB saat ini
+        return [];
     }
 
     private function getLatestPurchases()
