@@ -29,7 +29,7 @@ class ProductModel extends Model
         $checked = true;
     }
 
-    public function findWithDetails($id)
+    public function findWithDetails(int|string $id)
     {
         $stmt = $this->db->prepare("
             SELECT p.*, b.name as brand_name, c.name as category_name,
@@ -44,7 +44,7 @@ class ProductModel extends Model
         return $stmt->fetch();
     }
 
-    public function searchProducts($keyword, $limit = 20)
+    public function searchProducts(string $keyword, int $limit = 20)
     {
         $words = array_filter(explode(' ', trim($keyword)), 'strlen');
         $whereSql = "p.is_active = 1"; // base condition
@@ -88,7 +88,7 @@ class ProductModel extends Model
         return $stmt->fetchAll();
     }
 
-    public function findByBarcode($barcode)
+    public function findByBarcode(string $barcode)
     {
         $stmt = $this->db->prepare("
             SELECT p.*, b.name as brand_name, c.name as category_name,
@@ -258,7 +258,7 @@ class ProductModel extends Model
         }
     }
 
-    public function getPackagings($productId)
+    public function getPackagings(int|string $productId)
     {
         $stmt = $this->db->prepare("
             SELECT pp.*, u.name as unit_name
@@ -402,7 +402,7 @@ class ProductModel extends Model
         unset($p);
     }
 
-    public function createWithDetails($productData, $packagings = [])
+    public function createWithDetails(array $productData, array $packagings = [])
     {
         try {
             $this->beginTransaction();
@@ -469,7 +469,7 @@ class ProductModel extends Model
     /**
      * Products with same brand + product_type (multivariant siblings)
      */
-    public function findVariantSiblings($productId)
+    public function findVariantSiblings(int|string $productId)
     {
         $product = $this->find($productId);
         if (!$product || empty($product['brand_id']) || empty($product['product_type'])) {
@@ -496,7 +496,7 @@ class ProductModel extends Model
     /**
      * Update print label for one product
      */
-    public function updatePrintLabel($productId, $shortLabel, $invoiceName = null)
+    public function updatePrintLabel(int|string $productId, string $shortLabel, ?string $invoiceName = null)
     {
         $shortLabel = trim($shortLabel);
         if ($shortLabel === '') {
@@ -519,7 +519,7 @@ class ProductModel extends Model
     /**
      * Apply label base to all variant siblings (brand + product_type)
      */
-    public function distributePrintLabel($productId, $labelBase)
+    public function distributePrintLabel(int|string $productId, string $labelBase)
     {
         $product = $this->find($productId);
         if (!$product) {

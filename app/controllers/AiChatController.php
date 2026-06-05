@@ -145,7 +145,7 @@ class AiChatController extends Controller
                 $response  = curl_exec($ch);
                 $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 $curlError = curl_error($ch);
-                curl_close($ch);
+                // curl_close is deprecated since PHP 8.0, resources are auto-closed
 
                 if ($response === false) {
                     echo json_encode(['success' => false, 'error' => 'Koneksi ke OpenRouter gagal: ' . $curlError]);
