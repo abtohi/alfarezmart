@@ -228,4 +228,6 @@ $router->get('/chat', 'AiChatController@index');
 $router->post('/api/chat', 'AiChatController@sendMessage');
 $router->get('/api/chat/history', 'AiChatController@getHistory');
 $router->post('/api/chat/clear', 'AiChatController@clearHistory');
+$router->post('/api/chat/feedback', 'AiChatController@saveFeedback'); // Knowledge base
 $router->post('/api/settings/chat', 'ApiController@saveChatSettings');
+
