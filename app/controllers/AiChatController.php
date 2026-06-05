@@ -114,56 +114,96 @@ class AiChatController extends Controller
                 $messages[] = ['role' => $h['role'], 'content' => $h['content']];
             }
 
-            // 5. Kirim ke OpenRouter
+            // 5. Kirim ke OpenRouter (Agentic Loop max 2 pass)
             $url      = 'https://openrouter.ai/api/v1/chat/completions';
-            $postData = [
-                'model'       => $model,
-                'messages'    => $messages,
-                'temperature' => 0.2,   // Lebih rendah = lebih faktual
-                'max_tokens'  => 1024,
-            ];
+            $maxPasses = 2;
+            $currentPass = 1;
+            $aiResponse = '';
+            $totalTokens = 0;
 
-            $ch = curl_init($url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER,  true);
-            curl_setopt($ch, CURLOPT_POST,            true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS,      json_encode($postData));
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT,  10);
-            curl_setopt($ch, CURLOPT_TIMEOUT,         60);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Authorization: Bearer ' . $apiKey,
-                'Content-Type: application/json',
-                'HTTP-Referer: ' . BASE_URL,
-                'X-Title: AlfarezMart AI Chat',
-            ]);
+            while ($currentPass <= $maxPasses) {
+                $postData = [
+                    'model'       => $model,
+                    'messages'    => $messages,
+                    'temperature' => 0.2,   // Lebih rendah = lebih faktual
+                    'max_tokens'  => 1024,
+                ];
 
-            $response  = curl_exec($ch);
-            $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $curlError = curl_error($ch);
-            curl_close($ch);
+                $ch = curl_init($url);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER,  true);
+                curl_setopt($ch, CURLOPT_POST,            true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS,      json_encode($postData));
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT,  10);
+                curl_setopt($ch, CURLOPT_TIMEOUT,         60);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Authorization: Bearer ' . $apiKey,
+                    'Content-Type: application/json',
+                    'HTTP-Referer: ' . BASE_URL,
+                    'X-Title: AlfarezMart AI Chat',
+                ]);
 
-            if ($response === false) {
-                echo json_encode(['success' => false, 'error' => 'Koneksi ke OpenRouter gagal: ' . $curlError]);
-                exit;
+                $response  = curl_exec($ch);
+                $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curlError = curl_error($ch);
+                curl_close($ch);
+
+                if ($response === false) {
+                    echo json_encode(['success' => false, 'error' => 'Koneksi ke OpenRouter gagal: ' . $curlError]);
+                    exit;
+                }
+
+                $resData = json_decode($response, true);
+                if ($httpCode >= 400 || isset($resData['error'])) {
+                    $errMsg = $resData['error']['message'] ?? ('Gagal memproses request AI (HTTP ' . $httpCode . ')');
+                    echo json_encode(['success' => false, 'error' => $errMsg]);
+                    exit;
+                }
+
+                $aiResponse = $resData['choices'][0]['message']['content'] ?? '';
+                $totalTokens += $resData['usage']['total_tokens'] ?? 0;
+
+                // Cek apakah ada SQL Query
+                if (preg_match('/\[SQL_QUERY\](.*?)\[\/SQL_QUERY\]/is', $aiResponse, $matches)) {
+                    $sqlQuery = trim($matches[1]);
+                    
+                    // Keamanan: Validasi hanya boleh SELECT
+                    if (stripos($sqlQuery, 'SELECT') !== 0 || preg_match('/(?:INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|REPLACE|GRANT|REVOKE)\b/i', $sqlQuery)) {
+                        $sqlResult = "ERROR: Keamanan ditolak. Hanya query SELECT yang diizinkan.";
+                    } else {
+                        // Tambahkan LIMIT jika belum ada
+                        if (stripos($sqlQuery, 'LIMIT') === false) {
+                            $sqlQuery .= " LIMIT 50";
+                        }
+                        
+                        try {
+                            $db = Database::getInstance()->getConnection();
+                            $stmt = $db->query($sqlQuery);
+                            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                            $sqlResult = json_encode($results, JSON_UNESCAPED_UNICODE);
+                        } catch (Throwable $e) {
+                            $sqlResult = "ERROR SQL: " . $e->getMessage();
+                        }
+                    }
+
+                    // Append the AI's partial response and the SQL result
+                    $messages[] = ['role' => 'assistant', 'content' => $aiResponse];
+                    $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n" . $sqlResult . "\n[/SQL_RESULT]\nSekarang jawab pertanyaan saya berdasarkan data di atas. Jangan tampilkan query-nya lagi ke user."];
+                    
+                    $currentPass++;
+                } else {
+                    // No SQL query, break the loop
+                    break;
+                }
             }
-
-            $resData = json_decode($response, true);
-            if ($httpCode >= 400 || isset($resData['error'])) {
-                $errMsg = $resData['error']['message'] ?? ('Gagal memproses request AI (HTTP ' . $httpCode . ')');
-                echo json_encode(['success' => false, 'error' => $errMsg]);
-                exit;
-            }
-
-            $aiResponse = $resData['choices'][0]['message']['content'] ?? '';
-            $tokens     = $resData['usage']['total_tokens'] ?? 0;
 
             // 6. Simpan respons AI
             if (!empty($aiResponse)) {
-                $this->aiChatModel->saveMessage((int)$user['id'], $sessionId, 'assistant', $aiResponse, $tokens);
+                $this->aiChatModel->saveMessage((int)$user['id'], $sessionId, 'assistant', $aiResponse, $totalTokens);
             }
 
             echo json_encode([
                 'success' => true,
-                'data'    => ['response' => $aiResponse, 'tokens' => $tokens],
+                'data'    => ['response' => $aiResponse, 'tokens' => $totalTokens],
             ]);
 
         } catch (Throwable $e) {

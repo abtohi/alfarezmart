@@ -60,6 +60,15 @@ AI AlfarezMart terus belajar dari penggunanya. Terdapat tabel `ai_knowledge` yan
 2. **Koreksi Manual:** Pengguna dapat menekan ikon ✏️ pada pesan AI untuk mengoreksi fakta secara eksplisit.
 3. **Retrieval:** Setiap kali pengguna bertanya, AI akan mengekstrak kata kunci dan mencari di `ai_knowledge`. Jika ada fakta terkait, data tersebut diprioritaskan.
 
+## 🕵️‍♂️ Agentic SQL (Text-to-SQL)
+
+Untuk pertanyaan analitik historis yang mendalam (contoh: *"Berapa omzet tanggal 2 Juni 2024?"*), AI dilengkapi kemampuan **Agentic SQL**.
+
+1. **Schema Injection:** `AiContextBuilder` membaca seluruh struktur tabel dan kolom database dan memberikannya kepada AI.
+2. **Query Generation:** Jika AI mendeteksi data yang diminta tidak ada di konteks biasa, ia akan merespons dengan: `[SQL_QUERY] SELECT * FROM ... [/SQL_QUERY]`.
+3. **Safe Execution:** `AiChatController` mendeteksi tag tersebut, memvalidasi bahwa itu murni query `SELECT` (menolak segala upaya `INSERT/UPDATE/DELETE`), dan menjalankannya via PDO dengan limit otomatis.
+4. **Multi-Pass Loop:** Hasil query dilempar kembali ke AI untuk dirangkum menjadi jawaban akhir kepada pengguna.
+
 ## 📊 Kapasitas Analisis AI Saat Ini (v3.0)
 
 Saat ini AI mampu memahami dan menganalisis 35+ tabel secara komprehensif:

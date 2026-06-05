@@ -126,6 +126,9 @@ class AiContextBuilder
             $context['akun_keuangan'] = $this->getFinanceAccountsBalance();
         }
 
+        // Menambahkan Skema Database agar AI bisa membuat SQL Query
+        $context['schema_database'] = $this->getDatabaseSchema();
+
         $contextJson = json_encode($context, JSON_UNESCAPED_UNICODE);
 
         // System prompt dengan feature guide + rules ketat
@@ -134,7 +137,7 @@ class AiContextBuilder
         $prompt .= "1. INTERNAL FIRST: Selalu gunakan DATA_TOKO sebagai sumber utama. JANGAN cari dari internet.\n";
         $prompt .= "2. Jika 'produk_dicari' tersedia: gunakan data itu untuk menjawab pertanyaan produk (harga, stok, supplier, dll).\n";
         $prompt .= "3. Jika 'pengetahuan_toko' tersedia: itu adalah koreksi/fakta yang sudah diverifikasi user, gunakan sebagai kebenaran.\n";
-        $prompt .= "4. Jika data tidak ada di konteks: jawab 'Data ini belum tercatat di sistem AlfarezMart.'\n";
+        $prompt .= "4. AGENTIC SQL: Jika data historis TIDAK ADA di DATA_TOKO, jalankan query ke database dengan membalas menggunakan format persis ini: [SQL_QUERY] SELECT * FROM tabel LIMIT 50 [/SQL_QUERY]. Kamu HANYA BOLEH menggunakan SELECT. Hasilnya akan diberikan di pesan berikutnya.\n";
         $prompt .= "5. Format jawaban: Markdown. Angka penting = **bold**. Tabel jika data banyak.\n";
         $prompt .= "6. Bahasa: Indonesia. Singkat, akurat, ramah.\n";
         $prompt .= "7. Jika user bingung cara menggunakan aplikasi, jelaskan step-by-step berdasarkan PANDUAN_FITUR.\n\n";
@@ -907,5 +910,36 @@ class AiContextBuilder
             if (mb_strpos($haystack, $n) !== false) return true;
         }
         return false;
+    }
+
+    // ================================================================
+    // SCHEMAS FOR TEXT-TO-SQL (AGENTIC LOOP)
+    // ================================================================
+
+    /**
+     * Membaca struktur database (nama tabel & kolom) agar AI bisa menyusun SQL Query mandiri.
+     */
+    private function getDatabaseSchema(): array
+    {
+        try {
+            // Get all tables
+            $tablesStmt = $this->db->query("SHOW TABLES");
+            $tables = $tablesStmt->fetchAll(PDO::FETCH_COLUMN);
+            $schema = [];
+
+            foreach ($tables as $table) {
+                // Get columns for each table
+                $colsStmt = $this->db->query("SHOW COLUMNS FROM `{$table}`");
+                $columns = $colsStmt->fetchAll(PDO::FETCH_ASSOC);
+                $colNames = [];
+                foreach ($columns as $col) {
+                    $colNames[] = $col['Field'];
+                }
+                $schema[$table] = implode(', ', $colNames);
+            }
+            return $schema;
+        } catch (Throwable $e) {
+            return ['error' => 'Schema tidak tersedia'];
+        }
     }
 }
