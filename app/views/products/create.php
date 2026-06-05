@@ -164,27 +164,10 @@
 <!-- Template for units -->
 <script>
 // ===== Data from PHP =====
-const brandsData = [
-    <?php foreach ($brands as $b): ?>
-        { value: '<?= $b['id'] ?>', label: <?= json_encode($b['name']) ?> },
-    <?php endforeach; ?>
-];
-const categoriesData = [
-    <?php foreach ($categories as $c): ?>
-        { value: '<?= $c['id'] ?>', label: <?= json_encode($c['name']) ?> },
-    <?php endforeach; ?>
-];
-const unitsData = [
-    <?php foreach ($units as $u): ?>
-        { value: '<?= $u['id'] ?>', label: <?= json_encode($u['name']) ?> },
-    <?php endforeach; ?>
-];
-const weightUnitOptions = [
-    <?php foreach ($units as $u): ?>
-        <?php $wLabel = $u['name'] . (!empty($u['abbreviation']) ? ' (' . $u['abbreviation'] . ')' : ''); ?>
-        { value: <?= json_encode($u['abbreviation'] ?: $u['name']) ?>, label: <?= json_encode($wLabel) ?> },
-    <?php endforeach; ?>
-];
+let brandsData = [];
+let categoriesData = [];
+let unitsData = [];
+let weightUnitOptions = [];
 
 const csrfTokenValue = document.getElementById('csrfToken').value;
 let levelCount = 0;
@@ -197,7 +180,24 @@ let referenceSearchTimer = null;
 // ===== SearchBox Instances =====
 let brandSB, categorySB, weightUnitSB;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await window.OfflineDB.init();
+        const offlineBrands = await window.OfflineDB.getAllBrands();
+        const offlineCats = await window.OfflineDB.getAllCategories();
+        const offlineUnits = await window.OfflineDB.getAllUnits();
+
+        brandsData = offlineBrands.map(b => ({ value: String(b.id), label: b.name }));
+        categoriesData = offlineCats.map(c => ({ value: String(c.id), label: c.name }));
+        unitsData = offlineUnits.map(u => ({ value: String(u.id), label: u.name }));
+        weightUnitOptions = offlineUnits.map(u => {
+            const abbr = u.abbreviation || u.name;
+            const wLabel = u.abbreviation ? `${u.name} (${u.abbreviation})` : u.name;
+            return { value: abbr, label: wLabel };
+        });
+    } catch (e) {
+        console.error("Failed to load offline data", e);
+    }
     brandSB = new SearchBox(document.getElementById('brandSearchBox'), {
         options: brandsData,
         placeholder: 'Cari atau pilih brand...',
@@ -415,8 +415,14 @@ async function openMasterModal(type) {
 async function searchReferenceProducts(q) {
     const box = document.getElementById('referenceResults');
     try {
-        const res = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
-        const items = await res.json();
+        let items = [];
+        if (typeof OfflineDB !== 'undefined') {
+            items = await OfflineDB.searchProducts(q);
+        }
+        if ((!items || items.length === 0) && navigator.onLine) {
+            const res = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
+            items = await res.json();
+        }
         if (!items.length) {
             box.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--text-muted);">Tidak ditemukan</div>';
             box.style.display = 'block';
@@ -1132,6 +1138,41 @@ async function submitProduct(e) {
                     payload[key] = value;
                 }
             });
+            
+            // Optimistic Save to Dexie products table
+            const tempId = parseInt('999' + (Date.now() % 100000));
+            const newProduct = {
+                id: tempId,
+                full_name: payload.full_name,
+                short_label: payload.short_label || payload.full_name,
+                brand_name: brandSB ? brandSB.getLabel() : '',
+                category_name: categorySB ? categorySB.getLabel() : '',
+                code: payload.code || '',
+                packagings: [],
+                is_pending: true
+            };
+            
+            if (payload.unit_id) {
+                const units = Array.isArray(payload.unit_id) ? payload.unit_id : [payload.unit_id];
+                const buys = Array.isArray(payload.buy_price) ? payload.buy_price : [payload.buy_price];
+                const retails = Array.isArray(payload.sell_price_retail) ? payload.sell_price_retail : [payload.sell_price_retail];
+                const wholesales = Array.isArray(payload.sell_price_wholesale) ? payload.sell_price_wholesale : [payload.sell_price_wholesale];
+                const cqtys = Array.isArray(payload.contained_qty) ? payload.contained_qty : [payload.contained_qty];
+                
+                units.forEach((u, i) => {
+                    const unitObj = unitsData.find(x => x.value == u);
+                    newProduct.packagings.push({
+                        level: i + 1,
+                        unit_name: unitObj ? unitObj.label : 'Unit',
+                        contained_qty: cqtys[i] || 1,
+                        buy_price: buys[i] || 0,
+                        sell_price_retail: retails[i] || 0,
+                        sell_price_wholesale: wholesales[i] || 0
+                    });
+                });
+            }
+            await OfflineDB.saveProduct(newProduct);
+            
             await OfflineDB.addPendingChange(`${BASE_URL}api/products`, 'POST', payload);
             showToast('Tersimpan offline. Akan disinkronkan saat online.', 'info');
             if (typeof updateSyncBadge === 'function') updateSyncBadge();

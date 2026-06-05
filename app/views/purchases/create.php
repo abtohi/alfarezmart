@@ -773,16 +773,27 @@ async function performProductSearch() {
     }
 
     try {
-        let url;
-        if (filterBySupplierSales && !isOtherMode && currentSupplierId) {
-            url = `${BASE_URL}api/purchases/search-products?q=${encodeURIComponent(q)}`;
-            url += `&supplier_id=${currentSupplierId}`;
-            if (currentSalesRepId) url += `&sales_rep_id=${currentSalesRepId}`;
-        } else {
-            url = `${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`;
+        let data = [];
+        if (!filterBySupplierSales && typeof OfflineDB !== 'undefined') {
+            data = await OfflineDB.searchProducts(q);
         }
-
-        const data = await api(url);
+        
+        if ((!data || data.length === 0) || filterBySupplierSales) {
+            let url;
+            if (filterBySupplierSales && !isOtherMode && currentSupplierId) {
+                url = `${BASE_URL}api/purchases/search-products?q=${encodeURIComponent(q)}`;
+                url += `&supplier_id=${currentSupplierId}`;
+                if (currentSalesRepId) url += `&sales_rep_id=${currentSalesRepId}`;
+            } else {
+                url = `${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`;
+            }
+            try {
+                data = await api(url);
+            } catch (e) {
+                if (typeof OfflineDB !== 'undefined') data = await OfflineDB.searchProducts(q);
+            }
+        }
+        
         if (!Array.isArray(data) || data.length === 0) {
             suggestionsDiv.innerHTML = `
                 <div style="padding:12px;text-align:center;">
@@ -819,8 +830,15 @@ async function selectProduct(productSummary) {
     searchInput.value = '';
     suggestionsDiv.innerHTML = '';
     try {
-        const data = await api(`${BASE_URL}api/products/${productSummary.id}`);
-        addProductToCart(data);
+        let data = null;
+        if (typeof OfflineDB !== 'undefined') {
+            data = await OfflineDB.getProductById(productSummary.id);
+        }
+        if (!data && navigator.onLine) {
+            data = await api(`${BASE_URL}api/products/${productSummary.id}`);
+        }
+        if (data) addProductToCart(data);
+        else showToast('Produk tidak ditemukan di database lokal', 'warning');
     } catch (e) {
         showToast('Gagal mengambil data produk', 'error');
     }
@@ -2740,6 +2758,16 @@ async function submitPurchase() {
                 };
             })
         };
+
+        // ── OFFLINE MODE: queue to pending_changes ──
+        if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+            await OfflineDB.addPendingChange(`${BASE_URL}api/purchases`, 'POST', payload);
+            localStorage.removeItem('alfarezmart_purchase_draft');
+            showToast('📦 Pembelian disimpan offline! Akan otomatis sinkron saat online.', 'info', 5000);
+            if (typeof updateSyncBadge === 'function') updateSyncBadge();
+            setTimeout(() => window.location.reload(), 1800);
+            return;
+        }
 
         const res = await fetch(`${BASE_URL}api/purchases`, {
             method: 'POST',

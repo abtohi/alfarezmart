@@ -204,17 +204,12 @@ $pkgsJson = json_encode($packagings, JSON_UNESCAPED_UNICODE);
 <!-- Template for units -->
 <script>
 // ===== Data from PHP =====
-const brandsData = <?= $brandsJson ?>;
-const categoriesData = <?= $catsJson ?>;
-const unitsData = <?= $unitsJson ?>;
+let brandsData = [];
+let categoriesData = [];
+let unitsData = [];
+let weightUnitOptions = [];
 const packagingsData = <?= $pkgsJson ?>;
 const productId = <?= $product['id'] ?>;
-const weightUnitOptions = [
-    <?php foreach ($units as $u): ?>
-        <?php $wLabel = $u['name'] . (!empty($u['abbreviation']) ? ' (' . $u['abbreviation'] . ')' : ''); ?>
-        { value: <?= json_encode($u['abbreviation'] ?: $u['name']) ?>, label: <?= json_encode($wLabel) ?> },
-    <?php endforeach; ?>
-];
 
 const csrfTokenValue = document.getElementById('csrfToken').value;
 let levelCount = 0;
@@ -228,7 +223,24 @@ let deletedPkgIds = [];
 // ===== SearchBox Instances =====
 let brandSB, categorySB, weightUnitSB;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await window.OfflineDB.init();
+        const offlineBrands = await window.OfflineDB.getAllBrands();
+        const offlineCats = await window.OfflineDB.getAllCategories();
+        const offlineUnits = await window.OfflineDB.getAllUnits();
+
+        brandsData = offlineBrands.map(b => ({ value: String(b.id), label: b.name }));
+        categoriesData = offlineCats.map(c => ({ value: String(c.id), label: c.name }));
+        unitsData = offlineUnits.map(u => ({ value: String(u.id), label: u.name }));
+        weightUnitOptions = offlineUnits.map(u => {
+            const abbr = u.abbreviation || u.name;
+            const wLabel = u.abbreviation ? `${u.name} (${u.abbreviation})` : u.name;
+            return { value: abbr, label: wLabel };
+        });
+    } catch (e) {
+        console.error("Failed to load offline data", e);
+    }
     brandSB = new SearchBox(document.getElementById('brandSearchBox'), {
         options: brandsData,
         placeholder: 'Cari atau pilih brand...',
@@ -474,8 +486,14 @@ async function openMasterModal(type) {
 async function searchReferenceProducts(q) {
     const box = document.getElementById('referenceResults');
     try {
-        const res = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
-        const items = await res.json();
+        let items = [];
+        if (typeof OfflineDB !== 'undefined') {
+            items = await OfflineDB.searchProducts(q);
+        }
+        if ((!items || items.length === 0) && navigator.onLine) {
+            const res = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
+            items = await res.json();
+        }
         if (!items.length) {
             box.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--text-muted);">Tidak ditemukan</div>';
             box.style.display = 'block';
@@ -1326,6 +1344,21 @@ async function submitProduct(e) {
             };
 
             await OfflineDB.addPendingChange(`${BASE_URL}api/products/update/${productId}`, 'POST', productData);
+
+            // Optimistic update in Dexie: update local record immediately
+            try {
+                const localProduct = await OfflineDB.getProductById(productId);
+                if (localProduct) {
+                    localProduct.full_name = productData.full_name;
+                    localProduct.short_label = productData.short_label;
+                    localProduct.brand_name = brandSB ? brandSB.getLabel() : localProduct.brand_name;
+                    localProduct.category_name = categorySB ? categorySB.getLabel() : localProduct.category_name;
+                    localProduct.is_pending_update = true;
+                    await OfflineDB.saveProduct(localProduct);
+                }
+            } catch (dexieErr) {
+                console.warn('Dexie optimistic update failed:', dexieErr);
+            }
 
             for (const pId of deletedPkgIds) {
                 await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pId}/delete`, 'POST', { csrf_token: csrfTokenValue });

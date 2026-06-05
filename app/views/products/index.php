@@ -487,16 +487,15 @@ document.addEventListener('DOMContentLoaded', () => {
         timer = setTimeout(async () => {
             try {
                 let items = [];
-                if (!navigator.onLine) {
-                    if (typeof OfflineDB !== 'undefined') items = await OfflineDB.searchProducts(q);
-                } else {
+                if (typeof OfflineDB !== 'undefined') {
+                    items = await OfflineDB.searchProducts(q);
+                }
+                if ((!items || items.length === 0) && navigator.onLine) {
                     try {
                         const res = await fetch(`<?= BASE_URL ?>api/products/search?q=${encodeURIComponent(q)}`);
                         items = await res.json();
                     } catch (apiErr) {
-                        if (typeof OfflineDB !== 'undefined') {
-                            items = await OfflineDB.searchProducts(q);
-                        }
+                        console.error('API search failed', apiErr);
                     }
                 }
 
@@ -650,16 +649,13 @@ async function doOfflineSearch(query) {
 }
 
 // Auto-run offline search if we load the page without internet and there is a ?q= in the URL
-document.addEventListener('DOMContentLoaded', () => {
-    if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+document.addEventListener('DOMContentLoaded', async () => {
+    if (typeof OfflineDB !== 'undefined') {
+        await OfflineDB.init();
         const urlParams = new URLSearchParams(window.location.search);
-        const q = urlParams.get('q');
-        if (q) {
-            doOfflineSearch(q);
-        } else if (document.querySelectorAll('.product-card').length === 0) {
-             // If completely empty (perhaps SW loaded empty HTML), load everything
-             doOfflineSearch('');
-        }
+        const q = urlParams.get('q') || '';
+        // Always render from Dexie to get latest local changes (PWA offline-first behavior)
+        doOfflineSearch(q);
     }
 });
 </script>

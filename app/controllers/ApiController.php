@@ -169,6 +169,14 @@ class ApiController extends Controller
         $categoryModel = new CategoryModel();
         $categories = $categoryModel->all() ?? [];
 
+        require_once __DIR__ . '/../models/BrandModel.php';
+        $brandModel = new BrandModel();
+        $brands = $brandModel->all() ?? [];
+
+        require_once __DIR__ . '/../models/UnitModel.php';
+        $unitModel = new UnitModel();
+        $units = $unitModel->all() ?? [];
+
         // Finance Accounts & Categories
         require_once __DIR__ . '/../models/FinanceModel.php';
         $financeModel = new FinanceModel();
@@ -188,6 +196,8 @@ class ApiController extends Controller
             'suppliers' => $suppliers,
             'purchases' => $purchases,
             'categories' => $categories,
+            'brands'    => $brands,
+            'units'     => $units,
             'debts'     => [],
             'finance'   => [
                 'accounts'   => $financeAccounts,

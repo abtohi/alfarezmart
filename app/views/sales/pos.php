@@ -312,19 +312,16 @@ async function processBarcodeScan(q, inpEl, sugEl) {
     try {
         let result = null;
         try {
-            if (navigator.onLine) {
+            if (typeof OfflineDB !== 'undefined') {
+                result = await OfflineDB.findByBarcode(q);
+            }
+            if (!result && navigator.onLine) {
                 const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}`);
                 if (!resp.ok && resp.status === 503) throw new Error("Offline");
                 result = await resp.json();
-            } else {
-                throw new Error("Offline");
             }
         } catch (e) {
-            if (typeof OfflineDB !== 'undefined') {
-                result = await OfflineDB.findByBarcode(q);
-            } else {
-                throw e;
-            }
+            console.error('Barcode error', e);
         }
 
         if (result && result.id) {
@@ -364,27 +361,27 @@ async function performSearch(q) {
     try {
         let items = [];
         try {
-            if (navigator.onLine) {
+            if (typeof OfflineDB !== 'undefined') {
+                items = await OfflineDB.searchProducts(q);
+            }
+            
+            if ((!items || items.length === 0) && navigator.onLine) {
                 const resp = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`, { 
                     credentials: 'same-origin',
                     signal: window.posSearchAbortController.signal
                 });
                 if (!resp.ok) {
-                    if (resp.status === 503) throw new Error("Offline");
-                    sug.innerHTML = '<div style="padding:12px;text-align:center;color:#f59e0b;">Gagal memuat. Refresh halaman atau login ulang.</div>';
-                    return;
+                    if (resp.status !== 503) {
+                        sug.innerHTML = '<div style="padding:12px;text-align:center;color:#f59e0b;">Gagal memuat. Refresh halaman atau login ulang.</div>';
+                        return;
+                    }
+                } else {
+                    items = await resp.json();
                 }
-                items = await resp.json();
-            } else {
-                throw new Error("Offline");
             }
         } catch (e) {
             if (e.name === 'AbortError') return;
-            if (typeof OfflineDB !== 'undefined') {
-                items = await OfflineDB.searchProducts(q);
-            } else {
-                throw e;
-            }
+            console.error('POS search fetch error', e);
         }
         
         const currentInput = document.getElementById('posSearch');
@@ -439,7 +436,10 @@ async function selectProduct(id) {
     try {
         let data = null;
         try {
-            if (navigator.onLine) {
+            if (typeof OfflineDB !== 'undefined') {
+                data = await OfflineDB.getProductById(id);
+            }
+            if (!data && navigator.onLine) {
                 const resp = await fetch(`${BASE_URL}api/products/${id}`, { credentials: 'same-origin' });
                 if (!resp.ok) {
                     if (resp.status === 503) throw new Error("Offline");
@@ -449,15 +449,9 @@ async function selectProduct(id) {
                     return;
                 }
                 data = await resp.json();
-            } else {
-                throw new Error("Offline");
             }
         } catch (e) {
-            if (typeof OfflineDB !== 'undefined') {
-                data = await OfflineDB.getProductById(id);
-            } else {
-                throw e;
-            }
+            console.error(e);
         }
         
         if (!data || !data.id) {

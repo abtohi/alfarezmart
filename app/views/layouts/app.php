@@ -227,7 +227,8 @@ if ($userLevel === 'staff') {
         const version = '9.9';
     </script>
     <script src="<?= BASE_URL ?>public/js/utils.js<?= $v ?>"></script>
-    <script src="<?= BASE_URL ?>public/js/offline-db.js<?= $v ?>"></script>
+    <script src="<?= BASE_URL ?>public/js/dexie.min.js<?= $v ?>"></script>
+    <script src="<?= BASE_URL ?>public/js/db.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/printer.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/barcode.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/packaging-prices.js<?= $v ?>"></script>

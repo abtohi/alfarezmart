@@ -161,23 +161,39 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Load Master Data (Accounts & Categories)
     async function loadMasterData() {
         try {
-            if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+            // Try Dexie first for speed
+            if (typeof OfflineDB !== 'undefined') {
                 const financeData = await OfflineDB.getAllFinance();
-                accountsData = financeData.filter(x => x._type === 'account');
-                categoriesData = financeData.filter(x => x._type === 'finance_cat');
-            } else {
-                const accRes = await api(`${BASE_URL}api/finance/accounts`);
-                if (accRes.success) accountsData = accRes.data;
-
-                const catRes = await api(`${BASE_URL}api/finance/categories`);
-                if (catRes.success) categoriesData = catRes.data;
+                if (financeData && financeData.length > 0) {
+                    accountsData = financeData.filter(x => x._type === 'account');
+                    categoriesData = financeData.filter(x => x._type === 'finance_cat');
+                    renderPosGrid();
+                    updateFilterOptions();
+                    updateCategoryDatalist();
+                    // Refresh from server in background if online
+                    if (navigator.onLine) refreshMasterDataFromServer();
+                    return;
+                }
             }
+            await refreshMasterDataFromServer();
+        } catch (e) {
+            console.error("Gagal memuat data master keuangan:", e);
+        }
+    }
+
+    async function refreshMasterDataFromServer() {
+        try {
+            const accRes = await api(`${BASE_URL}api/finance/accounts`);
+            if (accRes.success) accountsData = accRes.data;
+
+            const catRes = await api(`${BASE_URL}api/finance/categories`);
+            if (catRes.success) categoriesData = catRes.data;
 
             renderPosGrid();
             updateFilterOptions();
             updateCategoryDatalist();
         } catch (e) {
-            console.error("Gagal memuat data master keuangan:", e);
+            console.error("Gagal refresh data master dari server:", e);
         }
     }
 

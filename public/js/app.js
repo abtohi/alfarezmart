@@ -222,26 +222,28 @@ function initSearch() {
                     </div>
                 `).join('');
             } else {
-                // Default Product Search
+                // Default Product Search (Instant Search via Dexie.js)
                 try {
-                    const data = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
+                    let data = [];
+                    if (typeof OfflineDB !== 'undefined') {
+                        data = await OfflineDB.searchProducts(q);
+                    }
+                    
+                    // Fallback to API if Dexie has no data and online
+                    if ((!data || data.length === 0) && navigator.onLine) {
+                        data = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
+                    }
+
                     if (input.value.trim().length < 2) { results.innerHTML = ''; return; }
                     renderProductSearch(data, results);
-                } catch (apiErr) {
-                    // Fallback to offline DB
-                    if (typeof OfflineDB !== 'undefined') {
-                        const data = await OfflineDB.searchProducts(q);
-                        if (input.value.trim().length < 2) { results.innerHTML = ''; return; }
-                        renderProductSearch(data, results);
-                    } else {
-                        throw apiErr;
-                    }
+                } catch (e) {
+                    results.innerHTML = '<div class="empty-state" style="padding:24px"><p>Gagal mencari produk</p></div>';
                 }
             }
         } catch (e) {
-            results.innerHTML = '<div class="empty-state" style="padding:24px"><p>Gagal mencari (Offline)</p></div>';
+            results.innerHTML = '<div class="empty-state" style="padding:24px"><p>Gagal mencari</p></div>';
         }
-    }, 300));
+    }, 150)); // Kurangi debounce time ke 150ms karena query lokal sangat cepat
 }
 
 function renderProductSearch(data, results) {
@@ -394,7 +396,10 @@ async function syncPendingChanges() {
                     headers: {}
                 };
                 
-                const csrfToken = document.getElementById('csrfToken') ? document.getElementById('csrfToken').value : '';
+                // Prefer CSRF from stored payload, fallback to DOM
+                const csrfFromPayload = change.payload && (change.payload.csrf_token || change.payload['X-CSRF-Token']);
+                const csrfFromDom = document.getElementById('csrfToken') ? document.getElementById('csrfToken').value : '';
+                const csrfToken = csrfFromPayload || csrfFromDom || '';
                 if (csrfToken) config.headers['X-CSRF-Token'] = csrfToken;
                 
                 if (change.payload) {
@@ -421,7 +426,7 @@ async function syncPendingChanges() {
                     } else {
                         localStorage.setItem(failKey, retries);
                         failCount++;
-                        console.error("Gagal sinkron data ID:", change.id, `(percobaan ${retries}/3)`);
+                        console.error("Gagal sinkron data ID:", change.id, `(percobaan ${retries}/3)`, `HTTP ${response.status}`);
                     }
                 }
             } catch (e) {

@@ -476,8 +476,14 @@ function loadExistingData() {
     
     existingItems.forEach(async (itemInfo) => {
         try {
-            const data = await api(`${BASE_URL}api/products/${itemInfo.product_id}`);
-            if(data) {
+            let data = null;
+            if (typeof OfflineDB !== 'undefined') {
+                data = await OfflineDB.getProductById(itemInfo.product_id);
+            }
+            if (!data && navigator.onLine) {
+                data = await api(`${BASE_URL}api/products/${itemInfo.product_id}`);
+            }
+            if (data) {
                 addProductToCartExisting(data, itemInfo);
             }
         } catch(e) { console.warn('Gagal memuat item', e); }
@@ -792,16 +798,27 @@ async function performProductSearch() {
     }
 
     try {
-        let url;
-        if (filterBySupplierSales && !isOtherMode && currentSupplierId) {
-            url = `${BASE_URL}api/purchases/search-products?q=${encodeURIComponent(q)}`;
-            url += `&supplier_id=${currentSupplierId}`;
-            if (currentSalesRepId) url += `&sales_rep_id=${currentSalesRepId}`;
-        } else {
-            url = `${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`;
+        let data = [];
+        if (!filterBySupplierSales && typeof OfflineDB !== 'undefined') {
+            data = await OfflineDB.searchProducts(q);
         }
 
-        const data = await api(url);
+        if ((!data || data.length === 0) || filterBySupplierSales) {
+            let url;
+            if (filterBySupplierSales && !isOtherMode && currentSupplierId) {
+                url = `${BASE_URL}api/purchases/search-products?q=${encodeURIComponent(q)}`;
+                url += `&supplier_id=${currentSupplierId}`;
+                if (currentSalesRepId) url += `&sales_rep_id=${currentSalesRepId}`;
+            } else {
+                url = `${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`;
+            }
+            try {
+                data = await api(url);
+            } catch (e) {
+                if (typeof OfflineDB !== 'undefined') data = await OfflineDB.searchProducts(q);
+            }
+        }
+
         if (!Array.isArray(data) || data.length === 0) {
             suggestionsDiv.innerHTML = `
                 <div style="padding:12px;text-align:center;">
@@ -838,8 +855,15 @@ async function selectProduct(productSummary) {
     searchInput.value = '';
     suggestionsDiv.innerHTML = '';
     try {
-        const data = await api(`${BASE_URL}api/products/${productSummary.id}`);
-        addProductToCart(data);
+        let data = null;
+        if (typeof OfflineDB !== 'undefined') {
+            data = await OfflineDB.getProductById(productSummary.id);
+        }
+        if (!data && navigator.onLine) {
+            data = await api(`${BASE_URL}api/products/${productSummary.id}`);
+        }
+        if (data) addProductToCart(data);
+        else showToast('Produk tidak ditemukan', 'warning');
     } catch (e) {
         showToast('Gagal mengambil data produk', 'error');
     }
