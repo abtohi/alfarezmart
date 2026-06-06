@@ -14,9 +14,11 @@
 
 ### Bug Fix
 
-1. **Fix Saldo Keuangan Harian = 0 (Offline Mode)**
-   - **Root Cause:** Di `loadFinanceData` offline fallback (`finance/index.php`), kode hanya mengambil log hari ini (`log.log_date === date`) untuk semua perhitungan, padahal `net` seharusnya akumulatif dari semua hari sebelumnya.
-   - **Fix:** Tambahkan `pastLogs` (semua log `<= date`) untuk menghitung `net` akumulatif. `income` dan `expense` tetap hanya dari hari yang dipilih.
+1. **Fix Saldo Keuangan Harian = 0**
+   - **Root Cause Offline:** Di `loadFinanceData` offline fallback (`finance/index.php`), kode hanya mengambil log hari ini (`log.log_date === date`) untuk semua perhitungan, padahal `net` seharusnya akumulatif dari semua hari sebelumnya.
+   - **Fix Offline:** Tambahkan `pastLogs` (semua log `<= date`) untuk menghitung `net` akumulatif. `income` dan `expense` tetap hanya dari hari yang dipilih.
+   - **Root Cause Online:** `loadMasterData()` memicu refresh API di background yang memanggil ulang `renderPosGrid()` *setelah* data summary di-load. Karena `renderPosGrid()` men-hardcode `Rp 0` di elemen HTML-nya, UI me-reset nilai summary yang sudah didapat dari server kembali ke 0.
+   - **Fix Online:** Update `renderPosGrid()` agar menggunakan `currentBreakdown` (jika tersedia) saat merender HTML agar tidak me-reset nilai yang sudah ada.
    - **File:** `app/views/finance/index.php`
 
 2. **Fix Halaman Produk Loading Data Offline Saat Online**

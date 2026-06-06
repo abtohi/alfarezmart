@@ -212,6 +212,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const style = getPosStyle(index);
             const safeName = escapeHtml(acc.name);
             const shortId = `pos_${acc.id}`;
+            const postData = (typeof currentBreakdown !== 'undefined' && currentBreakdown[acc.name]) ? currentBreakdown[acc.name] : { income: 0, expense: 0, net: 0 };
             
             html += `
             <div class="app-card post-card ${activePostFilter === acc.name ? 'active' : ''}" data-post="${safeName}" data-index="${index}" style="padding: 14px; position: relative; cursor: pointer; transition: transform 0.2s;">
@@ -221,10 +222,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                         <i class="bi ${style.bi}" style="font-size: 11px;"></i>
                     </div>
                 </div>
-                <div id="net_${shortId}" style="font-size: var(--font-size-sm); font-weight: 800; color: var(--text-primary);">Rp 0</div>
+                <div id="net_${shortId}" style="font-size: var(--font-size-sm); font-weight: 800; color: var(--text-primary);">${formatRupiah(postData.net)}</div>
                 <div style="font-size: 8px; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between;">
-                    <span>Masuk: <span id="inc_${shortId}" style="color: var(--success);">Rp 0</span></span>
-                    <span>Keluar: <span id="exp_${shortId}" style="color: var(--primary);">Rp 0</span></span>
+                    <span>Masuk: <span id="inc_${shortId}" style="color: var(--success);">${formatRupiah(postData.income)}</span></span>
+                    <span>Keluar: <span id="exp_${shortId}" style="color: var(--primary);">${formatRupiah(postData.expense)}</span></span>
                 </div>
                 ${acc.dependency_name ? `<div style="font-size: 7px; color: var(--info); margin-top: 4px; text-align: right;"><i class="bi bi-link"></i> ${escapeHtml(acc.dependency_name)}</div>` : ''}
             </div>
