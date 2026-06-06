@@ -6,7 +6,46 @@
 
 ---
 
-## [2026-06-01] — Fitur POS Keuangan Dinamis & Auto-Konversi Dependensi
+## [2026-06-06] — Fix Keuangan Harian, Fix Produk Offline/Online, Fix Mode Seleksi
+
+**Tipe:** Minor (Bug Fix)
+**Modul:** Finance, Products
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Bug Fix
+
+1. **Fix Saldo Keuangan Harian = 0 (Offline Mode)**
+   - **Root Cause:** Di `loadFinanceData` offline fallback (`finance/index.php`), kode hanya mengambil log hari ini (`log.log_date === date`) untuk semua perhitungan, padahal `net` seharusnya akumulatif dari semua hari sebelumnya.
+   - **Fix:** Tambahkan `pastLogs` (semua log `<= date`) untuk menghitung `net` akumulatif. `income` dan `expense` tetap hanya dari hari yang dipilih.
+   - **File:** `app/views/finance/index.php`
+
+2. **Fix Halaman Produk Loading Data Offline Saat Online**
+   - **Root Cause:** `DOMContentLoaded` listener di `products/index.php` selalu memanggil `doOfflineSearch(q)` tanpa cek `navigator.onLine`, dengan komentar lama "Always render from Dexie".
+   - **Fix:** Bungkus `doOfflineSearch(q)` dengan `if (!navigator.onLine)`. Ketika online, biarkan server-rendered HTML dari PHP yang tampil.
+   - **File:** `app/views/products/index.php`
+
+3. **Fix Live Search Dropdown Mencari Offline Padahal Online**
+   - **Root Cause:** Input live search selalu mencari OfflineDB dulu, API server jadi fallback sekunder.
+   - **Fix:** Balikkan prioritas: jika `navigator.onLine`, langsung hit API server. OfflineDB digunakan sebagai fallback jika offline atau hasil kosong.
+   - **File:** `app/views/products/index.php`
+
+4. **Fix Mode Seleksi Produk (Long Press Tidak Berfungsi)**
+   - **Root Cause:** Fungsi `toggleSelectMode`, `updateSelectionState`, dan listener long-press dikurung dalam closure `DOMContentLoaded` sehingga tidak diekspos secara global. `doOfflineSearch` tidak bisa memanggil re-attachment listener untuk card baru.
+   - **Fix:** Refactor semua fungsi seleksi menjadi global. Buat `attachProductCardListeners()` sebagai fungsi global yang dipanggil oleh `DOMContentLoaded` (server-rendered cards) maupun oleh `doOfflineSearch` (offline-rendered cards). Gunakan clone trick (replaceChild) untuk mencegah double-binding event.
+   - **File:** `app/views/products/index.php`
+
+5. **Fix Urutan Produk di Search API**
+   - **Root Cause:** `searchProducts` di `ProductModel.php` masih menggunakan `ORDER BY p.full_name ASC`.
+   - **Fix:** Ubah ke `ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.full_name ASC` agar konsisten dengan tampilan daftar produk utama (terbaru di atas).
+   - **File:** `app/models/ProductModel.php`
+
+### File yang Diubah
+- `app/views/finance/index.php`
+- `app/views/products/index.php`
+- `app/models/ProductModel.php`
+
+---
+
 
 **Tipe:** Mayor
 **Modul:** Finance (FinanceModel, ApiController, finance/index.php)

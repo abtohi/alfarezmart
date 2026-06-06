@@ -293,27 +293,34 @@ document.addEventListener('DOMContentLoaded', async function() {
         try {
             if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
                 const allLogs = await OfflineDB.getAllFinanceLogs();
-                const todayLogs = allLogs.filter(log => log.log_date === date);
+                const pastLogs = allLogs.filter(log => log.log_date <= date);
+                const todayLogs = pastLogs.filter(log => log.log_date === date);
                 currentLogs = todayLogs;
 
                 const summary = { income: 0, expense: 0, net: 0 };
                 const breakdown = {};
                 accountsData.forEach(a => breakdown[a.name] = { income: 0, expense: 0, net: 0 });
 
-                todayLogs.forEach(log => {
+                pastLogs.forEach(log => {
                     const amt = parseFloat(log.amount) || 0;
                     const pos = log.balance_type;
                     if (!breakdown[pos]) breakdown[pos] = { income: 0, expense: 0, net: 0 };
                     
                     if (log.category === 'Pemasukan') {
-                        summary.income += amt;
-                        breakdown[pos].income += amt;
+                        summary.net += amt;
+                        breakdown[pos].net += amt;
+                        if (log.log_date === date) {
+                            summary.income += amt;
+                            breakdown[pos].income += amt;
+                        }
                     } else if (log.category === 'Pengeluaran') {
-                        summary.expense += amt;
-                        breakdown[pos].expense += amt;
+                        summary.net -= amt;
+                        breakdown[pos].net -= amt;
+                        if (log.log_date === date) {
+                            summary.expense += amt;
+                            breakdown[pos].expense += amt;
+                        }
                     }
-                    summary.net = summary.income - summary.expense;
-                    breakdown[pos].net = breakdown[pos].income - breakdown[pos].expense;
                 });
                 
                 currentBreakdown = breakdown;

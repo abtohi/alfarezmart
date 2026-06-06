@@ -15,13 +15,30 @@
 | **Versi Asset** | `?v=9.0` (di `app/views/layouts/app.php`) |
 | **PHP Version** | XAMPP (cek `php -v`) |
 | **Timezone** | Asia/Jakarta (GMT+7) |
-| **Last Updated** | 2026-06-04 |
+| **Last Updated** | 2026-06-06 |
 
 ---
 
 ## Pekerjaan Terakhir
 
-### Sesi: 2026-06-04 — Fix Riwayat Barang Masuk + POS UI + Estimasi Profit + AI Fix + Offline Fix
+### Sesi: 2026-06-06 — Fix Keuangan Harian + Fix Produk Offline/Online + Fix Mode Seleksi
+
+**Yang dikerjakan:**
+1. **Fix Saldo Keuangan Harian (Offline Mode)** — Saat buka tanggal baru, Saldo Pulsa/Rokok/Utama tampil 0. Root cause: di `loadFinanceData` offline fallback, hanya filter log hari ini (`log.log_date === date`), bukan akumulatif. **Fix** di `finance/index.php`: Iterasi `pastLogs` (`log_date <= date`) untuk hitung `net`, tapi hanya hari ini untuk hitung `income`/`expense`.
+
+2. **Fix Halaman Produk Loading Offline Saat Online** — Root cause utama: `DOMContentLoaded` selalu memanggil `doOfflineSearch(q)` tanpa cek status koneksi (komentar lama: "Always render from Dexie"). **Fix** di `products/index.php`: Bungkus pemanggilan `doOfflineSearch` dengan `if (!navigator.onLine)`.
+
+3. **Fix Live Search Dropdown Prioritaskan Offline** — Live search dropdown saat mengetik selalu mencari OfflineDB dulu, API jadi fallback. **Fix**: Balikkan logika — online → API server dulu, OfflineDB sebagai fallback.
+
+4. **Fix Mode Seleksi Produk (Long Press)** — Fungsi `toggleSelectMode`, `updateSelectionState`, dan listener long-press terkurung dalam closure `DOMContentLoaded` sehingga tidak bisa dipanggil ulang oleh `doOfflineSearch`. **Fix**: Refactor semua fungsi seleksi menjadi global. Buat `attachProductCardListeners()` global yang bisa dipanggil ulang setelah `doOfflineSearch` render card baru. Clone trick (replaceChild) digunakan agar event tidak double-bind.
+
+5. **Fix Urutan Produk di Search** — `searchProducts` di `ProductModel.php` masih `ORDER BY full_name ASC`. **Fix**: Ubah ke `ORDER BY COALESCE(updated_at, created_at) DESC, full_name ASC` agar konsisten dengan daftar produk utama.
+
+**File yang Diubah:**
+- `app/views/finance/index.php` — Fix kalkulasi saldo akumulatif di mode offline
+- `app/views/products/index.php` — Fix online/offline logic, fix live search priority, refactor select mode ke global scope
+- `app/models/ProductModel.php` — Fix sort order di `searchProducts`
+
 
 **Yang dikerjakan:**
 1. **Fix Nama Produk Undefined di Edit Barang Masuk** — Saat klik icon edit di halaman Riwayat Barang Masuk, nama produk tampil "undefined". Root cause: `addProductToCartExisting` di `purchases/edit.php` tidak meng-assign field `name` ke objek item. **Fix**: Tambahkan `product.name = itemInfo.name || itemInfo.full_name` sebelum item masuk ke `purchaseItems`.

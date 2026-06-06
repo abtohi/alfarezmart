@@ -50,12 +50,12 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
             <span style="font-size:11px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;">💰</span>
             <input type="number" id="filterMinPrice" placeholder="Harga min" min="0" step="1000"
                    value="<?= htmlspecialchars($minPrice !== null ? (int)$minPrice : '') ?>"
-                   style="flex:1;min-width:0;background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:8px 10px;font-size:var(--font-size-xs);outline:none;-moz-appearance:textfield;"
+                   style="flex:1;min-width:0;background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:8px 10px;font-size:var(--font-size-xs);outline:none;appearance:textfield;-moz-appearance:textfield;"
                    onkeydown="if(event.key==='Enter') applyPriceFilter()">
             <span style="color:var(--text-muted);flex-shrink:0;font-size:12px;">—</span>
             <input type="number" id="filterMaxPrice" placeholder="Harga max" min="0" step="1000"
                    value="<?= htmlspecialchars($maxPrice !== null ? (int)$maxPrice : '') ?>"
-                   style="flex:1;min-width:0;background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:8px 10px;font-size:var(--font-size-xs);outline:none;-moz-appearance:textfield;"
+                   style="flex:1;min-width:0;background:var(--bg-card);color:var(--text-primary);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:8px 10px;font-size:var(--font-size-xs);outline:none;appearance:textfield;-moz-appearance:textfield;"
                    onkeydown="if(event.key==='Enter') applyPriceFilter()">
             <button type="button" onclick="applyPriceFilter()"
                     title="Terapkan filter harga"
@@ -219,63 +219,66 @@ let selectMode = false;
 let pressTimer;
 const ROLE_IS_STAFF = <?= $isStaff ? 'true' : 'false' ?>;
 
-document.addEventListener('DOMContentLoaded', () => {
+// Elemen UI global (akan di-set setelah DOM ready)
+let _selectAllCheckbox, _btnBulkDelete, _selectedCountSpan, _btnAddProduct, _selectAllContainer, _totalProductsText;
+
+function updateSelectionState() {
+    const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
+    const count = checkedBoxes.length;
     const cards = document.querySelectorAll('.product-card');
-    const selectAllCheckbox = document.getElementById('selectAllProducts');
-    const btnBulkDelete = document.getElementById('btnBulkDelete');
-    const selectedCountSpan = document.getElementById('selectedCount');
-    const btnAddProduct = document.getElementById('btnAddProduct');
-    const selectAllContainer = document.getElementById('selectAllContainer');
-    const totalProductsText = document.getElementById('totalProductsText');
+    if (_selectedCountSpan) _selectedCountSpan.textContent = count;
+    
+    if (count > 0) {
+        if (_btnBulkDelete) _btnBulkDelete.style.display = 'flex';
+        if (_btnAddProduct) _btnAddProduct.style.display = 'none';
+    } else if (selectMode) {
+        if (_btnBulkDelete) _btnBulkDelete.style.display = 'none';
+        if (_btnAddProduct) _btnAddProduct.style.display = 'inline-flex';
+    }
 
-    // Staff tidak punya hak hapus/edit — skip semua handler seleksi & long-press
+    if (_selectAllCheckbox) _selectAllCheckbox.checked = count === cards.length && cards.length > 0;
+}
+
+function toggleSelectMode(enable) {
+    selectMode = enable;
+    if (enable) {
+        document.querySelectorAll('.product-card').forEach(c => c.classList.add('select-mode'));
+        if (_selectAllContainer) _selectAllContainer.style.display = 'flex';
+        if (_totalProductsText) _totalProductsText.style.display = 'none';
+        if (_btnAddProduct) _btnAddProduct.style.display = 'none';
+        if (_btnBulkDelete) _btnBulkDelete.style.display = document.querySelectorAll('.product-checkbox:checked').length > 0 ? 'flex' : 'none';
+    } else {
+        document.querySelectorAll('.product-card').forEach(c => {
+            c.classList.remove('select-mode', 'selected');
+            const cb = c.querySelector('.product-checkbox');
+            if (cb) cb.checked = false;
+        });
+        if (_selectAllContainer) _selectAllContainer.style.display = 'none';
+        if (_totalProductsText) _totalProductsText.style.display = 'inline-block';
+        if (_btnAddProduct) _btnAddProduct.style.display = 'inline-flex';
+        if (_btnBulkDelete) _btnBulkDelete.style.display = 'none';
+        updateSelectionState();
+    }
+}
+
+// Fungsi global agar bisa dipanggil ulang setelah doOfflineSearch render card baru
+function attachProductCardListeners() {
     if (ROLE_IS_STAFF) return;
-
-    function updateSelectionState() {
-        const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
-        const count = checkedBoxes.length;
-        if (selectedCountSpan) selectedCountSpan.textContent = count;
-        
-        if (count > 0) {
-            btnBulkDelete.style.display = 'flex';
-            if (btnAddProduct) btnAddProduct.style.display = 'none';
-        } else if (selectMode) {
-            btnBulkDelete.style.display = 'none';
-            if (btnAddProduct) btnAddProduct.style.display = 'inline-flex';
-        }
-
-        selectAllCheckbox.checked = count === cards.length && cards.length > 0;
-    }
-
-    function toggleSelectMode(enable) {
-        selectMode = enable;
-        if (enable) {
-            document.querySelectorAll('.product-card').forEach(c => c.classList.add('select-mode'));
-            selectAllContainer.style.display = 'flex';
-            totalProductsText.style.display = 'none';
-            if (btnAddProduct) btnAddProduct.style.display = 'none';
-            btnBulkDelete.style.display = document.querySelectorAll('.product-checkbox:checked').length > 0 ? 'flex' : 'none';
-        } else {
-            document.querySelectorAll('.product-card').forEach(c => {
-                c.classList.remove('select-mode', 'selected');
-                const cb = c.querySelector('.product-checkbox');
-                if (cb) cb.checked = false;
-            });
-            selectAllContainer.style.display = 'none';
-            totalProductsText.style.display = 'inline-block';
-            if (btnAddProduct) btnAddProduct.style.display = 'inline-flex';
-            btnBulkDelete.style.display = 'none';
-            updateSelectionState();
-        }
-    }
-
+    const cards = document.querySelectorAll('.product-card');
+    
     cards.forEach(card => {
         const link = card.querySelector('.product-card-link');
         const checkbox = card.querySelector('.product-checkbox');
+        if (!link) return; // safety guard
 
-        // Long press logic
-        link.addEventListener('touchstart', (e) => {
+        // Hapus event lama dengan mengganti elemen (clone trick) agar tidak double-bind
+        const newLink = link.cloneNode(true);
+        link.parentNode.replaceChild(newLink, link);
+
+        // Long press logic (touch)
+        newLink.addEventListener('touchstart', (e) => {
             pressTimer = window.setTimeout(() => {
+                if (!checkbox) return;
                 toggleSelectMode(true);
                 checkbox.checked = true;
                 card.classList.add('selected');
@@ -286,17 +289,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 600); // 600ms long press
         }, {passive: true});
 
-        link.addEventListener('touchend', () => {
-            clearTimeout(pressTimer);
-        });
+        newLink.addEventListener('touchend', () => { clearTimeout(pressTimer); });
+        newLink.addEventListener('touchmove', () => { clearTimeout(pressTimer); });
 
-        link.addEventListener('touchmove', () => {
-            clearTimeout(pressTimer);
-        });
-
-        link.addEventListener('mousedown', (e) => {
-            if (e.button !== 0) return; // only left click
+        // Long press logic (mouse)
+        newLink.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
             pressTimer = window.setTimeout(() => {
+                if (!checkbox) return;
                 toggleSelectMode(true);
                 checkbox.checked = true;
                 card.classList.add('selected');
@@ -304,18 +304,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 600);
         });
 
-        link.addEventListener('mouseup', () => {
-            clearTimeout(pressTimer);
-        });
-
-        link.addEventListener('mouseleave', () => {
-            clearTimeout(pressTimer);
-        });
+        newLink.addEventListener('mouseup', () => { clearTimeout(pressTimer); });
+        newLink.addEventListener('mouseleave', () => { clearTimeout(pressTimer); });
 
         // Click intercept when in select mode
-        link.addEventListener('click', (e) => {
+        newLink.addEventListener('click', (e) => {
             if (selectMode) {
                 e.preventDefault();
+                if (!checkbox) return;
                 checkbox.checked = !checkbox.checked;
                 if (checkbox.checked) {
                     card.classList.add('selected');
@@ -323,8 +319,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     card.classList.remove('selected');
                 }
                 updateSelectionState();
-                
-                // Exit select mode if nothing is checked
                 if (document.querySelectorAll('.product-checkbox:checked').length === 0) {
                     toggleSelectMode(false);
                 }
@@ -332,37 +326,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Direct checkbox click
-        checkbox.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                card.classList.add('selected');
-            } else {
-                card.classList.remove('selected');
-            }
+        if (checkbox) {
+            checkbox.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    card.classList.add('selected');
+                } else {
+                    card.classList.remove('selected');
+                }
+                updateSelectionState();
+                if (document.querySelectorAll('.product-checkbox:checked').length === 0) {
+                    toggleSelectMode(false);
+                }
+            });
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    _selectAllCheckbox = document.getElementById('selectAllProducts');
+    _btnBulkDelete = document.getElementById('btnBulkDelete');
+    _selectedCountSpan = document.getElementById('selectedCount');
+    _btnAddProduct = document.getElementById('btnAddProduct');
+    _selectAllContainer = document.getElementById('selectAllContainer');
+    _totalProductsText = document.getElementById('totalProductsText');
+
+    // Staff tidak punya hak hapus/edit — skip semua handler seleksi & long-press
+    if (ROLE_IS_STAFF) return;
+
+    // Pasang listener ke semua card yang sudah ada (dari server render)
+    attachProductCardListeners();
+
+    if (_selectAllCheckbox) {
+        _selectAllCheckbox.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            document.querySelectorAll('.product-card').forEach(card => {
+                const cb = card.querySelector('.product-checkbox');
+                if (cb) {
+                    cb.checked = isChecked;
+                    if (isChecked) card.classList.add('selected');
+                    else card.classList.remove('selected');
+                }
+            });
             updateSelectionState();
-            if (document.querySelectorAll('.product-checkbox:checked').length === 0) {
+            if (!isChecked) {
                 toggleSelectMode(false);
             }
         });
-    });
-
-    selectAllCheckbox.addEventListener('change', (e) => {
-        const isChecked = e.target.checked;
-        cards.forEach(card => {
-            const cb = card.querySelector('.product-checkbox');
-            if (cb) {
-                cb.checked = isChecked;
-                if (isChecked) card.classList.add('selected');
-                else card.classList.remove('selected');
-            }
-        });
-        updateSelectionState();
-        if (!isChecked) {
-            toggleSelectMode(false);
-        }
-    });
-
-    // Also close select mode if clicking outside (optional, omitted for simplicity)
+    }
 });
+
 
 async function bulkDeleteSelected() {
     const checked = document.querySelectorAll('.product-checkbox:checked');
@@ -487,16 +499,18 @@ document.addEventListener('DOMContentLoaded', () => {
         timer = setTimeout(async () => {
             try {
                 let items = [];
-                if (typeof OfflineDB !== 'undefined') {
-                    items = await OfflineDB.searchProducts(q);
-                }
-                if ((!items || items.length === 0) && navigator.onLine) {
+                if (navigator.onLine) {
+                    // Online: prioritaskan data server (akurat & terkini)
                     try {
                         const res = await fetch(`<?= BASE_URL ?>api/products/search?q=${encodeURIComponent(q)}`);
                         items = await res.json();
                     } catch (apiErr) {
                         console.error('API search failed', apiErr);
                     }
+                }
+                if ((!items || items.length === 0) && typeof OfflineDB !== 'undefined') {
+                    // Fallback ke offline jika tidak ada hasil atau tidak online
+                    items = await OfflineDB.searchProducts(q);
                 }
 
                 if (!items || items.length === 0) {
@@ -648,14 +662,17 @@ async function doOfflineSearch(query) {
     }
 }
 
-// Auto-run offline search if we load the page without internet and there is a ?q= in the URL
+// Auto-run offline search hanya jika benar-benar tidak ada koneksi internet
 document.addEventListener('DOMContentLoaded', async () => {
     if (typeof OfflineDB !== 'undefined') {
         await OfflineDB.init();
-        const urlParams = new URLSearchParams(window.location.search);
-        const q = urlParams.get('q') || '';
-        // Always render from Dexie to get latest local changes (PWA offline-first behavior)
-        doOfflineSearch(q);
+        // Jika online: biarkan server-rendered HTML tampil (sudah benar dari PHP)
+        // Jika offline: gunakan IndexedDB untuk menampilkan produk
+        if (!navigator.onLine) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const q = urlParams.get('q') || '';
+            doOfflineSearch(q);
+        }
     }
 });
 </script>

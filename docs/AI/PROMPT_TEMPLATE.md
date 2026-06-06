@@ -33,14 +33,56 @@ Klasifikasikan task ini sebelum mulai:
 
 ## Task
 
+* Saat user membuka halaman Keuangan Harian, kenapa Saldo Pulsa, Saldo Rokok, dan Saldo Utama tertulis 0, padahal seharusnya ada nominalnya, karena itu akumulasi dari saldo hari sebelumnya, yang seharusnya 0 jika membuka tanggal baru adalah Uang Masuk dan Uang Keluar, karena memang belum ada pencatatan hari ini, tolong cek dan periksa semua bug pada fitur ini agar informasi yang ditampilkan akurat
+* Pada halaman produk, padahal saya dalam kondisi online, tapi kenapa loading dan mencari data di offline, tolong ini logicnya diperbaiki, ketika dalam mode online, pastikan datanya akan mencari di database online, yakni di server, tetapi ketika dalam mode offline, logicnya sudah benar, ia akan mencari di dalam data offline.
+* Pada halaman produk, saat ini data ditampilkan dengan urutan abjad, pada versi yang sebelumnya saya telah memintamu agar urutan nama produk bukan berdasarkan abjad, tetapi berdasarkan tanggal update terakhir produk, baik ketika produk di edit, atau ketika ada barang masuk, itu yang akan tampil di paling atas
+* Pada halaman produk, ketika user menahan nama produk, mode nya tidak berubah menjadi mode seleksi, jadi ketika user mau menyeleksi beberapa item, tidak bisa dilakukan karena checkbox seleksi tidak muncul dan tidak bisa memilih satu atau beberapa produk, dan tombol hapusnya tidak muncul, tolong ini diperbaiki.
+* Saat ini pada fitur AlfarezMart AI, AI belum begitu canggih bisa menjawab semua pertanyaan user terkait database, ketika ai chat memberikan response mohon tunggu, tetapi AI tidak merespon balik meskipun saya tunggu lama, tolong ubah semua logic AI chatnya, agar menyimpan semua dbcontext, dan jangan buat query di backend, melainkan ketika ada request dari user AI akan langsung memahami harus melakukan query ke tabel yang mana, yang perlu kamu lakukan adalah, AI diberi pemahaman soal tabel, relasinya, kegunaannya, dan catatan penting untuk setiap tabel dan kolom itu maksudnya apa dan bagaimana data itu bekerja di aplikasi, agar ketika user request apapun seputar data, baik data hutang, data input barang, data supplier, data piutang, data Pengaturan struk, data geofencing, data user, data produk, data nama produk, harga produk, harga jual, data omzet, data keuangan Harian, saldo, dan semua data lainnya yang ada di aplikasi ini, chat AI akan memahami konteks terlebih dahulu, lalu akan melakukan query mandiri menyesuaikan kebutuhan user, yang perlu dipahami adalah, ai harus tahu semua nama tabel dan kolom dengan akurasi 100% dan mampu menerjemahkan ke dalam bahasa bisnis dan request user, sehingga dengan pengetahuan konteks data yang lengkap, AI bisa memberikan jawaban yang memuaskan untuk user. Selain itu, AI juga diberikan kemampuan untuk memahami semua struktur website AlfarezMart, AI juga akan menjadi support assistant yang bisa membantu user ketika mengalami kendala pada aplikasi
 
-[ ] Pada halaman Pengaturan Sistem & AI, tolong model yang di munculkan di list adalah semua free model yang ada di openrouter, yang bisa digunakan sepuasnya tanpa ada limit dan tanpa ada max tokens, dan tambahkan model auto yang bisa secara otomatis openrouter akan memakai model yang availabel, model auto akan di set sebagai default model di Pengaturan Sistem & AI, pastikan model auto ini bisa berjalan tanpa error.
-[ ] Pada halaman Input Barang Masuk, di bawah form search box scan barcode atau ketik nama produk, tolong tambahkan checkbox PPN, dan disamping checkbox PPN tambahkan form input PPN, jika checkbox PPN dicentang, maka form input PPN akan aktif dan jika tidak dicentang maka form input PPN akan tidak aktif. Ketika PPN di input, maka semua produk yang diinput, di bagian form PPN nya akan otomatis terisi sesuai dengan input PPN diatas, dan sifatnya live, angka berapapun yang diinput, maka di semua produk terpilih, form PPN nya juga akan otomatis terisi sesuai dengan input PPN. Sehingga jika memang ada PPN, user tidak repot repot lagi input satu satu jumlah PPN di setiap produk.
-[ ] Pada halaman Edit Produk dan Tambah Produk, tolong untuk setiap harga modal di setiap kemasan, juga dipertimbangkan angka desimal, jangan langsung digenapkan ke bilangan bulat, baik hasil penggunaan kalkukator, harga perkalian atau pembagian ke jenis kemasan lain, jika memang ada desimal, tolong tampilkan desimalnya, maksimal 2 digit desimal, namun jika memang harga modalnya bilangan bulat, tolong desimalnya jangan ditampilkan. Contoh, jika Level 1 harga modal = 1154.67, dan level 2 berisi 6pcs dari level 1, di level 2 harga modalnya otomatis terisi 1154.67*6=6928.02, jangan dibulatkan menjadi 6928, tapi biarkan 6928.02, begitu pula sebaliknya, jika memang harga modalnya bilangan bulat, maka desimalnya jangan ditampilkan.
+Tolong terapkan saran dari response ini ke fitur ai chat
 
+"The System Prompt
+​You can paste this into your API call (e.g., as the system message in OpenAI/Gemini/Anthropic APIs):
 
-[ ] Pada saat menggunakan mode offline, saat ini ketika di klik Keuangan Harian masih belum bisa membuka halaman tersebut, dan kembali ke Beranda. Pastikan halaman ini bisa dibuka dan juga bisa melihat keuangan. Hal yang sama juga terjadi ketika mengklik laporan penjualan, termasuk user juga bisa input pengeluaran dan pemasukan saat mode offline. Pastikan semua fitur input produk, keuangan tetap bisa digunakan meskipun dalam mode offline, hanya scan AI otomatis yang tidak dapat digunakan dalam mode offline. Untuk fitur input produk, keuangan, laporan penjualan, penjualan, dll yang terkait dengan database, saya ingin ketika dalam keadaan offline, data tetap bisa disimpan ke lokal, kemudian setelah aplikasi online, secara otomatis data yang tersimpan di lokal akan kesinkron otomatis ke server di backend, dan count badge akan berkurang satu demi satu seiring data sinkron. Saat offline, jika ada inputan atau edit, count badge akan muncul di icon sync. Pastikan saat user mengklik Unduh Data Offline, semuanya terdownload dan bisa digunakan, termasuk routingannya bisa berjalan semuanya.
-[ ] Pada halaman Input Barang Masuk, saat ini setelah melalui proses scan AI, kemudian user mengubah Total Harga Pembelian, ketika user mengklik tombol Distribusikan ke Harga Modal Barang, kenapa Total Harga Pembelian berubah lagi menjadi harga yang sebelum saya edit (yang hasil scan AI), seharusnya tombol Distribusikan ke Harga Modal tidak akan mengubah data yang sudah di edit, tolong perbaiki ini
+#PROMPT
+You are an expert AI Assistant specialized in the [Insert Your App Name] platform. 
+Your goal is to provide accurate, helpful, and context-aware guidance to users.
+
+### CORE OPERATIONAL RULES:
+1. SOURCE OF TRUTH: Answer questions based ONLY on the provided [Application Documentation] and [Database Schema]. 
+2. SCOPE: Do not discuss topics outside of [Insert Your App Name] features, database structure, or usage instructions. If a user asks a question irrelevant to the app, politely redirect them to relevant app features.
+3. DATABASE EXPERTISE: When users ask about data, use the provided [Database Schema] to explain how data is stored, related, and queried.
+4. GUIDANCE: Act as an interactive user manual. If a user has a problem, explain the solution by referencing specific steps or features within the app.
+5. TONE: Professional, helpful, concise, and encouraging.
+
+### KNOWLEDGE BASE (SYSTEM CONTEXT):
+- [Application Features]: {INSERT_YOUR_APP_GUIDANCE_TEXT_HERE}
+- [Database Schema]: {INSERT_JSON_OR_SQL_SCHEMA_HERE}
+
+### RESPONSE PROTOCOL:
+- If you are unsure of the answer based on the context, state: "I'm sorry, I don't have information on that specific feature or database structure."
+- If the user's issue relates to a database state, explain it using the tables/columns provided in the schema.
+
+How to implement this in your PHP backend:
+​Since your application is offline-first (PWA), you should handle this dynamically. Do not hard-code everything into the prompt string if it's too large, or you will hit token limits.
+​Preparation (The "Context Injection"):
+​Create a text file or a JSON file in your project containing your Help/Guidance content.
+​Export your MySQL schema using mysqldump --no-data.
+​Dynamic Assembly (PHP):
+When the user sends a message, your PHP script should:
+​Fetch the relevant snippets (or the full schema) from your local files.
+​Inject them into the {INSERT_...} placeholders in the prompt above.
+​Send the final constructed string to your AI API.
+​A Pro-Tip for "Context Limits":
+​If your application grows and the documentation becomes huge, do not send the whole thing every time. Use a "Retrieval" strategy:
+​Use your PHP backend to search your documentation for the specific keywords the user asked about.
+​Only send the AI the relevant paragraph from your documentation and the relevant table from your schema based on the user's query."
+
+* Check semua error di terminal, di tab problems, perbaiki semua errornya, setelah selesai cari lagi errornya di problems, lalu perbaiki sampai tuntas, jangan berhenti sebelum semua error hilang
+
+* Update ai-instructions agar ketika ada tambahan fitur, atau database, memastikan ai chat akan selalu update dengan informasi terbaru, dan update dokumentasi AI agar bisa sesuai.
+
+* Commit dan push ke github
 
 
 ## Konteks Tambahan (opsional)
