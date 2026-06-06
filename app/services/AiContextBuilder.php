@@ -46,118 +46,80 @@ class AiContextBuilder
     /**
      * Membangun system prompt lengkap untuk setiap request AI.
      */
+    /**
+     * Membangun system prompt LEAN untuk setiap request AI.
+     *
+     * Strategi v4.0 "SQL-First":
+     * - Konteks minimal (~1500 token) agar tidak melebihi batas model gratis
+     * - AI mengandalkan SQL query mandiri untuk ambil data dari database
+     * - Hanya inject: tanggal, knowledge base hits, produk yang disebut user
+     * - Feature guide hanya disertakan saat user bertanya soal cara pakai
+     */
     public function buildSystemPrompt(string $userMessage = ''): string
     {
-        $today    = date('Y-m-d');
-        $keywords = $this->extractKeywords($userMessage);
         $q        = mb_strtolower($userMessage);
+        $keywords = $this->extractKeywords($userMessage);
 
-        // --- KONTEKS INTI (selalu disertakan) ---
-        $context = [
-            'toko'              => $this->getStoreSettings(),
-            'analitik_bisnis'   => $this->getBusinessAnalytics(),
-            'laba'              => $this->getProfitSummary(),
-            'keuangan_hari_ini' => $this->getFinancialSnapshot($today),
-            'stok_overview'     => $this->getStockOverview(),
-            'stok_menipis'      => $this->getLowStockProducts(),
-            'expiry_alert'      => $this->getExpiryAlerts(),
-            'produk_terlaris'   => $this->getTopProducts(),
-            'katalog_kategori'  => $this->getCatalogSummary(),
-            'hutang_toko'       => $this->getShopDebtSummary(),
-            'piutang_pelanggan' => $this->getCustomerDebtSummary(),
-            'jadwal_sales'      => $this->getSalesReps(),
-        ];
+        // --- KONTEKS MINIMAL (hemat token, total ~500-1500 token) ---
+        $ctx = [];
+        $hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+        $ctx[] = "Tanggal: " . date('Y-m-d') . " (" . $hari[(int)date('w')] . ")";
 
-        // --- PRODUK SPESIFIK (berdasarkan keyword dari pertanyaan user) ---
+        // 1. Knowledge base (fakta terverifikasi user) — sangat kecil, sudah difilter
         if (!empty($keywords)) {
-            $productHits = $this->searchProductsByKeyword($keywords);
-            if (!empty($productHits)) {
-                $context['produk_dicari'] = $productHits;
-            }
+            try {
+                $hits = $this->knowledgeModel->searchKnowledge($keywords, 3);
+                if (!empty($hits)) {
+                    $ctx[] = "\n## FAKTA TOKO (terverifikasi)";
+                    foreach ($hits as $k) {
+                        $ctx[] = "- {$k['topic']}: {$k['content']}";
+                    }
+                }
+            } catch (Throwable $e) {}
         }
 
-        // --- KNOWLEDGE BASE (koreksi & fakta yang dipelajari) ---
+        // 2. Produk spesifik yang disebut user — hanya jika relevan
         if (!empty($keywords)) {
-            $knowledgeHits = $this->knowledgeModel->searchKnowledge($keywords, 5);
-            if (!empty($knowledgeHits)) {
-                $context['pengetahuan_toko'] = array_map(fn($k) => [
-                    'topik'  => $k['topic'],
-                    'fakta'  => $k['content'],
-                    'sumber' => $k['source'],
-                ], $knowledgeHits);
-            }
+            try {
+                $products = $this->searchProductsByKeyword($keywords);
+                if (!empty($products)) {
+                    $ctx[] = "\n## PRODUK DITEMUKAN";
+                    $seen = [];
+                    foreach (array_slice($products, 0, 5) as $p) {
+                        $nama = $p['nama'] ?? '?';
+                        if (isset($seen[$nama])) continue;
+                        $seen[$nama] = true;
+                        $parts = [$nama];
+                        if (!empty($p['harga_jual_eceran'])) $parts[] = "Jual:Rp" . number_format((int)$p['harga_jual_eceran'], 0, ',', '.');
+                        if (!empty($p['harga_beli'])) $parts[] = "Modal:Rp" . number_format((int)$p['harga_beli'], 0, ',', '.');
+                        if (isset($p['stok'])) $parts[] = "Stok:{$p['stok']}";
+                        if (!empty($p['supplier']) && $p['supplier'] !== '-') $parts[] = "Sup:{$p['supplier']}";
+                        $ctx[] = "- " . implode(' | ', $parts);
+                    }
+                }
+            } catch (Throwable $e) {}
         }
 
-        // --- KONTEKS OPSIONAL (berdasarkan topik pertanyaan) ---
-        if ($this->contains($q, ['beli', 'pembelian', 'restock', 'supplier masuk', 'modal'])) {
-            $context['pembelian_terbaru'] = $this->getLatestPurchases();
-        }
-        if ($this->contains($q, ['supplier', 'pemasok', 'distributor', 'agen'])) {
-            $context['supplier_list'] = $this->getSuppliersSummary();
-        }
-        if ($this->contains($q, ['konsinyasi', 'titipan', 'konsinye'])) {
-            $context['konsinyasi'] = $this->getConsignments();
-        }
-        if ($this->contains($q, ['pelanggan', 'customer', 'pembeli', 'piutang siapa'])) {
-            $context['pelanggan_terbesar'] = $this->getTopCustomers();
-        }
-        if ($this->contains($q, ['bulan', 'monthly', 'bulanan', 'rekap', 'laporan'])) {
-            $context['laporan_bulan_ini'] = $this->getMonthlyFinanceSummary();
-        }
-        if ($this->contains($q, ['log', 'transaksi keuangan', 'catatan', 'masuk keluar'])) {
-            $context['log_keuangan_terbaru'] = $this->getRecentFinanceLogs();
-        }
-        if ($this->contains($q, ['pergerakan', 'movement', 'stok masuk', 'stok keluar'])) {
-            $context['pergerakan_stok'] = $this->getStockMovementsSummary();
-        }
-        if ($this->contains($q, ['estimasi', 'hitung order', 'orderan'])) {
-            $context['estimasi_order'] = $this->getOrderEstimates();
-        }
-        if ($this->contains($q, ['bayar', 'metode', 'cash', 'transfer', 'qris'])) {
-            $context['breakdown_pembayaran'] = $this->getPaymentBreakdown();
-        }
-        if ($this->contains($q, ['tidak laku', 'dead stock', 'mandek', 'tidak terjual'])) {
-            $context['produk_tidak_laku'] = $this->getInactiveProducts();
-        }
-        if ($this->contains($q, ['merk', 'brand', 'brand apa'])) {
-            $context['semua_merk'] = $this->getBrandsSummary();
-        }
-        if ($this->contains($q, ['akun keuangan', 'saldo', 'pos keuangan', 'uang laci', 'uang rokok'])) {
-            $context['akun_keuangan'] = $this->getFinanceAccountsBalance();
+        // 3. Panduan fitur — hanya saat user bertanya cara pakai
+        if ($this->contains($q, ['cara', 'fitur', 'bagaimana', 'gimana', 'panduan', 'tutorial', 'menu', 'tombol', 'setting', 'pengaturan'])) {
+            $ctx[] = "\n" . $this->getFeatureGuide();
         }
 
-        // Menambahkan katalog hanya jika benar-benar diminta (mencegah context overload)
-        if ($this->contains($q, ['semua produk', 'daftar produk', 'semua harga', 'katalog'])) {
-            $context['katalog_semua_produk'] = $this->getFullCatalogCompressed();
+        // --- SYSTEM PROMPT ULTRA-RINGKAS ---
+        $prompt  = "Kamu AI Asisten toko AlfarezMart. Bahasa Indonesia, akurat, singkat.\n\n";
+        $prompt .= "ATURAN:\n";
+        $prompt .= "1. Jawab dari DATA di bawah jika tersedia. Dilarang menebak harga/angka.\n";
+        $prompt .= "2. Jika data TIDAK ADA di bawah, WAJIB query database:\n";
+        $prompt .= "   [SQL_QUERY] SELECT ... FROM ... LIMIT 50 [/SQL_QUERY]\n";
+        $prompt .= "   HANYA tag itu saja, TANPA kalimat tambahan apapun.\n";
+        $prompt .= "3. DILARANG bilang 'tidak tahu' / 'tidak memiliki data' sebelum mencoba SQL.\n";
+        $prompt .= "4. Output: Markdown rapi, angka penting di-**bold**.\n\n";
+
+        if (!empty($ctx)) {
+            $prompt .= implode("\n", $ctx) . "\n\n";
         }
 
-        // Format konteks sebagai Markdown agar lebih mudah dipahami LLM
-        $contextMd = "=== DATA TOKO (CONTEXT) ===\n";
-        foreach ($context as $key => $val) {
-            $contextMd .= "## " . strtoupper($key) . "\n";
-            if (is_array($val)) {
-                $contextMd .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
-            } else {
-                $contextMd .= $val . "\n\n";
-            }
-        }
-
-        // System prompt dengan feature guide + rules ketat
-        $prompt  = "Kamu adalah AI Asisten AlfarezMart v3.1. Tugasmu adalah menjawab pertanyaan seputar operasional toko dengan akurat berdasarkan konteks data yang diberikan.\n\n";
-        $prompt .= "=== ATURAN WAJIB ===\n";
-        $prompt .= "1. JAWAB DARI DATA: Gunakan bagian DATA TOKO di bawah sebagai sumber utama. Dilarang menebak harga pasaran dari luar.\n";
-        $prompt .= "2. JIKA PRODUK TIDAK ADA: Katakan 'Produk belum tersedia' (kecuali user bertanya cara menambahkan).\n";
-        $prompt .= "3. FAKTA TOKO (pengetahuan_toko): Jika ada, ini adalah kebenaran absolut hasil koreksi user.\n";
-        $prompt .= "4. AGENTIC SQL (SANGAT PENTING): Jika user menanyakan data (seperti omzet masa lalu, transaksi tertentu, nama supplier, histori produk, dll) yang TIDAK ADA di bagian DATA TOKO, kamu WAJIB mengambilnya dari database menggunakan SQL.\n";
-        $prompt .= "   - JANGAN PERNAH menolak menjawab atau berkata 'Saya tidak tahu' sebelum kamu mencoba melakukan query SQL.\n";
-        $prompt .= "   - Format balasan WAJIB persis seperti ini: [SQL_QUERY] SELECT * FROM tabel WHERE kondisi LIMIT 50 [/SQL_QUERY]\n";
-        $prompt .= "   - JANGAN menambahkan kalimat apapun (seperti 'Baik, saya akan cek') saat kamu memberikan tag [SQL_QUERY].\n";
-        $prompt .= "   - Perhatikan SKEMA DATABASE PENTING untuk mengetahui nama tabel dan kolom.\n";
-        $prompt .= "5. FORMAT OUTPUT: Gunakan markdown yang rapi (list/tabel). Angka penting di-bold.\n\n";
-
-        $prompt .= $contextMd;
         $prompt .= $this->getDatabaseSchema();
-        $prompt .= "\n" . $this->getFeatureGuide();
 
         return $prompt;
     }

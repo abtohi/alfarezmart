@@ -176,6 +176,9 @@ class AiChatController extends Controller
                         }
                         
                         try {
+                            if (!Database::getInstance()->ping()) {
+                                Database::getInstance()->reconnect();
+                            }
                             $db = Database::getInstance()->getConnection();
                             $stmt = $db->query($sqlQuery);
                             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -203,6 +206,11 @@ class AiChatController extends Controller
 
             // 6. Simpan respons AI
             if (!empty($aiResponse)) {
+                if (!Database::getInstance()->ping()) {
+                    Database::getInstance()->reconnect();
+                    // Re-instantiate model so it gets the fresh DB connection
+                    $this->aiChatModel = new AiChatModel();
+                }
                 $this->aiChatModel->saveMessage((int)$user['id'], $sessionId, 'assistant', $aiResponse, $totalTokens);
             }
 

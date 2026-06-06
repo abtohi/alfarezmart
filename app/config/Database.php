@@ -41,7 +41,7 @@ class Database
 
                 $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
                 $options = [
-                    PDO::ATTR_PERSISTENT => true,
+                    PDO::ATTR_PERSISTENT => false,
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                     PDO::ATTR_EMULATE_PREPARES => false
@@ -83,6 +83,29 @@ class Database
     public function getConnection()
     {
         return $this->pdo;
+    }
+
+    /**
+     * Ping database to check if connection is alive
+     */
+    public function ping()
+    {
+        try {
+            @$this->pdo->query('SELECT 1');
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Reconnect to the database
+     */
+    public function reconnect()
+    {
+        $this->pdo = null;
+        self::$instance = null;
+        return self::getInstance()->getConnection();
     }
 
     // Prevent cloning and unserialization
