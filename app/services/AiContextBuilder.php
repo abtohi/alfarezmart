@@ -148,11 +148,11 @@ class AiContextBuilder
         $prompt .= "1. JAWAB DARI DATA: Gunakan bagian DATA TOKO di bawah sebagai sumber utama. Dilarang menebak harga pasaran dari luar.\n";
         $prompt .= "2. JIKA PRODUK TIDAK ADA: Katakan 'Produk belum tersedia' (kecuali user bertanya cara menambahkan).\n";
         $prompt .= "3. FAKTA TOKO (pengetahuan_toko): Jika ada, ini adalah kebenaran absolut hasil koreksi user.\n";
-        $prompt .= "4. AGENTIC SQL: Jika user menanyakan data spesifik (laporan bulanan, riwayat hutang, detail stok, transaksi, absensi) yang TIDAK ADA atau kurang lengkap di DATA TOKO, kamu BISA mengambilnya langsung dari database.\n";
-        $prompt .= "   - Caranya, balas dengan format: [SQL_QUERY] SELECT * FROM tabel LIMIT 50 [/SQL_QUERY]\n";
-        $prompt .= "   - Jika kamu merespons dengan SQL_QUERY, DILARANG menambahkan teks lain (hanya tag tersebut).\n";
-        $prompt .= "   - Hasil query akan dikirim kembali ke kamu di pesan selanjutnya.\n";
-        $prompt .= "   - Perhatikan SKEMA DATABASE PENTING untuk mengetahui nama tabel dan relasinya.\n";
+        $prompt .= "4. AGENTIC SQL (SANGAT PENTING): Jika user menanyakan data (seperti omzet masa lalu, transaksi tertentu, nama supplier, histori produk, dll) yang TIDAK ADA di bagian DATA TOKO, kamu WAJIB mengambilnya dari database menggunakan SQL.\n";
+        $prompt .= "   - JANGAN PERNAH menolak menjawab atau berkata 'Saya tidak tahu' sebelum kamu mencoba melakukan query SQL.\n";
+        $prompt .= "   - Format balasan WAJIB persis seperti ini: [SQL_QUERY] SELECT * FROM tabel WHERE kondisi LIMIT 50 [/SQL_QUERY]\n";
+        $prompt .= "   - JANGAN menambahkan kalimat apapun (seperti 'Baik, saya akan cek') saat kamu memberikan tag [SQL_QUERY].\n";
+        $prompt .= "   - Perhatikan SKEMA DATABASE PENTING untuk mengetahui nama tabel dan kolom.\n";
         $prompt .= "5. FORMAT OUTPUT: Gunakan markdown yang rapi (list/tabel). Angka penting di-bold.\n\n";
 
         $prompt .= $contextMd;
