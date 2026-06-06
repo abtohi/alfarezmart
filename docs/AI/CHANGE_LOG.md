@@ -6,6 +6,23 @@
 
 ---
 
+## [2026-06-06] — Fix Saldo Keuangan Harian (0 Rupiah) & Update Version
+
+**Tipe:** Hotfix
+**Modul:** Finance, Core
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+- **Fix Saldo Keuangan Harian**: Memperbaiki issue dimana saldo (Saldo Utama, Saldo Pulsa, Saldo Rokok) pada halaman Keuangan Harian menunjukkan `Rp 0`. Akar penyebabnya adalah ketidakcocokan antara alias SQL di query database (`current_balance`) dengan array key PHP yang dipanggil (`accumulative_net`) pada `FinanceModel.php`. Alias SQL telah disesuaikan menjadi `accumulative_net`.
+- **Update Versi Aplikasi**: Meningkatkan `APP_VERSION` dan `version` JavaScript menjadi `10.0` pada `app.php`. Memperbarui query string aset (css/js) menjadi `?v=10.6` pada `app.php`. Meningkatkan versi cache service worker `sw.js` menjadi `alfarezmart-v7.7`.
+
+### File yang Diubah
+- `app/models/FinanceModel.php`
+- `app/views/layouts/app.php`
+- `sw.js`
+
+---
+
 ## [2026-06-06] — Revamp Total Algoritma AI Chat & Context Injection
 
 **Tipe:** Mayor (Feature Improvement)

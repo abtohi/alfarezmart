@@ -1865,7 +1865,7 @@ async function deleteSelectedItems() {
 }
 
 function distributeAdjustments() {
-    purchaseItems.forEach(item => collectDrawerDataForItem(item));
+    purchaseItems.forEach(item => collectDrawerDataForItem(item.id));
     if (purchaseItems.length === 0 || currentSubtotal === 0) return;
     
     // The ratio of grand_total to subtotal
@@ -2627,6 +2627,7 @@ function onMainInputChange(uid, field, val) {
             // Total Harga = qty × buy_price_per_pkg → buy_price_per_pkg = total / qty
             item.buy_price = Math.round(total / qty);
             item.total     = total;
+            item.is_manual_price = true; // Fix: Mark as manual price so it doesn't revert during distribute
             // Update the current level packaging too
             if (selPkg) selPkg.buy_price = item.buy_price;
         }

@@ -76,7 +76,7 @@ class FinanceModel extends Model
                 (
                     COALESCE(SUM(CASE WHEN DATE(log_date) <= :date3 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) -
                     COALESCE(SUM(CASE WHEN DATE(log_date) <= :date4 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0)
-                ) as current_balance
+                ) as accumulative_net
             FROM finance_logs
             WHERE DATE(log_date) <= :date5
             GROUP BY balance_type
