@@ -114,9 +114,9 @@ class AiChatController extends Controller
                 $messages[] = ['role' => $h['role'], 'content' => $h['content']];
             }
 
-            // 5. Kirim ke OpenRouter (Agentic Loop max 2 pass)
+            // 5. Kirim ke OpenRouter (Agentic Loop max 3 pass)
             $url      = 'https://openrouter.ai/api/v1/chat/completions';
-            $maxPasses = 2;
+            $maxPasses = 3;
             $currentPass = 1;
             $aiResponse = '';
             $totalTokens = 0;
@@ -187,7 +187,12 @@ class AiChatController extends Controller
 
                     // Append the AI's partial response and the SQL result
                     $messages[] = ['role' => 'assistant', 'content' => $aiResponse];
-                    $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n" . $sqlResult . "\n[/SQL_RESULT]\nSekarang jawab pertanyaan saya berdasarkan data di atas. Jangan tampilkan query-nya lagi ke user."];
+                    
+                    if (strpos($sqlResult, 'ERROR') !== false) {
+                        $messages[] = ['role' => 'user', 'content' => "[SQL_ERROR]\n" . $sqlResult . "\n[/SQL_ERROR]\nTerjadi kesalahan. Coba periksa kembali nama tabel/kolom di SKEMA DATABASE PENTING dan perbaiki query-mu."];
+                    } else {
+                        $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n" . $sqlResult . "\n[/SQL_RESULT]\nSekarang jawab pertanyaan saya berdasarkan data di atas. Jangan tampilkan query-nya lagi ke user."];
+                    }
                     
                     $currentPass++;
                 } else {

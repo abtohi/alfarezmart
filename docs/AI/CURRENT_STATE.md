@@ -21,6 +21,19 @@
 
 ## Pekerjaan Terakhir
 
+### Sesi: 2026-06-06 — Revamp Total Algoritma AI Chat & Context Injection
+
+**Yang dikerjakan:**
+1. **Refactor `AiContextBuilder.php`** — Mengubah format Context Injection dari JSON mentah ke format Markdown yang lebih bersih agar tidak terjadi *Context Overload*. Menghapus injeksi otomatis `katalog_semua_produk` (hanya disertakan jika keywords cocok) sehingga token prompt berkurang drastis.
+2. **Penyederhanaan & Penjelasan Skema Database** — `getDatabaseSchema` kini mengembalikan daftar statis tabel-tabel penting beserta kolom dan tipe relasinya. Hal ini jauh lebih berguna bagi AI dibanding sekadar `SHOW COLUMNS`.
+3. **Peningkatan Agentic SQL Loop di `AiChatController.php`** — Memisahkan feedback antara `[SQL_RESULT]` (sukses) dan `[SQL_ERROR]` (gagal) agar AI tahu saat query-nya salah dan bisa melakukan *self-correction*. Batas perulangan (max passes) dinaikkan dari 2 menjadi 3.
+
+**File yang Diubah:**
+- `app/services/AiContextBuilder.php` — Merombak format System Prompt.
+- `app/controllers/AiChatController.php` — Modifikasi error handling dan loop passes untuk Agentic SQL.
+
+---
+
 ### Sesi: 2026-06-06 — Fix Keuangan Harian + Fix Produk Offline/Online + Fix Mode Seleksi
 
 **Yang dikerjakan:**

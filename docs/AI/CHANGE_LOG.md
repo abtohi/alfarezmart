@@ -6,6 +6,27 @@
 
 ---
 
+## [2026-06-06] — Revamp Total Algoritma AI Chat & Context Injection
+
+**Tipe:** Mayor (Feature Improvement)
+**Modul:** AI Chat
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Feature Improvement
+
+1. **Refactor `AiContextBuilder.php`**
+   - **Root Cause:** Data `katalog_semua_produk` yang dimasukkan ke dalam System Prompt sangat besar sehingga memicu *Context Overload* pada model LLM, menyebabkannya "berhalusinasi" atau tidak mengetahui konteks. Format JSON mentah juga sulit dipahami oleh LLM.
+   - **Fix:** Menghapus autoinject `katalog_semua_produk` kecuali ada trigger keywords (contoh: "katalog", "semua produk"). Mengubah format `json_encode` menjadi Markdown yang lebih bersih dan human-readable.
+   - **Penyederhanaan Skema:** Mengganti fungsi `getDatabaseSchema` (yang sebelumnya menggunakan `SHOW COLUMNS` dan tidak jelas bagi AI) menjadi struktur string manual yang memuat daftar tabel kunci beserta tipe data, status, dan contoh cara melakukan `JOIN` antar tabel.
+   - **File:** `app/services/AiContextBuilder.php`
+
+2. **Peningkatan Agentic SQL Loop di `AiChatController.php`**
+   - **Root Cause:** Prompt perintah SQL Agentic lemah, dan bila model AI mengembalikan format SQL yang salah, server gagal memberikan pesan kesalahan kepada AI untuk memperbaikinya, sehingga loop terputus begitu saja.
+   - **Fix:** Menaikkan batas *max passes* iterasi dari 2 menjadi 3. Memodifikasi parsing feedback; apabila server gagal menjalankan query yang dibentuk AI, kembalikan response dalam block `[SQL_ERROR]` disertai pesan perbaikan.
+   - **File:** `app/controllers/AiChatController.php`
+
+---
+
 ## [2026-06-06] — Fix Keuangan Harian, Fix Produk Offline/Online, Fix Mode Seleksi
 
 **Tipe:** Minor (Bug Fix)

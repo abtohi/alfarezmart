@@ -126,26 +126,38 @@ class AiContextBuilder
             $context['akun_keuangan'] = $this->getFinanceAccountsBalance();
         }
 
-        // Menambahkan Skema Database agar AI bisa membuat SQL Query
-        $context['schema_database'] = $this->getDatabaseSchema();
-        
-        // Katalog ringkas (semua produk + modal + harga jual) agar AI hafal semua produk
-        $context['katalog_semua_produk'] = $this->getFullCatalogCompressed();
+        // Menambahkan katalog hanya jika benar-benar diminta (mencegah context overload)
+        if ($this->contains($q, ['semua produk', 'daftar produk', 'semua harga', 'katalog'])) {
+            $context['katalog_semua_produk'] = $this->getFullCatalogCompressed();
+        }
 
-        $contextJson = json_encode($context, JSON_UNESCAPED_UNICODE);
+        // Format konteks sebagai Markdown agar lebih mudah dipahami LLM
+        $contextMd = "=== DATA TOKO (CONTEXT) ===\n";
+        foreach ($context as $key => $val) {
+            $contextMd .= "## " . strtoupper($key) . "\n";
+            if (is_array($val)) {
+                $contextMd .= json_encode($val, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n\n";
+            } else {
+                $contextMd .= $val . "\n\n";
+            }
+        }
 
         // System prompt dengan feature guide + rules ketat
-        $prompt  = "Kamu adalah AI Asisten AlfarezMart v3.0 dengan akses PENUH ke seluruh database toko.\n\n";
+        $prompt  = "Kamu adalah AI Asisten AlfarezMart v3.1. Tugasmu adalah menjawab pertanyaan seputar operasional toko dengan akurat berdasarkan konteks data yang diberikan.\n\n";
         $prompt .= "=== ATURAN WAJIB ===\n";
-        $prompt .= "1. INTERNAL FIRST: Selalu gunakan DATA_TOKO sebagai sumber utama. JANGAN PERNAH memberikan asumsi harga pasaran dari internet.\n";
-        $prompt .= "2. Jika ditanya soal produk/harga: cek 'katalog_semua_produk' atau 'produk_dicari'. Jika produk tidak ada, katakan 'Produk belum tersedia di toko' dan JANGAN menebak harganya.\n";
-        $prompt .= "3. Jika 'pengetahuan_toko' tersedia: itu adalah koreksi/fakta yang sudah diverifikasi user, gunakan sebagai kebenaran.\n";
-        $prompt .= "4. AGENTIC SQL: Jika data historis TIDAK ADA di DATA_TOKO, jalankan query ke database dengan membalas menggunakan format persis ini: [SQL_QUERY] SELECT * FROM tabel LIMIT 50 [/SQL_QUERY]. Kamu HANYA BOLEH menggunakan SELECT. Hasilnya akan diberikan di pesan berikutnya.\n";
-        $prompt .= "5. Format jawaban: Markdown. Angka penting = **bold**. Tabel jika data banyak.\n";
-        $prompt .= "6. Bahasa: Indonesia. Singkat, akurat, ramah.\n";
-        $prompt .= "7. Jika user bingung cara menggunakan aplikasi, jelaskan step-by-step berdasarkan PANDUAN_FITUR.\n\n";
-        $prompt .= $this->getFeatureGuide();
-        $prompt .= "\nDATA_TOKO=" . $contextJson . "\n";
+        $prompt .= "1. JAWAB DARI DATA: Gunakan bagian DATA TOKO di bawah sebagai sumber utama. Dilarang menebak harga pasaran dari luar.\n";
+        $prompt .= "2. JIKA PRODUK TIDAK ADA: Katakan 'Produk belum tersedia' (kecuali user bertanya cara menambahkan).\n";
+        $prompt .= "3. FAKTA TOKO (pengetahuan_toko): Jika ada, ini adalah kebenaran absolut hasil koreksi user.\n";
+        $prompt .= "4. AGENTIC SQL: Jika user menanyakan data spesifik (laporan bulanan, riwayat hutang, detail stok, transaksi, absensi) yang TIDAK ADA atau kurang lengkap di DATA TOKO, kamu BISA mengambilnya langsung dari database.\n";
+        $prompt .= "   - Caranya, balas dengan format: [SQL_QUERY] SELECT * FROM tabel LIMIT 50 [/SQL_QUERY]\n";
+        $prompt .= "   - Jika kamu merespons dengan SQL_QUERY, DILARANG menambahkan teks lain (hanya tag tersebut).\n";
+        $prompt .= "   - Hasil query akan dikirim kembali ke kamu di pesan selanjutnya.\n";
+        $prompt .= "   - Perhatikan SKEMA DATABASE PENTING untuk mengetahui nama tabel dan relasinya.\n";
+        $prompt .= "5. FORMAT OUTPUT: Gunakan markdown yang rapi (list/tabel). Angka penting di-bold.\n\n";
+
+        $prompt .= $contextMd;
+        $prompt .= $this->getDatabaseSchema();
+        $prompt .= "\n" . $this->getFeatureGuide();
 
         return $prompt;
     }
@@ -920,30 +932,33 @@ class AiContextBuilder
     // ================================================================
 
     /**
-     * Membaca struktur database (nama tabel & kolom) agar AI bisa menyusun SQL Query mandiri.
+     * Membaca struktur database statis yang dirancang khusus untuk dimengerti AI.
      */
-    private function getDatabaseSchema(): array
+    private function getDatabaseSchema(): string
     {
-        try {
-            // Get all tables
-            $tablesStmt = $this->db->query("SHOW TABLES");
-            $tables = $tablesStmt->fetchAll(PDO::FETCH_COLUMN);
-            $schema = [];
+        return "
+=== SKEMA DATABASE PENTING ===
+Gunakan skema ini saat membuat SQL_QUERY.
 
-            foreach ($tables as $table) {
-                // Get columns for each table
-                $colsStmt = $this->db->query("SHOW COLUMNS FROM `{$table}`");
-                $columns = $colsStmt->fetchAll(PDO::FETCH_ASSOC);
-                $colNames = [];
-                foreach ($columns as $col) {
-                    $colNames[] = $col['Field'];
-                }
-                $schema[$table] = implode(', ', $colNames);
-            }
-            return $schema;
-        } catch (Throwable $e) {
-            return ['error' => 'Schema tidak tersedia'];
-        }
+- `products`: id, full_name, code, category_id, brand_id, min_stock, is_active
+- `product_packagings`: id, product_id, level (1=Terkecil), unit_id, base_qty, buy_price, sell_price_retail, sell_price_wholesale
+- `stock`: product_id, current_qty_base (stok real-time), nearest_expiry
+- `sale_transactions`: id, created_at, total_amount, payment_method, customer_id, cashier_id
+- `sale_items`: id, transaction_id, product_id, quantity, unit_price, total_price, profit
+- `purchases`: id, supplier_id, purchase_date, grand_total, payment_status
+- `purchase_items`: id, purchase_id, product_id, quantity, buy_price, subtotal
+- `finance_logs`: id, log_date, category ('Pemasukan'/'Pengeluaran'), amount, balance_type (misal 'Saldo Utama', 'Saldo Rokok'), detail
+- `shop_debts`: id, supplier_id, remaining_amount, status ('lunas'/'belum_lunas')
+- `customer_debts`: id, customer_id, remaining_amount, status ('lunas'/'belum_lunas')
+- `suppliers`: id, name, type_id
+- `sales_reps`: id, supplier_id, name, phone, status
+
+TIPS RELASI (JOIN):
+- Stok produk: `products` JOIN `stock` ON products.id = stock.product_id
+- Transaksi jual: `sale_transactions` JOIN `sale_items` ON sale_transactions.id = sale_items.transaction_id
+- Laba penjualan: Hitung dengan `SUM(profit)` di `sale_items`
+- Keuangan: Filter berdasarkan `category` dan `balance_type` di tabel `finance_logs`
+";
     }
 
     /**
