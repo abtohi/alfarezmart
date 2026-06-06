@@ -44,8 +44,8 @@
             <a href="<?= BASE_URL ?>finance" class="stat-card" style="margin-bottom: 0; flex: 1; display: flex; align-items: center; gap: 12px; padding: 12px 16px; text-decoration: none; color: inherit; cursor: pointer; transition: background 0.2s;">
                 <div class="stat-icon blue" style="margin-bottom: 0; width: 36px; height: 36px; font-size: 1.1rem; flex-shrink: 0;"><i class="bi bi-wallet2"></i></div>
                 <div style="flex: 1; min-width: 0;">
-                    <div class="stat-value" style="font-size: 11px; font-weight: 800; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Net: Rp <?= number_format(($stats['finance_today']['income'] ?? 0) - ($stats['finance_today']['expense'] ?? 0), 0, ',', '.') ?>">
-                        Rp <?= number_format(($stats['finance_today']['income'] ?? 0) - ($stats['finance_today']['expense'] ?? 0), 0, ',', '.') ?>
+                    <div class="stat-value" style="font-size: 11px; font-weight: 800; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Total: Rp <?= number_format($stats['finance_today']['accumulative_net'] ?? 0, 0, ',', '.') ?>">
+                        Rp <?= number_format($stats['finance_today']['accumulative_net'] ?? 0, 0, ',', '.') ?>
                     </div>
                     <div class="stat-label" style="font-size: 9px; margin-top: 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;">
                         Keuangan Harian <i class="bi bi-chevron-right" style="font-size: 8px;"></i>

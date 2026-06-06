@@ -21,6 +21,7 @@ class DashboardController extends Controller
         $stats['finance_today'] = [
             'income' => $todayFinanceSummary['income'] ?? 0,
             'expense' => $todayFinanceSummary['expense'] ?? 0,
+            'accumulative_net' => $todayFinanceSummary['accumulative_net'] ?? 0,
         ];
 
         $this->view('dashboard.index', [

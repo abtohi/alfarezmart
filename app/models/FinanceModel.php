@@ -44,14 +44,14 @@ class FinanceModel extends Model
     {
         $stmt = $this->db->prepare("
             SELECT 
-                COALESCE(SUM(CASE WHEN log_date = :date1 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) as income,
-                COALESCE(SUM(CASE WHEN log_date = :date2 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0) as expense,
+                COALESCE(SUM(CASE WHEN DATE(log_date) = :date1 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) as income,
+                COALESCE(SUM(CASE WHEN DATE(log_date) = :date2 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0) as expense,
                 (
-                    COALESCE(SUM(CASE WHEN log_date <= :date3 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) -
-                    COALESCE(SUM(CASE WHEN log_date <= :date4 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0)
+                    COALESCE(SUM(CASE WHEN DATE(log_date) <= :date3 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) -
+                    COALESCE(SUM(CASE WHEN DATE(log_date) <= :date4 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0)
                 ) as accumulative_net
             FROM finance_logs
-            WHERE log_date <= :date5
+            WHERE DATE(log_date) <= :date5
         ");
         $stmt->execute([':date1' => $date, ':date2' => $date, ':date3' => $date, ':date4' => $date, ':date5' => $date]);
         return $stmt->fetch();
@@ -71,14 +71,14 @@ class FinanceModel extends Model
         $stmt = $this->db->prepare("
             SELECT 
                 balance_type,
-                COALESCE(SUM(CASE WHEN log_date = :date1 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) as income,
-                COALESCE(SUM(CASE WHEN log_date = :date2 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0) as expense,
+                COALESCE(SUM(CASE WHEN DATE(log_date) = :date1 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) as income,
+                COALESCE(SUM(CASE WHEN DATE(log_date) = :date2 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0) as expense,
                 (
-                    COALESCE(SUM(CASE WHEN log_date <= :date3 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) -
-                    COALESCE(SUM(CASE WHEN log_date <= :date4 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0)
-                ) as accumulative_net
+                    COALESCE(SUM(CASE WHEN DATE(log_date) <= :date3 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) -
+                    COALESCE(SUM(CASE WHEN DATE(log_date) <= :date4 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0)
+                ) as current_balance
             FROM finance_logs
-            WHERE log_date <= :date5
+            WHERE DATE(log_date) <= :date5
             GROUP BY balance_type
         ");
         
