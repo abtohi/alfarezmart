@@ -301,6 +301,7 @@ class ApiController extends Controller
 
     public function getByBarcode(string $code)
     {
+        $code = trim(urldecode($code));
         $model = new ProductModel();
         $product = $model->findByBarcode($code);
         if (!$product) {

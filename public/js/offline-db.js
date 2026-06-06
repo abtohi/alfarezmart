@@ -232,15 +232,25 @@ window.OfflineDB = (function() {
 
     async function findByBarcode(barcode) {
         if (!barcode) return null;
-        barcode = barcode.toLowerCase();
+        barcode = barcode.replace(/\s+/g, '').toLowerCase();
         
         try {
             const all = await getAllProducts();
             return all.find(p => {
-                if (p.packagings && Array.isArray(p.packagings)) {
-                    return p.packagings.some(pkg => pkg.barcode && pkg.barcode.toLowerCase() === barcode);
+                let match = false;
+                if (p.code) {
+                    let pCode = p.code.replace(/\s+/g, '').toLowerCase();
+                    if (pCode === barcode) match = true;
                 }
-                return false;
+                
+                if (!match && p.packagings && Array.isArray(p.packagings)) {
+                    match = p.packagings.some(pkg => {
+                        if (!pkg.barcode) return false;
+                        let b = pkg.barcode.replace(/\s+/g, '').toLowerCase();
+                        return b === barcode || b === '0' + barcode || '0' + b === barcode || b === '00' + barcode || '00' + b === barcode;
+                    });
+                }
+                return match;
             });
         } catch (e) {
             console.error("Offline barcode lookup failed", e);

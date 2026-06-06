@@ -90,6 +90,9 @@ class ProductModel extends Model
 
     public function findByBarcode(string $barcode)
     {
+        // Trim and remove all spaces from the input barcode
+        $barcode = str_replace(' ', '', trim($barcode));
+        
         $stmt = $this->db->prepare("
             SELECT p.*, b.name as brand_name, c.name as category_name,
                    pp.barcode, pp.level, pp.unit_id, u.name as unit_name,
@@ -99,7 +102,12 @@ class ProductModel extends Model
             LEFT JOIN brands b ON p.brand_id = b.id
             LEFT JOIN categories c ON p.category_id = c.id
             LEFT JOIN units u ON pp.unit_id = u.id
-            WHERE pp.barcode = :barcode OR p.code = :barcode
+            WHERE REPLACE(pp.barcode, ' ', '') = :barcode 
+               OR p.code = :barcode
+               OR REPLACE(pp.barcode, ' ', '') = CONCAT('0', :barcode)
+               OR CONCAT('0', REPLACE(pp.barcode, ' ', '')) = :barcode
+               OR REPLACE(pp.barcode, ' ', '') = CONCAT('00', :barcode)
+               OR CONCAT('00', REPLACE(pp.barcode, ' ', '')) = :barcode
             ORDER BY pp.level ASC
             LIMIT 1
         ");
