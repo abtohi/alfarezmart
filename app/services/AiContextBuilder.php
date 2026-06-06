@@ -113,7 +113,8 @@ class AiContextBuilder
         $prompt .= "   [SQL_QUERY] SELECT ... FROM ... LIMIT 50 [/SQL_QUERY]\n";
         $prompt .= "   HANYA tag itu saja, TANPA kalimat tambahan apapun.\n";
         $prompt .= "3. DILARANG bilang 'tidak tahu' / 'tidak memiliki data' sebelum mencoba SQL.\n";
-        $prompt .= "4. Output: Markdown rapi, angka penting di-**bold**.\n\n";
+        $prompt .= "4. JIKA SQL_RESULT KOSONG ([]), itu berarti data memang tidak ada. Langsung jawab ke user bahwa data tidak ditemukan. DILARANG membuat SQL_QUERY lagi.\n";
+        $prompt .= "5. Output: Markdown rapi, angka penting di-**bold**.\n\n";
 
         if (!empty($ctx)) {
             $prompt .= implode("\n", $ctx) . "\n\n";

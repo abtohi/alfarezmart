@@ -192,7 +192,9 @@ class AiChatController extends Controller
                     $messages[] = ['role' => 'assistant', 'content' => $aiResponse];
                     
                     if (strpos($sqlResult, 'ERROR') !== false) {
-                        $messages[] = ['role' => 'user', 'content' => "[SQL_ERROR]\n" . $sqlResult . "\n[/SQL_ERROR]\nTerjadi kesalahan. Coba periksa kembali nama tabel/kolom di SKEMA DATABASE PENTING dan perbaiki query-mu."];
+                        $messages[] = ['role' => 'user', 'content' => "[SQL_ERROR]\n" . $sqlResult . "\n[/SQL_ERROR]\nTerjadi kesalahan sintaks SQL. Coba perbaiki query-mu."];
+                    } else if ($sqlResult === '[]') {
+                        $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n[]\n[/SQL_RESULT]\nData kosong. JANGAN KASIH SQL LAGI. Beritahu user datanya tidak ditemukan."];
                     } else {
                         $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n" . $sqlResult . "\n[/SQL_RESULT]\nSekarang jawab pertanyaan saya berdasarkan data di atas. Jangan tampilkan query-nya lagi ke user."];
                     }
@@ -201,6 +203,15 @@ class AiChatController extends Controller
                 } else {
                     // No SQL query, break the loop
                     break;
+                }
+            }
+
+            // Jika exhausted (lebih dari maxPasses) dan response terakhir masih berupa query, bersihkan
+            if (preg_match('/\[SQL_QUERY\]/is', $aiResponse)) {
+                $aiResponse = preg_replace('/\[SQL_QUERY\].*?\[\/SQL_QUERY\]/is', '', $aiResponse);
+                $aiResponse = trim($aiResponse);
+                if (empty($aiResponse)) {
+                    $aiResponse = "Maaf, data tidak ditemukan dalam database.";
                 }
             }
 
