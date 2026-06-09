@@ -34,8 +34,11 @@ Klasifikasikan task ini sebelum mulai:
 ## Task
 
 * Jangan mengubah fitur yang sudah ada, kecuali ada permintaan khusus dari user
-* Pada setiap fitur searchBox, saat ini sudah bagus sekali bisa menggunakan multi keywords saat search, meskipun kata katanya tidak berurut, tetapi tetap bisa search, aku ingin kamu pertahankan ini, namun aku mau kamu menambahkan agar proses search juga bisa menggunakan barcode, nama label, nama produk, dan juga nama produk di invoice, dengan tetap mempertahankan algoritma multi keywords.
-* Tolong perbaiki fitur Riwayat Barang Masuk, ketika barang di edit, tampilan edit barang masuk dibuat sama persis dengan saat Input Barang Masuk, termasuk diatasnya ada checkbox untuk input PPN dan juga form PPN. Selain itu pada bagian Subtotal Barang, tolong hapus saja kolom PPN nya, karena tidak berguna. Dan angka Grand Total yang ditampilkan, tolong dibuat dua, yakni total sebelum PPN, dan ada total PPN, dan dibawahnya ada Grand Total setelah PPN
+* Pada halaman produk, pada bagian informasi Modal dan Selisih, tolong jangan ditulis "Modal", tapi cukup M saja, dan selisih tolong diubah menjadi P saja yang artinya Profit, begitu juga pada halaman Scan atau Cek Harga, Modal cukup tulis M: dan Selisih cukup tulis P:
+* Pada halaman Scan, tolong untuk harga tier juga ditampilkan, beli berapa dapat harga berapa. Saat ini hanya ditampilkan informasi Qty, tetapi belum ada informasi harganya.
+* 
+* Update versi, commit dan push
+
 #PROMPT
 You are an expert AI Assistant specialized in the [Insert Your App Name] platform. 
 Your goal is to provide accurate, helpful, and context-aware guidance to users.

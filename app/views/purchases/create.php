@@ -146,20 +146,20 @@
     <!-- Invoice Adjustments & Total -->
     <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; margin-top:16px; border:1px solid var(--border-color);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-weight:600; color:var(--text-muted);">Subtotal Barang</span>
-            <span id="purchaseSubtotal" style="font-weight:600;">Rp0</span>
+            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Subtotal Barang</span>
+            <span id="purchaseSubtotal" style="font-weight:600; font-size:12px;">Rp0</span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-weight:600; color:var(--text-muted);">Diskon Nota (Rp)</span>
-            <input type="number" id="invoiceDiscount" class="form-control-dark" style="width:120px; font-size:13px; text-align:right;" value="0" min="0" oninput="calculateGrandTotal()">
+            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Diskon Nota (Rp)</span>
+            <input type="number" id="invoiceDiscount" class="form-control-dark" style="width:100px; font-size:11px; padding:4px 8px; text-align:right;" value="0" min="0" oninput="calculateGrandTotal()">
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-weight:600; color:var(--text-muted);">Total Sebelum PPN</span>
-            <span id="purchaseTotalBeforePPN" style="font-weight:600;">Rp0</span>
+            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Total Sebelum PPN</span>
+            <span id="purchaseTotalBeforePPN" style="font-weight:600; font-size:12px;">Rp0</span>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border-color);">
-            <span style="font-weight:600; color:var(--text-muted);">Total PPN</span>
-            <span id="purchaseTotalPPN" style="font-weight:600;">Rp0</span>
+            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Total PPN</span>
+            <span id="purchaseTotalPPN" style="font-weight:600; font-size:12px;">Rp0</span>
         </div>
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -2410,6 +2410,12 @@ function onDrawerCustomToggle(prefix, uid, level, priceType, isCustom) {
         }
     }
     refreshMiniTableForItem(uid);
+    // Refresh drawer row margin
+    const isBulk = (prefix === 'bulk');
+    const rowElToRefresh = isBulk
+        ? document.querySelector(`.bulk-item[data-bulk-id="${uid}"] .drawer-pkg-row[data-level="${level}"]`)
+        : document.querySelector(`#drawer_${uid} .drawer-pkg-row[data-level="${level}"]`);
+    if (rowElToRefresh) refreshDrawerRowMargin(rowElToRefresh);
 }
 
 /**

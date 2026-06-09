@@ -149,8 +149,8 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
                                 $baseMarginAmt = current($p['packagings'])['sell_price_retail'] - current($p['packagings'])['buy_price'];
                                 $baseMarginPct = current($p['packagings'])['buy_price'] > 0 ? round(($baseMarginAmt / current($p['packagings'])['buy_price']) * 100, 1) : 0;
                             ?>
-                            <div style="font-size:9px;color:var(--text-muted);opacity:0.8;text-shadow:0 1px 1px rgba(0,0,0,0.1);margin-top:2px;">
-                                Modal: <?= Helper::rupiah(current($p['packagings'])['buy_price']) ?> | Selisih: <?= Helper::rupiah($baseMarginAmt) ?> (<?= $baseMarginPct ?>%)
+                            <div style="font-size:10px; color:var(--text-muted); opacity:0.8; text-shadow:0 1px 1px rgba(0,0,0,0.1); margin-top:2px; text-align:right;">
+                                M: <?= Helper::rupiah(current($p['packagings'])['buy_price']) ?> | P: <?= Helper::rupiah($baseMarginAmt) ?> (<?= $baseMarginPct ?>%)
                             </div>
                             <?php endif; ?>
                         </div>
@@ -173,9 +173,9 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
                                 </div>
                             </div>
                             <?php if ($isSuperadmin): ?>
-                            <div style="text-align:right;font-size:9px;color:var(--text-muted);opacity:0.8;text-shadow:0 1px 1px rgba(0,0,0,0.1);">
-                                Modal: <?= Helper::rupiah($pkg['buy_price']) ?> | Selisih: <?= Helper::rupiah($marginAmt) ?> (<?= $marginPct ?>%)
-                            </div>
+                                <div style="font-size:9px; color:var(--text-muted); opacity:0.8; text-shadow:0 1px 1px rgba(0,0,0,0.1); text-align:right;">
+                                    M: <?= Helper::rupiah($pkg['buy_price']) ?> | P: <?= Helper::rupiah($marginAmt) ?> (<?= $marginPct ?>%)
+                                </div>
                             <?php endif; ?>
                         </div>
                         <?php endforeach; ?>
@@ -675,9 +675,10 @@ async function doOfflineSearch(query) {
                 const basePkg = p.packagings[0];
                 const baseMarginAmt = parseFloat(basePkg.sell_price_retail) - parseFloat(basePkg.buy_price || 0);
                 const baseMarginPct = parseFloat(basePkg.buy_price) > 0 ? ((baseMarginAmt / parseFloat(basePkg.buy_price)) * 100).toFixed(1) : 0;
-                baseMarginHtml = `<div style="font-size:9px;color:var(--text-muted);opacity:0.8;text-shadow:0 1px 1px rgba(0,0,0,0.1);margin-top:2px;">
-                                    Modal: Rp${parseFloat(basePkg.buy_price || 0).toLocaleString('id-ID')} | Selisih: Rp${baseMarginAmt.toLocaleString('id-ID')} (${baseMarginPct}%)
-                                  </div>`;
+                baseMarginHtml = `
+                                    <div style="font-size:10px; color:var(--text-muted); opacity:0.8; text-shadow:0 1px 1px rgba(0,0,0,0.1); margin-top:2px; text-align:right;">
+                                        M: Rp${parseFloat(basePkg.buy_price || 0).toLocaleString('id-ID')} | P: Rp${baseMarginAmt.toLocaleString('id-ID')} (${baseMarginPct}%)
+                                    </div>`;
             }
 
             html += `
@@ -711,7 +712,7 @@ async function doOfflineSearch(query) {
                                     ${spW > 0 ? `<span style="color:var(--warning);margin-left:4px;">(G: Rp${spW.toLocaleString('id-ID')})</span>` : ''}
                                 </div>
                             </div>
-                            ${ROLE_IS_SUPERADMIN ? `<div style="text-align:right;font-size:9px;color:var(--text-muted);opacity:0.8;text-shadow:0 1px 1px rgba(0,0,0,0.1);">Modal: Rp${bp.toLocaleString('id-ID')} | Selisih: Rp${marginAmt.toLocaleString('id-ID')} (${marginPct}%)</div>` : ''}
+                            ${ROLE_IS_SUPERADMIN ? `<div style="text-align:right;font-size:9px;color:var(--text-muted);opacity:0.8;text-shadow:0 1px 1px rgba(0,0,0,0.1);">M: Rp${bp.toLocaleString('id-ID')} | P: Rp${marginAmt.toLocaleString('id-ID')} (${marginPct}%)</div>` : ''}
                         </div>`;
                 });
                 html += `</div>`;

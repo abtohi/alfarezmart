@@ -140,7 +140,7 @@ function renderPackagingsForList(packagings) {
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
                         <div style="font-weight:700; font-size:11px; color:var(--text-primary);">${jenis} <span style="font-weight:400; color:var(--text-muted); font-size:9px;">(Isi ${qty})</span></div>
                         <div style="font-size:9px; color:rgba(150, 150, 150, 0.4); text-shadow:0 1px 1px rgba(0,0,0,0.1); text-align:right;">
-                            ${SCANNER_IS_SUPERADMIN && modal > 0 ? `Modal: ${formatRupiah(modal)} | Selisih: ${formatRupiah(marginAmt)} (${marginPct}%)` : ''}
+                            ${SCANNER_IS_SUPERADMIN && modal > 0 ? `M: ${formatRupiah(modal)} | P: ${formatRupiah(marginAmt)} (${marginPct}%)` : ''}
                         </div>
                     </div>
                     <div style="display:flex; justify-content:space-between; font-size:12px;">
@@ -192,14 +192,13 @@ function renderProductScanResult(data, isOffline) {
             tierHtml = `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-color);">
                 <div style="font-size:10px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Harga Tier / Kuantitas:</div>
                 ${p.qty_prices.map(t => {
-                    const tRet = parseFloat(t.price_retail) || 0;
-                    const tWho = parseFloat(t.price_wholesale) || 0;
+                    const tPrice = parseFloat(t.unit_price) || 0;
+                    const mode = t.sale_mode || 'both';
+                    const modeLabel = mode === 'retail' ? '<span style="color:var(--success);">Ecer</span>' : (mode === 'wholesale' ? '<span style="color:var(--warning);">Grosir</span>' : '<span style="color:var(--info);">Ecer/Grosir</span>');
                     return `<div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:2px;">
                         <span><i class="bi bi-layers" style="margin-right:4px;"></i>Min. ${t.min_qty} ${p.unit_name}</span>
-                        <span style="text-align:right;">
-                            ${tRet > 0 ? `<span style="color:var(--success);">Ecer: ${formatRupiah(tRet)}</span>` : ''}
-                            ${tRet > 0 && tWho > 0 ? '<span style="color:var(--text-muted);margin:0 4px;">|</span>' : ''}
-                            ${tWho > 0 ? `<span style="color:var(--warning);">Grosir: ${formatRupiah(tWho)}</span>` : ''}
+                        <span style="text-align:right; font-weight:600;">
+                            ${modeLabel}: ${formatRupiah(tPrice)}
                         </span>
                     </div>`;
                 }).join('')}
@@ -217,7 +216,7 @@ function renderProductScanResult(data, isOffline) {
                             <span style="font-size:10px; font-weight:400; color:var(--text-muted); background:var(--surface-2); padding:2px 6px; border-radius:4px; margin-left:4px;">Isi ${baseQty} pcs</span>
                         </div>
                         <div style="font-size:9px; color:rgba(150, 150, 150, 0.4); margin-top:2px; text-shadow:0 1px 1px rgba(0,0,0,0.1);">
-                            ${SCANNER_IS_SUPERADMIN && modal > 0 ? `Modal: ${formatRupiah(modal)} | Selisih: ${formatRupiah(marginAmt)} (${marginPct}%)` : ''}
+                            ${SCANNER_IS_SUPERADMIN && modal > 0 ? `M: ${formatRupiah(modal)} | P: ${formatRupiah(marginAmt)} (${marginPct}%)` : ''}
                         </div>
                     </div>
                     <div style="text-align:right;">
