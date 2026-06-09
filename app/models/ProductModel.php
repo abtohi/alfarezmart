@@ -60,7 +60,8 @@ class ProductModel extends Model
                 $p_code  = ":kw_{$idx}_code";
                 $p_bar   = ":kw_{$idx}_bar";
                 $p_inv   = ":kw_{$idx}_inv";
-                $whereClauses[] = "(p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR b.name LIKE $p_brand OR p.code LIKE $p_code OR p.invoice_name LIKE $p_inv OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
+                $p_sinv  = ":kw_{$idx}_sinv";
+                $whereClauses[] = "(p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR b.name LIKE $p_brand OR p.code LIKE $p_code OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
                 $like = "%{$word}%";
                 $params[$p_name]  = $like;
                 $params[$p_label] = $like;
@@ -68,6 +69,7 @@ class ProductModel extends Model
                 $params[$p_code]  = $like;
                 $params[$p_bar]   = $like;
                 $params[$p_inv]   = $like;
+                $params[$p_sinv]  = $like;
             }
             $whereSql .= ' AND ' . implode(' AND ', $whereClauses);
         }
@@ -297,11 +299,13 @@ class ProductModel extends Model
                 $p_label = ":s_{$idx}_label";
                 $p_inv   = ":s_{$idx}_inv";
                 $p_code  = ":s_{$idx}_code";
-                $where .= " AND (p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.code LIKE $p_code OR b.name LIKE $p_brand OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
+                $p_sinv  = ":s_{$idx}_sinv";
+                $where .= " AND (p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR p.code LIKE $p_code OR b.name LIKE $p_brand OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
                 $like = "%{$word}%";
                 $params[$p_name]  = $like;
                 $params[$p_label] = $like;
                 $params[$p_inv]   = $like;
+                $params[$p_sinv]  = $like;
                 $params[$p_code]  = $like;
                 $params[$p_brand] = $like;
                 $params[$p_bar]   = $like;

@@ -136,15 +136,16 @@ class ApiController extends Controller
         if (isset($productsResult['data'])) {
             foreach ($productsResult['data'] as $p) {
                 $products[] = [
-                    'id'            => (int)$p['id'],
-                    'short_label'   => $p['short_label'],
-                    'full_name'     => $p['full_name'],
-                    'invoice_name'  => $p['invoice_name'] ?? null,
-                    'brand_name'    => $p['brand_name'],
-                    'category_name' => $p['category_name'],
-                    'code'          => $p['code'],
-                    'photo'         => $p['photo'] ?? null,
-                    'packagings'    => $p['packagings']
+                    'id'                   => (int)$p['id'],
+                    'short_label'          => $p['short_label'],
+                    'full_name'            => $p['full_name'],
+                    'invoice_name'         => $p['invoice_name'] ?? null,
+                    'supplier_invoice_name'=> $p['supplier_invoice_name'] ?? null,
+                    'brand_name'           => $p['brand_name'],
+                    'category_name'        => $p['category_name'],
+                    'code'                 => $p['code'],
+                    'photo'                => $p['photo'] ?? null,
+                    'packagings'           => $p['packagings']
                 ];
             }
         }
@@ -220,15 +221,16 @@ class ApiController extends Controller
         $products = [];
         foreach ($result['data'] as $p) {
             $products[] = [
-                'id' => (int)$p['id'],
-                'short_label' => $p['short_label'],
-                'full_name' => $p['full_name'],
-                'invoice_name' => $p['invoice_name'] ?? null,
-                'brand_name' => $p['brand_name'],
-                'category_name' => $p['category_name'],
-                'code' => $p['code'],
-                'photo' => $p['photo'] ?? null,
-                'packagings' => $p['packagings']
+                'id'                    => (int)$p['id'],
+                'short_label'           => $p['short_label'],
+                'full_name'             => $p['full_name'],
+                'invoice_name'          => $p['invoice_name'] ?? null,
+                'supplier_invoice_name' => $p['supplier_invoice_name'] ?? null,
+                'brand_name'            => $p['brand_name'],
+                'category_name'         => $p['category_name'],
+                'code'                  => $p['code'],
+                'photo'                 => $p['photo'] ?? null,
+                'packagings'            => $p['packagings']
             ];
         }
         

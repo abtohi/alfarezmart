@@ -34,10 +34,8 @@ Klasifikasikan task ini sebelum mulai:
 ## Task
 
 * Jangan mengubah fitur yang sudah ada, kecuali ada permintaan khusus dari user
-* Pada halaman produk, tolong tambahkan informasi harga modal perkemasan, persentase markup, dan juga selisih harga modal dan harga jual, tampilkan dalam ukuran kecil, dengan warna samar samar / shadow.
-Saat ini saya belum melihat informasi tersebut di halaman produk https://alfarezmart.com/products. Tolong cek dan perbaiki ini agar ada informasi harga modal, persentase markup setiap kemasan dan juga selisih harga modal dan harga jual.
-
-* Pada halaman https://alfarezmart.com/scanner, tolong juga tampilkan thumbnail foto produk, harga modal, persentase markup, dan selisih harga modal dan harga jual, tampilkan dalam ukuran kecil, dengan warna samar samar / shadow. Saat ini saya belum melihat informasi tersebut di halaman scanner, tolong cek dan perbaiki ini. Ketika produk dibuka, maka fotonya akan terlihat lebih besar namun tetap full square.
+* Pada setiap fitur searchBox, saat ini sudah bagus sekali bisa menggunakan multi keywords saat search, meskipun kata katanya tidak berurut, tetapi tetap bisa search, aku ingin kamu pertahankan ini, namun aku mau kamu menambahkan agar proses search juga bisa menggunakan barcode, nama label, nama produk, dan juga nama produk di invoice, dengan tetap mempertahankan algoritma multi keywords.
+* Tolong perbaiki fitur Riwayat Barang Masuk, ketika barang di edit, tampilan edit barang masuk dibuat sama persis dengan saat Input Barang Masuk, termasuk diatasnya ada checkbox untuk input PPN dan juga form PPN. Selain itu pada bagian Subtotal Barang, tolong hapus saja kolom PPN nya, karena tidak berguna. Dan angka Grand Total yang ditampilkan, tolong dibuat dua, yakni total sebelum PPN, dan ada total PPN, dan dibawahnya ada Grand Total setelah PPN
 #PROMPT
 You are an expert AI Assistant specialized in the [Insert Your App Name] platform. 
 Your goal is to provide accurate, helpful, and context-aware guidance to users.

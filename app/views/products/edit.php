@@ -8,7 +8,7 @@
  * @var array $product
  * @var string $csrfToken
  */
-$unitsJson = json_encode(array_map(fn($u) => ['value'=>(string)$u['id'],'label'=>$u['name']], $units), JSON_UNESCAPED_UNICODE);
+$unitsJson = json_encode(array_map(fn($u) => ['value'=>(string)$u['id'],'label'=>$u['name'], 'abbreviation'=>$u['abbreviation'] ?? ''], $units), JSON_UNESCAPED_UNICODE);
 $brandsJson = json_encode(array_map(fn($b) => ['value'=>(string)$b['id'],'label'=>$b['name']], $brands), JSON_UNESCAPED_UNICODE);
 $catsJson = json_encode(array_map(fn($c) => ['value'=>(string)$c['id'],'label'=>$c['name']], $categories), JSON_UNESCAPED_UNICODE);
 $pkgsJson = json_encode($packagings, JSON_UNESCAPED_UNICODE);
@@ -256,23 +256,14 @@ let deletedPkgIds = [];
 let brandSB, categorySB, weightUnitSB;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await window.OfflineDB.init();
-        const offlineBrands = await window.OfflineDB.getAllBrands();
-        const offlineCats = await window.OfflineDB.getAllCategories();
-        const offlineUnits = await window.OfflineDB.getAllUnits();
-
-        brandsData = offlineBrands.map(b => ({ value: String(b.id), label: b.name }));
-        categoriesData = offlineCats.map(c => ({ value: String(c.id), label: c.name }));
-        unitsData = offlineUnits.map(u => ({ value: String(u.id), label: u.name }));
-        weightUnitOptions = offlineUnits.map(u => {
-            const abbr = u.abbreviation || u.name;
-            const wLabel = u.abbreviation ? `${u.name} (${u.abbreviation})` : u.name;
+        brandsData = <?= $brandsJson ?>;
+        categoriesData = <?= $catsJson ?>;
+        unitsData = <?= $unitsJson ?>;
+        weightUnitOptions = unitsData.map(u => {
+            const abbr = u.abbreviation || u.label;
+            const wLabel = u.abbreviation ? `${u.label} (${u.abbreviation})` : u.label;
             return { value: abbr, label: wLabel };
         });
-    } catch (e) {
-        console.error("Failed to load offline data", e);
-    }
     brandSB = new SearchBox(document.getElementById('brandSearchBox'), {
         options: brandsData,
         placeholder: 'Cari atau pilih brand...',

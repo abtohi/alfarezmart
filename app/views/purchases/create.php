@@ -2452,12 +2452,16 @@ function collectDrawerDataForItem(uid) {
         const level  = parseInt(row.dataset.level);
         const pkg    = item.packagings.find(p => p.level == level);
         if (!pkg) return;
+        // The following values are already handled by oninput handlers (onDrawerPkgInput & onDrawerCustomToggle)
+        // Overwriting them here can cause bugs if the drawer DOM is stale (e.g. when main input changes but drawer isn't re-rendered)
+        /*
         pkg.buy_price            = parseFloat(row.querySelector('.drawer-pkg-buy')?.value) || pkg.buy_price;
         pkg.sell_price_retail    = parseFloat(row.querySelector('.drawer-pkg-ret')?.value) || pkg.sell_price_retail;
         pkg.sell_price_wholesale = parseFloat(row.querySelector('.drawer-pkg-who')?.value) || pkg.sell_price_wholesale;
         pkg.buy_custom  = row.querySelector('.chk-buy-custom')?.checked  || false;
         pkg.sell_custom = row.querySelector('.chk-sell-custom')?.checked || false;
         pkg.harga_nett  = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
+        */
 
         // Collect tier prices
         const tiers = [];
