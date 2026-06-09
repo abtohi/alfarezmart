@@ -294,9 +294,15 @@ class ProductModel extends Model
                 $p_name  = ":s_{$idx}_name";
                 $p_brand = ":s_{$idx}_brand";
                 $p_bar   = ":s_{$idx}_bar";
-                $where .= " AND (p.full_name LIKE $p_name OR b.name LIKE $p_brand OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
+                $p_label = ":s_{$idx}_label";
+                $p_inv   = ":s_{$idx}_inv";
+                $p_code  = ":s_{$idx}_code";
+                $where .= " AND (p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.code LIKE $p_code OR b.name LIKE $p_brand OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
                 $like = "%{$word}%";
                 $params[$p_name]  = $like;
+                $params[$p_label] = $like;
+                $params[$p_inv]   = $like;
+                $params[$p_code]  = $like;
                 $params[$p_brand] = $like;
                 $params[$p_bar]   = $like;
             }

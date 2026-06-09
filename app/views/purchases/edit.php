@@ -107,6 +107,16 @@
                 <input type="text" id="productSearch" placeholder="Scan barcode atau ketik nama produk..." 
                        style="flex:1;border:none;background:transparent;padding:12px 10px;color:var(--text-primary);font-size:var(--font-size-base);outline:none;font-family:var(--font-family);" autocomplete="off">
             </div>
+            
+            <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text-primary);">
+                    <input type="checkbox" id="chkGlobalPpn" style="width:13px;height:13px;accent-color:var(--primary);" onchange="toggleGlobalPpn()">
+                    PPN (%)
+                </label>
+                <input type="number" id="globalPpnInput" placeholder="Misal: 11" class="form-control-dark" style="width:80px; height:26px; font-size:11px; padding:4px 8px;" disabled oninput="applyGlobalPpn()">
+                <div style="font-size:10px; color:var(--text-muted);">Terapkan PPN ke semua barang di keranjang</div>
+            </div>
+
             <div id="productSuggestions" style="margin-top:8px;"></div>
         </div>
     </div>
@@ -139,23 +149,23 @@
         </div>
     </div>
 
-    <!-- Total -->
     <!-- Invoice Adjustments & Total -->
     <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; margin-top:16px; border:1px solid var(--border-color);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border-color);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <span style="font-weight:600; color:var(--text-muted);">Subtotal Barang</span>
             <span id="purchaseSubtotal" style="font-weight:600;">Rp0</span>
         </div>
-        
-        <div style="display:flex; gap:12px; margin-bottom:12px;">
-            <div style="flex:1;">
-                <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px;">Diskon Nota (Rp)</label>
-                <input type="number" id="invoiceDiscount" class="form-control-dark" style="width:100%; font-size:13px;" value="0" min="0" oninput="calculateGrandTotal()">
-            </div>
-            <div style="flex:1;">
-                <label style="font-size:10px; color:var(--text-muted); display:block; margin-bottom:4px;">PPN (%)</label>
-                <input type="number" id="invoiceTax" class="form-control-dark" style="width:100%; font-size:13px;" value="0" min="0" max="100" oninput="calculateGrandTotal()">
-            </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-weight:600; color:var(--text-muted);">Diskon Nota (Rp)</span>
+            <input type="number" id="invoiceDiscount" class="form-control-dark" style="width:120px; font-size:13px; text-align:right;" value="0" min="0" oninput="calculateGrandTotal()">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-weight:600; color:var(--text-muted);">Total Sebelum PPN</span>
+            <span id="purchaseTotalBeforePPN" style="font-weight:600;">Rp0</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border-color);">
+            <span style="font-weight:600; color:var(--text-muted);">Total PPN</span>
+            <span id="purchaseTotalPPN" style="font-weight:600;">Rp0</span>
         </div>
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -537,6 +547,26 @@ function updateFilterHint() {
     } else {
         hint.textContent = 'Semua produk akan muncul saat diketik namanya';
     }
+}
+
+function toggleGlobalPpn() {
+    const isChecked = document.getElementById('chkGlobalPpn').checked;
+    const input = document.getElementById('globalPpnInput');
+    input.disabled = !isChecked;
+    if (isChecked) {
+        input.focus();
+    } else {
+        input.value = '';
+        applyGlobalPpn();
+    }
+}
+
+function applyGlobalPpn() {
+    const val = parseFloat(document.getElementById('globalPpnInput').value) || 0;
+    purchaseItems.forEach(item => {
+        onMainInputChange(item.id, 'ppn', val);
+    });
+    if (typeof renderCart === 'function') renderCart();
 }
 
 function clearSalesRepSelection() {
@@ -1723,15 +1753,23 @@ function calculateTotal() {
 
 function calculateGrandTotal() {
     const discount = parseFloat(document.getElementById('invoiceDiscount').value) || 0;
-    const taxPercent = parseFloat(document.getElementById('invoiceTax').value) || 0;
     
     let totalAfterDiscount = currentSubtotal - discount;
     if (totalAfterDiscount < 0) totalAfterDiscount = 0;
     
-    const taxAmount = totalAfterDiscount * (taxPercent / 100);
-    currentGrandTotal = totalAfterDiscount + taxAmount;
+    let totalPpn = 0;
+    for (const item of purchaseItems) {
+        const itemPpnAmt = item.buy_price * ((item.ppn_pct || 0) / 100) * (item.quantity || 1);
+        totalPpn += itemPpnAmt;
+    }
+    
+    currentGrandTotal = totalAfterDiscount + totalPpn;
     
     document.getElementById('purchaseSubtotal').textContent = formatRupiah(currentSubtotal);
+    const beforePpnEl = document.getElementById('purchaseTotalBeforePPN');
+    if(beforePpnEl) beforePpnEl.textContent = formatRupiah(totalAfterDiscount);
+    const ppnEl = document.getElementById('purchaseTotalPPN');
+    if(ppnEl) ppnEl.textContent = formatRupiah(totalPpn);
     document.getElementById('purchaseGrandTotal').textContent = formatRupiah(currentGrandTotal);
 }
 
