@@ -33,17 +33,11 @@ Klasifikasikan task ini sebelum mulai:
 
 ## Task
 
-* Saat user membuka halaman Keuangan Harian, kenapa Saldo Pulsa, Saldo Rokok, dan Saldo Utama tertulis 0, padahal seharusnya ada nominalnya, karena itu akumulasi dari saldo hari sebelumnya, yang seharusnya 0 jika membuka tanggal baru adalah Uang Masuk dan Uang Keluar, karena memang belum ada pencatatan hari ini, tolong cek dan periksa semua bug pada fitur ini agar informasi yang ditampilkan akurat
-* Pada halaman produk, padahal saya dalam kondisi online, tapi kenapa loading dan mencari data di offline, tolong ini logicnya diperbaiki, ketika dalam mode online, pastikan datanya akan mencari di database online, yakni di server, tetapi ketika dalam mode offline, logicnya sudah benar, ia akan mencari di dalam data offline.
-* Pada halaman produk, saat ini data ditampilkan dengan urutan abjad, pada versi yang sebelumnya saya telah memintamu agar urutan nama produk bukan berdasarkan abjad, tetapi berdasarkan tanggal update terakhir produk, baik ketika produk di edit, atau ketika ada barang masuk, itu yang akan tampil di paling atas
-* Pada halaman produk, ketika user menahan nama produk, mode nya tidak berubah menjadi mode seleksi, jadi ketika user mau menyeleksi beberapa item, tidak bisa dilakukan karena checkbox seleksi tidak muncul dan tidak bisa memilih satu atau beberapa produk, dan tombol hapusnya tidak muncul, tolong ini diperbaiki.
-* Saat ini pada fitur AlfarezMart AI, AI belum begitu canggih bisa menjawab semua pertanyaan user terkait database, ketika ai chat memberikan response mohon tunggu, tetapi AI tidak merespon balik meskipun saya tunggu lama, tolong ubah semua logic AI chatnya, agar menyimpan semua dbcontext, dan jangan buat query di backend, melainkan ketika ada request dari user AI akan langsung memahami harus melakukan query ke tabel yang mana, yang perlu kamu lakukan adalah, AI diberi pemahaman soal tabel, relasinya, kegunaannya, dan catatan penting untuk setiap tabel dan kolom itu maksudnya apa dan bagaimana data itu bekerja di aplikasi, agar ketika user request apapun seputar data, baik data hutang, data input barang, data supplier, data piutang, data Pengaturan struk, data geofencing, data user, data produk, data nama produk, harga produk, harga jual, data omzet, data keuangan Harian, saldo, dan semua data lainnya yang ada di aplikasi ini, chat AI akan memahami konteks terlebih dahulu, lalu akan melakukan query mandiri menyesuaikan kebutuhan user, yang perlu dipahami adalah, ai harus tahu semua nama tabel dan kolom dengan akurasi 100% dan mampu menerjemahkan ke dalam bahasa bisnis dan request user, sehingga dengan pengetahuan konteks data yang lengkap, AI bisa memberikan jawaban yang memuaskan untuk user. Selain itu, AI juga diberikan kemampuan untuk memahami semua struktur website AlfarezMart, AI juga akan menjadi support assistant yang bisa membantu user ketika mengalami kendala pada aplikasi
+* Jangan mengubah fitur yang sudah ada, kecuali ada permintaan khusus dari user
+* Pada halaman produk, tolong tambahkan informasi harga modal perkemasan, persentase markup, dan juga selisih harga modal dan harga jual, tampilkan dalam ukuran kecil, dengan warna samar samar / shadow.
+Saat ini saya belum melihat informasi tersebut di halaman produk https://alfarezmart.com/products. Tolong cek dan perbaiki ini agar ada informasi harga modal, persentase markup setiap kemasan dan juga selisih harga modal dan harga jual.
 
-Tolong terapkan saran dari response ini ke fitur ai chat
-
-"The System Prompt
-​You can paste this into your API call (e.g., as the system message in OpenAI/Gemini/Anthropic APIs):
-
+* Pada halaman https://alfarezmart.com/scanner, tolong juga tampilkan thumbnail foto produk, harga modal, persentase markup, dan selisih harga modal dan harga jual, tampilkan dalam ukuran kecil, dengan warna samar samar / shadow. Saat ini saya belum melihat informasi tersebut di halaman scanner, tolong cek dan perbaiki ini. Ketika produk dibuka, maka fotonya akan terlihat lebih besar namun tetap full square.
 #PROMPT
 You are an expert AI Assistant specialized in the [Insert Your App Name] platform. 
 Your goal is to provide accurate, helpful, and context-aware guidance to users.

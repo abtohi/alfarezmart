@@ -134,26 +134,45 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
                         <?php endif; ?>
                     </div>
                     <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px;">
-                        <div>
-                            <?php if (!empty($p['price_small_retail'])): ?>
-                                <span class="product-price"><?= Helper::rupiah($p['price_small_retail']) ?></span>
-                            <?php endif; ?>
-                            <?php if (!empty($p['price_small_wholesale'])): ?>
-                                <span class="product-price-wholesale" style="margin-left:6px;"><?= Helper::rupiah($p['price_small_wholesale']) ?></span>
+                        <div style="display:flex;flex-direction:column;">
+                            <div>
+                                <?php if (!empty($p['price_small_retail'])): ?>
+                                    <span class="product-price"><?= Helper::rupiah($p['price_small_retail']) ?></span>
+                                <?php endif; ?>
+                                <?php if (!empty($p['price_small_wholesale'])): ?>
+                                    <span class="product-price-wholesale" style="margin-left:6px;"><?= Helper::rupiah($p['price_small_wholesale']) ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <?php if (!empty($p['packagings']) && isset($p['packagings'][0])): 
+                                $basePkg = $p['packagings'][0];
+                                $baseMarginAmt = current($p['packagings'])['sell_price_retail'] - current($p['packagings'])['buy_price'];
+                                $baseMarginPct = current($p['packagings'])['buy_price'] > 0 ? round(($baseMarginAmt / current($p['packagings'])['buy_price']) * 100, 1) : 0;
+                            ?>
+                            <div style="font-size:9px;color:var(--text-muted);opacity:0.8;text-shadow:0 1px 1px rgba(0,0,0,0.1);margin-top:2px;">
+                                Modal: <?= Helper::rupiah(current($p['packagings'])['buy_price']) ?> | Selisih: <?= Helper::rupiah($baseMarginAmt) ?> (<?= $baseMarginPct ?>%)
+                            </div>
                             <?php endif; ?>
                         </div>
                         <span class="product-stock"><?= (int)($p['current_qty_base'] ?? 0) ?> pcs</span>
                     </div>
                     <?php if (!empty($p['packagings']) && count($p['packagings']) > 1): ?>
                     <div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border-color);display:flex;flex-direction:column;gap:4px;">
-                        <?php foreach($p['packagings'] as $idx => $pkg): if($idx == 0) continue; ?>
-                        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;">
-                            <span style="color:var(--text-muted);font-weight:600;"><i class="bi bi-box2"></i> <?= htmlspecialchars($pkg['unit_name']) ?></span>
-                            <div style="text-align:right;">
-                                <span style="color:var(--success);"><?= Helper::rupiah($pkg['sell_price_retail']) ?></span>
-                                <?php if($pkg['sell_price_wholesale'] > 0): ?>
-                                <span style="color:var(--warning);margin-left:4px;">(G: <?= Helper::rupiah($pkg['sell_price_wholesale']) ?>)</span>
-                                <?php endif; ?>
+                        <?php foreach($p['packagings'] as $idx => $pkg): if($idx == 0) continue; 
+                            $marginAmt = $pkg['sell_price_retail'] - $pkg['buy_price'];
+                            $marginPct = $pkg['buy_price'] > 0 ? round(($marginAmt / $pkg['buy_price']) * 100, 1) : 0;
+                        ?>
+                        <div style="display:flex;flex-direction:column;font-size:10px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span style="color:var(--text-muted);font-weight:600;"><i class="bi bi-box2"></i> <?= htmlspecialchars($pkg['unit_name']) ?></span>
+                                <div style="text-align:right;">
+                                    <span style="color:var(--success);"><?= Helper::rupiah($pkg['sell_price_retail']) ?></span>
+                                    <?php if($pkg['sell_price_wholesale'] > 0): ?>
+                                    <span style="color:var(--warning);margin-left:4px;">(G: <?= Helper::rupiah($pkg['sell_price_wholesale']) ?>)</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <div style="text-align:right;font-size:9px;color:var(--text-muted);opacity:0.8;text-shadow:0 1px 1px rgba(0,0,0,0.1);">
+                                Modal: <?= Helper::rupiah($pkg['buy_price']) ?> | Selisih: <?= Helper::rupiah($marginAmt) ?> (<?= $marginPct ?>%)
                             </div>
                         </div>
                         <?php endforeach; ?>
@@ -633,11 +652,26 @@ async function doOfflineSearch(query) {
                     <div class="product-info" style="width:calc(100% - 76px);">
                         <div class="product-name">${name}</div>
                         <div class="product-category">${brandCat}</div>
+            let baseMarginHtml = '';
+            if (p.packagings && p.packagings.length > 0) {
+                const basePkg = p.packagings[0];
+                const baseMarginAmt = parseFloat(basePkg.sell_price_retail) - parseFloat(basePkg.buy_price || 0);
+                const baseMarginPct = parseFloat(basePkg.buy_price) > 0 ? ((baseMarginAmt / parseFloat(basePkg.buy_price)) * 100).toFixed(1) : 0;
+                baseMarginHtml = `<div style="font-size:9px;color:var(--text-muted);opacity:0.8;text-shadow:0 1px 1px rgba(0,0,0,0.1);margin-top:2px;">
+                                    Modal: Rp${parseFloat(basePkg.buy_price || 0).toLocaleString('id-ID')} | Selisih: Rp${baseMarginAmt.toLocaleString('id-ID')} (${baseMarginPct}%)
+                                  </div>`;
+            }
+
+            html += `
                         <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px;">
-                            <div>
-                                ${price ? `<span class="product-price">Rp${price.toLocaleString('id-ID')}</span>` : ''}
-                                ${priceWs ? `<span class="product-price-wholesale" style="margin-left:6px;">Rp${priceWs.toLocaleString('id-ID')}</span>` : ''}
+                            <div style="display:flex;flex-direction:column;">
+                                <div>
+                                    ${price ? `<span class="product-price">Rp${price.toLocaleString('id-ID')}</span>` : ''}
+                                    ${priceWs ? `<span class="product-price-wholesale" style="margin-left:6px;">Rp${priceWs.toLocaleString('id-ID')}</span>` : ''}
+                                </div>
+                                ${baseMarginHtml}
                             </div>
+                            <span class="product-stock">${p.current_qty_base || 0} pcs</span>
                         </div>`;
             
             if (p.packagings && p.packagings.length > 1) {
@@ -646,12 +680,21 @@ async function doOfflineSearch(query) {
                     if (idx === 0) return;
                     const spR = parseFloat(pkg.sell_price_retail);
                     const spW = parseFloat(pkg.sell_price_wholesale);
+                    const bp = parseFloat(pkg.buy_price || 0);
+                    const marginAmt = spR - bp;
+                    const marginPct = bp > 0 ? ((marginAmt / bp) * 100).toFixed(1) : 0;
+                    
                     html += `
-                        <div style="display:flex;justify-content:space-between;align-items:center;font-size:10px;">
-                            <span style="color:var(--text-muted);font-weight:600;"><i class="bi bi-box2"></i> ${pkg.unit_name}</span>
-                            <div style="text-align:right;">
-                                <span style="color:var(--success);">Rp${spR.toLocaleString('id-ID')}</span>
-                                ${spW > 0 ? `<span style="color:var(--warning);margin-left:4px;">(G: Rp${spW.toLocaleString('id-ID')})</span>` : ''}
+                        <div style="display:flex;flex-direction:column;font-size:10px;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span style="color:var(--text-muted);font-weight:600;"><i class="bi bi-box2"></i> ${pkg.unit_name}</span>
+                                <div style="text-align:right;">
+                                    <span style="color:var(--success);">Rp${spR.toLocaleString('id-ID')}</span>
+                                    ${spW > 0 ? `<span style="color:var(--warning);margin-left:4px;">(G: Rp${spW.toLocaleString('id-ID')})</span>` : ''}
+                                </div>
+                            </div>
+                            <div style="text-align:right;font-size:9px;color:var(--text-muted);opacity:0.8;text-shadow:0 1px 1px rgba(0,0,0,0.1);">
+                                Modal: Rp${bp.toLocaleString('id-ID')} | Selisih: Rp${marginAmt.toLocaleString('id-ID')} (${marginPct}%)
                             </div>
                         </div>`;
                 });

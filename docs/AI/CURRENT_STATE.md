@@ -28,13 +28,17 @@
 2. **Upload Foto di Edit Produk** — Ditambahkan antarmuka pengubahan foto produk di halaman `products/edit.php`. User sekarang bisa melihat preview foto, mengunggah file baru, melihatnya secara fullscreen (modal), dan menghapusnya. 
 3. **Backend Delete Photo** — Diperbarui endpoint `ApiController::updateProductPhoto` untuk memproses parameter `delete_photo` jika dikirimkan oleh form, sehingga foto dapat direset ke null.
 4. **Thumbnail Daftar Produk** — Pada halaman `products/index.php`, tampilan fallback icon (`bi-box-seam`) diganti dengan foto produk (jika ada). Gambar dibuat `object-fit: contain` di dalam kontainer berukuran `60x60px` sehingga terlihat square, tidak terpotong, dan jarak antar margin (`margin-right: 16px`) diperbaiki agar tidak menempel dengan teks.
-5. **Update AI Instructions** — Menambahkan aturan di `ai-instructions.md` (bagian Documentation & Changelog Rules) agar AI wajib mengupdate dokumentasi `BLUEPRINT.md` atau `CURRENT_STATE.md` saat terjadi perubahan skema database atau fitur baru.
+5. **Detail Harga di Daftar Produk & Scanner** — Menambahkan tampilan info harga modal, selisih margin, dan markup pada setiap kemasan di halaman `products/index.php` dan `scanner/index.php`.
+6. **Foto Produk di Scanner** — Menambahkan thumbnail foto produk di halaman `scanner/index.php` yang jika diklik dapat menampilkan gambar secara *fullscreen*.
+7. **Update AI Instructions** — Menambahkan aturan di `ai-instructions.md` (bagian Documentation & Changelog Rules) agar AI wajib mengupdate dokumentasi `BLUEPRINT.md` atau `CURRENT_STATE.md` saat terjadi perubahan skema database atau fitur baru.
 
 **File yang Diubah:**
 - `app/views/products/show.php` — Tweak UI profit margin & buy price.
 - `app/views/products/edit.php` — Penambahan komponen upload/hapus foto produk beserta handler JS-nya.
 - `app/controllers/ApiController.php` — Modifikasi `updateProductPhoto` untuk penanganan `delete_photo`.
-- `app/views/products/index.php` — Modifikasi layout list item (`.product-card`) untuk menampilkan foto secara square.
+- `app/views/products/index.php` — Modifikasi layout list item (`.product-card`) untuk menampilkan foto secara square dan menambahkan info margin.
+- `app/views/scanner/index.php` — Penambahan foto produk dan detail modal/margin pada hasil scan.
+- `app/views/layouts/app.php` & `sw.js` — Bump APP_VERSION & CACHE_NAME ke 10.2 untuk memicu pembaruan UI di klien PWA.
 - `docs/AI/ai-instructions.md` — Modifikasi instruksi dokumentasi AI.
 
 ---

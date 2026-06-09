@@ -60,7 +60,12 @@ async function lookupBarcode() {
                         resultDiv.innerHTML = searchData.map(prod => `
                             <div class="product-card" onclick='showProductResultOffline(${JSON.stringify(prod).replace(/'/g, "&#39;")})' style="cursor:pointer; flex-direction:column; align-items:stretch;">
                                 <div style="display:flex; align-items:center;">
-                                    <div class="product-icon"><i class="bi bi-box-seam"></i></div>
+                                    ${prod.photo 
+                                        ? `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:var(--surface-2); flex-shrink:0; margin-right:16px;">
+                                               <img src="${typeof BASE_URL !== 'undefined' ? BASE_URL : '/'}${prod.photo}" style="width:100%; height:100%; object-fit:contain;">
+                                           </div>`
+                                        : `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; background:var(--primary-bg); color:var(--primary); font-size:1.5rem; flex-shrink:0; margin-right:16px;"><i class="bi bi-box-seam"></i></div>`
+                                    }
                                     <div class="product-info" style="flex:1;">
                                         <div class="product-name">${prod.full_name}</div>
                                         <div class="product-category">${prod.brand_name || ''} · ${prod.category_name || ''}</div>
@@ -90,7 +95,12 @@ async function lookupBarcode() {
                 resultDiv.innerHTML = searchData.map(p => `
                     <div class="product-card" onclick="fetchProductDetail(${p.id})" style="cursor:pointer; flex-direction:column; align-items:stretch;">
                         <div style="display:flex; align-items:center;">
-                            <div class="product-icon"><i class="bi bi-box-seam"></i></div>
+                            ${p.photo 
+                                ? `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:var(--surface-2); flex-shrink:0; margin-right:16px;">
+                                       <img src="${typeof BASE_URL !== 'undefined' ? BASE_URL : '/'}${p.photo}" style="width:100%; height:100%; object-fit:contain;">
+                                   </div>`
+                                : `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; background:var(--primary-bg); color:var(--primary); font-size:1.5rem; flex-shrink:0; margin-right:16px;"><i class="bi bi-box-seam"></i></div>`
+                            }
                             <div class="product-info" style="flex:1;">
                                 <div class="product-name">${p.full_name}</div>
                                 <div class="product-category">${p.brand_name || ''} · ${p.category_name || ''}</div>
@@ -117,12 +127,16 @@ function renderPackagingsForList(packagings) {
             const ecer = parseFloat(pkg.sell_price_retail) || 0;
             const grosir = parseFloat(pkg.sell_price_wholesale) || 0;
             const modal = parseFloat(pkg.buy_price) || 0;
+            const marginAmt = ecer - modal;
+            const marginPct = modal > 0 ? ((marginAmt / modal) * 100).toFixed(1) : 0;
             
             return `
                 <div style="margin-bottom:8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
                         <div style="font-weight:700; font-size:11px; color:var(--text-primary);">${jenis} <span style="font-weight:400; color:var(--text-muted); font-size:9px;">(Isi ${qty})</span></div>
-                        <div style="font-size:9px; color:rgba(150, 150, 150, 0.4);">${modal > 0 ? 'Modal: ' + formatRupiah(modal) : ''}</div>
+                        <div style="font-size:9px; color:rgba(150, 150, 150, 0.4); text-shadow:0 1px 1px rgba(0,0,0,0.1); text-align:right;">
+                            ${modal > 0 ? `Modal: ${formatRupiah(modal)} | Selisih: ${formatRupiah(marginAmt)} (${marginPct}%)` : ''}
+                        </div>
                     </div>
                     <div style="display:flex; justify-content:space-between; font-size:12px;">
                         <div>${ecer > 0 ? `<span style="color:var(--text-muted); font-size:9px;">Ecer:</span> <span style="color:var(--success); font-weight:700;">${formatRupiah(ecer)}</span>` : ''}</div>
@@ -164,6 +178,8 @@ function renderProductScanResult(data, isOffline) {
         const modal = parseFloat(p.buy_price) || 0;
         const ecer = parseFloat(p.sell_price_retail) || 0;
         const grosir = parseFloat(p.sell_price_wholesale) || 0;
+        const marginAmt = ecer - modal;
+        const marginPct = modal > 0 ? ((marginAmt / modal) * 100).toFixed(1) : 0;
         
         // Tier pricing html
         let tierHtml = '';
@@ -195,8 +211,8 @@ function renderProductScanResult(data, isOffline) {
                             ${p.unit_name || 'Level '+p.level} 
                             <span style="font-size:10px; font-weight:400; color:var(--text-muted); background:var(--surface-2); padding:2px 6px; border-radius:4px; margin-left:4px;">Isi ${baseQty} pcs</span>
                         </div>
-                        <div style="font-size:9px; color:rgba(150, 150, 150, 0.4); margin-top:2px;">
-                            ${modal > 0 ? `Modal: ${formatRupiah(modal)}` : ''}
+                        <div style="font-size:9px; color:rgba(150, 150, 150, 0.4); margin-top:2px; text-shadow:0 1px 1px rgba(0,0,0,0.1);">
+                            ${modal > 0 ? `Modal: ${formatRupiah(modal)} | Selisih: ${formatRupiah(marginAmt)} (${marginPct}%)` : ''}
                         </div>
                     </div>
                     <div style="text-align:right;">
@@ -212,9 +228,14 @@ function renderProductScanResult(data, isOffline) {
     resultDiv.innerHTML = `
         <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; border:1px solid var(--border-color); box-shadow:0 4px 12px rgba(0,0,0,0.05);">
             <div style="display:flex; gap:14px; margin-bottom:16px;">
-                <div style="width:50px;height:50px;background:var(--primary-bg);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="bi bi-upc-scan" style="font-size:1.5rem;color:var(--primary);"></i>
-                </div>
+                ${data.photo 
+                    ? `<div style="width:60px;height:60px;border-radius:var(--radius-md);overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--surface-2);flex-shrink:0;">
+                           <img src="${(typeof BASE_URL !== 'undefined' ? BASE_URL : '/')}${data.photo}" style="width:100%;height:100%;object-fit:contain;cursor:pointer;" onclick="viewFullPhoto(this.src)">
+                       </div>`
+                    : `<div style="width:50px;height:50px;background:var(--primary-bg);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                           <i class="bi bi-upc-scan" style="font-size:1.5rem;color:var(--primary);"></i>
+                       </div>`
+                }
                 <div style="flex:1; min-width:0;">
                     <h3 style="font-size:var(--font-size-md); font-weight:700; margin-bottom:4px; line-height:1.2;">
                         ${data.full_name} 
@@ -267,4 +288,18 @@ document.getElementById('barcodeInput')?.addEventListener('keypress', (e) => {
 
 // Auto-focus
 document.getElementById('barcodeInput')?.focus();
+</script>
+
+<!-- Modal Full Preview -->
+<div id="fullPhotoModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; align-items:center; justify-content:center; flex-direction:column;">
+    <button type="button" onclick="document.getElementById('fullPhotoModal').style.display='none'" style="position:absolute; top:20px; right:20px; background:none; border:none; color:white; font-size:2rem; cursor:pointer;"><i class="bi bi-x-lg"></i></button>
+    <img id="fullPhotoImg" src="" style="max-width:90%; max-height:90%; object-fit:contain;">
+</div>
+
+<script>
+function viewFullPhoto(src) {
+    if (!src) return;
+    document.getElementById('fullPhotoImg').src = src;
+    document.getElementById('fullPhotoModal').style.display = 'flex';
+}
 </script>
