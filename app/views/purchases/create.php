@@ -2412,12 +2412,8 @@ function onDrawerCustomToggle(prefix, uid, level, priceType, isCustom) {
         }
     }
     refreshMiniTableForItem(uid);
-    // Refresh drawer row margin
-    const isBulk = (prefix === 'bulk');
-    const rowElToRefresh = isBulk
-        ? document.querySelector(`.bulk-item[data-bulk-id="${uid}"] .drawer-pkg-row[data-level="${level}"]`)
-        : document.querySelector(`#drawer_${uid} .drawer-pkg-row[data-level="${level}"]`);
-    if (rowElToRefresh) refreshDrawerRowMargin(rowElToRefresh);
+    // Refresh drawer row margin using the rowEl already obtained above
+    if (rowEl) refreshDrawerRowMargin(rowEl);
 }
 
 /**
