@@ -473,16 +473,17 @@ function loadExistingData() {
     const srId = <?= json_encode($purchase['sales_rep_id'] ?? null) ?>;
     if (srId && salesRepsLookup[srId]) {
         salesRepSB.setValue(String(srId), salesRepsLookup[srId].name);
+        onSalesRepPicked(String(srId), salesRepsLookup[srId].name); // Show product section + set supplier
     } else {
         const supId = <?= json_encode($purchase['supplier_id'] ?? null) ?>;
         if (supId) {
             salesRepSB.setValue('other', '📦 Other — belum tahu supplier/sales');
+            onSalesRepPicked('other', '📦 Other — belum tahu supplier/sales');
             currentSupplierId = supId; // Retain supplier if mapped to other
         }
     }
     document.getElementById('purchaseDate').value = <?= json_encode($purchase['purchase_date'] ?? date('Y-m-d')) ?>;
-    document.getElementById('invoiceDiscount').value = <?= json_encode($purchase['discount_amount'] ?? 0) ?>; // Wait, actually discount amount on header is not directly saved. We'll leave it 0 or load if we added it to model.
-    // For now we'll just populate items.
+    document.getElementById('invoiceDiscount').value = <?= json_encode($purchase['discount_amount'] ?? 0) ?>;
     
     existingItems.forEach(async (itemInfo) => {
         try {

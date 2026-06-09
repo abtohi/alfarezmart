@@ -1,211 +1,31 @@
-<!-- Purchases Create View — Sales → Supplier (auto) → Product -->
-<?php /** @var string $csrfToken */ ?>
-<div class="page-section">
-    <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;">
-        <div>
-            <p style="font-size:var(--font-size-sm); color:var(--text-muted); margin-top:4px;">Pilih sales, supplier terisi otomatis, lalu scan/cari produk</p>
-        </div>
-        <a href="<?= BASE_URL ?>purchases" class="btn-outline-custom" style="font-size:var(--font-size-xs); padding:6px 10px; text-decoration:none;">
-            <i class="bi bi-clock-history"></i> Riwayat
-        </a>
-    </div>
-    
-    <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
-    <!-- Step 1: Supplier Selection -->
-    <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; border:1px solid var(--border-color);">
-        <div class="section-title" style="margin-bottom:8px;">
-            <i class="bi bi-1-circle" style="color:var(--primary);"></i> Sales & Supplier
-        </div>
-        <div style="margin-bottom:12px;">
-            <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Sales *</label>
-            <div id="salesRepSearchBox"></div>
-            <div id="salesRepInfo" style="margin-top:6px; font-size:11px; color:var(--text-muted);"></div>
-        </div>
-
-        <div id="supplierDisplaySection" style="margin-bottom:12px; display:none;">
-            <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Supplier (otomatis)</label>
-            <div id="supplierDisplay" style="padding:10px 12px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); font-size:var(--font-size-sm); font-weight:600; color:var(--text-primary);">—</div>
-        </div>
-
-        <div style="display:flex; gap:12px; flex-direction:column;">
-            <div>
-                <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Tanggal *</label>
-                <input type="date" id="purchaseDate" value="<?= date('Y-m-d') ?>" class="form-control-dark" style="width:100%; height:44px; appearance:none; -webkit-appearance:none;">
-            </div>
-            <div>
-                <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Foto Invoice</label>
-                <input type="file" id="invoicePhotoCam" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event, true)">
-                <input type="file" id="invoicePhotoGal" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event, false)">
-                <div style="display:flex; gap:8px;">
-                    <button type="button" class="btn-outline-custom" id="btnPhotoCam" style="flex:1; padding:10px 4px; font-size:12px; height:44px;" onclick="document.getElementById('invoicePhotoCam').click()">
-                        <i class="bi bi-camera"></i> Kamera
-                    </button>
-                    <button type="button" class="btn-outline-custom" id="btnPhotoGal" style="flex:1; padding:10px 4px; font-size:12px; height:44px;" onclick="document.getElementById('invoicePhotoGal').click()">
-                        <i class="bi bi-image"></i> Galeri
-                    </button>
-                </div>
-                <div style="display:flex; gap:8px; margin-top:8px;">
-                    <button type="button" class="btn-primary-custom" id="btnScanAI" style="flex:1; padding:10px 4px; font-size:12px; display:none; height:44px;" onclick="scanInvoiceWithAI()">
-                        <i class="bi bi-robot"></i> Scan dengan AI (Otomatis)
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Photo Preview Modal -->
-    <div id="photoPreviewModal" class="modal-backdrop" style="display:none; z-index:2000;">
-        <div class="modal-content" style="max-width:400px; padding:0; overflow:hidden; display:flex; flex-direction:column; height:90vh;">
-            <div style="padding:16px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="font-size:var(--font-size-md); margin:0;">Pratinjau Foto</h3>
-                <button class="btn-close-custom" onclick="closePhotoPreview()"><i class="bi bi-x-lg"></i></button>
-            </div>
-            <div style="flex:1; overflow:hidden; background:#111; position:relative; display:flex; align-items:center; justify-content:center;">
-                <canvas id="photoPreviewCanvas" style="max-width:100%; max-height:100%; object-fit:contain;"></canvas>
-            </div>
-            <div style="padding:16px; background:var(--surface-1);">
-                <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; cursor:pointer;">
-                    <input type="checkbox" id="chkEnhancePhoto" checked onchange="applyPhotoFilter()" style="width:18px;height:18px;accent-color:var(--primary);">
-                    <span style="font-size:13px; font-weight:600; color:var(--text-primary);">Mode Dokumen (Perjelas Teks)</span>
-                </label>
-                <div style="display:flex; gap:8px;">
-                    <button type="button" class="btn-outline-custom" style="flex:1;" onclick="closePhotoPreview()">Batal</button>
-                    <button type="button" class="btn-primary-custom" style="flex:1;" onclick="savePhotoPreview()">Gunakan Foto</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Step 3: Product Search (shown after supplier selected) -->
-    <div id="productSearchSection" style="display:none;">
-        <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; border:1px solid var(--border-color);">
-            <div class="section-title" style="margin-bottom:8px;">
-                <i class="bi bi-2-circle" style="color:var(--primary);"></i> Cari Produk
-            </div>
-            <div id="supplierBadge" style="display:none; margin-bottom:8px;">
-                <span class="badge-custom badge-info" style="font-size:11px;"></span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--font-size-xs);">
-                    <input type="checkbox" id="filterBySupplierSales" checked style="width:16px;height:16px;accent-color:var(--primary);">
-                    <span>Filter produk berdasarkan supplier & sales</span>
-                </label>
-                <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px;" onclick="openBulkInputModal()">
-                    <i class="bi bi-list-check"></i> Input Bulk (Massal)
-                </button>
-            </div>
-            <p id="filterHint" style="font-size:10px;color:var(--text-muted);margin:-6px 0 10px 24px;">Hanya tampilkan barang terkait supplier/sales terpilih</p>
-            <div class="search-input-wrapper" style="position:relative;background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0 12px; display:flex; align-items:center;">
-                <i class="bi bi-upc-scan" style="color:var(--text-muted);cursor:pointer;" onclick="scanProductBarcode()" title="Scan Barcode"></i>
-                <input type="text" id="productSearch" placeholder="Scan barcode atau ketik nama produk..." 
-                       style="flex:1;border:none;background:transparent;padding:12px 10px;color:var(--text-primary);font-size:var(--font-size-base);outline:none;font-family:var(--font-family);" autocomplete="off">
-            </div>
-            
-            <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
-                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text-primary);">
-                    <input type="checkbox" id="chkGlobalPpn" style="width:13px;height:13px;accent-color:var(--primary);" onchange="toggleGlobalPpn()">
-                    PPN (%)
-                </label>
-                <input type="number" id="globalPpnInput" placeholder="Misal: 11" class="form-control-dark" style="width:80px; height:26px; font-size:11px; padding:4px 8px;" disabled oninput="applyGlobalPpn()">
-                <div style="font-size:10px; color:var(--text-muted);">Terapkan PPN ke semua barang di keranjang</div>
-            </div>
-
-            <div id="productSuggestions" style="margin-top:8px;"></div>
-        </div>
-    </div>
-
-    <!-- Items List -->
-    <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
-        <span><i class="bi bi-3-circle" style="color:var(--primary);"></i> Daftar Barang</span>
-        <div style="display:flex; align-items:center; gap:8px;">
-            <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px; color:var(--danger); border-color:var(--danger);" onclick="clearAllDrafts()" title="Kosongkan Semua Inputan">
-                <i class="bi bi-trash"></i> Kosongkan
-            </button>
-            <span id="itemCountBadge" class="badge-custom badge-info">0 Item</span>
-        </div>
-    </div>
-    
-    <div id="massActionToolbar" style="display:none; background:rgba(230,57,70,0.1); border-radius:var(--radius-md); padding:8px 12px; margin-bottom:12px; align-items:center; justify-content:space-between;">
-        <label style="display:flex; align-items:center; gap:8px; font-size:var(--font-size-sm); font-weight:600; color:var(--danger); cursor:pointer;">
-            <input type="checkbox" id="chkSelectAllItems" style="width:16px; height:16px; accent-color:var(--danger);" onchange="toggleSelectAllItems(this)">
-            <span id="massSelectCount">0 Terpilih</span>
-        </label>
-        <button type="button" class="btn-primary-custom" style="background:var(--danger-bg); color:var(--danger); font-size:10px; padding:4px 8px;" onclick="deleteSelectedItems()">
-            <i class="bi bi-trash"></i> Hapus Terpilih
-        </button>
-    </div>
-
-    <div id="purchaseItems">
-        <div class="empty-state" id="emptyPurchaseState" style="padding:24px;">
-            <i class="bi bi-cart-plus" style="font-size:2rem;"></i>
-            <p style="margin-top:8px;">Pilih sales, lalu cari produk untuk menambahkan ke daftar</p>
-        </div>
-    </div>
-
-    <!-- Invoice Adjustments & Total -->
-    <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; margin-top:16px; border:1px solid var(--border-color);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Subtotal Barang</span>
-            <span id="purchaseSubtotal" style="font-weight:600; font-size:12px;">Rp0</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Diskon Nota (Rp)</span>
-            <input type="number" id="invoiceDiscount" class="form-control-dark" style="width:100px; font-size:11px; padding:4px 8px; text-align:right;" value="0" min="0" oninput="calculateGrandTotal()">
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Total Sebelum PPN</span>
-            <span id="purchaseTotalBeforePPN" style="font-weight:600; font-size:12px;">Rp0</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border-color);">
-            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Total PPN</span>
-            <span id="purchaseTotalPPN" style="font-weight:600; font-size:12px;">Rp0</span>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <span style="font-weight:700;">Grand Total</span>
-            <span id="purchaseGrandTotal" style="font-size:var(--font-size-xl); font-weight:800; color:var(--success);">Rp0</span>
-        </div>
-
-        <button class="btn-outline-custom" style="width:100%; font-size:12px; padding:8px;" onclick="distributeAdjustments()">
-            <i class="bi bi-calculator"></i> Distribusikan ke Harga Modal Barang
-        </button>
-        <div style="font-size:10px; color:var(--text-muted); text-align:center; margin-top:4px;">Menghitung ulang harga modal satuan berdasarkan Diskon & PPN</div>
-    </div>
-
-    <button id="btnSavePurchase" class="btn-primary-custom" style="width:100%; margin-top:16px; padding:14px; cursor:pointer;" onclick="submitPurchase()">
-        <i class="bi bi-check-circle"></i> Simpan Pembelian
-    </button>
-</div>
-
-<script>
 // ===== Data from PHP =====
 const suppliersData = [
-    <?php foreach ($suppliers ?? [] as $s): ?>
-        { value: '<?= $s['id'] ?>', label: <?= json_encode($s['name']) ?> },
-    <?php endforeach; ?>
+    null
+        { value: 'null', label: null },
+    null
 ];
 
 const salesRepsLookup = {
-    <?php foreach ($salesReps ?? [] as $sr): ?>
-    '<?= (int)$sr['id'] ?>': {
-        supplier_id: '<?= (int)($sr['supplier_id'] ?? 0) ?>',
-        supplier_name: <?= json_encode($sr['supplier_name'] ?? '') ?>,
-        name: <?= json_encode($sr['name'] ?? '') ?>,
-        phone: <?= json_encode($sr['phone'] ?? '') ?>,
-        visit_day: <?= json_encode($sr['visit_day'] ?? '') ?>
+    null
+    'null': {
+        supplier_id: 'null',
+        supplier_name: null,
+        name: null,
+        phone: null,
+        visit_day: null
     },
-    <?php endforeach; ?>
+    null
 };
 
 const salesRepsOptions = [
     { value: 'other', label: '📦 Other — belum tahu supplier/sales' },
-    <?php foreach ($salesReps ?? [] as $sr): ?>
+    null
     {
-        value: '<?= (int)$sr['id'] ?>',
-        label: <?= json_encode(($sr['name'] ?? '') . (!empty($sr['supplier_name']) ? ' · ' . $sr['supplier_name'] : '')) ?>
+        value: 'null',
+        label: null
     },
-    <?php endforeach; ?>
+    null
 ];
 
 const csrfVal = document.getElementById('csrfToken').value;
@@ -215,12 +35,16 @@ let currentSupplierId = null;
 let currentSupplierName = '';
 let currentSalesRepId = null;
 let currentSalesRepName = '';
-let currentSubtotal = 0;
-let currentGrandTotal = 0;
+let currentSubtotal = null;
+let currentGrandTotal = null;
 let filterBySupplierSales = true;
 let invoicePhotoBase64 = null;
 
 let originalPhotoImg = null;
+let purchaseId = null;
+
+// Inject Existing Data
+const existingItems = null;
 
 function handlePhotoSelect(e, isCamera) {
     const file = e.target.files[0];
@@ -396,27 +220,11 @@ async function scanInvoiceWithAI() {
                             // Add to cart with the specific level pre-selected
                             addProductToCart(productData, bestPkg ? bestPkg.level : 1);
                             
-                            // Immediately update the added item's quantity, buy_price, and total
+                            // Immediately update the added item's quantity and total
                             const addedItem = purchaseItems[0]; // addProductToCart unshifts to the front
                             if (addedItem && addedItem.product_id == item.product_id) {
-                                addedItem.quantity  = item.qty;
-                                addedItem.buy_price = item.unit_price;
-                                addedItem.total     = item.qty * item.unit_price;
-
-                                // Propagate AI buy_price to ALL packaging levels (so drawer/panel
-                                // kemasan juga menampilkan Harga Modal yang benar, bukan harga lama DB)
-                                propagateFromMainInputs(addedItem);
-
-                                // Also sync sell prices based on new buy price (maintain margin)
-                                syncSellPricesWhenBuyPriceChanges(addedItem);
-
-                                // Recalculate nett price for the selected level
-                                addedItem.harga_nett = calcItemNett(
-                                    addedItem.buy_price,
-                                    addedItem.ppn_pct || 0,
-                                    addedItem.diskon_mode || 'rp',
-                                    addedItem.diskon_value || 0
-                                );
+                                addedItem.quantity = item.qty;
+                                addedItem.total = item.qty * item.unit_price;
                             }
                         }
                     } catch(e) {
@@ -452,11 +260,9 @@ document.addEventListener('DOMContentLoaded', () => {
         onAdd: () => addSalesRepModal(),
         onChange: (val, label) => {
             onSalesRepPicked(val, label);
-            saveDraft();
         },
         onClear: () => {
             clearSalesRepSelection();
-            saveDraft();
         }
     });
 
@@ -473,13 +279,81 @@ document.addEventListener('DOMContentLoaded', () => {
         if (q.length >= 2) searchInput.dispatchEvent(new Event('input'));
     });
 
-    document.getElementById('purchaseDate').addEventListener('change', saveDraft);
-    document.getElementById('invoiceDiscount').addEventListener('input', saveDraft);
-    document.getElementById('invoiceTax').addEventListener('input', saveDraft);
-
     initPurchaseProductSearch();
-    loadDraft();
+    loadExistingData();
 });
+
+function loadExistingData() {
+    const srId = null;
+    if (srId && salesRepsLookup[srId]) {
+        salesRepSB.setValue(String(srId), salesRepsLookup[srId].name);
+    } else {
+        const supId = null;
+        if (supId) {
+            salesRepSB.setValue('other', '📦 Other — belum tahu supplier/sales');
+            currentSupplierId = supId; // Retain supplier if mapped to other
+        }
+    }
+    document.getElementById('purchaseDate').value = null;
+    document.getElementById('invoiceDiscount').value = null; // Wait, actually discount amount on header is not directly saved. We'll leave it 0 or load if we added it to model.
+    // For now we'll just populate items.
+    
+    existingItems.forEach(async (itemInfo) => {
+        try {
+            let data = null;
+            if (typeof OfflineDB !== 'undefined') {
+                try {
+                    data = await OfflineDB.getProductById(itemInfo.product_id);
+                } catch(err) {
+                    console.warn('OfflineDB fallback:', err);
+                }
+            }
+            if (!data && navigator.onLine) {
+                data = await api(`${BASE_URL}api/products/${itemInfo.product_id}`);
+            }
+            if (data && !data.error) {
+                addProductToCartExisting(data, itemInfo);
+            }
+        } catch(e) { console.warn('Gagal memuat item', e); }
+    });
+}
+
+function addProductToCartExisting(product, itemInfo) {
+    const realProductId = product.id; // Save actual product ID
+    product.id = Date.now() + Math.random(); // Temp ID for cart array (must be unique)
+    product.product_id = realProductId;  // Real product ID for backend
+    product.name = product.full_name || product.short_label || 'Produk';
+    product.is_manual_price = false;
+    product.level = parseInt(itemInfo.level) || 1;
+    product.quantity = parseFloat(itemInfo.quantity) || 1;
+    product.buy_price = parseFloat(itemInfo.buy_price) || 0;
+    product.ppn_pct = parseFloat(itemInfo.ppn_percent) || 0;
+    product.diskon_value = parseFloat(itemInfo.discount_amount) || 0;
+    if(itemInfo.discount_percent > 0) {
+        product.diskon_mode = 'pct';
+        product.diskon_value = parseFloat(itemInfo.discount_percent);
+    } else {
+        product.diskon_mode = 'rp';
+    }
+    
+    product.packagings.forEach(p => {
+        p.ppn_pct = product.ppn_pct;
+        p.diskon_mode = product.diskon_mode;
+        p.diskon_value = product.diskon_value;
+        if (p.level == product.level) {
+            p.buy_price = product.buy_price;
+            p.sell_price_retail = itemInfo.sell_price_retail;
+            p.sell_price_wholesale = itemInfo.sell_price_wholesale;
+            p.harga_nett = itemInfo.nett_price;
+        }
+    });
+    
+    product.total = product.quantity * product.buy_price;
+    purchaseItems.unshift(product);
+    renderCart();
+    calculateTotal();
+}
+
 
 function updateFilterHint() {
     const hint = document.getElementById('filterHint');
@@ -511,7 +385,6 @@ function applyGlobalPpn() {
         onMainInputChange(item.id, 'ppn', val);
     });
     if (typeof renderCart === 'function') renderCart();
-    saveDraft();
 }
 
 function clearSalesRepSelection() {
@@ -777,7 +650,7 @@ async function performProductSearch() {
         if (!filterBySupplierSales && typeof OfflineDB !== 'undefined') {
             data = await OfflineDB.searchProducts(q);
         }
-        
+
         if ((!data || data.length === 0) || filterBySupplierSales) {
             let url;
             if (filterBySupplierSales && !isOtherMode && currentSupplierId) {
@@ -793,7 +666,7 @@ async function performProductSearch() {
                 if (typeof OfflineDB !== 'undefined') data = await OfflineDB.searchProducts(q);
             }
         }
-        
+
         if (!Array.isArray(data) || data.length === 0) {
             suggestionsDiv.innerHTML = `
                 <div style="padding:12px;text-align:center;">
@@ -838,7 +711,7 @@ async function selectProduct(productSummary) {
             data = await api(`${BASE_URL}api/products/${productSummary.id}`);
         }
         if (data) addProductToCart(data);
-        else showToast('Produk tidak ditemukan di database lokal', 'warning');
+        else showToast('Produk tidak ditemukan', 'warning');
     } catch (e) {
         showToast('Gagal mengambil data produk', 'error');
     }
@@ -1449,7 +1322,7 @@ function openAllPackagingsModal(tempId) {
             return `
             <div class="tier-row" style="margin-bottom:6px;">
                 <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
-                    <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" value="${t.min_qty}" min="1" oninput="recalcTierHint(this)">
+                    <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" value="${t.min_qty}" min="1">
                     <input type="number" class="form-control-dark tier-total-harga" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" value="${totalH}" min="0" oninput="recalcTierHint(this)">
                     <select class="form-select-dark tier-mode" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;">
                         <option value="both" ${t.sale_mode==='both'?'selected':''}>E+G</option>
@@ -1651,7 +1524,7 @@ function addTierRow(btn) {
     row.style.cssText = 'margin-bottom:6px;';
     row.innerHTML = `
         <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
-            <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" min="1" oninput="recalcTierHint(this)">
+            <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" min="1">
             <input type="number" class="form-control-dark tier-total-harga" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" min="0" oninput="recalcTierHint(this)">
             <select class="form-select-dark tier-mode" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;">
                 <option value="both">E+G</option><option value="retail">Ecer</option><option value="wholesale">Grosir</option>
@@ -1672,53 +1545,12 @@ function recalcTierHint(el) {
     if (!hint) {
         hint = document.createElement('div');
         hint.className = 'tier-hint';
-        hint.style.cssText = 'font-size:10px;color:var(--text-muted);padding-left:2px;margin-top:4px;width:100%;';
+        hint.style.cssText = 'font-size:9px;color:var(--text-muted);padding-left:2px;';
         row.querySelector('.tier-mode, .drawer-tier-mode').parentElement.after(hint);
     }
-    
-    if (minQty > 0 && totalH > 0) {
-        const pricePerUnit = totalH / minQty;
-        let text = `≈ Rp${Math.round(pricePerUnit).toLocaleString('id-ID')}/satuan`;
-        
-        let nett = 0;
-        const lvEl = row.closest('.packaging-level-edit');
-        const drawerEl = row.closest('.drawer-pkg-row');
-        
-        if (lvEl) {
-            const buy = parseFloat(lvEl.querySelector('.pkg-buy, .buy-price')?.value) || 0;
-            const ppn = parseFloat(lvEl.querySelector('.pkg-ppn')?.value) || 0;
-            const diskonMode = lvEl.querySelector('.pkg-diskon-mode')?.value || 'rp';
-            const diskonVal = parseFloat(lvEl.querySelector('.pkg-diskon-value')?.value) || 0;
-            nett = typeof calcItemNett === 'function' ? calcItemNett(buy, ppn, diskonMode, diskonVal) : buy;
-        } else if (drawerEl) {
-            const buy = parseFloat(drawerEl.querySelector('.drawer-pkg-buy')?.value) || 0;
-            const ppn = parseFloat(drawerEl.closest('[data-item-ppn]')?.dataset.itemPpn || drawerEl.closest('.item-card')?.dataset.ppn || 0);
-            nett = typeof calcItemNett === 'function' ? calcItemNett(buy, ppn, 'rp', 0) : buy;
-            
-            const uid = drawerEl.closest('[id^="drawer_"]')?.id.split('_')[1];
-            if (uid) {
-                let item = typeof purchaseItems !== 'undefined' ? purchaseItems.find(i => i.id == uid) : null;
-                if (!item && typeof bulkItems !== 'undefined') item = bulkItems.find(b => b.id == uid);
-                if (item) {
-                    const level = parseInt(drawerEl.dataset.level || 1, 10);
-                    const pkg = item.packagings.find(p => p.level == level);
-                    if (pkg) nett = pkg.harga_nett || (typeof calcItemNett === 'function' ? calcItemNett(buy, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value) : buy);
-                }
-            }
-        }
-        
-        if (nett > 0) {
-            const profit = pricePerUnit - nett;
-            const marginPct = (profit / nett * 100);
-            const color = marginPct >= 5 ? 'var(--success)' : (marginPct >= 0 ? 'var(--warning)' : 'var(--danger)');
-            const formatRp = (num) => 'Rp ' + Math.round(num).toLocaleString('id-ID');
-            text += ` <span style="margin-left:8px;">Mkp: <strong style="color:${color}">${marginPct.toFixed(1)}%</strong> <span style="font-size:9px;color:var(--text-muted);">(${profit > 0 ? '+' : ''}${formatRp(profit)})</span></span>`;
-        }
-        
-        hint.innerHTML = text;
-    } else {
-        hint.innerHTML = '';
-    }
+    hint.textContent = (minQty > 0 && totalH > 0)
+        ? `≈ Rp${Math.round(totalH/minQty).toLocaleString('id-ID')} / pcs`
+        : '';
 }
 
 
@@ -1757,57 +1589,12 @@ function calculateGrandTotal() {
     const ppnEl = document.getElementById('purchaseTotalPPN');
     if(ppnEl) ppnEl.textContent = formatRupiah(totalPpn);
     document.getElementById('purchaseGrandTotal').textContent = formatRupiah(currentGrandTotal);
-    saveDraft();
 }
 
 // ===== Draft and Mass Actions =====
-function saveDraft() {
-    // Collect draft data
-    const draft = {
-        salesRepId: currentSalesRepId,
-        supplierId: currentSupplierId,
-        isOtherMode: isOtherMode,
-        purchaseDate: document.getElementById('purchaseDate').value,
-        invoiceDiscount: document.getElementById('invoiceDiscount').value,
-        items: purchaseItems
-    };
-    try {
-        localStorage.setItem('alfarezmart_purchase_draft', JSON.stringify(draft));
-    } catch (e) {
-        console.warn('Gagal menyimpan draft ke localStorage', e);
-    }
-}
-
-function loadDraft() {
-    try {
-        const draftJson = localStorage.getItem('alfarezmart_purchase_draft');
-        if (!draftJson) return;
-        const draft = JSON.parse(draftJson);
-        
-        if (draft.purchaseDate) document.getElementById('purchaseDate').value = draft.purchaseDate;
-        if (draft.invoiceDiscount) document.getElementById('invoiceDiscount').value = draft.invoiceDiscount;
-        
-        if (draft.isOtherMode) {
-            salesRepSB.setValue('other', '📦 Other — belum tahu supplier/sales');
-            onSalesRepPicked('other', '📦 Other — belum tahu supplier/sales');
-        } else if (draft.salesRepId) {
-            const sr = salesRepsLookup[draft.salesRepId];
-            if (sr) {
-                salesRepSB.setValue(draft.salesRepId, sr.name + (sr.supplier_name ? ' · ' + sr.supplier_name : ''));
-                onSalesRepPicked(draft.salesRepId, sr.name);
-            }
-        }
-
-        if (Array.isArray(draft.items) && draft.items.length > 0) {
-            purchaseItems = draft.items;
-            renderCart();
-            calculateTotal();
-            showToast('Draft sebelumnya berhasil dimuat', 'info');
-        }
-    } catch (e) {
-        console.warn('Gagal memuat draft', e);
-    }
-}
+// Drafts disabled in edit mode
+function saveDraft() {}
+function loadDraft() {}
 
 async function clearAllDrafts() {
     if (purchaseItems.length === 0) return;
@@ -1976,8 +1763,8 @@ function buildMiniPricingTableHtml(item) {
         const ret  = parseFloat(pkg.sell_price_retail) || 0;
         const who  = parseFloat(pkg.sell_price_wholesale) || 0;
 
-        const mR = (nett > 0 && ret > 0) ? ((ret - nett) / nett * 100) : null;
-        const mW = (nett > 0 && who > 0) ? ((who - nett) / nett * 100) : null;
+        const mR = (nett > 0 && ret > 0) ? ((ret - nett) / ret * 100) : null;
+        const mW = (nett > 0 && who > 0) ? ((who - nett) / who * 100) : null;
         const profitR = ret > 0 ? (ret - nett) : null;
         const profitW = who > 0 ? (who - nett) : null;
         const cR = mR !== null ? (mR >= 10 ? 'var(--success)' : mR >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
@@ -2511,7 +2298,7 @@ function renderCart() {
         const selBaseQty = parseFloat(selPkg?.base_qty) || 1;
         const totalVal  = Math.round((item.quantity || 1) * (item.buy_price || 0));
         const hasPkgs   = item.packagings.length > 1;
-        const drawerHtml  = buildDrawerRowHtml(item, 'item');
+        const drawerHtml  = hasPkgs ? buildDrawerRowHtml(item, 'item') : '';
 
         // Simple per-unit price summary
         const buyPrice = parseFloat(selPkg?.buy_price) || 0;
@@ -2562,7 +2349,7 @@ function renderCart() {
             <div style="margin-bottom:10px;">
                 <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Total Harga Pembelian</label>
                 <input type="number" id="main_total_${item.id}" class="form-control-dark" style="width:100%;padding:8px;font-size:13px;font-weight:600;color:var(--info);"
-                       value="${totalVal > 0 ? totalVal : ''}" placeholder="Masukkan total harga..."
+                       value="${totalVal > 0 ? totalVal : ''}" placeholder="Masukkan total harga..." step="any"
                        oninput="onMainInputChange(${item.id}, 'total', this.value)">
             </div>
 
@@ -2591,6 +2378,7 @@ function renderCart() {
             <!-- ── Trend Banner (OUTSIDE drawer) ── -->
             <div class="item-trend-banner">${buildTrendBannerHtml(item)}</div>
 
+            ${hasPkgs ? `
             <!-- ── Drawer Toggle Button ── -->
             <button id="drawer_btn_${item.id}" type="button" onclick="toggleItemDrawer(${item.id})"
                     style="width:100%;margin-top:10px;background:var(--surface-2);color:var(--primary);border:1px dashed var(--border-color);padding:9px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;">
@@ -2604,7 +2392,7 @@ function renderCart() {
                 </div>
                 <!-- Per-packaging detail editors -->
                 ${drawerHtml}
-            </div>
+            </div>` : ''}
         </div>`;
     });
 
@@ -2741,7 +2529,7 @@ async function submitPurchase() {
 
     try {
         const payload = {
-            supplier_id: isOtherMode ? null : (currentSupplierId || null),
+            supplier_id: isOtherMode ? (currentSupplierId || null) : (currentSupplierId || null),
             sales_rep_id: isOtherMode ? null : (currentSalesRepId || null),
             notes: isOtherMode ? 'Other — supplier/sales belum diketahui' : '',
             purchase_date: document.getElementById('purchaseDate').value,
@@ -2749,7 +2537,7 @@ async function submitPurchase() {
             grand_total: currentGrandTotal,
             invoice_photo_base64: invoicePhotoBase64,
             items: purchaseItems.map(i => {
-                const itemNett = parseFloat(i.harga_nett) || parseFloat(i.buy_price) || 0;
+                const itemNett = calcItemNett(parseFloat(i.buy_price) || 0, parseFloat(i.ppn_pct) || 0, i.diskon_mode || 'rp', parseFloat(i.diskon_value) || 0);
                 return {
                     product_id: i.product_id,
                     level: i.level,
@@ -2760,7 +2548,6 @@ async function submitPurchase() {
                     ppn_pct: parseFloat(i.ppn_pct) || 0,
                     diskon_mode: i.diskon_mode || 'rp',
                     diskon_value: parseFloat(i.diskon_value) || 0,
-                    harga_nett: itemNett,
                     packagings: i.packagings.map(p => {
                         const pkgNett = calcItemNett(parseFloat(p.buy_price) || 0, parseFloat(p.ppn_pct) || 0, p.diskon_mode || 'rp', parseFloat(p.diskon_value) || 0);
                         return {
@@ -2778,32 +2565,12 @@ async function submitPurchase() {
             })
         };
 
-        // ── OFFLINE MODE: queue to pending_changes ──
-        if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
-            await OfflineDB.addPendingChange(`${BASE_URL}api/purchases`, 'POST', payload);
-            localStorage.removeItem('alfarezmart_purchase_draft');
-            showToast('📦 Pembelian disimpan offline! Akan otomatis sinkron saat online.', 'info', 5000);
-            if (typeof updateSyncBadge === 'function') updateSyncBadge();
-            setTimeout(() => window.location.reload(), 1800);
-            return;
-        }
-
-        const res = await fetch(`${BASE_URL}api/purchases`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfVal
-            },
-            body: JSON.stringify(payload)
-        });
-        const result = await res.json();
-
-        if (result.success) {
-            localStorage.removeItem('alfarezmart_purchase_draft'); // Hapus draft agar form kosong
-            showToast('✅ Pembelian berhasil disimpan!', 'success');
-            setTimeout(() => window.location.reload(), 1500);
+        const res = await api(`${BASE_URL}api/purchases/${purchaseId}/update`, 'POST', payload);
+        if (res.success) {
+            showToast('Pembelian berhasil diperbarui!', 'success');
+            setTimeout(() => window.location.href = BASE_URL + 'purchases', 1500);
         } else {
-            showToast('❌ ' + (result.error || 'Gagal menyimpan pembelian'), 'error');
+            showToast('❌ ' + (res.error || 'Gagal menyimpan pembelian'), 'error');
             btn.innerHTML = prevText;
             btn.disabled = false;
         }
@@ -2895,7 +2662,7 @@ async function openBulkInputModal() {
             `<option value="${p.level}" ${p.level == item.level ? 'selected' : ''}>${p.unit_name} (Isi ${p.base_qty})</option>`
         ).join('');
         const hasPkgs    = item.packagings.length > 1;
-        const drawerHtml  = buildDrawerRowHtml(item, 'bulk');
+        const drawerHtml  = hasPkgs ? buildDrawerRowHtml(item, 'bulk') : '';
 
         // Simple per-unit price summary (instead of full table)
         const selPkg = item.packagings.find(p => p.level == item.level) || item.packagings[0];
@@ -2925,7 +2692,7 @@ async function openBulkInputModal() {
                 <div style="flex:2;">
                     <label style="font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:3px;">
                         <span>Kemasan Beli</span>
-                        <a href="<?= BASE_URL ?>settings/master-data" target="_blank" style="color:var(--info);text-decoration:none;font-size:9px;"><i class="bi bi-box-arrow-up-right"></i></a>
+                        <a href="nullsettings/master-data" target="_blank" style="color:var(--info);text-decoration:none;font-size:9px;"><i class="bi bi-box-arrow-up-right"></i></a>
                     </label>
                     <select class="form-select-dark bulk-pkg-select" style="width:100%;padding:6px;font-size:11px;" onchange="onBulkLevelChange('${item.id}', this.value)">
                         ${levelOptions}
@@ -2973,6 +2740,7 @@ async function openBulkInputModal() {
             <!-- ── Trend Banner (OUTSIDE drawer) ── -->
             <div class="bulk-trend-banner">${buildTrendBannerHtml(item)}</div>
 
+            ${hasPkgs ? `
             <!-- ── Drawer Toggle ── -->
             <button class="bulk-drawer-btn" type="button" onclick="toggleBulkDrawer('${item.id}', this)"
                     style="width:100%;margin-top:8px;background:var(--surface-1);color:var(--primary);border:1px dashed var(--border-color);padding:7px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;">
@@ -2985,7 +2753,7 @@ async function openBulkInputModal() {
                 </div>
                 <!-- Per-packaging detail editors -->
                 ${drawerHtml}
-            </div>
+            </div>` : ''}
         </div>`;
     }).join('');
 
@@ -3208,4 +2976,3 @@ function filterBulkModal(keyword) {
 }
 
 
-</script>
