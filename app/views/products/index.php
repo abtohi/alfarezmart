@@ -655,7 +655,8 @@ async function doOfflineSearch(query) {
                     ${photoHtml}
                     <div class="product-info" style="width:calc(100% - 76px);">
                         <div class="product-name">${name}</div>
-                        <div class="product-category">${brandCat}</div>
+                        <div class="product-category">${brandCat}</div>`;
+
             let baseMarginHtml = '';
             if (ROLE_IS_SUPERADMIN && p.packagings && p.packagings.length > 0) {
                 const basePkg = p.packagings[0];
