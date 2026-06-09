@@ -550,10 +550,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     resultsDiv.innerHTML = items.map(p => {
                         const name = (p.short_label || p.full_name || '').replace(/</g,'&lt;');
                         const brand = (p.brand_name || '').replace(/</g,'&lt;');
-                        const price = p.price_small_retail ? `Rp${parseInt(p.price_small_retail).toLocaleString('id-ID')}` : (p.packagings && p.packagings.length > 0 ? `Rp${parseInt(p.packagings[0].sell_price_retail).toLocaleString('id-ID')}` : '');
+                        let priceText = '';
+                        if (p.packagings && p.packagings.length > 0) {
+                            const pkgsHtml = p.packagings.map(pkg => {
+                                const price = parseFloat(pkg.sell_price_retail) || 0;
+                                return price > 0 ? `<div style="font-size:var(--font-size-xs); margin-top:2px; text-align:right;"><span style="color:var(--primary);font-weight:600;">Rp${price.toLocaleString('id-ID')}</span> <span style="font-size:10px; color:var(--text-muted);">/ ${pkg.unit_name}</span></div>` : '';
+                            }).join('');
+                            if (pkgsHtml) {
+                                priceText = `<div>${pkgsHtml}</div>`;
+                            }
+                        } else if (p.price_small_retail) {
+                            const price = parseInt(p.price_small_retail);
+                            priceText = `<div style="font-size:var(--font-size-xs); margin-top:2px; text-align:right;"><span style="color:var(--primary);font-weight:600;">Rp${price.toLocaleString('id-ID')}</span></div>`;
+                        }
+
                         return `<a href="<?= BASE_URL ?>products/${p.id}" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border-color);text-decoration:none;color:var(--text-primary);font-size:var(--font-size-sm);">
                             <div><div style="font-weight:600;">${name}</div>${brand ? `<div style="font-size:var(--font-size-xs);color:var(--text-muted);">${brand}</div>` : ''}</div>
-                            ${price ? `<span style="color:var(--primary);font-weight:600;font-size:var(--font-size-xs);white-space:nowrap;">${price}</span>` : ''}
+                            ${priceText}
                         </a>`;
                     }).join('');
                 }
