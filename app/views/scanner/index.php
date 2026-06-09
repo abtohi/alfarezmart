@@ -1,4 +1,8 @@
 <!-- Barcode Scanner View -->
+<?php
+$scannerUserLevel = $_SESSION['user_level'] ?? '';
+$scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
+?>
 <div class="page-section">
     <div style="text-align: center; margin-bottom: 20px;">
         <div style="width: 80px; height: 80px; background: var(--primary-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
@@ -31,6 +35,7 @@
 </div>
 
 <script>
+const SCANNER_IS_SUPERADMIN = <?= $scannerIsSuperadmin ? 'true' : 'false' ?>;
 async function lookupBarcode() {
     const input = document.getElementById('barcodeInput');
     const code = input.value.trim();
@@ -135,7 +140,7 @@ function renderPackagingsForList(packagings) {
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
                         <div style="font-weight:700; font-size:11px; color:var(--text-primary);">${jenis} <span style="font-weight:400; color:var(--text-muted); font-size:9px;">(Isi ${qty})</span></div>
                         <div style="font-size:9px; color:rgba(150, 150, 150, 0.4); text-shadow:0 1px 1px rgba(0,0,0,0.1); text-align:right;">
-                            ${modal > 0 ? `Modal: ${formatRupiah(modal)} | Selisih: ${formatRupiah(marginAmt)} (${marginPct}%)` : ''}
+                            ${SCANNER_IS_SUPERADMIN && modal > 0 ? `Modal: ${formatRupiah(modal)} | Selisih: ${formatRupiah(marginAmt)} (${marginPct}%)` : ''}
                         </div>
                     </div>
                     <div style="display:flex; justify-content:space-between; font-size:12px;">
@@ -212,7 +217,7 @@ function renderProductScanResult(data, isOffline) {
                             <span style="font-size:10px; font-weight:400; color:var(--text-muted); background:var(--surface-2); padding:2px 6px; border-radius:4px; margin-left:4px;">Isi ${baseQty} pcs</span>
                         </div>
                         <div style="font-size:9px; color:rgba(150, 150, 150, 0.4); margin-top:2px; text-shadow:0 1px 1px rgba(0,0,0,0.1);">
-                            ${modal > 0 ? `Modal: ${formatRupiah(modal)} | Selisih: ${formatRupiah(marginAmt)} (${marginPct}%)` : ''}
+                            ${SCANNER_IS_SUPERADMIN && modal > 0 ? `Modal: ${formatRupiah(modal)} | Selisih: ${formatRupiah(marginAmt)} (${marginPct}%)` : ''}
                         </div>
                     </div>
                     <div style="text-align:right;">

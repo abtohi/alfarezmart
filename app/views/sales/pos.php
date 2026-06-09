@@ -398,6 +398,16 @@ async function performSearch(q) {
         sug.innerHTML = items.map(p => {
             const name = escapeHtml(p.short_label || p.full_name);
             const brand = escapeHtml(p.brand_name || '');
+            const invoiceName = p.invoice_name ? `<span style="font-size:0.65rem;color:var(--info);">(${escapeHtml(p.invoice_name)})</span>` : '';
+            
+            // Photo or icon
+            const thumbHtml = p.photo 
+                ? `<div style="width:44px;height:44px;border-radius:var(--radius-sm);overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--surface-2);flex-shrink:0;">
+                       <img src="${BASE_URL}${escapeHtml(p.photo)}" style="width:100%;height:100%;object-fit:contain;" loading="lazy">
+                   </div>`
+                : `<div style="width:44px;height:44px;background:var(--primary-bg);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--primary);flex-shrink:0;">
+                       <i class="bi bi-box-seam" style="font-size:1.2rem;"></i>
+                   </div>`;
             
             let priceText = '';
             if (p.packagings && p.packagings.length > 0) {
@@ -413,12 +423,10 @@ async function performSearch(q) {
             }
 
             return `
-            <div data-id="${p.id}" style="padding:10px 12px; background:var(--surface-1); margin-bottom:6px; cursor:pointer; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; align-items:flex-start; gap:12px; transition:all 0.2s; box-shadow:var(--shadow-sm);" onclick="selectProduct(${p.id})" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
-                <div style="width:36px; height:36px; background:var(--primary-bg); border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; color:var(--primary); flex-shrink:0;">
-                    <i class="bi bi-box-seam" style="font-size:1.1rem;"></i>
-                </div>
+            <div data-id="${p.id}" style="padding:10px 12px; background:var(--surface-1); margin-bottom:6px; cursor:pointer; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; align-items:flex-start; gap:10px; transition:all 0.2s; box-shadow:var(--shadow-sm);" onclick="selectProduct(${p.id})" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
+                ${thumbHtml}
                 <div style="flex:1; min-width:0;">
-                    <div style="font-weight:600; font-size:0.8rem; color:var(--text-primary); line-height:1.3; word-break:break-word; white-space:normal;">${name}</div>
+                    <div style="font-weight:600; font-size:0.8rem; color:var(--text-primary); line-height:1.3; word-break:break-word; white-space:normal;">${name} ${invoiceName}</div>
                     <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${brand ? brand : 'Tanpa Merek'}</div>
                 </div>
                 <div style="text-align:right;">

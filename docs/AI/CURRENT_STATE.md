@@ -21,6 +21,23 @@
 
 ## Pekerjaan Terakhir
 
+### Sesi: 2026-06-09 — Tweak UI Role Margin & Pencarian POS (Invoice Name & Thumbnail)
+
+**Yang dikerjakan:**
+1. **Sembunyikan Info Modal/Margin** — Membatasi visibilitas informasi harga modal, margin (Rp), dan persentase markup (%) di halaman Produk (`products/index.php`) dan Scanner (`scanner/index.php`) agar **hanya bisa dilihat oleh akun dengan role `superadmin`**. Akun `staff` dan `admin` tidak lagi melihat info tersebut.
+2. **Thumbnail Foto di POS** — Menambahkan pratinjau thumbnail foto produk di dalam panel list produk rekomendasi (hasil *live search*) pada halaman Kasir POS (`pos.php`), sehingga deteksi produk saat dicari jauh lebih akurat dan cepat.
+3. **Pencarian Nama Invoice di POS & Backend** — Memperbarui logika pencarian produk (`ProductModel::searchProducts` dan JS OfflineDB) agar algoritma multi-keywords juga mencocokkan kata kunci ke dalam kolom `invoice_name` (nama produk dari invoice supplier). Hasilnya di panel pencarian POS akan dimunculkan dengan tambahan nama invoice dalam tanda kurung jika tersedia, namun harga yang ditampilkan tetap berpedoman pada ecer/grosir kemasan saat ini.
+
+**File yang Diubah:**
+- `app/views/products/index.php` — Tweak PHP & JS rendering info margin dengan `isSuperadmin` check.
+- `app/views/scanner/index.php` — Injection variable superadmin dari server dan hiding info margin di client.
+- `app/views/sales/pos.php` — Perbaikan list recommendation HTML template dengan `p.photo` dan `p.invoice_name`.
+- `app/models/ProductModel.php` — Inklusi kolom `invoice_name` pada skema binding array SQL search.
+- `public/js/offline-db.js` — Penambahan `invoice_name` ke lookup local dictionary filter.
+- `app/views/layouts/app.php` & `sw.js` — Bump APP_VERSION & CACHE_NAME ke 10.3 untuk PWA Cache Busting.
+
+---
+
 ### Sesi: 2026-06-09 — Tweak UI Detail, Edit, & Daftar Produk
 
 **Yang dikerjakan:**

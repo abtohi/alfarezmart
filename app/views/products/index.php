@@ -83,6 +83,7 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
             <?php
             $userLevel = $_SESSION['user_level'] ?? '';
             $isStaff = $userLevel === 'staff';
+            $isSuperadmin = $userLevel === 'superadmin';
             if (!$isStaff):
             ?>
             <button type="button" id="btnBulkDelete" onclick="bulkDeleteSelected()" style="display:none;background:var(--danger);color:white;border:none;border-radius:var(--radius-sm);padding:6px 12px;font-size:var(--font-size-xs);cursor:pointer;align-items:center;gap:4px;flex-shrink:0;">
@@ -143,7 +144,7 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
                                     <span class="product-price-wholesale" style="margin-left:6px;"><?= Helper::rupiah($p['price_small_wholesale']) ?></span>
                                 <?php endif; ?>
                             </div>
-                            <?php if (!empty($p['packagings']) && isset($p['packagings'][0])): 
+                            <?php if ($isSuperadmin && !empty($p['packagings']) && isset($p['packagings'][0])): 
                                 $basePkg = $p['packagings'][0];
                                 $baseMarginAmt = current($p['packagings'])['sell_price_retail'] - current($p['packagings'])['buy_price'];
                                 $baseMarginPct = current($p['packagings'])['buy_price'] > 0 ? round(($baseMarginAmt / current($p['packagings'])['buy_price']) * 100, 1) : 0;
@@ -171,9 +172,11 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
                                     <?php endif; ?>
                                 </div>
                             </div>
+                            <?php if ($isSuperadmin): ?>
                             <div style="text-align:right;font-size:9px;color:var(--text-muted);opacity:0.8;text-shadow:0 1px 1px rgba(0,0,0,0.1);">
                                 Modal: <?= Helper::rupiah($pkg['buy_price']) ?> | Selisih: <?= Helper::rupiah($marginAmt) ?> (<?= $marginPct ?>%)
                             </div>
+                            <?php endif; ?>
                         </div>
                         <?php endforeach; ?>
                     </div>
@@ -245,6 +248,7 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
 let selectMode = false;
 let pressTimer;
 const ROLE_IS_STAFF = <?= $isStaff ? 'true' : 'false' ?>;
+const ROLE_IS_SUPERADMIN = <?= $isSuperadmin ? 'true' : 'false' ?>;
 
 // Elemen UI global (akan di-set setelah DOM ready)
 let _selectAllCheckbox, _btnBulkDelete, _selectedCountSpan, _btnAddProduct, _selectAllContainer, _totalProductsText;
@@ -653,7 +657,7 @@ async function doOfflineSearch(query) {
                         <div class="product-name">${name}</div>
                         <div class="product-category">${brandCat}</div>
             let baseMarginHtml = '';
-            if (p.packagings && p.packagings.length > 0) {
+            if (ROLE_IS_SUPERADMIN && p.packagings && p.packagings.length > 0) {
                 const basePkg = p.packagings[0];
                 const baseMarginAmt = parseFloat(basePkg.sell_price_retail) - parseFloat(basePkg.buy_price || 0);
                 const baseMarginPct = parseFloat(basePkg.buy_price) > 0 ? ((baseMarginAmt / parseFloat(basePkg.buy_price)) * 100).toFixed(1) : 0;
@@ -693,9 +697,7 @@ async function doOfflineSearch(query) {
                                     ${spW > 0 ? `<span style="color:var(--warning);margin-left:4px;">(G: Rp${spW.toLocaleString('id-ID')})</span>` : ''}
                                 </div>
                             </div>
-                            <div style="text-align:right;font-size:9px;color:var(--text-muted);opacity:0.8;text-shadow:0 1px 1px rgba(0,0,0,0.1);">
-                                Modal: Rp${bp.toLocaleString('id-ID')} | Selisih: Rp${marginAmt.toLocaleString('id-ID')} (${marginPct}%)
-                            </div>
+                            ${ROLE_IS_SUPERADMIN ? `<div style="text-align:right;font-size:9px;color:var(--text-muted);opacity:0.8;text-shadow:0 1px 1px rgba(0,0,0,0.1);">Modal: Rp${bp.toLocaleString('id-ID')} | Selisih: Rp${marginAmt.toLocaleString('id-ID')} (${marginPct}%)</div>` : ''}
                         </div>`;
                 });
                 html += `</div>`;
