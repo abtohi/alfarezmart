@@ -171,13 +171,26 @@ document.addEventListener('DOMContentLoaded', async function() {
                     updateFilterOptions();
                     updateCategoryDatalist();
                     // Refresh from server in background if online
-                    if (navigator.onLine) refreshMasterDataFromServer();
+                    if (navigator.onLine) {
+                        // Don't await, but ensure it completes
+                        refreshMasterDataFromServer().catch(e => console.error("Background refresh failed:", e));
+                    }
                     return;
                 }
             }
             await refreshMasterDataFromServer();
         } catch (e) {
             console.error("Gagal memuat data master keuangan:", e);
+            // Ensure accountsData has at least default entries to prevent empty dropdown
+            if (!accountsData || accountsData.length === 0) {
+                accountsData = [
+                    { id: 1, name: 'Saldo Utama', is_active: 1 },
+                    { id: 2, name: 'Saldo Rokok', is_active: 1 },
+                    { id: 3, name: 'Saldo Pulsa', is_active: 1 }
+                ];
+            }
+            renderPosGrid();
+            updateFilterOptions();
         }
     }
 
@@ -765,6 +778,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     };
 
     window.showAddLogModal = async function() {
+        // Ensure master data is loaded before showing modal
+        if (!accountsData || accountsData.length === 0) {
+            showToast('Tunggu, data POS Keuangan masih dimuat...', 'info');
+            await loadMasterData();
+            if (!accountsData || accountsData.length === 0) {
+                showToast('Gagal memuat data POS Keuangan', 'error');
+                return;
+            }
+        }
+
         const currentDate = dateInput.value;
         
         // Build Select Options for POS

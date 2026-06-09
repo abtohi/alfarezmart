@@ -439,7 +439,11 @@ async function bulkDeleteSelected() {
 }
 
 function filterByCategory(val) {
-    const q = document.getElementById('productSearchInput')?.value?.trim() || '';
+    // Clear search input when category changes
+    const searchInput = document.getElementById('productSearchInput');
+    if (searchInput) searchInput.value = '';
+    
+    const q = '';  // Always empty search when filtering by category
     const minP = document.getElementById('filterMinPrice')?.value?.trim() || '';
     const maxP = document.getElementById('filterMaxPrice')?.value?.trim() || '';
     const parts = [];
@@ -618,16 +622,25 @@ async function doOfflineSearch(query) {
             items = await OfflineDB.searchProducts(query);
         }
 
-        // Apply Price Filters & Category Filters Client-Side (Optional enhancements)
-        const catFilter = document.getElementById('categoryFilterSearchBox') ? document.querySelector('#categoryFilterSearchBox input[type="hidden"]')?.value : null;
-        const minP = parseFloat(document.getElementById('filterMinPrice')?.value);
-        const maxP = parseFloat(document.getElementById('filterMaxPrice')?.value);
+        // Apply Filters from URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const catId = urlParams.get('category');
+        const minP = parseFloat(urlParams.get('min_price'));
+        const maxP = parseFloat(urlParams.get('max_price'));
         
-        if (catFilter || !isNaN(minP) || !isNaN(maxP)) {
+        if (catId || !isNaN(minP) || !isNaN(maxP)) {
             items = items.filter(p => {
                 let match = true;
-                // Since OfflineDB only has category_name, not category_id, we can't easily filter by ID unless we map it. 
-                // But we'll do price at least:
+                // Filter by category (compare category_id if available, or fallback to category name)
+                if (catId) {
+                    const pCatId = String(p.category_id || '');
+                    const pCatName = String(p.category_name || '').toLowerCase();
+                    const filterCat = String(catId).toLowerCase();
+                    if (pCatId !== String(catId) && pCatName !== filterCat) {
+                        match = false;
+                    }
+                }
+                // Filter by price range
                 const price = p.price_small_retail ? parseFloat(p.price_small_retail) : (p.packagings && p.packagings.length > 0 ? parseFloat(p.packagings[0].sell_price_retail) : 0);
                 if (!isNaN(minP) && price < minP) match = false;
                 if (!isNaN(maxP) && price > maxP) match = false;

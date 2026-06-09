@@ -166,11 +166,6 @@
             <span style="font-weight:700;">Grand Total</span>
             <span id="purchaseGrandTotal" style="font-size:var(--font-size-xl); font-weight:800; color:var(--success);">Rp0</span>
         </div>
-
-        <button class="btn-outline-custom" style="width:100%; font-size:12px; padding:8px;" onclick="distributeAdjustments()">
-            <i class="bi bi-calculator"></i> Distribusikan ke Harga Modal Barang
-        </button>
-        <div style="font-size:10px; color:var(--text-muted); text-align:center; margin-top:4px;">Menghitung ulang harga modal satuan berdasarkan Diskon & PPN</div>
     </div>
 
     <button id="btnSavePurchase" class="btn-primary-custom" style="width:100%; margin-top:16px; padding:14px; cursor:pointer;" onclick="submitPurchase()">
@@ -920,7 +915,7 @@ function changeLevel(tempId, newLevel) {
         item.ppn_pct = pkg.ppn_pct || 0;
         item.diskon_mode = pkg.diskon_mode || 'rp';
         item.diskon_value = pkg.diskon_value || 0;
-        item.harga_nett = calcItemNett(item.buy_price, item.ppn_pct, item.diskon_mode, item.diskon_value);
+        item.harga_nett = calcItemNett(item.buy_price, item.ppn_pct, item.diskon_mode, item.diskon_value, item.quantity);
         item.total = item.quantity * item.buy_price;
         renderCart();
     }
@@ -965,7 +960,7 @@ function updateItem(tempId, field, value) {
     }
     
     if (field === 'buy_price') {
-        item.harga_nett = calcItemNett(item.buy_price, item.ppn_pct || 0, item.diskon_mode || 'rp', item.diskon_value || 0);
+        item.harga_nett = calcItemNett(item.buy_price, item.ppn_pct || 0, item.diskon_mode || 'rp', item.diskon_value || 0, item.quantity);
         const nettEl = document.getElementById(`nett_info_${tempId}`);
         if (nettEl) nettEl.innerHTML = buildNettInfo(item);
     }
@@ -1295,12 +1290,16 @@ function syncPricesFromLevel1(item) {
 }
 
 /** Calculate nett buy price after PPN and discount */
-function calcItemNett(buy, ppn_pct, diskon_mode, diskon_value) {
+function calcItemNett(buy, ppn_pct, diskon_mode, diskon_value, qty = 1) {
     buy = parseFloat(buy) || 0;
     const ppn_amt = buy * ((parseFloat(ppn_pct) || 0) / 100);
+    
+    // For Rp mode: diskon_value is total discount, divide by qty for per-unit discount
+    // For pct mode: percentage is applied to buy price directly
     const diskon_amt = diskon_mode === 'pct'
         ? buy * ((parseFloat(diskon_value) || 0) / 100)
-        : (parseFloat(diskon_value) || 0);
+        : ((parseFloat(diskon_value) || 0) / (parseFloat(qty) || 1));
+    
     return Math.max(0, buy + ppn_amt - diskon_amt);
 }
 
@@ -1336,7 +1335,7 @@ function updateItemPpnDiskon(tempId, type, val) {
         item.diskon_value = parseFloat(val) || 0;
     }
     
-    item.harga_nett = calcItemNett(item.buy_price, item.ppn_pct, item.diskon_mode, item.diskon_value);
+    item.harga_nett = calcItemNett(item.buy_price, item.ppn_pct, item.diskon_mode, item.diskon_value, item.quantity);
     
     const nettEl = document.getElementById(`nett_info_${tempId}`);
     if (nettEl) nettEl.innerHTML = buildNettInfo(item);
@@ -1353,13 +1352,23 @@ function calcMarginForLevel(lvEl) {
     const ppn = parseFloat(lvEl?.querySelector('.pkg-ppn')?.value) || 0;
     const diskonMode = lvEl?.querySelector('.pkg-diskon-mode')?.value || 'rp';
     const diskonVal = parseFloat(lvEl?.querySelector('.pkg-diskon-value')?.value) || 0;
-    const nett = calcItemNett(buy, ppn, diskonMode, diskonVal);
+    
+    // Try to get item context for quantity
+    let qty = 1;
+    const uid = lvEl?.closest('[id^="drawer_"]')?.id?.split('_')[1] || lvEl?.closest('.item-card')?.dataset?.uid;
+    if (uid) {
+        let item = typeof purchaseItems !== 'undefined' ? purchaseItems.find(i => i.id == parseInt(uid)) : null;
+        if (!item && typeof bulkItems !== 'undefined') item = bulkItems.find(b => b.id == parseInt(uid));
+        qty = item?.quantity || 1;
+    }
+    
+    const nett = calcItemNett(buy, ppn, diskonMode, diskonVal, qty);
 
     const nettInfoEl = lvEl?.querySelector('.pkg-nett-info');
     if (nettInfoEl) {
         if (ppn > 0 || diskonVal > 0) {
             const ppnAmt = buy * ppn / 100;
-            const diskonAmt = diskonMode === 'pct' ? buy * diskonVal / 100 : diskonVal;
+            const diskonAmt = diskonMode === 'pct' ? buy * diskonVal / 100 : (diskonVal / qty);
             nettInfoEl.innerHTML = '<span style="color:var(--text-muted);">Modal: Rp' + Math.round(buy).toLocaleString('id-ID') + '</span>'
                 + (ppn > 0 ? ' <span style="color:var(--warning);">+PPN: Rp' + Math.round(ppnAmt).toLocaleString('id-ID') + '</span>' : '')
                 + (diskonVal > 0 ? ' <span style="color:var(--success);">\u2212Diskon: Rp' + Math.round(diskonAmt).toLocaleString('id-ID') + '</span>' : '')
@@ -1416,7 +1425,7 @@ function openAllPackagingsModal(tempId) {
         const baseQty = parseFloat(pkg.base_qty) || 1;
         const origBuy = parseFloat(pkg._orig_buy) || 0;
         const origRet = parseFloat(pkg._orig_ret) || 0;
-        const nett = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
+        const nett = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value, item.quantity);
 
         // Price change badge
         let changeBadge = '';
@@ -1561,7 +1570,7 @@ function openAllPackagingsModal(tempId) {
                 if (ppnEl) pkg.ppn_pct = parseFloat(ppnEl.value) || 0;
                 if (dModeEl) pkg.diskon_mode = dModeEl.value || 'rp';
                 if (dValEl) pkg.diskon_value = parseFloat(dValEl.value) || 0;
-                pkg.harga_nett = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
+                pkg.harga_nett = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value, item.quantity);
 
                 const lvEl = document.querySelector(`.packaging-level-edit[data-level="${pkg.level}"]`);
                 if (lvEl) {
@@ -1693,16 +1702,23 @@ function recalcTierHint(el) {
         } else if (drawerEl) {
             const buy = parseFloat(drawerEl.querySelector('.drawer-pkg-buy')?.value) || 0;
             const ppn = parseFloat(drawerEl.closest('[data-item-ppn]')?.dataset.itemPpn || drawerEl.closest('.item-card')?.dataset.ppn || 0);
-            nett = typeof calcItemNett === 'function' ? calcItemNett(buy, ppn, 'rp', 0) : buy;
             
             const uid = drawerEl.closest('[id^="drawer_"]')?.id.split('_')[1];
+            let qty = 1;
+            if (uid) {
+                let item = typeof purchaseItems !== 'undefined' ? purchaseItems.find(i => i.id == uid) : null;
+                if (!item && typeof bulkItems !== 'undefined') item = bulkItems.find(b => b.id == uid);
+                qty = item?.quantity || 1;
+            }
+            nett = typeof calcItemNett === 'function' ? calcItemNett(buy, ppn, 'rp', 0, qty) : buy;
+            
             if (uid) {
                 let item = typeof purchaseItems !== 'undefined' ? purchaseItems.find(i => i.id == uid) : null;
                 if (!item && typeof bulkItems !== 'undefined') item = bulkItems.find(b => b.id == uid);
                 if (item) {
                     const level = parseInt(drawerEl.dataset.level || 1, 10);
                     const pkg = item.packagings.find(p => p.level == level);
-                    if (pkg) nett = pkg.harga_nett || (typeof calcItemNett === 'function' ? calcItemNett(buy, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value) : buy);
+                    if (pkg) nett = pkg.harga_nett || (typeof calcItemNett === 'function' ? calcItemNett(buy, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value, item.quantity) : buy);
                 }
             }
         }
@@ -1972,7 +1988,7 @@ function buildMiniPricingTableHtml(item) {
         const ppn  = parseFloat(pkg.ppn_pct) || 0;
         const dm   = pkg.diskon_mode || 'rp';
         const dv   = parseFloat(pkg.diskon_value) || 0;
-        const nett = calcItemNett(buy, ppn, dm, dv);
+        const nett = calcItemNett(buy, ppn, dm, dv, item.quantity);
         const ret  = parseFloat(pkg.sell_price_retail) || 0;
         const who  = parseFloat(pkg.sell_price_wholesale) || 0;
 
@@ -2570,7 +2586,7 @@ function renderCart() {
                            oninput="onMainInputChange(${item.id}, 'ppn', this.value)">
                 </div>
                 <div>
-                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Diskon</label>
+                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Diskon (Rp=Total)</label>
                     <div style="display:flex;gap:4px;">
                         <select class="form-select-dark item-diskon-mode" style="width:65px;padding:8px;font-size:11px;" onchange="onMainInputChange(${item.id}, 'diskon_mode', this.value)">
                             <option value="rp" ${(item.diskon_mode||'rp')==='rp'?'selected':''}>Rp</option>

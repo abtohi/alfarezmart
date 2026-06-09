@@ -257,15 +257,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('isMultivariant')?.addEventListener('change', (e) => {
         isMultivariant = e.target.checked;
         if (isMultivariant) {
+            // Close all SearchBox dropdowns before changing panel visibility
+            if (brandSB) brandSB.close();
+            if (categorySB) categorySB.close();
+            if (weightUnitSB) weightUnitSB.close();
+            
+            // Show multivariant panel
             document.getElementById('multiVariantPanel').style.display = 'block';
             document.getElementById('singleVariantPanel').style.display = 'none';
-            // productTypeInput not required anymore
             document.getElementById('singleNameInput').required = false;
             if (brandSB) brandSB.setRequired(true);
         } else {
+            // Close all SearchBox dropdowns before changing panel visibility
+            if (brandSB) brandSB.close();
+            if (categorySB) categorySB.close();
+            if (weightUnitSB) weightUnitSB.close();
+            
+            // Show single variant panel
             document.getElementById('multiVariantPanel').style.display = 'none';
             document.getElementById('singleVariantPanel').style.display = 'block';
-            // productTypeInput not required anymore
             document.getElementById('singleNameInput').required = true;
             if (brandSB) brandSB.setRequired(false);
         }
