@@ -290,6 +290,7 @@ Setelah implementasi:
 Setelah task selesai:
 - Update `docs/AI/CHANGE_LOG.md` sesuai perubahan yang dilakukan.
 - Update `docs/AI/CURRENT_STATE.md` jika status project berubah.
+- **WAJIB**: Jika ada penambahan fitur baru atau perubahan schema/database, selalu update `docs/AI/BLUEPRINT.md` dan pastikan AI context/dokumentasi (seperti README atau instruksi terkait) selalu tersinkronisasi dengan informasi terbaru.
 - Dokumentasikan secara singkat, jelas, dan sesuai fakta.
 - Jangan tulis perubahan yang tidak benar-benar dilakukan.
 - Jika ada perubahan behavior, flow, endpoint, konfigurasi, atau cara penggunaan fitur — tulis di dokumentasi.

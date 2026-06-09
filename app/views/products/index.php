@@ -114,8 +114,16 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
                 <input type="checkbox" class="product-checkbox" value="<?= (int)$p['id'] ?>" style="display:none;position:absolute;top:16px;left:16px;width:20px;height:20px;accent-color:var(--primary);z-index:2;">
                 <?php endif; ?>
                 <a href="<?= BASE_URL ?>products/<?= (int)$p['id'] ?>" class="product-card-link" style="display:flex;text-decoration:none;color:inherit;width:100%;">
-                    <div class="product-icon"><i class="bi bi-box-seam"></i></div>
-                    <div class="product-info" style="width:100%;">
+                    <?php if (!empty($p['photo'])): ?>
+                        <div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:var(--surface-2); flex-shrink:0; margin-right:16px;">
+                            <img src="<?= BASE_URL . htmlspecialchars($p['photo']) ?>" style="width:100%; height:100%; object-fit:contain;">
+                        </div>
+                    <?php else: ?>
+                        <div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; background:var(--primary-bg); color:var(--primary); font-size:1.5rem; flex-shrink:0; margin-right:16px;">
+                            <i class="bi bi-box-seam"></i>
+                        </div>
+                    <?php endif; ?>
+                    <div class="product-info" style="width:calc(100% - 76px);">
                         <div class="product-name"><?= htmlspecialchars($p['full_name'] ?? $p['short_label'] ?? '-') ?></div>
                     <div class="product-category">
                         <?= htmlspecialchars($p['brand_name'] ?? '') ?>
@@ -609,12 +617,20 @@ async function doOfflineSearch(query) {
             const price = p.price_small_retail ? parseFloat(p.price_small_retail) : (p.packagings && p.packagings.length > 0 ? parseFloat(p.packagings[0].sell_price_retail) : 0);
             const priceWs = p.price_small_wholesale ? parseFloat(p.price_small_wholesale) : (p.packagings && p.packagings.length > 0 ? parseFloat(p.packagings[0].sell_price_wholesale) : 0);
             
+            const photoHtml = p.photo 
+                ? `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:var(--surface-2); flex-shrink:0; margin-right:16px;">
+                       <img src="${BASE_URL}${p.photo}" style="width:100%; height:100%; object-fit:contain;">
+                   </div>`
+                : `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; background:var(--primary-bg); color:var(--primary); font-size:1.5rem; flex-shrink:0; margin-right:16px;">
+                       <i class="bi bi-box-seam"></i>
+                   </div>`;
+
             html += `
             <div class="product-card" data-id="${p.id}" style="position:relative;display:block;">
                 ${!ROLE_IS_STAFF ? `<input type="checkbox" class="product-checkbox" value="${p.id}" style="display:none;position:absolute;top:16px;left:16px;width:20px;height:20px;accent-color:var(--primary);z-index:2;">` : ''}
                 <a href="${BASE_URL}products/${p.id}" class="product-card-link" style="display:flex;text-decoration:none;color:inherit;width:100%;">
-                    <div class="product-icon"><i class="bi bi-box-seam"></i></div>
-                    <div class="product-info" style="width:100%;">
+                    ${photoHtml}
+                    <div class="product-info" style="width:calc(100% - 76px);">
                         <div class="product-name">${name}</div>
                         <div class="product-category">${brandCat}</div>
                         <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:4px;">

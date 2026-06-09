@@ -15,11 +15,29 @@
 | **Versi Asset** | `?v=9.0` (di `app/views/layouts/app.php`) |
 | **PHP Version** | XAMPP (cek `php -v`) |
 | **Timezone** | Asia/Jakarta (GMT+7) |
-| **Last Updated** | 2026-06-06 |
+| **Last Updated** | 2026-06-09 |
 
 ---
 
 ## Pekerjaan Terakhir
+
+### Sesi: 2026-06-09 — Tweak UI Detail, Edit, & Daftar Produk
+
+**Yang dikerjakan:**
+1. **Detail Harga di Halaman Produk** — Pada halaman `products/show.php`, ditambahkan informasi harga modal per kemasan, persentase markup, dan selisih harga (profit margin) dalam ukuran kecil dan samar di bawah harga jual ecer & grosir.
+2. **Upload Foto di Edit Produk** — Ditambahkan antarmuka pengubahan foto produk di halaman `products/edit.php`. User sekarang bisa melihat preview foto, mengunggah file baru, melihatnya secara fullscreen (modal), dan menghapusnya. 
+3. **Backend Delete Photo** — Diperbarui endpoint `ApiController::updateProductPhoto` untuk memproses parameter `delete_photo` jika dikirimkan oleh form, sehingga foto dapat direset ke null.
+4. **Thumbnail Daftar Produk** — Pada halaman `products/index.php`, tampilan fallback icon (`bi-box-seam`) diganti dengan foto produk (jika ada). Gambar dibuat `object-fit: contain` di dalam kontainer berukuran `60x60px` sehingga terlihat square, tidak terpotong, dan jarak antar margin (`margin-right: 16px`) diperbaiki agar tidak menempel dengan teks.
+5. **Update AI Instructions** — Menambahkan aturan di `ai-instructions.md` (bagian Documentation & Changelog Rules) agar AI wajib mengupdate dokumentasi `BLUEPRINT.md` atau `CURRENT_STATE.md` saat terjadi perubahan skema database atau fitur baru.
+
+**File yang Diubah:**
+- `app/views/products/show.php` — Tweak UI profit margin & buy price.
+- `app/views/products/edit.php` — Penambahan komponen upload/hapus foto produk beserta handler JS-nya.
+- `app/controllers/ApiController.php` — Modifikasi `updateProductPhoto` untuk penanganan `delete_photo`.
+- `app/views/products/index.php` — Modifikasi layout list item (`.product-card`) untuk menampilkan foto secara square.
+- `docs/AI/ai-instructions.md` — Modifikasi instruksi dokumentasi AI.
+
+---
 
 ### Sesi: 2026-06-06 — Revamp Total Algoritma AI Chat & Context Injection
 

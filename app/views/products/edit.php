@@ -45,6 +45,38 @@ $pkgsJson = json_encode($packagings, JSON_UNESCAPED_UNICODE);
         <input type="hidden" name="reference_product_id" id="referenceProductId" value="">
         <input type="hidden" name="csrf_token" id="csrfToken" value="<?= $csrfToken ?>">
 
+        <!-- Foto Produk -->
+        <div style="background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;border:1px solid var(--border-color);">
+            <div class="section-title" style="margin-bottom:12px;">Foto Produk</div>
+            <div style="display:flex; gap:16px; align-items:flex-start;">
+                <div id="photoPreviewContainer" style="width:100px; height:100px; border-radius:var(--radius-md); background:var(--surface-2); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; border:1px solid var(--border-color);">
+                    <?php if (!empty($product['photo'])): ?>
+                        <img id="photoPreview" src="<?= BASE_URL . htmlspecialchars($product['photo']) ?>" style="width:100%; height:100%; object-fit:contain; cursor:pointer;" onclick="viewFullPhoto(this.src)">
+                        <i id="photoIcon" class="bi bi-camera" style="display:none; font-size:2rem; color:var(--text-muted);"></i>
+                    <?php else: ?>
+                        <img id="photoPreview" style="display:none; width:100%; height:100%; object-fit:contain; cursor:pointer;" onclick="viewFullPhoto(this.src)">
+                        <i id="photoIcon" class="bi bi-camera" style="font-size:2rem; color:var(--text-muted);"></i>
+                    <?php endif; ?>
+                </div>
+                <div style="flex:1;">
+                    <input type="file" id="productPhotoInput" accept="image/*" style="display:none;" onchange="handleEditPhotoSelect(event)">
+                    <input type="hidden" id="photoBase64" value="">
+                    <input type="hidden" id="deletePhoto" value="0">
+                    <div style="display:flex; gap:8px; margin-bottom:8px;">
+                        <button type="button" class="btn-primary-custom" style="padding:6px 12px; font-size:12px;" onclick="document.getElementById('productPhotoInput').click()">
+                            <i class="bi bi-upload"></i> Upload / Ubah
+                        </button>
+                        <button type="button" class="btn-outline-custom" style="padding:6px 12px; font-size:12px; color:var(--danger); border-color:var(--danger);" onclick="removeProductPhoto()">
+                            <i class="bi bi-trash"></i> Hapus
+                        </button>
+                    </div>
+                    <div style="font-size:10px; color:var(--text-muted);">
+                        Upload foto baru untuk mengubah, atau hapus foto saat ini. Klik foto untuk melihat ukuran penuh.
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Identitas Produk -->
         <div id="identitySection" style="background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;border:1px solid var(--border-color);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
@@ -1491,6 +1523,20 @@ async function submitProduct(e) {
         }
 
 
+        // Handle Photo Upload
+        const photoBase64 = document.getElementById('photoBase64')?.value;
+        const deletePhoto = document.getElementById('deletePhoto')?.value;
+        if ((photoBase64 && photoBase64 !== '') || (deletePhoto === '1')) {
+            try {
+                await api(`${BASE_URL}api/products/${productId}/photo`, 'POST', {
+                    csrf_token: csrfTokenValue,
+                    photo_base64: photoBase64,
+                    delete_photo: deletePhoto
+                });
+            } catch (photoErr) {
+                console.error("Gagal mengupdate foto:", photoErr);
+            }
+        }
 
         showToast('✅ Produk berhasil diupdate!', 'success');
         setTimeout(() => window.location.href = `${BASE_URL}products`, 1000);
@@ -1537,5 +1583,43 @@ function collectInvoiceNames() {
     const inputs = document.querySelectorAll('.invoice-name-item');
     const names = Array.from(inputs).map(inp => inp.value.trim()).filter(v => v);
     return names.join(';');
+}
+</script>
+
+<!-- Modal Full Preview -->
+<div id="fullPhotoModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; align-items:center; justify-content:center; flex-direction:column;">
+    <button type="button" onclick="document.getElementById('fullPhotoModal').style.display='none'" style="position:absolute; top:20px; right:20px; background:none; border:none; color:white; font-size:2rem; cursor:pointer;"><i class="bi bi-x-lg"></i></button>
+    <img id="fullPhotoImg" src="" style="max-width:90%; max-height:90%; object-fit:contain;">
+</div>
+
+<script>
+function handleEditPhotoSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        document.getElementById('photoPreview').src = e.target.result;
+        document.getElementById('photoPreview').style.display = 'block';
+        document.getElementById('photoIcon').style.display = 'none';
+        document.getElementById('photoBase64').value = e.target.result;
+        document.getElementById('deletePhoto').value = '0';
+    };
+    reader.readAsDataURL(file);
+}
+
+function removeProductPhoto() {
+    document.getElementById('photoPreview').src = '';
+    document.getElementById('photoPreview').style.display = 'none';
+    document.getElementById('photoIcon').style.display = 'block';
+    document.getElementById('productPhotoInput').value = '';
+    document.getElementById('photoBase64').value = '';
+    document.getElementById('deletePhoto').value = '1';
+}
+
+function viewFullPhoto(src) {
+    if (!src) return;
+    document.getElementById('fullPhotoImg').src = src;
+    document.getElementById('fullPhotoModal').style.display = 'flex';
 }
 </script>

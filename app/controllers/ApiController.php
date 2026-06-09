@@ -538,6 +538,22 @@ class ApiController extends Controller
         try {
             $id = (int)$id;
             $jsonBody = json_decode(file_get_contents('php://input'), true);
+            $deletePhoto = $jsonBody['delete_photo'] ?? $this->input('delete_photo');
+            $model = new ProductModel();
+
+            if (!empty($deletePhoto) && $deletePhoto == '1') {
+                $oldProduct = $model->find($id);
+                if (!empty($oldProduct['photo'])) {
+                    $oldPath = strpos($oldProduct['photo'], 'storage/') === 0
+                        ? dirname(BASE_PATH) . '/' . ltrim($oldProduct['photo'], '/')
+                        : BASE_PATH . '/' . ltrim($oldProduct['photo'], '/');
+                    if (file_exists($oldPath)) @unlink($oldPath);
+                }
+                $model->update($id, ['photo' => null]);
+                $this->json(['success' => true, 'photo' => null]);
+                return;
+            }
+
             $base64 = $jsonBody['photo_base64'] ?? $this->input('photo_base64');
             if (empty($base64)) throw new Exception("Foto tidak ditemukan");
 

@@ -100,13 +100,23 @@
                 <div style="flex:1;padding:10px;background:var(--success-bg);border-radius:var(--radius-sm);text-align:center;">
                     <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:2px;">Ecer/Retail</div>
                     <div style="font-weight:700;color:var(--success);font-size:var(--font-size-sm);"><?= Helper::rupiah($p['sell_price_retail']) ?></div>
-                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;"><?= round($p['margin_retail'] * 100, 1) ?>% markup</div>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;text-shadow:0 1px 1px rgba(0,0,0,0.1);">
+                        Modal: <?= Helper::rupiah($p['buy_price']) ?>
+                    </div>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:1px;text-shadow:0 1px 1px rgba(0,0,0,0.1);">
+                        Selisih: <?= Helper::rupiah($p['sell_price_retail'] - $p['buy_price']) ?> (<?= round($p['margin_retail'] * 100, 1) ?>%)
+                    </div>
                 </div>
                 <?php if ($p['sell_price_wholesale'] > 0): ?>
-                <div style="flex:1;">
+                <div style="flex:1;padding:10px;background:var(--surface-2);border-radius:var(--radius-sm);text-align:center;">
                     <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:2px;">Grosir</div>
                     <div style="font-weight:700;color:var(--text-primary);font-size:var(--font-size-md);"><?= Helper::rupiah($p['sell_price_wholesale']) ?></div>
-                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;"><?= round($p['margin_wholesale'] * 100, 1) ?>% markup</div>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;text-shadow:0 1px 1px rgba(0,0,0,0.1);">
+                        Modal: <?= Helper::rupiah($p['buy_price']) ?>
+                    </div>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:1px;text-shadow:0 1px 1px rgba(0,0,0,0.1);">
+                        Selisih: <?= Helper::rupiah($p['sell_price_wholesale'] - $p['buy_price']) ?> (<?= round($p['margin_wholesale'] * 100, 1) ?>%)
+                    </div>
                 </div>
                 <?php endif; ?>
             </div>
