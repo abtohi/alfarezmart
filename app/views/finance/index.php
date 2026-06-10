@@ -140,6 +140,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     let accountsData = [];
     let currentBreakdown = {};
     let categoriesData = [];
+    let masterDataRefreshPromise = null; // Tracks in-progress server refresh
     let selectedLogs = new Set();
 
     // Helper: Colors for dynamically generated POS cards
@@ -171,9 +172,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                     updateFilterOptions();
                     updateCategoryDatalist();
                     // Refresh from server in background if online
+                    // Store the promise so modal can await it before opening
                     if (navigator.onLine) {
-                        // Don't await, but ensure it completes
-                        refreshMasterDataFromServer().catch(e => console.error("Background refresh failed:", e));
+                        masterDataRefreshPromise = refreshMasterDataFromServer();
+                        masterDataRefreshPromise.catch(e => console.error("Background refresh failed:", e));
                     }
                     return;
                 }
@@ -786,6 +788,15 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
         }
 
+        // Always wait for the latest server refresh (if in-progress) so dropdown has all accounts
+        if (masterDataRefreshPromise) {
+            try { await masterDataRefreshPromise; } catch (e) { /* ignore, cached data still usable */ }
+            masterDataRefreshPromise = null;
+        } else if (navigator.onLine) {
+            // If no pending refresh, do a fresh one now to get latest accounts
+            await refreshMasterDataFromServer().catch(e => console.error('Refresh failed:', e));
+        }
+
         const currentDate = dateInput.value;
         
         // Build Select Options for POS
@@ -986,6 +997,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     };
 
     window.editLog = async function(log) {
+        // Ensure we have the latest accounts data from server
+        if (masterDataRefreshPromise) {
+            try { await masterDataRefreshPromise; } catch (e) { /* ignore */ }
+            masterDataRefreshPromise = null;
+        } else if (navigator.onLine && (!accountsData || accountsData.length <= 3)) {
+            await refreshMasterDataFromServer().catch(e => console.error('Refresh failed:', e));
+        }
+
         let posOptions = '';
         accountsData.forEach(acc => {
             posOptions += `<option value="${escapeHtml(acc.name)}" ${log.balance_type === acc.name ? 'selected' : ''}>${escapeHtml(acc.name)}</option>`;
