@@ -40,17 +40,38 @@ class SupplierProductModel extends Model
      */
     public function searchBySupplier($supplierId, $keyword, $salesRepId = null, $limit = 20)
     {
-        $params = [
-            ':sid' => $supplierId,
-            ':kw1' => "%{$keyword}%",
-            ':kw2' => "%{$keyword}%",
-            ':kw3' => "%{$keyword}%",
-        ];
+        $words = array_filter(explode(' ', trim($keyword)), 'strlen');
+        $params = [':sid' => $supplierId];
+        $whereSql = "sp.supplier_id = :sid";
 
-        $salesFilter = "";
         if ($salesRepId) {
-            $salesFilter = "AND sp.sales_rep_id = :srid";
+            $whereSql .= " AND sp.sales_rep_id = :srid";
             $params[':srid'] = $salesRepId;
+        }
+
+        if (!empty($words)) {
+            $whereClauses = [];
+            foreach ($words as $idx => $word) {
+                $p_name  = ":kw_{$idx}_name";
+                $p_label = ":kw_{$idx}_label";
+                $p_brand = ":kw_{$idx}_brand";
+                $p_code  = ":kw_{$idx}_code";
+                $p_bar   = ":kw_{$idx}_bar";
+                $p_inv   = ":kw_{$idx}_inv";
+                $p_sinv  = ":kw_{$idx}_sinv";
+                
+                $whereClauses[] = "(p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR b.name LIKE $p_brand OR p.code LIKE $p_code OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
+                
+                $like = "%{$word}%";
+                $params[$p_name]  = $like;
+                $params[$p_label] = $like;
+                $params[$p_brand] = $like;
+                $params[$p_code]  = $like;
+                $params[$p_bar]   = $like;
+                $params[$p_inv]   = $like;
+                $params[$p_sinv]  = $like;
+            }
+            $whereSql .= ' AND ' . implode(' AND ', $whereClauses);
         }
 
         $stmt = $this->db->prepare("
@@ -62,8 +83,7 @@ class SupplierProductModel extends Model
             JOIN products p ON sp.product_id = p.id
             LEFT JOIN brands b ON p.brand_id = b.id
             LEFT JOIN categories c ON p.category_id = c.id
-            WHERE sp.supplier_id = :sid {$salesFilter}
-              AND (p.full_name LIKE :kw1 OR p.short_label LIKE :kw2 OR b.name LIKE :kw3)
+            WHERE {$whereSql}
             ORDER BY sp.purchase_count DESC, p.full_name ASC
             LIMIT :lim
         ");

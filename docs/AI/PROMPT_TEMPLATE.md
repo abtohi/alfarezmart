@@ -34,10 +34,11 @@ Klasifikasikan task ini sebelum mulai:
 ## Task
 
 * Jangan mengubah fitur yang sudah ada, kecuali ada permintaan khusus dari user
-* Pada halaman produk, pada bagian informasi Modal dan Selisih, tolong jangan ditulis "Modal", tapi cukup M saja, dan selisih tolong diubah menjadi P saja yang artinya Profit, begitu juga pada halaman Scan atau Cek Harga, Modal cukup tulis M: dan Selisih cukup tulis P:
-* Pada halaman Scan, tolong untuk harga tier juga ditampilkan, beli berapa dapat harga berapa. Saat ini hanya ditampilkan informasi Qty, tetapi belum ada informasi harganya.
-* Saat saya Edit Barang Masuk, saat saya mengubah harga jual pada level kemasan diatasnya, kenapa persentase markup dan selisih harganya tidak berubah ubah secara live. Harusnya akan berubah, dan ketika harga custom di unhecklist, otomatis akan mengikuti harga pada level kemasan diatasnya menyesuaikan persentasenya. Tetapi ketika harga custom di checklist, harga akan ke lock dan bisa diubah ubah tanpa mempengaruhi harga kemasan lainnya.
-* Pada halaman Edit Barang masuk dan Input Barang Masuk, tolong ukuran font Subtotal Barang, Diskon Nota (Rp),Total Sebelum PPN dan Total PPN di buat lebih kecil lagi dan lebih elegan, jangan terlalu besar, jangan sama dengan grand Total. Agar terlihat lebih rapi dan elegan.
+* Pada halaman tambah produk baru, saat user menceklis produk multivarian, opsi brand pada form brand tidak muncul, tolong cek dan perbaiki.
+* Pada halaman keuangan harian, halaman tersebut loading terus tidak selesai selesai, selain itu saat saya klik Transaksi, opsi Pilih pos keuangan tidak muncul listnya, tolong cek dan perbaiki, saat ini hanya muncul opsi Saldo Utama, Saldo Pulsa, Saldo Rokok, sementara masih ada opsi lain seperti Uang Laci, Uang Pulsa, Uang Rokok, Uang Pinjaman yang statusnya dependent dengan pos keuangan lainnya, itu tidak muncul di list, tolong cek dan perbaiki
+* Pada halaman produk, saat saya memilih Kategori tertentu, produknya tidak berhasil ke filter, namun malah di searchbox muncul barcode terakhir yang pernah di search, dan tidak bisa di hapus, begitu di reset muncul lagi produk tersebut, kenapa history pencarian lama masih tersimpan dan tiba tiba ke load lagi, tolong ini cek dimana salahnya, lalu perbaiki.
+* Pada halaman input barang masuk, user tidak bisa search produk, tolong algoritma search produk ini disamakan dengan algoritma search produk pada halaman kasir pos dan produk, yakni berdasarkan barcode, nama produk, nama label, dan nama produk di invoice
+* Pada halaman input barang masuk dan edit barang masuk, form diskon pada setiap produk tolong untuk yang Rp, algoritmanya di ubah agar diskon tersebut adalah diskon total, artinya jika Total Pembelian 50000 untuk qty 5, dengan diskon 5000 itu berarti 5000 untuk ke 5 produk, bukan masing masing produk 5000. Saat ini logicnya menganggap diskon tersebut sebagai diskon per produk, bukan diskon total, sehingga output nya salah, tolong ini diperbaiki
 
 * Update versi, commit dan push
 

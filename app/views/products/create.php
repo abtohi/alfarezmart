@@ -163,11 +163,27 @@
 
 <!-- Template for units -->
 <script>
-// ===== Data from PHP =====
-let brandsData = [];
-let categoriesData = [];
-let unitsData = [];
-let weightUnitOptions = [];
+<?php
+$brandsArr = array_map(function($b) { return ['value' => (string)$b['id'], 'label' => $b['name']]; }, $brands);
+$catsArr = array_map(function($c) { return ['value' => (string)$c['id'], 'label' => $c['name']]; }, $categories);
+$unitsArr = array_map(function($u) { 
+    $abbr = !empty($u['abbreviation']) ? $u['abbreviation'] : $u['name'];
+    return [
+        'id' => (string)$u['id'],
+        'name' => $u['name'],
+        'abbreviation' => !empty($u['abbreviation']) ? $u['abbreviation'] : ''
+    ]; 
+}, $units);
+?>
+let brandsData = <?= json_encode($brandsArr) ?>;
+let categoriesData = <?= json_encode($catsArr) ?>;
+let unitsData = <?= json_encode(array_map(function($u) { return ['value' => $u['id'], 'label' => $u['name']]; }, $unitsArr)) ?>;
+let weightUnitOptions = <?= json_encode(array_map(function($u) {
+    return [
+        'value' => $u['abbreviation'], 
+        'label' => $u['abbreviation'] && $u['abbreviation'] !== $u['name'] ? $u['name'] . ' (' . $u['abbreviation'] . ')' : $u['name']
+    ];
+}, $unitsArr)) ?>;
 
 const csrfTokenValue = document.getElementById('csrfToken').value;
 let levelCount = 0;
@@ -181,23 +197,7 @@ let referenceSearchTimer = null;
 let brandSB, categorySB, weightUnitSB;
 
 document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await window.OfflineDB.init();
-        const offlineBrands = await window.OfflineDB.getAllBrands();
-        const offlineCats = await window.OfflineDB.getAllCategories();
-        const offlineUnits = await window.OfflineDB.getAllUnits();
 
-        brandsData = offlineBrands.map(b => ({ value: String(b.id), label: b.name }));
-        categoriesData = offlineCats.map(c => ({ value: String(c.id), label: c.name }));
-        unitsData = offlineUnits.map(u => ({ value: String(u.id), label: u.name }));
-        weightUnitOptions = offlineUnits.map(u => {
-            const abbr = u.abbreviation || u.name;
-            const wLabel = u.abbreviation ? `${u.name} (${u.abbreviation})` : u.name;
-            return { value: abbr, label: wLabel };
-        });
-    } catch (e) {
-        console.error("Failed to load offline data", e);
-    }
     brandSB = new SearchBox(document.getElementById('brandSearchBox'), {
         options: brandsData,
         placeholder: 'Cari atau pilih brand...',

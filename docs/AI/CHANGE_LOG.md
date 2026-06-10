@@ -6,6 +6,32 @@
 
 ---
 
+## [2026-06-10] — Perbaikan UI, Filter Kategori & Algoritma Search Barang Masuk
+
+**Tipe:** Minor (Bug Fix & UX Improvement)
+**Modul:** Finance, Products, Purchases
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+1. **Fix Keuangan Harian (Infinite Loading):** Memperbaiki query di `FinanceModel::getLogsByDate` yang sebelumnya membandingkan `log_date = :date`. Karena kolom menggunakan `DATETIME`, ini menyebabkan kegagalan pencarian. Diubah menjadi perbandingan rentang waktu (`>= startOfDay` dan `<= endOfDay`).
+2. **Fix Filter POS Keuangan Dependent:** Menghapus _hardcoded filter_ `['Saldo Utama', 'Saldo Pulsa', 'Saldo Rokok']` di halaman `finance/index.php`. Sekarang, semua pos keuangan aktif termasuk pos dengan _dependency_ (seperti Uang Laci, Uang Pinjaman) akan muncul di dropdown saat input transaksi.
+3. **Fix Opsi Brand Multivarian Hilang:** Memperbaiki form di `products/create.php` agar dropdown brand langsung di-_populate_ dari native array PHP (`json_encode`) saat halaman dirender, menghilangkan kemungkinan data hilang akibat eksekusi asinkron `OfflineDB` yang tertunda.
+4. **Perbaikan Pencarian Barang Masuk:** Menyelaraskan algoritma fungsi `searchBySupplier` di dalam `SupplierProductModel` agar identik dengan `ProductModel::searchProducts`. Sekarang pencarian mendeteksi _multi-keyword_ (spasi) dan mencocokkannya lintas kolom (full_name, short_label, brand_name, code, barcode kemasan, hingga invoice_name).
+5. **Klarifikasi UI Diskon Barang Masuk:** Mengubah teks pada rincian _Nett Price_ di halaman pembuatan dan pengubahan barang masuk menjadi "Total Diskon". Fungsi internal `calcItemNett` juga disesuaikan untuk menghitung diskon secara konsisten dengan memasukkan kuantitas (qty) sebagai parameter, sehingga perhitungan `buy_price` aktual per-item lebih presisi.
+6. **Fix Filter Kategori Produk & Search Autofill:** Mencegah isu di mana browser mengisi otomatis (_autofill_ / _bfcache_) barcode terakhir ke dalam kotak pencarian. Di file `products/index.php`, ditambahkan _event listener_ di `DOMContentLoaded` yang memaksa `searchInput.value = ''` jika parameter `q` tidak ada pada query string URL.
+
+### File yang Diubah
+- `app/models/FinanceModel.php`
+- `app/models/SupplierProductModel.php`
+- `app/views/finance/index.php`
+- `app/views/products/create.php`
+- `app/views/products/index.php`
+- `app/views/purchases/create.php`
+- `app/views/purchases/edit.php`
+- `public/sw.js`
+
+---
+
 ## [2026-06-06] — Fix Saldo Keuangan Harian (0 Rupiah) & Update Version
 
 **Tipe:** Hotfix

@@ -217,8 +217,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        const allowedPos = ['Saldo Utama', 'Saldo Rokok', 'Saldo Pulsa'];
-        let visibleAccounts = accountsData.filter(a => allowedPos.includes(a.name));
+        let visibleAccounts = accountsData;
 
         let html = '';
         visibleAccounts.forEach((acc, index) => {
@@ -575,8 +574,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     window.updateBalanceInfo = function(val, containerId, category, amount) {
         const infoEl = document.getElementById(containerId);
         if (!infoEl) return;
-        const allowed = ['Saldo Utama', 'Saldo Rokok', 'Saldo Pulsa'];
-        if (allowed.includes(val) && currentBreakdown[val]) {
+        if (currentBreakdown[val]) {
             const currentNet = currentBreakdown[val].net;
             let html = `<span style="display:block;"><i class="bi bi-wallet2" style="margin-right:4px;"></i>Saldo Saat Ini: <strong>${formatRupiah(currentNet)}</strong></span>`;
             const amt = parseFloat(amount);

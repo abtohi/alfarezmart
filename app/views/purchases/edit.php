@@ -1355,12 +1355,15 @@ function syncPricesFromLevel1(item) {
 }
 
 /** Calculate nett buy price after PPN and discount */
-function calcItemNett(buy, ppn_pct, diskon_mode, diskon_value) {
+function calcItemNett(buy, ppn_pct, diskon_mode, diskon_value, qty = 1) {
     buy = parseFloat(buy) || 0;
     const ppn_amt = buy * ((parseFloat(ppn_pct) || 0) / 100);
+    
+    // For Rp mode: diskon_value is total discount, divide by qty for per-unit discount
     const diskon_amt = diskon_mode === 'pct'
         ? buy * ((parseFloat(diskon_value) || 0) / 100)
-        : (parseFloat(diskon_value) || 0);
+        : ((parseFloat(diskon_value) || 0) / (parseFloat(qty) || 1));
+        
     return Math.max(0, buy + ppn_amt - diskon_amt);
 }
 
@@ -1377,7 +1380,7 @@ function buildNettInfo(item) {
     let html = `<div style="background:rgba(0,0,0,0.25);border-radius:4px;padding:5px 7px;font-size:10px;">`;
     html += `<span style="color:var(--text-muted);">Modal: Rp${Math.round(buy).toLocaleString('id-ID')}</span>`;
     if (ppn > 0) html += ` <span style="color:var(--warning);">+PPN(${ppn}%): Rp${Math.round(ppn_amt).toLocaleString('id-ID')}</span>`;
-    if (diskon > 0) html += ` <span style="color:var(--success);">−Diskon: Rp${Math.round(diskon_amt).toLocaleString('id-ID')}</span>`;
+    if (diskon > 0) html += ` <span style="color:var(--success);">−Total Diskon: Rp${Math.round(diskon_amt).toLocaleString('id-ID')}</span>`;
     html += ` → <strong style="color:var(--info);">Nett: Rp${Math.round(nett).toLocaleString('id-ID')}</strong>`;
     html += `</div>`;
     return html;
@@ -1396,7 +1399,7 @@ function updateItemPpnDiskon(tempId, type, val) {
         item.diskon_value = parseFloat(val) || 0;
     }
     
-    item.harga_nett = calcItemNett(item.buy_price, item.ppn_pct, item.diskon_mode, item.diskon_value);
+    item.harga_nett = calcItemNett(item.buy_price, item.ppn_pct, item.diskon_mode, item.diskon_value, item.quantity);
     
     const nettEl = document.getElementById(`nett_info_${tempId}`);
     if (nettEl) nettEl.innerHTML = buildNettInfo(item);
@@ -1409,11 +1412,22 @@ function calcMarginForLevel(lvEl) {
     const buy = parseFloat(lvEl?.querySelector('.pkg-buy,.buy-price')?.value) || 0;
     const ret = parseFloat(lvEl?.querySelector('.pkg-ret,.retail-price')?.value) || 0;
     const who = parseFloat(lvEl?.querySelector('.pkg-wholesale,.wholesale-price')?.value) || 0;
+    const marginInfo = lvEl?.querySelector('.pkg-margin-info,.margin-calc');
+    if (!marginInfo) return;
     
-    const ppn = parseFloat(lvEl?.querySelector('.pkg-ppn')?.value) || 0;
+    // Find the item quantity (use 1 as fallback for modal edit)
+    let itemQty = 1;
+    const row = lvEl.closest('[data-id]');
+    if (row && row.dataset.id) {
+        const item = purchaseItems.find(i => i.id == row.dataset.id);
+        if (item) itemQty = item.quantity || 1;
+    }
+    
+    const ppn = parseFloat(lvEl?.querySelector('.pkg-ppn-pct')?.value) || 0;
     const diskonMode = lvEl?.querySelector('.pkg-diskon-mode')?.value || 'rp';
     const diskonVal = parseFloat(lvEl?.querySelector('.pkg-diskon-value')?.value) || 0;
-    const nett = calcItemNett(buy, ppn, diskonMode, diskonVal);
+    
+    const nett = calcItemNett(buy, ppn, diskonMode, diskonVal, itemQty);
 
     const nettInfoEl = lvEl?.querySelector('.pkg-nett-info');
     if (nettInfoEl) {

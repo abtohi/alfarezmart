@@ -21,6 +21,28 @@
 
 ## Pekerjaan Terakhir
 
+### Sesi: 2026-06-10 — Perbaikan UI, Filter Kategori & Algoritma Search Barang Masuk
+
+**Yang dikerjakan:**
+1. **Fix Infinite Loading Keuangan Harian** — Memperbaiki query SQL di `FinanceModel::getLogsByDate` untuk menggunakan perbandingan rentang waktu (`>= startOfDay` dan `<= endOfDay`) agar kompatibel dengan tipe kolom `DATETIME`.
+2. **Fix Pos Keuangan Dependent Tidak Muncul** — Menghapus filter *hardcoded* di `finance/index.php` sehingga akun-akun dengan *dependency* (Uang Laci, Uang Rokok, dll) dapat dipilih di form transaksi.
+3. **Fix Opsi Brand Multivarian** — Memperbaiki inisialisasi dropdown brand di `products/create.php` dengan merender PHP `json_encode` di awal load halaman, menghindari *race condition* akibat pemanggilan asinkron ke `OfflineDB`.
+4. **Perbaikan Search Barang Masuk** — Menyamakan logika `SupplierProductModel::searchBySupplier` dengan pencarian kasir, menggunakan *multi-keyword matching* dan mencocokkan di banyak kolom (nama, label, brand, barcode, code, invoice_name).
+5. **Fix Logic Diskon Barang Masuk** — Di form barang masuk (`purchases/create.php` dan `edit.php`), mengklarifikasi antarmuka menjadi "Total Diskon" di breakdown *nett price* dan memastikan nilai diskon per kuantitas (dibagi qty) dipertahankan saat dikalkulasi di server.
+6. **Fix Filter Kategori & Search Input** — Di halaman `products/index.php`, menambahkan logic saat `DOMContentLoaded` yang memaksa pembersihan nilai pada input pencarian teks (`#productSearchInput`) jika parameter query string `?q=` tidak ada, demi mengatasi *bug* di mana browser meng-*autofill* barcode dari pencarian terakhir meski filter yang dipilih adalah berdasarkan kategori.
+
+**File yang Diubah:**
+- `app/models/FinanceModel.php`
+- `app/models/SupplierProductModel.php`
+- `app/views/finance/index.php`
+- `app/views/products/create.php`
+- `app/views/products/index.php`
+- `app/views/purchases/create.php`
+- `app/views/purchases/edit.php`
+- `public/sw.js` — Bump CACHE_NAME ke v10.9
+
+---
+
 ### Sesi: 2026-06-09 — Tweak UI Role Margin & Pencarian POS (Invoice Name & Thumbnail)
 
 **Yang dikerjakan:**

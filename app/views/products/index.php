@@ -454,6 +454,15 @@ function filterByCategory(val) {
     window.location.href = '<?= BASE_URL ?>products' + (parts.length ? '?' + parts.join('&') : '');
 }
 
+// Ensure search input is clear on load if URL has no 'q' (prevents browser autofill/bfcache from repopulating it)
+document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.has('q')) {
+        const searchInput = document.getElementById('productSearchInput');
+        if (searchInput) searchInput.value = '';
+    }
+});
+
 function applyPriceFilter() {
     const q = document.getElementById('productSearchInput')?.value?.trim() || '';
     const minP = document.getElementById('filterMinPrice')?.value?.trim() || '';

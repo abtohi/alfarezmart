@@ -42,18 +42,26 @@ class FinanceModel extends Model
 
     public function getDailySummary(string $date)
     {
+        // Ensure proper date bounds for index usage (handles both DATE and DATETIME log_date)
+        $startOfDay = $date . ' 00:00:00';
+        $endOfDay = $date . ' 23:59:59';
+        
         $stmt = $this->db->prepare("
             SELECT 
-                COALESCE(SUM(CASE WHEN DATE(log_date) = :date1 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) as income,
-                COALESCE(SUM(CASE WHEN DATE(log_date) = :date2 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0) as expense,
+                COALESCE(SUM(CASE WHEN log_date >= :start1 AND log_date <= :end1 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) as income,
+                COALESCE(SUM(CASE WHEN log_date >= :start2 AND log_date <= :end2 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0) as expense,
                 (
-                    COALESCE(SUM(CASE WHEN DATE(log_date) <= :date3 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) -
-                    COALESCE(SUM(CASE WHEN DATE(log_date) <= :date4 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0)
+                    COALESCE(SUM(CASE WHEN log_date <= :end3 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) -
+                    COALESCE(SUM(CASE WHEN log_date <= :end4 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0)
                 ) as accumulative_net
             FROM finance_logs
-            WHERE DATE(log_date) <= :date5
+            WHERE log_date <= :end5
         ");
-        $stmt->execute([':date1' => $date, ':date2' => $date, ':date3' => $date, ':date4' => $date, ':date5' => $date]);
+        $stmt->execute([
+            ':start1' => $startOfDay, ':end1' => $endOfDay,
+            ':start2' => $startOfDay, ':end2' => $endOfDay,
+            ':end3' => $endOfDay, ':end4' => $endOfDay, ':end5' => $endOfDay
+        ]);
         return $stmt->fetch();
     }
 
@@ -68,21 +76,28 @@ class FinanceModel extends Model
             $result[$post] = ['income' => 0, 'expense' => 0, 'net' => 0];
         }
         
+        $startOfDay = $date . ' 00:00:00';
+        $endOfDay = $date . ' 23:59:59';
+        
         $stmt = $this->db->prepare("
             SELECT 
                 balance_type,
-                COALESCE(SUM(CASE WHEN DATE(log_date) = :date1 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) as income,
-                COALESCE(SUM(CASE WHEN DATE(log_date) = :date2 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0) as expense,
+                COALESCE(SUM(CASE WHEN log_date >= :start1 AND log_date <= :end1 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) as income,
+                COALESCE(SUM(CASE WHEN log_date >= :start2 AND log_date <= :end2 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0) as expense,
                 (
-                    COALESCE(SUM(CASE WHEN DATE(log_date) <= :date3 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) -
-                    COALESCE(SUM(CASE WHEN DATE(log_date) <= :date4 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0)
+                    COALESCE(SUM(CASE WHEN log_date <= :end3 AND category = 'Pemasukan' THEN amount ELSE 0 END), 0) -
+                    COALESCE(SUM(CASE WHEN log_date <= :end4 AND category = 'Pengeluaran' THEN amount ELSE 0 END), 0)
                 ) as accumulative_net
             FROM finance_logs
-            WHERE DATE(log_date) <= :date5
+            WHERE log_date <= :end5
             GROUP BY balance_type
         ");
         
-        $stmt->execute([':date1' => $date, ':date2' => $date, ':date3' => $date, ':date4' => $date, ':date5' => $date]);
+        $stmt->execute([
+            ':start1' => $startOfDay, ':end1' => $endOfDay,
+            ':start2' => $startOfDay, ':end2' => $endOfDay,
+            ':end3' => $endOfDay, ':end4' => $endOfDay, ':end5' => $endOfDay
+        ]);
         $rows = $stmt->fetchAll();
         
         foreach ($rows as $row) {
@@ -100,12 +115,15 @@ class FinanceModel extends Model
 
     public function getLogsByDate(string $date)
     {
+        // Support both DATE and DATETIME storage formats
+        $startOfDay = $date . ' 00:00:00';
+        $endOfDay   = $date . ' 23:59:59';
         $stmt = $this->db->prepare("
             SELECT * FROM finance_logs
-            WHERE log_date = :date
+            WHERE log_date >= :start AND log_date <= :end
             ORDER BY id DESC
         ");
-        $stmt->execute([':date' => $date]);
+        $stmt->execute([':start' => $startOfDay, ':end' => $endOfDay]);
         return $stmt->fetchAll();
     }
 
