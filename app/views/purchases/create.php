@@ -817,7 +817,8 @@ async function performProductSearch() {
             `;
         }).join('');
     } catch (e) {
-        suggestionsDiv.innerHTML = '';
+        console.error("Product Search Error:", e);
+        suggestionsDiv.innerHTML = `<div style="padding:12px;text-align:center;color:var(--danger);font-size:12px;">Pencarian gagal: ${e.message}</div>`;
     }
 }
 

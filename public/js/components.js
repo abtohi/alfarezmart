@@ -641,13 +641,7 @@ class SearchBox {
     /** Get current label */
     getLabel() { return this.selectedLabel; }
 
-    /** Set required attribute on hidden input */
-    setRequired(isRequired) {
-        if (this._hiddenInput) {
-            if (isRequired) this._hiddenInput.setAttribute('required', 'required');
-            else this._hiddenInput.removeAttribute('required');
-        }
-    }
+
 
     /** Programmatic reset */
     reset() {
