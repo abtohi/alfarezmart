@@ -130,7 +130,9 @@ window.OfflineDB = (function() {
             return await db.products.filter(p => {
                 return words.every(word => {
                     const nameMatch = (p.full_name && p.full_name.toLowerCase().includes(word)) ||
-                                      (p.short_label && p.short_label.toLowerCase().includes(word));
+                                      (p.short_label && p.short_label.toLowerCase().includes(word)) ||
+                                      (p.invoice_name && p.invoice_name.toLowerCase().includes(word)) ||
+                                      (p.supplier_invoice_name && p.supplier_invoice_name.toLowerCase().includes(word));
                     const brandMatch = p.brand_name && p.brand_name.toLowerCase().includes(word);
                     const codeMatch = p.code && p.code.toLowerCase().includes(word);
                     
