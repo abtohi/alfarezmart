@@ -470,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('purchaseDate').addEventListener('change', saveDraft);
     document.getElementById('invoiceDiscount').addEventListener('input', saveDraft);
-    document.getElementById('invoiceTax').addEventListener('input', saveDraft);
+    document.getElementById('invoiceTax')?.addEventListener('input', saveDraft);
 
     initPurchaseProductSearch();
     loadDraft();
