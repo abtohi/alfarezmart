@@ -6,6 +6,31 @@
 
 ---
 
+## [2026-06-11] — Penyembunyian POS Keuangan Dependent & Tampilan Profit Hari Ini
+
+**Tipe:** Minor
+**Modul:** Dashboard, Finance
+**Dikerjakan oleh:** AI Agent (Antigravity)
+
+### Perubahan
+1. **Penyembunyian POS Keuangan Dependent di Grid:**
+   - Menyaring POS Keuangan di grid visual halaman Keuangan Harian (`app/views/finance/index.php`) agar tidak menampilkan POS yang dependent (selalu bernilai 0): `Uang Laci`, `Uang Pulsa`, `Uang Rokok`, dan `Uang Pinjaman`.
+   - POS Keuangan dependent tersebut tetap tersedia dan dapat dipilih secara aman pada dropdown form transaksi modal serta filter daftar transaksi.
+2. **Estimasi Profit Hari Ini di Dashboard:**
+   - Menambahkan field `today_profit` yang didapat dari query `gross_profit` (penjualan hari ini) di `DashboardController.php`.
+   - Menampilkan hari ini profit dengan label hijau: `Profit: Rp X.XXX` di bawah informasi omset/transaksi POS pada kartu "Omset Hari Ini" di dashboard (`app/views/dashboard/index.php`) khusus untuk pengguna dengan role non-staff.
+3. **PWA Cache Busting & Versi Aset:**
+   - Melakukan sinkronisasi dan peningkatan PWA Cache Buster dan query parameter aset menjadi `11.3` (di `app/views/layouts/app.php` dan `sw.js`).
+
+### File yang Diubah
+- `app/controllers/DashboardController.php`
+- `app/views/dashboard/index.php`
+- `app/views/finance/index.php`
+- `app/views/layouts/app.php`
+- `sw.js`
+
+---
+
 ## [2026-06-10] — Perbaikan UI, Filter Kategori & Algoritma Search Barang Masuk
 
 **Tipe:** Minor (Bug Fix & UX Improvement)

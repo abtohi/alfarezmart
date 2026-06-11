@@ -65,6 +65,9 @@
                 <div style="font-size: 9px; color: var(--text-muted); margin-top: 4px;">
                     <?= number_format($stats['today_transactions'] ?? 0) ?> transaksi POS
                 </div>
+                <div style="font-size: 9px; color: var(--success); margin-top: 2px; font-weight: 700;">
+                    Profit: Rp <?= number_format($stats['today_profit'] ?? 0, 0, ',', '.') ?>
+                </div>
             </div>
             <?php else: ?>
             <div class="stat-card" style="margin-bottom: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 16px;">

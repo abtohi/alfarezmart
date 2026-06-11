@@ -14,6 +14,7 @@ class DashboardController extends Controller
         $todaySaleStats = $saleModel->getDailyStats(date('Y-m-d'));
         $stats['today_revenue'] = $todaySaleStats['revenue'] ?? 0;
         $stats['today_transactions'] = $todaySaleStats['transactions'] ?? 0;
+        $stats['today_profit'] = $todaySaleStats['gross_profit'] ?? 0;
 
         // Fetch finance summary for today
         $financeModel = new FinanceModel();

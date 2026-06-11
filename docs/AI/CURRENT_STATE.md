@@ -11,15 +11,31 @@
 | Item | Nilai |
 |------|-------|
 | **Status** | Aktif dikembangkan (Production-ready, fitur lanjutan sedang ditambah) |
-| **Versi Cache SW** | `alfarezmart-v9.0` |
-| **Versi Asset** | `?v=9.0` (di `app/views/layouts/app.php`) |
+| **Versi Cache SW** | `alfarezmart-v11.3` |
+| **Versi Asset** | `?v=11.3` (di `app/views/layouts/app.php`) |
 | **PHP Version** | XAMPP (cek `php -v`) |
 | **Timezone** | Asia/Jakarta (GMT+7) |
-| **Last Updated** | 2026-06-09 |
+| **Last Updated** | 2026-06-11 |
 
 ---
 
 ## Pekerjaan Terakhir
+
+### Sesi: 2026-06-11 — Penyembunyian POS Keuangan Dependent & Tampilan Profit Hari Ini
+
+**Yang dikerjakan:**
+1. **Penyembunyian POS Keuangan Dependent di Grid** — Di `app/views/finance/index.php`, menyaring `accountsData` sebelum merender grid POS keuangan (`renderPosGrid`) agar POS dependent (Uang Laci, Uang Pulsa, Uang Rokok, Uang Pinjaman) tidak ditampilkan karena nilainya selalu 0, namun tetap dapat dipilih di form transaksi/filter logs.
+2. **Profit Hari Ini di Dashboard** — Mengirimkan estimasi profit hari ini (`gross_profit` dari `SaleModel::getDailyStats`) dari `DashboardController::index()` sebagai `today_profit`, lalu menampilkannya di view `dashboard/index.php` pada kartu "Omset Hari Ini" di bawah jumlah transaksi POS.
+3. **PWA Cache Busting** — Menyamakan versi cache service worker dan aset ke `11.3` untuk memicu refresh cache browser.
+
+**File yang Diubah:**
+- `app/controllers/DashboardController.php`
+- `app/views/dashboard/index.php`
+- `app/views/finance/index.php`
+- `app/views/layouts/app.php`
+- `sw.js`
+
+---
 
 ### Sesi: 2026-06-10 — Perbaikan UI, Filter Kategori & Algoritma Search Barang Masuk
 

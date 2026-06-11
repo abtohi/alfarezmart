@@ -219,7 +219,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        let visibleAccounts = accountsData;
+        const hiddenPos = ['Uang Laci', 'Uang Pulsa', 'Uang Rokok', 'Uang Pinjaman'];
+        let visibleAccounts = accountsData.filter(acc => !hiddenPos.includes(acc.name));
 
         let html = '';
         visibleAccounts.forEach((acc, index) => {
