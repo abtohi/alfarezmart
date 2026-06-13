@@ -16,6 +16,12 @@ class DashboardController extends Controller
         $stats['today_transactions'] = $todaySaleStats['transactions'] ?? 0;
         $stats['today_profit'] = $todaySaleStats['gross_profit'] ?? 0;
 
+        // Calculate average markup today
+        $todayItemsRev = (float)($todaySaleStats['items_revenue'] ?? 0);
+        $todayProfit = (float)($todaySaleStats['gross_profit'] ?? 0);
+        $todayCostBasis = max(0.01, $todayItemsRev - $todayProfit);
+        $stats['today_avg_markup'] = ($todayProfit / $todayCostBasis) * 100;
+
         // Fetch finance summary for today
         $financeModel = new FinanceModel();
         $todayFinanceSummary = $financeModel->getDailySummary(date('Y-m-d'));

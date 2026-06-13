@@ -67,6 +67,9 @@
                 </div>
                 <div style="font-size: 9px; color: var(--success); margin-top: 2px; font-weight: 700;">
                     Profit: Rp <?= number_format($stats['today_profit'] ?? 0, 0, ',', '.') ?>
+                    <?php if (($stats['today_profit'] ?? 0) > 0): ?>
+                        <span style="color: var(--text-muted); font-weight: 600; margin-left: 4px;">(Markup <?= number_format($stats['today_avg_markup'] ?? 0, 1) ?>%)</span>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php else: ?>

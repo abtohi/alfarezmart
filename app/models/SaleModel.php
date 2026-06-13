@@ -402,6 +402,7 @@ class SaleModel extends Model
             'transactions' => $result['transaction_count'] ?? 0,
             'revenue' => $result['total_revenue'] ?? 0,
             'items_sold' => $itemsResult['items_sold'] ?? 0,
+            'items_revenue' => $itemsResult['total_items_revenue'] ?? 0,
             'gross_profit' => $itemsResult['total_profit'] ?? 0
         ];
     }
