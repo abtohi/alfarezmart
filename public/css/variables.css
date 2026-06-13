@@ -109,40 +109,52 @@
 
 :root[data-theme="light"] {
     --bg-primary: #ffffff;
-    --bg-secondary: #ffffff;
+    --bg-secondary: #f8f9fa;
     --bg-card: #ffffff;
-    --bg-card-hover: #f4f6ff;
-    --bg-elevated: #f7f8ff;
+    --bg-card-hover: #f4f6fb;
+    --bg-elevated: #ffffff;
     --bg-input: #ffffff;
     --bg-modal: #ffffff;
 
     --surface-1: #ffffff;
-    --surface-2: #f4f6ff;
+    --surface-2: #f4f6fb;
     --surface-3: #eaf1ff;
 
     --text-primary: #0b0b0d;
-    --text-secondary: #1b1b1f;
-    --text-muted: #4b5563;
+    --text-secondary: #343a40;
+    --text-muted: #6c757d;
     --text-inverse: #ffffff;
 
-    /* Accent colors tetap, tapi background/overlays light */
-    --border-color: rgba(0, 0, 0, 0.08);
-    --border-active: rgba(230, 57, 70, 0.35);
+    /* Theme Primary Colors from Logo */
+    --primary: #E63031;
+    --primary-dark: #c22526;
+    --primary-light: #ff4d4e;
 
-    --gradient-card: linear-gradient(145deg, #ffffff 0%, #f4f6ff 100%);
-    --gradient-header: linear-gradient(135deg, #e63946 0%, #1e40af 100%);
+    /* Adjust semantic colors for Ecer (Blue) and Grosir (Red) in light theme */
+    --success: #364395; /* Royal Blue for Ecer */
+    --warning: #E63031; /* Crimson for Grosir */
+    --danger: #E63031;
+    --info: #0dcaf0;
 
-    --primary-bg: rgba(76, 201, 240, 0.12); /* biru untuk background aksen */
+    --border-color: rgba(0, 0, 0, 0.15);
+    --border-active: rgba(54, 67, 149, 0.4);
 
-    /* Toast text agar kontras */
-    --warning-bg: rgba(255, 183, 3, 0.22);
-    --danger-bg: rgba(230, 57, 70, 0.18);
-    --success-bg: rgba(46, 196, 182, 0.16);
-    --info-bg: rgba(76, 201, 240, 0.18);
+    --gradient-card: linear-gradient(145deg, #ffffff 0%, #fcfcfc 100%);
+    --gradient-header: linear-gradient(135deg, #E63031 0%, #364395 100%);
 
-    --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.08);
-    --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.10);
+    --primary-bg: rgba(230, 48, 49, 0.08);
+
+    /* Backgrounds for text contrast */
+    --success-bg: rgba(54, 67, 149, 0.12); /* Blue bg for Ecer */
+    --warning-bg: rgba(230, 48, 49, 0.12); /* Red bg for Grosir */
+    --danger-bg: rgba(230, 48, 49, 0.12);
+    --info-bg: rgba(13, 202, 240, 0.12);
+
+    /* Elegant dark gray shadows */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.25);
+    --shadow-glow: 0 0 20px rgba(54, 67, 149, 0.2); /* Royal Blue glow */
 }
 
 /* Ensure loader + global body background follows theme */
