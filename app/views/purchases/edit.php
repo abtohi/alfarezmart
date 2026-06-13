@@ -288,7 +288,7 @@ function applyPhotoFilter() {
 
 function savePhotoPreview() {
     const canvas = document.getElementById('photoPreviewCanvas');
-    invoicePhotoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+    invoicePhotoBase64 = canvas.toDataURL('image/webp', 0.7);
     
     const btnCam = document.getElementById('btnPhotoCam');
     const btnGal = document.getElementById('btnPhotoGal');
