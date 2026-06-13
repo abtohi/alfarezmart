@@ -163,10 +163,23 @@
         orderItems.forEach((it, idx) => {
             const card = document.createElement('div');
             card.className = 'order-item-card';
+
+            let packHtml = '';
+            if (it.packagings && it.packagings.length > 0) {
+                packHtml = `<select class="pkg-select" data-idx="${idx}" style="font-size:10px; padding:4px; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); margin-top:4px; width:100%;">`;
+                it.packagings.forEach(pk => {
+                    const sel = (pk.id == it.packaging_id) ? 'selected' : '';
+                    packHtml += `<option value="${pk.id}" data-price="${pk.buy_price}" data-unit="${pk.unit_name}" ${sel}>${escapeHtml(pk.unit_name || 'pcs')} (Isi ${pk.base_qty}) - ${fmtRp(pk.buy_price)}</option>`;
+                });
+                packHtml += `</select>`;
+            } else {
+                packHtml = `<div style="font-size:10px; color:var(--text-muted); margin-top:4px;">${escapeHtml(it.unit_name)} · ${fmtRp(it.buy_price)}</div>`;
+            }
+
             card.innerHTML = `
                 <div style="flex:1; min-width:0;">
                     <div class="item-name">${escapeHtml(it.name)}</div>
-                    <div class="item-meta">${escapeHtml(it.unit_name)} · ${fmtRp(it.buy_price)} / unit</div>
+                    ${packHtml}
                 </div>
                 <button type="button" class="qty-btn" data-act="dec" data-idx="${idx}">−</button>
                 <input type="number" class="qty-input" min="0" step="1" value="${it.qty}" data-idx="${idx}">
@@ -177,6 +190,19 @@
         });
         recompute();
     }
+
+    elList.addEventListener('change', (e) => {
+        if (e.target.classList.contains('pkg-select')) {
+            const idx = parseInt(e.target.dataset.idx, 10);
+            const opt = e.target.options[e.target.selectedIndex];
+            if (orderItems[idx]) {
+                orderItems[idx].packaging_id = parseInt(opt.value, 10);
+                orderItems[idx].buy_price = parseFloat(opt.dataset.price) || 0;
+                orderItems[idx].unit_name = opt.dataset.unit || '';
+                recompute();
+            }
+        }
+    });
 
     function escapeHtml(s) {
         return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -254,36 +280,24 @@
         }
         const html = [];
         results.forEach((p, pi) => {
-            const packs = Array.isArray(p.packagings) && p.packagings.length > 0 ? p.packagings : [];
             const displayName = p.full_name || p.short_label || p.invoice_name || 'Produk';
-            if (packs.length === 0) {
-                html.push(`<div class="search-result-row" data-pi="${pi}" data-ki="-1">
-                    <div style="flex:1; min-width:0;">
-                        <div class="res-name">${escapeHtml(displayName)}</div>
-                        <div class="res-meta">— belum ada kemasan —</div>
-                    </div>
-                </div>`);
-            } else {
-                packs.forEach((pk, ki) => {
-                    html.push(`<div class="search-result-row" data-pi="${pi}" data-ki="${ki}">
-                        <div style="flex:1; min-width:0;">
-                            <div class="res-name">${escapeHtml(displayName)}</div>
-                            <div class="res-meta">Lv.${pk.level} · ${escapeHtml(pk.unit_name || 'pcs')} (isi ${pk.base_qty})</div>
-                        </div>
-                        <div class="res-price">${fmtRp(pk.buy_price)}</div>
-                    </div>`);
-                });
-            }
+            const catName = p.category_name || '';
+            const brandName = p.brand_name ? p.brand_name + ' · ' : '';
+            html.push(`<div class="search-result-row" data-pi="${pi}">
+                <div style="flex:1; min-width:0;">
+                    <div class="res-name">${escapeHtml(displayName)}</div>
+                    <div class="res-meta">${escapeHtml(brandName)}${escapeHtml(catName)}</div>
+                </div>
+                <div class="res-price"><i class="bi bi-plus-circle" style="font-size:1.2rem;color:var(--primary);"></i></div>
+            </div>`);
         });
         elResults.innerHTML = html.join('');
         elResults.style.display = '';
         Array.from(elResults.querySelectorAll('.search-result-row')).forEach(row => {
             row.addEventListener('click', () => {
                 const pi = parseInt(row.dataset.pi, 10);
-                const ki = parseInt(row.dataset.ki, 10);
                 const p = results[pi]; if (!p) return;
-                const pk = (ki >= 0 && p.packagings) ? p.packagings[ki] : null;
-                addItem(p, pk);
+                addItem(p);
                 elInput.value = '';
                 elResults.style.display = 'none';
                 lastResults = [];
@@ -291,14 +305,19 @@
         });
     }
 
-    function addItem(product, packaging) {
-        const pkgId = packaging ? parseInt(packaging.id, 10) : 0;
-        // Dedup: increment qty if same packaging already in list
-        const existing = orderItems.find(it => it.product_id === parseInt(product.id, 10) && it.packaging_id === pkgId);
+    function addItem(product) {
+        // Dedup: increment qty if same product already in list
+        const existing = orderItems.find(it => it.product_id === parseInt(product.id, 10));
         if (existing) { existing.qty++; renderList(); return; }
+        
+        const packs = Array.isArray(product.packagings) && product.packagings.length > 0 ? product.packagings : [];
+        const packaging = packs.length > 0 ? packs[0] : null;
+        const pkgId = packaging ? parseInt(packaging.id, 10) : 0;
+        
         const displayName = product.full_name || product.short_label || product.invoice_name || 'Produk';
         orderItems.push({
             product_id: parseInt(product.id, 10),
+            packagings: packs,
             packaging_id: pkgId,
             name: displayName,
             short_label: product.short_label || product.invoice_name || displayName,
