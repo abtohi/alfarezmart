@@ -16,13 +16,16 @@
     <!-- Product Header -->
     <div style="background:var(--surface-1);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;border:1px solid var(--border-color);">
         <div style="display:flex;gap:16px;align-items:flex-start;">
-            <div style="width:64px;height:64px;background:var(--primary-bg);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;overflow:hidden;cursor:pointer;" onclick="choosePhotoMethod()">
+            <div style="width:64px;height:64px;background:var(--primary-bg);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;overflow:hidden;">
                 <?php if (!empty($product['photo'])): ?>
-                    <img src="<?= BASE_URL . htmlspecialchars($product['photo']) ?>" style="width:100%;height:100%;object-fit:cover;">
+                    <img src="<?= BASE_URL . htmlspecialchars($product['photo']) ?>"
+                         style="width:100%;height:100%;object-fit:contain;cursor:zoom-in;"
+                         onclick="viewFullPhoto(this.src)"
+                         title="Klik untuk lihat foto penuh">
                 <?php else: ?>
-                    <i class="bi bi-camera-fill" style="font-size:1.8rem;color:var(--primary);"></i>
+                    <i class="bi bi-camera-fill" style="font-size:1.8rem;color:var(--primary);cursor:pointer;" onclick="choosePhotoMethod()"></i>
                 <?php endif; ?>
-                <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);color:white;font-size:9px;text-align:center;padding:2px;font-weight:600;">FOTO</div>
+                <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.6);color:white;font-size:9px;text-align:center;padding:2px;font-weight:600;cursor:pointer;" onclick="choosePhotoMethod()">FOTO</div>
             </div>
             <input type="file" id="productPhotoInputCamera" accept="image/*" capture="environment" style="display:none;" onchange="handleProductPhoto(event)">
             <input type="file" id="productPhotoInputGallery" accept="image/*" style="display:none;" onchange="handleProductPhoto(event)">

@@ -1607,10 +1607,4 @@ function removeProductPhoto() {
     document.getElementById('photoBase64').value = '';
     document.getElementById('deletePhoto').value = '1';
 }
-
-function viewFullPhoto(src) {
-    if (!src) return;
-    document.getElementById('fullPhotoImg').src = src;
-    document.getElementById('fullPhotoModal').style.display = 'flex';
-}
 </script>

@@ -294,16 +294,4 @@ document.getElementById('barcodeInput')?.addEventListener('keypress', (e) => {
 document.getElementById('barcodeInput')?.focus();
 </script>
 
-<!-- Modal Full Preview -->
-<div id="fullPhotoModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; align-items:center; justify-content:center; flex-direction:column;">
-    <button type="button" onclick="document.getElementById('fullPhotoModal').style.display='none'" style="position:absolute; top:20px; right:20px; background:none; border:none; color:white; font-size:2rem; cursor:pointer;"><i class="bi bi-x-lg"></i></button>
-    <img id="fullPhotoImg" src="" style="max-width:90%; max-height:90%; object-fit:contain;">
-</div>
 
-<script>
-function viewFullPhoto(src) {
-    if (!src) return;
-    document.getElementById('fullPhotoImg').src = src;
-    document.getElementById('fullPhotoModal').style.display = 'flex';
-}
-</script>

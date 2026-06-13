@@ -237,7 +237,7 @@ if ($userLevel === 'staff') {
     <!-- App JS -->
     <script>
         const BASE_URL = '<?= BASE_URL ?>';
-        const version = '11.6';
+        const version = '11.7';
     </script>
     <script src="<?= BASE_URL ?>public/js/utils.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/dexie.min.js<?= $v ?>"></script>
@@ -305,7 +305,7 @@ if ($userLevel === 'staff') {
     
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '11.6'; // Update this to force client reloads
+    const APP_VERSION = '11.7'; // Update this to force client reloads
     
     // Self-healing cache buster
     if (localStorage.getItem('app_version') !== APP_VERSION) {
@@ -331,5 +331,56 @@ if ($userLevel === 'staff') {
             .catch(err => console.log('SW registration failed:', err));
     }
     </script>
+
+    <!-- ===== Global Photo Lightbox ===== -->
+    <div id="fullPhotoModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index:99998; align-items:center; justify-content:center;" onclick="closeFullPhoto()">
+        <!-- Backdrop blur overlay -->
+        <div id="fullPhotoBackdrop" style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);"></div>
+        <!-- Close button -->
+        <button type="button" onclick="closeFullPhoto()" style="position:absolute;top:16px;right:16px;z-index:2;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:white;border-radius:50%;width:44px;height:44px;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;backdrop-filter:blur(4px);" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+            <i class="bi bi-x-lg"></i>
+        </button>
+        <!-- Zoom hint -->
+        <div id="fullPhotoHint" style="position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.5);font-size:11px;z-index:2;white-space:nowrap;pointer-events:none;transition:opacity 0.5s;">Tap di luar untuk menutup · Cubit untuk zoom</div>
+        <!-- Image -->
+        <img id="fullPhotoImg" src="" alt="Preview Foto"
+             style="position:relative;z-index:1;max-width:92vw;max-height:88vh;object-fit:contain;border-radius:12px;box-shadow:0 24px 80px rgba(0,0,0,0.8);touch-action:pinch-zoom;user-select:none;"
+             onclick="event.stopPropagation()">
+    </div>
+    <style>
+    @keyframes _lightboxFadeIn { from { opacity:0; transform:scale(0.94); } to { opacity:1; transform:scale(1); } }
+    #fullPhotoModal.is-open { display:flex !important; }
+    #fullPhotoModal.is-open #fullPhotoImg { animation: _lightboxFadeIn 0.22s cubic-bezier(.25,.46,.45,.94) forwards; }
+    </style>
+    <script>
+    function viewFullPhoto(src) {
+        if (!src || src === window.location.href) return;
+        const modal = document.getElementById('fullPhotoModal');
+        const img = document.getElementById('fullPhotoImg');
+        if (!modal || !img) return;
+        img.src = src;
+        modal.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+        // Auto-hide hint after 2.5s
+        const hint = document.getElementById('fullPhotoHint');
+        if (hint) setTimeout(() => { hint.style.opacity = '0'; }, 2500);
+    }
+    function closeFullPhoto() {
+        const modal = document.getElementById('fullPhotoModal');
+        if (!modal) return;
+        modal.classList.remove('is-open');
+        document.body.style.overflow = '';
+        setTimeout(() => {
+            const img = document.getElementById('fullPhotoImg');
+            if (img) img.src = '';
+            const hint = document.getElementById('fullPhotoHint');
+            if (hint) hint.style.opacity = '1';
+        }, 200);
+    }
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeFullPhoto();
+    });
+    </script>
+
 </body>
 </html>
