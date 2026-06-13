@@ -412,6 +412,9 @@ class ThermalPrinter {
             // Format: "  1bks x Rp17.000"  (space after x)
             const left = `  ${qty}${unitAbbr} x ${this._formatPrice(unitPrice)}`;
             cmds += this.padLine(left, this._formatPrice(itemTotal), width) + LF;
+            
+            // Add a slight gap between products (print and feed 12 dots ≈ 1.5mm)
+            cmds += ESC + 'J' + String.fromCharCode(12);
         });
 
         // TOTAL
@@ -658,9 +661,9 @@ class ThermalPrinter {
             const unitAbbr = this.abbreviateUnit(item.unit_name || 'pcs');
             itemsHtml += `<tr><td colspan="3" class="item-name">${this._escapeHtml(name)}</td></tr>`;
             itemsHtml += `<tr class="item-detail">
-                <td>${item.quantity} ${this._escapeHtml(unitAbbr)}</td>
-                <td>x ${this._formatPrice(unitPrice)}</td>
-                <td class="right">${this._formatPrice(itemTotal)}</td>
+                <td style="padding-bottom: 6px;">${item.quantity} ${this._escapeHtml(unitAbbr)}</td>
+                <td style="padding-bottom: 6px;">x ${this._formatPrice(unitPrice)}</td>
+                <td class="right" style="padding-bottom: 6px;">${this._formatPrice(itemTotal)}</td>
             </tr>`;
         });
 
