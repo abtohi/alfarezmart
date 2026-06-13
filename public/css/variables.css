@@ -134,7 +134,7 @@
     --success: #364395; /* Royal Blue for Ecer */
     --warning: #E63031; /* Crimson for Grosir */
     --danger: #E63031;
-    --info: #0dcaf0;
+    --info: #2563EB; /* Blue instead of tosca */
 
     --border-color: rgba(0, 0, 0, 0.15);
     --border-active: rgba(54, 67, 149, 0.4);
@@ -148,7 +148,7 @@
     --success-bg: rgba(54, 67, 149, 0.12); /* Blue bg for Ecer */
     --warning-bg: rgba(230, 48, 49, 0.12); /* Red bg for Grosir */
     --danger-bg: rgba(230, 48, 49, 0.12);
-    --info-bg: rgba(13, 202, 240, 0.12);
+    --info-bg: rgba(37, 99, 235, 0.12);
 
     /* Elegant dark gray shadows */
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.15);
