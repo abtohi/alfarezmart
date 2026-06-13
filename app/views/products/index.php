@@ -116,7 +116,7 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
                 <?php endif; ?>
                 <a href="<?= BASE_URL ?>products/<?= (int)$p['id'] ?>" class="product-card-link" style="display:flex;text-decoration:none;color:inherit;width:100%;">
                     <?php if (!empty($p['photo'])): ?>
-                        <div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:var(--surface-2); flex-shrink:0; margin-right:16px;">
+                        <div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:transparent; flex-shrink:0; margin-right:16px;">
                             <img src="<?= BASE_URL . htmlspecialchars($p['photo']) ?>" style="width:100%; height:100%; object-fit:contain;">
                         </div>
                     <?php else: ?>
@@ -676,7 +676,7 @@ async function doOfflineSearch(query) {
             const priceWs = p.price_small_wholesale ? parseFloat(p.price_small_wholesale) : (p.packagings && p.packagings.length > 0 ? parseFloat(p.packagings[0].sell_price_wholesale) : 0);
             
             const photoHtml = p.photo 
-                ? `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:var(--surface-2); flex-shrink:0; margin-right:16px;">
+                ? `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:transparent; flex-shrink:0; margin-right:16px;">
                        <img src="${BASE_URL}${p.photo}" style="width:100%; height:100%; object-fit:contain;">
                    </div>`
                 : `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; background:var(--primary-bg); color:var(--primary); font-size:1.5rem; flex-shrink:0; margin-right:16px;">

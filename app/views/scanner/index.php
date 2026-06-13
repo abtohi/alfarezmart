@@ -66,7 +66,7 @@ async function lookupBarcode() {
                             <div class="product-card" onclick='showProductResultOffline(${JSON.stringify(prod).replace(/'/g, "&#39;")})' style="cursor:pointer; flex-direction:column; align-items:stretch;">
                                 <div style="display:flex; align-items:center;">
                                     ${prod.photo 
-                                        ? `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:var(--surface-2); flex-shrink:0; margin-right:16px;">
+                                        ? `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:transparent; flex-shrink:0; margin-right:16px;">
                                                <img src="${typeof BASE_URL !== 'undefined' ? BASE_URL : '/'}${prod.photo}" style="width:100%; height:100%; object-fit:contain;">
                                            </div>`
                                         : `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; background:var(--primary-bg); color:var(--primary); font-size:1.5rem; flex-shrink:0; margin-right:16px;"><i class="bi bi-box-seam"></i></div>`
@@ -101,7 +101,7 @@ async function lookupBarcode() {
                     <div class="product-card" onclick="fetchProductDetail(${p.id})" style="cursor:pointer; flex-direction:column; align-items:stretch;">
                         <div style="display:flex; align-items:center;">
                             ${p.photo 
-                                ? `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:var(--surface-2); flex-shrink:0; margin-right:16px;">
+                                ? `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:transparent; flex-shrink:0; margin-right:16px;">
                                        <img src="${typeof BASE_URL !== 'undefined' ? BASE_URL : '/'}${p.photo}" style="width:100%; height:100%; object-fit:contain;">
                                    </div>`
                                 : `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; background:var(--primary-bg); color:var(--primary); font-size:1.5rem; flex-shrink:0; margin-right:16px;"><i class="bi bi-box-seam"></i></div>`
@@ -233,7 +233,7 @@ function renderProductScanResult(data, isOffline) {
         <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; border:1px solid var(--border-color); box-shadow:0 4px 12px rgba(0,0,0,0.05);">
             <div style="display:flex; gap:14px; margin-bottom:16px;">
                 ${data.photo 
-                    ? `<div style="width:60px;height:60px;border-radius:var(--radius-md);overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--surface-2);flex-shrink:0;">
+                    ? `<div style="width:60px;height:60px;border-radius:var(--radius-md);overflow:hidden;display:flex;align-items:center;justify-content:center;background:transparent;flex-shrink:0;">
                            <img src="${(typeof BASE_URL !== 'undefined' ? BASE_URL : '/')}${data.photo}" style="width:100%;height:100%;object-fit:contain;cursor:pointer;" onclick="viewFullPhoto(this.src)">
                        </div>`
                     : `<div style="width:50px;height:50px;background:var(--primary-bg);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
