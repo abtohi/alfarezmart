@@ -166,25 +166,31 @@
 
             let packHtml = '';
             if (it.packagings && it.packagings.length > 0) {
-                packHtml = `<select class="pkg-select" data-idx="${idx}" style="font-size:10px; padding:4px; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); margin-top:4px; width:100%;">`;
+                packHtml = `<select class="pkg-select" data-idx="${idx}" style="font-size:10px; padding:6px; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); width:100%;">`;
                 it.packagings.forEach(pk => {
                     const sel = (pk.id == it.packaging_id) ? 'selected' : '';
                     packHtml += `<option value="${pk.id}" data-price="${pk.buy_price}" data-unit="${pk.unit_name}" ${sel}>${escapeHtml(pk.unit_name || 'pcs')} (Isi ${pk.base_qty}) - ${fmtRp(pk.buy_price)}</option>`;
                 });
                 packHtml += `</select>`;
             } else {
-                packHtml = `<div style="font-size:10px; color:var(--text-muted); margin-top:4px;">${escapeHtml(it.unit_name)} · ${fmtRp(it.buy_price)}</div>`;
+                packHtml = `<div style="font-size:10px; color:var(--text-muted); padding:6px 0;">${escapeHtml(it.unit_name)} · ${fmtRp(it.buy_price)}</div>`;
             }
 
             card.innerHTML = `
-                <div style="flex:1; min-width:0;">
-                    <div class="item-name">${escapeHtml(it.name)}</div>
-                    ${packHtml}
+                <div style="display:flex; flex-direction:column; gap:8px; width:100%;">
+                    <div class="item-name" style="width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(it.name)}</div>
+                    <div style="display:flex; align-items:center; gap:10px; width:100%;">
+                        <div style="flex:1; min-width:0;">
+                            ${packHtml}
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                            <button type="button" class="qty-btn" data-act="dec" data-idx="${idx}">−</button>
+                            <input type="number" class="qty-input" min="0" step="1" value="${it.qty}" data-idx="${idx}">
+                            <button type="button" class="qty-btn" data-act="inc" data-idx="${idx}">+</button>
+                            <button type="button" class="del-btn" style="margin-left:4px;" data-act="del" data-idx="${idx}"><i class="bi bi-x"></i></button>
+                        </div>
+                    </div>
                 </div>
-                <button type="button" class="qty-btn" data-act="dec" data-idx="${idx}">−</button>
-                <input type="number" class="qty-input" min="0" step="1" value="${it.qty}" data-idx="${idx}">
-                <button type="button" class="qty-btn" data-act="inc" data-idx="${idx}">+</button>
-                <button type="button" class="del-btn" data-act="del" data-idx="${idx}"><i class="bi bi-x"></i></button>
             `;
             elList.appendChild(card);
         });
