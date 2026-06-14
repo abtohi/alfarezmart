@@ -652,7 +652,7 @@ class PurchaseModel extends Model
                  FROM purchase_items pi2
                  JOIN purchases p2 ON pi2.purchase_id = p2.id
                  JOIN product_packagings pkg2 ON pi2.packaging_id = pkg2.id
-                 WHERE pi2.product_id = :pid 
+                 WHERE pi2.product_id = :pid2
                    AND p2.supplier_id = COALESCE(s.id, 0)
                  ORDER BY p2.purchase_date DESC, p2.id DESC
                  LIMIT 1
@@ -665,7 +665,7 @@ class PurchaseModel extends Model
             GROUP BY COALESCE(s.id, 0), COALESCE(s.name, 'Supplier Dihapus')
             ORDER BY avg_price ASC
         ");
-        $stmt->execute([':pid' => $productId]);
+        $stmt->execute([':pid' => $productId, ':pid2' => $productId]);
         $results = $stmt->fetchAll();
         
         // Ensure latest_price is float
