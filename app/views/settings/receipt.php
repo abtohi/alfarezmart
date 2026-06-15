@@ -1,6 +1,6 @@
 <!-- Receipt Settings View -->
 <?php
-$settingModel = new \App\Models\SettingModel();
+$settingModel = new SettingModel();
 $storeName = $settingModel->get('store_name', 'AlfarezMart');
 $storeAddress = $settingModel->get('store_address', '');
 $storePhone = $settingModel->get('store_phone', '');
