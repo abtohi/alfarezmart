@@ -201,7 +201,7 @@ function updateCartItemDom(item) {
                 let color = profitPerUnit >= 0 ? 'var(--success)' : 'var(--danger)';
                 let icon = profitPerUnit >= 0 ? '<i class="bi bi-arrow-up-right"></i>' : '<i class="bi bi-arrow-down-right"></i>';
                 
-                markupEl.innerHTML = `<div style="color:${color};"><span style="color:var(--text-muted);font-weight:400;">Markup:</span> ${icon} ${markupPct}% &nbsp;|&nbsp; <span style="color:var(--text-muted);font-weight:400;">Margin/Item:</span> ${formatRupiah(profitPerUnit)} &nbsp;|&nbsp; <span style="color:var(--text-muted);font-weight:400;">Profit:</span> ${formatRupiah(totalProfit)}</div>`;
+                markupEl.innerHTML = `<div style="color:${color};"><span style="color:var(--text-muted);font-weight:400;">M:</span> ${icon} ${markupPct}% &nbsp;|&nbsp; <span style="color:var(--text-muted);font-weight:400;">S:</span> ${formatRupiah(profitPerUnit)} &nbsp;|&nbsp; <span style="color:var(--text-muted);font-weight:400;">P:</span> ${formatRupiah(totalProfit)}</div>`;
                 markupEl.style.display = 'block';
             } else {
                 markupEl.style.display = 'none';
@@ -629,20 +629,22 @@ function renderCart() {
                     </div>
                     <div class="cart-item-total" style="font-weight:700;font-size:1rem;text-align:right;color:var(--primary);">${formatRupiah(item.total)}</div>
                 </div>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                    <select class="form-select-dark" style="padding:6px 8px;font-size:0.8rem;border:1px solid var(--border-color);background:var(--surface-2);border-radius:var(--radius-sm);" onchange="changeLevel(${item.id}, this.value)">
-                        ${levelOptions}
-                    </select>
-                    <div style="display:flex;align-items:center;background:var(--surface-2);border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-color);">
-                        <button type="button" onclick="updateQty(${item.id}, -1)" style="border:none;background:none;color:var(--text-primary);padding:6px 10px;cursor:pointer;"><i class="bi bi-dash-lg"></i></button>
-                        <span style="font-weight:700;width:32px;text-align:center;font-size:0.9rem;">${item.quantity}</span>
-                        <button type="button" onclick="updateQty(${item.id}, 1)" style="border:none;background:none;color:var(--primary);padding:6px 10px;cursor:pointer;"><i class="bi bi-plus-lg"></i></button>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--surface-2);padding:8px 10px;border-radius:var(--radius-md);border:1px solid var(--border-color);">
+                    <div style="flex:1;min-width:110px;">
+                        <select class="form-select-dark-sm" style="width:100%;font-weight:600;color:var(--primary);background-color:var(--primary-bg);border:1px solid rgba(230,57,70,0.2);background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23e63946' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E&quot;);padding-top:8px;padding-bottom:8px;" onchange="changeLevel(${item.id}, this.value)">
+                            ${levelOptions}
+                        </select>
                     </div>
-                    <button type="button" onclick="cart = cart.filter(i => i.id != ${item.id}); renderCart();" style="margin-left:auto;border:none;background:none;color:var(--danger);cursor:pointer;padding:6px 8px;"><i class="bi bi-trash"></i></button>
+                    <div style="display:flex;align-items:center;background:var(--surface-1);border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-color);box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                        <button type="button" onclick="updateQty(${item.id}, -1)" style="border:none;background:none;color:var(--text-secondary);padding:6px 12px;cursor:pointer;transition:all 150ms;"><i class="bi bi-dash"></i></button>
+                        <span style="font-weight:700;width:32px;text-align:center;font-size:0.95rem;color:var(--text-primary);">${item.quantity}</span>
+                        <button type="button" onclick="updateQty(${item.id}, 1)" style="border:none;background:none;color:var(--primary);padding:6px 12px;cursor:pointer;transition:all 150ms;"><i class="bi bi-plus"></i></button>
+                    </div>
+                    <button type="button" onclick="cart = cart.filter(i => i.id != ${item.id}); renderCart();" style="border:1px solid rgba(230,57,70,0.2);background:var(--danger-bg);color:var(--danger);cursor:pointer;padding:6px 12px;border-radius:var(--radius-sm);transition:all 150ms;"><i class="bi bi-trash3"></i></button>
                 </div>
-                <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:var(--font-size-xs);color:var(--text-secondary);cursor:pointer;user-select:none;">
-                    <input type="checkbox" ${customChecked} onchange="togglePosCustomPrice(${item.id}, this.checked)" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;">
-                    <span><i class="bi bi-pencil-square"></i> Harga custom</span>
+                <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11px;color:var(--text-secondary);cursor:pointer;user-select:none;font-weight:500;">
+                    <input type="checkbox" ${customChecked} onchange="togglePosCustomPrice(${item.id}, this.checked)" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;margin:0;">
+                    <span><i class="bi bi-pencil-square" style="margin-right:2px;"></i> Terapkan Harga Custom</span>
                 </label>
                 <div style="margin-top:8px;${customWrapStyle}">
                     <input type="number" min="0" step="1" value="${customPriceVal}" placeholder="Total harga untuk ${item.quantity} ${escapeHtml(item.unit_name)}"
