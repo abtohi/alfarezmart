@@ -1050,8 +1050,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                         ${isAnon ? '<span class="badge-custom badge-danger" style="font-size:9px; margin-left:4px;">Tanpa Nama</span>' : ''}
                                     </div>
                                     <div style="display:flex; gap:6px;">
-                                        <button onclick="showEditCustomerModal(${JSON.stringify(c).replace(/"/g, '&quot;')})" class="btn-icon" style="color:var(--text-primary);"><i class="bi bi-pencil-square"></i></button>
-                                        <button onclick="deleteCustomer(${c.id}, '${c.name.replace(/'/g, "\\'")}')" class="btn-icon" style="color:var(--danger);"><i class="bi bi-trash"></i></button>
+                                        ${c.phone ? `<a href="https://wa.me/${c.phone.replace(/^0/, '62').replace(/\D/g, '')}" target="_blank" class="btn-icon" style="color:#25D366; text-decoration:none; display:flex; align-items:center; justify-content:center;" title="Hubungi via WhatsApp"><i class="bi bi-whatsapp"></i></a>` : ''}
+                                        <button onclick="showEditCustomerModal(${JSON.stringify(c).replace(/"/g, '&quot;')})" class="btn-icon" style="color:var(--text-primary);" title="Edit Pelanggan"><i class="bi bi-pencil-square"></i></button>
+                                        <button onclick="deleteCustomer(${c.id}, '${c.name.replace(/'/g, "\\'")}')" class="btn-icon" style="color:var(--danger);" title="Hapus Pelanggan"><i class="bi bi-trash"></i></button>
                                     </div>
                                 </div>
                                 <div style="font-size:var(--font-size-xs); color:var(--text-muted); margin-top:4px;">
