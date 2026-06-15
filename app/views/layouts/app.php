@@ -237,7 +237,7 @@ if ($userLevel === 'staff') {
     <!-- App JS -->
     <script>
         const BASE_URL = '<?= BASE_URL ?>';
-        const version = '11.21';
+        const version = '11.23';
     </script>
     <script src="<?= BASE_URL ?>public/js/utils.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/dexie.min.js<?= $v ?>"></script>
