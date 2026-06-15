@@ -4,7 +4,7 @@
  * @var string $csrfToken
  */
 ?>
-<div class="page-section" style="padding-bottom:100px;">
+<div class="page-section" style="padding-bottom:200px;">
     <div class="pos-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
         <h2 style="font-size:var(--font-size-lg); font-weight:700; margin:0;">Kasir (POS)</h2>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -183,6 +183,31 @@ function updateCartItemDom(item) {
             noteEl.style.display = '';
         } else {
             noteEl.style.display = 'none';
+        }
+    }
+    
+    // Update custom markup info
+    const markupEl = row.querySelector('.cart-custom-markup');
+    if (markupEl) {
+        if (item.use_custom_price) {
+            const curPkg = item.packagings?.find(p => p.level == item.level);
+            const buyPrice = parseFloat(curPkg?.buy_price) || 0;
+            if (buyPrice > 0 && item.custom_line_total !== null && item.custom_line_total !== '') {
+                const customUnitPrice = parseFloat(item.custom_line_total) / item.quantity;
+                const profitPerUnit = customUnitPrice - buyPrice;
+                const totalProfit = parseFloat(item.custom_line_total) - (buyPrice * item.quantity);
+                const markupPct = (profitPerUnit / buyPrice * 100).toFixed(1);
+                
+                let color = profitPerUnit >= 0 ? 'var(--success)' : 'var(--danger)';
+                let icon = profitPerUnit >= 0 ? '<i class="bi bi-arrow-up-right"></i>' : '<i class="bi bi-arrow-down-right"></i>';
+                
+                markupEl.innerHTML = `<div style="color:${color};"><span style="color:var(--text-muted);font-weight:400;">Markup:</span> ${icon} ${markupPct}% &nbsp;|&nbsp; <span style="color:var(--text-muted);font-weight:400;">Margin/Item:</span> ${formatRupiah(profitPerUnit)} &nbsp;|&nbsp; <span style="color:var(--text-muted);font-weight:400;">Profit:</span> ${formatRupiah(totalProfit)}</div>`;
+                markupEl.style.display = 'block';
+            } else {
+                markupEl.style.display = 'none';
+            }
+        } else {
+            markupEl.style.display = 'none';
         }
     }
 }
@@ -623,6 +648,7 @@ function renderCart() {
                     <input type="number" min="0" step="1" value="${customPriceVal}" placeholder="Total harga untuk ${item.quantity} ${escapeHtml(item.unit_name)}"
                         oninput="onPosCustomPriceInput(${item.id}, this)"
                         class="form-control-dark cart-custom-price-input" style="width:100%;font-size:0.85rem;padding:8px 10px;border:1px solid var(--border-color);border-radius:var(--radius-sm);background:var(--bg-input);">
+                    <div class="cart-custom-markup" style="font-size:0.75rem; margin-top:6px; font-weight:600; background:var(--surface-2); padding:6px 8px; border-radius:4px; border:1px solid var(--border-color); display:none;"></div>
                 </div>
             </div>
         `;
@@ -635,6 +661,9 @@ function renderCart() {
         cartContainer.innerHTML = '';
         cartContainer.appendChild(emptyState);
     }
+    
+    // Apply dynamic updates (markup etc)
+    cart.forEach(item => updateCartItemDom(item));
 
     calculateTotal();
     autoSaveCart();
@@ -799,9 +828,56 @@ window.deleteDraft = function(id) {
     showToast('Draft dihapus', 'success');
 };
 
-async function checkout() {
+function checkout() {
     if (cart.length === 0) return;
 
+    let hasZeroPrice = false;
+    let hasLowPrice = false;
+
+    for (let i = 0; i < cart.length; i++) {
+        if (cart[i].total === 0) {
+            hasZeroPrice = true;
+        } else if (cart[i].total < 500) {
+            hasLowPrice = true;
+        }
+    }
+
+    if (hasZeroPrice) {
+        AppModal.show({
+            title: 'Harga Tidak Valid',
+            subtitle: 'Pengecekan Harga Keranjang',
+            icon: 'bi-exclamation-triangle',
+            iconColor: 'var(--danger-bg)',
+            iconAccent: 'var(--danger)',
+            bodyHTML: '<div style="text-align:center; padding:10px 0;"><i class="bi bi-exclamation-circle" style="font-size:3rem; color:var(--danger); display:block; margin-bottom:12px;"></i><p style="font-size:14px; margin-bottom:8px;">Terdapat produk dengan total harga <strong style="color:var(--danger)">Rp0</strong> di keranjang.</p><p style="font-size:13px; color:var(--text-muted);">Mohon perbaiki harga produk tersebut sebelum melanjutkan pembayaran.</p></div>',
+            hideFooter: true,
+            cancelText: 'Tutup & Perbaiki'
+        });
+        return;
+    }
+
+    if (hasLowPrice) {
+        AppModal.show({
+            title: 'Konfirmasi Harga',
+            subtitle: 'Peringatan Harga Terlalu Rendah',
+            icon: 'bi-info-circle',
+            iconColor: 'var(--warning-bg)',
+            iconAccent: 'var(--warning)',
+            bodyHTML: '<div style="text-align:center; padding:10px 0;"><i class="bi bi-question-circle" style="font-size:3rem; color:var(--warning); display:block; margin-bottom:12px;"></i><p style="font-size:14px; margin-bottom:8px;">Terdapat produk dengan total harga <strong>kurang dari Rp500</strong>.</p><p style="font-size:13px; color:var(--text-muted);">Apakah Anda yakin nominal harga tersebut sudah benar?</p></div>',
+            submitText: 'Ya, Lanjutkan',
+            cancelText: 'Batal',
+            onSubmit: async () => {
+                proceedCheckout();
+                return true;
+            }
+        });
+        return;
+    }
+
+    proceedCheckout();
+}
+
+async function proceedCheckout() {
     btnCheckout.innerHTML = '<i class="spinner-border spinner-border-sm"></i> MEMPROSES...';
     btnCheckout.disabled = true;
 
