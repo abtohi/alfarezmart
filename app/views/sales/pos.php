@@ -597,9 +597,14 @@ function renderCart() {
 
     let html = '';
     cart.forEach(item => {
-        const levelOptions = item.packagings.map(p =>
-            `<option value="${p.level}" ${p.level == item.level ? 'selected' : ''}>${escapeHtml(p.unit_name)}</option>`
-        ).join('');
+        let activeLabel = item.unit_name;
+        let levelOptionsHTML = '';
+        item.packagings.forEach(p => {
+            if (p.level == item.level) activeLabel = p.unit_name;
+            const isActive = (p.level == item.level);
+            const activeStyle = isActive ? 'background:var(--primary); color:#fff; font-weight:600;' : 'color:var(--text-primary);';
+            levelOptionsHTML += `<li><a class="dropdown-item" href="javascript:void(0)" onclick="changeLevel(${item.id}, ${p.level})" style="padding:8px 16px; font-size:0.85rem; transition:0.2s; ${activeStyle}" onmouseover="if(!${isActive}){this.style.background='var(--surface-3)'}" onmouseout="if(!${isActive}){this.style.background='transparent'}">${escapeHtml(p.unit_name)}</a></li>`;
+        });
 
         const customChecked = item.use_custom_price ? 'checked' : '';
         const customWrapStyle = item.use_custom_price ? '' : 'opacity:0.55;pointer-events:none;';
@@ -630,10 +635,13 @@ function renderCart() {
                     <div class="cart-item-total" style="font-weight:700;font-size:1rem;text-align:right;color:var(--primary);">${formatRupiah(item.total)}</div>
                 </div>
                 <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--surface-2);padding:8px 10px;border-radius:var(--radius-md);border:1px solid var(--border-color);">
-                    <div style="flex:1;min-width:110px;">
-                        <select class="form-select-dark-sm" style="width:100%;font-weight:600;color:var(--primary);background-color:var(--primary-bg);border:1px solid rgba(230,57,70,0.2);background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23e63946' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E&quot;);padding-top:8px;padding-bottom:8px;" onchange="changeLevel(${item.id}, this.value)">
-                            ${levelOptions}
-                        </select>
+                    <div class="dropdown" style="flex:1;min-width:110px;">
+                        <button type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%;font-weight:600;color:var(--primary);background-color:var(--primary-bg);border:1px solid rgba(230,57,70,0.2);border-radius:var(--radius-sm);padding:8px 28px 8px 12px;text-align:left;font-size:11px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23e63946' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 10px center;background-size:10px;cursor:pointer;">
+                            ${escapeHtml(activeLabel)}
+                        </button>
+                        <ul class="dropdown-menu shadow-lg" style="background:var(--surface-2); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:4px 0; min-width:100%; margin-top:4px;">
+                            ${levelOptionsHTML}
+                        </ul>
                     </div>
                     <div style="display:flex;align-items:center;background:var(--surface-1);border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-color);box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                         <button type="button" onclick="updateQty(${item.id}, -1)" style="border:none;background:none;color:var(--text-secondary);padding:6px 12px;cursor:pointer;transition:all 150ms;"><i class="bi bi-dash"></i></button>
