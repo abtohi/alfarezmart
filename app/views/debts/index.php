@@ -428,27 +428,25 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     window.showAddCustomerDebtModal = async function() {
-        // Fetch active customers
-        let customerOptions = '<option value="">-- Pilih Pelanggan --</option>';
+        let customerOptionsData = [];
         try {
             const custRes = await api(`${BASE_URL}api/customers`);
             if (custRes.success) {
                 custRes.data.forEach(c => {
                     const ciri = c.notes ? ` (${c.notes})` : '';
-                    customerOptions += `<option value="${c.id}">${c.name}${ciri}</option>`;
+                    customerOptionsData.push({ value: String(c.id), label: `${c.name}${ciri}` });
                 });
             }
         } catch (e) {
             console.error(e);
         }
+        customerOptionsData.push({ value: 'NEW_ANON', label: '-- input manual / tanpa nama --' });
 
         const html = `
             <div class="modal-form-group">
                 <label>Pelanggan *</label>
-                <select id="newDebtCustomerId" class="form-select-dark" onchange="toggleCustomerFallback(this.value)">
-                    ${customerOptions}
-                    <option value="NEW_ANON">-- input manual / tanpa nama --</option>
-                </select>
+                <div id="newDebtCustomerIdContainer"></div>
+                <input type="hidden" id="newDebtCustomerId">
             </div>
             
             <div class="modal-form-group" id="manualCustomerGroup" style="display:none;">
@@ -490,6 +488,23 @@ document.addEventListener('DOMContentLoaded', function() {
             iconAccent: 'var(--info)',
             bodyHTML: html,
             submitText: 'Catat Piutang',
+            onShown: () => {
+                new SearchBox(document.getElementById('newDebtCustomerIdContainer'), {
+                    options: customerOptionsData,
+                    placeholder: 'Cari pelanggan...',
+                    icon: 'bi-person',
+                    name: 'newDebtCustomerIdDummy',
+                    clearable: true,
+                    onChange: (val) => {
+                        document.getElementById('newDebtCustomerId').value = val;
+                        toggleCustomerFallback(val);
+                    },
+                    onClear: () => {
+                        document.getElementById('newDebtCustomerId').value = '';
+                        toggleCustomerFallback('');
+                    }
+                });
+            },
             onSubmit: async () => {
                 const custId = document.getElementById('newDebtCustomerId').value;
                 const fallback = document.getElementById('newDebtCustomerFallback').value.trim();
@@ -1055,9 +1070,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function getCustomerFormHTML(c = {}) {
-        let options = '<option value="">Pilih Level...</option>';
+        let optionsListHtml = '';
+        let activeTypeName = 'Pilih Level...';
         customerTypes.forEach(t => {
-            options += `<option value="${t.id}" ${c.type_id == t.id ? 'selected' : ''}>${t.name} (Tier: ${t.price_tier})</option>`;
+            if (c.type_id == t.id) activeTypeName = `${t.name} (Tier: ${t.price_tier})`;
+            optionsListHtml += `<li><a class="dropdown-item ${c.type_id == t.id ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='${t.id}'; dp.querySelector('button span').textContent='${t.name} (Tier: ${t.price_tier})'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">${t.name} (Tier: ${t.price_tier})</a></li>`;
         });
 
         const isAnon = c.name ? c.name.toLowerCase().includes('tanpa nama') : false;
@@ -1088,7 +1105,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             <div class="modal-form-group">
                 <label>Level Kategori Pelanggan</label>
-                <select id="modalCustType" class="form-select-dark">${options}</select>
+                <div class="dropdown" style="width:100%;">
+                    <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:10px; font-size:12px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                        <span>${activeTypeName}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
+                        ${optionsListHtml}
+                    </ul>
+                    <input type="hidden" id="modalCustType" value="${c.type_id || ''}">
+                </div>
             </div>
 
             <div class="modal-form-group">

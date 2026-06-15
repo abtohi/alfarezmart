@@ -121,12 +121,18 @@ async function openAddUserModal() {
             <div class="modal-form-group"><label>No HP</label><input type="text" class="form-control-dark" id="mu_phone" placeholder="08xx..."></div>
             <div class="modal-form-group"><label>Password *</label><input type="password" class="form-control-dark" id="mu_password" placeholder="Min 6 karakter" required></div>
             <div class="modal-form-group"><label>Level Akses *</label>
-                <select class="form-select-dark" id="mu_level" style="width:100%;padding:10px;">
-                    <option value="staff">Staff</option>
-                    <option value="admin">Admin</option>
-                    <option value="superadmin">Superadmin</option>
-                    <option value="customer">Customer (Coming Soon)</option>
-                </select>
+                <div class="dropdown" style="width:100%;">
+                    <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:10px; font-size:12px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                        <span>Staff</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
+                        <li><a class="dropdown-item active" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='staff'; dp.querySelector('button span').textContent='Staff'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Staff</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='admin'; dp.querySelector('button span').textContent='Admin'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Admin</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='superadmin'; dp.querySelector('button span').textContent='Superadmin'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Superadmin</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='customer'; dp.querySelector('button span').textContent='Customer (Coming Soon)'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Customer (Coming Soon)</a></li>
+                    </ul>
+                    <input type="hidden" id="mu_level" value="staff">
+                </div>
             </div>
         `,
         submitText: 'Buat User',

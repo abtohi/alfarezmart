@@ -80,10 +80,15 @@
     <div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div class="section-title" style="margin-bottom: 0;">Daftar Transaksi</div>
-            <select id="filterPost" class="form-select-dark-sm" style="width: auto; min-width: 120px;">
-                <option value="">Semua Pos</option>
-                <!-- Options akan digenerate disini -->
-            </select>
+            <div class="dropdown" style="width:auto; min-width:120px;">
+                <button id="filterPostBtn" class="btn btn-dark dropdown-toggle form-select-dark-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center;">
+                    <span>Semua Pos</span>
+                </button>
+                <ul id="filterPostMenu" class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
+                    <!-- Options akan digenerate disini -->
+                </ul>
+                <input type="hidden" id="filterPost" value="">
+            </div>
         </div>
         
         <div id="bulkActionBar" style="display: none; background: var(--surface-2); padding: 10px 14px; border-radius: var(--radius-md); margin-bottom: 12px; align-items: center; justify-content: space-between; border: 1px solid var(--primary);">
@@ -268,11 +273,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     function updateFilterOptions() {
-        let html = '<option value="">Semua Pos</option>';
+        let html = `<li><a class="dropdown-item ${activePostFilter === '' ? 'active' : ''}" href="#" onclick="event.preventDefault(); document.getElementById('filterPost').value=''; document.getElementById('filterPostBtn').querySelector('span').textContent='Semua Pos'; document.querySelectorAll('#filterPostMenu .dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); document.getElementById('filterPost').dispatchEvent(new Event('change'));">Semua Pos</a></li>`;
+        if (activePostFilter === '') document.getElementById('filterPostBtn').querySelector('span').textContent = 'Semua Pos';
         accountsData.forEach(acc => {
-            html += `<option value="${escapeHtml(acc.name)}" ${activePostFilter === acc.name ? 'selected' : ''}>${escapeHtml(acc.name)}</option>`;
+            const isSelected = activePostFilter === acc.name;
+            if (isSelected) {
+                document.getElementById('filterPostBtn').querySelector('span').textContent = escapeHtml(acc.name);
+            }
+            html += `<li><a class="dropdown-item ${isSelected ? 'active' : ''}" href="#" onclick="event.preventDefault(); document.getElementById('filterPost').value='${escapeHtml(acc.name)}'; document.getElementById('filterPostBtn').querySelector('span').textContent='${escapeHtml(acc.name)}'; document.querySelectorAll('#filterPostMenu .dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); document.getElementById('filterPost').dispatchEvent(new Event('change'));">${escapeHtml(acc.name)}</a></li>`;
         });
-        filterPost.innerHTML = html;
+        document.getElementById('filterPostMenu').innerHTML = html;
     }
 
     function updateCategoryDatalist() {
@@ -1210,10 +1220,16 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <div style="display:flex; flex-direction:column; gap: 8px;">
                     <input type="text" id="newCatName" class="form-control-dark" placeholder="Nama Kategori (Misal: Uang Makan)" style="width: 100%;">
                     <div style="display:flex; gap: 8px; align-items:center;">
-                        <select id="newCatType" class="form-select-dark" style="flex:1; font-size: 11px;">
-                            <option value="Pemasukan">Pemasukan</option>
-                            <option value="Pengeluaran" selected>Pengeluaran</option>
-                        </select>
+                        <div class="dropdown" style="flex:1;">
+                            <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:6px 10px; font-size:11px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                                <span>Pengeluaran</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:11px; min-width:100%;">
+                                <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Pemasukan'; dp.querySelector('button span').textContent='Pemasukan'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Pemasukan</a></li>
+                                <li><a class="dropdown-item active" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Pengeluaran'; dp.querySelector('button span').textContent='Pengeluaran'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Pengeluaran</a></li>
+                            </ul>
+                            <input type="hidden" id="newCatType" value="Pengeluaran">
+                        </div>
                         <button class="btn-primary-custom" onclick="saveNewCategory()" style="padding: 6px 12px; border-radius:var(--radius-md); font-size: 11px; white-space:nowrap;"><i class="bi bi-plus-lg"></i> Tambah</button>
                     </div>
                 </div>
@@ -1222,10 +1238,16 @@ document.addEventListener('DOMContentLoaded', async function() {
                 ${categoriesData.map(cat => `
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border-color);">
                         <div style="flex: 1; display:flex; gap: 5px; align-items: center;">
-                            <select id="editCatType_${cat.id}" class="form-select-dark" style="font-size: 11px; padding: 4px; width: auto; height: auto;">
-                                <option value="Pemasukan" ${cat.type === 'Pemasukan' ? 'selected' : ''}>Pemasukan</option>
-                                <option value="Pengeluaran" ${cat.type === 'Pengeluaran' ? 'selected' : ''}>Pengeluaran</option>
-                            </select>
+                            <div class="dropdown" style="width:auto;">
+                                <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="text-align:left; display:flex; justify-content:space-between; align-items:center; padding:4px 8px; font-size:11px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                                    <span>${cat.type}</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:11px; min-width:100%;">
+                                    <li><a class="dropdown-item ${cat.type === 'Pemasukan' ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Pemasukan'; dp.querySelector('button span').textContent='Pemasukan'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Pemasukan</a></li>
+                                    <li><a class="dropdown-item ${cat.type === 'Pengeluaran' ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Pengeluaran'; dp.querySelector('button span').textContent='Pengeluaran'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Pengeluaran</a></li>
+                                </ul>
+                                <input type="hidden" id="editCatType_${cat.id}" value="${cat.type}">
+                            </div>
                             <input type="text" id="editCatName_${cat.id}" value="${escapeHtml(cat.name)}" class="form-control-dark" style="font-size: 12px; padding: 4px; height: auto; flex:1;">
                         </div>
                         <div style="display: flex; gap: 5px; margin-left: 10px;">

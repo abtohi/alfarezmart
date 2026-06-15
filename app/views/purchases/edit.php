@@ -709,10 +709,8 @@ async function addSalesRepModal() {
         bodyHTML: `
             <div class="modal-form-group">
                 <label>Supplier *</label>
-                <select class="form-control-dark" id="modalSalesSupplier" style="width:100%;">
-                    <option value="">— Pilih supplier —</option>
-                    ${supplierOptions}
-                </select>
+                <div id="modalSalesSupplierContainer"></div>
+                <input type="hidden" id="modalSalesSupplier">
             </div>
             <div class="modal-form-group">
                 <label>Nama Sales *</label>
@@ -734,6 +732,18 @@ async function addSalesRepModal() {
             </div>
         `,
         submitText: 'Simpan',
+        onShown: () => {
+            new SearchBox(document.getElementById('modalSalesSupplierContainer'), {
+                options: suppliersData,
+                placeholder: 'Cari atau pilih supplier...',
+                icon: 'bi-truck',
+                name: 'modalSalesSupplierDummy',
+                required: true,
+                clearable: true,
+                onChange: (val) => { document.getElementById('modalSalesSupplier').value = val; },
+                onClear: () => { document.getElementById('modalSalesSupplier').value = ''; }
+            });
+        },
         onSubmit: async () => {
             const name = document.getElementById('modalSalesName').value.trim();
             const supplierId = document.getElementById('modalSalesSupplier').value;
@@ -1526,11 +1536,17 @@ function openAllPackagingsModal(tempId) {
                 <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
                     <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" value="${t.min_qty}" min="1">
                     <input type="number" class="form-control-dark tier-total-harga" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" value="${totalH}" min="0" oninput="recalcTierHint(this)">
-                    <select class="form-select-dark tier-mode" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;">
-                        <option value="both" ${t.sale_mode==='both'?'selected':''}>E+G</option>
-                        <option value="retail" ${t.sale_mode==='retail'?'selected':''}>Ecer</option>
-                        <option value="wholesale" ${t.sale_mode==='wholesale'?'selected':''}>Grosir</option>
-                    </select>
+                    <div class="dropdown" style="width:100%;">
+                        <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:4px; font-size:10px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                            <span>${t.sale_mode==='retail'?'Ecer':t.sale_mode==='wholesale'?'Grosir':'E+G'}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:10px; min-width:100%;">
+                            <li><a class="dropdown-item ${t.sale_mode==='both'?'active':''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='both'; dp.querySelector('button span').textContent='E+G'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">E+G</a></li>
+                            <li><a class="dropdown-item ${t.sale_mode==='retail'?'active':''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='retail'; dp.querySelector('button span').textContent='Ecer'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">Ecer</a></li>
+                            <li><a class="dropdown-item ${t.sale_mode==='wholesale'?'active':''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='wholesale'; dp.querySelector('button span').textContent='Grosir'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">Grosir</a></li>
+                        </ul>
+                        <input type="hidden" class="tier-mode" value="${t.sale_mode||'both'}">
+                    </div>
                     <button type="button" onclick="this.closest('.tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 6px;cursor:pointer;font-size:11px;min-width:0;"><i class="bi bi-x"></i></button>
                 </div>
                 <input type="text" class="form-control-dark tier-label" value="${t.label||''}" placeholder="Label (opsional)" style="font-size:10px;padding:4px;width:100%;box-sizing:border-box;">
@@ -1567,10 +1583,11 @@ function openAllPackagingsModal(tempId) {
                         <div>
                             <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">Diskon</label>
                             <div style="display:flex;gap:4px;">
-                                <select id="mod_diskon_mode_${pkg.level}" class="form-select-dark pkg-diskon-mode" style="width:50px;padding:4px;font-size:10px;" onchange="onPkgModalInput(this, ${pkg.level})">
-                                    <option value="rp" ${(pkg.diskon_mode||'rp')==='rp'?'selected':''}>Rp</option>
-                                    <option value="pct" ${(pkg.diskon_mode||'rp')==='pct'?'selected':''}>%</option>
-                                </select>
+                                <div class="discount-toggle-group" style="display:flex; border-radius:var(--radius-md) 0 0 var(--radius-md); overflow:hidden; border:1px solid var(--border-color); border-right:none; width:50px;">
+                                    <button type="button" class="btn-discount-mode rp-mode ${(pkg.diskon_mode||'rp')==='rp'?'active':''}" style="flex:1; padding:4px 0; background:${(pkg.diskon_mode||'rp')==='rp'?'var(--primary)':'var(--bg-input)'}; color:${(pkg.diskon_mode||'rp')==='rp'?'#fff':'var(--text-muted)'}; border:none; font-size:10px; font-weight:bold; cursor:pointer;" onclick="event.preventDefault(); const p=this.closest('.discount-toggle-group'); p.querySelector('.pct-mode').style.background='var(--bg-input)'; p.querySelector('.pct-mode').style.color='var(--text-muted)'; this.style.background='var(--primary)'; this.style.color='#fff'; const hidden=p.nextElementSibling; hidden.value='rp'; hidden.dispatchEvent(new Event('change'));">Rp</button>
+                                    <button type="button" class="btn-discount-mode pct-mode ${pkg.diskon_mode==='pct'?'active':''}" style="flex:1; padding:4px 0; background:${pkg.diskon_mode==='pct'?'var(--primary)':'var(--bg-input)'}; color:${pkg.diskon_mode==='pct'?'#fff':'var(--text-muted)'}; border:none; font-size:10px; font-weight:bold; cursor:pointer;" onclick="event.preventDefault(); const p=this.closest('.discount-toggle-group'); p.querySelector('.rp-mode').style.background='var(--bg-input)'; p.querySelector('.rp-mode').style.color='var(--text-muted)'; this.style.background='var(--primary)'; this.style.color='#fff'; const hidden=p.nextElementSibling; hidden.value='pct'; hidden.dispatchEvent(new Event('change'));">%</button>
+                                </div>
+                                <input type="hidden" id="mod_diskon_mode_${pkg.level}" class="pkg-diskon-mode" value="${pkg.diskon_mode||'rp'}" onchange="onPkgModalInput(this, ${pkg.level})">
                                 <input type="number" id="mod_diskon_value_${pkg.level}" class="form-control-dark pkg-diskon-value" step="0.01" style="flex:1;padding:4px;font-size:11px;" value="${pkg.diskon_value || 0}" min="0" placeholder="0" oninput="onPkgModalInput(this, ${pkg.level})">
                             </div>
                         </div>
@@ -1728,9 +1745,17 @@ function addTierRow(btn) {
         <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
             <input type="number" class="form-control-dark tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" min="1">
             <input type="number" class="form-control-dark tier-total-harga" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" min="0" oninput="recalcTierHint(this)">
-            <select class="form-select-dark tier-mode" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;">
-                <option value="both">E+G</option><option value="retail">Ecer</option><option value="wholesale">Grosir</option>
-            </select>
+            <div class="dropdown" style="width:100%;">
+                <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:4px; font-size:10px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                    <span>E+G</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:10px; min-width:100%;">
+                    <li><a class="dropdown-item active" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='both'; dp.querySelector('button span').textContent='E+G'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">E+G</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='retail'; dp.querySelector('button span').textContent='Ecer'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">Ecer</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='wholesale'; dp.querySelector('button span').textContent='Grosir'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">Grosir</a></li>
+                </ul>
+                <input type="hidden" class="tier-mode" value="both">
+            </div>
             <button type="button" onclick="this.closest('.tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 6px;cursor:pointer;font-size:11px;min-width:0;"><i class="bi bi-x"></i></button>
         </div>
         <input type="text" class="form-control-dark tier-label" placeholder="Label (opsional)" style="font-size:10px;padding:4px;width:100%;box-sizing:border-box;">`;
@@ -2102,11 +2127,17 @@ function buildDrawerRowHtml(item, prefix) {
                 <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
                     <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" value="${t.min_qty}" min="1">
                     <input type="number" class="form-control-dark drawer-tier-total" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" value="${th}" min="0" oninput="recalcTierHint(this)">
-                    <select class="form-select-dark drawer-tier-mode" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;">
-                        <option value="both" ${t.sale_mode==='both'?'selected':''}>E+G</option>
-                        <option value="retail" ${t.sale_mode==='retail'?'selected':''}>Ecer</option>
-                        <option value="wholesale" ${t.sale_mode==='wholesale'?'selected':''}>Grosir</option>
-                    </select>
+                    <div class="dropdown" style="width:100%;">
+                        <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:4px; font-size:10px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                            <span>${t.sale_mode==='retail'?'Ecer':t.sale_mode==='wholesale'?'Grosir':'E+G'}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:10px; min-width:100%;">
+                            <li><a class="dropdown-item ${t.sale_mode==='both'?'active':''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='both'; dp.querySelector('button span').textContent='E+G'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">E+G</a></li>
+                            <li><a class="dropdown-item ${t.sale_mode==='retail'?'active':''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='retail'; dp.querySelector('button span').textContent='Ecer'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">Ecer</a></li>
+                            <li><a class="dropdown-item ${t.sale_mode==='wholesale'?'active':''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='wholesale'; dp.querySelector('button span').textContent='Grosir'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">Grosir</a></li>
+                        </ul>
+                        <input type="hidden" class="drawer-tier-mode" value="${t.sale_mode||'both'}">
+                    </div>
                     <button type="button" onclick="this.closest('.drawer-tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 6px;cursor:pointer;font-size:11px;min-width:0;"><i class="bi bi-x"></i></button>
                 </div>
                 <input type="text" class="form-control-dark drawer-tier-label" value="${t.label||''}" placeholder="Label (opsional)" style="font-size:10px;padding:4px;width:100%;box-sizing:border-box;">
@@ -2241,9 +2272,17 @@ function addDrawerTierRow(btn) {
         <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
             <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" min="1">
             <input type="number" class="form-control-dark drawer-tier-total" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" value="" min="0" oninput="recalcTierHint(this)">
-            <select class="form-select-dark drawer-tier-mode" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;">
-                <option value="both">E+G</option><option value="retail">Ecer</option><option value="wholesale">Grosir</option>
-            </select>
+            <div class="dropdown" style="width:100%;">
+                <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:4px; font-size:10px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                    <span>E+G</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:10px; min-width:100%;">
+                    <li><a class="dropdown-item active" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='both'; dp.querySelector('button span').textContent='E+G'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">E+G</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='retail'; dp.querySelector('button span').textContent='Ecer'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">Ecer</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='wholesale'; dp.querySelector('button span').textContent='Grosir'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">Grosir</a></li>
+                </ul>
+                <input type="hidden" class="drawer-tier-mode" value="both">
+            </div>
             <button type="button" onclick="this.closest('.drawer-tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 6px;cursor:pointer;font-size:11px;min-width:0;"><i class="bi bi-x"></i></button>
         </div>
         <input type="text" class="form-control-dark drawer-tier-label" placeholder="Label (opsional)" style="font-size:10px;padding:4px;width:100%;box-sizing:border-box;">`;
@@ -2489,8 +2528,9 @@ function renderCart() {
         });
 
         const levelOptions = item.packagings.map(p => 
-            `<option value="${p.level}" ${p.level == item.level ? 'selected' : ''}>${p.unit_name} (Isi ${p.base_qty})</option>`
+            `<li><a class="dropdown-item ${p.level == item.level ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='${p.level}'; dp.querySelector('button span').textContent='${p.unit_name} (Isi ${p.base_qty})'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">${p.unit_name} (Isi ${p.base_qty})</a></li>`
         ).join('');
+        const activePkgStr = (item.packagings.find(p => p.level == item.level) || item.packagings[0]) ? `${(item.packagings.find(p => p.level == item.level) || item.packagings[0]).unit_name} (Isi ${(item.packagings.find(p => p.level == item.level) || item.packagings[0]).base_qty})` : 'Pilih Kemasan';
 
         const selPkg    = item.packagings.find(p => p.level == item.level) || item.packagings[0];
         const selBaseQty = parseFloat(selPkg?.base_qty) || 1;
@@ -2532,9 +2572,15 @@ function renderCart() {
                     <label style="font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:4px;">
                         <span>Kemasan Beli</span>
                     </label>
-                    <select class="form-select-dark" style="width:100%;padding:8px;font-size:12px;" onchange="changeLevel(${item.id}, this.value)">
-                        ${levelOptions}
-                    </select>
+                    <div class="dropdown" style="width:100%;">
+                        <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:8px; font-size:12px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                            <span>${activePkgStr}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
+                            ${levelOptions}
+                        </ul>
+                        <input type="hidden" value="${item.level}" onchange="changeLevel(${item.id}, this.value)">
+                    </div>
                 </div>
                 <div style="flex:1;">
                     <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Qty Beli</label>
@@ -2561,10 +2607,11 @@ function renderCart() {
                 <div>
                     <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Diskon</label>
                     <div style="display:flex;gap:4px;">
-                        <select class="form-select-dark item-diskon-mode" style="width:65px;padding:8px;font-size:11px;" onchange="onMainInputChange(${item.id}, 'diskon_mode', this.value)">
-                            <option value="rp" ${(item.diskon_mode||'rp')==='rp'?'selected':''}>Rp</option>
-                            <option value="pct" ${(item.diskon_mode||'rp')==='pct'?'selected':''}}>%</option>
-                        </select>
+                        <div class="discount-toggle-group" style="display:flex; border-radius:var(--radius-md) 0 0 var(--radius-md); overflow:hidden; border:1px solid var(--border-color); border-right:none; width:65px;">
+                            <button type="button" class="btn-discount-mode rp-mode ${(item.diskon_mode||'rp')==='rp'?'active':''}" style="flex:1; padding:8px 0; background:${(item.diskon_mode||'rp')==='rp'?'var(--primary)':'var(--bg-input)'}; color:${(item.diskon_mode||'rp')==='rp'?'#fff':'var(--text-muted)'}; border:none; font-size:11px; font-weight:bold; cursor:pointer;" onclick="event.preventDefault(); const p=this.closest('.discount-toggle-group'); p.querySelector('.pct-mode').style.background='var(--bg-input)'; p.querySelector('.pct-mode').style.color='var(--text-muted)'; this.style.background='var(--primary)'; this.style.color='#fff'; const hidden=p.nextElementSibling; hidden.value='rp'; hidden.dispatchEvent(new Event('change'));">Rp</button>
+                            <button type="button" class="btn-discount-mode pct-mode ${item.diskon_mode==='pct'?'active':''}" style="flex:1; padding:8px 0; background:${item.diskon_mode==='pct'?'var(--primary)':'var(--bg-input)'}; color:${item.diskon_mode==='pct'?'#fff':'var(--text-muted)'}; border:none; font-size:11px; font-weight:bold; cursor:pointer;" onclick="event.preventDefault(); const p=this.closest('.discount-toggle-group'); p.querySelector('.rp-mode').style.background='var(--bg-input)'; p.querySelector('.rp-mode').style.color='var(--text-muted)'; this.style.background='var(--primary)'; this.style.color='#fff'; const hidden=p.nextElementSibling; hidden.value='pct'; hidden.dispatchEvent(new Event('change'));">%</button>
+                        </div>
+                        <input type="hidden" class="item-diskon-mode" value="${item.diskon_mode||'rp'}" onchange="onMainInputChange(${item.id}, 'diskon_mode', this.value)">
                         <input type="number" class="form-control-dark item-diskon-value" style="flex:1;padding:8px;font-size:12px;" value="${item.diskon_value || 0}" min="0" placeholder="0"
                                oninput="onMainInputChange(${item.id}, 'diskon_value', this.value)">
                     </div>
@@ -2857,8 +2904,10 @@ async function openBulkInputModal() {
     // Render each bulk item card using the same helpers
     const listHTML = bulkItems.map(item => {
         const levelOptions = item.packagings.map(p =>
-            `<option value="${p.level}" ${p.level == item.level ? 'selected' : ''}>${p.unit_name} (Isi ${p.base_qty})</option>`
+            `<li><a class="dropdown-item ${p.level == item.level ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='${p.level}'; dp.querySelector('button span').textContent='${p.unit_name} (Isi ${p.base_qty})'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">${p.unit_name} (Isi ${p.base_qty})</a></li>`
         ).join('');
+        const selPkg = item.packagings.find(p => p.level == item.level) || item.packagings[0];
+        const activePkgStr = selPkg ? `${selPkg.unit_name} (Isi ${selPkg.base_qty})` : 'Pilih Kemasan';
         const hasPkgs    = item.packagings.length > 1;
         const drawerHtml  = hasPkgs ? buildDrawerRowHtml(item, 'bulk') : '';
 
@@ -2892,9 +2941,15 @@ async function openBulkInputModal() {
                         <span>Kemasan Beli</span>
                         <a href="<?= BASE_URL ?>settings/master-data" target="_blank" style="color:var(--info);text-decoration:none;font-size:9px;"><i class="bi bi-box-arrow-up-right"></i></a>
                     </label>
-                    <select class="form-select-dark bulk-pkg-select" style="width:100%;padding:6px;font-size:11px;" onchange="onBulkLevelChange('${item.id}', this.value)">
-                        ${levelOptions}
-                    </select>
+                    <div class="dropdown" style="width:100%;">
+                        <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:6px; font-size:11px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                            <span>${activePkgStr}</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:11px; min-width:100%;">
+                            ${levelOptions}
+                        </ul>
+                        <input type="hidden" class="bulk-pkg-select" value="${item.level}" onchange="onBulkLevelChange('${item.id}', this.value)">
+                    </div>
                 </div>
                 <div style="flex:1;">
                     <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">Qty Beli</label>
@@ -2920,10 +2975,11 @@ async function openBulkInputModal() {
                 <div>
                     <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:3px;">Diskon</label>
                     <div style="display:flex;gap:3px;">
-                        <select class="form-select-dark bulk-diskon-mode" style="width:58px;padding:6px;font-size:10px;" onchange="onBulkMainChange('${item.id}', 'diskon_mode', this.value)">
-                            <option value="rp">Rp</option>
-                            <option value="pct">%</option>
-                        </select>
+                        <div class="discount-toggle-group" style="display:flex; border-radius:var(--radius-md) 0 0 var(--radius-md); overflow:hidden; border:1px solid var(--border-color); border-right:none; width:58px;">
+                            <button type="button" class="btn-discount-mode rp-mode active" style="flex:1; padding:6px 0; background:var(--primary); color:#fff; border:none; font-size:10px; font-weight:bold; cursor:pointer;" onclick="event.preventDefault(); const p=this.closest('.discount-toggle-group'); p.querySelector('.pct-mode').style.background='var(--bg-input)'; p.querySelector('.pct-mode').style.color='var(--text-muted)'; this.style.background='var(--primary)'; this.style.color='#fff'; const hidden=p.nextElementSibling; hidden.value='rp'; hidden.dispatchEvent(new Event('change'));">Rp</button>
+                            <button type="button" class="btn-discount-mode pct-mode" style="flex:1; padding:6px 0; background:var(--bg-input); color:var(--text-muted); border:none; font-size:10px; font-weight:bold; cursor:pointer;" onclick="event.preventDefault(); const p=this.closest('.discount-toggle-group'); p.querySelector('.rp-mode').style.background='var(--bg-input)'; p.querySelector('.rp-mode').style.color='var(--text-muted)'; this.style.background='var(--primary)'; this.style.color='#fff'; const hidden=p.nextElementSibling; hidden.value='pct'; hidden.dispatchEvent(new Event('change'));">%</button>
+                        </div>
+                        <input type="hidden" class="bulk-diskon-mode" value="rp" onchange="onBulkMainChange('${item.id}', 'diskon_mode', this.value)">
                         <input type="number" class="form-control-dark bulk-diskon-value" style="flex:1;padding:6px;font-size:11px;" value="0" min="0" placeholder="0"
                                oninput="onBulkMainChange('${item.id}', 'diskon_value', this.value)">
                     </div>

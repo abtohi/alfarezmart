@@ -52,10 +52,16 @@ $logo = $settingModel->get('store_logo', '');
             
             <div>
                 <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Lebar Printer (mm)</label>
-                <select id="thermal_printer_width" name="thermal_printer_width" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);">
-                    <option value="58" <?= $printerWidth == '58' ? 'selected' : '' ?>>58mm (32 karakter)</option>
-                    <option value="80" <?= $printerWidth == '80' ? 'selected' : '' ?>>80mm (48 karakter)</option>
-                </select>
+                <div class="dropdown" style="width:100%;">
+                    <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:10px; font-size:var(--font-size-sm); background:var(--bg-primary); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-sm);">
+                        <span><?= $printerWidth == '80' ? '80mm (48 karakter)' : '58mm (32 karakter)' ?></span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:var(--font-size-sm); min-width:100%;">
+                        <li><a class="dropdown-item <?= $printerWidth == '58' ? 'active' : '' ?>" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='58'; dp.querySelector('button span').textContent='58mm (32 karakter)'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">58mm (32 karakter)</a></li>
+                        <li><a class="dropdown-item <?= $printerWidth == '80' ? 'active' : '' ?>" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='80'; dp.querySelector('button span').textContent='80mm (48 karakter)'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">80mm (48 karakter)</a></li>
+                    </ul>
+                    <input type="hidden" id="thermal_printer_width" name="thermal_printer_width" value="<?= htmlspecialchars($printerWidth) ?>">
+                </div>
             </div>
         </div>
 

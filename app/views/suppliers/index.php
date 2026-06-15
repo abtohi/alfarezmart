@@ -79,9 +79,11 @@ const supplierTypes = [
 ];
 
 function getSupplierFormHTML(s = {}) {
-    let options = '<option value="">Pilih Jenis...</option>';
+    let activeTypeName = 'Pilih Jenis...';
+    let typeOptionsHtml = `<li><a class="dropdown-item ${!s.type_id ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value=''; dp.querySelector('button span').textContent='Pilih Jenis...'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Pilih Jenis...</a></li>`;
     supplierTypes.forEach(st => {
-        options += `<option value="${st.value}" ${s.type_id == st.value ? 'selected' : ''}>${st.label}</option>`;
+        if (s.type_id == st.value) activeTypeName = st.label;
+        typeOptionsHtml += `<li><a class="dropdown-item ${s.type_id == st.value ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='${st.value}'; dp.querySelector('button span').textContent='${st.label.replace(/'/g, "\\'")}'  ; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">${st.label}</a></li>`;
     });
 
     return `
@@ -91,7 +93,15 @@ function getSupplierFormHTML(s = {}) {
         </div>
         <div class="modal-form-group">
             <label>Jenis Supplier</label>
-            <select id="modalSupType" class="form-select-dark">${options}</select>
+            <div class="dropdown" style="width:100%;">
+                <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:10px; font-size:12px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                    <span>${activeTypeName}</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
+                    ${typeOptionsHtml}
+                </ul>
+                <input type="hidden" id="modalSupType" value="${s.type_id || ''}">
+            </div>
         </div>
         <div class="modal-form-group">
             <label>Alamat</label>
@@ -301,10 +311,16 @@ function getSalesRepFormHTML(sr = {}) {
         </div>
         <div class="modal-form-group">
             <label>Status</label>
-            <select class="form-select-dark" id="modalSalesStatus">
-                <option value="Aktif" ${sr.status !== 'Non-Aktif' ? 'selected' : ''}>Aktif</option>
-                <option value="Non-Aktif" ${sr.status === 'Non-Aktif' ? 'selected' : ''}>Non-Aktif</option>
-            </select>
+            <div class="dropdown" style="width:100%;">
+                <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:10px; font-size:12px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                    <span>${sr.status === 'Non-Aktif' ? 'Non-Aktif' : 'Aktif'}</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
+                    <li><a class="dropdown-item ${sr.status !== 'Non-Aktif' ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Aktif'; dp.querySelector('button span').textContent='Aktif'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Aktif</a></li>
+                    <li><a class="dropdown-item ${sr.status === 'Non-Aktif' ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Non-Aktif'; dp.querySelector('button span').textContent='Non-Aktif'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Non-Aktif</a></li>
+                </ul>
+                <input type="hidden" id="modalSalesStatus" value="${sr.status === 'Non-Aktif' ? 'Non-Aktif' : 'Aktif'}">
+            </div>
         </div>
     `;
 }

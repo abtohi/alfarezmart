@@ -166,12 +166,39 @@
 
             let packHtml = '';
             if (it.packagings && it.packagings.length > 0) {
-                packHtml = `<select class="pkg-select" data-idx="${idx}" style="font-size:10px; padding:6px; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); width:100%;">`;
+                const firstPk = it.packagings.find(pk => pk.id == it.packaging_id) || it.packagings[0];
+                let optionsHtml = '';
                 it.packagings.forEach(pk => {
-                    const sel = (pk.id == it.packaging_id) ? 'selected' : '';
-                    packHtml += `<option value="${pk.id}" data-price="${pk.buy_price}" data-unit="${pk.unit_name}" ${sel}>${escapeHtml(pk.unit_name || 'pcs')} (Isi ${pk.base_qty}) - ${fmtRp(pk.buy_price)}</option>`;
+                    const isActive = (pk.id == it.packaging_id);
+                    optionsHtml += `<li><a class="dropdown-item ${isActive ? 'active' : ''}" href="#"
+                        data-pkg-id="${pk.id}" data-price="${pk.buy_price}" data-unit="${escapeHtml(pk.unit_name || 'pcs')}"
+                        onclick="event.preventDefault(); event.stopPropagation();
+                            const dp=this.closest('.pkg-dropdown-wrapper');
+                            const inp=dp.querySelector('input.pkg-select');
+                            inp.value='${pk.id}';
+                            inp.dataset.price='${pk.buy_price}';
+                            inp.dataset.unit='${escapeHtml(pk.unit_name || 'pcs')}';
+                            dp.querySelector('button span').textContent='${escapeHtml((pk.unit_name||'pcs') + ' (Isi ' + pk.base_qty + ') - ' + fmtRp(pk.buy_price))}';
+                            dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');
+                            inp.dispatchEvent(new Event('change', {bubbles:true}));
+                        ">${escapeHtml(pk.unit_name || 'pcs')} (Isi ${pk.base_qty}) - ${fmtRp(pk.buy_price)}</a></li>`;
                 });
-                packHtml += `</select>`;
+                const activeLabel = `${escapeHtml((firstPk.unit_name||'pcs'))} (Isi ${firstPk.base_qty}) - ${fmtRp(firstPk.buy_price)}`;
+                packHtml = `<div class="pkg-dropdown-wrapper dropdown" style="width:100%;">
+                    <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                        style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center;
+                               padding:6px 8px; font-size:10px; background:var(--bg-input); border:1px solid var(--border-color);
+                               color:var(--text-primary); border-radius:var(--radius-sm); white-space:nowrap; overflow:hidden;">
+                        <span style="overflow:hidden;text-overflow:ellipsis;">${activeLabel}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:10px; min-width:100%;">
+                        ${optionsHtml}
+                    </ul>
+                    <input type="hidden" class="pkg-select" data-idx="${idx}"
+                        value="${firstPk.id}"
+                        data-price="${firstPk.buy_price}"
+                        data-unit="${escapeHtml(firstPk.unit_name || 'pcs')}">
+                </div>`;
             } else {
                 packHtml = `<div style="font-size:10px; color:var(--text-muted); padding:6px 0;">${escapeHtml(it.unit_name)} · ${fmtRp(it.buy_price)}</div>`;
             }
@@ -200,11 +227,13 @@
     elList.addEventListener('change', (e) => {
         if (e.target.classList.contains('pkg-select')) {
             const idx = parseInt(e.target.dataset.idx, 10);
-            const opt = e.target.options[e.target.selectedIndex];
+            const val = e.target.value;
+            const price = e.target.dataset.price;
+            const unit = e.target.dataset.unit;
             if (orderItems[idx]) {
-                orderItems[idx].packaging_id = parseInt(opt.value, 10);
-                orderItems[idx].buy_price = parseFloat(opt.dataset.price) || 0;
-                orderItems[idx].unit_name = opt.dataset.unit || '';
+                orderItems[idx].packaging_id = parseInt(val, 10);
+                orderItems[idx].buy_price = parseFloat(price) || 0;
+                orderItems[idx].unit_name = unit || '';
                 recompute();
             }
         }

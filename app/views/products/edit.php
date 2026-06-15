@@ -808,11 +808,12 @@ function addPackagingLevel(prefill = null) {
                     <div style="flex:1.5;">
                         <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Diskon</label>
                         <div style="display:flex;">
-                            <select name="discount_mode[]" class="form-control-dark discount-mode" style="width:60px;border-top-right-radius:0;border-bottom-right-radius:0;padding:6px;font-size:12px;">
-                                <option value="rp">Rp</option>
-                                <option value="pct">%</option>
-                            </select>
-                            <input type="number" name="discount_value[]" placeholder="0" step="any" min="0" class="form-control-dark discount-value" style="width:100%;border-top-left-radius:0;border-bottom-left-radius:0;border-left:none;font-size:12px;">
+                            <div class="discount-toggle-group" style="display:flex; border-radius:var(--radius-md) 0 0 var(--radius-md); overflow:hidden; border:1px solid var(--border-color); border-right:none; width:65px;">
+                                <button type="button" class="btn-discount-mode rp-mode active" style="flex:1; padding:6px 0; background:var(--primary); color:#fff; border:none; font-size:11px; font-weight:bold; cursor:pointer;" onclick="event.preventDefault(); const p=this.closest('.discount-toggle-group'); p.querySelector('.pct-mode').style.background='var(--bg-input)'; p.querySelector('.pct-mode').style.color='var(--text-muted)'; this.style.background='var(--primary)'; this.style.color='#fff'; const hidden=p.nextElementSibling; hidden.value='rp'; hidden.dispatchEvent(new Event('change'));">Rp</button>
+                                <button type="button" class="btn-discount-mode pct-mode" style="flex:1; padding:6px 0; background:var(--bg-input); color:var(--text-muted); border:none; font-size:11px; font-weight:bold; cursor:pointer;" onclick="event.preventDefault(); const p=this.closest('.discount-toggle-group'); p.querySelector('.rp-mode').style.background='var(--bg-input)'; p.querySelector('.rp-mode').style.color='var(--text-muted)'; this.style.background='var(--primary)'; this.style.color='#fff'; const hidden=p.nextElementSibling; hidden.value='pct'; hidden.dispatchEvent(new Event('change'));">%</button>
+                            </div>
+                            <input type="hidden" name="discount_mode[]" class="discount-mode" value="rp">
+                            <input type="number" name="discount_value[]" placeholder="0" step="any" min="0" class="form-control-dark discount-value" style="width:100%; border-top-left-radius:0; border-bottom-left-radius:0; font-size:12px;">
                         </div>
                     </div>
                 </div>
@@ -884,7 +885,21 @@ function addPackagingLevel(prefill = null) {
         const dModeEl = div.querySelector('.discount-mode');
         const dValEl = div.querySelector('.discount-value');
         if (ppnEl) ppnEl.value = prefill.ppn_pct ?? '';
-        if (dModeEl && prefill.discount_mode) dModeEl.value = prefill.discount_mode;
+        if (dModeEl && prefill.discount_mode) {
+             dModeEl.value = prefill.discount_mode;
+             const dGroup = div.querySelector('.discount-toggle-group');
+             if (dGroup) {
+                 const rpBtn = dGroup.querySelector('.rp-mode');
+                 const pctBtn = dGroup.querySelector('.pct-mode');
+                 if (prefill.discount_mode === 'pct') {
+                     rpBtn.style.background='var(--bg-input)'; rpBtn.style.color='var(--text-muted)';
+                     pctBtn.style.background='var(--primary)'; pctBtn.style.color='#fff';
+                 } else {
+                     pctBtn.style.background='var(--bg-input)'; pctBtn.style.color='var(--text-muted)';
+                     rpBtn.style.background='var(--primary)'; rpBtn.style.color='#fff';
+                 }
+             }
+        }
         if (dValEl) dValEl.value = prefill.discount_value ?? '';
         
         calcMarginForLevel(div);
@@ -1132,7 +1147,10 @@ function addQtyTierRow(listEl, data = {}) {
     row.className = 'qty-tier-row';
     row.style.cssText = 'display:grid;grid-template-columns:minmax(56px,0.8fr) minmax(80px,1fr) minmax(90px,1fr) auto;gap:6px;align-items:start;margin-bottom:6px;';
     const mode = data.sale_mode || 'both';
-    const modeOpts = QTY_MODE_OPTS.map(o => `<option value="${o.v}" ${mode === o.v ? 'selected' : ''}>${o.l}</option>`).join('');
+    const selectedModeObj = QTY_MODE_OPTS.find(o => o.v === mode) || QTY_MODE_OPTS[0];
+    const modeDropdownItems = QTY_MODE_OPTS.map(o => `
+        <li><a class="dropdown-item ${mode === o.v ? 'active' : ''}" href="#" onclick="event.preventDefault(); const p=this.closest('.dropdown'); p.querySelector('.tier-sale-mode').value='${o.v}'; p.querySelector('button span').textContent='${o.l}'; p.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">${o.l}</a></li>
+    `).join('');
     
     const minQty = data.min_qty || '';
     const unitPrice = data.unit_price || '';
@@ -1148,7 +1166,16 @@ function addQtyTierRow(listEl, data = {}) {
             <div class="tier-margin-info" style="font-size:9px;color:var(--text-muted);margin-top:2px;min-height:14px;"></div>
         </div>
         <div><label style="font-size:9px;color:var(--text-muted);">Mode</label>
-            <select class="form-control-dark tier-sale-mode" style="width:100%;padding:6px;font-size:11px;">${modeOpts}</select></div>
+            <div class="dropdown" style="width:100%;">
+                <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:6px; font-size:11px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                    <span>${selectedModeObj.l}</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:11px; min-width:100%;">
+                    ${modeDropdownItems}
+                </ul>
+                <input type="hidden" class="tier-sale-mode" value="${mode}">
+            </div>
+        </div>
         <div><label style="font-size:9px;visibility:hidden;">X</label>
             <button type="button" title="Hapus tier" style="border:none;background:var(--danger-bg);color:var(--danger);padding:8px;border-radius:6px;cursor:pointer;margin-bottom:2px;display:block;width:100%;" onclick="this.closest('.qty-tier-row').remove()"><i class="bi bi-trash"></i></button></div>
         <div style="grid-column:1/-1;"><label style="font-size:9px;color:var(--text-muted);">Label (opsional)</label>
