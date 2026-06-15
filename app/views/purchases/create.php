@@ -2961,7 +2961,6 @@ async function openBulkInputModal() {
         const drawerHtml  = buildDrawerRowHtml(item, 'bulk');
 
         // Simple per-unit price summary (instead of full table)
-        const selPkg = item.packagings.find(p => p.level == item.level) || item.packagings[0];
         const buyPrice = parseFloat(selPkg?.buy_price) || 0;
         const lastBuy = parseFloat(item.last_buy_price) || 0;
         let priceSummary = '';
