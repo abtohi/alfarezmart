@@ -639,15 +639,15 @@ class PurchaseModel extends Model
 
     public function getProductSupplierComparison(int $productId)
     {
-        // Get all purchase records for this product grouped by supplier with latest price in single query
+        // Get the normalized base_qty prices grouped by supplier
         $stmt = $this->db->prepare("
             SELECT 
                 COALESCE(s.id, 0) as supplier_id, 
                 COALESCE(s.name, 'Supplier Dihapus') as supplier_name,
                 MAX(p.purchase_date) as last_purchase_date,
-                AVG(pi.buy_price / pkg.base_qty) as avg_price,
-                MIN(pi.buy_price / pkg.base_qty) as min_price,
-                MAX(pi.buy_price / pkg.base_qty) as max_price,
+                AVG(pi.buy_price / pkg.base_qty) as avg_base_price,
+                MIN(pi.buy_price / pkg.base_qty) as min_base_price,
+                MAX(pi.buy_price / pkg.base_qty) as max_base_price,
                 (SELECT (pi2.buy_price / pkg2.base_qty)
                  FROM purchase_items pi2
                  JOIN purchases p2 ON pi2.purchase_id = p2.id
@@ -656,21 +656,66 @@ class PurchaseModel extends Model
                    AND p2.supplier_id = COALESCE(s.id, 0)
                  ORDER BY p2.purchase_date DESC, p2.id DESC
                  LIMIT 1
-                ) as latest_price
+                ) as latest_base_price,
+                (SELECT pi2.buy_price
+                 FROM purchase_items pi2
+                 JOIN purchases p2 ON pi2.purchase_id = p2.id
+                 WHERE pi2.product_id = :pid3
+                   AND p2.supplier_id = COALESCE(s.id, 0)
+                 ORDER BY p2.purchase_date DESC, p2.id DESC
+                 LIMIT 1
+                ) as latest_actual_price,
+                (SELECT u2.name
+                 FROM purchase_items pi2
+                 JOIN purchases p2 ON pi2.purchase_id = p2.id
+                 JOIN product_packagings pkg2 ON pi2.packaging_id = pkg2.id
+                 JOIN units u2 ON pkg2.unit_id = u2.id
+                 WHERE pi2.product_id = :pid4
+                   AND p2.supplier_id = COALESCE(s.id, 0)
+                 ORDER BY p2.purchase_date DESC, p2.id DESC
+                 LIMIT 1
+                ) as latest_unit_name,
+                (SELECT pkg2.level
+                 FROM purchase_items pi2
+                 JOIN purchases p2 ON pi2.purchase_id = p2.id
+                 JOIN product_packagings pkg2 ON pi2.packaging_id = pkg2.id
+                 WHERE pi2.product_id = :pid5
+                   AND p2.supplier_id = COALESCE(s.id, 0)
+                 ORDER BY p2.purchase_date DESC, p2.id DESC
+                 LIMIT 1
+                ) as latest_level
             FROM purchase_items pi
             JOIN purchases p ON pi.purchase_id = p.id
             LEFT JOIN suppliers s ON p.supplier_id = s.id
             JOIN product_packagings pkg ON pi.packaging_id = pkg.id
             WHERE pi.product_id = :pid
             GROUP BY COALESCE(s.id, 0), COALESCE(s.name, 'Supplier Dihapus')
-            ORDER BY avg_price ASC
+            ORDER BY avg_base_price ASC
         ");
-        $stmt->execute([':pid' => $productId, ':pid2' => $productId]);
+        $stmt->execute([
+            ':pid' => $productId, 
+            ':pid2' => $productId,
+            ':pid3' => $productId,
+            ':pid4' => $productId,
+            ':pid5' => $productId,
+        ]);
         $results = $stmt->fetchAll();
         
-        // Ensure latest_price is float
+        // Fetch the base unit name for display
+        $stmtBaseUnit = $this->db->prepare("
+            SELECT u.name 
+            FROM product_packagings pkg 
+            JOIN units u ON pkg.unit_id = u.id 
+            WHERE pkg.product_id = :pid AND pkg.level = 1 
+            LIMIT 1
+        ");
+        $stmtBaseUnit->execute([':pid' => $productId]);
+        $baseUnit = $stmtBaseUnit->fetchColumn() ?: 'Satuan Dasar';
+
+        // Ensure latest_price is float and attach base unit
         foreach ($results as &$row) {
-            $row['latest_price'] = $row['latest_price'] ? floatval($row['latest_price']) : floatval($row['avg_price']);
+            $row['latest_base_price'] = $row['latest_base_price'] ? floatval($row['latest_base_price']) : floatval($row['avg_base_price']);
+            $row['base_unit_name'] = $baseUnit;
         }
         
         return $results;

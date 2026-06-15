@@ -25,14 +25,22 @@
             </div>
         </div>
 
-        <div id="selectedProductCard" style="display:none; background:var(--bg-primary); padding:12px; border-radius:var(--radius-md); border:1px solid var(--border-color); align-items:center; justify-content:space-between; margin-top:12px;">
-            <div>
-                <div id="selectedProductName" style="font-weight:700; font-size:14px; color:var(--text-primary); margin-bottom:2px;">-</div>
-                <div id="selectedProductCode" style="font-size:11px; color:var(--text-muted);">Kode: -</div>
+        <div id="selectedProductCard" style="display:none; background:var(--bg-primary); padding:16px; border-radius:var(--radius-md); border:1px solid var(--border-color); flex-direction:column; gap:12px; margin-top:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div style="display:flex; gap:12px; align-items:center;">
+                    <img id="selectedProductPhoto" src="" style="width:50px; height:50px; object-fit:cover; border-radius:var(--radius-sm); border:1px solid var(--border-color); display:none;" onerror="this.style.display='none'">
+                    <div>
+                        <div id="selectedProductName" style="font-weight:700; font-size:15px; color:var(--text-primary); margin-bottom:2px;">-</div>
+                        <div id="selectedProductCode" style="font-size:12px; color:var(--text-muted);">Kode: -</div>
+                    </div>
+                </div>
+                <button id="btnClearProduct" style="background:transparent; border:1px solid var(--danger); color:var(--danger); border-radius:var(--radius-sm); padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer;">
+                    <i class="bi bi-x-lg"></i> Ganti
+                </button>
             </div>
-            <button id="btnClearProduct" style="background:transparent; border:1px solid var(--danger); color:var(--danger); border-radius:var(--radius-sm); padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer;">
-                <i class="bi bi-x-lg"></i> Ganti
-            </button>
+            <div id="selectedProductPackagings" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:8px; border-top:1px dashed var(--border-color); padding-top:12px; margin-top:4px;">
+                <!-- Filled via JS -->
+            </div>
         </div>
     </div>
 
@@ -194,17 +202,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 data.forEach(function(p) {
                     var item = document.createElement('div');
-                    item.style.cssText = 'padding:12px 16px; border-bottom:1px solid var(--border-color); cursor:pointer; transition:background 150ms ease; display:flex; justify-content:space-between; align-items:center;';
+                    item.style.cssText = 'padding:12px 16px; border-bottom:1px solid var(--border-color); cursor:pointer; transition:background 150ms ease; display:flex; gap:12px; align-items:center;';
                     
                     var name = escapeHtmlLocal(p.short_label || p.full_name || '');
                     var brand = escapeHtmlLocal(p.brand_name || '');
-                    var price = p.price_small_retail ? 'Rp' + parseInt(p.price_small_retail).toLocaleString('id-ID') : '';
                     
-                    item.innerHTML = '<div>' + 
-                        '<div style="font-weight:600; font-size:13px; color:var(--text-primary);">' + name + '</div>' +
-                        (brand ? '<div style="font-size:11px; color:var(--text-muted);">' + brand + '</div>' : '') + 
-                        '</div>' +
-                        (price ? '<span style="color:var(--primary); font-weight:600; font-size:12px; white-space:nowrap;">' + price + '</span>' : '');
+                    var photoHtml = '';
+                    if (p.photo) {
+                        photoHtml = '<img src="' + BASE_URL + p.photo + '" style="width:40px; height:40px; object-fit:cover; border-radius:var(--radius-sm); border:1px solid var(--border-color);" onerror="this.style.display=\'none\'">';
+                    } else {
+                        photoHtml = '<div style="width:40px; height:40px; background:var(--surface-2); border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; color:var(--text-muted);"><i class="bi bi-image"></i></div>';
+                    }
+
+                    var packagingsHtml = '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">';
+                    if (p.packagings && p.packagings.length > 0) {
+                        p.packagings.forEach(function(pkg) {
+                            packagingsHtml += '<span style="font-size:10px; background:var(--surface-2); padding:3px 6px; border-radius:4px; color:var(--text-primary); border:1px solid var(--border-color);"><span style="color:var(--text-muted);">' + escapeHtmlLocal(pkg.unit_name) + ':</span> <strong style="color:var(--primary);">' + formatRupiah(pkg.buy_price) + '</strong></span>';
+                        });
+                    }
+                    packagingsHtml += '</div>';
+                    
+                    item.innerHTML = photoHtml + 
+                        '<div style="flex:1;">' + 
+                            '<div style="font-weight:600; font-size:13px; color:var(--text-primary);">' + name + '</div>' +
+                            (brand ? '<div style="font-size:11px; color:var(--text-muted);">' + brand + '</div>' : '') + 
+                            packagingsHtml +
+                        '</div>';
                         
                     item.addEventListener('click', function() { selectProduct(p); });
                     item.addEventListener('mouseenter', function() { this.style.background = 'var(--surface-2)'; });
@@ -246,6 +269,29 @@ document.addEventListener('DOMContentLoaded', function() {
         
         document.getElementById('selectedProductName').textContent = p.full_name || p.short_label || '';
         document.getElementById('selectedProductCode').textContent = 'Kode: ' + (p.code || '-');
+        
+        var photoEl = document.getElementById('selectedProductPhoto');
+        if (p.photo) {
+            photoEl.src = BASE_URL + p.photo;
+            photoEl.style.display = 'block';
+        } else {
+            photoEl.style.display = 'none';
+        }
+
+        var packagingsEl = document.getElementById('selectedProductPackagings');
+        packagingsEl.innerHTML = '';
+        if (p.packagings && p.packagings.length > 0) {
+            p.packagings.forEach(function(pkg) {
+                var div = document.createElement('div');
+                div.style.cssText = 'background:var(--surface-2); padding:8px; border-radius:var(--radius-sm); border:1px solid var(--border-color);';
+                div.innerHTML = '<div style="font-size:10px; color:var(--text-muted); margin-bottom:2px;">' + escapeHtmlLocal(pkg.unit_name) + ' (Lvl ' + pkg.level + ')</div>' +
+                                '<div style="font-size:13px; font-weight:700; color:var(--primary);">' + formatRupiah(pkg.buy_price) + ' <span style="font-size:9px; font-weight:400; color:var(--text-muted);">/ modal</span></div>';
+                packagingsEl.appendChild(div);
+            });
+            packagingsEl.style.display = 'grid';
+        } else {
+            packagingsEl.style.display = 'none';
+        }
         
         selectedProductCard.style.display = 'flex';
         btnExport.href = BASE_URL + 'reports/product-history/export/' + p.id;
@@ -289,13 +335,16 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Find the cheapest supplier based on LATEST price
+        // Find the cheapest supplier based on LATEST base price
         var bestSupplier = data[0];
         data.forEach(function(item) {
-            if (parseFloat(item.latest_price) < parseFloat(bestSupplier.latest_price)) {
+            if (parseFloat(item.latest_base_price) < parseFloat(bestSupplier.latest_base_price)) {
                 bestSupplier = item;
             }
         });
+
+        var cardGrid = document.createElement('div');
+        cardGrid.style.cssText = 'display:grid; grid-template-columns:1fr; gap:12px;';
 
         data.forEach(function(item) {
             var isBest = item.supplier_id === bestSupplier.supplier_id;
@@ -306,18 +355,17 @@ document.addEventListener('DOMContentLoaded', function() {
             var bestBadge = isBest ? '<div style="position:absolute; top:-10px; right:16px; background:var(--warning); color:#000; font-size:10px; font-weight:800; padding:2px 10px; border-radius:10px;"><i class="bi bi-star-fill"></i> TERMURAH SAAT INI</div>' : '';
             
             var supplierIcon = isBest ? '<i class="bi bi-star-fill" style="color:var(--warning);margin-right:4px;"></i>' : '<i class="bi bi-truck" style="color:var(--text-muted);margin-right:4px;"></i>';
-            
             var nameColor = isBest ? 'var(--warning)' : 'var(--text-primary)';
             
-            var latest = parseFloat(item.latest_price);
-            var avg = parseFloat(item.avg_price);
+            var latestBase = parseFloat(item.latest_base_price);
+            var avgBase = parseFloat(item.avg_base_price);
             var trendHtml = '';
             
-            if (latest > avg) {
-                var pct = ((latest - avg) / avg * 100).toFixed(1);
+            if (latestBase > avgBase) {
+                var pct = ((latestBase - avgBase) / avgBase * 100).toFixed(1);
                 trendHtml = '<span style="color:var(--danger); font-size:11px; font-weight:600;"><i class="bi bi-graph-up-arrow"></i> Naik ' + pct + '% dari rata-rata</span>';
-            } else if (latest < avg) {
-                var pct = ((avg - latest) / avg * 100).toFixed(1);
+            } else if (latestBase < avgBase) {
+                var pct = ((avgBase - latestBase) / avgBase * 100).toFixed(1);
                 trendHtml = '<span style="color:var(--success); font-size:11px; font-weight:600;"><i class="bi bi-graph-down-arrow"></i> Turun ' + pct + '% dari rata-rata</span>';
             } else {
                 trendHtml = '<span style="color:var(--text-muted); font-size:11px;"><i class="bi bi-dash"></i> Harga stabil</span>';
@@ -328,38 +376,44 @@ document.addEventListener('DOMContentLoaded', function() {
                     supplierIcon + escapeHtmlLocal(item.supplier_name || 'Tanpa Supplier') +
                 '</div>' +
                 '<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:12px;">' +
-                    '<span style="color:var(--text-muted);">Harga Terakhir <small>(per satuan dasar)</small></span>' +
-                    '<span style="color:var(--primary); font-weight:800; font-size:14px;">' + formatRupiah(item.latest_price) + '</span>' +
+                    '<span style="color:var(--text-muted);">Pembelian Terakhir <small>(per ' + escapeHtmlLocal(item.latest_unit_name) + ')</small></span>' +
+                    '<span style="color:var(--text-primary); font-weight:600; font-size:13px;">' + formatRupiah(item.latest_actual_price) + '</span>' +
                 '</div>' +
                 '<div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:12px;">' +
-                    '<span style="color:var(--text-muted);">Tren Harga</span>' +
+                    '<span style="color:var(--text-muted); font-weight:600;">Harga Modal per ' + escapeHtmlLocal(item.base_unit_name) + '</span>' +
+                    '<span style="color:var(--primary); font-weight:800; font-size:15px;">' + formatRupiah(item.latest_base_price) + '</span>' +
+                '</div>' +
+                '<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:11px;">' +
+                    '<span style="color:var(--text-muted);">Tren Modal</span>' +
                     trendHtml +
                 '</div>' +
                 '<div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:11px;">' +
-                    '<span style="color:var(--text-muted);">Rata-rata: ' + formatRupiah(item.avg_price) + '</span>' +
-                    '<span style="color:var(--text-muted);">Rentang: ' + formatRupiah(item.min_price) + ' - ' + formatRupiah(item.max_price) + '</span>' +
+                    '<span style="color:var(--text-muted);">Rata-rata: ' + formatRupiah(item.avg_base_price) + '</span>' +
+                    '<span style="color:var(--text-muted);">Rentang: ' + formatRupiah(item.min_base_price) + ' - ' + formatRupiah(item.max_base_price) + '</span>' +
                 '</div>' +
-                '<div style="border-top:1px dashed var(--border-color); padding-top:8px; font-size:11px; color:var(--text-muted);">' +
+                '<div style="border-top:1px dashed var(--border-color); padding-top:8px; margin-top:4px; font-size:11px; color:var(--text-muted);">' +
                     '<i class="bi bi-calendar2-check"></i> Pembelian terakhir: ' + formatDate(item.last_purchase_date) +
                 '</div>';
 
-            grid.appendChild(card);
+            cardGrid.appendChild(card);
         });
 
-        // Add recommendation summary based on latest price
+        grid.appendChild(cardGrid);
+
+        // Add recommendation summary based on latest_base_price
         if (data.length > 1) {
-            var maxLatest = parseFloat(data[0].latest_price);
+            var maxLatest = parseFloat(data[0].latest_base_price);
             data.forEach(function(item) {
-                if (parseFloat(item.latest_price) > maxLatest) maxLatest = parseFloat(item.latest_price);
+                if (parseFloat(item.latest_base_price) > maxLatest) maxLatest = parseFloat(item.latest_base_price);
             });
             
-            var savings = maxLatest - parseFloat(bestSupplier.latest_price);
+            var savings = maxLatest - parseFloat(bestSupplier.latest_base_price);
             if (savings > 0) {
                 var summaryCard = document.createElement('div');
-                summaryCard.style.cssText = 'background:var(--success-bg); border:1px solid var(--success); border-radius:var(--radius-lg); padding:14px; text-align:center;';
+                summaryCard.style.cssText = 'background:var(--success-bg); border:1px solid var(--success); border-radius:var(--radius-lg); padding:14px; text-align:center; margin-top:12px;';
                 summaryCard.innerHTML = '<div style="font-size:12px; color:var(--success); font-weight:600;">' +
                     '<i class="bi bi-lightbulb-fill"></i> Rekomendasi: Beli dari <strong>' + escapeHtmlLocal(bestSupplier.supplier_name || '-') + '</strong>' +
-                    '<br>Hemat hingga <strong>' + formatRupiah(savings) + '</strong> per satuan dibanding supplier lain' +
+                    '<br>Hemat modal hingga <strong>' + formatRupiah(savings) + '</strong> per ' + escapeHtmlLocal(bestSupplier.base_unit_name) + ' dibanding supplier lain' +
                 '</div>';
                 grid.appendChild(summaryCard);
             }
