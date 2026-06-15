@@ -110,17 +110,17 @@
     <!-- Quick Actions -->
     <div class="section-title">Aksi Cepat</div>
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 24px; text-align: center;">
-        <a href="<?= BASE_URL ?>scanner" class="quick-action">
-            <div class="action-icon" style="background: var(--danger-bg); color: var(--primary);"><i class="bi bi-upc-scan"></i></div>
-            <span class="action-label">Scan Harga</span>
+        <a href="<?= BASE_URL ?>debts" class="quick-action">
+            <div class="action-icon" style="background: var(--danger-bg); color: var(--primary);"><i class="bi bi-journal-text"></i></div>
+            <span class="action-label">Catatan Hutang</span>
         </a>
-        <a href="<?= BASE_URL ?>purchases/create" class="quick-action">
-            <div class="action-icon" style="background: var(--success-bg); color: var(--success);"><i class="bi bi-cart-plus"></i></div>
-            <span class="action-label">Barang Masuk</span>
+        <a href="<?= BASE_URL ?>suppliers" class="quick-action">
+            <div class="action-icon" style="background: var(--success-bg); color: var(--success);"><i class="bi bi-building"></i></div>
+            <span class="action-label">Supplier &amp; Sales</span>
         </a>
-        <a href="<?= BASE_URL ?>sales/pos" class="quick-action">
-            <div class="action-icon" style="background: var(--warning-bg); color: var(--warning);"><i class="bi bi-receipt"></i></div>
-            <span class="action-label">Kasir POS</span>
+        <a href="<?= BASE_URL ?>reports/product-history" class="quick-action">
+            <div class="action-icon" style="background: var(--warning-bg); color: var(--warning);"><i class="bi bi-tags"></i></div>
+            <span class="action-label">Histori Produk</span>
         </a>
         <a href="<?= BASE_URL ?>sales" class="quick-action">
             <div class="action-icon" style="background: var(--primary-bg); color: var(--primary);"><i class="bi bi-clock-history"></i></div>
