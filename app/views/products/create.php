@@ -1198,6 +1198,7 @@ async function submitProduct(e) {
                 brand_name: brandSB ? brandSB.getLabel() : '',
                 category_name: categorySB ? categorySB.getLabel() : '',
                 code: payload.code || '',
+                is_available: parseInt(payload.is_available) || 0,
                 packagings: [],
                 is_pending: true
             };

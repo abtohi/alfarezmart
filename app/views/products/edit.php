@@ -1414,6 +1414,7 @@ async function submitProduct(e) {
                     localProduct.short_label = productData.short_label;
                     localProduct.brand_name = brandSB ? brandSB.getLabel() : localProduct.brand_name;
                     localProduct.category_name = categorySB ? categorySB.getLabel() : localProduct.category_name;
+                    localProduct.is_available = parseInt(productData.is_available) || 0;
                     localProduct.is_pending_update = true;
                     await OfflineDB.saveProduct(localProduct);
                 }
@@ -1490,6 +1491,23 @@ async function submitProduct(e) {
         // 2. Delete removed packagings
         for (const pId of deletedPkgIds) {
             await api(`${BASE_URL}api/products/packaging/${pId}/delete`, 'POST', { csrf_token: csrfTokenValue });
+        }
+
+        // Optimistic update local cache so search doesn't show old data before background sync finishes
+        try {
+            if (typeof OfflineDB !== 'undefined') {
+                const localProduct = await OfflineDB.getProductById(productId);
+                if (localProduct) {
+                    localProduct.full_name = productData.full_name;
+                    localProduct.short_label = productData.short_label;
+                    localProduct.brand_name = brandSB ? brandSB.getLabel() : localProduct.brand_name;
+                    localProduct.category_name = categorySB ? categorySB.getLabel() : localProduct.category_name;
+                    localProduct.is_available = parseInt(productData.is_available) || 0;
+                    await OfflineDB.saveProduct(localProduct);
+                }
+            }
+        } catch (dexieErr) {
+            console.warn('Dexie cache update failed:', dexieErr);
         }
 
         // 3. Upsert packaging levels

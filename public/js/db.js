@@ -128,7 +128,8 @@ window.OfflineDB = (function() {
         
         try {
             return await db.products.filter(p => {
-                if (isPos && p.is_available === 0) return false;
+                // Ensure type safety since IndexedDB might store it as a string "0"
+                if (isPos && (p.is_available == 0 || p.is_available === '0' || p.is_available === false)) return false;
 
                 return words.every(word => {
                     const nameMatch = (p.full_name && p.full_name.toLowerCase().includes(word)) ||
@@ -158,7 +159,8 @@ window.OfflineDB = (function() {
         
         try {
             return await db.products.filter(p => {
-                if (isPos && p.is_available === 0) return false;
+                // Ensure type safety since IndexedDB might store it as a string "0"
+                if (isPos && (p.is_available == 0 || p.is_available === '0' || p.is_available === false)) return false;
 
                 let match = false;
                 if (p.code) {
