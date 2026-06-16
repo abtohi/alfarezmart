@@ -126,7 +126,7 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
                         </div>
                     <?php endif; ?>
                     <div class="product-info" style="width:calc(100% - 76px);">
-                        <div class="product-name"><?= htmlspecialchars($p['full_name'] ?? $p['short_label'] ?? '-') ?></div>
+                        <div class="product-name" style="padding-right:36px;"><?= htmlspecialchars($p['full_name'] ?? $p['short_label'] ?? '-') ?></div>
                     <div class="product-category">
                         <?= htmlspecialchars($p['brand_name'] ?? '') ?>
                         <?php if (!empty($p['brand_name']) && !empty($p['category_name'])): ?> · <?php endif; ?>
@@ -185,8 +185,8 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
                     </div>
                 </a>
                 <?php if (!$isStaff): ?>
-                <button type="button" class="avail-toggle-btn" title="<?= $pIsAvail ? 'Nonaktifkan produk' : 'Aktifkan produk' ?>" onclick="event.stopPropagation(); quickToggleAvailability(this, <?= (int)$p['id'] ?>, <?= $pIsAvail ? 1 : 0 ?>)" style="position:absolute;top:10px;right:10px;width:38px;height:22px;border-radius:11px;border:none;cursor:pointer;padding:2px;transition:background 0.25s;background:<?= $pIsAvail ? 'var(--success)' : 'var(--surface-2)' ?>;display:flex;align-items:center;z-index:3;">
-                    <span style="display:block;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);transition:transform 0.25s;transform:translateX(<?= $pIsAvail ? '16px' : '0px' ?>);"></span>
+                <button type="button" class="avail-toggle-btn" title="<?= $pIsAvail ? 'Nonaktifkan produk' : 'Aktifkan produk' ?>" onclick="event.stopPropagation(); quickToggleAvailability(this, <?= (int)$p['id'] ?>, <?= $pIsAvail ? 1 : 0 ?>)" style="position:absolute;top:10px;right:10px;width:34px;height:20px;border-radius:10px;border:none;cursor:pointer;padding:2px;transition:background 0.25s;background:<?= $pIsAvail ? 'var(--success)' : 'var(--surface-2)' ?>;display:flex;align-items:center;z-index:3;">
+                    <span style="display:block;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);transition:transform 0.25s;transform:translateX(<?= $pIsAvail ? '14px' : '0px' ?>);"></span>
                 </button>
                 <?php endif; ?>
             </div>
@@ -773,7 +773,7 @@ async function doOfflineSearch(query) {
                 <a href="${BASE_URL}products/${p.id}" class="product-card-link" style="display:flex;text-decoration:none;color:inherit;width:100%;">
                     ${photoHtml}
                     <div class="product-info" style="width:calc(100% - 76px);">
-                        <div class="product-name">${name}</div>
+                        <div class="product-name" style="padding-right:36px;">${name}</div>
                         <div class="product-category">${brandCat}</div>`;
 
             let baseMarginHtml = '';
@@ -825,7 +825,7 @@ async function doOfflineSearch(query) {
             }
 
             const availBg = (p.is_available == 0 || p.is_available === '0' || p.is_available === false) ? 'var(--surface-2)' : 'var(--success)';
-            const availTx = (p.is_available == 0 || p.is_available === '0' || p.is_available === false) ? '0px' : '16px';
+            const availTx = (p.is_available == 0 || p.is_available === '0' || p.is_available === false) ? '0px' : '14px';
             const availVal = (p.is_available == 0 || p.is_available === '0' || p.is_available === false) ? 0 : 1;
             const availTitle = availVal === 1 ? 'Nonaktifkan produk' : 'Aktifkan produk';
             const cardOpacity = availVal === 0 ? 'opacity:0.65;' : '';
@@ -833,7 +833,7 @@ async function doOfflineSearch(query) {
             html += `
                     </div>
                 </a>
-                ${!ROLE_IS_STAFF ? `<button type="button" class="avail-toggle-btn" title="${availTitle}" onclick="event.stopPropagation(); quickToggleAvailability(this, ${p.id}, ${availVal})" style="position:absolute;top:10px;right:10px;width:38px;height:22px;border-radius:11px;border:none;cursor:pointer;padding:2px;transition:background 0.25s;background:${availBg};display:flex;align-items:center;z-index:3;"><span style="display:block;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);transition:transform 0.25s;transform:translateX(${availTx});"></span></button>` : ''}
+                ${!ROLE_IS_STAFF ? `<button type="button" class="avail-toggle-btn" title="${availTitle}" onclick="event.stopPropagation(); quickToggleAvailability(this, ${p.id}, ${availVal})" style="position:absolute;top:10px;right:10px;width:34px;height:20px;border-radius:10px;border:none;cursor:pointer;padding:2px;transition:background 0.25s;background:${availBg};display:flex;align-items:center;z-index:3;"><span style="display:block;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);transition:transform 0.25s;transform:translateX(${availTx});"></span></button>` : ''}
             </div>`;
         });
         
@@ -927,7 +927,7 @@ async function _confirmAvailToggle() {
     const knob = btn.querySelector('span');
     if (newVal === 1) {
         btn.style.background = 'var(--success)';
-        if (knob) knob.style.transform = 'translateX(16px)';
+        if (knob) knob.style.transform = 'translateX(14px)';
         btn.title = 'Nonaktifkan produk';
     } else {
         btn.style.background = 'var(--surface-2)';
@@ -972,7 +972,7 @@ async function _confirmAvailToggle() {
         const knob2 = btn.querySelector('span');
         if (revertVal === 1) {
             btn.style.background = 'var(--success)';
-            if (knob2) knob2.style.transform = 'translateX(16px)';
+            if (knob2) knob2.style.transform = 'translateX(14px)';
         } else {
             btn.style.background = 'var(--surface-2)';
             if (knob2) knob2.style.transform = 'translateX(0px)';
