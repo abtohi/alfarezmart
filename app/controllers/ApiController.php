@@ -529,6 +529,20 @@ class ApiController extends Controller
         }
     }
 
+    public function updateProductAvailability(int $id)
+    {
+        $this->blockStaffMutations('mengedit');
+        $this->validateCSRF();
+        $model = new ProductModel();
+        try {
+            $is_available = (int)$this->input('is_available');
+            $model->update($id, ['is_available' => $is_available, 'updated_at' => date('Y-m-d H:i:s')]);
+            $this->json(['success' => true]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     /**
      * Update print label (short_label) for thermal receipt
      */

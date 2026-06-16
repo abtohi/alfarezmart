@@ -72,6 +72,7 @@ $router->get('/api/barcode/generate', 'ApiController@generateBarcode');
 $router->get('/api/products/{id}', 'ApiController@getById');
 $router->post('/api/products', 'ApiController@createProduct');
 $router->post('/api/products/update/{id}', 'ApiController@updateProduct');
+$router->post('/api/products/{id}/availability', 'ApiController@updateProductAvailability');
 $router->post('/api/products/{id}/delete', 'ApiController@deleteProduct');
 $router->post('/api/products/bulk-delete', 'ApiController@bulkDeleteProducts');
 $router->post('/api/products/packaging/{id}', 'ApiController@updatePackaging');

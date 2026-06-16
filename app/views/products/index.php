@@ -110,7 +110,8 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
         </div>
     <?php else: ?>
         <?php foreach ($products['data'] as $p): ?>
-            <div class="product-card" data-id="<?= (int)$p['id'] ?>" style="position:relative;display:block;">
+            <?php $pIsAvail = !isset($p['is_available']) || $p['is_available'] == 1; ?>
+            <div class="product-card" data-id="<?= (int)$p['id'] ?>" data-available="<?= $pIsAvail ? '1' : '0' ?>" style="position:relative;display:block;<?= !$pIsAvail ? 'opacity:0.7;' : '' ?>">
                 <?php if (!$isStaff): ?>
                 <input type="checkbox" class="product-checkbox" value="<?= (int)$p['id'] ?>" style="display:none;position:absolute;top:16px;left:16px;width:20px;height:20px;accent-color:var(--primary);z-index:2;">
                 <?php endif; ?>
@@ -183,6 +184,11 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
                     <?php endif; ?>
                     </div>
                 </a>
+                <?php if (!$isStaff): ?>
+                <button type="button" class="avail-toggle-btn" title="<?= $pIsAvail ? 'Nonaktifkan produk' : 'Aktifkan produk' ?>" onclick="event.stopPropagation(); quickToggleAvailability(this, <?= (int)$p['id'] ?>, <?= $pIsAvail ? 1 : 0 ?>)" style="position:absolute;top:10px;right:10px;width:38px;height:22px;border-radius:11px;border:none;cursor:pointer;padding:2px;transition:background 0.25s;background:<?= $pIsAvail ? 'var(--success)' : 'var(--surface-2)' ?>;display:flex;align-items:center;z-index:3;">
+                    <span style="display:block;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);transition:transform 0.25s;transform:translateX(<?= $pIsAvail ? '16px' : '0px' ?>);"></span>
+                </button>
+                <?php endif; ?>
             </div>
         <?php endforeach; ?>
 
@@ -242,7 +248,70 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
 .product-card.select-mode .product-card-link { margin-left: 28px; }
 .product-card.select-mode { padding-left: 8px; }
 .product-card.selected { border-color: var(--primary); background: rgba(230,57,70,0.05); }
+.product-card.unavailable-product { opacity: 0.65; }
+.avail-toggle-btn:active { transform: scale(0.92); }
+
+/* Availability Confirm Modal */
+#availConfirmModal {
+    position: fixed; inset: 0; z-index: 9999;
+    display: none; align-items: flex-end; justify-content: center;
+    background: rgba(0,0,0,0.55); backdrop-filter: blur(4px);
+    padding: 16px;
+}
+#availConfirmModal.show { display: flex; }
+#availConfirmSheet {
+    background: var(--surface-1);
+    border-radius: 20px 20px 16px 16px;
+    width: 100%; max-width: 480px;
+    padding: 28px 24px 24px;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.4);
+    animation: slideUpModal 0.28s cubic-bezier(.32,1.1,.5,1) both;
+}
+@keyframes slideUpModal {
+    from { transform: translateY(60px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+.avail-modal-icon {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; margin: 0 auto 14px;
+}
+#availConfirmTitle {
+    font-size: 1.05rem; font-weight: 700;
+    color: var(--text-primary); text-align: center; margin-bottom: 8px;
+}
+#availConfirmBody {
+    font-size: var(--font-size-sm); color: var(--text-muted);
+    text-align: center; line-height: 1.6; margin-bottom: 22px;
+}
+.avail-modal-btns {
+    display: flex; gap: 10px;
+}
+.avail-modal-btns button {
+    flex: 1; padding: 12px; border: none; border-radius: var(--radius-md);
+    font-size: var(--font-size-sm); font-weight: 600; cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s;
+}
+.avail-modal-btns button:active { transform: scale(0.97); opacity: 0.85; }
+#availBtnCancel {
+    background: var(--surface-2); color: var(--text-muted);
+    border: 1px solid var(--border-color);
+}
+#availBtnConfirm { color: #fff; }
 </style>
+
+<!-- Availability Confirmation Modal -->
+<div id="availConfirmModal" onclick="_closeAvailModal()">
+    <div id="availConfirmSheet" onclick="event.stopPropagation()">
+        <div class="avail-modal-icon" id="availModalIcon"></div>
+        <div id="availConfirmTitle">Konfirmasi</div>
+        <div id="availConfirmBody"></div>
+        <div class="avail-modal-btns">
+            <button id="availBtnCancel" onclick="_closeAvailModal()">Batal</button>
+            <button id="availBtnConfirm">Konfirmasi</button>
+        </div>
+    </div>
+</div>
 
 <script>
 let selectMode = false;
@@ -696,8 +765,10 @@ async function doOfflineSearch(query) {
                        <i class="bi bi-box-seam"></i>
                    </div>`;
 
+            const _isUnavail = (p.is_available == 0 || p.is_available === '0' || p.is_available === false);
+
             html += `
-            <div class="product-card" data-id="${p.id}" style="position:relative;display:block;">
+            <div class="product-card" data-id="${p.id}" data-available="${_isUnavail ? 0 : 1}" style="position:relative;display:block;${_isUnavail ? 'opacity:0.65;' : ''}">
                 ${!ROLE_IS_STAFF ? `<input type="checkbox" class="product-checkbox" value="${p.id}" style="display:none;position:absolute;top:16px;left:16px;width:20px;height:20px;accent-color:var(--primary);z-index:2;">` : ''}
                 <a href="${BASE_URL}products/${p.id}" class="product-card-link" style="display:flex;text-decoration:none;color:inherit;width:100%;">
                     ${photoHtml}
@@ -753,9 +824,16 @@ async function doOfflineSearch(query) {
                 html += `</div>`;
             }
 
+            const availBg = (p.is_available == 0 || p.is_available === '0' || p.is_available === false) ? 'var(--surface-2)' : 'var(--success)';
+            const availTx = (p.is_available == 0 || p.is_available === '0' || p.is_available === false) ? '0px' : '16px';
+            const availVal = (p.is_available == 0 || p.is_available === '0' || p.is_available === false) ? 0 : 1;
+            const availTitle = availVal === 1 ? 'Nonaktifkan produk' : 'Aktifkan produk';
+            const cardOpacity = availVal === 0 ? 'opacity:0.65;' : '';
+
             html += `
                     </div>
                 </a>
+                ${!ROLE_IS_STAFF ? `<button type="button" class="avail-toggle-btn" title="${availTitle}" onclick="event.stopPropagation(); quickToggleAvailability(this, ${p.id}, ${availVal})" style="position:absolute;top:10px;right:10px;width:38px;height:22px;border-radius:11px;border:none;cursor:pointer;padding:2px;transition:background 0.25s;background:${availBg};display:flex;align-items:center;z-index:3;"><span style="display:block;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);transition:transform 0.25s;transform:translateX(${availTx});"></span></button>` : ''}
             </div>`;
         });
         
@@ -786,4 +864,122 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 });
+
+// =====================================================
+// QUICK TOGGLE AVAILABILITY
+// =====================================================
+let _availPendingBtn = null;
+let _availPendingId = null;
+let _availPendingNewVal = null;
+
+function quickToggleAvailability(btn, productId, currentVal) {
+    // currentVal: 1 = saat ini Tersedia, 0 = saat ini Tidak Tersedia
+    const newVal = currentVal === 1 ? 0 : 1;
+    _availPendingBtn = btn;
+    _availPendingId = productId;
+    _availPendingNewVal = newVal;
+
+    const modal  = document.getElementById('availConfirmModal');
+    const icon   = document.getElementById('availModalIcon');
+    const title  = document.getElementById('availConfirmTitle');
+    const body   = document.getElementById('availConfirmBody');
+    const btnOk  = document.getElementById('availBtnConfirm');
+
+    if (newVal === 0) {
+        // Disable product
+        icon.innerHTML  = '<i class="bi bi-eye-slash-fill" style="color:#f59e0b;"></i>';
+        icon.style.background = 'rgba(245,158,11,0.12)';
+        title.textContent = 'Nonaktifkan Produk?';
+        body.innerHTML  = 'Produk ini akan diubah menjadi <strong style="color:var(--text-primary);">Tidak Tersedia</strong>.<br>Produk tidak akan muncul di hasil pencarian <strong style="color:var(--primary);">Kasir POS</strong>, sehingga kasir tidak bisa menambahkannya ke transaksi.';
+        btnOk.style.background = '#f59e0b';
+        btnOk.textContent = 'Ya, Nonaktifkan';
+    } else {
+        // Enable product
+        icon.innerHTML  = '<i class="bi bi-check-circle-fill" style="color:var(--success);"></i>';
+        icon.style.background = 'rgba(34,197,94,0.12)';
+        title.textContent = 'Aktifkan Produk?';
+        body.innerHTML  = 'Produk ini akan diubah menjadi <strong style="color:var(--success);">Tersedia</strong>.<br>Produk akan kembali muncul di pencarian <strong style="color:var(--primary);">Kasir POS</strong>.';
+        btnOk.style.background = 'var(--success)';
+        btnOk.textContent = 'Ya, Aktifkan';
+    }
+
+    btnOk.onclick = _confirmAvailToggle;
+    modal.classList.add('show');
+}
+
+function _closeAvailModal() {
+    const modal = document.getElementById('availConfirmModal');
+    modal.classList.remove('show');
+    _availPendingBtn = null;
+    _availPendingId = null;
+    _availPendingNewVal = null;
+}
+
+async function _confirmAvailToggle() {
+    const btn = _availPendingBtn;
+    const id  = _availPendingId;
+    const newVal = _availPendingNewVal;
+    _closeAvailModal();
+
+    if (!btn || id === null) return;
+
+    // Optimistic UI update
+    const knob = btn.querySelector('span');
+    if (newVal === 1) {
+        btn.style.background = 'var(--success)';
+        if (knob) knob.style.transform = 'translateX(16px)';
+        btn.title = 'Nonaktifkan produk';
+    } else {
+        btn.style.background = 'var(--surface-2)';
+        if (knob) knob.style.transform = 'translateX(0px)';
+        btn.title = 'Aktifkan produk';
+    }
+    const card = btn.closest('.product-card');
+    if (card) {
+        card.style.opacity = newVal === 1 ? '1' : '0.65';
+        card.dataset.available = String(newVal);
+    }
+    btn.setAttribute('onclick', `event.stopPropagation(); quickToggleAvailability(this, ${id}, ${newVal})`);
+
+    try {
+        const csrfToken = '<?= $_SESSION["csrf_token"] ?? "" ?>';
+        const res = await fetch(`${BASE_URL}api/products/${id}/availability`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+            credentials: 'same-origin',
+            body: JSON.stringify({ is_available: newVal, csrf_token: csrfToken })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Gagal update');
+
+        // Also update Dexie local cache so offline search reflects the change immediately
+        if (typeof OfflineDB !== 'undefined') {
+            try {
+                const local = await OfflineDB.getProductById(id);
+                if (local) {
+                    local.is_available = newVal;
+                    await OfflineDB.saveProduct(local);
+                }
+            } catch(e) { /* non-critical */ }
+        }
+
+        if (typeof showToast === 'function') {
+            showToast(newVal === 1 ? '✅ Produk diaktifkan' : '🔕 Produk dinonaktifkan', newVal === 1 ? 'success' : 'info');
+        }
+    } catch(err) {
+        // Revert optimistic update on failure
+        const revertVal = newVal === 1 ? 0 : 1;
+        const knob2 = btn.querySelector('span');
+        if (revertVal === 1) {
+            btn.style.background = 'var(--success)';
+            if (knob2) knob2.style.transform = 'translateX(16px)';
+        } else {
+            btn.style.background = 'var(--surface-2)';
+            if (knob2) knob2.style.transform = 'translateX(0px)';
+        }
+        if (card) card.style.opacity = revertVal === 1 ? '1' : '0.65';
+        btn.setAttribute('onclick', `event.stopPropagation(); quickToggleAvailability(this, ${id}, ${revertVal})`);
+        if (typeof showToast === 'function') showToast('Gagal mengubah status: ' + err.message, 'error');
+    }
+}
 </script>
