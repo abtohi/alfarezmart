@@ -11,6 +11,7 @@ class ProductModel extends Model
     {
         parent::__construct();
         $this->ensureCustomLabelColumn();
+        $this->ensureIsAvailableColumn();
     }
 
     private function ensureCustomLabelColumn()
@@ -22,6 +23,22 @@ class ProductModel extends Model
         } catch (PDOException $e) {
             try {
                 $this->db->exec("ALTER TABLE products ADD COLUMN is_custom_label TINYINT(1) DEFAULT 0");
+            } catch (PDOException $e2) {
+                // Ignore
+            }
+        }
+        $checked = true;
+    }
+
+    private function ensureIsAvailableColumn()
+    {
+        static $checked = false;
+        if ($checked) return;
+        try {
+            $this->db->query("SELECT is_available FROM products LIMIT 1");
+        } catch (PDOException $e) {
+            try {
+                $this->db->exec("ALTER TABLE products ADD COLUMN is_available TINYINT(1) DEFAULT 1");
             } catch (PDOException $e2) {
                 // Ignore
             }
@@ -44,10 +61,13 @@ class ProductModel extends Model
         return $stmt->fetch();
     }
 
-    public function searchProducts(string $keyword, int $limit = 20)
+    public function searchProducts(string $keyword, int $limit = 20, bool $forPos = false)
     {
         $words = array_filter(explode(' ', trim($keyword)), 'strlen');
         $whereSql = "p.is_active = 1"; // base condition
+        if ($forPos) {
+            $whereSql .= " AND p.is_available = 1";
+        }
         $params = [];
         
         if (!empty($words)) {
@@ -92,11 +112,22 @@ class ProductModel extends Model
         return $stmt->fetchAll();
     }
 
-    public function findByBarcode(string $barcode)
+    public function findByBarcode(string $barcode, bool $forPos = false)
     {
         // Trim and remove all spaces from the input barcode
         $barcode = str_replace(' ', '', trim($barcode));
         
+        $whereSql = "(REPLACE(pp.barcode, ' ', '') = :barcode 
+               OR p.code = :barcode
+               OR REPLACE(pp.barcode, ' ', '') = CONCAT('0', :barcode)
+               OR CONCAT('0', REPLACE(pp.barcode, ' ', '')) = :barcode
+               OR REPLACE(pp.barcode, ' ', '') = CONCAT('00', :barcode)
+               OR CONCAT('00', REPLACE(pp.barcode, ' ', '')) = :barcode)";
+
+        if ($forPos) {
+            $whereSql .= " AND p.is_available = 1";
+        }
+
         $stmt = $this->db->prepare("
             SELECT p.*, b.name as brand_name, c.name as category_name,
                    pp.barcode, pp.level, pp.unit_id, u.name as unit_name,
@@ -106,12 +137,7 @@ class ProductModel extends Model
             LEFT JOIN brands b ON p.brand_id = b.id
             LEFT JOIN categories c ON p.category_id = c.id
             LEFT JOIN units u ON pp.unit_id = u.id
-            WHERE REPLACE(pp.barcode, ' ', '') = :barcode 
-               OR p.code = :barcode
-               OR REPLACE(pp.barcode, ' ', '') = CONCAT('0', :barcode)
-               OR CONCAT('0', REPLACE(pp.barcode, ' ', '')) = :barcode
-               OR REPLACE(pp.barcode, ' ', '') = CONCAT('00', :barcode)
-               OR CONCAT('00', REPLACE(pp.barcode, ' ', '')) = :barcode
+            WHERE $whereSql
             ORDER BY pp.level ASC
             LIMIT 1
         ");

@@ -120,7 +120,7 @@ window.OfflineDB = (function() {
         return db.products.get(parseInt(id));
     }
 
-    async function searchProducts(query) {
+    async function searchProducts(query, isPos = false) {
         if (!query) return [];
         query = query.toLowerCase().trim();
         const words = query.split(/\s+/).filter(w => w.length > 0);
@@ -128,6 +128,8 @@ window.OfflineDB = (function() {
         
         try {
             return await db.products.filter(p => {
+                if (isPos && p.is_available === 0) return false;
+
                 return words.every(word => {
                     const nameMatch = (p.full_name && p.full_name.toLowerCase().includes(word)) ||
                                       (p.short_label && p.short_label.toLowerCase().includes(word)) ||
@@ -150,12 +152,14 @@ window.OfflineDB = (function() {
         }
     }
 
-    async function findByBarcode(barcode) {
+    async function findByBarcode(barcode, isPos = false) {
         if (!barcode) return null;
         barcode = barcode.replace(/\s+/g, '').toLowerCase();
         
         try {
             return await db.products.filter(p => {
+                if (isPos && p.is_available === 0) return false;
+
                 let match = false;
                 if (p.code) {
                     let pCode = p.code.replace(/\s+/g, '').toLowerCase();

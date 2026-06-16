@@ -147,6 +147,16 @@
             <div class="section-title" style="margin-bottom:8px;">Preview Nama Produk</div>
             <div id="namePreview" style="font-size:var(--font-size-sm);color:var(--text-secondary);font-weight:600;margin-bottom:12px;">-</div>
             
+            <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:6px;">Status Produk</label>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;">
+                <input type="hidden" name="is_available" value="0">
+                <input type="checkbox" name="is_available" value="1" checked id="toggleIsAvailableCreate" style="display:none;">
+                <span id="toggleIsAvailableCreateSwitch" onclick="toggleAvailability('toggleIsAvailableCreate','toggleIsAvailableCreateSwitch','toggleIsAvailableCreateLabel')" style="display:inline-flex;align-items:center;width:44px;height:24px;border-radius:12px;background:var(--primary);border:none;padding:2px;cursor:pointer;transition:background 0.25s;flex-shrink:0;">
+                    <span style="display:block;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform 0.25s;transform:translateX(20px);"></span>
+                </span>
+                <span id="toggleIsAvailableCreateLabel" style="font-size:var(--font-size-sm);font-weight:600;color:var(--success);">Tersedia</span>
+            </label>
+
             <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Label Struk & Rak</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;margin-bottom:8px;">
                 <input type="checkbox" id="isCustomLabel" name="is_custom_label" value="1" style="width:14px;height:14px;accent-color:var(--primary);">
@@ -1286,5 +1296,26 @@ function collectInvoiceNames() {
     const inputs = document.querySelectorAll('.invoice-name-item');
     const names = Array.from(inputs).map(inp => inp.value.trim()).filter(v => v);
     return names.join(';');
+}
+
+function toggleAvailability(inputId, switchId, labelId) {
+    const inp = document.getElementById(inputId);
+    const sw = document.getElementById(switchId);
+    const lbl = document.getElementById(labelId);
+    if (!inp || !sw || !lbl) return;
+
+    inp.checked = !inp.checked;
+    
+    if (inp.checked) {
+        sw.style.background = 'var(--primary)';
+        sw.firstElementChild.style.transform = 'translateX(20px)';
+        lbl.textContent = 'Tersedia';
+        lbl.style.color = 'var(--success)';
+    } else {
+        sw.style.background = 'var(--surface-2)';
+        sw.firstElementChild.style.transform = 'translateX(0)';
+        lbl.textContent = 'Tidak Tersedia';
+        lbl.style.color = 'var(--text-muted)';
+    }
 }
 </script>

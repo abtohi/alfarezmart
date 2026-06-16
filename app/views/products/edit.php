@@ -219,6 +219,17 @@ $pkgsJson = json_encode($packagings, JSON_UNESCAPED_UNICODE);
             <div class="section-title" style="margin-bottom:8px;">Preview Nama Produk</div>
             <div id="namePreview" style="font-size:var(--font-size-sm);color:var(--text-secondary);font-weight:600;margin-bottom:12px;">-</div>
             
+            <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:6px;">Status Produk</label>
+            <?php $isAvail = !isset($product['is_available']) || $product['is_available'] == 1; ?>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;">
+                <input type="hidden" name="is_available" value="0">
+                <input type="checkbox" name="is_available" value="1" <?= $isAvail ? 'checked' : '' ?> id="toggleIsAvailableEdit" style="display:none;">
+                <span id="toggleIsAvailableEditSwitch" onclick="toggleAvailability('toggleIsAvailableEdit','toggleIsAvailableEditSwitch','toggleIsAvailableEditLabel')" style="display:inline-flex;align-items:center;width:44px;height:24px;border-radius:12px;background:<?= $isAvail ? 'var(--primary)' : 'var(--surface-2)' ?>;border:none;padding:2px;cursor:pointer;transition:background 0.25s;flex-shrink:0;">
+                    <span style="display:block;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform 0.25s;transform:translateX(<?= $isAvail ? '20px' : '0' ?>);"></span>
+                </span>
+                <span id="toggleIsAvailableEditLabel" style="font-size:var(--font-size-sm);font-weight:600;color:<?= $isAvail ? 'var(--success)' : 'var(--text-muted)' ?>;"><?= $isAvail ? 'Tersedia' : 'Tidak Tersedia' ?></span>
+            </label>
+
             <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Label Struk & Rak</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;margin-bottom:8px;">
                 <input type="checkbox" id="isCustomLabel" name="is_custom_label" value="1" style="width:14px;height:14px;accent-color:var(--primary);" <?= !empty($product['is_custom_label']) ? 'checked' : '' ?>>
@@ -1633,5 +1644,26 @@ function removeProductPhoto() {
     document.getElementById('productPhotoInput').value = '';
     document.getElementById('photoBase64').value = '';
     document.getElementById('deletePhoto').value = '1';
+}
+
+function toggleAvailability(inputId, switchId, labelId) {
+    const inp = document.getElementById(inputId);
+    const sw = document.getElementById(switchId);
+    const lbl = document.getElementById(labelId);
+    if (!inp || !sw || !lbl) return;
+
+    inp.checked = !inp.checked;
+    
+    if (inp.checked) {
+        sw.style.background = 'var(--primary)';
+        sw.firstElementChild.style.transform = 'translateX(20px)';
+        lbl.textContent = 'Tersedia';
+        lbl.style.color = 'var(--success)';
+    } else {
+        sw.style.background = 'var(--surface-2)';
+        sw.firstElementChild.style.transform = 'translateX(0)';
+        lbl.textContent = 'Tidak Tersedia';
+        lbl.style.color = 'var(--text-muted)';
+    }
 }
 </script>

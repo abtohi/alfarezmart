@@ -378,10 +378,10 @@ async function processBarcodeScan(q, inpEl, sugEl) {
         let result = null;
         try {
             if (typeof OfflineDB !== 'undefined') {
-                result = await OfflineDB.findByBarcode(q);
+                result = await OfflineDB.findByBarcode(q, true); // true for isPos
             }
             if (!result && navigator.onLine) {
-                const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}`);
+                const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}?pos=1`);
                 if (!resp.ok && resp.status === 503) throw new Error("Offline");
                 result = await resp.json();
             }
@@ -427,11 +427,11 @@ async function performSearch(q) {
         let items = [];
         try {
             if (typeof OfflineDB !== 'undefined') {
-                items = await OfflineDB.searchProducts(q);
+                items = await OfflineDB.searchProducts(q, true); // true for isPos
             }
             
             if ((!items || items.length === 0) && navigator.onLine) {
-                const resp = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`, { 
+                const resp = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}&pos=1`, { 
                     credentials: 'same-origin',
                     signal: window.posSearchAbortController.signal
                 });

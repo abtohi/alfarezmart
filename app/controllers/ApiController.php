@@ -262,14 +262,16 @@ class ApiController extends Controller
             $model = new ProductModel();
             $q = isset($_GET['q']) ? Security::sanitize($_GET['q']) : '';
             
+            $isPos = isset($_GET['pos']) && $_GET['pos'] == 1;
+
             // Validate input
             if (strlen($q) < 1) {
                 // Return recent/all products (limited) for browsing
-                $results = $model->searchProducts('', 30);
+                $results = $model->searchProducts('', 30, $isPos);
                 if (!is_array($results)) $results = [];
             } else {
                 // Search products
-                $results = $model->searchProducts($q, 15);
+                $results = $model->searchProducts($q, 15, $isPos);
             }
             
             // Ensure results is array
@@ -309,7 +311,8 @@ class ApiController extends Controller
     {
         $code = trim(urldecode($code));
         $model = new ProductModel();
-        $product = $model->findByBarcode($code);
+        $isPos = isset($_GET['pos']) && $_GET['pos'] == 1;
+        $product = $model->findByBarcode($code, $isPos);
         if (!$product) {
             $this->json(['error' => 'Produk tidak ditemukan'], 404);
             return;
@@ -425,6 +428,7 @@ class ApiController extends Controller
                 'weight_value' => $this->input('weight_value') ?: null,
                 'weight_unit' => $this->input('weight_unit'),
                 'is_custom_label' => $this->input('is_custom_label') ? 1 : 0,
+                'is_available' => isset($_POST['is_available']) ? (int)$_POST['is_available'] : 1,
             ];
 
             $packagings = [];
@@ -493,7 +497,7 @@ class ApiController extends Controller
         try {
             $data = [];
             $fields = ['full_name','short_label','invoice_name','product_type','variant','brand_id','category_id',
-                       'weight_value','weight_unit', 'supplier_product_code', 'supplier_invoice_name', 'is_custom_label'];
+                       'weight_value','weight_unit', 'supplier_product_code', 'supplier_invoice_name', 'is_custom_label', 'is_available'];
             $nullableFields = ['brand_id','product_type','variant','weight_value','weight_unit', 'supplier_product_code', 'supplier_invoice_name'];
             foreach ($fields as $f) {
                 $val = $this->input($f);
