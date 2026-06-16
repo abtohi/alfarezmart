@@ -46,9 +46,23 @@
                         <span><i class="bi bi-person"></i> <?= htmlspecialchars($s['customer_name'] ?? 'Pelanggan Umum') ?></span>
                         <span class="badge-custom badge-<?= $s['sale_mode'] == 'retail' ? 'info' : 'warning' ?>"><?= ucfirst($s['sale_mode']) ?></span>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:8px;">
                         <span style="font-size:var(--font-size-xs); color:var(--text-muted);"><?= $s['total_items'] ?? 0 ?> item</span>
                         <span style="font-weight:700; color:var(--primary); font-size:var(--font-size-base);"><?= Helper::rupiah($s['total_amount']) ?></span>
+                    </div>
+                    <?php 
+                        $profit = $s['total_profit'] ?? 0;
+                        $modal = $s['total_amount'] - $profit;
+                        $markup = $modal > 0 ? ($profit / $modal) * 100 : ($profit > 0 ? 100 : 0);
+                    ?>
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px dashed var(--border-color); padding-top:8px;">
+                        <div style="font-size:11px; color:var(--text-secondary);">
+                            Modal: <span style="font-weight:600; color:var(--text-primary);"><?= Helper::rupiah($modal) ?></span>
+                        </div>
+                        <div style="font-size:11px; color:var(--text-secondary);">
+                            Profit: <span style="font-weight:600; color:var(--success);"><?= Helper::rupiah($profit) ?></span> 
+                            <span style="background:var(--success-bg); color:var(--success); padding:2px 4px; border-radius:4px; font-size:10px; margin-left:2px;">+<?= str_replace('.', ',', round($markup, 1)) ?>%</span>
+                        </div>
                     </div>
                 </div>
             </div>

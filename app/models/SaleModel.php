@@ -193,7 +193,8 @@ class SaleModel extends Model
 
         $stmt = $this->db->prepare("
             SELECT t.*, c.name as customer_name,
-                   (SELECT SUM(quantity) FROM sale_items WHERE transaction_id = t.id) as total_items
+                   (SELECT SUM(quantity) FROM sale_items WHERE transaction_id = t.id) as total_items,
+                   (SELECT SUM(profit) FROM sale_items WHERE transaction_id = t.id) as total_profit
             FROM sale_transactions t
             LEFT JOIN customers c ON t.customer_id = c.id
             ORDER BY t.created_at DESC, t.id DESC
