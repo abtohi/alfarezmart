@@ -38,9 +38,20 @@
                     <i class="bi bi-receipt"></i>
                 </div>
                 <div class="product-info">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
                         <span style="font-weight:700; font-size:var(--font-size-sm);"><?= htmlspecialchars($s['invoice_number']) ?></span>
-                        <span style="font-size:var(--font-size-xs); color:var(--text-muted);"><?= Helper::formatDate($s['created_at']) ?></span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:var(--font-size-xs); color:var(--text-muted);"><?= Helper::formatDate($s['created_at']) ?></span>
+                            <button type="button"
+                                onclick="event.stopPropagation(); shareInvoice(<?= $s['id'] ?>, '<?= htmlspecialchars($s['invoice_number']) ?>')"
+                                title="Bagikan struk"
+                                style="background:none; border:none; padding:2px 4px; cursor:pointer; color:var(--text-muted); font-size:1rem; border-radius:var(--radius-sm); transition:color 0.2s, background 0.2s; line-height:1; display:flex; align-items:center;"
+                                onmouseover="this.style.color='var(--primary)'; this.style.background='var(--primary-bg)'"
+                                onmouseout="this.style.color='var(--text-muted)'; this.style.background='none'"
+                                data-share-btn="<?= $s['id'] ?>">
+                                <i class="bi bi-share"></i>
+                            </button>
+                        </div>
                     </div>
                     <div style="font-size:var(--font-size-xs); color:var(--text-secondary); margin-bottom:6px; display:flex; justify-content:space-between;">
                         <span><i class="bi bi-person"></i> <?= htmlspecialchars($s['customer_name'] ?? 'Pelanggan Umum') ?></span>
@@ -108,6 +119,9 @@
 </div>
 
 <input type="hidden" id="csrfToken" value="<?= $csrfToken ?? '' ?>">
+
+<!-- Hidden receipt canvas for PNG share generation -->
+<div id="receiptShareCanvas" style="position:fixed; top:-9999px; left:-9999px; z-index:-1; width:320px; background:#fff; font-family:'Inter',sans-serif; color:#111; padding:0;"></div>
 
 <!-- Bulk Action Bar (fixed bottom) -->
 <div id="bulkActionBar" style="display:none;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:110;padding:0 12px 12px;">
@@ -375,4 +389,157 @@ document.addEventListener('DOMContentLoaded', () => {
         }).catch(() => updatePrinterUI());
     }
 });
+</script>
+
+<!-- html2canvas for PNG receipt generation -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+// ===== Share Invoice as PNG =====
+
+function formatRupiah(amount) {
+    return 'Rp ' + parseInt(amount || 0).toLocaleString('id-ID');
+}
+
+function formatDateShort(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function renderReceiptHTML(data) {
+    const tx = data.transaction;
+    const items = tx.items || [];
+    const storeName = (typeof STORE_SETTINGS !== 'undefined' && STORE_SETTINGS?.store_name) ? STORE_SETTINGS.store_name : 'AlfarezMart';
+
+    const itemRows = items.map(item => `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:8px 0; border-bottom:1px solid #f0f0f0;">
+            <div style="flex:1; margin-right:12px;">
+                <div style="font-weight:600; font-size:12px; color:#111; line-height:1.3;">${item.invoice_name || item.full_name || 'Item'}</div>
+                <div style="font-size:11px; color:#666; margin-top:2px;">${parseInt(item.quantity)} ${item.unit_name || 'pcs'} &times; ${formatRupiah(item.unit_price)}</div>
+            </div>
+            <div style="font-weight:700; font-size:12px; color:#111; white-space:nowrap;">${formatRupiah(item.total_price)}</div>
+        </div>
+    `).join('');
+
+    return `
+        <div style="width:320px; background:#ffffff; font-family:'Inter',Arial,sans-serif; color:#111; padding:0; overflow:hidden; border-radius:12px; box-shadow:0 4px 24px rgba(0,0,0,0.12);">
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#6c47ff 0%,#3b82f6 100%); padding:20px 20px 16px; text-align:center;">
+                <div style="font-size:22px; font-weight:800; color:#fff; letter-spacing:0.5px;">${storeName}</div>
+                <div style="font-size:11px; color:rgba(255,255,255,0.8); margin-top:4px;">Struk Penjualan</div>
+            </div>
+            <!-- Invoice Info -->
+            <div style="padding:14px 16px 10px; background:#f8f9fc; border-bottom:2px dashed #e0e0e0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:11px; color:#666;">No. Invoice</span>
+                    <span style="font-weight:700; font-size:12px; color:#111;">${tx.invoice_number}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:11px; color:#666;">Tanggal</span>
+                    <span style="font-size:11px; color:#333;">${formatDateShort(tx.created_at)}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <span style="font-size:11px; color:#666;">Pelanggan</span>
+                    <span style="font-size:11px; color:#333;">${tx.customer_name || 'Pelanggan Umum'}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:11px; color:#666;">Pembayaran</span>
+                    <span style="font-size:11px; color:#333;">${tx.payment_method || 'Cash'}</span>
+                </div>
+            </div>
+            <!-- Items -->
+            <div style="padding:10px 16px 0;">
+                <div style="font-size:11px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Item Pembelian</div>
+                ${itemRows}
+            </div>
+            <!-- Total -->
+            <div style="margin:12px 16px; background:linear-gradient(135deg,#6c47ff 0%,#3b82f6 100%); border-radius:8px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:13px; font-weight:600; color:rgba(255,255,255,0.9);">Total Pembayaran</span>
+                <span style="font-size:16px; font-weight:800; color:#fff;">${formatRupiah(tx.total_amount)}</span>
+            </div>
+            <!-- Footer -->
+            <div style="text-align:center; padding:10px 16px 16px;">
+                <div style="font-size:10px; color:#aaa;">Terima kasih telah berbelanja di ${storeName}</div>
+                <div style="font-size:10px; color:#aaa; margin-top:2px;">⭐ Simpan struk ini sebagai bukti pembelian</div>
+            </div>
+        </div>
+    `;
+}
+
+async function shareInvoice(saleId, invoiceNumber) {
+    const btn = document.querySelector(`[data-share-btn="${saleId}"]`);
+    if (btn) {
+        btn.innerHTML = '<i class="bi bi-hourglass-split" style="font-size:0.85rem;"></i>';
+        btn.disabled = true;
+    }
+
+    try {
+        // 1. Fetch invoice detail
+        const res = await fetch(`${BASE_URL}api/sales/invoice/${saleId}`);
+        if (!res.ok) throw new Error('Gagal mengambil data invoice');
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Data tidak ditemukan');
+
+        // 2. Render receipt HTML into hidden canvas div
+        const canvasEl = document.getElementById('receiptShareCanvas');
+        canvasEl.innerHTML = renderReceiptHTML(data);
+        // Briefly show it for html2canvas to capture
+        canvasEl.style.top = '-9999px';
+        canvasEl.style.left = '-9999px';
+        canvasEl.style.display = 'block';
+
+        // 3. Capture with html2canvas
+        const receiptNode = canvasEl.firstElementChild;
+        const canvas = await html2canvas(receiptNode, {
+            scale: 2.5,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+        });
+        canvasEl.innerHTML = '';
+
+        // 4. Convert to PNG blob
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        const fileName = `struk-${invoiceNumber.replace(/[^a-zA-Z0-9\-]/g,'_')}.png`;
+
+        // 5. Share or download
+        if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'image/png' })] })) {
+            const file = new File([blob], fileName, { type: 'image/png' });
+            await navigator.share({
+                title: `Struk ${invoiceNumber}`,
+                text: `Struk pembelian ${invoiceNumber}`,
+                files: [file],
+            });
+        } else if (navigator.share) {
+            // Share without file (fallback - some browsers)
+            const url = URL.createObjectURL(blob);
+            await navigator.share({
+                title: `Struk ${invoiceNumber}`,
+                text: `Struk pembelian ${invoiceNumber} - buka link untuk melihat`,
+                url: `${BASE_URL}sales/${saleId}`
+            });
+            URL.revokeObjectURL(url);
+        } else {
+            // Fallback: download PNG
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showToast('Struk diunduh sebagai PNG', 'success');
+        }
+    } catch (err) {
+        if (err.name !== 'AbortError') {
+            showToast('Gagal membagikan struk: ' + (err.message || 'Error tidak diketahui'), 'error');
+        }
+    } finally {
+        if (btn) {
+            btn.innerHTML = '<i class="bi bi-share"></i>';
+            btn.disabled = false;
+        }
+    }
+}
 </script>
