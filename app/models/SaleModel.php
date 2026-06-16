@@ -231,7 +231,7 @@ class SaleModel extends Model
             SELECT si.*, COALESCE(si.custom_name, p.full_name) AS full_name, 
                    COALESCE(si.custom_name, p.short_label) AS short_label, 
                    COALESCE(si.custom_name, p.invoice_name) AS invoice_name,
-                   pp.level, COALESCE(si.custom_unit, u.name) AS unit_name
+                   pp.level, pp.buy_price, COALESCE(si.custom_unit, u.name) AS unit_name
             FROM sale_items si
             JOIN products p ON si.product_id = p.id
             LEFT JOIN product_packagings pp ON si.packaging_id = pp.id

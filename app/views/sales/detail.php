@@ -58,19 +58,66 @@
 
     <h3 style="font-size:var(--font-size-md); font-weight:600; margin-bottom:12px;">Daftar Item</h3>
     <div style="background:var(--surface-1); border-radius:var(--radius-lg); overflow:hidden; border:1px solid var(--border-color); margin-bottom:16px;">
-        <?php foreach ($sale['items'] as $item): ?>
+        <?php foreach ($sale['items'] as $item): 
+            $buyPrice   = (float)($item['buy_price'] ?? 0);
+            $unitPrice  = (float)($item['unit_price'] ?? 0);
+            $qty        = (int)($item['quantity'] ?? 1);
+            $totalModal = $buyPrice * $qty;
+            $selisih    = $unitPrice - $buyPrice;
+            $markup     = $buyPrice > 0 ? ($selisih / $buyPrice) * 100 : ($unitPrice > 0 ? 100 : 0);
+            $itemProfit = $selisih * $qty;
+            $isCustom   = !empty($item['custom_name']);
+        ?>
             <div style="padding:12px 16px; border-bottom:1px solid var(--border-color);">
-                <div style="font-weight:600; font-size:var(--font-size-sm); color:var(--text-primary); margin-bottom:4px;">
+                <!-- Item name & total -->
+                <div style="font-weight:600; font-size:var(--font-size-sm); color:var(--text-primary); margin-bottom:6px;">
                     <?= htmlspecialchars($item['invoice_name'] ?? $item['full_name'] ?? 'Item') ?>
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div style="font-size:var(--font-size-xs); color:var(--text-secondary);">
-                        <?= (int)$item['quantity'] ?> <?= htmlspecialchars($item['unit_name'] ?? 'Pcs') ?> x <?= Helper::rupiah($item['unit_price']) ?>
+                        <?= $qty ?> <?= htmlspecialchars($item['unit_name'] ?? 'Pcs') ?> x <?= Helper::rupiah($unitPrice) ?>
                     </div>
                     <div style="font-weight:700; color:var(--text-primary); font-size:var(--font-size-sm);">
                         <?= Helper::rupiah($item['total_price']) ?>
                     </div>
                 </div>
+                <!-- Modal / Markup / Profit info -->
+                <?php if (!$isCustom): ?>
+                <div style="background:var(--surface-2); border-radius:var(--radius-sm); padding:8px 10px; display:grid; grid-template-columns:1fr 1fr; gap:6px 12px;">
+                    <div>
+                        <div style="font-size:10px; color:var(--text-muted); margin-bottom:2px;">Modal/unit</div>
+                        <div style="font-size:11px; font-weight:600; color:var(--text-secondary);"><?= Helper::rupiah($buyPrice) ?></div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px; color:var(--text-muted); margin-bottom:2px;">Total modal</div>
+                        <div style="font-size:11px; font-weight:600; color:var(--text-secondary);"><?= Helper::rupiah($totalModal) ?></div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px; color:var(--text-muted); margin-bottom:2px;">Selisih harga</div>
+                        <div style="font-size:11px; font-weight:600; color:<?= $selisih >= 0 ? 'var(--success)' : 'var(--danger)' ?>;">
+                            <?= ($selisih >= 0 ? '+' : '') . Helper::rupiah($selisih) ?>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size:10px; color:var(--text-muted); margin-bottom:2px;">Markup</div>
+                        <div style="display:flex; align-items:center; gap:4px;">
+                            <span style="font-size:11px; font-weight:600; color:<?= $markup >= 0 ? 'var(--success)' : 'var(--danger)' ?>;">
+                                <?= ($markup >= 0 ? '+' : '') . str_replace('.', ',', round($markup, 1)) ?>%
+                            </span>
+                        </div>
+                    </div>
+                    <div style="grid-column:1/-1; border-top:1px dashed var(--border-color); padding-top:6px; margin-top:2px; display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-size:10px; color:var(--text-muted);">Profit item (<?= $qty ?> <?= htmlspecialchars($item['unit_name'] ?? 'Pcs') ?>)</div>
+                        <div style="font-size:12px; font-weight:700; color:<?= $itemProfit >= 0 ? 'var(--success)' : 'var(--danger)' ?>;">
+                            <?= ($itemProfit >= 0 ? '+' : '') . Helper::rupiah($itemProfit) ?>
+                        </div>
+                    </div>
+                </div>
+                <?php else: ?>
+                <div style="background:var(--surface-2); border-radius:var(--radius-sm); padding:6px 10px;">
+                    <span style="font-size:10px; color:var(--text-muted); font-style:italic;">Item custom — modal tidak tercatat</span>
+                </div>
+                <?php endif; ?>
             </div>
         <?php endforeach; ?>
         <div style="padding:16px; background:var(--surface-2); display:flex; justify-content:space-between; align-items:center;">
@@ -78,6 +125,7 @@
             <div style="font-weight:700; font-size:var(--font-size-lg); color:var(--primary);"><?= Helper::rupiah($sale['total_amount']) ?></div>
         </div>
     </div>
+
 </div>
 
 <script src="<?= BASE_URL ?>public/js/printer.js"></script>
