@@ -144,6 +144,7 @@ class ApiController extends Controller
                     'brand_name'           => $p['brand_name'],
                     'category_name'        => $p['category_name'],
                     'code'                 => $p['code'],
+                    'is_available'         => (int)($p['is_available'] ?? 1),
                     'photo'                => $p['photo'] ?? null,
                     'packagings'           => $p['packagings']
                 ];
@@ -229,6 +230,7 @@ class ApiController extends Controller
                 'brand_name'            => $p['brand_name'],
                 'category_name'         => $p['category_name'],
                 'code'                  => $p['code'],
+                'is_available'          => (int)($p['is_available'] ?? 1),
                 'photo'                 => $p['photo'] ?? null,
                 'packagings'            => $p['packagings']
             ];
