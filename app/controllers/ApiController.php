@@ -146,6 +146,8 @@ class ApiController extends Controller
                     'code'                 => $p['code'],
                     'is_available'         => (int)($p['is_available'] ?? 1),
                     'photo'                => $p['photo'] ?? null,
+                    'updated_at'           => $p['updated_at'] ?? null,
+                    'created_at'           => $p['created_at'] ?? null,
                     'packagings'           => $p['packagings']
                 ];
             }
@@ -232,6 +234,8 @@ class ApiController extends Controller
                 'code'                  => $p['code'],
                 'is_available'          => (int)($p['is_available'] ?? 1),
                 'photo'                 => $p['photo'] ?? null,
+                'updated_at'            => $p['updated_at'] ?? null,
+                'created_at'            => $p['created_at'] ?? null,
                 'packagings'            => $p['packagings']
             ];
         }

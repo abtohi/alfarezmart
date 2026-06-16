@@ -657,6 +657,19 @@ async function doOfflineSearch(query) {
             });
         }
 
+        // Sort exactly like online mode: ORDER BY COALESCE(updated_at, created_at) DESC, full_name ASC
+        items.sort((a, b) => {
+            const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
+            const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
+            if (dateA !== dateB) return dateB - dateA;
+            
+            const nameA = (a.full_name || '').toLowerCase();
+            const nameB = (b.full_name || '').toLowerCase();
+            if (nameA < nameB) return -1;
+            if (nameA > nameB) return 1;
+            return 0;
+        });
+
         if (items.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
