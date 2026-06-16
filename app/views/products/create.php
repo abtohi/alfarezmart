@@ -1174,6 +1174,10 @@ async function submitProduct(e) {
         const collectedNames = collectInvoiceNames();
         updatedData.set('supplier_invoice_name', collectedNames);
         
+        // Ensure is_available is explicitly set from the toggle state
+        const isAvailableToggle = document.getElementById('toggleIsAvailableCreate');
+        updatedData.set('is_available', isAvailableToggle && isAvailableToggle.checked ? 1 : 0);
+        
         if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
         try {
             const payload = {};
