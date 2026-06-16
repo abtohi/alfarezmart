@@ -17,6 +17,7 @@ class SaleController extends Controller
             'title' => 'Riwayat Penjualan',
             'activeNav' => 'pos',
             'sales' => $sales,
+            'csrfToken' => (new Security())->getCSRFToken(),
         ]);
     }
 
