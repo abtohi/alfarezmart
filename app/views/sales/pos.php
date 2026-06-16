@@ -1808,3 +1808,4 @@ function updateCustomerUI() {
         if (clearBtn) clearBtn.style.display = 'none';
     }
 }
+</script>
