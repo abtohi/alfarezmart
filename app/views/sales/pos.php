@@ -19,6 +19,45 @@
     
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
+    <!-- Customer Selector -->
+    <div style="margin-bottom:12px; position:relative;">
+        <div id="customerSelectorBox"
+             onclick="toggleCustomerDropdown()"
+             style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:all 0.2s; user-select:none;"
+             onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor=document.getElementById('customerDropdown').style.display==='none'?'var(--border-color)':'var(--primary)'">
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-person" id="customerSelectorIcon" style="color:var(--primary);font-size:1rem;"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:1px;">Pelanggan</div>
+                <div id="customerSelectorLabel" style="font-size:var(--font-size-sm);font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Pelanggan Umum</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                <button type="button" id="btnClearCustomer" onclick="event.stopPropagation();clearCustomer()" title="Hapus pilihan" style="display:none;background:var(--surface-2);border:1px solid var(--border-color);border-radius:50%;width:24px;height:24px;padding:0;cursor:pointer;color:var(--text-muted);font-size:0.75rem;line-height:1;">
+                    <i class="bi bi-x"></i>
+                </button>
+                <i class="bi bi-chevron-down" id="customerChevron" style="color:var(--text-muted);font-size:0.75rem;transition:transform 0.2s;"></i>
+            </div>
+        </div>
+        <!-- Customer Dropdown Panel -->
+        <div id="customerDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:200;background:var(--surface-1);border:1px solid var(--primary);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;">
+            <div style="padding:10px 12px;border-bottom:1px solid var(--border-color);">
+                <div style="display:flex;align-items:center;gap:8px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:0 10px;">
+                    <i class="bi bi-search" style="color:var(--text-muted);font-size:0.9rem;"></i>
+                    <input type="text" id="customerSearchInput"
+                           placeholder="Ketik nama atau nomor HP..."
+                           autocomplete="off" autocorrect="off" spellcheck="false"
+                           style="flex:1;border:none;background:transparent;padding:10px 4px;color:var(--text-primary);font-size:var(--font-size-sm);outline:none;font-family:var(--font-family);"
+                           oninput="onCustomerSearch(this.value)">
+                    <i class="bi bi-x-circle" style="color:var(--text-muted);font-size:0.9rem;cursor:pointer;" onclick="document.getElementById('customerSearchInput').value='';onCustomerSearch('');"></i>
+                </div>
+            </div>
+            <div id="customerResults" style="max-height:220px;overflow-y:auto;padding:6px 0;">
+                <!-- populated by JS -->
+            </div>
+        </div>
+    </div>
+
     <!-- Search: barcode atau nama -->
     <div style="background:var(--surface-1); border-radius:var(--radius-md); padding:12px; margin-bottom:16px; border:1px solid var(--border-color);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -78,6 +117,7 @@ let saleMode = 'retail';
 let currentDraftId = null;
 let editSaleId = null;
 let searchInput, suggestionsDiv, cartContainer, emptyState, cartTotalEl, cartCountEl, btnCheckout, btnSaveDraft;
+let selectedCustomer = null; // { id, name, phone } or null = Pelanggan Umum
 
 function escapeHtml(str) {
     const d = document.createElement('div');
@@ -897,6 +937,7 @@ async function proceedCheckout() {
         total_amount: calculateTotal(),
         payment_method: 'Cash',
         payment_status: 'Lunas',
+        customer_id: selectedCustomer ? selectedCustomer.id : null,
         items: cart.map(i => ({
             product_id: i.product_id,
             level: i.level,
@@ -1475,6 +1516,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) { console.warn('[POS] auto-reconnect skip:', e); }
 
         initPosSearch();
+        initCustomerSearch();
 
         const urlParams = new URLSearchParams(window.location.search);
         const editId = urlParams.get('edit');
@@ -1567,3 +1609,202 @@ async function loadSaleForEdit(id) {
     }
 }
 </script>
+
+<script>
+// ===== Customer Selector =====
+
+let _customerSearchTimeout = null;
+let _allCustomers = []; // cached from first load
+
+function initCustomerSearch() {
+    // Close dropdown on outside click
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('#customerSelectorBox') && !e.target.closest('#customerDropdown')) {
+            closeCustomerDropdown();
+        }
+    });
+    // Pre-load customers in background
+    fetchCustomers('').catch(() => {});
+}
+
+function toggleCustomerDropdown() {
+    const dd = document.getElementById('customerDropdown');
+    if (dd.style.display === 'none' || !dd.style.display) {
+        openCustomerDropdown();
+    } else {
+        closeCustomerDropdown();
+    }
+}
+
+function openCustomerDropdown() {
+    const dd = document.getElementById('customerDropdown');
+    const chevron = document.getElementById('customerChevron');
+    const box = document.getElementById('customerSelectorBox');
+    dd.style.display = 'block';
+    box.style.borderColor = 'var(--primary)';
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
+    // Focus search input
+    setTimeout(() => {
+        const inp = document.getElementById('customerSearchInput');
+        if (inp) { inp.value = ''; inp.focus(); onCustomerSearch(''); }
+    }, 60);
+}
+
+function closeCustomerDropdown() {
+    const dd = document.getElementById('customerDropdown');
+    const chevron = document.getElementById('customerChevron');
+    const box = document.getElementById('customerSelectorBox');
+    dd.style.display = 'none';
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+    if (box) box.style.borderColor = 'var(--border-color)';
+}
+
+function onCustomerSearch(q) {
+    clearTimeout(_customerSearchTimeout);
+    _customerSearchTimeout = setTimeout(() => {
+        renderCustomerResults(q.trim());
+    }, 200);
+}
+
+/**
+ * Multi-keyword fuzzy search:
+ * Splits query into words, each word must match at least one field
+ * (name or phone). Case-insensitive, accent-insensitive.
+ */
+function multiKeywordFilter(customers, q) {
+    if (!q) return customers;
+    const normalize = s => (s || '').toLowerCase()
+        .replace(/[àáâãäå]/g, 'a').replace(/[èéêë]/g, 'e')
+        .replace(/[ìíîï]/g, 'i').replace(/[òóôõö]/g, 'o')
+        .replace(/[ùúûü]/g, 'u').replace(/[ñ]/g, 'n');
+    const keywords = normalize(q).split(/\s+/).filter(k => k.length > 0);
+    return customers.filter(c => {
+        const name = normalize(c.name || '');
+        const phone = normalize(c.phone || '');
+        return keywords.every(kw => name.includes(kw) || phone.includes(kw));
+    });
+}
+
+async function fetchCustomers(q) {
+    try {
+        const url = q
+            ? `${BASE_URL}api/customers?q=${encodeURIComponent(q)}`
+            : `${BASE_URL}api/customers`;
+        const res = await fetch(url, { credentials: 'same-origin' });
+        if (!res.ok) return [];
+        const data = await res.json();
+        const list = data.data || data || [];
+        if (!q) _allCustomers = list; // cache full list
+        return list;
+    } catch (e) {
+        return [];
+    }
+}
+
+async function renderCustomerResults(q) {
+    const container = document.getElementById('customerResults');
+    if (!container) return;
+
+    // Use cached list + client-side filter for instant feel; also fetch from server
+    let customers = multiKeywordFilter(_allCustomers, q);
+
+    // Show immediately from cache
+    renderCustomerList(container, customers, q);
+
+    // Also fetch from server if query changed (server-side search for new data)
+    if (q.length > 0) {
+        const serverList = await fetchCustomers(q);
+        // Merge & dedupe by id
+        const merged = [...serverList];
+        customers.forEach(c => {
+            if (!merged.find(m => m.id === c.id)) merged.push(c);
+        });
+        const filtered = multiKeywordFilter(merged, q);
+        renderCustomerList(container, filtered, q);
+    }
+}
+
+function highlightKeywords(text, q) {
+    if (!q || !text) return escapeHtml(text || '');
+    const keywords = q.trim().split(/\s+/).filter(k => k.length > 0);
+    let result = escapeHtml(text);
+    keywords.forEach(kw => {
+        const regex = new RegExp('(' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        result = result.replace(regex, '<mark style="background:var(--primary-bg);color:var(--primary);border-radius:2px;padding:0 2px;">$1</mark>');
+    });
+    return result;
+}
+
+function renderCustomerList(container, customers, q) {
+    // Always show "Pelanggan Umum" option at top
+    let html = `
+        <div onclick="selectCustomer(null)" style="padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background 0.15s;${!selectedCustomer ? 'background:var(--primary-bg);' : ''}"
+             onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${!selectedCustomer ? 'var(--primary-bg)' : 'transparent'}'">
+            <div style="width:30px;height:30px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-person" style="color:var(--text-muted);font-size:0.9rem;"></i>
+            </div>
+            <div style="flex:1;">
+                <div style="font-size:var(--font-size-sm);font-weight:600;color:var(--text-primary);">Pelanggan Umum</div>
+                <div style="font-size:10px;color:var(--text-muted);">Tanpa pencatatan pelanggan</div>
+            </div>
+            ${!selectedCustomer ? '<i class="bi bi-check-circle-fill" style="color:var(--primary);"></i>' : ''}
+        </div>`;
+
+    if (customers.length === 0 && q) {
+        html += `<div style="padding:14px;text-align:center;color:var(--text-muted);font-size:var(--font-size-sm);">
+            <i class="bi bi-search" style="display:block;font-size:1.5rem;margin-bottom:6px;opacity:0.4;"></i>
+            Tidak ada pelanggan ditemukan
+        </div>`;
+    } else {
+        customers.slice(0, 20).forEach(c => {
+            const isActive = selectedCustomer && selectedCustomer.id === c.id;
+            html += `
+                <div onclick="selectCustomer(${JSON.stringify({id: c.id, name: c.name, phone: c.phone || ''}).replace(/"/g,'&quot;')})"
+                     style="padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background 0.15s;${isActive ? 'background:var(--primary-bg);' : ''}border-top:1px solid var(--border-color);"
+                     onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${isActive ? 'var(--primary-bg)' : 'transparent'}'">
+                    <div style="width:30px;height:30px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;font-weight:700;color:var(--primary);">
+                        ${escapeHtml((c.name || '?').charAt(0).toUpperCase())}
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:var(--font-size-sm);font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${highlightKeywords(c.name, q)}</div>
+                        ${c.phone ? `<div style="font-size:10px;color:var(--text-muted);">${highlightKeywords(c.phone, q)}</div>` : ''}
+                    </div>
+                    ${isActive ? '<i class="bi bi-check-circle-fill" style="color:var(--primary);flex-shrink:0;"></i>' : ''}
+                </div>`;
+        });
+    }
+
+    container.innerHTML = html;
+}
+
+function selectCustomer(customer) {
+    if (!customer || customer === 'null') {
+        selectedCustomer = null;
+    } else {
+        // customer may be object passed via onclick JSON or already an object
+        selectedCustomer = typeof customer === 'string' ? JSON.parse(customer) : customer;
+    }
+    updateCustomerUI();
+    closeCustomerDropdown();
+}
+
+function clearCustomer() {
+    selectedCustomer = null;
+    updateCustomerUI();
+}
+
+function updateCustomerUI() {
+    const label = document.getElementById('customerSelectorLabel');
+    const icon = document.getElementById('customerSelectorIcon');
+    const clearBtn = document.getElementById('btnClearCustomer');
+
+    if (selectedCustomer) {
+        if (label) label.textContent = selectedCustomer.name + (selectedCustomer.phone ? ` · ${selectedCustomer.phone}` : '');
+        if (icon) { icon.className = 'bi bi-person-check-fill'; icon.style.color = 'var(--success)'; }
+        if (clearBtn) clearBtn.style.display = 'flex';
+    } else {
+        if (label) label.textContent = 'Pelanggan Umum';
+        if (icon) { icon.className = 'bi bi-person'; icon.style.color = 'var(--primary)'; }
+        if (clearBtn) clearBtn.style.display = 'none';
+    }
+}
