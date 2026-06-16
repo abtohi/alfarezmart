@@ -149,8 +149,7 @@
             
             <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:6px;">Status Produk</label>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;">
-                <input type="hidden" name="is_available" value="0">
-                <input type="checkbox" name="is_available" value="1" checked id="toggleIsAvailableCreate" style="display:none;">
+                <input type="hidden" name="is_available" id="toggleIsAvailableCreate" value="1">
                 <span id="toggleIsAvailableCreateSwitch" onclick="toggleAvailability('toggleIsAvailableCreate','toggleIsAvailableCreateSwitch','toggleIsAvailableCreateLabel')" style="display:inline-flex;align-items:center;width:44px;height:24px;border-radius:12px;background:var(--primary);border:none;padding:2px;cursor:pointer;transition:background 0.25s;flex-shrink:0;">
                     <span style="display:block;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform 0.25s;transform:translateX(20px);"></span>
                 </span>
@@ -1308,9 +1307,11 @@ function toggleAvailability(inputId, switchId, labelId) {
     const lbl = document.getElementById(labelId);
     if (!inp || !sw || !lbl) return;
 
-    inp.checked = !inp.checked;
+    // Toggle: flip between '1' and '0'
+    const isNowAvailable = inp.value !== '1';
+    inp.value = isNowAvailable ? '1' : '0';
     
-    if (inp.checked) {
+    if (isNowAvailable) {
         sw.style.background = 'var(--primary)';
         sw.firstElementChild.style.transform = 'translateX(20px)';
         lbl.textContent = 'Tersedia';

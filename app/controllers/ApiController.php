@@ -501,9 +501,16 @@ class ApiController extends Controller
             $fields = ['full_name','short_label','invoice_name','product_type','variant','brand_id','category_id',
                        'weight_value','weight_unit', 'supplier_product_code', 'supplier_invoice_name', 'is_custom_label', 'is_available'];
             $nullableFields = ['brand_id','product_type','variant','weight_value','weight_unit', 'supplier_product_code', 'supplier_invoice_name'];
+            // Fields that can legitimately be 0
+            $integerFields = ['is_custom_label', 'is_available'];
             foreach ($fields as $f) {
                 $val = $this->input($f);
-                if ($val !== null && $val !== '') {
+                if (in_array($f, $integerFields)) {
+                    // For integer fields, always save even if 0
+                    if ($val !== null) {
+                        $data[$f] = (int)$val;
+                    }
+                } elseif ($val !== null && $val !== '') {
                     $data[$f] = $val;
                 } elseif (in_array($f, $nullableFields)) {
                     // Allow clearing nullable fields

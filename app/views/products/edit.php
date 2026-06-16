@@ -222,8 +222,7 @@ $pkgsJson = json_encode($packagings, JSON_UNESCAPED_UNICODE);
             <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:6px;">Status Produk</label>
             <?php $isAvail = !isset($product['is_available']) || $product['is_available'] == 1; ?>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:12px;">
-                <input type="hidden" name="is_available" value="0">
-                <input type="checkbox" name="is_available" value="1" <?= $isAvail ? 'checked' : '' ?> id="toggleIsAvailableEdit" style="display:none;">
+                <input type="hidden" name="is_available" id="toggleIsAvailableEdit" value="<?= $isAvail ? '1' : '0' ?>">
                 <span id="toggleIsAvailableEditSwitch" onclick="toggleAvailability('toggleIsAvailableEdit','toggleIsAvailableEditSwitch','toggleIsAvailableEditLabel')" style="display:inline-flex;align-items:center;width:44px;height:24px;border-radius:12px;background:<?= $isAvail ? 'var(--primary)' : 'var(--surface-2)' ?>;border:none;padding:2px;cursor:pointer;transition:background 0.25s;flex-shrink:0;">
                     <span style="display:block;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform 0.25s;transform:translateX(<?= $isAvail ? '20px' : '0' ?>);"></span>
                 </span>
@@ -1394,7 +1393,7 @@ async function submitProduct(e) {
                 short_label: _shortLabelSafe,
                 invoice_name: _shortLabelSafe,
                 is_custom_label: document.getElementById('isCustomLabel').checked ? 1 : 0,
-                is_available: document.getElementById('toggleIsAvailableEdit').checked ? 1 : 0,
+                is_available: parseInt(document.getElementById('toggleIsAvailableEdit').value) || 0,
                 product_type: isMulti ? (document.querySelector('[name="product_type"]')?.value?.trim() || '') : '',
                 variant: isMulti ? (document.querySelector('[name="variant"]')?.value?.trim() || '') : '',
                 brand_id: isMulti ? brandSB.getValue() : '',
@@ -1472,7 +1471,7 @@ async function submitProduct(e) {
             short_label: _shortLabelSafe,
             invoice_name: _shortLabelSafe,
             is_custom_label: document.getElementById('isCustomLabel').checked ? 1 : 0,
-            is_available: document.getElementById('toggleIsAvailableEdit').checked ? 1 : 0,
+            is_available: parseInt(document.getElementById('toggleIsAvailableEdit').value) || 0,
             product_type: isMulti ? (document.querySelector('[name="product_type"]')?.value?.trim() || '') : '',
             variant: isMulti ? (document.querySelector('[name="variant"]')?.value?.trim() || '') : '',
             brand_id: isMulti ? brandSB.getValue() : '',
@@ -1654,9 +1653,11 @@ function toggleAvailability(inputId, switchId, labelId) {
     const lbl = document.getElementById(labelId);
     if (!inp || !sw || !lbl) return;
 
-    inp.checked = !inp.checked;
+    // Toggle: flip between '1' and '0'
+    const isNowAvailable = inp.value !== '1';
+    inp.value = isNowAvailable ? '1' : '0';
     
-    if (inp.checked) {
+    if (isNowAvailable) {
         sw.style.background = 'var(--primary)';
         sw.firstElementChild.style.transform = 'translateX(20px)';
         lbl.textContent = 'Tersedia';
