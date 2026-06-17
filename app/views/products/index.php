@@ -646,8 +646,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             priceText = `<div style="font-size:var(--font-size-xs); margin-top:2px; text-align:right;"><span style="color:var(--primary);font-weight:600;">Rp${price.toLocaleString('id-ID')}</span></div>`;
                         }
 
-                        return `<a href="<?= BASE_URL ?>products/${p.id}" style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border-color);text-decoration:none;color:var(--text-primary);font-size:var(--font-size-sm);">
-                            <div><div style="font-weight:600;">${name}</div>${brand ? `<div style="font-size:var(--font-size-xs);color:var(--text-muted);">${brand}</div>` : ''}</div>
+                        const imgHtml = (p.photo)
+                            ? `<img src="${BASE_URL}${p.photo}" style="width:40px;height:40px;object-fit:contain;border-radius:6px;background:transparent;flex-shrink:0;" loading="lazy">`
+                            : `<div style="width:40px;height:40px;border-radius:6px;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;"><i class="bi bi-box-seam"></i></div>`;
+
+                        return `<a href="<?= BASE_URL ?>products/${p.id}" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border-color);text-decoration:none;color:var(--text-primary);font-size:var(--font-size-sm);transition:background 0.15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+                            <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">${imgHtml}<div style="min-width:0;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>${brand ? `<div style="font-size:var(--font-size-xs);color:var(--text-muted);">${brand}</div>` : ''}</div></div>
                             ${priceText}
                         </a>`;
                     }).join('');
