@@ -307,6 +307,11 @@ class ProductModel extends Model
         ");
         $stmt->execute([':pid' => $productId]);
         $rows = $stmt->fetchAll();
+        foreach ($rows as &$row) {
+            if (isset($row['contained_qty'])) $row['contained_qty'] = (float)$row['contained_qty'];
+            if (isset($row['base_qty'])) $row['base_qty'] = (float)$row['base_qty'];
+        }
+        unset($row);
         return $this->attachQtyPricesToPackagings($rows);
     }
 
@@ -414,6 +419,11 @@ class ProductModel extends Model
             ORDER BY pp.product_id ASC, pp.level ASC
         ");
         $allPackagings = $stmt->fetchAll();
+        foreach ($allPackagings as &$row) {
+            if (isset($row['contained_qty'])) $row['contained_qty'] = (float)$row['contained_qty'];
+            if (isset($row['base_qty'])) $row['base_qty'] = (float)$row['base_qty'];
+        }
+        unset($row);
         $allPackagings = $this->attachQtyPricesToPackagings($allPackagings);
         
         $byProduct = [];

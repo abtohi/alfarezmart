@@ -12,12 +12,12 @@ const PackagingPriceSync = {
         const levels = this.getLevels();
         return levels.map((lv, i) => {
             if (lv.dataset.baseQty) {
-                return parseInt(lv.dataset.baseQty, 10) || 1;
+                return parseFloat(lv.dataset.baseQty) || 1;
             }
             if (i === 0) return 1;
             let running = 1;
             for (let j = 1; j <= i; j++) {
-                const cqty = parseInt(levels[j].querySelector('.contained-qty')?.value, 10) || 0;
+                const cqty = parseFloat(levels[j].querySelector('.contained-qty')?.value) || 0;
                 if (cqty > 0) running *= cqty;
             }
             return running;
