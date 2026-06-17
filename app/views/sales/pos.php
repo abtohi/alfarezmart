@@ -252,9 +252,28 @@ function updateCartItemDom(item) {
     }
 }
 
-window.togglePosCustomPrice = function(itemId, checked) {
+window.togglePosCustomPrice = async function(itemId, checked, checkboxEl) {
     const item = cart.find(i => i.id == itemId);
     if (!item) return;
+
+    if (!checked) {
+        const confirmed = await AppModal.show({
+            title: 'Kembalikan ke Harga Normal?',
+            subtitle: 'Pembatalan Harga Custom',
+            bodyHTML: '<div style="text-align:center; padding:10px 0;"><i class="bi bi-exclamation-circle" style="font-size:3rem; color:var(--warning); display:block; margin-bottom:12px;"></i><p style="font-size:14px; margin-bottom:8px;">Anda yakin ingin membatalkan harga custom?</p><p style="font-size:13px; color:var(--text-muted);">Harga barang ini akan kembali mengikuti harga normal sesuai sistem.</p></div>',
+            icon: 'bi-question-circle',
+            iconColor: 'var(--warning-bg)',
+            iconAccent: 'var(--warning)',
+            submitText: 'Ya, Kembalikan',
+            cancelText: 'Batal'
+        });
+        
+        if (!confirmed) {
+            if (checkboxEl) checkboxEl.checked = true;
+            return;
+        }
+    }
+
     item.use_custom_price = !!checked;
     if (checked) {
         if (item.custom_line_total == null || item.custom_line_total === '') {
@@ -691,7 +710,7 @@ function renderCart() {
                     <button type="button" onclick="cart = cart.filter(i => i.id != ${item.id}); renderCart();" style="border:1px solid rgba(230,57,70,0.2);background:var(--danger-bg);color:var(--danger);cursor:pointer;padding:6px 12px;border-radius:var(--radius-sm);transition:all 150ms;"><i class="bi bi-trash3"></i></button>
                 </div>
                 <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11px;color:var(--text-secondary);cursor:pointer;user-select:none;font-weight:500;">
-                    <input type="checkbox" ${customChecked} onchange="togglePosCustomPrice(${item.id}, this.checked)" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;margin:0;">
+                    <input type="checkbox" ${customChecked} onchange="togglePosCustomPrice(${item.id}, this.checked, this)" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;margin:0;">
                     <span><i class="bi bi-pencil-square" style="margin-right:2px;"></i> Terapkan Harga Custom</span>
                 </label>
                 <div style="margin-top:8px;${customWrapStyle}">
