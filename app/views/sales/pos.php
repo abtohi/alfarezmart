@@ -7,13 +7,13 @@
 <div class="page-section" style="padding-bottom:200px;">
     <div class="pos-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
         <h2 style="font-size:var(--font-size-lg); font-weight:700; margin:0;">Kasir (POS)</h2>
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="btn-outline-custom" onclick="clearCartConfirm()" style="padding:8px 14px; border-radius:var(--radius-md); font-size:var(--font-size-xs); background:var(--danger-bg); border:1px solid rgba(230,57,70,0.3); color:var(--danger); display:flex; align-items:center; gap:6px;" title="Kosongkan Keranjang"><i class="bi bi-trash3"></i> <span>Kosongkan</span></button>
-            <button class="btn-outline-custom" onclick="window.location.href=`${BASE_URL}sales`" style="padding:8px 14px; border-radius:var(--radius-md); font-size:var(--font-size-xs); background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:6px;" title="Lihat Riwayat Penjualan"><i class="bi bi-clock-history"></i> <span>Riwayat</span></button>
-            <button class="btn-outline-custom" onclick="openDrafts()" style="padding:8px 14px; border-radius:var(--radius-md); font-size:var(--font-size-xs); background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:6px;"><i class="bi bi-journal-bookmark"></i> <span>Draft</span></button>
-            <div style="display:flex; background:var(--surface-1); border-radius:var(--radius-md); padding:4px; border:1px solid var(--border-color);">
-                <button id="btnRetail" class="btn-primary-custom" style="padding:8px 16px; border-radius:var(--radius-sm); font-size:var(--font-size-xs);" onclick="setSaleMode('retail')">Ecer</button>
-                <button id="btnWholesale" class="btn-outline-custom" style="padding:8px 16px; border-radius:var(--radius-sm); font-size:var(--font-size-xs); border:none;" onclick="setSaleMode('wholesale')">Grosir</button>
+        <div style="display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px;">
+            <button type="button" class="btn-outline-custom" onclick="clearCartConfirm()" style="padding:6px 10px; border-radius:var(--radius-md); font-size:var(--font-size-xs); background:var(--danger-bg); border:1px solid rgba(230,57,70,0.3); color:var(--danger); display:flex; align-items:center; gap:6px; flex-shrink:0;" title="Kosongkan Keranjang"><i class="bi bi-trash3"></i> <span class="d-none d-sm-inline">Kosongkan</span></button>
+            <button class="btn-outline-custom" onclick="window.location.href=`${BASE_URL}sales`" style="padding:6px 10px; border-radius:var(--radius-md); font-size:var(--font-size-xs); background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:6px; flex-shrink:0;" title="Lihat Riwayat Penjualan"><i class="bi bi-clock-history"></i> <span class="d-none d-sm-inline">Riwayat</span></button>
+            <button class="btn-outline-custom" onclick="openDrafts()" style="padding:6px 10px; border-radius:var(--radius-md); font-size:var(--font-size-xs); background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:6px; flex-shrink:0;"><i class="bi bi-journal-bookmark"></i> <span class="d-none d-sm-inline">Draft</span></button>
+            <div style="display:flex; background:var(--surface-1); border-radius:var(--radius-md); padding:3px; border:1px solid var(--border-color); flex-shrink:0;">
+                <button id="btnRetail" class="btn-primary-custom" style="padding:4px 12px; border-radius:var(--radius-sm); font-size:var(--font-size-xs);" onclick="setSaleMode('retail')">Ecer</button>
+                <button id="btnWholesale" class="btn-outline-custom" style="padding:4px 12px; border-radius:var(--radius-sm); font-size:var(--font-size-xs); border:none;" onclick="setSaleMode('wholesale')">Grosir</button>
             </div>
         </div>
     </div>
