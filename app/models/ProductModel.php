@@ -299,7 +299,7 @@ class ProductModel extends Model
     public function getPackagings(int|string $productId)
     {
         $stmt = $this->db->prepare("
-            SELECT pp.*, u.name as unit_name
+            SELECT pp.*, u.name as unit_name, u.abbreviation as unit_abbr
             FROM product_packagings pp
             JOIN units u ON pp.unit_id = u.id
             WHERE pp.product_id = :pid 
@@ -412,7 +412,7 @@ class ProductModel extends Model
         $stmt = $this->db->query("
             SELECT pp.id, pp.product_id, pp.level, pp.sell_price_retail, pp.sell_price_wholesale,
                    pp.ppn_pct, pp.discount_mode, pp.discount_value, pp.buy_price, pp.base_qty, pp.contained_qty, pp.barcode,
-                   u.name AS unit_name
+                   u.name AS unit_name, u.abbreviation AS unit_abbr
             FROM product_packagings pp
             JOIN units u ON u.id = pp.unit_id
             WHERE pp.product_id IN ($in)
