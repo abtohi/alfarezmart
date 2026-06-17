@@ -638,14 +638,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             const pkgsHtml = p.packagings.map(pkg => {
                                 const price = parseFloat(pkg.sell_price_retail) || 0;
                                 const unitDisp = pkg.unit_abbr || pkg.unit_name;
-                                return price > 0 ? `<span style="color:var(--primary);font-weight:600;font-size:11px;">Rp${price.toLocaleString('id-ID')}</span><span style="font-size:9px;color:var(--text-muted);margin-left:2px;">/${unitDisp}</span>` : '';
+                                return price > 0 ? `<span style="color:var(--primary);font-weight:600;font-size:10px;">Rp${price.toLocaleString('id-ID')}</span><span style="font-size:8px;color:var(--text-muted);margin-left:2px;">/${unitDisp}</span>` : '';
                             }).filter(Boolean).join('<span style="color:var(--border-color);margin:0 4px;font-size:10px;">·</span>');
                             if (pkgsHtml) {
                                 priceText = `<div style="margin-top:2px;display:flex;flex-wrap:wrap;gap:2px;align-items:center;">${pkgsHtml}</div>`;
                             }
                         } else if (p.price_small_retail) {
                             const price = parseInt(p.price_small_retail);
-                            priceText = `<div style="margin-top:2px;"><span style="color:var(--primary);font-weight:600;font-size:11px;">Rp${price.toLocaleString('id-ID')}</span></div>`;
+                            priceText = `<div style="margin-top:2px;"><span style="color:var(--primary);font-weight:600;font-size:10px;">Rp${price.toLocaleString('id-ID')}</span></div>`;
                         }
 
                         const imgHtml = (p.photo)
