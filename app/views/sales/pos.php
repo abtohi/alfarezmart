@@ -8,6 +8,7 @@
     <div class="pos-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
         <h2 style="font-size:var(--font-size-lg); font-weight:700; margin:0;">Kasir (POS)</h2>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn-outline-custom" onclick="clearCartConfirm()" style="padding:8px 14px; border-radius:var(--radius-md); font-size:var(--font-size-xs); background:var(--danger-bg); border:1px solid rgba(230,57,70,0.3); color:var(--danger); display:flex; align-items:center; gap:6px;" title="Kosongkan Keranjang"><i class="bi bi-trash3"></i> <span>Kosongkan</span></button>
             <button class="btn-outline-custom" onclick="window.location.href=`${BASE_URL}sales`" style="padding:8px 14px; border-radius:var(--radius-md); font-size:var(--font-size-xs); background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:6px;" title="Lihat Riwayat Penjualan"><i class="bi bi-clock-history"></i> <span>Riwayat</span></button>
             <button class="btn-outline-custom" onclick="openDrafts()" style="padding:8px 14px; border-radius:var(--radius-md); font-size:var(--font-size-xs); background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:6px;"><i class="bi bi-journal-bookmark"></i> <span>Draft</span></button>
             <div style="display:flex; background:var(--surface-1); border-radius:var(--radius-md); padding:4px; border:1px solid var(--border-color);">
@@ -761,6 +762,43 @@ function autoRestoreCart() {
 function clearAutoSave() {
     try { localStorage.removeItem('pos_autosave'); } catch(e) {}
 }
+
+window.clearCartConfirm = async function() {
+    if (cart.length === 0) {
+        showToast('Keranjang sudah kosong', 'info');
+        return;
+    }
+    const confirmed = await AppModal.show({
+        title: 'Kosongkan Keranjang?',
+        subtitle: 'Hapus Semua Produk',
+        bodyHTML: '<div style="text-align:center; padding:10px 0;"><i class="bi bi-trash3" style="font-size:3rem; color:var(--danger); display:block; margin-bottom:12px;"></i><p style="font-size:14px; margin-bottom:8px;">Anda yakin ingin menghapus semua produk dari keranjang?</p><p style="font-size:13px; color:var(--text-muted);">Tindakan ini tidak dapat dibatalkan.</p></div>',
+        icon: 'bi-trash3',
+        iconColor: 'var(--danger-bg)',
+        iconAccent: 'var(--danger)',
+        submitText: 'Ya, Kosongkan',
+        cancelText: 'Batal'
+    });
+    
+    if (confirmed) {
+        cart = [];
+        currentDraftId = null;
+        if (editSaleId) editSaleId = null;
+        clearAutoSave();
+        renderCart();
+        
+        // Remove edit param from URL silently if exists
+        if (window.history.replaceState) {
+            const url = new URL(window.location);
+            if (url.searchParams.has('edit')) {
+                url.searchParams.delete('edit');
+                window.history.replaceState(null, '', url);
+            }
+        }
+        
+        showToast('Keranjang berhasil dikosongkan', 'success');
+        searchInput?.focus();
+    }
+};
 
 function saveDraft() {
     if (cart.length === 0) return;
