@@ -9,17 +9,17 @@ const PackagingPriceSync = {
     },
 
     getBaseQtys() {
+        // Always read fresh from live inputs — never use cached dataset values
         const levels = this.getLevels();
+        let running = 1;
         return levels.map((lv, i) => {
-            if (lv.dataset.baseQty) {
-                return parseFloat(lv.dataset.baseQty) || 1;
+            if (i === 0) {
+                running = 1;
+                return 1;
             }
-            if (i === 0) return 1;
-            let running = 1;
-            for (let j = 1; j <= i; j++) {
-                const cqty = parseFloat(levels[j].querySelector('.contained-qty')?.value) || 0;
-                if (cqty > 0) running *= cqty;
-            }
+            const inp = lv.querySelector('.contained-qty');
+            const cqty = inp ? (parseFloat(inp.value) || 0) : 0;
+            if (cqty > 0) running *= cqty;
             return running;
         });
     },
@@ -207,6 +207,19 @@ const PackagingPriceSync = {
         if (cqty && !cqty.dataset.priceSyncBound) {
             cqty.dataset.priceSyncBound = '1';
             cqty.addEventListener('input', () => {
+                // When isi-per-kemasan changes, auto-release custom lock so prices re-sync
+                const chkBuy  = levelEl.querySelector('.chk-buy-custom');
+                const chkSell = levelEl.querySelector('.chk-sell-custom');
+                if (chkBuy && chkBuy.checked) {
+                    chkBuy.checked = false;
+                    levelEl.querySelector('.buy-custom-toggle')?.classList.remove('active');
+                    levelEl.querySelector('.buy-locked-note')?.classList.add('visible');
+                }
+                if (chkSell && chkSell.checked) {
+                    chkSell.checked = false;
+                    levelEl.querySelector('.sell-custom-toggle')?.classList.remove('active');
+                    levelEl.querySelector('.sell-locked-note')?.classList.add('visible');
+                }
                 if (typeof updateBaseQtyInfo === 'function') updateBaseQtyInfo();
                 this.propagateAllFromLevel1();
             });
