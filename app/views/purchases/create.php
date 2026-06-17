@@ -1708,8 +1708,13 @@ function recalcTierHint(el) {
     if (!hint) {
         hint = document.createElement('div');
         hint.className = 'tier-hint';
-        hint.style.cssText = 'font-size:10px;color:var(--text-muted);padding-left:2px;margin-top:4px;width:100%;';
-        row.querySelector('.tier-mode, .drawer-tier-mode').parentElement.after(hint);
+        hint.style.cssText = 'font-size:10px;color:var(--text-muted);padding:6px 10px;margin-bottom:6px;background:var(--surface-1);border:1px dashed var(--border-color);border-radius:var(--radius-sm);width:100%;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;';
+        const labelEl = row.querySelector('.tier-label, .drawer-tier-label');
+        if (labelEl) {
+            labelEl.before(hint);
+        } else {
+            row.appendChild(hint);
+        }
     }
     
     if (minQty > 0 && totalH > 0) {
@@ -1755,7 +1760,7 @@ function recalcTierHint(el) {
             const marginPct = (profit / nett * 100);
             const color = marginPct >= 5 ? 'var(--success)' : (marginPct >= 0 ? 'var(--warning)' : 'var(--danger)');
             const formatRp = (num) => 'Rp ' + Math.round(num).toLocaleString('id-ID');
-            text += ` <span style="margin-left:8px;">Mkp: <strong style="color:${color}">${marginPct.toFixed(1)}%</strong> <span style="font-size:9px;color:var(--text-muted);">(${profit > 0 ? '+' : ''}${formatRp(profit)})</span></span>`;
+            text += ` <span>Mkp: <strong style="color:${color}">${marginPct.toFixed(1)}%</strong> <span style="font-size:9px;color:var(--text-muted);">(${profit > 0 ? '+' : ''}${formatRp(profit)})</span></span>`;
         }
         
         hint.innerHTML = text;
