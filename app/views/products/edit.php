@@ -729,7 +729,7 @@ function addPackagingLevel(prefill = null) {
         containedHtml = `
             <div style="flex:1;">
                 <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">Isi per kemasan *</label>
-                <input type="number" name="contained_qty[]" placeholder="Cth: 10, 12, 24" class="form-control-dark contained-qty" style="width:100%;" min="2" required value="${prefill ? prefill.contained_qty : ''}">
+                <input type="number" name="contained_qty[]" placeholder="Cth: 10, 12, 24" class="form-control-dark contained-qty" style="width:100%;" min="0.001" step="any" required value="${prefill ? prefill.contained_qty : ''}">
                 <small class="base-qty-info" style="font-size:10px;color:var(--info);margin-top:2px;display:block;"></small>
             </div>
         `;
@@ -752,7 +752,7 @@ function addPackagingLevel(prefill = null) {
                     const l1Buy = parseFloat(l1.querySelector('.buy-price')?.value) || 0;
                     const l1Retail = parseFloat(l1.querySelector('.retail-price')?.value) || 0;
                     const l1Wholesale = parseFloat(l1.querySelector('.wholesale-price')?.value) || 0;
-                    const bQty = parseInt(prefill.base_qty) || 1;
+                    const bQty = parseFloat(prefill.base_qty) || 1;
                     
                     const expBuy = l1Buy * bQty;
                     const expRetail = l1Retail * bQty;
@@ -985,7 +985,7 @@ function updateBaseQtyInfo() {
             runningBase = 1;
             return;
         }
-        const cqty = parseInt(lv.querySelector('.contained-qty')?.value) || 0;
+        const cqty = parseFloat(lv.querySelector('.contained-qty')?.value) || 0;
         if (cqty > 0) runningBase = runningBase * cqty;
         const info = lv.querySelector('.base-qty-info');
         if (info && cqty > 0) {
@@ -1112,7 +1112,7 @@ function updateNamePreview() {
     const qtyChain = [];
     if (levels.length > 1) {
         for (let i = levels.length - 1; i >= 1; i--) {
-            const qty = parseInt(levels[i].querySelector('input[name="contained_qty[]"]')?.value) || 0;
+            const qty = parseFloat(levels[i].querySelector('input[name="contained_qty[]"]')?.value) || 0;
             if (qty > 0) qtyChain.push(qty);
         }
     }

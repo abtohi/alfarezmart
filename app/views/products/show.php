@@ -486,8 +486,8 @@ function openUpdateStockModal() {
             packagings.forEach(p => {
                 const el = document.getElementById(`stock_qty_${p.level}`);
                 if (el) {
-                    const qty = parseInt(el.value) || 0;
-                    totalBaseQty += qty * parseInt(p.base_qty);
+                    const qty = parseFloat(el.value) || 0;
+                    totalBaseQty += qty * parseFloat(p.base_qty);
                 }
             });
 
@@ -518,7 +518,7 @@ function calculateTotalStockPreview() {
     packagings.forEach(p => {
         const el = document.getElementById(`stock_qty_${p.level}`);
         if (el) {
-            total += (parseInt(el.value) || 0) * parseInt(p.base_qty);
+            total += (parseFloat(el.value) || 0) * parseFloat(p.base_qty);
         }
     });
     document.getElementById('previewTotalStock').textContent = total;

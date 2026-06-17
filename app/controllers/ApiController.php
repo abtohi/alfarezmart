@@ -880,7 +880,7 @@ class ApiController extends Controller
                     if ((int)$lv['level'] === 1) {
                         $runningBase = 1;
                     } else {
-                        $runningBase *= (int)$lv['contained_qty'];
+                        $runningBase *= (float)$lv['contained_qty'];
                     }
                     $stmtBq = $db->prepare("UPDATE product_packagings SET base_qty = :bq WHERE id = :lid");
                     $stmtBq->execute([':bq' => $runningBase, ':lid' => $lv['id']]);
@@ -1774,13 +1774,13 @@ class ApiController extends Controller
             $unitId = $this->input('unit_id');
             if (!$unitId) throw new Exception("Satuan wajib dipilih");
 
-            $containedQty = (int)($this->input('contained_qty') ?: 1);
+            $containedQty = (float)($this->input('contained_qty') ?: 1);
             if ($newLevel > 1 && $containedQty < 1) throw new Exception("Isi kemasan minimal 1");
 
             // Calculate base_qty
             $stmtBase = $db->prepare("SELECT base_qty FROM product_packagings WHERE product_id = :pid ORDER BY level DESC LIMIT 1");
             $stmtBase->execute([':pid' => $productId]);
-            $lastBase = (int)($stmtBase->fetchColumn() ?: 1);
+            $lastBase = (float)($stmtBase->fetchColumn() ?: 1);
             $baseQty = ($newLevel === 1) ? 1 : $lastBase * $containedQty;
 
             $buyPrice  = (float)$this->input('buy_price', 0);
