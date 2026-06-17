@@ -630,29 +630,34 @@ document.addEventListener('DOMContentLoaded', () => {
                     resultsDiv.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:var(--font-size-xs);">Tidak ditemukan</div>';
                 } else {
                     resultsDiv.innerHTML = items.map(p => {
-                        const name = (p.short_label || p.full_name || '').replace(/</g,'&lt;');
+                        // Use short_label as display name (user preference)
+                        const label = (p.short_label || p.full_name || '').replace(/</g,'&lt;');
                         const brand = (p.brand_name || '').replace(/</g,'&lt;');
                         let priceText = '';
                         if (p.packagings && p.packagings.length > 0) {
                             const pkgsHtml = p.packagings.map(pkg => {
                                 const price = parseFloat(pkg.sell_price_retail) || 0;
-                                return price > 0 ? `<div style="font-size:var(--font-size-xs); margin-top:2px; text-align:right;"><span style="color:var(--primary);font-weight:600;">Rp${price.toLocaleString('id-ID')}</span> <span style="font-size:10px; color:var(--text-muted);">/ ${pkg.unit_name}</span></div>` : '';
-                            }).join('');
+                                return price > 0 ? `<span style="color:var(--primary);font-weight:600;font-size:var(--font-size-xs);">Rp${price.toLocaleString('id-ID')}</span><span style="font-size:10px;color:var(--text-muted);margin-left:2px;">/ ${pkg.unit_name}</span>` : '';
+                            }).filter(Boolean).join('<span style="color:var(--border-color);margin:0 6px;">·</span>');
                             if (pkgsHtml) {
-                                priceText = `<div>${pkgsHtml}</div>`;
+                                priceText = `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;">${pkgsHtml}</div>`;
                             }
                         } else if (p.price_small_retail) {
                             const price = parseInt(p.price_small_retail);
-                            priceText = `<div style="font-size:var(--font-size-xs); margin-top:2px; text-align:right;"><span style="color:var(--primary);font-weight:600;">Rp${price.toLocaleString('id-ID')}</span></div>`;
+                            priceText = `<div style="margin-top:4px;"><span style="color:var(--primary);font-weight:600;font-size:var(--font-size-xs);">Rp${price.toLocaleString('id-ID')}</span></div>`;
                         }
 
                         const imgHtml = (p.photo)
-                            ? `<img src="${BASE_URL}${p.photo}" style="width:40px;height:40px;object-fit:contain;border-radius:6px;background:transparent;flex-shrink:0;" loading="lazy">`
-                            : `<div style="width:40px;height:40px;border-radius:6px;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;"><i class="bi bi-box-seam"></i></div>`;
+                            ? `<img src="${BASE_URL}${p.photo}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;background:transparent;flex-shrink:0;" loading="lazy">`
+                            : `<div style="width:44px;height:44px;border-radius:8px;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;"><i class="bi bi-box-seam"></i></div>`;
 
-                        return `<a href="<?= BASE_URL ?>products/${p.id}" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--border-color);text-decoration:none;color:var(--text-primary);font-size:var(--font-size-sm);transition:background 0.15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
-                            <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">${imgHtml}<div style="min-width:0;"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>${brand ? `<div style="font-size:var(--font-size-xs);color:var(--text-muted);">${brand}</div>` : ''}</div></div>
-                            ${priceText}
+                        return `<a href="<?= BASE_URL ?>products/${p.id}" style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border-color);text-decoration:none;color:var(--text-primary);font-size:var(--font-size-sm);transition:background 0.15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+                            ${imgHtml}
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-weight:600;line-height:1.3;">${label}</div>
+                                ${brand ? `<div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:1px;">${brand}</div>` : ''}
+                                ${priceText}
+                            </div>
                         </a>`;
                     }).join('');
                 }
