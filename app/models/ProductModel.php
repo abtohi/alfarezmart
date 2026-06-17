@@ -411,7 +411,7 @@ class ProductModel extends Model
         $in = implode(',', $ids);
         $stmt = $this->db->query("
             SELECT pp.id, pp.product_id, pp.level, pp.sell_price_retail, pp.sell_price_wholesale,
-                   pp.ppn_pct, pp.discount_mode, pp.discount_value, pp.buy_price, pp.base_qty,
+                   pp.ppn_pct, pp.discount_mode, pp.discount_value, pp.buy_price, pp.base_qty, pp.contained_qty, pp.barcode,
                    u.name AS unit_name
             FROM product_packagings pp
             JOIN units u ON u.id = pp.unit_id

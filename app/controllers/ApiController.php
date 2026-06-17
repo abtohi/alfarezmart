@@ -447,7 +447,7 @@ class ApiController extends Controller
                 if (empty($unitId)) continue;
                 
                 $level = $i + 1;
-                $cqty = $_POST['contained_qty'][$i] ?? 1;
+                $cqty = isset($_POST['contained_qty'][$i]) ? (float)$_POST['contained_qty'][$i] : 1;
                 $buy = (float)($_POST['buy_price'][$i] ?? 0);
                 $retail = $_POST['sell_price_retail'][$i] ?? 0;
                 $wholesale = $_POST['sell_price_wholesale'][$i] ?? 0;
@@ -862,7 +862,7 @@ class ApiController extends Controller
                 ':id'       => $id
             ];
             if ($unitId) $params[':uid'] = $unitId;
-            if ($containedQty !== null && $containedQty !== '') $params[':cqty'] = (int)$containedQty;
+            if ($containedQty !== null && $containedQty !== '') $params[':cqty'] = (float)$containedQty;
             $stmt->execute($params);
 
             // Update product's updated_at timestamp
