@@ -1867,8 +1867,10 @@ async function clearAllDrafts() {
     purchaseItems = [];
     localStorage.removeItem('alfarezmart_purchase_draft');
     
-    document.getElementById('invoiceDiscount').value = '0';
-    document.getElementById('invoiceTax').value = '0';
+    const discountEl = document.getElementById('invoiceDiscount');
+    if (discountEl) discountEl.value = '0';
+    const taxEl = document.getElementById('invoiceTax');
+    if (taxEl) taxEl.value = '0';
     
     renderCart();
     calculateTotal();
@@ -1930,8 +1932,10 @@ function distributeAdjustments() {
     });
     
     // Reset discount and tax since they are now baked into the item prices
-    document.getElementById('invoiceDiscount').value = 0;
-    document.getElementById('invoiceTax').value = 0;
+    const discountEl = document.getElementById('invoiceDiscount');
+    if (discountEl) discountEl.value = 0;
+    const taxEl = document.getElementById('invoiceTax');
+    if (taxEl) taxEl.value = 0;
     
     renderCart(); // this calls calculateTotal() and calculateGrandTotal()
     showToast('Harga modal berhasil didistribusikan', 'success');
