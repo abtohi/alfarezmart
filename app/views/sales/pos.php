@@ -1824,7 +1824,7 @@ window.showAddCustomerModal = async function() {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        csrf_token: csrfVal,
+                        csrf_token: document.getElementById('csrfToken')?.value || '',
                         name: name,
                         phone: phone,
                         address: address,
