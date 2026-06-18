@@ -1013,9 +1013,7 @@ async function proceedCheckout() {
         if (result.success) {
             showToast('Transaksi Berhasil!', 'success');
 
-            const printCart = cart.map(i => ({ ...i }));
-            const printTotal = calculateTotal();
-            const invoiceNo = result.invoice || result.id || ('OFF-' + Date.now());
+            const isEditMode = !!editSaleId;
 
             // Clear current draft if checkout success
             if (currentDraftId) {
@@ -1024,20 +1022,25 @@ async function proceedCheckout() {
                 localStorage.setItem('pos_drafts', JSON.stringify(drafts));
             }
 
+            if (isEditMode) {
+                // If editing, just show success and redirect back to sales
+                showToast('Perubahan berhasil disimpan!', 'success');
+                setTimeout(() => {
+                    window.location.href = '${BASE_URL}sales';
+                }, 1000);
+                return;
+            }
+
+            const printCart = cart.map(i => ({ ...i }));
+            const printTotal = calculateTotal();
+            const invoiceNo = result.invoice || result.id || ('OFF-' + Date.now());
+
             cart = [];
             currentDraftId = null;
-            if (editSaleId) editSaleId = null;
             clearAutoSave();
             renderCart();
             btnCheckout.innerHTML = 'BAYAR SEKARANG';
             btnCheckout.disabled = false;
-
-            // Remove edit param from URL silently
-            if (window.history.replaceState) {
-                const url = new URL(window.location);
-                url.searchParams.delete('edit');
-                window.history.replaceState(null, '', url);
-            }
 
             const tp = getThermalPrinterSafe();
             if (STORE_SETTINGS && tp?.setStoreSettings) {
@@ -1602,21 +1605,43 @@ async function loadSaleForEdit(id) {
             const sale = data.transaction;
             setSaleMode(sale.sale_mode);
             
-            // Map items
-            cart = sale.items.map(item => {
+            // Map items with real packagings
+            cart = await Promise.all(sale.items.map(async item => {
                 const isCustom = item.custom_name !== null;
                 const printName = item.invoice_name || item.full_name || item.custom_name;
                 
-                let pkg = null;
+                let packagings = [];
+                let isItemValid = true;
+
                 if (!isCustom) {
-                    pkg = {
+                    try {
+                        const pRes = await fetch(`${BASE_URL}api/products/${item.product_id}`);
+                        if (pRes.ok) {
+                            const pData = await pRes.json();
+                            if (pData && pData.packagings && pData.packagings.length > 0) {
+                                packagings = pData.packagings;
+                            } else {
+                                isItemValid = false;
+                            }
+                        } else {
+                            isItemValid = false;
+                        }
+                    } catch(e) {
+                        isItemValid = false;
+                    }
+                }
+                
+                // Fallback packagings if fetch fails or is custom
+                if (isCustom || !isItemValid || packagings.length === 0) {
+                    packagings = [{
                         level: item.packaging_level || 1,
                         unit_name: item.unit_name,
                         sell_price_retail: item.unit_price,
                         sell_price_wholesale: item.unit_price,
+                        buy_price: item.buy_price || 0,
                         ppn_pct: 0,
                         discount_value: 0
-                    };
+                    }];
                 }
 
                 return {
@@ -1626,7 +1651,7 @@ async function loadSaleForEdit(id) {
                     name: printName,
                     print_name: printName,
                     product_name: printName,
-                    packagings: isCustom ? [{ level: 1, unit_name: item.unit_name, qty_prices: [] }] : [pkg],
+                    packagings: packagings,
                     level: isCustom ? 1 : (item.packaging_level || 1),
                     unit_name: item.unit_name,
                     quantity: parseFloat(item.quantity),
@@ -1637,7 +1662,7 @@ async function loadSaleForEdit(id) {
                     total: parseFloat(item.total_price),
                     price_note: isCustom ? 'Barang Custom' : ''
                 };
-            });
+            }));
 
             // Insert edit banner
             const banner = document.createElement('div');
@@ -1647,10 +1672,16 @@ async function loadSaleForEdit(id) {
                         <div style="font-weight:700; color:var(--warning); font-size:14px;"><i class="bi bi-pencil-square"></i> Mode Edit Transaksi</div>
                         <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Mengedit Invoice: <strong style="color:var(--text-primary);">${sale.invoice_number}</strong></div>
                     </div>
-                    <a href="${BASE_URL}sales/pos" class="btn-outline-custom" style="padding:4px 10px; font-size:11px; text-decoration:none;">Batal Edit</a>
+                    <a href="${BASE_URL}sales" class="btn-outline-custom" style="padding:4px 10px; font-size:11px; text-decoration:none;">Batal Edit</a>
                 </div>
             `;
             document.querySelector('.page-section').insertBefore(banner, document.querySelector('.pos-header').nextSibling);
+
+            // Change checkout button text
+            const btnCheckout = document.getElementById('btnCheckout');
+            if (btnCheckout) {
+                btnCheckout.innerHTML = '<i class="bi bi-save"></i> SIMPAN PERUBAHAN';
+            }
 
             cart.forEach(it => recalcItemPrice(it));
             renderCart();
