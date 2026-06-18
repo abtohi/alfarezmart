@@ -28,12 +28,17 @@ class DebtModel extends Model
         }
 
         if ($search !== '') {
-            $sql .= " AND (c.name LIKE :search 
-                        OR c.notes LIKE :search 
-                        OR cd.customer_name_fallback LIKE :search 
-                        OR cd.notes LIKE :search 
-                        OR st.invoice_number LIKE :search)";
-            $params[':search'] = "%{$search}%";
+            $sql .= " AND (c.name LIKE :s1 
+                        OR c.notes LIKE :s2 
+                        OR cd.customer_name_fallback LIKE :s3 
+                        OR cd.notes LIKE :s4 
+                        OR st.invoice_number LIKE :s5)";
+            $s = "%{$search}%";
+            $params[':s1'] = $s;
+            $params[':s2'] = $s;
+            $params[':s3'] = $s;
+            $params[':s4'] = $s;
+            $params[':s5'] = $s;
         }
 
         $sql .= " ORDER BY cd.debt_date DESC, cd.id DESC";
@@ -155,12 +160,17 @@ class DebtModel extends Model
         }
 
         if ($search !== '') {
-            $sql .= " AND (s.name LIKE :search 
-                        OR ds.name LIKE :search 
-                        OR sd.supplier_name_fallback LIKE :search 
-                        OR sd.notes LIKE :search 
-                        OR p.purchase_code LIKE :search)";
-            $params[':search'] = "%{$search}%";
+            $sql .= " AND (s.name LIKE :s1 
+                        OR ds.name LIKE :s2 
+                        OR sd.supplier_name_fallback LIKE :s3 
+                        OR sd.notes LIKE :s4 
+                        OR p.purchase_code LIKE :s5)";
+            $s = "%{$search}%";
+            $params[':s1'] = $s;
+            $params[':s2'] = $s;
+            $params[':s3'] = $s;
+            $params[':s4'] = $s;
+            $params[':s5'] = $s;
         }
 
         $sql .= " ORDER BY sd.debt_date DESC, sd.id DESC";
@@ -271,8 +281,12 @@ class DebtModel extends Model
         $params = [];
 
         if ($search !== '') {
-            $sql .= " AND (c.name LIKE :search OR c.phone LIKE :search OR c.address LIKE :search OR c.notes LIKE :search)";
-            $params[':search'] = "%{$search}%";
+            $sql .= " AND (c.name LIKE :s1 OR c.phone LIKE :s2 OR c.address LIKE :s3 OR c.notes LIKE :s4)";
+            $s = "%{$search}%";
+            $params[':s1'] = $s;
+            $params[':s2'] = $s;
+            $params[':s3'] = $s;
+            $params[':s4'] = $s;
         }
 
         $sql .= " ORDER BY c.name ASC";

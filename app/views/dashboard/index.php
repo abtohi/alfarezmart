@@ -110,6 +110,10 @@
     <!-- Quick Actions -->
     <div class="section-title">Aksi Cepat</div>
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 24px; text-align: center;">
+        <a href="<?= BASE_URL ?>customers" class="quick-action">
+            <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-people-fill"></i></div>
+            <span class="action-label">Pelanggan</span>
+        </a>
         <a href="<?= BASE_URL ?>debts" class="quick-action">
             <div class="action-icon" style="background: var(--danger-bg); color: var(--primary);"><i class="bi bi-journal-text"></i></div>
             <span class="action-label">Catatan Hutang</span>
@@ -160,6 +164,11 @@
         <a href="<?= BASE_URL ?>suppliers" class="menu-item">
             <div class="menu-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-building"></i></div>
             <div class="menu-text"><h6>Supplier &amp; Sales</h6><small>Database pemasok barang dan kontak agen</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
+        <a href="<?= BASE_URL ?>customers" class="menu-item">
+            <div class="menu-icon" style="background: var(--primary-bg); color: var(--primary);"><i class="bi bi-people-fill"></i></div>
+            <div class="menu-text"><h6>Database Pelanggan</h6><small>Kelola data pelanggan dan kategori tier harga</small></div>
             <i class="bi bi-chevron-right menu-arrow"></i>
         </a>
         <a href="<?= BASE_URL ?>settings/master-data" class="menu-item">

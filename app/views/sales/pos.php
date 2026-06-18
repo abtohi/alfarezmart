@@ -1670,8 +1670,149 @@ async function loadSaleForEdit(id) {
 <script>
 // ===== Customer Selector =====
 
+const customerTypes = <?= json_encode($customerTypes ?? []) ?>;
 let _customerSearchTimeout = null;
 let _allCustomers = []; // cached from first load
+
+function getCustomerFormHTML(c = {}) {
+    let optionsListHtml = '';
+    let activeTypeName = 'Pilih Level...';
+    customerTypes.forEach(t => {
+        if (c.type_id == t.id) activeTypeName = `${t.name} (Tier: ${t.price_tier})`;
+        optionsListHtml += `<li><a class="dropdown-item ${c.type_id == t.id ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='${t.id}'; dp.querySelector('button span').textContent='${t.name} (Tier: ${t.price_tier})'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">${t.name} (Tier: ${t.price_tier})</a></li>`;
+    });
+
+    const isAnon = c.name ? c.name.toLowerCase().includes('tanpa nama') : false;
+
+    return `
+        <div class="modal-form-group" style="margin-bottom:12px;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; background:var(--surface-2); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                <input type="checkbox" id="modalCustAnon" value="1" ${isAnon ? 'checked' : ''} onchange="toggleAnonCheckbox(this.checked)" style="width:18px; height:18px; accent-color:var(--primary);">
+                <span style="font-size:var(--font-size-sm); font-weight:600; color:var(--text-primary);">Nama Pelanggan Tidak Diketahui</span>
+            </label>
+            <div style="font-size:10px; color:var(--text-muted); margin-top:4px; margin-left:26px;">Gunakan opsi ini jika pelanggan tidak tahu namanya, dan kasir hanya mencatat ciri fisik.</div>
+        </div>
+        
+        <div class="modal-form-group" id="groupCustName">
+            <label>Nama Pelanggan *</label>
+            <input type="text" id="modalCustName" class="form-control-dark" value="${c.name || ''}" placeholder="Cth: Budi Santoso" required>
+        </div>
+        
+        <div class="modal-form-group">
+            <label>Nomor HP / WA</label>
+            <input type="text" id="modalCustPhone" class="form-control-dark" value="${c.phone || ''}" placeholder="Cth: 0812...">
+        </div>
+
+        <div class="modal-form-group">
+            <label>Alamat</label>
+            <input type="text" id="modalCustAddr" class="form-control-dark" value="${c.address || ''}" placeholder="Alamat lengkap...">
+        </div>
+
+        <div class="modal-form-group">
+            <label>Level Kategori Pelanggan</label>
+            <div class="dropdown" style="width:100%;">
+                <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:10px; font-size:12px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                    <span>${activeTypeName}</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
+                    ${optionsListHtml}
+                </ul>
+                <input type="hidden" id="modalCustType" value="${c.type_id || ''}">
+            </div>
+        </div>
+
+        <div class="modal-form-group">
+            <label id="labelNotes">Catatan / Ciri-Ciri Fisik ${isAnon ? '*' : ''}</label>
+            <textarea id="modalCustNotes" class="form-control-dark" placeholder="Cth: Ibu-ibu kerudung merah, sering bawa anak kecil, pakai motor Beat" rows="3" required>${c.notes || ''}</textarea>
+        </div>
+    `;
+}
+
+window.toggleAnonCheckbox = function(checked) {
+    const nameGroup = document.getElementById('groupCustName');
+    const nameInput = document.getElementById('modalCustName');
+    const notesLabel = document.getElementById('labelNotes');
+    
+    if (checked) {
+        nameGroup.style.opacity = '0.5';
+        nameInput.disabled = true;
+        nameInput.value = 'Pelanggan Tanpa Nama';
+        notesLabel.innerHTML = 'Catatan / Ciri-Ciri Fisik *';
+        document.getElementById('modalCustNotes').focus();
+    } else {
+        nameGroup.style.opacity = '1';
+        nameInput.disabled = false;
+        nameInput.value = '';
+        notesLabel.innerHTML = 'Catatan / Ciri-Ciri Fisik';
+    }
+};
+
+window.showAddCustomerModal = async function() {
+    closeCustomerDropdown();
+    await AppModal.show({
+        title: 'Tambah Pelanggan',
+        subtitle: 'Tambahkan data pelanggan baru',
+        icon: 'bi-person-plus-fill',
+        iconColor: 'var(--success-bg)',
+        iconAccent: 'var(--success)',
+        bodyHTML: getCustomerFormHTML(),
+        submitText: 'Simpan',
+        onSubmit: async () => {
+            const isAnon = document.getElementById('modalCustAnon').checked;
+            let name = document.getElementById('modalCustName').value.trim();
+            const phone = document.getElementById('modalCustPhone').value.trim();
+            const address = document.getElementById('modalCustAddr').value.trim();
+            const notes = document.getElementById('modalCustNotes').value.trim();
+            const typeId = document.getElementById('modalCustType').value;
+
+            if (isAnon) {
+                if (!notes) {
+                    showToast('Ciri-ciri fisik wajib diisi jika nama tidak diketahui', 'warning');
+                    return false;
+                }
+                const shortTrait = notes.split(',')[0].substring(0, 30);
+                name = `Tanpa Nama - ${shortTrait}`;
+            } else if (!name) {
+                showToast('Nama pelanggan wajib diisi', 'warning');
+                return false;
+            }
+
+            try {
+                const res = await fetch(`${BASE_URL}api/customers`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        csrf_token: csrfVal,
+                        name: name,
+                        phone: phone,
+                        address: address,
+                        notes: notes,
+                        type_id: typeId
+                    })
+                }).then(r => r.json());
+
+                if (res.success) {
+                    showToast('Pelanggan berhasil ditambahkan', 'success');
+                    // Refresh customers
+                    await fetchCustomers('');
+                    // Auto select new customer
+                    selectCustomer({id: res.customer_id, name: name, phone: phone});
+                    return true;
+                } else {
+                    showToast(res.error || 'Terjadi kesalahan', 'error');
+                }
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+            return false;
+        }
+    });
+
+    // Initialize state
+    toggleAnonCheckbox(false);
+};
 
 function initCustomerSearch() {
     // Close dropdown on outside click
@@ -1805,6 +1946,16 @@ function renderCustomerList(container, customers, q) {
                 <div style="font-size:10px;color:var(--text-muted);">Tanpa pencatatan pelanggan</div>
             </div>
             ${!selectedCustomer ? '<i class="bi bi-check-circle-fill" style="color:var(--primary);"></i>' : ''}
+        </div>
+        <div onclick="showAddCustomerModal()" style="padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background 0.15s;border-top:1px solid var(--border-color);"
+             onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">
+            <div style="width:30px;height:30px;border-radius:50%;background:var(--success-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-person-plus-fill" style="color:var(--success);font-size:0.9rem;"></i>
+            </div>
+            <div style="flex:1;">
+                <div style="font-size:var(--font-size-sm);font-weight:600;color:var(--success);">+ Pelanggan Baru</div>
+                <div style="font-size:10px;color:var(--text-muted);">Tambah data pelanggan baru</div>
+            </div>
         </div>`;
 
     if (customers.length === 0 && q) {

@@ -480,7 +480,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
 
-        await AppModal.show({
+        AppModal.show({
             title: 'Tambah Piutang Pelanggan',
             subtitle: 'Catat hutang baru untuk pelanggan',
             icon: 'bi-person-fill-exclamation',
@@ -488,23 +488,6 @@ document.addEventListener('DOMContentLoaded', function() {
             iconAccent: 'var(--info)',
             bodyHTML: html,
             submitText: 'Catat Piutang',
-            onShown: () => {
-                new SearchBox(document.getElementById('newDebtCustomerIdContainer'), {
-                    options: customerOptionsData,
-                    placeholder: 'Cari pelanggan...',
-                    icon: 'bi-person',
-                    name: 'newDebtCustomerIdDummy',
-                    clearable: true,
-                    onChange: (val) => {
-                        document.getElementById('newDebtCustomerId').value = val;
-                        toggleCustomerFallback(val);
-                    },
-                    onClear: () => {
-                        document.getElementById('newDebtCustomerId').value = '';
-                        toggleCustomerFallback('');
-                    }
-                });
-            },
             onSubmit: async () => {
                 const custId = document.getElementById('newDebtCustomerId').value;
                 const fallback = document.getElementById('newDebtCustomerFallback').value.trim();
@@ -554,6 +537,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 return false;
             }
         });
+
+        setTimeout(() => {
+            const container = document.getElementById('newDebtCustomerIdContainer');
+            if (container) {
+                new SearchBox(container, {
+                    options: customerOptionsData,
+                    placeholder: 'Cari pelanggan...',
+                    icon: 'bi-person',
+                    name: 'newDebtCustomerIdDummy',
+                    clearable: true,
+                    onChange: (val) => {
+                        const idEl = document.getElementById('newDebtCustomerId');
+                        if (idEl) idEl.value = val;
+                        toggleCustomerFallback(val);
+                    },
+                    onClear: () => {
+                        const idEl = document.getElementById('newDebtCustomerId');
+                        if (idEl) idEl.value = '';
+                        toggleCustomerFallback('');
+                    }
+                });
+            }
+        }, 100);
 
         // Toggle Manual Input Helper
         window.toggleCustomerFallback = function(val) {

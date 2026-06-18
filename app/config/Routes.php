@@ -41,6 +41,8 @@ $router->get('/sales/{id}', 'SaleController@show');
 // Suppliers
 $router->get('/suppliers', 'SupplierController@index');
 
+// Customers
+$router->get('/customers', 'CustomerController@index');
 // Scanner (Cek Harga)
 $router->get('/scanner', 'BarcodeController@scanner');
 
@@ -105,6 +107,7 @@ $router->get('/api/storage/invoice-photo', 'ApiController@serveInvoicePhoto');
 $router->get('/api/reports/product-history/{id}', 'ApiController@getProductHistory');
 
 // Sales Transactions API
+$router->get('/api/sales/analytics', 'ApiController@getSalesAnalytics');
 $router->post('/api/sales', 'ApiController@createSale');
 $router->get('/api/sales/invoice/{id}', 'ApiController@getInvoice');
 $router->post('/api/sales/bulk-delete', 'ApiController@bulkDeleteSales');

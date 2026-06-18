@@ -213,6 +213,93 @@ class SaleModel extends Model
     }
 
     /**
+     * Get filtered transactions for analytics view (up to 500 records)
+     */
+    public function getFiltered(array $filters = [])
+    {
+        $params = [];
+        $where = [];
+
+        if (!empty($filters['date_from'])) {
+            $where[] = 'DATE(t.created_at) >= :date_from';
+            $params[':date_from'] = $filters['date_from'];
+        }
+        if (!empty($filters['date_to'])) {
+            $where[] = 'DATE(t.created_at) <= :date_to';
+            $params[':date_to'] = $filters['date_to'];
+        }
+        if (!empty($filters['customer_id'])) {
+            if ($filters['customer_id'] === 'none') {
+                $where[] = 't.customer_id IS NULL';
+            } else {
+                $where[] = 't.customer_id = :customer_id';
+                $params[':customer_id'] = (int)$filters['customer_id'];
+            }
+        }
+
+        $whereStr = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+        $sql = "SELECT t.id, t.invoice_number, t.customer_id, t.sale_mode, t.total_amount,
+                       t.payment_method, t.payment_status, t.created_at, t.notes,
+                       c.name as customer_name, c.phone as customer_phone,
+                       (SELECT SUM(quantity) FROM sale_items WHERE transaction_id = t.id) as total_items,
+                       (SELECT SUM(profit) FROM sale_items WHERE transaction_id = t.id) as total_profit
+                FROM sale_transactions t
+                LEFT JOIN customers c ON t.customer_id = c.id
+                {$whereStr}
+                ORDER BY t.created_at DESC, t.id DESC
+                LIMIT 1000";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get customer profit ranking for analytics
+     */
+    public function getCustomerProfitRanking(array $filters = [])
+    {
+        $params = [];
+        $where = ['t.customer_id IS NOT NULL'];
+
+        if (!empty($filters['date_from'])) {
+            $where[] = 'DATE(t.created_at) >= :date_from';
+            $params[':date_from'] = $filters['date_from'];
+        }
+        if (!empty($filters['date_to'])) {
+            $where[] = 'DATE(t.created_at) <= :date_to';
+            $params[':date_to'] = $filters['date_to'];
+        }
+        if (!empty($filters['customer_id']) && $filters['customer_id'] !== 'none') {
+            $where[] = 't.customer_id = :customer_id';
+            $params[':customer_id'] = (int)$filters['customer_id'];
+        }
+
+        $whereStr = 'WHERE ' . implode(' AND ', $where);
+
+        $sql = "SELECT c.id, c.name, c.phone,
+                       COUNT(DISTINCT t.id) as transaction_count,
+                       SUM(t.total_amount) as total_omzet,
+                       COALESCE(SUM(si_agg.total_profit), 0) as total_profit
+                FROM sale_transactions t
+                JOIN customers c ON t.customer_id = c.id
+                LEFT JOIN (
+                    SELECT transaction_id, SUM(profit) as total_profit
+                    FROM sale_items
+                    GROUP BY transaction_id
+                ) si_agg ON si_agg.transaction_id = t.id
+                {$whereStr}
+                GROUP BY c.id, c.name, c.phone
+                ORDER BY total_profit DESC
+                LIMIT 20";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * @param int|string $id
      */
     public function getTransactionDetails($id)

@@ -1629,6 +1629,39 @@ class ApiController extends Controller
             $this->json([]);
         }
     }
+    public function getSalesAnalytics()
+    {
+        try {
+            $model = new SaleModel();
+            $filters = [
+                'date_from'   => trim($_GET['date_from'] ?? ''),
+                'date_to'     => trim($_GET['date_to'] ?? ''),
+                'customer_id' => trim($_GET['customer_id'] ?? ''),
+            ];
+
+            $transactions     = $model->getFiltered($filters);
+            $customerRanking  = $model->getCustomerProfitRanking($filters);
+
+            $totalOmzet  = array_sum(array_column($transactions, 'total_amount'));
+            $totalProfit = array_sum(array_column($transactions, 'total_profit'));
+
+            $this->json([
+                'success' => true,
+                'data' => [
+                    'transactions'       => $transactions,
+                    'customer_ranking'   => $customerRanking,
+                    'summary' => [
+                        'total_transactions' => count($transactions),
+                        'total_omzet'        => $totalOmzet,
+                        'total_profit'       => $totalProfit,
+                    ],
+                ],
+            ]);
+        } catch (Exception $e) {
+            $this->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
     public function createSale()
     {
         $this->validateCSRF();

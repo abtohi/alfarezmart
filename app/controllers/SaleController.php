@@ -24,6 +24,10 @@ class SaleController extends Controller
     public function pos()
     {
         $settings = new SettingModel();
+        require_once __DIR__ . '/../models/DebtModel.php';
+        $debtModel = new DebtModel();
+        $customerTypes = $debtModel->getCustomerTypes();
+
         $this->view('sales.pos', [
             'title' => 'Kasir',
             'activeNav' => 'pos',
@@ -36,6 +40,7 @@ class SaleController extends Controller
                 'receipt_footer' => $settings->get('receipt_footer', ''),
                 'store_logo' => $settings->get('store_logo', BASE_URL . 'public/images/Icon.png'),
             ],
+            'customerTypes' => $customerTypes,
             'csrfToken' => (new Security())->getCSRFToken(),
         ]);
     }
