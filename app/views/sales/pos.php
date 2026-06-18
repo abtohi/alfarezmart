@@ -1026,7 +1026,7 @@ async function proceedCheckout() {
                 // If editing, just show success and redirect back to sales
                 showToast('Perubahan berhasil disimpan!', 'success');
                 setTimeout(() => {
-                    window.location.href = '${BASE_URL}sales';
+                    window.location.href = BASE_URL + 'sales';
                 }, 1000);
                 return;
             }
@@ -1644,6 +1644,15 @@ async function loadSaleForEdit(id) {
                     }];
                 }
 
+                // Periksa apakah item ini menggunakan harga custom (selain produk custom)
+                const curPkg = packagings.find(p => p.level == (item.packaging_level || 1)) || packagings[0];
+                const catalogPrice = curPkg ? (sale.sale_mode === 'wholesale' 
+                    ? (parseFloat(curPkg.sell_price_wholesale) || parseFloat(curPkg.sell_price_retail))
+                    : parseFloat(curPkg.sell_price_retail)) : 0;
+                
+                const savedUnitPrice = parseFloat(item.unit_price);
+                const isCustomPrice = isCustom || (savedUnitPrice !== catalogPrice);
+
                 return {
                     id: Date.now() + Math.random(),
                     product_id: isCustom ? 'CUSTOM' : item.product_id,
@@ -1655,12 +1664,12 @@ async function loadSaleForEdit(id) {
                     level: isCustom ? 1 : (item.packaging_level || 1),
                     unit_name: item.unit_name,
                     quantity: parseFloat(item.quantity),
-                    use_custom_price: isCustom,
-                    custom_line_total: isCustom ? parseFloat(item.total_price) : null,
-                    custom_price_draft: isCustom ? String(item.total_price) : undefined,
-                    unit_price: parseFloat(item.unit_price),
+                    use_custom_price: isCustomPrice,
+                    custom_line_total: isCustomPrice ? parseFloat(item.total_price) : null,
+                    custom_price_draft: isCustomPrice ? String(item.total_price) : undefined,
+                    unit_price: savedUnitPrice,
                     total: parseFloat(item.total_price),
-                    price_note: isCustom ? 'Barang Custom' : ''
+                    price_note: isCustom ? 'Barang Custom' : (isCustomPrice ? 'Harga Custom (Edit)' : '')
                 };
             }));
 
