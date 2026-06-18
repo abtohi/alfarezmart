@@ -18,18 +18,22 @@
 
     <!-- ===== SUMMARY CARD ===== -->
     <div id="summaryCard" style="background:var(--gradient-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;display:none;">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:center;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;text-align:center;">
             <div>
                 <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:4px;">Transaksi</div>
                 <div id="summaryTx" style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);">—</div>
             </div>
-            <div style="border-left:1px solid var(--border-color);border-right:1px solid var(--border-color);">
+            <div style="border-left:1px solid var(--border-color);">
                 <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:4px;">Total Omzet</div>
                 <div id="summaryOmzet" style="font-size:var(--font-size-sm);font-weight:800;color:var(--primary);">—</div>
             </div>
-            <div>
+            <div style="border-left:1px solid var(--border-color);">
                 <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:4px;">Total Profit</div>
                 <div id="summaryProfit" style="font-size:var(--font-size-sm);font-weight:800;color:var(--success);">—</div>
+            </div>
+            <div style="border-left:1px solid var(--border-color);">
+                <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:4px;">Avg Markup</div>
+                <div id="summaryMarkup" style="font-size:var(--font-size-sm);font-weight:800;color:var(--warning);">—</div>
             </div>
         </div>
     </div>
@@ -267,6 +271,14 @@ function renderSummary(summary) {
     document.getElementById('summaryTx').textContent = summary.total_transactions.toLocaleString('id-ID') + ' transaksi';
     document.getElementById('summaryOmzet').textContent = rupiah(summary.total_omzet);
     document.getElementById('summaryProfit').textContent = rupiah(summary.total_profit);
+    
+    // Hitung rata-rata markup
+    const totalOmzet = summary.total_omzet || 0;
+    const totalProfit = summary.total_profit || 0;
+    const modal = totalOmzet - totalProfit;
+    const markup = modal > 0 ? (totalProfit / modal * 100) : (totalProfit > 0 ? 100 : 0);
+    document.getElementById('summaryMarkup').textContent = '+' + markup.toFixed(1).replace('.', ',') + '%';
+    
     document.getElementById('summaryCard').style.display = 'block';
 }
 
@@ -315,6 +327,20 @@ function toggleRanking() {
 }
 
 // ===== Render Grouped Sales =====
+function toggleDateGroup(dateKey) {
+    const el = document.getElementById('date-group-' + dateKey);
+    const chevron = document.querySelector('.date-chevron-' + dateKey);
+    if (!el || !chevron) return;
+    
+    if (el.style.display === 'none') {
+        el.style.display = 'block';
+        chevron.style.transform = 'rotate(180deg)';
+    } else {
+        el.style.display = 'none';
+        chevron.style.transform = '';
+    }
+}
+
 function renderGroupedSales(transactions) {
     const container = document.getElementById('salesListContainer');
 
@@ -332,18 +358,27 @@ function renderGroupedSales(transactions) {
     });
 
     let html = '';
+    const todayISO = isoDate(new Date());
+
     Object.keys(groups).sort().reverse().forEach(dateKey => {
         const dayTx = groups[dateKey];
         const dayOmzet  = dayTx.reduce((s, t) => s + parseFloat(t.total_amount || 0), 0);
         const dayProfit = dayTx.reduce((s, t) => s + parseFloat(t.total_profit || 0), 0);
+        
+        const isToday = dateKey === todayISO;
+        const displayStyle = isToday ? 'block' : 'none';
+        const chevronStyle = isToday ? 'transform:rotate(180deg);' : '';
 
         html += `
-        <div style="margin-bottom:20px;">
+        <div style="margin-bottom:12px;">
             <!-- Date Group Header -->
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);margin-bottom:8px;position:sticky;top:60px;z-index:5;backdrop-filter:blur(8px);">
-                <div>
-                    <div style="font-size:var(--font-size-xs);font-weight:800;color:var(--text-primary);">${fmtDate(dateKey)}</div>
-                    <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">${dayTx.length} transaksi</div>
+            <div onclick="toggleDateGroup('${dateKey}')" style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);cursor:pointer;transition:background 0.2s;position:sticky;top:60px;z-index:5;backdrop-filter:blur(8px);">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <i class="bi bi-chevron-down date-chevron-${dateKey}" style="color:var(--text-muted);transition:transform 0.3s;${chevronStyle}"></i>
+                    <div>
+                        <div style="font-size:var(--font-size-xs);font-weight:800;color:var(--text-primary);">${fmtDate(dateKey)} ${isToday ? '<span class="badge-custom badge-primary" style="margin-left:6px;font-size:9px;">Hari Ini</span>' : ''}</div>
+                        <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">${dayTx.length} transaksi</div>
+                    </div>
                 </div>
                 <div style="text-align:right;">
                     <div style="font-size:var(--font-size-xs);font-weight:700;color:var(--primary);">${rupiah(dayOmzet)}</div>
@@ -351,7 +386,9 @@ function renderGroupedSales(transactions) {
                 </div>
             </div>
             <!-- Day Transactions -->
-            ${dayTx.map(t => renderSaleCard(t)).join('')}
+            <div id="date-group-${dateKey}" style="display:${displayStyle};padding-top:8px;">
+                ${dayTx.map(t => renderSaleCard(t)).join('')}
+            </div>
         </div>`;
     });
 
