@@ -17,13 +17,26 @@
     </div>
 
     <!-- Action Bar -->
-    <div style="display:flex; gap:8px; margin-bottom:20px;">
-        <div class="search-input-wrapper">
+    <style>
+        .cust-btn-text-full { display: inline; }
+        .cust-btn-text-short { display: none; }
+        @media (max-width: 480px) {
+            .cust-btn-text-full { display: none; }
+            .cust-btn-text-short { display: inline; }
+            .action-bar-container { gap: 6px !important; }
+        }
+    </style>
+    <div class="action-bar-container" style="display:flex; gap:8px; margin-bottom:20px; align-items:stretch;">
+        <div class="search-input-wrapper" style="margin:0; height:auto; min-height:42px;">
             <i class="bi bi-search"></i>
-            <input type="text" id="searchCustomers" placeholder="Cari nama atau no HP..." oninput="debounceCustomerSearch()">
+            <input type="text" id="searchCustomers" placeholder="Cari nama atau no HP..." oninput="debounceCustomerSearch()" style="height:100%;">
         </div>
-        <button class="btn-primary-custom" style="padding:10px 16px; display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer;" onclick="showAddCustomerModal()">
-            <i class="bi bi-person-plus-fill" style="font-size:1.1rem;"></i> <span style="white-space:nowrap;">Pelanggan Baru</span>
+        <button class="btn-primary-custom" style="padding:0 14px; display:flex; align-items:center; justify-content:center; gap:6px; font-weight:600; cursor:pointer; flex-shrink:0; height:auto; min-height:42px; font-size:13px;" onclick="showAddCustomerModal()">
+            <i class="bi bi-person-plus-fill" style="font-size:1.1rem;"></i>
+            <span style="white-space:nowrap;">
+                <span class="cust-btn-text-full">Pelanggan Baru</span>
+                <span class="cust-btn-text-short">Pelanggan</span>
+            </span>
         </button>
     </div>
 
