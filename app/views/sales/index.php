@@ -57,15 +57,33 @@
             </div>
         </div>
 
-        <!-- Customer Filter -->
+        <!-- Customer Filter (Custom Searchbox) -->
         <div style="margin-bottom:12px;">
             <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;font-weight:600;">Pelanggan</label>
-            <div style="position:relative;">
-                <i class="bi bi-person" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-muted);font-size:0.85rem;pointer-events:none;"></i>
-                <select id="filterCustomer" class="form-control-dark" style="font-size:var(--font-size-xs);padding:8px 10px 8px 32px;width:100%;-webkit-appearance:none;">
-                    <option value="">Semua Pelanggan</option>
-                    <option value="none">Pelanggan Umum (Tanpa Nama)</option>
-                </select>
+            <div style="position:relative;" id="custFilterWrapper">
+                <input type="hidden" id="filterCustomerId" value="">
+                <div id="custFilterBox"
+                     style="display:flex;align-items:center;gap:8px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:0 12px;cursor:text;transition:border-color 0.2s,box-shadow 0.2s;"
+                     onclick="openCustFilter()">
+                    <i class="bi bi-person" id="custFilterIcon" style="color:var(--text-muted);font-size:0.9rem;flex-shrink:0;"></i>
+                    <input type="text" id="custFilterInput"
+                           placeholder="Semua Pelanggan"
+                           autocomplete="off" autocorrect="off" spellcheck="false"
+                           style="flex:1;border:none;background:transparent;padding:9px 0;color:var(--text-primary);font-size:var(--font-size-xs);outline:none;font-family:var(--font-family);cursor:text;"
+                           oninput="onCustFilterInput(this.value)"
+                           onfocus="openCustFilter()">
+                    <button type="button" id="custFilterClear"
+                            onclick="event.stopPropagation();clearCustFilter()"
+                            style="display:none;background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0;font-size:0.8rem;line-height:1;">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </button>
+                </div>
+                <div id="custFilterDropdown"
+                     style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:300;
+                            background:var(--surface-1);border:1px solid var(--primary);border-radius:var(--radius-md);
+                            box-shadow:0 12px 40px rgba(0,0,0,0.35);overflow:hidden;max-height:240px;overflow-y:auto;">
+                    <div id="custFilterList" style="padding:4px 0;"></div>
+                </div>
             </div>
         </div>
 
@@ -171,21 +189,156 @@ function isoDate(d) {
     return d.toISOString().split('T')[0];
 }
 
-// ===== Load Customers into Filter Select =====
+// ===== Customer Filter Searchbox (Custom, Elegant) =====
+let _allCustOptions = [];
+let _custSearchTimeout = null;
+
 async function loadCustomerOptions() {
     try {
         const res = await api(`${BASE_URL}api/customers`);
         if (res.success && res.data) {
-            const sel = document.getElementById('filterCustomer');
-            res.data.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.id;
-                opt.textContent = c.name + (c.phone ? ` (${c.phone})` : '');
-                sel.appendChild(opt);
-            });
+            _allCustOptions = res.data.map(c => ({ id: c.id, name: c.name, phone: c.phone || '' }));
+            renderCustFilterList('');
         }
     } catch(e) {}
 }
+
+function escSales(str) {
+    const d = document.createElement('div'); d.textContent = str || ''; return d.innerHTML;
+}
+
+function highlightQuery(text, q) {
+    if (!q || !q.trim()) return text;
+    const words = q.trim().split(/\s+/).filter(Boolean);
+    let result = text;
+    words.forEach(w => {
+        const reg = new RegExp('(' + w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi');
+        result = result.replace(reg, '<mark style="background:rgba(230,57,70,0.22);color:var(--primary);border-radius:2px;padding:0 2px;font-weight:700;">$1</mark>');
+    });
+    return result;
+}
+
+function multiKeywordMatch(text, query) {
+    if (!query || !query.trim()) return true;
+    const words = query.trim().toLowerCase().split(/\s+/);
+    const t = text.toLowerCase();
+    return words.every(w => t.includes(w));
+}
+
+function renderCustFilterList(q) {
+    const list = document.getElementById('custFilterList');
+    if (!list) return;
+    const currentId = String(document.getElementById('filterCustomerId').value);
+    const filtered = _allCustOptions.filter(c => multiKeywordMatch(c.name + ' ' + c.phone, q));
+
+    const isAllActive = !currentId;
+    const isNoneActive = currentId === 'none';
+
+    let html = `
+        <div onclick="selectCustFilter('','Semua Pelanggan')"
+             style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background 0.15s;${isAllActive ? 'background:var(--primary-bg);' : ''}"
+             onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${isAllActive ? 'var(--primary-bg)' : 'transparent'}'">
+            <div style="width:30px;height:30px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-people" style="font-size:0.8rem;color:var(--text-muted);"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:var(--font-size-xs);font-weight:600;color:var(--text-primary);">Semua Pelanggan</div>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">Tampilkan semua transaksi</div>
+            </div>
+            ${isAllActive ? '<i class="bi bi-check-circle-fill" style="color:var(--primary);font-size:0.85rem;flex-shrink:0;"></i>' : ''}
+        </div>
+        <div onclick="selectCustFilter('none','Pelanggan Umum')"
+             style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background 0.15s;border-top:1px solid var(--border-color);${isNoneActive ? 'background:var(--primary-bg);' : ''}"
+             onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${isNoneActive ? 'var(--primary-bg)' : 'transparent'}'">
+            <div style="width:30px;height:30px;border-radius:50%;background:var(--surface-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-person-slash" style="font-size:0.8rem;color:var(--text-muted);"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:var(--font-size-xs);font-weight:600;color:var(--text-primary);">Pelanggan Umum</div>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">Transaksi tanpa nama pelanggan</div>
+            </div>
+            ${isNoneActive ? '<i class="bi bi-check-circle-fill" style="color:var(--primary);font-size:0.85rem;flex-shrink:0;"></i>' : ''}
+        </div>`;
+
+    if (filtered.length === 0 && q) {
+        html += `<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:var(--font-size-xs);border-top:1px solid var(--border-color);">
+            <i class="bi bi-search" style="font-size:1.4rem;display:block;margin-bottom:8px;opacity:0.4;"></i>
+            Tidak ada pelanggan "<strong>${escSales(q)}</strong>"
+        </div>`;
+    } else {
+        filtered.slice(0, 30).forEach(c => {
+            const isActive = currentId === String(c.id);
+            const initials = c.name.trim().split(' ').map(w => w[0] || '').slice(0,2).join('').toUpperCase();
+            const nameHL = highlightQuery(escSales(c.name), q);
+            const phoneHL = c.phone ? highlightQuery(escSales(c.phone), q) : '';
+            const label = escSales(c.name) + (c.phone ? ' · ' + escSales(c.phone) : '');
+            html += `
+                <div onclick="selectCustFilter(${c.id}, '${c.name.replace(/'/g,"\\'") + (c.phone ? ' · ' + c.phone : '')}')"
+                     style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;transition:background 0.15s;border-top:1px solid var(--border-color);${isActive ? 'background:var(--primary-bg);' : ''}"
+                     onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${isActive ? 'var(--primary-bg)' : 'transparent'}'">
+                    <div style="width:30px;height:30px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:700;color:var(--primary);">${initials}</div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:var(--font-size-xs);font-weight:600;color:var(--text-primary);text-overflow:ellipsis;overflow:hidden;white-space:nowrap;">${nameHL}</div>
+                        ${c.phone ? `<div style="font-size:10px;color:var(--text-muted);margin-top:1px;"><i class="bi bi-telephone" style="font-size:9px;"></i> ${phoneHL}</div>` : '<div style="font-size:10px;color:var(--text-muted);margin-top:1px;">Tidak ada nomor HP</div>'}
+                    </div>
+                    ${isActive ? '<i class="bi bi-check-circle-fill" style="color:var(--primary);font-size:0.85rem;flex-shrink:0;"></i>' : ''}
+                </div>`;
+        });
+    }
+    list.innerHTML = html;
+}
+
+function openCustFilter() {
+    const dd = document.getElementById('custFilterDropdown');
+    const box = document.getElementById('custFilterBox');
+    if (!dd || dd.style.display === 'block') return;
+    dd.style.display = 'block';
+    box.style.borderColor = 'var(--primary)';
+    box.style.boxShadow = '0 0 0 3px rgba(230,57,70,0.15)';
+    renderCustFilterList(document.getElementById('custFilterInput').value);
+    setTimeout(() => document.addEventListener('click', _custOutsideHandler), 10);
+}
+
+function _custOutsideHandler(e) {
+    const wrapper = document.getElementById('custFilterWrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        closeCustFilter();
+    } else {
+        document.addEventListener('click', _custOutsideHandler, { once: true });
+    }
+}
+
+function closeCustFilter() {
+    const dd = document.getElementById('custFilterDropdown');
+    const box = document.getElementById('custFilterBox');
+    if (dd) dd.style.display = 'none';
+    if (box) { box.style.borderColor = 'var(--border-color)'; box.style.boxShadow = 'none'; }
+}
+
+function onCustFilterInput(q) {
+    clearTimeout(_custSearchTimeout);
+    _custSearchTimeout = setTimeout(() => {
+        renderCustFilterList(q);
+        if (document.getElementById('custFilterDropdown').style.display !== 'block') openCustFilter();
+    }, 120);
+}
+
+function selectCustFilter(id, label) {
+    document.getElementById('filterCustomerId').value = id;
+    document.getElementById('custFilterInput').value = label;
+    const clearBtn = document.getElementById('custFilterClear');
+    const icon = document.getElementById('custFilterIcon');
+    if (clearBtn) clearBtn.style.display = id ? 'inline-flex' : 'none';
+    if (icon) icon.style.color = id ? 'var(--primary)' : 'var(--text-muted)';
+    closeCustFilter();
+}
+
+function clearCustFilter() {
+    selectCustFilter('', '');
+    document.getElementById('custFilterInput').placeholder = 'Semua Pelanggan';
+    renderCustFilterList('');
+}
+
 
 // ===== Quick Date Buttons =====
 function setQuickDate(key) {
@@ -221,7 +374,7 @@ function setQuickDate(key) {
 function resetFilter() {
     document.getElementById('filterDateFrom').value = '';
     document.getElementById('filterDateTo').value = '';
-    document.getElementById('filterCustomer').value = '';
+    clearCustFilter();
     document.querySelectorAll('.filter-quick-btn').forEach(btn => {
         btn.style.background = 'var(--surface-2)';
         btn.style.color = 'var(--text-muted)';
@@ -241,7 +394,7 @@ function resetFilter() {
 async function applyFilter() {
     const dateFrom    = document.getElementById('filterDateFrom').value;
     const dateTo      = document.getElementById('filterDateTo').value;
-    const customerId  = document.getElementById('filterCustomer').value;
+    const customerId  = document.getElementById('filterCustomerId').value;
 
     const container = document.getElementById('salesListContainer');
     container.innerHTML = `<div class="elegant-loader" style="margin:30px auto;"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
