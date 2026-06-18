@@ -268,7 +268,7 @@ async function applyFilter() {
 
 // ===== Render Summary =====
 function renderSummary(summary) {
-    document.getElementById('summaryTx').textContent = summary.total_transactions.toLocaleString('id-ID') + ' transaksi';
+    document.getElementById('summaryTx').textContent = summary.total_transactions.toLocaleString('id-ID');
     document.getElementById('summaryOmzet').textContent = rupiah(summary.total_omzet);
     document.getElementById('summaryProfit').textContent = rupiah(summary.total_profit);
     
