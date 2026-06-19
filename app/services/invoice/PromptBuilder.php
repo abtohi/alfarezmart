@@ -97,6 +97,10 @@ class PromptBuilder
         $lines[] = '7. Kemasan/satuan: kenali istilah seperti CTN=Karton, DUS=Karton, PCS/BTL/BKS=satuan kecil, dll.';
         $lines[] = '8. PENTING (KOLOM QTY BSR/TGH/KCL): Jika invoice memiliki kolom qty terpisah bernama BSR, TGH, dan KCL, isi nilai angka dari masing-masing kolom tersebut ke dalam field "qty_bsr", "qty_tgh", dan "qty_kcl" di JSON.';
         $lines[] = '   - Jika tidak ada kolom tersebut, biarkan null atau 0.';
+        $lines[] = '9. PENTING (TOTAL HARGA): Angka Total Harga (total_price) PASTI berada di KOLOM PALING KANAN tabel.';
+        $lines[] = '   - PERHATIAN: Terkadang angka Total Harga dicetak PADA BARIS BARU TEPAT DI BAWAH baris produk, di posisi paling kanan (contoh: baris pertama 153.000 di tengah, lalu di bawahnya ada 17.000 di ujung kanan. Maka total_price = 17000).';
+        $lines[] = '   - JANGAN mengambil harga per karton yang ada di tengah-tengah kolom. Selalu cari angka paling kanan.';
+        $lines[] = '10. PENTING (HARGA SATUAN): Biarkan "unit_price" = null. Sistem kami akan menghitung otomatis dari (total_price / qty). JANGAN isi unit_price.';
         $lines[] = '';
 
         if ($isCorrectionPass) {
@@ -119,8 +123,8 @@ class PromptBuilder
         $lines[] = '    "qty_bsr": 0,';
         $lines[] = '    "qty_tgh": 2,';
         $lines[] = '    "qty_kcl": 0,';
-        $lines[] = '    "unit_price": 250000,';
-        $lines[] = '    "total_price": 500000,';
+        $lines[] = '    "unit_price": null,';
+        $lines[] = '    "total_price": 17000,';
         $lines[] = '    "discount": 0,';
         $lines[] = '    "brand": "Nama merk jika tertulis",';
         $lines[] = '    "variant": "Varian produk jika ada (misal: Merah, 500ml)",';
@@ -218,9 +222,10 @@ class PromptBuilder
         }
 
         // === BAGIAN 6: PERINTAH AKHIR & PENEKANAN ===
-        $parts[] = "=== PERINTAH KHUSUS BSR/TGH/KCL ===\n" .
-                   "Jika di tabel invoice terlihat ada angka di bawah kolom BSR, TGH, atau KCL:\n" .
-                   "WAJIB masukkan angka tersebut ke dalam field `qty_bsr`, `qty_tgh`, atau `qty_kcl` pada JSON. Jangan sampai terlewat!\n\n" .
+        $parts[] = "=== PERINTAH KHUSUS BSR/TGH/KCL & HARGA ===\n" .
+                   "1. QTY: Jika ada kolom BSR, TGH, atau KCL, masukkan angka qty-nya ke `qty_bsr`, `qty_tgh`, atau `qty_kcl`.\n" .
+                   "2. TOTAL HARGA: Cari angka di posisi PALING KANAN. Jika ada angka menyempil di baris bawahnya tapi posisinya di paling kanan (ujung), ITULAH `total_price` yang benar (contoh: 17.000 atau 20.500).\n" .
+                   "3. UNIT PRICE: SELALU kembalikan `null` untuk `unit_price`. Jangan diisi angka apapun.\n\n" .
                    "=== PERINTAH ===\nBaca gambar invoice di atas dan kembalikan JSON array sesuai format. Tidak ada teks selain JSON.";
 
         return implode("\n\n", $parts);
