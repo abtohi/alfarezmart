@@ -442,7 +442,7 @@ function setupDatabase()
             email VARCHAR(150) NOT NULL UNIQUE,
             phone VARCHAR(20),
             password_hash VARCHAR(255) NOT NULL,
-            user_level ENUM('superadmin','admin','customer') NOT NULL DEFAULT 'customer',
+            user_level ENUM('superadmin','admin','staff','customer') NOT NULL DEFAULT 'customer',
             avatar_path VARCHAR(255),
             is_active TINYINT(1) DEFAULT 1,
             work_days VARCHAR(255) NULL,

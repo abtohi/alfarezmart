@@ -150,16 +150,18 @@ class AuthController extends Controller
     {
         if (!isset($_SESSION['user_id'])) return null;
         
-        // Dynamic schedule check on every action/page change
-        if (($_SESSION['user_level'] ?? '') === 'staff') {
-            // Always fetch schedule from DB (not session) to ensure up-to-date restrictions
-            try {
-                $db = Database::getInstance()->getConnection();
-                $stmt = $db->prepare("SELECT work_days, work_start, work_end FROM users WHERE id = :id LIMIT 1");
-                $stmt->execute([':id' => (int)$_SESSION['user_id']]);
-                $scheduleRow = $stmt->fetch();
+        // Always fetch user status from DB to ensure up-to-date restrictions and level
+        try {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("SELECT user_level, work_days, work_start, work_end FROM users WHERE id = :id LIMIT 1");
+            $stmt->execute([':id' => (int)$_SESSION['user_id']]);
+            $userRow = $stmt->fetch();
+            
+            if ($userRow) {
+                // Update session level in case it was changed by superadmin
+                $_SESSION['user_level'] = $userRow['user_level'];
                 
-                if ($scheduleRow && !self::checkStaffScheduleStatic($scheduleRow)) {
+                if ($userRow['user_level'] === 'staff' && !self::checkStaffScheduleStatic($userRow)) {
                     // Auto logout
                     $_SESSION = [];
                     if (ini_get('session.use_cookies')) {
@@ -175,15 +177,19 @@ class AuthController extends Controller
                     if (strpos($uri, '/api/') !== false) {
                         http_response_code(401);
                         header('Content-Type: application/json');
-                        echo json_encode(['error' => 'Sesi berakhir karena di luar jadwal kerja.']);
+                        echo json_encode(['error' => 'Sesi berakhir: Anda berada di luar jam kerja.']);
                         exit;
                     }
-                    header('Location: ' . BASE_URL . 'login?error=' . urlencode('Sesi berakhir: Anda berada di luar jadwal kerja'));
+                    
+                    // Web redirect
+                    session_start();
+                    $_SESSION['_flash']['error'] = 'Sesi berakhir: Anda berada di luar jam kerja.';
+                    header('Location: ' . BASE_URL . 'login');
                     exit;
                 }
-            } catch (Exception $e) {
-                // If DB check fails, allow through (fail open)
             }
+        } catch (Exception $e) {
+            // If DB check fails, allow through (fail open)
         }
         
         return [

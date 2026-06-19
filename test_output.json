@@ -1,0 +1,20 @@
+[
+    {
+        "id": 1,
+        "name": "Super Admin",
+        "email": "admin@alfarezmart.com",
+        "user_level": "superadmin",
+        "work_days": null,
+        "work_start": null,
+        "work_end": null
+    },
+    {
+        "id": 7,
+        "name": "Ulfa",
+        "email": "ulfa@alfarezmart.com",
+        "user_level": "",
+        "work_days": "[\"Senin\",\"Selasa\",\"Rabu\",\"Kamis\"]",
+        "work_start": "08:00:00",
+        "work_end": "17:00:00"
+    }
+]
