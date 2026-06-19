@@ -17,14 +17,23 @@ class InvoiceScanService
     private $productModel;
 
     // Sub-services
+    /** @var ImagePreprocessor */
     private $preprocessor;
+    /** @var PromptBuilder */
     private $promptBuilder;
+    /** @var LayoutAnalyzer */
     private $layoutAnalyzer;
+    /** @var TableParser */
     private $tableParser;
+    /** @var InvoiceValidator */
     private $validator;
+    /** @var ProductMatcher */
     private $matcher;
+    /** @var ConfidenceScorer */
     private $scorer;
+    /** @var SelfCorrectionEngine */
     private $selfCorrection;
+    /** @var TemplateLearner */
     private $templateLearner;
 
     public function __construct(\PDO $db)
@@ -362,7 +371,10 @@ class InvoiceScanService
         $response = curl_exec($ch);
         $err      = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        
+        if (is_resource($ch)) {
+            curl_close($ch);
+        }
 
         if ($err) {
             throw new \Exception("Koneksi ke OpenRouter gagal: " . $err);
