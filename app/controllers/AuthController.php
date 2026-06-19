@@ -51,7 +51,7 @@ class AuthController extends Controller
         // Enforce staff schedule on login
         if ($user['user_level'] === 'staff') {
             if (!$this->isStaffScheduleValid($user)) {
-                $this->json(['error' => 'Anda berada di luar jadwal kerja yang diizinkan.'], 403);
+                $this->json(['error' => 'Staff sedang berada di luar jam kerja dan tidak dapat masuk ke sistem'], 403);
                 return;
             }
         }
