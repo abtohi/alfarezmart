@@ -123,7 +123,7 @@
 const csrf = document.getElementById('csrfToken').value;
 
 async function openAddUserModal() {
-    await AppModal.show({
+    const modalPromise = AppModal.show({
         title: 'Tambah User Baru',
         subtitle: 'Isi data user dan pilih level akses',
         icon: 'bi-person-plus',
@@ -195,7 +195,9 @@ async function openAddUserModal() {
             return true;
         }
     });
-    toggleScheduleUI('staff');
+    
+    setTimeout(() => toggleScheduleUI('staff'), 50);
+    await modalPromise;
 }
 
 function toggleScheduleUI(level) {
@@ -208,8 +210,7 @@ async function openEditUserModal(u) {
     if (u.work_days) {
         try { days = JSON.parse(u.work_days); } catch(e){}
     }
-    
-    await AppModal.show({
+    const modalPromise = AppModal.show({
         title: 'Edit User',
         subtitle: 'Update data pengguna',
         icon: 'bi-pencil-square',
@@ -279,7 +280,8 @@ async function openEditUserModal(u) {
         }
     });
     // Call after modal HTML is injected into DOM
-    setTimeout(() => toggleScheduleUI(u.user_level || 'staff'), 50);
+    setTimeout(() => toggleScheduleUI(u.user_level ? u.user_level.toLowerCase() : 'staff'), 50);
+    await modalPromise;
 }
 
 async function toggleUser(id, activate) {
