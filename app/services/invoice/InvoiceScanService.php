@@ -372,9 +372,7 @@ class InvoiceScanService
         $err      = curl_error($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         
-        if (is_resource($ch)) {
-            curl_close($ch);
-        }
+
 
         if ($err) {
             throw new \Exception("Koneksi ke OpenRouter gagal: " . $err);
