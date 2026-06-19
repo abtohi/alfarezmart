@@ -120,12 +120,17 @@ class ImagePreprocessor
      */
     public function buildImageUrlBlock(string $imageB64, string $format = 'jpeg'): array
     {
-        // Always use jpeg MIME for maximum compatibility with vision models
+        // Strip data-URI prefix if still present
+        if (strpos($imageB64, 'base64,') !== false) {
+            $imageB64 = substr($imageB64, strpos($imageB64, 'base64,') + 7);
+        }
+
+        // Always use standard MIME for maximum compatibility with vision models
         $mime = in_array($format, ['png', 'webp', 'gif']) ? "image/{$format}" : 'image/jpeg';
 
         return [
             'type'      => 'image_url',
-            'image_url' => ['url' => "{$mime};base64,{$imageB64}"],
+            'image_url' => ['url' => "data:{$mime};base64,{$imageB64}"],
         ];
     }
 }
