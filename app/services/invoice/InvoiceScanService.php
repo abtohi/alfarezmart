@@ -52,6 +52,27 @@ class InvoiceScanService
         $this->scorer          = new ConfidenceScorer();
         $this->selfCorrection  = new SelfCorrectionEngine();
         $this->templateLearner = new TemplateLearner($this->db);
+
+        // Ensure database schema is up to date
+        $this->ensureSupplierProductCodeColumn();
+    }
+
+    /**
+     * Ensure the supplier_product_code column exists in supplier_products table.
+     */
+    private function ensureSupplierProductCodeColumn(): void
+    {
+        try {
+            $this->db->query("SELECT supplier_product_code FROM supplier_products LIMIT 1");
+        } catch (\PDOException $e) {
+            // Column does not exist
+            try {
+                $this->db->exec("ALTER TABLE supplier_products ADD COLUMN supplier_product_code VARCHAR(100) DEFAULT NULL AFTER product_id");
+                $this->db->exec("CREATE INDEX idx_sp_code ON supplier_products(supplier_product_code)");
+            } catch (\PDOException $e2) {
+                error_log('Failed to add supplier_product_code column: ' . $e2->getMessage());
+            }
+        }
     }
 
     // ----------------------------------------------------------------
