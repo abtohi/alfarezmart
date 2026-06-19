@@ -107,10 +107,12 @@
             <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-people-fill"></i></div>
             <span class="action-label">Pelanggan</span>
         </a>
+        <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
         <a href="<?= BASE_URL ?>debts" class="quick-action">
             <div class="action-icon" style="background: var(--danger-bg); color: var(--primary);"><i class="bi bi-journal-text"></i></div>
             <span class="action-label">Catatan Hutang</span>
         </a>
+        <?php endif; ?>
         <a href="<?= BASE_URL ?>suppliers" class="quick-action">
             <div class="action-icon" style="background: var(--success-bg); color: var(--success);"><i class="bi bi-building"></i></div>
             <span class="action-label">Supplier &amp; Sales</span>
