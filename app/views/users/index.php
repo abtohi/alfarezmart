@@ -1,3 +1,10 @@
+<?php
+/**
+ * @var array $users
+ * @var string $csrfToken
+ * @var array $currentUser
+ */
+?>
 <!-- User Management View (Superadmin Only) -->
 <div class="page-section">
     <div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;">

@@ -1,3 +1,18 @@
+<?php
+/**
+ * @var string $csrfToken
+ * @var string $aiModel
+ * @var string $aiApiKey
+ * @var string $aiPrompt
+ * @var string $storeRadius
+ * @var string $storeLat
+ * @var string $storeLng
+ * @var string $aiChatEnabled
+ * @var string $aiChatModel
+ * @var string $aiChatApiKey
+ * @var array $currentUser
+ */
+?>
 <!-- App Settings View -->
 <div class="page-section">
     <div style="margin-bottom:20px;">
