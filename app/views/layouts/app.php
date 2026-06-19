@@ -257,7 +257,7 @@ if ($userLevel === 'staff') {
             lat: '<?= $geoLat ?>',
             lng: '<?= $geoLng ?>',
             radius: '<?= $geoRadius ?>',
-            logoutUrl: '<?= BASE_URL ?>auth/logout'
+            logoutUrl: '<?= BASE_URL ?>logout'
         };
     </script>
 
