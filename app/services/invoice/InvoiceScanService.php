@@ -372,7 +372,8 @@ class InvoiceScanService
             ],
             // Request JSON object
             'response_format' => ['type' => 'json_object'],
-            'temperature' => 0.1 // Low temp for more deterministic extraction
+            'temperature' => 0.1, // Low temp for more deterministic extraction
+            'max_tokens'  => 3000 // Limit output to prevent OpenRouter from reserving too many credits
         ];
 
         $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
