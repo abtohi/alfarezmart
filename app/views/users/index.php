@@ -141,28 +141,35 @@ async function openAddUserModal() {
                     <option value="superadmin">Superadmin</option>
                 </select>
             </div>
-            <div id="schedule_section" style="background:var(--surface-2);padding:10px;border-radius:var(--radius-md);margin-bottom:12px;">
-                <label style="font-size:11px;font-weight:600;margin-bottom:8px;display:block;">Jadwal Login (Hanya Staff)</label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div id="schedule_section" class="schedule-card">
+                <div class="schedule-header">
+                    <div class="schedule-header-icon"><i class="bi bi-clock-fill"></i></div>
                     <div>
-                        <label style="font-size:10px;">Jam Mulai</label>
-                        <input type="time" class="form-control-dark" id="mu_start" value="08:00">
-                    </div>
-                    <div>
-                        <label style="font-size:10px;">Jam Selesai</label>
-                        <input type="time" class="form-control-dark" id="mu_end" value="17:00">
+                        <div class="schedule-header-text">Jadwal Login Staff</div>
+                        <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">Atur kapan staff boleh masuk ke sistem</div>
                     </div>
                 </div>
-                <label style="font-size:10px;">Hari Kerja</label>
-                <div style="display:flex;flex-wrap:wrap;gap:4px;" id="mu_days">
-                    <label style="font-size:10px;"><input type="checkbox" value="Senin" checked> Sen</label>
-                    <label style="font-size:10px;"><input type="checkbox" value="Selasa" checked> Sel</label>
-                    <label style="font-size:10px;"><input type="checkbox" value="Rabu" checked> Rab</label>
-                    <label style="font-size:10px;"><input type="checkbox" value="Kamis" checked> Kam</label>
-                    <label style="font-size:10px;"><input type="checkbox" value="Jumat" checked> Jum</label>
-                    <label style="font-size:10px;"><input type="checkbox" value="Sabtu" checked> Sab</label>
-                    <label style="font-size:10px;"><input type="checkbox" value="Minggu"> Min</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                    <div>
+                        <div class="schedule-time-label"><i class="bi bi-sun"></i> Mulai</div>
+                        <input type="time" class="time-input-modern" id="mu_start" value="08:00">
+                    </div>
+                    <div>
+                        <div class="schedule-time-label"><i class="bi bi-moon"></i> Selesai</div>
+                        <input type="time" class="time-input-modern" id="mu_end" value="17:00">
+                    </div>
                 </div>
+                <div class="schedule-time-label" style="margin-bottom:10px;"><i class="bi bi-calendar3"></i> Hari Kerja</div>
+                <div style="display:flex;justify-content:space-between;gap:4px;" id="mu_days">
+                    <span class="day-chip active" data-val="Senin">Sen</span>
+                    <span class="day-chip active" data-val="Selasa">Sel</span>
+                    <span class="day-chip active" data-val="Rabu">Rab</span>
+                    <span class="day-chip active" data-val="Kamis">Kam</span>
+                    <span class="day-chip active" data-val="Jumat">Jum</span>
+                    <span class="day-chip" data-val="Sabtu">Sab</span>
+                    <span class="day-chip" data-val="Minggu">Min</span>
+                </div>
+                <div id="mu_days_hidden"></div>
             </div>
         `,
         submitText: 'Buat User',
@@ -175,7 +182,7 @@ async function openAddUserModal() {
             
             const start = document.getElementById('mu_start').value;
             const end = document.getElementById('mu_end').value;
-            const days = Array.from(document.querySelectorAll('#mu_days input:checked')).map(el => el.value);
+            const days = Array.from(document.querySelectorAll('#mu_days .day-chip.active')).map(el => el.dataset.val);
 
             if (!name) { showToast('Nama wajib diisi', 'warning'); return false; }
             if (!email && !phone) { showToast('Email atau No HP wajib diisi', 'warning'); return false; }
@@ -196,13 +203,96 @@ async function openAddUserModal() {
         }
     });
     
-    setTimeout(() => toggleScheduleUI('staff'), 50);
+    setTimeout(() => {
+        toggleScheduleUI('staff');
+        // Wire up day chip clicks for Add modal
+        document.querySelectorAll('#mu_days .day-chip').forEach(chip => {
+            chip.onclick = () => chip.classList.toggle('active');
+        });
+    }, 50);
     await modalPromise;
 }
 
 function toggleScheduleUI(level) {
     const sec = document.getElementById('schedule_section');
-    if(sec) sec.style.display = level === 'staff' ? 'block' : 'none';
+    if (!sec) return;
+    if (level === 'staff') {
+        sec.style.display = 'block';
+        sec.style.animation = 'scheduleSlideIn 0.3s ease';
+    } else {
+        sec.style.display = 'none';
+    }
+}
+
+// Inject keyframe animation once
+if (!document.getElementById('schedule-anim-style')) {
+    const st = document.createElement('style');
+    st.id = 'schedule-anim-style';
+    st.textContent = `
+    @keyframes scheduleSlideIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+    .day-chip {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 38px; height: 38px; border-radius: 50%;
+        font-size: 11px; font-weight: 700;
+        cursor: pointer; border: 2px solid transparent;
+        background: rgba(255,255,255,0.05);
+        color: var(--text-muted);
+        transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+        user-select: none;
+        letter-spacing: -0.3px;
+    }
+    .day-chip:hover { transform: scale(1.1); border-color: rgba(230,57,70,0.4); color: var(--text-primary); }
+    .day-chip.active {
+        background: linear-gradient(135deg,#e63946,#b8202e);
+        border-color: transparent; color: #fff;
+        box-shadow: 0 4px 14px rgba(230,57,70,0.45);
+        transform: scale(1.05);
+    }
+    .time-input-modern {
+        background: var(--bg-input);
+        border: 1.5px solid var(--border-color);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-size: 1.15rem;
+        font-weight: 700;
+        padding: 10px 12px;
+        width: 100%; outline: none; text-align: center;
+        letter-spacing: 1px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        font-family: var(--font-family);
+        -webkit-appearance: none;
+        appearance: none;
+    }
+    .time-input-modern:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(230,57,70,0.18);
+    }
+    /* Chrome clock icon color override */
+    .time-input-modern::-webkit-calendar-picker-indicator { filter: invert(1) opacity(0.5); cursor: pointer; }
+    .schedule-card {
+        background: linear-gradient(135deg, rgba(230,57,70,0.07) 0%, rgba(184,32,46,0.04) 100%);
+        border: 1.5px solid rgba(230,57,70,0.22);
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+    .schedule-header {
+        display: flex; align-items: center; gap: 8px;
+        margin-bottom: 16px;
+    }
+    .schedule-header-icon {
+        width: 28px; height: 28px; border-radius: 8px;
+        background: rgba(230,57,70,0.18);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 13px; color: #e63946; flex-shrink: 0;
+    }
+    .schedule-header-text { font-size: 12px; font-weight: 700; color: #e63946; }
+    .schedule-time-label { font-size: 10px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+    `;
+    document.head.appendChild(st);
 }
 
 async function openEditUserModal(u) {
@@ -227,27 +317,33 @@ async function openEditUserModal(u) {
                     <option value="superadmin" ${u.user_level==='superadmin'?'selected':''}>Superadmin</option>
                 </select>
             </div>
-            <div id="schedule_section" style="background:var(--surface-2);padding:10px;border-radius:var(--radius-md);margin-bottom:12px; display:${u.user_level==='staff'?'block':'none'};">
-                <label style="font-size:11px;font-weight:600;margin-bottom:8px;display:block;">Jadwal Login (Hanya Staff)</label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+            <div id="schedule_section" class="schedule-card" style="display:${u.user_level==='staff'?'block':'none'}">
+                <div class="schedule-header">
+                    <div class="schedule-header-icon"><i class="bi bi-clock-fill"></i></div>
                     <div>
-                        <label style="font-size:10px;">Jam Mulai</label>
-                        <input type="time" class="form-control-dark" id="eu_start" value="${u.work_start?u.work_start.substring(0,5):'08:00'}">
-                    </div>
-                    <div>
-                        <label style="font-size:10px;">Jam Selesai</label>
-                        <input type="time" class="form-control-dark" id="eu_end" value="${u.work_end?u.work_end.substring(0,5):'17:00'}">
+                        <div class="schedule-header-text">Jadwal Login Staff</div>
+                        <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">Atur kapan staff boleh masuk ke sistem</div>
                     </div>
                 </div>
-                <label style="font-size:10px;">Hari Kerja</label>
-                <div style="display:flex;flex-wrap:wrap;gap:4px;" id="eu_days">
-                    <label style="font-size:10px;"><input type="checkbox" value="Senin" ${days.includes('Senin')?'checked':''}> Sen</label>
-                    <label style="font-size:10px;"><input type="checkbox" value="Selasa" ${days.includes('Selasa')?'checked':''}> Sel</label>
-                    <label style="font-size:10px;"><input type="checkbox" value="Rabu" ${days.includes('Rabu')?'checked':''}> Rab</label>
-                    <label style="font-size:10px;"><input type="checkbox" value="Kamis" ${days.includes('Kamis')?'checked':''}> Kam</label>
-                    <label style="font-size:10px;"><input type="checkbox" value="Jumat" ${days.includes('Jumat')?'checked':''}> Jum</label>
-                    <label style="font-size:10px;"><input type="checkbox" value="Sabtu" ${days.includes('Sabtu')?'checked':''}> Sab</label>
-                    <label style="font-size:10px;"><input type="checkbox" value="Minggu" ${days.includes('Minggu')?'checked':''}> Min</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                    <div>
+                        <div class="schedule-time-label"><i class="bi bi-sun"></i> Mulai</div>
+                        <input type="time" class="time-input-modern" id="eu_start" value="${u.work_start?u.work_start.substring(0,5):'08:00'}">
+                    </div>
+                    <div>
+                        <div class="schedule-time-label"><i class="bi bi-moon"></i> Selesai</div>
+                        <input type="time" class="time-input-modern" id="eu_end" value="${u.work_end?u.work_end.substring(0,5):'17:00'}">
+                    </div>
+                </div>
+                <div class="schedule-time-label" style="margin-bottom:10px;"><i class="bi bi-calendar3"></i> Hari Kerja</div>
+                <div style="display:flex;justify-content:space-between;gap:4px;" id="eu_days">
+                    <span class="day-chip ${days.includes('Senin')?'active':''}" data-val="Senin">Sen</span>
+                    <span class="day-chip ${days.includes('Selasa')?'active':''}" data-val="Selasa">Sel</span>
+                    <span class="day-chip ${days.includes('Rabu')?'active':''}" data-val="Rabu">Rab</span>
+                    <span class="day-chip ${days.includes('Kamis')?'active':''}" data-val="Kamis">Kam</span>
+                    <span class="day-chip ${days.includes('Jumat')?'active':''}" data-val="Jumat">Jum</span>
+                    <span class="day-chip ${days.includes('Sabtu')?'active':''}" data-val="Sabtu">Sab</span>
+                    <span class="day-chip ${days.includes('Minggu')?'active':''}" data-val="Minggu">Min</span>
                 </div>
             </div>
         `,
@@ -260,7 +356,7 @@ async function openEditUserModal(u) {
             
             const start = document.getElementById('eu_start').value;
             const end = document.getElementById('eu_end').value;
-            const daysArr = Array.from(document.querySelectorAll('#eu_days input:checked')).map(el => el.value);
+            const daysArr = Array.from(document.querySelectorAll('#eu_days .day-chip.active')).map(el => el.dataset.val);
 
             if (!name) { showToast('Nama wajib diisi', 'warning'); return false; }
             if (!email && !phone) { showToast('Email atau No HP wajib diisi', 'warning'); return false; }
@@ -280,7 +376,13 @@ async function openEditUserModal(u) {
         }
     });
     // Call after modal HTML is injected into DOM
-    setTimeout(() => toggleScheduleUI(u.user_level ? u.user_level.toLowerCase() : 'staff'), 50);
+    setTimeout(() => {
+        toggleScheduleUI(u.user_level ? u.user_level.toLowerCase() : 'staff');
+        // Wire up day chip clicks for Edit modal
+        document.querySelectorAll('#eu_days .day-chip').forEach(chip => {
+            chip.onclick = () => chip.classList.toggle('active');
+        });
+    }, 50);
     await modalPromise;
 }
 
