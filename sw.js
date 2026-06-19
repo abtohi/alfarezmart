@@ -2,7 +2,7 @@
  * AlfarezMart PWA - Service Worker
  * Cache Strategy: Cache First for assets, Network First for API
  */
-const CACHE_NAME = 'alfarezmart-v11.40';
+const CACHE_NAME = 'alfarezmart-v11.41';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -98,6 +98,15 @@ self.addEventListener('fetch', event => {
                 });
             })
         );
+        return;
+    }
+
+    // PENTING: Halaman auth (login/logout) TIDAK BOLEH di-cache karena mengandung CSRF token
+    // Selalu ambil dari network agar token selalu fresh dan tidak expired
+    const authPaths = ['/login', '/logout', '/register'];
+    const isAuthPage = authPaths.some(p => url.pathname === BASE_URL.replace(/\/$/, '') + p || url.pathname.endsWith(p));
+    if (isAuthPage) {
+        event.respondWith(fetch(event.request, { cache: 'no-cache', credentials: 'same-origin' }));
         return;
     }
 
