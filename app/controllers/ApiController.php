@@ -2847,14 +2847,14 @@ class ApiController extends Controller
         register_shutdown_function(function() {
             $error = error_get_last();
             if ($error !== null && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR, E_RECOVERABLE_ERROR, E_CORE_WARNING, E_COMPILE_WARNING, E_PARSE])) {
-                file_put_contents('c:\\xampp\\htdocs\\AlfarezMart\\logs\\ai_crash.log', date('Y-m-d H:i:s') . " FATAL CRASH: " . print_r($error, true) . "\n", FILE_APPEND);
+                file_put_contents(__DIR__ . '/../../logs/ai_crash.log', date('Y-m-d H:i:s') . " FATAL CRASH: " . print_r($error, true) . "\n", FILE_APPEND);
             }
         });
         
         ob_start(); // Capture any stray output/warnings to prevent breaking JSON
         try {
             error_log("SCAN_AI_TRACE: Starting scanInvoiceAI with InvoiceScanService");
-            file_put_contents('c:\\xampp\\htdocs\\AlfarezMart\\logs\\ai_crash.log', date('Y-m-d H:i:s') . " Trace: Starting scanInvoiceAI\n", FILE_APPEND);
+            file_put_contents(__DIR__ . '/../../logs/ai_crash.log', date('Y-m-d H:i:s') . " Trace: Starting scanInvoiceAI\n", FILE_APPEND);
             
             // Read image_base64 directly from raw JSON to bypass Security::sanitize()
             // which calls strip_tags() and could corrupt base64 data.
@@ -2872,16 +2872,16 @@ class ApiController extends Controller
             $supplierId = isset($rawJson['supplier_id']) ? (int)$rawJson['supplier_id'] : null;
 
             // Load and run the new service
-            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/ImagePreprocessor.php';
-            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/PromptBuilder.php';
-            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/LayoutAnalyzer.php';
-            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/TableParser.php';
-            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/InvoiceValidator.php';
-            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/ProductMatcher.php';
-            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/ConfidenceScorer.php';
-            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/SelfCorrectionEngine.php';
-            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/TemplateLearner.php';
-            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/InvoiceScanService.php';
+            require_once __DIR__ . '/../services/invoice/ImagePreprocessor.php';
+            require_once __DIR__ . '/../services/invoice/PromptBuilder.php';
+            require_once __DIR__ . '/../services/invoice/LayoutAnalyzer.php';
+            require_once __DIR__ . '/../services/invoice/TableParser.php';
+            require_once __DIR__ . '/../services/invoice/InvoiceValidator.php';
+            require_once __DIR__ . '/../services/invoice/ProductMatcher.php';
+            require_once __DIR__ . '/../services/invoice/ConfidenceScorer.php';
+            require_once __DIR__ . '/../services/invoice/SelfCorrectionEngine.php';
+            require_once __DIR__ . '/../services/invoice/TemplateLearner.php';
+            require_once __DIR__ . '/../services/invoice/InvoiceScanService.php';
 
             $service = new InvoiceScanService($this->db);
             $result = $service->scan($imageB64, $supplierId);
