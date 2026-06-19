@@ -26,6 +26,7 @@
     </div>
     <?php endif; ?>
 
+    <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
     <!-- Status Hari Ini -->
     <div class="section-title">Status Hari Ini</div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; align-items: stretch;">
@@ -39,7 +40,6 @@
                     <div class="stat-label" style="font-size: 9px; margin-top: 0; text-transform: uppercase; letter-spacing: 0.5px;">Stok Terendah</div>
                 </div>
             </div>
-            <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
             <!-- Keuangan/Dompet Card -->
             <a href="<?= BASE_URL ?>finance" class="stat-card" style="margin-bottom: 0; flex: 1; display: flex; align-items: center; gap: 12px; padding: 12px 16px; text-decoration: none; color: inherit; cursor: pointer; transition: background 0.2s;">
                 <div class="stat-icon blue" style="margin-bottom: 0; width: 36px; height: 36px; font-size: 1.1rem; flex-shrink: 0;"><i class="bi bi-wallet2"></i></div>
@@ -52,11 +52,9 @@
                     </div>
                 </div>
             </a>
-            <?php endif; ?>
         </div>
         <!-- Right Column -->
         <div style="display: flex;">
-            <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
             <!-- Omset Hari Ini Card -->
             <div class="stat-card" style="margin-bottom: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 16px;">
                 <div class="stat-icon green" style="width: 44px; height: 44px; font-size: 1.3rem; margin-bottom: 8px; flex-shrink: 0;"><i class="bi bi-cash-stack"></i></div>
@@ -72,15 +70,10 @@
                     <?php endif; ?>
                 </div>
             </div>
-            <?php else: ?>
-            <div class="stat-card" style="margin-bottom: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 16px;">
-                <div class="stat-icon green" style="width: 44px; height: 44px; font-size: 1.3rem; margin-bottom: 8px; flex-shrink: 0;"><i class="bi bi-cart-check"></i></div>
-                <div class="stat-value" style="font-size: var(--font-size-md); font-weight: 800;"><?= number_format($stats['today_transactions'] ?? 0) ?></div>
-                <div class="stat-label" style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Transaksi Hari Ini</div>
-            </div>
-            <?php endif; ?>
         </div>
     </div>
+    <?php endif; ?>
+
 
     <!-- Stats Grid -->
     <div class="section-title">Ringkasan Data</div>
