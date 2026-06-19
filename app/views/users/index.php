@@ -68,56 +68,144 @@
                 default      => 'badge-warning',
             };
         ?>
-        <div class="menu-item" id="user-row-<?= $u['id'] ?>" style="flex-wrap:wrap;gap:8px;margin-bottom:8px;border-radius:var(--radius-lg);background:var(--surface-1);<?= !$u['is_active'] ? 'opacity:0.55;' : '' ?>">
-            <div style="width:40px;height:40px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;color:var(--primary);flex-shrink:0;">
-                <?= strtoupper(substr($u['name'], 0, 1)) ?>
-            </div>
-            <div style="flex:1;min-width:120px;">
-                <div style="font-weight:600;font-size:var(--font-size-sm);"><?= htmlspecialchars($u['name']) ?></div>
-                <div style="font-size:11px;color:var(--text-muted);"><?= htmlspecialchars($u['email'] ?? $u['phone'] ?? '-') ?></div>
-                <div style="margin-top:4px;">
-                    <span class="badge-custom <?= $levelClass ?>"><?= ucfirst($u['user_level']) ?></span>
-                    <?php if (!$u['is_active']): ?><span class="badge-custom badge-danger" style="margin-left:4px;">Nonaktif</span><?php endif; ?>
+        <div class="user-card" id="user-row-<?= $u['id'] ?>" style="<?= !$u['is_active'] ? 'opacity:0.55;' : '' ?>">
+            <!-- Main Row -->
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+                <div style="position:relative;flex-shrink:0;">
+                    <div style="width:42px;height:42px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:var(--primary);">
+                        <?= strtoupper(substr($u['name'], 0, 1)) ?>
+                    </div>
+                    <span class="online-dot" id="dot-<?= $u['id'] ?>" style="display:none;"></span>
+                </div>
+                <div style="flex:1;min-width:120px;">
+                    <div style="font-weight:600;font-size:var(--font-size-sm);display:flex;align-items:center;gap:6px;">
+                        <?= htmlspecialchars($u['name']) ?>
+                        <span id="online-badge-<?= $u['id'] ?>" style="display:none;font-size:9px;background:rgba(46,213,115,0.15);color:#2ed573;border:1px solid rgba(46,213,115,0.3);border-radius:20px;padding:1px 7px;font-weight:600;">● Online</span>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-muted);"><?= htmlspecialchars($u['email'] ?? $u['phone'] ?? '-') ?></div>
+                    <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;">
+                        <span class="badge-custom <?= $levelClass ?>"><?= ucfirst($u['user_level']) ?></span>
+                        <?php if (!$u['is_active']): ?><span class="badge-custom badge-danger">Nonaktif</span><?php endif; ?>
+                        <span id="lastseen-<?= $u['id'] ?>" style="font-size:9px;color:var(--text-muted);"></span>
+                    </div>
+                </div>
+                <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+                    <button onclick="openActivityPanel(<?= $u['id'] ?>)"
+                            title="Lihat Aktivitas"
+                            id="act-btn-<?= $u['id'] ?>"
+                            style="background:rgba(76,201,240,0.12);color:#4cc9f0;border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
+                        <i class="bi bi-graph-up"></i> Aktivitas
+                    </button>
+                    <button onclick="openEditUserModal(<?= htmlspecialchars(json_encode([
+                        'id' => $u['id'],
+                        'name' => $u['name'],
+                        'email' => $u['email'],
+                        'phone' => $u['phone'],
+                        'user_level' => $u['user_level'],
+                        'work_days' => $u['work_days'],
+                        'work_start' => $u['work_start'],
+                        'work_end' => $u['work_end']
+                    ])) ?>)"
+                            title="Edit User"
+                            style="background:var(--primary-bg);color:var(--primary);border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
+                        <i class="bi bi-pencil-square"></i> Edit
+                    </button>
+                    <button onclick="toggleUser(<?= $u['id'] ?>, <?= $u['is_active'] ? 'false':'true' ?>)"
+                            title="<?= $u['is_active'] ? 'Nonaktifkan':'Aktifkan' ?>"
+                            style="background:<?= $u['is_active'] ? 'var(--warning-bg)':'var(--success-bg)' ?>;color:<?= $u['is_active'] ? 'var(--warning)':'var(--success)' ?>;border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
+                        <i class="bi bi-<?= $u['is_active'] ? 'pause-circle':'play-circle' ?>"></i>
+                        <?= $u['is_active'] ? 'Nonaktif':'Aktifkan' ?>
+                    </button>
+                    <button onclick="resetPassword(<?= $u['id'] ?>, '<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>')"
+                            title="Reset Password"
+                            style="background:var(--info-bg);color:var(--info);border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
+                        <i class="bi bi-key"></i>
+                    </button>
+                    <?php if ($u['id'] !== ($_SESSION['user_id'] ?? 0)): ?>
+                    <button onclick="deleteUser(<?= $u['id'] ?>, '<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>')"
+                            title="Hapus User"
+                            style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                    <?php endif; ?>
                 </div>
             </div>
-            <div style="display:flex;gap:6px;align-items:center;">
-                <button onclick="openEditUserModal(<?= htmlspecialchars(json_encode([
-                    'id' => $u['id'],
-                    'name' => $u['name'],
-                    'email' => $u['email'],
-                    'phone' => $u['phone'],
-                    'user_level' => $u['user_level'],
-                    'work_days' => $u['work_days'],
-                    'work_start' => $u['work_start'],
-                    'work_end' => $u['work_end']
-                ])) ?>)"
-                        title="Edit User"
-                        style="background:var(--primary-bg);color:var(--primary);border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
-                    <i class="bi bi-pencil-square"></i> Edit
-                </button>
-                <button onclick="toggleUser(<?= $u['id'] ?>, <?= $u['is_active'] ? 'false':'true' ?>)"
-                        title="<?= $u['is_active'] ? 'Nonaktifkan':'Aktifkan' ?>"
-                        style="background:<?= $u['is_active'] ? 'var(--warning-bg)':'var(--success-bg)' ?>;color:<?= $u['is_active'] ? 'var(--warning)':'var(--success)' ?>;border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
-                    <i class="bi bi-<?= $u['is_active'] ? 'pause-circle':'play-circle' ?>"></i>
-                    <?= $u['is_active'] ? 'Nonaktif':'Aktifkan' ?>
-                </button>
-                <button onclick="resetPassword(<?= $u['id'] ?>, '<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>')"
-                        title="Reset Password"
-                        style="background:var(--info-bg);color:var(--info);border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
-                    <i class="bi bi-key"></i>
-                </button>
-                <?php if ($u['id'] !== ($_SESSION['user_id'] ?? 0)): ?>
-                <button onclick="deleteUser(<?= $u['id'] ?>, '<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>')"
-                        title="Hapus User"
-                        style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
-                    <i class="bi bi-trash"></i>
-                </button>
-                <?php endif; ?>
+
+            <!-- Activity Panel (hidden, toggled per user) -->
+            <div class="activity-panel" id="activity-panel-<?= $u['id'] ?>" style="display:none;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px;">
+                        <i class="bi bi-activity" style="color:#4cc9f0;"></i> Aktivitas Pengguna
+                    </div>
+                    <button onclick="closeActivityPanel(<?= $u['id'] ?>)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;line-height:1;">×</button>
+                </div>
+                <div id="activity-content-<?= $u['id'] ?>" style="min-height:60px;display:flex;align-items:center;justify-content:center;">
+                    <span style="color:var(--text-muted);font-size:12px;"><i class="bi bi-hourglass-split"></i> Memuat...</span>
+                </div>
             </div>
         </div>
         <?php endforeach; ?>
     </div>
 </div>
+
+<style>
+.user-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    transition: box-shadow 0.2s;
+}
+.user-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,0.18); }
+.online-dot {
+    position: absolute;
+    bottom: 1px; right: 1px;
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    background: #2ed573;
+    border: 2px solid var(--surface-1);
+    animation: pulse-online 2s infinite;
+}
+@keyframes pulse-online {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(46,213,115,0.5); }
+    50% { box-shadow: 0 0 0 5px rgba(46,213,115,0); }
+}
+.activity-panel {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border-color);
+    animation: slideDown 0.25s ease;
+}
+@keyframes slideDown {
+    from { opacity:0; transform:translateY(-6px); }
+    to   { opacity:1; transform:translateY(0); }
+}
+.activity-timeline { list-style: none; padding: 0; margin: 0; }
+.activity-timeline li {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 11px;
+}
+.activity-timeline li:last-child { border-bottom: none; }
+.tl-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--primary); flex-shrink: 0; margin-top: 3px;
+}
+.tl-time { color: var(--text-muted); white-space: nowrap; min-width: 52px; }
+.tl-page { color: var(--text-primary); flex: 1; word-break: break-all; }
+.tl-gps { color: #4cc9f0; font-size: 10px; white-space: nowrap; }
+.stat-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+    background: var(--surface-2);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+</style>
+
 
 <script>
 const csrf = document.getElementById('csrfToken').value;
@@ -395,7 +483,7 @@ async function toggleUser(id, activate) {
     );
     if (!confirmed) return;
 
-    const res = await api(`${BASE_URL}api/users/${id}/toggle-active`, 'POST', { csrf_token: csrf });
+    const res = await api(`${BASE_URL}api/users/${id}/toggle`, 'POST', { csrf_token: csrf });
     if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 600); }
     else showToast(res.error || 'Gagal', 'error');
 }
@@ -435,4 +523,134 @@ async function deleteUser(id, name) {
         if (row) row.remove();
     } else showToast(res.error || 'Gagal', 'error');
 }
+
+// --- Activity Tracking Logic ---
+function closeActivityPanel(id) {
+    const p = document.getElementById('activity-panel-'+id);
+    if(p) p.style.display = 'none';
+}
+
+async function openActivityPanel(id) {
+    const p = document.getElementById('activity-panel-'+id);
+    if(!p) return;
+    
+    // Toggle if already open
+    if (p.style.display === 'block') {
+        p.style.display = 'none';
+        return;
+    }
+    
+    p.style.display = 'block';
+    const content = document.getElementById('activity-content-'+id);
+    content.innerHTML = '<span style="color:var(--text-muted);font-size:12px;"><i class="bi bi-hourglass-split"></i> Memuat...</span>';
+    
+    try {
+        const res = await api(`${BASE_URL}api/users/${id}/activity`);
+        if(!res.success) throw new Error(res.error || 'Gagal memuat');
+        
+        let html = '';
+        
+        // Header / Summary Stats
+        html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">';
+        if (res.is_online) {
+            html += '<span class="stat-chip" style="color:#2ed573;background:rgba(46,213,115,0.1);border-color:rgba(46,213,115,0.2);"><i class="bi bi-broadcast"></i> Sedang Online</span>';
+        } else if (res.last_seen) {
+            const timeAgo = formatTimeAgo(res.last_seen.created_at);
+            html += `<span class="stat-chip"><i class="bi bi-clock-history"></i> Terakhir: ${timeAgo}</span>`;
+        } else {
+            html += '<span class="stat-chip"><i class="bi bi-person-dash"></i> Belum ada aktivitas</span>';
+        }
+        
+        if(res.last_seen && res.last_seen.lat) {
+            html += `<a href="https://maps.google.com/?q=${res.last_seen.lat},${res.last_seen.lng}" target="_blank" class="stat-chip" style="color:#4cc9f0;background:rgba(76,201,240,0.1);border-color:rgba(76,201,240,0.2);text-decoration:none;"><i class="bi bi-geo-alt"></i> Buka GPS Terakhir</a>`;
+        }
+        html += '</div>';
+
+        // Timeline
+        if (res.logs && res.logs.length > 0) {
+            html += '<ul class="activity-timeline">';
+            res.logs.forEach(log => {
+                const timeStr = log.created_at.substring(11, 16); // HH:mm
+                const dateStr = log.created_at.substring(5, 10).replace('-','/'); // MM/DD
+                let gpsHtml = '';
+                if(log.lat && log.lng) {
+                    gpsHtml = `<a href="https://maps.google.com/?q=${log.lat},${log.lng}" target="_blank" class="tl-gps" title="Lihat di Peta"><i class="bi bi-geo-alt-fill"></i> GPS</a>`;
+                }
+                let titleHtml = log.page_title ? `<strong style="color:var(--text-primary);">${log.page_title}</strong><br>` : '';
+                let urlHtml = `<a href="${log.page_url}" target="_blank" style="color:var(--primary);text-decoration:none;">${log.page_url}</a>`;
+                
+                html += `
+                <li>
+                    <div class="tl-time">${dateStr} <span style="color:var(--text-primary);font-weight:600;">${timeStr}</span></div>
+                    <div class="tl-dot"></div>
+                    <div class="tl-page">
+                        ${titleHtml}
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                            <div style="font-size:10px;opacity:0.8;word-break:break-all;">${urlHtml}</div>
+                            ${gpsHtml}
+                        </div>
+                    </div>
+                </li>`;
+            });
+            html += '</ul>';
+        } else {
+            html += '<div style="text-align:center;padding:16px;color:var(--text-muted);font-size:11px;">Tidak ada rekam jejak dalam 2 hari terakhir.</div>';
+        }
+        
+        content.innerHTML = html;
+        
+    } catch(err) {
+        content.innerHTML = `<span style="color:var(--danger);font-size:12px;"><i class="bi bi-exclamation-circle"></i> ${err.message}</span>`;
+    }
+}
+
+function formatTimeAgo(dateStr) {
+    const date = new Date(dateStr + " UTC"); // Assuming DB returns UTC or local, adjust if needed
+    // If DB is in local time (+07:00), we just parse it as is without " UTC" if it doesn't have timezone
+    // Let's assume the server returns local time string
+    const target = new Date(dateStr.replace(' ', 'T'));
+    const seconds = Math.floor((new Date() - target) / 1000);
+    
+    if (seconds < 60) return "Baru saja";
+    if (seconds < 3600) return Math.floor(seconds/60) + " menit lalu";
+    if (seconds < 86400) return Math.floor(seconds/3600) + " jam lalu";
+    return Math.floor(seconds/86400) + " hari lalu";
+}
+
+// Polling for online status
+async function pollOnlineStatus() {
+    try {
+        const res = await api(`${BASE_URL}api/users/activity/all`, 'GET');
+        if(res.success && res.users) {
+            res.users.forEach(u => {
+                const dot = document.getElementById('dot-'+u.id);
+                const badge = document.getElementById('online-badge-'+u.id);
+                const lastseen = document.getElementById('lastseen-'+u.id);
+                
+                // Online if seconds_ago < 180 (3 minutes)
+                const isOnline = u.seconds_ago !== null && u.seconds_ago < 180;
+                
+                if (dot) dot.style.display = isOnline ? 'block' : 'none';
+                if (badge) badge.style.display = isOnline ? 'inline-block' : 'none';
+                
+                if (lastseen) {
+                    if (isOnline) {
+                        lastseen.textContent = '';
+                    } else if (u.seconds_ago !== null) {
+                        lastseen.textContent = 'Terakhir: ' + formatTimeAgo(u.created_at);
+                    } else {
+                        lastseen.textContent = 'Belum pernah login';
+                    }
+                }
+            });
+        }
+    } catch(e) {}
+}
+
+// Initial poll + interval
+document.addEventListener('DOMContentLoaded', () => {
+    pollOnlineStatus();
+    setInterval(pollOnlineStatus, 30000); // Check every 30 seconds
+});
+
 </script>

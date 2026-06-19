@@ -2040,7 +2040,7 @@ class ApiController extends Controller
         }
     }
 
-    public function toggleUserActive(int $id)
+    public function toggleUserStatus(int $id)
     {
         $this->validateCSRF();
         $level = $_SESSION['user_level'] ?? '';
@@ -3061,6 +3061,144 @@ class ApiController extends Controller
             $this->json(['success' => true, 'message' => 'Draft berhasil dihapus']);
         } catch (Exception $e) {
             $this->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/activity/log
+     * Called from frontend on every page load to record user activity.
+     */
+    public function logActivity()
+    {
+        if (!isset($_SESSION['user_id'])) {
+            $this->json(['error' => 'Unauthenticated'], 401);
+            return;
+        }
+        try {
+            $db = Database::getInstance()->getConnection();
+            $userId   = (int)$_SESSION['user_id'];
+            $pageUrl  = $this->input('page_url') ?? '';
+            $pageTitle = $this->input('page_title') ?? '';
+            $lat      = $this->input('lat');
+            $lng      = $this->input('lng');
+            $ip       = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+            $ua       = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 512);
+            $sessId   = substr(session_id(), 0, 128);
+
+            if (empty($pageUrl)) {
+                $this->json(['error' => 'page_url required'], 400);
+                return;
+            }
+
+            $stmt = $db->prepare("
+                INSERT INTO user_activity_logs
+                    (user_id, page_url, page_title, action_type, lat, lng, ip, user_agent, session_id, created_at)
+                VALUES
+                    (:user_id, :page_url, :page_title, 'page_view', :lat, :lng, :ip, :ua, :sess, NOW())
+            ");
+            $stmt->execute([
+                ':user_id'    => $userId,
+                ':page_url'   => substr($pageUrl, 0, 512),
+                ':page_title' => substr($pageTitle, 0, 255),
+                ':lat'        => ($lat !== null && $lat !== '') ? (float)$lat : null,
+                ':lng'        => ($lng !== null && $lng !== '') ? (float)$lng : null,
+                ':ip'         => $ip,
+                ':ua'         => $ua,
+                ':sess'       => $sessId,
+            ]);
+
+            $this->json(['success' => true]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /api/users/{id}/activity
+     * Fetch activity logs for a specific user (superadmin only).
+     */
+    public function getUserActivity(int $id)
+    {
+        $level = $_SESSION['user_level'] ?? '';
+        if ($level !== 'superadmin') {
+            $this->json(['error' => 'Akses ditolak'], 403);
+            return;
+        }
+        try {
+            $db = Database::getInstance()->getConnection();
+
+            // Last 50 logs for today + yesterday
+            $stmt = $db->prepare("
+                SELECT id, page_url, page_title, action_type, lat, lng, ip, created_at
+                FROM user_activity_logs
+                WHERE user_id = :uid
+                AND created_at >= DATE_SUB(NOW(), INTERVAL 2 DAY)
+                ORDER BY created_at DESC
+                LIMIT 100
+            ");
+            $stmt->execute([':uid' => (int)$id]);
+            $logs = $stmt->fetchAll();
+
+            // Last seen
+            $stmtLast = $db->prepare("
+                SELECT created_at, page_url, page_title, lat, lng
+                FROM user_activity_logs
+                WHERE user_id = :uid
+                ORDER BY created_at DESC
+                LIMIT 1
+            ");
+            $stmtLast->execute([':uid' => (int)$id]);
+            $lastSeen = $stmtLast->fetch();
+
+            // Online check: seen in last 3 minutes?
+            $isOnline = false;
+            if ($lastSeen) {
+                $diff = time() - strtotime($lastSeen['created_at']);
+                $isOnline = ($diff < 180);
+            }
+
+            $this->json([
+                'success'   => true,
+                'is_online' => $isOnline,
+                'last_seen' => $lastSeen ?: null,
+                'logs'      => $logs,
+            ]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * GET /api/users/activity/all
+     * Get latest activity snapshot for all users (superadmin only).
+     */
+    public function getAllUsersActivity()
+    {
+        $level = $_SESSION['user_level'] ?? '';
+        if ($level !== 'superadmin') {
+            $this->json(['error' => 'Akses ditolak'], 403);
+            return;
+        }
+        try {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("
+                SELECT u.id, u.name, u.user_level,
+                    l.page_url, l.page_title, l.lat, l.lng, l.created_at,
+                    TIMESTAMPDIFF(SECOND, l.created_at, NOW()) AS seconds_ago
+                FROM users u
+                LEFT JOIN user_activity_logs l ON l.id = (
+                    SELECT id FROM user_activity_logs
+                    WHERE user_id = u.id
+                    ORDER BY created_at DESC LIMIT 1
+                )
+                WHERE u.is_active = 1
+                ORDER BY l.created_at DESC
+            ");
+            $stmt->execute();
+            $rows = $stmt->fetchAll();
+            $this->json(['success' => true, 'users' => $rows]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
         }
     }
 }

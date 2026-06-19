@@ -382,5 +382,36 @@ if ($userLevel === 'staff') {
     });
     </script>
 
+    <!-- Activity Logger: fire-and-forget, silent, no impact on UX -->
+    <script>
+    (function() {
+        'use strict';
+        <?php $actUserId = (int)($_SESSION['user_id'] ?? 0); ?>
+        if (<?= $actUserId ?> === 0) return;
+        const _logUrl = BASE_URL + 'api/activity/log';
+        const _pageUrl = window.location.href;
+        const _pageTitle = document.title;
+        function _sendLog(lat, lng) {
+            const body = { page_url: _pageUrl, page_title: _pageTitle };
+            if (lat != null) { body.lat = lat; body.lng = lng; }
+            fetch(_logUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                keepalive: true
+            }).catch(function() {});
+        }
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(pos) { _sendLog(pos.coords.latitude, pos.coords.longitude); },
+                function()    { _sendLog(null, null); },
+                { timeout: 4000, maximumAge: 60000, enableHighAccuracy: false }
+            );
+        } else {
+            _sendLog(null, null);
+        }
+    })();
+    </script>
+
 </body>
 </html>
