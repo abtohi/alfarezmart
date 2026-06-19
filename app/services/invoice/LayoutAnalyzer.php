@@ -226,6 +226,24 @@ class LayoutAnalyzer
         $unitRaw = $get('unit', ['satuan', 'kemasan', 'uom']);
         $unit    = is_string($unitRaw) ? trim($unitRaw) : '';
 
+        // --- Extract explicit BSR/TGH/KCL quantities (Overriding unit and qty if found) ---
+        $qtyBsr = $this->parseQty($get('qty_bsr', ['bsr']), 0);
+        $qtyTgh = $this->parseQty($get('qty_tgh', ['tgh']), 0);
+        $qtyKcl = $this->parseQty($get('qty_kcl', ['kcl']), 0);
+
+        // Only override if they actually have a valid number > 0
+        // And if the AI outputs exactly the number, we trust it more than the generic unit column
+        if ($qtyBsr > 0) {
+            $qty  = $qtyBsr;
+            $unit = 'bsr';
+        } elseif ($qtyTgh > 0) {
+            $qty  = $qtyTgh;
+            $unit = 'tgh';
+        } elseif ($qtyKcl > 0) {
+            $qty  = $qtyKcl;
+            $unit = 'kcl';
+        }
+
         // --- Extract prices ---
         $unitPriceRaw = $get('unit_price', ['harga', 'price', 'harga_satuan', 'unit_price', 'harga satuan']);
         $totalRaw     = $get('total', ['total_price', 'total', 'amount', 'jumlah_harga', 'subtotal']);
@@ -286,9 +304,9 @@ class LayoutAnalyzer
     /**
      * Parse a quantity value from various formats.
      */
-    private function parseQty($raw): float
+    private function parseQty($raw, float $default = 1): float
     {
-        if ($raw === null || $raw === '') return 1;
+        if ($raw === null || $raw === '') return $default;
         if (is_numeric($raw)) return max(0, (float)$raw);
 
         $str = preg_replace('/[^0-9.,]/', '', (string)$raw);

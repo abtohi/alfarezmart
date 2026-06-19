@@ -95,10 +95,8 @@ class PromptBuilder
         $lines[] = '5. Harga dalam format Rupiah Indonesia. Jika tertulis "5.500" artinya Rp 5.500, bukan Rp 5,5.';
         $lines[] = '6. Perhatikan tanda desimal: titik (.) adalah pemisah ribuan, koma (,) adalah desimal.';
         $lines[] = '7. Kemasan/satuan: kenali istilah seperti CTN=Karton, DUS=Karton, PCS/BTL/BKS=satuan kecil, dll.';
-        $lines[] = '8. PENTING (KOLOM QTY BSR/TGH/KCL): Jika invoice tidak memiliki 1 kolom Qty, melainkan memiliki kolom terpisah bernama BSR (Besar/Karton), TGH (Tengah/Renceng/Lusin), dan KCL (Kecil/Pcs):';
-        $lines[] = '   - Nilai angka yang terisi pada kolom tersebut adalah QTY.';
-        $lines[] = '   - Nama header kolom tersebut (BSR atau TGH atau KCL) adalah UNIT (satuan).';
-        $lines[] = '   - Contoh: Jika BSR=0, TGH=2, KCL=0, maka ekstrak qty: 2 dan unit: "TGH".';
+        $lines[] = '8. PENTING (KOLOM QTY BSR/TGH/KCL): Jika invoice memiliki kolom qty terpisah bernama BSR, TGH, dan KCL, isi nilai angka dari masing-masing kolom tersebut ke dalam field "qty_bsr", "qty_tgh", dan "qty_kcl" di JSON.';
+        $lines[] = '   - Jika tidak ada kolom tersebut, biarkan null atau 0.';
         $lines[] = '';
 
         if ($isCorrectionPass) {
@@ -118,6 +116,9 @@ class PromptBuilder
         $lines[] = '    "supplier_code": "Kode barang supplier jika ada",';
         $lines[] = '    "qty": 2,';
         $lines[] = '    "unit": "Karton",';
+        $lines[] = '    "qty_bsr": 0,';
+        $lines[] = '    "qty_tgh": 2,';
+        $lines[] = '    "qty_kcl": 0,';
         $lines[] = '    "unit_price": 250000,';
         $lines[] = '    "total_price": 500000,';
         $lines[] = '    "discount": 0,';
@@ -216,13 +217,10 @@ class PromptBuilder
             $parts[] = implode("\n", $lines);
         }
 
-        // === BAGIAN 6: PERINTAH AKHIR & PENENEKANAN ===
+        // === BAGIAN 6: PERINTAH AKHIR & PENEKANAN ===
         $parts[] = "=== PERINTAH KHUSUS BSR/TGH/KCL ===\n" .
-                   "Jika invoice memiliki kolom angka terpisah seperti BSR, TGH, KCL:\n" .
-                   "1. JANGAN LEWATKAN KOLOM INI.\n" .
-                   "2. Angka di dalam kolom tersebut adalah QTY.\n" .
-                   "3. Nama kolomnya (BSR, TGH, atau KCL) WAJIB dijadikan sebagai 'unit'.\n" .
-                   "Contoh: Jika di kolom TGH tertulis angka 2, maka hasilmu harus qty: 2 dan unit: \"TGH\".\n\n" .
+                   "Jika di tabel invoice terlihat ada angka di bawah kolom BSR, TGH, atau KCL:\n" .
+                   "WAJIB masukkan angka tersebut ke dalam field `qty_bsr`, `qty_tgh`, atau `qty_kcl` pada JSON. Jangan sampai terlewat!\n\n" .
                    "=== PERINTAH ===\nBaca gambar invoice di atas dan kembalikan JSON array sesuai format. Tidak ada teks selain JSON.";
 
         return implode("\n\n", $parts);
