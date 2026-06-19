@@ -2866,7 +2866,7 @@ class ApiController extends Controller
             }
 
             $userModel = new UserModel();
-            $dbUser = $userModel->findByEmail($user['email']); // get fresh hash
+            $dbUser = $userModel->find($user['id']); // get fresh hash
             if (!$dbUser || !password_verify($oldPassword, $dbUser['password_hash'])) {
                 throw new \Exception("Password lama tidak sesuai");
             }

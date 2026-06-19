@@ -341,110 +341,126 @@
         }
     }
 
-    // Save AI Scanner Settings
-    document.getElementById('ai-settings-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const btn = this.querySelector('button[type="submit"]');
-        const originalText = btn.textContent;
-        try {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
-            const data = {
-                csrf_token: csrfToken,
-                ai_model: document.getElementById('ai_model').value,
-                ai_api_key: document.getElementById('ai_api_key').value,
-                ai_invoice_prompt: document.getElementById('ai_invoice_prompt').value
-            };
-            const result = await api('<?= BASE_URL ?>api/settings/app', 'POST', data);
-            showToast(result.message || 'Pengaturan Scanner berhasil disimpan', 'success');
-            if (data.ai_api_key) {
-                document.getElementById('ai_api_key').value = '';
-                document.getElementById('ai_api_key').placeholder = '(Tersimpan - Diubah untuk mengganti)';
+    // Save AI Settings
+    const aiForm = document.getElementById('ai-settings-form');
+    if (aiForm) {
+        aiForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
+                const data = {
+                    csrf_token: csrfToken,
+                    ai_model: document.getElementById('ai_model').value,
+                    ai_api_key: document.getElementById('ai_api_key').value,
+                    ai_invoice_prompt: document.getElementById('ai_invoice_prompt').value
+                };
+                const result = await api('<?= BASE_URL ?>api/settings/app', 'POST', data);
+                showToast(result.message || 'Pengaturan AI berhasil disimpan', 'success');
+                if (data.ai_api_key) {
+                    document.getElementById('ai_api_key').value = '';
+                    document.getElementById('ai_api_key').placeholder = '(Tersimpan - Diubah untuk mengganti)';
+                }
+            } catch (err) {
+                showToast(err.message || 'Gagal menyimpan pengaturan AI', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
             }
-        } catch (err) {
-            showToast(err.message || 'Gagal menyimpan pengaturan', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = originalText;
-        }
-    });
+        });
+    }
 
-    // Save AI Chat Settings
-    document.getElementById('chat-settings-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const btn = this.querySelector('button[type="submit"]');
-        const originalText = btn.textContent;
-        try {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
-            const data = {
-                csrf_token: csrfToken,
-                ai_chat_enabled: document.getElementById('ai_chat_enabled').checked ? '1' : '0',
-                ai_chat_model: document.getElementById('ai_chat_model').value,
-                ai_chat_api_key: document.getElementById('ai_chat_api_key').value
-            };
-            const result = await api('<?= BASE_URL ?>api/settings/chat', 'POST', data);
-            showToast(result.message || 'Pengaturan Chat berhasil disimpan', 'success');
-            if (data.ai_chat_api_key) {
-                document.getElementById('ai_chat_api_key').value = '';
-                document.getElementById('ai_chat_api_key').placeholder = '(Tersimpan - Diubah untuk mengganti)';
+    // Save Chat Settings
+    const chatForm = document.getElementById('chat-settings-form');
+    if (chatForm) {
+        chatForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
+                const data = {
+                    csrf_token: csrfToken,
+                    ai_chat_enabled: document.getElementById('ai_chat_enabled').checked ? '1' : '0',
+                    ai_chat_model: document.getElementById('ai_chat_model').value,
+                    ai_chat_api_key: document.getElementById('ai_chat_api_key').value
+                };
+                const result = await api('<?= BASE_URL ?>api/settings/chat', 'POST', data);
+                showToast(result.message || 'Pengaturan Chat berhasil disimpan', 'success');
+                if (data.ai_chat_api_key) {
+                    document.getElementById('ai_chat_api_key').value = '';
+                    document.getElementById('ai_chat_api_key').placeholder = '(Tersimpan - Diubah untuk mengganti)';
+                }
+            } catch (err) {
+                showToast(err.message || 'Gagal menyimpan pengaturan chat', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
             }
-        } catch (err) {
-            showToast(err.message || 'Gagal menyimpan pengaturan chat', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = originalText;
-        }
-    });
+        });
+    }
 
     // Save Geo Settings
-    document.getElementById('geo-settings-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const btn = this.querySelector('button[type="submit"]');
-        const originalText = btn.textContent;
-        try {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
-            const data = {
-                csrf_token: csrfToken,
-                store_latitude: document.getElementById('store_latitude').value,
-                store_longitude: document.getElementById('store_longitude').value,
-                store_radius_meters: document.getElementById('store_radius_meters').value
-            };
-            const result = await api('<?= BASE_URL ?>api/settings/app', 'POST', data);
-            showToast(result.message || 'Pengaturan Lokasi berhasil disimpan', 'success');
-        } catch (err) {
-            showToast(err.message || 'Gagal menyimpan pengaturan Lokasi', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = originalText;
-        }
-    });
+    const geoForm = document.getElementById('geo-settings-form');
+    if (geoForm) {
+        geoForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
+                const data = {
+                    csrf_token: csrfToken,
+                    store_latitude: document.getElementById('store_latitude').value,
+                    store_longitude: document.getElementById('store_longitude').value,
+                    store_radius_meters: document.getElementById('store_radius_meters').value
+                };
+                const result = await api('<?= BASE_URL ?>api/settings/app', 'POST', data);
+                showToast(result.message || 'Pengaturan Lokasi berhasil disimpan', 'success');
+            } catch (err) {
+                showToast(err.message || 'Gagal menyimpan pengaturan Lokasi', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        });
+    }
 
     // Change Password
-    document.getElementById('password-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const btn = this.querySelector('button[type="submit"]');
-        const originalText = btn.textContent;
-        const oldPwd = document.getElementById('old_password').value;
-        const newPwd = document.getElementById('new_password').value;
-        const confPwd = document.getElementById('confirm_password').value;
-        
-        if (newPwd !== confPwd) return showToast('Konfirmasi password baru tidak cocok', 'error');
-        if (newPwd.length < 6) return showToast('Password baru minimal 6 karakter', 'error');
-        
-        try {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Memproses...';
-            const data = { csrf_token: csrfToken, old_password: oldPwd, new_password: newPwd };
-            const result = await api('<?= BASE_URL ?>api/users/change-password', 'POST', data);
-            showToast(result.message || 'Password berhasil diubah', 'success');
-            this.reset();
-        } catch (err) {
-            showToast(err.message || 'Gagal mengubah password', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.textContent = originalText;
-        }
-    });
+    const pwdForm = document.getElementById('password-form');
+    if (pwdForm) {
+        pwdForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+            const oldPwd = document.getElementById('old_password').value;
+            const newPwd = document.getElementById('new_password').value;
+            const confPwd = document.getElementById('confirm_password').value;
+            
+            if (newPwd !== confPwd) return showToast('Konfirmasi password baru tidak cocok', 'error');
+            if (newPwd.length < 6) return showToast('Password baru minimal 6 karakter', 'error');
+            
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Memproses...';
+                const data = { csrf_token: csrfToken, old_password: oldPwd, new_password: newPwd };
+                const result = await api('<?= BASE_URL ?>api/users/change-password', 'POST', data);
+                if(result.success) {
+                    showToast(result.message || 'Password berhasil diubah', 'success');
+                    this.reset();
+                } else {
+                    showToast(result.error || 'Gagal mengubah password', 'error');
+                }
+            } catch (err) {
+                showToast(err.message || 'Gagal mengubah password', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        });
+    }
 </script>
