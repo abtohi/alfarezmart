@@ -7,7 +7,7 @@
 
     <!-- Tabs -->
     <div style="display:flex; border-bottom:1px solid var(--border-color); margin-bottom:20px; overflow-x:auto; white-space:nowrap;">
-        <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
+        <?php if (($currentUser['user_level'] ?? '') !== 'staff'): ?>
         <button id="tabBtn-ai" class="tab-btn active" style="padding:12px 16px; background:none; border:none; border-bottom:2px solid var(--primary); color:var(--primary); font-weight:700; font-size:var(--font-size-sm);" onclick="switchTab('ai')">
             <i class="bi bi-robot"></i> AI Agent
         </button>
@@ -24,7 +24,7 @@
 
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>" />
 
-    <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
+    <?php if (($currentUser['user_level'] ?? '') !== 'staff'): ?>
     <!-- AI Agent Tab -->
     <div id="tabContent-ai" style="display:block;">
         
@@ -190,7 +190,7 @@
     <?php endif; ?>
 
     <!-- Password Tab -->
-    <div id="tabContent-pwd" style="display:<?= (($currentUser['level'] ?? '') === 'staff') ? 'block' : 'none' ?>;">
+    <div id="tabContent-pwd" style="display:<?= (($currentUser['user_level'] ?? '') === 'staff') ? 'block' : 'none' ?>;">
         <form id="password-form">
             <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
                 <div style="font-weight:600; margin-bottom:12px; color:var(--text-primary);">
