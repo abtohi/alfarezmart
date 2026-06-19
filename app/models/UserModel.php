@@ -85,7 +85,7 @@ class UserModel extends Model
         $total = $countStmt->fetchColumn();
 
         $stmt = $this->db->prepare("
-            SELECT id, name, email, phone, user_level, is_active, last_login_at, login_count, created_at
+            SELECT id, name, email, phone, user_level, is_active, last_login_at, login_count, created_at, work_days, work_start, work_end
             FROM {$this->table}
             ORDER BY created_at DESC
             LIMIT :limit OFFSET :offset
