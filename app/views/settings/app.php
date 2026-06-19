@@ -22,7 +22,7 @@
 
     <!-- Tabs -->
     <div style="display:flex; border-bottom:1px solid var(--border-color); margin-bottom:20px; overflow-x:auto; white-space:nowrap;">
-        <?php if (($currentUser['user_level'] ?? '') !== 'staff'): ?>
+        <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
         <button id="tabBtn-ai" class="tab-btn active" style="padding:12px 16px; background:none; border:none; border-bottom:2px solid var(--primary); color:var(--primary); font-weight:700; font-size:var(--font-size-sm);" onclick="switchTab('ai')">
             <i class="bi bi-robot"></i> AI Agent
         </button>
@@ -39,7 +39,7 @@
 
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>" />
 
-    <?php if (($currentUser['user_level'] ?? '') !== 'staff'): ?>
+    <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
     <!-- AI Agent Tab -->
     <div id="tabContent-ai" style="display:block;">
         
