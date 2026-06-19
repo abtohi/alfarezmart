@@ -170,13 +170,20 @@ let _currentData = null;
 function rupiah(n) {
     return 'Rp ' + Math.round(n || 0).toLocaleString('id-ID');
 }
-// Parse datetime string dari DB (tanpa timezone) sebagai WIB GMT+7
+// Parse datetime/date string dari DB (tanpa timezone) sebagai WIB GMT+7
 // Mencegah browser salah mengartikan sebagai UTC sehingga tanggal mundur 1 hari
+// Mendukung dua format: "2026-06-19 10:30:00" (datetime) dan "2026-06-19" (date-only)
 function parseWIBDate(dateStr) {
     if (!dateStr) return new Date();
-    // Ganti spasi menjadi T dan tambahkan offset +07:00
-    const normalized = dateStr.replace(' ', 'T') + '+07:00';
-    return new Date(normalized);
+    if (dateStr.includes(' ')) {
+        // Format datetime: "2026-06-19 10:30:00" → "2026-06-19T10:30:00+07:00"
+        return new Date(dateStr.replace(' ', 'T') + '+07:00');
+    } else if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        // Format date-only: "2026-06-19" → "2026-06-19T00:00:00+07:00"
+        return new Date(dateStr + 'T00:00:00+07:00');
+    }
+    // Fallback
+    return new Date(dateStr);
 }
 function fmtDate(dateStr) {
     if (!dateStr) return '';
