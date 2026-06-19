@@ -281,8 +281,14 @@ async function openEditUserModal(u) {
 }
 
 async function toggleUser(id, activate) {
-    const label = activate ? 'mengaktifkan' : 'menonaktifkan';
-    if (!confirm(`${activate ? 'Aktifkan' : 'Nonaktifkan'} user ini?`)) return;
+    const actionText = activate ? 'Mengaktifkan' : 'Menonaktifkan';
+    const confirmed = await AppModal.confirm(
+        `${actionText} User`, 
+        `Apakah Anda yakin ingin ${actionText.toLowerCase()} user ini?`, 
+        'Ya, Lanjutkan'
+    );
+    if (!confirmed) return;
+
     const res = await api(`${BASE_URL}api/users/${id}/toggle-active`, 'POST', { csrf_token: csrf });
     if (res.success) { showToast(res.message, 'success'); setTimeout(() => location.reload(), 600); }
     else showToast(res.error || 'Gagal', 'error');
@@ -309,7 +315,13 @@ async function resetPassword(id, name) {
 }
 
 async function deleteUser(id, name) {
-    if (!confirm(`Hapus user "${name}"? Tindakan ini tidak bisa dibatalkan!`)) return;
+    const confirmed = await AppModal.confirm(
+        'Hapus User', 
+        `Apakah Anda yakin ingin menghapus user <strong>${name}</strong>? Tindakan ini tidak bisa dibatalkan!`, 
+        'Ya, Hapus'
+    );
+    if (!confirmed) return;
+
     const res = await api(`${BASE_URL}api/users/${id}/delete`, 'POST', { csrf_token: csrf });
     if (res.success) {
         showToast('User dihapus', 'success');
