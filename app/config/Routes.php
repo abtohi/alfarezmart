@@ -156,6 +156,7 @@ $router->get('/api/dashboard/stats', 'ApiController@getDashboardStats');
 // User Management API
 $router->get('/api/users', 'ApiController@getUsers');
 $router->post('/api/users', 'ApiController@createUser');
+$router->post('/api/users/{id}/update', 'ApiController@updateUser');
 $router->post('/api/users/{id}/toggle', 'ApiController@toggleUserStatus');
 $router->post('/api/users/{id}/delete', 'ApiController@deleteUser');
 $router->post('/api/users/{id}/reset-password', 'ApiController@resetUserPassword');

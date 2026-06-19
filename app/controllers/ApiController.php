@@ -1972,6 +1972,10 @@ class ApiController extends Controller
             $password  = $this->input('password');
             $userLevel = $this->input('user_level', 'staff');
 
+            $workDays  = $this->input('work_days');
+            $workStart = $this->input('work_start');
+            $workEnd   = $this->input('work_end');
+
             if (empty($name))     throw new Exception("Nama wajib diisi");
             if (empty($email) && empty($phone)) throw new Exception("Email atau No HP wajib diisi");
             if (empty($password)) throw new Exception("Password wajib diisi");
@@ -1985,9 +1989,52 @@ class ApiController extends Controller
                 'password'   => $password,
                 'user_level' => $userLevel,
                 'is_active'  => 1,
+                'work_days'  => $userLevel === 'staff' ? $workDays : null,
+                'work_start' => $userLevel === 'staff' && $workStart ? $workStart : null,
+                'work_end'   => $userLevel === 'staff' && $workEnd ? $workEnd : null,
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
             $this->json(['success' => true, 'id' => $id, 'message' => 'User berhasil dibuat']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateUser(int $id)
+    {
+        $this->validateCSRF();
+        $level = $_SESSION['user_level'] ?? '';
+        if (!in_array($level, ['superadmin'])) {
+            $this->json(['error' => 'Akses ditolak'], 403);
+            return;
+        }
+        try {
+            $name      = $this->input('name');
+            $email     = $this->input('email');
+            $phone     = $this->input('phone');
+            $userLevel = $this->input('user_level');
+            $workDays  = $this->input('work_days');
+            $workStart = $this->input('work_start');
+            $workEnd   = $this->input('work_end');
+
+            if (empty($name)) throw new Exception("Nama wajib diisi");
+            if (!in_array($userLevel, ['superadmin','admin','staff','customer'])) throw new Exception("Level tidak valid");
+
+            $model = new UserModel();
+            
+            $updateData = [
+                'name'       => $name,
+                'email'      => $email ?: null,
+                'phone'      => $phone ?: null,
+                'user_level' => $userLevel,
+                'work_days'  => $userLevel === 'staff' ? $workDays : null,
+                'work_start' => $userLevel === 'staff' && $workStart ? $workStart : null,
+                'work_end'   => $userLevel === 'staff' && $workEnd ? $workEnd : null,
+            ];
+            
+            $model->update($id, $updateData);
+            
+            $this->json(['success' => true, 'message' => 'User berhasil diupdate']);
         } catch (Exception $e) {
             $this->json(['error' => $e->getMessage()], 500);
         }

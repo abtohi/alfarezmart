@@ -81,6 +81,20 @@
                 </div>
             </div>
             <div style="display:flex;gap:6px;align-items:center;">
+                <button onclick="openEditUserModal(<?= htmlspecialchars(json_encode([
+                    'id' => $u['id'],
+                    'name' => $u['name'],
+                    'email' => $u['email'],
+                    'phone' => $u['phone'],
+                    'user_level' => $u['user_level'],
+                    'work_days' => $u['work_days'],
+                    'work_start' => $u['work_start'],
+                    'work_end' => $u['work_end']
+                ])) ?>)"
+                        title="Edit User"
+                        style="background:var(--primary-bg);color:var(--primary);border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
+                    <i class="bi bi-pencil-square"></i> Edit
+                </button>
                 <button onclick="toggleUser(<?= $u['id'] ?>, <?= $u['is_active'] ? 'false':'true' ?>)"
                         title="<?= $u['is_active'] ? 'Nonaktifkan':'Aktifkan' ?>"
                         style="background:<?= $u['is_active'] ? 'var(--warning-bg)':'var(--success-bg)' ?>;color:<?= $u['is_active'] ? 'var(--warning)':'var(--success)' ?>;border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
@@ -121,17 +135,33 @@ async function openAddUserModal() {
             <div class="modal-form-group"><label>No HP</label><input type="text" class="form-control-dark" id="mu_phone" placeholder="08xx..."></div>
             <div class="modal-form-group"><label>Password *</label><input type="password" class="form-control-dark" id="mu_password" placeholder="Min 6 karakter" required></div>
             <div class="modal-form-group"><label>Level Akses *</label>
-                <div class="dropdown" style="width:100%;">
-                    <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:10px; font-size:12px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
-                        <span>Staff</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
-                        <li><a class="dropdown-item active" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='staff'; dp.querySelector('button span').textContent='Staff'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Staff</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='admin'; dp.querySelector('button span').textContent='Admin'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Admin</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='superadmin'; dp.querySelector('button span').textContent='Superadmin'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Superadmin</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='customer'; dp.querySelector('button span').textContent='Customer (Coming Soon)'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Customer (Coming Soon)</a></li>
-                    </ul>
-                    <input type="hidden" id="mu_level" value="staff">
+                <select class="form-control-dark" id="mu_level" onchange="toggleScheduleUI(this.value)">
+                    <option value="staff">Staff</option>
+                    <option value="admin">Admin</option>
+                    <option value="superadmin">Superadmin</option>
+                </select>
+            </div>
+            <div id="schedule_section" style="background:var(--surface-2);padding:10px;border-radius:var(--radius-md);margin-bottom:12px;">
+                <label style="font-size:11px;font-weight:600;margin-bottom:8px;display:block;">Jadwal Login (Hanya Staff)</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                    <div>
+                        <label style="font-size:10px;">Jam Mulai</label>
+                        <input type="time" class="form-control-dark" id="mu_start" value="08:00">
+                    </div>
+                    <div>
+                        <label style="font-size:10px;">Jam Selesai</label>
+                        <input type="time" class="form-control-dark" id="mu_end" value="17:00">
+                    </div>
+                </div>
+                <label style="font-size:10px;">Hari Kerja</label>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;" id="mu_days">
+                    <label style="font-size:10px;"><input type="checkbox" value="Senin" checked> Sen</label>
+                    <label style="font-size:10px;"><input type="checkbox" value="Selasa" checked> Sel</label>
+                    <label style="font-size:10px;"><input type="checkbox" value="Rabu" checked> Rab</label>
+                    <label style="font-size:10px;"><input type="checkbox" value="Kamis" checked> Kam</label>
+                    <label style="font-size:10px;"><input type="checkbox" value="Jumat" checked> Jum</label>
+                    <label style="font-size:10px;"><input type="checkbox" value="Sabtu" checked> Sab</label>
+                    <label style="font-size:10px;"><input type="checkbox" value="Minggu"> Min</label>
                 </div>
             </div>
         `,
@@ -142,14 +172,108 @@ async function openAddUserModal() {
             const phone = document.getElementById('mu_phone').value.trim();
             const password = document.getElementById('mu_password').value;
             const level = document.getElementById('mu_level').value;
+            
+            const start = document.getElementById('mu_start').value;
+            const end = document.getElementById('mu_end').value;
+            const days = Array.from(document.querySelectorAll('#mu_days input:checked')).map(el => el.value);
 
             if (!name) { showToast('Nama wajib diisi', 'warning'); return false; }
             if (!email && !phone) { showToast('Email atau No HP wajib diisi', 'warning'); return false; }
             if (password.length < 6) { showToast('Password min 6 karakter', 'warning'); return false; }
 
-            const res = await api(`${BASE_URL}api/users`, 'POST', { csrf_token: csrf, name, email, phone, password, user_level: level });
+            const payload = { csrf_token: csrf, name, email, phone, password, user_level: level };
+            if (level === 'staff') {
+                payload.work_days = JSON.stringify(days);
+                payload.work_start = start;
+                payload.work_end = end;
+            }
+
+            const res = await api(`${BASE_URL}api/users`, 'POST', payload);
             if (res.error) { showToast(res.error, 'error'); return false; }
             showToast('User berhasil dibuat!', 'success');
+            setTimeout(() => location.reload(), 800);
+            return true;
+        }
+    });
+    toggleScheduleUI('staff');
+}
+
+function toggleScheduleUI(level) {
+    const sec = document.getElementById('schedule_section');
+    if(sec) sec.style.display = level === 'staff' ? 'block' : 'none';
+}
+
+async function openEditUserModal(u) {
+    let days = [];
+    if (u.work_days) {
+        try { days = JSON.parse(u.work_days); } catch(e){}
+    }
+    
+    await AppModal.show({
+        title: 'Edit User',
+        subtitle: 'Update data pengguna',
+        icon: 'bi-pencil-square',
+        iconColor: 'var(--primary-bg)',
+        iconAccent: 'var(--primary)',
+        bodyHTML: `
+            <div class="modal-form-group"><label>Nama Lengkap *</label><input type="text" class="form-control-dark" id="eu_name" value="${u.name}" required></div>
+            <div class="modal-form-group"><label>Email</label><input type="email" class="form-control-dark" id="eu_email" value="${u.email||''}"></div>
+            <div class="modal-form-group"><label>No HP</label><input type="text" class="form-control-dark" id="eu_phone" value="${u.phone||''}"></div>
+            <div class="modal-form-group"><label>Level Akses *</label>
+                <select class="form-control-dark" id="eu_level" onchange="toggleScheduleUI(this.value)">
+                    <option value="staff" ${u.user_level==='staff'?'selected':''}>Staff</option>
+                    <option value="admin" ${u.user_level==='admin'?'selected':''}>Admin</option>
+                    <option value="superadmin" ${u.user_level==='superadmin'?'selected':''}>Superadmin</option>
+                </select>
+            </div>
+            <div id="schedule_section" style="background:var(--surface-2);padding:10px;border-radius:var(--radius-md);margin-bottom:12px; display:${u.user_level==='staff'?'block':'none'};">
+                <label style="font-size:11px;font-weight:600;margin-bottom:8px;display:block;">Jadwal Login (Hanya Staff)</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                    <div>
+                        <label style="font-size:10px;">Jam Mulai</label>
+                        <input type="time" class="form-control-dark" id="eu_start" value="${u.work_start?u.work_start.substring(0,5):'08:00'}">
+                    </div>
+                    <div>
+                        <label style="font-size:10px;">Jam Selesai</label>
+                        <input type="time" class="form-control-dark" id="eu_end" value="${u.work_end?u.work_end.substring(0,5):'17:00'}">
+                    </div>
+                </div>
+                <label style="font-size:10px;">Hari Kerja</label>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;" id="eu_days">
+                    <label style="font-size:10px;"><input type="checkbox" value="Senin" ${days.includes('Senin')?'checked':''}> Sen</label>
+                    <label style="font-size:10px;"><input type="checkbox" value="Selasa" ${days.includes('Selasa')?'checked':''}> Sel</label>
+                    <label style="font-size:10px;"><input type="checkbox" value="Rabu" ${days.includes('Rabu')?'checked':''}> Rab</label>
+                    <label style="font-size:10px;"><input type="checkbox" value="Kamis" ${days.includes('Kamis')?'checked':''}> Kam</label>
+                    <label style="font-size:10px;"><input type="checkbox" value="Jumat" ${days.includes('Jumat')?'checked':''}> Jum</label>
+                    <label style="font-size:10px;"><input type="checkbox" value="Sabtu" ${days.includes('Sabtu')?'checked':''}> Sab</label>
+                    <label style="font-size:10px;"><input type="checkbox" value="Minggu" ${days.includes('Minggu')?'checked':''}> Min</label>
+                </div>
+            </div>
+        `,
+        submitText: 'Simpan',
+        onSubmit: async () => {
+            const name = document.getElementById('eu_name').value.trim();
+            const email = document.getElementById('eu_email').value.trim();
+            const phone = document.getElementById('eu_phone').value.trim();
+            const level = document.getElementById('eu_level').value;
+            
+            const start = document.getElementById('eu_start').value;
+            const end = document.getElementById('eu_end').value;
+            const daysArr = Array.from(document.querySelectorAll('#eu_days input:checked')).map(el => el.value);
+
+            if (!name) { showToast('Nama wajib diisi', 'warning'); return false; }
+            if (!email && !phone) { showToast('Email atau No HP wajib diisi', 'warning'); return false; }
+
+            const payload = { csrf_token: csrf, name, email, phone, user_level: level };
+            if (level === 'staff') {
+                payload.work_days = JSON.stringify(daysArr);
+                payload.work_start = start;
+                payload.work_end = end;
+            }
+
+            const res = await api(`${BASE_URL}api/users/${u.id}/update`, 'POST', payload);
+            if (res.error) { showToast(res.error, 'error'); return false; }
+            showToast('User berhasil diupdate!', 'success');
             setTimeout(() => location.reload(), 800);
             return true;
         }
