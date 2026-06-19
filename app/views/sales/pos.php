@@ -1645,8 +1645,11 @@ async function loadSaleForEdit(id) {
                 }
 
                 // Periksa apakah item ini menggunakan harga custom (selain produk custom)
-                const curPkg = packagings.find(p => p.level == (item.packaging_level || 1)) || packagings[0];
-                const catalogPrice = curPkg ? (sale.sale_mode === 'wholesale' 
+                // item.level comes from SQL: pp.level aliased as "level" in getTransactionDetails()
+                // item.packaging_level does NOT exist — using it always falls back to 1
+                const savedLevel = parseInt(item.level) || 1;
+                const curPkg = packagings.find(p => parseInt(p.level) === savedLevel) || packagings[0];
+                const catalogPrice = curPkg ? (sale.sale_mode === 'wholesale'
                     ? (parseFloat(curPkg.sell_price_wholesale) || parseFloat(curPkg.sell_price_retail))
                     : parseFloat(curPkg.sell_price_retail)) : 0;
                 
@@ -1661,7 +1664,7 @@ async function loadSaleForEdit(id) {
                     print_name: printName,
                     product_name: printName,
                     packagings: packagings,
-                    level: isCustom ? 1 : (item.packaging_level || 1),
+                    level: isCustom ? 1 : savedLevel,
                     unit_name: item.unit_name,
                     quantity: parseFloat(item.quantity),
                     use_custom_price: isCustomPrice,
