@@ -95,6 +95,10 @@ class PromptBuilder
         $lines[] = '5. Harga dalam format Rupiah Indonesia. Jika tertulis "5.500" artinya Rp 5.500, bukan Rp 5,5.';
         $lines[] = '6. Perhatikan tanda desimal: titik (.) adalah pemisah ribuan, koma (,) adalah desimal.';
         $lines[] = '7. Kemasan/satuan: kenali istilah seperti CTN=Karton, DUS=Karton, PCS/BTL/BKS=satuan kecil, dll.';
+        $lines[] = '8. PENTING (KOLOM QTY BSR/TGH/KCL): Jika invoice tidak memiliki 1 kolom Qty, melainkan memiliki kolom terpisah bernama BSR (Besar/Karton), TGH (Tengah/Renceng/Lusin), dan KCL (Kecil/Pcs):';
+        $lines[] = '   - Nilai angka yang terisi pada kolom tersebut adalah QTY.';
+        $lines[] = '   - Nama header kolom tersebut (BSR atau TGH atau KCL) adalah UNIT (satuan).';
+        $lines[] = '   - Contoh: Jika BSR=0, TGH=2, KCL=0, maka ekstrak qty: 2 dan unit: "TGH".';
         $lines[] = '';
 
         if ($isCorrectionPass) {

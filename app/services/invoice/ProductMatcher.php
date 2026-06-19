@@ -385,13 +385,18 @@ class ProductMatcher
         int $hintLevel
     ): int {
         $bestLevel = 1;
-        $bestScore = 0;
+        $bestScore = -1;
 
         foreach ($packagings as $pkg) {
             $score = 0;
             $lvl   = (int)$pkg['level'];
 
-            // Unit name match
+            // 1. Semantic Hint Match (Highest Priority: +50)
+            if ($hintLevel > 0 && $lvl === $hintLevel) {
+                $score += 50;
+            }
+
+            // 2. Unit name partial match (+40)
             if (!empty($unit) && !empty($pkg['unit_name'])) {
                 if (stripos($pkg['unit_name'], $unit) !== false ||
                     stripos($unit, $pkg['unit_name']) !== false) {
@@ -399,7 +404,7 @@ class ProductMatcher
                 }
             }
 
-            // Price match
+            // 3. Price Match (+30)
             $dbPrice = (float)($pkg['buy_price'] ?? 0);
             if ($unitPrice > 0 && $dbPrice > 0) {
                 $diff = abs($dbPrice - $unitPrice);
@@ -411,19 +416,15 @@ class ProductMatcher
                 }
             }
 
-            // Hint level match
-            if ($lvl === $hintLevel) {
-                $score += 15;
-            }
-
             if ($score > $bestScore) {
                 $bestScore = $score;
                 $bestLevel = $lvl;
             }
         }
 
-        // Fallback to level 1 if no meaningful match
+        // Fallback if no matching signals found at all
         if ($bestScore === 0) {
+            // Default to Level 1 if we have absolutely no clues
             $lvl1 = array_filter($packagings, fn($p) => (int)$p['level'] === 1);
             return !empty($lvl1) ? 1 : ($packagings[0]['level'] ?? 1);
         }

@@ -139,6 +139,7 @@ class LayoutAnalyzer
     public function inferPackagingLevel(string $unit): int
     {
         $unit = strtolower(trim($unit));
+        if (empty($unit)) return 0; // Return 0 if unknown so we don't wrongly bias Level 1
         foreach (self::PACKAGING_LEVEL_HINTS as $level => $hints) {
             foreach ($hints as $hint) {
                 if ($unit === $hint || strpos($unit, $hint) !== false) {
@@ -146,7 +147,7 @@ class LayoutAnalyzer
                 }
             }
         }
-        return 1; // default to smallest unit
+        return 0; // Unknown
     }
 
     /**
