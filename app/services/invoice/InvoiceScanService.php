@@ -119,7 +119,9 @@ class InvoiceScanService
                 $supplierName = $stmt->fetchColumn() ?: 'Unknown Supplier';
             }
 
-            $template = $this->templateLearner->findTemplate($supplierId);
+            // TEMPORARY: Bypass old templates to force the AI to read the new BSR/TGH rules
+            // $template = $this->templateLearner->findTemplate($supplierId);
+            $template = null;
 
             // ================================================================
             // STAGE 3: Prompt Building

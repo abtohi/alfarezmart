@@ -216,8 +216,14 @@ class PromptBuilder
             $parts[] = implode("\n", $lines);
         }
 
-        // === BAGIAN 6: PERINTAH AKHIR ===
-        $parts[] = "=== PERINTAH ===\nBaca gambar invoice di atas dan kembalikan JSON array sesuai format. Tidak ada teks selain JSON.";
+        // === BAGIAN 6: PERINTAH AKHIR & PENENEKANAN ===
+        $parts[] = "=== PERINTAH KHUSUS BSR/TGH/KCL ===\n" .
+                   "Jika invoice memiliki kolom angka terpisah seperti BSR, TGH, KCL:\n" .
+                   "1. JANGAN LEWATKAN KOLOM INI.\n" .
+                   "2. Angka di dalam kolom tersebut adalah QTY.\n" .
+                   "3. Nama kolomnya (BSR, TGH, atau KCL) WAJIB dijadikan sebagai 'unit'.\n" .
+                   "Contoh: Jika di kolom TGH tertulis angka 2, maka hasilmu harus qty: 2 dan unit: \"TGH\".\n\n" .
+                   "=== PERINTAH ===\nBaca gambar invoice di atas dan kembalikan JSON array sesuai format. Tidak ada teks selain JSON.";
 
         return implode("\n\n", $parts);
     }
