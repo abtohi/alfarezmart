@@ -303,6 +303,7 @@ class LayoutAnalyzer
 
     /**
      * Parse a quantity value from various formats.
+     * @param mixed $raw
      */
     private function parseQty($raw, float $default = 1): float
     {
@@ -318,6 +319,7 @@ class LayoutAnalyzer
     /**
      * Parse a price value, handling Indonesian number formats.
      * "5.000" → 5000, "5,000.50" → 5000.5, "5.000,50" → 5000.5
+     * @param mixed $raw
      */
     public function parsePrice($raw): float
     {
