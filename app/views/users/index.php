@@ -278,6 +278,8 @@ async function openEditUserModal(u) {
             return true;
         }
     });
+    // Call after modal HTML is injected into DOM
+    setTimeout(() => toggleScheduleUI(u.user_level || 'staff'), 50);
 }
 
 async function toggleUser(id, activate) {

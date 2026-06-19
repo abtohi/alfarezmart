@@ -152,40 +152,43 @@ class AuthController extends Controller
         
         // Dynamic schedule check on every action/page change
         if (($_SESSION['user_level'] ?? '') === 'staff') {
-            $user = [
-                'work_days'  => $_SESSION['work_days'] ?? null,
-                'work_start' => $_SESSION['work_start'] ?? null,
-                'work_end'   => $_SESSION['work_end'] ?? null,
-            ];
-            
-            // To be able to call non-static method, we instantiate AuthController or make isStaffScheduleValid static
-            if (!self::checkStaffScheduleStatic($user)) {
-                // Auto logout
-                $_SESSION = [];
-                if (ini_get('session.use_cookies')) {
-                    $params = session_get_cookie_params();
-                    setcookie(session_name(), '', time() - 42000,
-                        $params['path'], $params['domain'],
-                        $params['secure'], $params['httponly']
-                    );
-                }
-                session_destroy();
+            // Always fetch schedule from DB (not session) to ensure up-to-date restrictions
+            try {
+                $db = Database::getInstance()->getConnection();
+                $stmt = $db->prepare("SELECT work_days, work_start, work_end FROM users WHERE id = :id LIMIT 1");
+                $stmt->execute([':id' => (int)$_SESSION['user_id']]);
+                $scheduleRow = $stmt->fetch();
                 
-                $uri = $_SERVER['REQUEST_URI'] ?? '';
-                if (strpos($uri, '/api/') !== false) {
-                    http_response_code(401);
-                    header('Content-Type: application/json');
-                    echo json_encode(['error' => 'Sesi berakhir karena di luar jadwal kerja.']);
+                if ($scheduleRow && !self::checkStaffScheduleStatic($scheduleRow)) {
+                    // Auto logout
+                    $_SESSION = [];
+                    if (ini_get('session.use_cookies')) {
+                        $params = session_get_cookie_params();
+                        setcookie(session_name(), '', time() - 42000,
+                            $params['path'], $params['domain'],
+                            $params['secure'], $params['httponly']
+                        );
+                    }
+                    session_destroy();
+                    
+                    $uri = $_SERVER['REQUEST_URI'] ?? '';
+                    if (strpos($uri, '/api/') !== false) {
+                        http_response_code(401);
+                        header('Content-Type: application/json');
+                        echo json_encode(['error' => 'Sesi berakhir karena di luar jadwal kerja.']);
+                        exit;
+                    }
+                    header('Location: ' . BASE_URL . 'login?error=' . urlencode('Sesi berakhir: Anda berada di luar jadwal kerja'));
                     exit;
                 }
-                header('Location: ' . BASE_URL . 'login?error=' . urlencode('Sesi berakhir karena di luar jam kerja'));
-                exit;
+            } catch (Exception $e) {
+                // If DB check fails, allow through (fail open)
             }
         }
         
         return [
-            'id' => $_SESSION['user_id'],
-            'name' => $_SESSION['user_name'],
+            'id'    => $_SESSION['user_id'],
+            'name'  => $_SESSION['user_name'],
             'email' => $_SESSION['user_email'],
             'level' => $_SESSION['user_level'],
         ];
