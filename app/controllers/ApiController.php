@@ -2836,6 +2836,8 @@ class ApiController extends Controller
     // AI INTEGRATION API
     // ==========================================
 
+
+
     public function scanInvoiceAI()
     {
         $this->validateCSRF();
@@ -2851,17 +2853,14 @@ class ApiController extends Controller
         
         ob_start(); // Capture any stray output/warnings to prevent breaking JSON
         try {
-            error_log("SCAN_AI_TRACE: Starting scanInvoiceAI");
+            error_log("SCAN_AI_TRACE: Starting scanInvoiceAI with InvoiceScanService");
             file_put_contents('c:\\xampp\\htdocs\\AlfarezMart\\logs\\ai_crash.log', date('Y-m-d H:i:s') . " Trace: Starting scanInvoiceAI\n", FILE_APPEND);
             
             // Read image_base64 directly from raw JSON to bypass Security::sanitize()
             // which calls strip_tags() and could corrupt base64 data.
-            // We must read php://input before any $this->input() call consumes it.
             $rawInput = file_get_contents('php://input');
-            error_log("SCAN_AI_TRACE: Read php://input length: " . strlen($rawInput));
             $rawJson = json_decode($rawInput, true);
             if (!is_array($rawJson)) {
-                // Fallback: decode directly again or just use empty array
                 $rawJson = [];
             }
             $imageB64 = $rawJson['image_base64'] ?? '';
@@ -2869,390 +2868,36 @@ class ApiController extends Controller
                 throw new \Exception("Gambar invoice tidak ditemukan");
             }
 
-            $settingModel = new SettingModel();
-            $apiKey = $settingModel->get('ai_api_key');
-            $modelName = $settingModel->get('ai_model', 'google/gemini-2.5-flash');
-            
-            // Backward compatibility map for models that OpenRouter renamed/removed
-            $modelMap = [
-                'anthropic/claude-3.5-sonnet' => 'anthropic/claude-sonnet-4-5',
-                'anthropic/claude-3.5-haiku' => 'anthropic/claude-haiku-4-5'
-            ];
-            if (isset($modelMap[$modelName])) {
-                $modelName = $modelMap[$modelName];
-            }
+            // Optional supplier context
+            $supplierId = isset($rawJson['supplier_id']) ? (int)$rawJson['supplier_id'] : null;
 
-            $prompt = $settingModel->get('ai_invoice_prompt', 'Tugasmu: Ekstrak data dari gambar invoice/faktur supplier menjadi array JSON valid.');
+            // Load and run the new service
+            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/ImagePreprocessor.php';
+            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/PromptBuilder.php';
+            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/LayoutAnalyzer.php';
+            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/TableParser.php';
+            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/InvoiceValidator.php';
+            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/ProductMatcher.php';
+            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/ConfidenceScorer.php';
+            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/SelfCorrectionEngine.php';
+            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/TemplateLearner.php';
+            require_once 'c:/xampp/htdocs/AlfarezMart/app/services/invoice/InvoiceScanService.php';
 
-            if (empty($apiKey)) {
-                throw new \Exception("API Key AI belum dikonfigurasi di Pengaturan Aplikasi");
-            }
-
-            // Clean base64 if it has prefix
-            if (preg_match('/^data:image\/(\w+);base64,/', $imageB64, $type)) {
-                $imageB64 = substr($imageB64, strpos($imageB64, ',') + 1);
-            }
-
-            // OpenRouter API payload
-            $data = [
-                "model" => $modelName,
-                "messages" => [
-                    [
-                        "role" => "user",
-                        "content" => [
-                            [
-                                "type" => "text",
-                                "text" => $prompt
-                            ],
-                            [
-                                "type" => "image_url",
-                                "image_url" => [
-                                    "url" => "data:image/jpeg;base64," . $imageB64
-                                ]
-                            ]
-                        ]
-                    ]
-                ],
-                "max_tokens" => 4000
-            ];
-
-            file_put_contents('c:\\xampp\\htdocs\\AlfarezMart\\logs\\ai_crash.log', date('Y-m-d H:i:s') . " Trace: Preparing curl request\n", FILE_APPEND);
-            $ch = curl_init("https://openrouter.ai/api/v1/chat/completions");
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                "Authorization: Bearer " . $apiKey,
-                "HTTP-Referer: " . BASE_URL,
-                "Content-Type: application/json"
-            ]);
-            curl_setopt($ch, CURLOPT_POST, true);
-            
-            file_put_contents('c:\\xampp\\htdocs\\AlfarezMart\\logs\\ai_crash.log', date('Y-m-d H:i:s') . " Trace: Encoding JSON for curl\n", FILE_APPEND);
-            $jsonPayload = json_encode($data);
-            if ($jsonPayload === false) {
-                throw new \Exception("Failed to encode JSON payload: " . json_last_error_msg());
-            }
-            
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonPayload);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 110); // 110s timeout for AI (must be less than max_execution_time)
-
-            error_log("SCAN_AI_TRACE: Executing curl");
-            file_put_contents('c:\\xampp\\htdocs\\AlfarezMart\\logs\\ai_crash.log', date('Y-m-d H:i:s') . " Trace: Executing curl...\n", FILE_APPEND);
-            
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $err = curl_error($ch);
-            // curl_close is deprecated in PHP 8.0+ when using CurlHandle objects
-            
-
-            error_log("SCAN_AI_TRACE: Curl finished with code: " . $httpCode);
-            file_put_contents('c:\\xampp\\htdocs\\AlfarezMart\\logs\\ai_crash.log', date('Y-m-d H:i:s') . " Trace: Curl finished, code: $httpCode, err: $err\n", FILE_APPEND);
-
-            if ($err) {
-                throw new \Exception("cURL Error: " . $err);
-            }
-
-            if ($httpCode >= 400) {
-                throw new \Exception("OpenRouter API Error ($httpCode): " . $response);
-            }
-
-            $resJson = json_decode($response, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new \Exception("Gagal membaca respons dari AI (Bukan JSON valid). Response: " . substr($response, 0, 100) . "...");
-            }
-
-            $content = $resJson['choices'][0]['message']['content'] ?? '[]';
-            
-            // Clean markdown json tags if present
-            $content = preg_replace('/^```json\s*/i', '', trim($content));
-            $content = preg_replace('/```$/i', '', $content);
-            
-            // Attempt to fix common truncated JSON by adding closing brackets if missing
-            $parsedItems = json_decode($content, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                // If truncated, it might miss ] or }]
-                if (substr(trim($content), -1) !== ']') {
-                    if (substr(trim($content), -1) !== '}') {
-                        $content .= '}';
-                    }
-                    $content .= ']';
-                    $parsedItems = json_decode($content, true);
-                }
-                
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    throw new \Exception("Format JSON dari AI terpotong atau tidak valid: " . json_last_error_msg());
-                }
-            }
-
-            if (isset($parsedItems['items'])) {
-                $parsedItems = $parsedItems['items'];
-            }
-            if (!is_array($parsedItems)) {
-                throw new \Exception("Format respons AI tidak valid. Diharapkan JSON array.");
-            }
-
-            // Fuzzy mapping against DB
-            $productModel = new ProductModel();
-            $allProducts = $productModel->allWithDetails();
-            $productModel->attachPackagingsForProductList($allProducts);
-
-            $supplierId = $this->input('supplier_id');
-            $supplierProductIds = [];
-            if ($supplierId) {
-                $spModel = new SupplierProductModel();
-                $supplierProducts = $spModel->getProductsBySupplier($supplierId);
-                
-                foreach ($supplierProducts as $sp) {
-                    $supplierProductIds[] = $sp['product_id'];
-                }
-            }
-
-            $mappedItems = [];
-            foreach ($parsedItems as $item) {
-                $name = $item['name'] ?? '';
-                $qty = isset($item['qty']) && $item['qty'] > 0 ? (float)$item['qty'] : 1;
-                $totalPrice = isset($item['total_price']) ? (float)$item['total_price'] : (isset($item['price']) ? (float)$item['price'] : 0);
-                $unitPrice = isset($item['unit_price']) ? (float)$item['unit_price'] : ($totalPrice > 0 ? $totalPrice / $qty : 0);
-                $extractedBrand = $item['brand'] ?? '';
-                $extractedType = $item['product_type'] ?? '';
-                $extractedVariant = $item['variant'] ?? '';
-                $extractedWeightVal = isset($item['weight']) ? (float)$item['weight'] : null;
-                $extractedWeightUnit = $item['unit'] ?? '';
-                $extractedCode = $item['supplier_code'] ?? $item['supplier_product_code'] ?? '';
-                $extractedSize = strtolower(trim($item['size'] ?? ''));
-                $extractedSuppInvName = $item['supplier_invoice_name'] ?? '';
-                
-                // Auto-scale abbreviated prices (e.g. 5.5 -> 5500, 12 -> 12000) for standard Rupiah values
-                if ($unitPrice > 0 && $unitPrice < 1000) {
-                    if (floor($unitPrice) != $unitPrice || $unitPrice < 100) {
-                        $unitPrice = $unitPrice * 1000;
-                    }
-                }
-                if ($totalPrice > 0 && $totalPrice < 1000 && $totalPrice < $unitPrice) {
-                     $totalPrice = $unitPrice * $qty; // Correct it if AI abbreviated it
-                }
-                
-                $bestMatch = null;
-                $highestScore = 0;
-                
-                // ========== ALGORITMA 4-POIN SCANNING - MATCHING STRATEGY ==========
-                // POIN 1 (100pts): Kode Barang Supplier - exact match only
-                // POIN 2 (80-95pts): Nama Barang Supplier - exact match first, fuzzy match second
-                // POIN 3 (25-65pts): Product Name/Label Analysis - keyword matching, brand/variant/type
-                // POIN 4 (15-35pts): Unit Kemasan Analysis - reverse-engineer dari qty/price
-                // =====================================================================
-                
-                $trimmedCode = trim($extractedCode);
-                if (!empty($trimmedCode)) {
-                    foreach ($allProducts as $p) {
-                        $dbSuppCode = trim($p['supplier_product_code'] ?? '');
-                        $dbCode = trim($p['code'] ?? '');
-                        if ((!empty($dbSuppCode) && strcasecmp($trimmedCode, $dbSuppCode) === 0) ||
-                            (!empty($dbCode) && strcasecmp($trimmedCode, $dbCode) === 0)) {
-                            $bestMatch = $p;
-                            $highestScore = 200; // POIN 1: Kode exact match = highest priority
-                            break;
-                        }
-                    }
-                }
-                
-                if (!$bestMatch) {
-                    foreach ($allProducts as $p) {
-                        $score = 0;
-                    
-                    // ========== POIN 1: KODE BARANG SUPPLIER (Supplier Product Code) ==========
-                    // Supplier belonging check
-                    if ($supplierId && in_array($p['id'], $supplierProductIds)) {
-                        $score += 25; // Boost score if product belongs to this supplier
-                    }
-                    
-                    // 1. Direct code matching (if AI found a code) — highest priority
-                    if (!empty($extractedCode)) {
-                        $normCode = strtolower(trim($extractedCode));
-                        $normDbCode = strtolower(trim($p['supplier_product_code'] ?? ''));
-                        $normProdCode = strtolower(trim($p['code'] ?? ''));
-                        if ($normCode === $normDbCode || $normCode === $normProdCode) {
-                            $score += 85; // Exact code match — very high
-                        } elseif (!empty($normDbCode) && (stripos($normDbCode, $normCode) !== false || stripos($normCode, $normDbCode) !== false)) {
-                            $score += 30; // Partial supplier_product_code match
-                        } elseif (!empty($normProdCode) && (stripos($normProdCode, $normCode) !== false || stripos($normCode, $normProdCode) !== false)) {
-                            $score += 20; // Partial product code match
-                        }
-                    }
-                    
-                    // ========== POIN 2: NAMA BARANG SUPPLIER (Supplier Invoice Name) ==========
-                    // Support multi-nama: supplier_invoice_name bisa berisi banyak baris/nama
-                    if (!empty($p['supplier_invoice_name'])) {
-                        // Pecah menjadi array nama (per baris, koma, atau titik koma)
-                        $rawInvNames = preg_split('/[\n\r,;]+/', $p['supplier_invoice_name']);
-                        $invNames = array_filter(array_map('trim', $rawInvNames));
-                        
-                        $normSuppInvName = strtolower(trim($extractedSuppInvName));
-                        $normName = strtolower(trim($name));
-                        
-                        $poin2Score = 0;
-                        foreach ($invNames as $invNameEntry) {
-                            $normInvEntry = strtolower(trim($invNameEntry));
-                            if (empty($normInvEntry)) continue;
-                            
-                            // Exact match: extracted supplier_invoice_name vs each stored name
-                            if (!empty($normSuppInvName) && $normSuppInvName === $normInvEntry) {
-                                $poin2Score = max($poin2Score, 95); // POIN 2: Nama supplier exact match
-                            } elseif (!empty($normName) && $normName === $normInvEntry) {
-                                $poin2Score = max($poin2Score, 90);
-                            } elseif (!empty($normSuppInvName) && (stripos($normInvEntry, $normSuppInvName) !== false || stripos($normSuppInvName, $normInvEntry) !== false)) {
-                                $poin2Score = max($poin2Score, 28); // Fuzzy match
-                            } elseif (!empty($normName) && (stripos($normInvEntry, $normName) !== false || stripos($normName, $normInvEntry) !== false)) {
-                                $poin2Score = max($poin2Score, 25);
-                            }
-                        }
-                        $score += $poin2Score;
-                    }
-                    
-                    // ========== POIN 3: ANALISIS NAMA PRODUK (Product Name/Label Analysis) ==========
-                    // 3. Name similarity matching via similar_text() — keyword matching
-                    $nameSimilarities = [];
-                    
-                    // Match against full_name
-                    similar_text(strtolower($name), strtolower($p['full_name'] ?? ''), $simFullName);
-                    $nameSimilarities[] = $simFullName;
-                    
-                    // Match against short_label
-                    if (!empty($p['short_label'])) {
-                        similar_text(strtolower($name), strtolower($p['short_label']), $simShort);
-                        $nameSimilarities[] = $simShort;
-                    }
-                    
-                    // Match against invoice_name
-                    if (!empty($p['invoice_name'])) {
-                        similar_text(strtolower($name), strtolower($p['invoice_name']), $simInv);
-                        $nameSimilarities[] = $simInv;
-                    }
-                    
-                    // Match against supplier_invoice_name (for fuzzy matching if not exact) — support multi-nama
-                    if (!empty($p['supplier_invoice_name'])) {
-                        $invEntries = preg_split('/[\n\r,]+/', $p['supplier_invoice_name']);
-                        foreach ($invEntries as $invEntry) {
-                            $invEntry = trim($invEntry);
-                            if (!empty($invEntry)) {
-                                similar_text(strtolower($name), strtolower($invEntry), $simSuppInvX);
-                                $nameSimilarities[] = $simSuppInvX;
-                            }
-                        }
-                    }
-                    
-                    $bestNameSim = max($nameSimilarities);
-                    
-                    // Base score from best name similarity (65% weight if no exact match)
-                    if ($score < 95) { // Only apply similarity weight if no exact supplier_invoice_name match
-                        $score += $bestNameSim * 0.65; // POIN 3: Keyword matching score
-                    }
-                    
-                    // 4. Brand match (weight: 12 points) — part of POIN 3
-                    if (!empty($extractedBrand) && !empty($p['brand_name'])) {
-                        if (stripos($p['brand_name'], $extractedBrand) !== false || stripos($extractedBrand, $p['brand_name']) !== false) {
-                            $score += 12;
-                        }
-                    }
-                    
-                    // 5. Product type match (weight: 8 points) — part of POIN 3
-                    if (!empty($extractedType) && !empty($p['product_type'])) {
-                        if (stripos($p['product_type'], $extractedType) !== false || stripos($extractedType, $p['product_type']) !== false) {
-                            $score += 8;
-                        }
-                    }
-                    
-                    // 6. Variant match (weight: 8 points) — part of POIN 3
-                    if (!empty($extractedVariant) && !empty($p['variant'])) {
-                        if (stripos($p['variant'], $extractedVariant) !== false || stripos($extractedVariant, $p['variant']) !== false) {
-                            $score += 8;
-                        }
-                    }
-                    
-                    // 7. Weight/volume match (weight: 10 points) — part of POIN 3
-                    if ($extractedWeightVal !== null && !empty($p['weight_value'])) {
-                        $dbWeightVal = (float)$p['weight_value'];
-                        if (abs($extractedWeightVal - $dbWeightVal) < 0.01) {
-                            $score += 10;
-                            if (!empty($extractedWeightUnit) && !empty($p['weight_unit'])) {
-                                if (strtolower(trim($extractedWeightUnit)) === strtolower(trim($p['weight_unit']))) {
-                                    $score += 3;
-                                }
-                            }
-                        }
-                    }
-                    
-                    // 8. Size / package configuration match (weight: up to 10 points) — part of POIN 3
-                    if (!empty($extractedSize)) {
-                        // Check size against product full_name (e.g. "1DZ" in product name)
-                        if (!empty($p['full_name']) && stripos($p['full_name'], $extractedSize) !== false) {
-                            $score += 8;
-                        }
-                        // Check size against supplier_invoice_name
-                        if (!empty($p['supplier_invoice_name']) && stripos($p['supplier_invoice_name'], $extractedSize) !== false) {
-                            $score += 6;
-                        }
-                        // Check if size contains weight+unit combination (e.g. size="12x300ml", weight=300, unit="ml")
-                        if ($extractedWeightVal !== null && !empty($p['weight_value']) && !empty($p['weight_unit'])) {
-                            $weightCombo = (string)(int)$p['weight_value'] . strtolower(trim($p['weight_unit']));
-                            if (stripos($extractedSize, $weightCombo) !== false) {
-                                $score += 5;
-                            }
-                        }
-                    }
-                    
-                    // ========== POIN 4: UNIT KEMASAN ANALYSIS (Reverse-engineer dari qty/price) ==========
-                    // 9. Analisis Satuan Harga — detect packaging level from unit price
-                    if ($unitPrice > 0 && !empty($p['packagings'])) {
-                        $bestPriceMatch = 0;
-                        foreach ($p['packagings'] as $pkg) {
-                            $dbPrice = (float)($pkg['buy_price'] ?? 0);
-                            if ($dbPrice > 0) {
-                                $diff = abs($dbPrice - $unitPrice);
-                                $pct = $diff / max($dbPrice, $unitPrice);
-                                if ($pct < 0.05) { // Within 5% difference — strong match
-                                    $priceMatchScore = 25; // POIN 4: Strong unit price match
-                                    // Also check unit text match
-                                    if (!empty($extractedWeightUnit) && !empty($pkg['unit_name'])) {
-                                        if (stripos($pkg['unit_name'], $extractedWeightUnit) !== false || stripos($extractedWeightUnit, $pkg['unit_name']) !== false) {
-                                            $priceMatchScore += 10; // Additional bonus for unit text match
-                                        }
-                                    }
-                                    $bestPriceMatch = max($bestPriceMatch, $priceMatchScore);
-                                } elseif ($pct < 0.15) { // Within 15% — moderate match
-                                    $bestPriceMatch = max($bestPriceMatch, 15); // POIN 4: Moderate unit price match
-                                }
-                            }
-                        }
-                        $score += $bestPriceMatch;
-                    }
-                    
-                    if ($score > $highestScore) {
-                        $highestScore = $score;
-                        $bestMatch = $p;
-                    }
-                }
-                } // End of if (!$bestMatch)
-
-                $isMatched = ($highestScore > 65); // Threshold
-
-                $mappedItems[] = [
-                    'original_name' => $name,
-                    'qty' => $qty,
-                    'unit_price' => $unitPrice,
-                    'total_price' => $totalPrice,
-                    'unit' => $extractedWeightUnit,
-                    'is_matched' => $isMatched,
-                    'product_id' => $isMatched ? $bestMatch['id'] : null,
-                    'product_name' => $isMatched ? $bestMatch['full_name'] : null,
-                    'match_score' => round($highestScore, 2)
-                ];
-            }
+            $service = new InvoiceScanService($this->db);
+            $result = $service->scan($imageB64, $supplierId);
 
             ob_end_clean(); // Discard any stray output before sending JSON
-            $this->json([
-                'success' => true,
-                'data' => $mappedItems
-            ]);
+
+            if ($result['success']) {
+                $this->json([
+                    'success'  => true,
+                    'message'  => $result['message'],
+                    'data'     => $result['data'],
+                    'metadata' => $result['metadata']
+                ]);
+            } else {
+                $this->json(['error' => $result['message']], 500);
+            }
 
         } catch (\Exception $e) {
             error_log("SCAN_AI_TRACE: Exception caught: " . $e->getMessage());
