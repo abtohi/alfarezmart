@@ -170,16 +170,24 @@ let _currentData = null;
 function rupiah(n) {
     return 'Rp ' + Math.round(n || 0).toLocaleString('id-ID');
 }
+// Parse datetime string dari DB (tanpa timezone) sebagai WIB GMT+7
+// Mencegah browser salah mengartikan sebagai UTC sehingga tanggal mundur 1 hari
+function parseWIBDate(dateStr) {
+    if (!dateStr) return new Date();
+    // Ganti spasi menjadi T dan tambahkan offset +07:00
+    const normalized = dateStr.replace(' ', 'T') + '+07:00';
+    return new Date(normalized);
+}
 function fmtDate(dateStr) {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
+    const d = parseWIBDate(dateStr);
     const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
     const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
     return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 function fmtDateTime(dateStr) {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
+    const d = parseWIBDate(dateStr);
     const hh = String(d.getHours()).padStart(2,'0');
     const mm = String(d.getMinutes()).padStart(2,'0');
     const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -799,7 +807,9 @@ document.addEventListener('DOMContentLoaded', () => {
 function formatRupiah(amount) { return 'Rp ' + parseInt(amount || 0).toLocaleString('id-ID'); }
 function formatDateShort(dateStr) {
     if (!dateStr) return '';
-    const d = new Date(dateStr);
+    // Tambahkan +07:00 agar browser tidak memparsing sebagai UTC
+    const normalized = dateStr.replace(' ', 'T') + '+07:00';
+    const d = new Date(normalized);
     return d.toLocaleString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
 }
 function renderReceiptHTML(data) {
