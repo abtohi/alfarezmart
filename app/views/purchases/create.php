@@ -828,20 +828,23 @@ async function performProductSearch() {
                        <i class="bi bi-box-seam" style="font-size:1.2rem;"></i>
                    </div>`;
                    
-            // Packaging info elegant cards
+            // Packaging info compact horizontal badges
             let pkgHtml = '';
             if (p.packagings && p.packagings.length > 0) {
                 const pkgItems = p.packagings.map(pkg => {
                     const ret = parseFloat(pkg.sell_price_retail) || 0;
                     return `
-                    <div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:6px 8px; flex:1; min-width:90px; max-width:150px; text-align:left; box-shadow:var(--shadow-sm);">
-                        <div style="font-size:0.65rem; color:var(--text-muted); margin-bottom:4px; display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                            <i class="bi bi-box-seam" style="color:var(--primary);"></i> <span style="font-weight:600; color:var(--text-primary);">${pkg.unit_name || ''}</span> <span style="font-size:0.6rem;">(Isi ${pkg.base_qty})</span>
-                        </div>
-                        <div style="font-size:0.75rem; font-weight:700; color:var(--success);">${formatRupiah(ret)}</div>
+                    <div style="display:inline-flex; align-items:center; background:var(--surface-2); border:1px solid var(--border-color); border-radius:4px; padding:3px 6px; font-size:0.65rem; white-space:nowrap; flex-shrink:0;">
+                        <span style="color:var(--text-primary); font-weight:600; margin-right:3px;">${pkg.unit_name || ''}</span>
+                        <span style="color:var(--text-muted); margin-right:5px; font-size:0.55rem;">(x${pkg.base_qty})</span>
+                        <span style="color:var(--success); font-weight:700;">${formatRupiah(ret)}</span>
                     </div>`;
                 }).join('');
-                pkgHtml = `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">${pkgItems}</div>`;
+                pkgHtml = `
+                <style>.hide-scroll::-webkit-scrollbar { display: none; }</style>
+                <div class="hide-scroll" style="display:flex; overflow-x:auto; gap:4px; margin-top:6px; padding-bottom:2px; scrollbar-width:none; -ms-overflow-style:none; width:100%;">
+                    ${pkgItems}
+                </div>`;
             }
             
             // Note: need to stringify p safely for onclick
