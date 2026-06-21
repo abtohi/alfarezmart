@@ -313,20 +313,52 @@
             elResults.style.display = '';
             return;
         }
-        const html = [];
-        results.forEach((p, pi) => {
-            const displayName = p.full_name || p.short_label || p.invoice_name || 'Produk';
-            const catName = p.category_name || '';
-            const brandName = p.brand_name ? p.brand_name + ' · ' : '';
-            html.push(`<div class="search-result-row" data-pi="${pi}">
+        
+        const html = results.map((p, pi) => {
+            const thumbUrl = p.photo ? (p.photo.startsWith('http') ? p.photo : `<?= BASE_URL ?>${p.photo}`) : '';
+            const thumbHtml = thumbUrl
+                ? `<img src="${thumbUrl}" alt="Thumb" style="width:40px; height:40px; border-radius:6px; object-fit:cover; border:1px solid var(--border-color); flex-shrink:0;">`
+                : `<div style="width:40px; height:40px; border-radius:6px; background:var(--surface-2); display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color); flex-shrink:0; color:var(--text-muted);">
+                       <i class="bi bi-box-seam" style="font-size:1.2rem;"></i>
+                   </div>`;
+                   
+            // Packaging info compact horizontal badges
+            let pkgHtml = '';
+            if (p.packagings && p.packagings.length > 0) {
+                const pkgItems = p.packagings.map(pkg => {
+                    const ret = parseFloat(pkg.sell_price_retail) || 0;
+                    return `
+                    <div style="display:inline-flex; align-items:center; background:var(--surface-2); border:1px solid var(--border-color); border-radius:4px; padding:3px 6px; font-size:0.65rem; white-space:nowrap; flex-shrink:0;">
+                        <span style="color:var(--text-primary); font-weight:600; margin-right:3px;">${pkg.unit_name || ''}</span>
+                        <span style="color:var(--text-muted); margin-right:5px; font-size:0.55rem;">(x${pkg.base_qty})</span>
+                        <span style="color:var(--success); font-weight:700;">${fmtRp(ret)}</span>
+                    </div>`;
+                }).join('');
+                pkgHtml = `
+                <style>.hide-scroll::-webkit-scrollbar { display: none; }</style>
+                <div class="hide-scroll" style="display:flex; overflow-x:auto; gap:4px; margin-top:6px; padding-bottom:2px; scrollbar-width:none; -ms-overflow-style:none; width:100%;">
+                    ${pkgItems}
+                </div>`;
+            }
+
+            return `
+            <div data-pi="${pi}" class="search-result-row" style="align-items:flex-start;">
+                ${thumbHtml}
                 <div style="flex:1; min-width:0;">
-                    <div class="res-name">${escapeHtml(displayName)}</div>
-                    <div class="res-meta">${escapeHtml(brandName)}${escapeHtml(catName)}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:4px;">
+                        <div style="font-weight:600; font-size:0.85rem; color:var(--text-primary); line-height:1.3; word-break:break-word; white-space:normal;">${p.short_label || p.full_name}</div>
+                        <i class="bi bi-plus-circle" style="font-size:1.2rem;color:var(--primary);flex-shrink:0;"></i>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                        <span>${p.brand_name ? p.brand_name : 'Tanpa Merek'}</span>
+                        ${p.last_buy_price ? `<span>&middot; Beli: <strong style="color:var(--text-primary);">${fmtRp(p.last_buy_price)}</strong></span>` : ''}
+                    </div>
+                    ${pkgHtml}
                 </div>
-                <div class="res-price"><i class="bi bi-plus-circle" style="font-size:1.2rem;color:var(--primary);"></i></div>
-            </div>`);
-        });
-        elResults.innerHTML = html.join('');
+            </div>`;
+        }).join('');
+        
+        elResults.innerHTML = html;
         elResults.style.display = '';
         Array.from(elResults.querySelectorAll('.search-result-row')).forEach(row => {
             row.addEventListener('click', () => {
