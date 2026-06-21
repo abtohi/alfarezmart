@@ -828,10 +828,20 @@ async function performProductSearch() {
                        <i class="bi bi-box-seam" style="font-size:1.2rem;"></i>
                    </div>`;
                    
-            // Packaging info
-            let pkgText = '';
+            // Packaging info elegant cards
+            let pkgHtml = '';
             if (p.packagings && p.packagings.length > 0) {
-                pkgText = p.packagings.map(pkg => `${pkg.unit_name} (x${pkg.base_qty})`).join(', ');
+                const pkgItems = p.packagings.map(pkg => {
+                    const ret = parseFloat(pkg.sell_price_retail) || 0;
+                    return `
+                    <div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:6px 8px; flex:1; min-width:90px; max-width:150px; text-align:left; box-shadow:var(--shadow-sm);">
+                        <div style="font-size:0.65rem; color:var(--text-muted); margin-bottom:4px; display:flex; align-items:center; gap:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                            <i class="bi bi-box-seam" style="color:var(--primary);"></i> <span style="font-weight:600; color:var(--text-primary);">${pkg.unit_name || ''}</span> <span style="font-size:0.6rem;">(Isi ${pkg.base_qty})</span>
+                        </div>
+                        <div style="font-size:0.75rem; font-weight:700; color:var(--success);">${formatRupiah(ret)}</div>
+                    </div>`;
+                }).join('');
+                pkgHtml = `<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">${pkgItems}</div>`;
             }
             
             // Note: need to stringify p safely for onclick
@@ -849,7 +859,7 @@ async function performProductSearch() {
                         <span>${p.brand_name ? p.brand_name : 'Tanpa Merek'}</span>
                         ${p.last_buy_price ? `<span>&middot; Beli: <strong style="color:var(--text-primary);">${formatRupiah(p.last_buy_price)}</strong></span>` : ''}
                     </div>
-                    ${pkgText ? `<div style="font-size:0.65rem; color:var(--info); margin-top:3px; background:rgba(76,201,240,0.1); padding:2px 6px; border-radius:4px; display:inline-block;"><i class="bi bi-box"></i> ${pkgText}</div>` : ''}
+                    ${pkgHtml}
                 </div>
             </div>`;
         }).join('');
