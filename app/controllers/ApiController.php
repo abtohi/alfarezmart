@@ -1623,7 +1623,12 @@ class ApiController extends Controller
             });
 
             $merged = array_merge($supplierResults, array_values($otherResults));
-            $this->json(array_slice($merged, 0, 20));
+            $finalResults = array_slice($merged, 0, 20);
+            
+            // Attach packagings so frontend can show them in the suggestion list
+            $productModel->attachPackagingsForProductList($finalResults);
+
+            $this->json($finalResults);
         } catch (\Throwable $e) {
             error_log('Search Products For Purchase Error: ' . $e->getMessage());
             $this->json([]);
