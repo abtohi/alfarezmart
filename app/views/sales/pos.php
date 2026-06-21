@@ -679,8 +679,9 @@ function renderCart() {
         const curPkg = item.packagings?.find(p => p.level == item.level);
         const buyPrice = parseFloat(curPkg?.buy_price) || 0;
         const profitItem = buyPrice > 0 ? item.total - (buyPrice * item.quantity) : 0;
+        const profitPerUnit = buyPrice > 0 ? (item.total / item.quantity) - buyPrice : 0;
         const buyPriceBlock = buyPrice > 0
-            ? `<div style="font-size:9px;color:rgba(255,255,255,0.18);margin-top:2px;letter-spacing:0.3px;user-select:none;">M: ${formatRupiah(buyPrice)}/${escapeHtml(item.unit_name)} &middot; P: ${formatRupiah(profitItem)}</div>`
+            ? `<div style="font-size:10px;color:var(--text-muted);margin-top:4px;letter-spacing:0.3px;display:flex;flex-wrap:wrap;gap:6px;"><span>M: ${formatRupiah(buyPrice)}</span> &middot; <span style="color:${profitPerUnit >= 0 ? 'var(--success)' : 'var(--danger)'}">P: ${formatRupiah(profitPerUnit)}/satuan</span> &middot; <span style="color:${profitItem >= 0 ? 'var(--success)' : 'var(--danger)'}">Total P: ${formatRupiah(profitItem)}</span></div>`
             : '';
 
         html += `

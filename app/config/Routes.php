@@ -162,6 +162,11 @@ $router->post('/api/users/{id}/delete', 'ApiController@deleteUser');
 $router->post('/api/users/{id}/reset-password', 'ApiController@resetUserPassword');
 $router->post('/api/users/change-password', 'ApiController@changePassword');
 
+// User Activity Tracking API
+$router->post('/api/activity/log', 'ApiController@logActivity');
+$router->get('/api/users/activity/all', 'ApiController@getAllUsersActivity');
+$router->get('/api/users/{id}/activity', 'ApiController@getUserActivity');
+
 // User Management Web Routes
 $router->get('/users', 'UserController@index');
 
