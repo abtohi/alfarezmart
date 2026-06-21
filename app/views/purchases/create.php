@@ -816,16 +816,42 @@ async function performProductSearch() {
             const badge = !filterBySupplierSales
                 ? ''
                 : (isSupplierProduct 
-                    ? '<span style="font-size:9px;background:var(--success-bg);color:var(--success);padding:2px 6px;border-radius:10px;margin-left:4px;">Supplier</span>'
-                    : '<span style="font-size:9px;background:var(--warning-bg);color:var(--warning);padding:2px 6px;border-radius:10px;margin-left:4px;">Lainnya</span>');
+                    ? '<span style="font-size:9px;background:var(--success-bg);color:var(--success);padding:2px 6px;border-radius:10px;white-space:nowrap;">Supplier</span>'
+                    : '<span style="font-size:9px;background:var(--warning-bg);color:var(--warning);padding:2px 6px;border-radius:10px;white-space:nowrap;">Lainnya</span>');
             
+            // Photo or icon
+            const thumbHtml = p.photo 
+                ? `<div style="width:44px;height:44px;border-radius:var(--radius-sm);overflow:hidden;display:flex;align-items:center;justify-content:center;background:transparent;flex-shrink:0;">
+                       <img src="${BASE_URL}${p.photo.replace(/"/g, '&quot;')}" style="width:100%;height:100%;object-fit:contain;" loading="lazy">
+                   </div>`
+                : `<div style="width:44px;height:44px;background:var(--primary-bg);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--primary);flex-shrink:0;">
+                       <i class="bi bi-box-seam" style="font-size:1.2rem;"></i>
+                   </div>`;
+                   
+            // Packaging info
+            let pkgText = '';
+            if (p.packagings && p.packagings.length > 0) {
+                pkgText = p.packagings.map(pkg => `${pkg.unit_name} (x${pkg.base_qty})`).join(', ');
+            }
+            
+            // Note: need to stringify p safely for onclick
+            const pStr = JSON.stringify(p).replace(/'/g, "&#39;");
+
             return `
-                <div class="search-result-item" onclick='selectProduct(${JSON.stringify(p).replace(/'/g, "&#39;")})' 
-                     style="padding:10px;background:var(--surface-2);border-radius:var(--radius-sm);margin-bottom:4px;cursor:pointer;${isSupplierProduct ? 'border-left:3px solid var(--success);' : ''}">
-                    <div style="font-size:0.85rem;font-weight:600;">${p.full_name || p.short_label}${badge}</div>
-                    <div style="font-size:0.7rem;color:var(--text-muted);">${p.brand_name || ''} · ${p.category_name || ''}${p.last_buy_price ? ' · Beli: ' + formatRupiah(p.last_buy_price) : ''}</div>
+            <div data-id="${p.id}" class="search-result-item" style="padding:10px 12px; background:var(--surface-1); margin-bottom:6px; cursor:pointer; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; align-items:flex-start; gap:10px; transition:all 0.2s; box-shadow:var(--shadow-sm); ${isSupplierProduct ? 'border-left:3px solid var(--success);' : ''}" onclick='selectProduct(${pStr})' onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
+                ${thumbHtml}
+                <div style="flex:1; min-width:0;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:4px;">
+                        <div style="font-weight:600; font-size:0.85rem; color:var(--text-primary); line-height:1.3; word-break:break-word; white-space:normal;">${p.short_label || p.full_name}</div>
+                        ${badge}
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                        <span>${p.brand_name ? p.brand_name : 'Tanpa Merek'}</span>
+                        ${p.last_buy_price ? `<span>&middot; Beli: <strong style="color:var(--text-primary);">${formatRupiah(p.last_buy_price)}</strong></span>` : ''}
+                    </div>
+                    ${pkgText ? `<div style="font-size:0.65rem; color:var(--info); margin-top:3px; background:rgba(76,201,240,0.1); padding:2px 6px; border-radius:4px; display:inline-block;"><i class="bi bi-box"></i> ${pkgText}</div>` : ''}
                 </div>
-            `;
+            </div>`;
         }).join('');
     } catch (e) {
         console.error("Product Search Error:", e);
