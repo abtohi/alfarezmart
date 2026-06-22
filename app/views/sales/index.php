@@ -809,7 +809,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <!-- html2canvas for PNG receipt generation -->
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="<?= BASEURL ?>/js/html2canvas.min.js"></script>
 <script>
 function formatRupiah(amount) { return 'Rp ' + parseInt(amount || 0).toLocaleString('id-ID'); }
 function formatDateShort(dateStr) {
