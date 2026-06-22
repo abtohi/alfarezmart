@@ -580,6 +580,7 @@ function addProductToCart(product) {
             name: printName,
             print_name: printName,
             product_name: product.full_name,
+            photo: product.photo || null,
             packagings: product.packagings,
             level: selectedPkg.level,
             unit_name: selectedPkg.unit_name,
@@ -684,20 +685,38 @@ function renderCart() {
             ? `<div style="font-size:10px;color:var(--text-muted);margin-top:4px;letter-spacing:0.3px;display:flex;flex-wrap:wrap;gap:6px;"><span>M: ${formatRupiah(buyPrice)}</span> &middot; <span style="color:${profitPerUnit >= 0 ? 'var(--success)' : 'var(--danger)'}">P: ${formatRupiah(profitPerUnit)}/satuan</span> &middot; <span style="color:${profitItem >= 0 ? 'var(--success)' : 'var(--danger)'}">Total P: ${formatRupiah(profitItem)}</span></div>`
             : '';
 
+        // Gambar produk (thumbnail)
+        const photoUrl = item.photo
+            ? (item.photo.startsWith('http') ? item.photo : `${BASE_URL}${item.photo}`)
+            : null;
+        const thumbHtml = photoUrl
+            ? `<div style="width:46px;height:46px;flex-shrink:0;border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-color);background:var(--surface-2);">
+                   <img src="${photoUrl}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:contain;display:block;">
+               </div>`
+            : `<div style="width:46px;height:46px;flex-shrink:0;border-radius:var(--radius-sm);background:var(--primary-bg);border:1px solid rgba(230,57,70,0.15);display:flex;align-items:center;justify-content:center;color:var(--primary);">
+                   <i class="bi bi-box-seam" style="font-size:1.2rem;"></i>
+               </div>`;
+
+        // Gunakan short_label (nama label) sebagai tampilan nama, fallback ke name
+        const displayName = item.name;
+
         html += `
-            <div data-cart-id="${item.id}" style="background:var(--surface-1);border-radius:var(--radius-md);padding:14px;margin-bottom:10px;border:1px solid var(--border-color);">
-                <div style="display:grid;grid-template-columns:1fr auto;gap:12px;margin-bottom:10px;">
-                    <div style="min-width:0;">
-                        <div style="font-weight:600;font-size:0.95rem;margin-bottom:3px;line-height:1.3;color:var(--text-primary);">${escapeHtml(item.name)}</div>
-                        <div class="cart-item-unit-price" style="color:var(--text-muted);font-size:0.85rem;">${item.use_custom_price ? `${formatRupiah(item.unit_price)} / ${escapeHtml(item.unit_name)} (Total ${formatRupiah(item.total)})` : `${formatRupiah(item.unit_price)} / ${escapeHtml(item.unit_name)}`}</div>
+            <div data-cart-id="${item.id}" style="background:var(--surface-1);border-radius:var(--radius-md);padding:12px;margin-bottom:10px;border:1px solid var(--border-color);transition:box-shadow 0.15s;">
+                <!-- Baris 1: Foto + Info Produk + Total -->
+                <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
+                    ${thumbHtml}
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;font-size:0.8rem;margin-bottom:2px;line-height:1.35;color:var(--text-primary);white-space:normal;word-break:break-word;">${escapeHtml(displayName)}</div>
+                        <div class="cart-item-unit-price" style="color:var(--text-muted);font-size:0.78rem;">${item.use_custom_price ? `${formatRupiah(item.unit_price)} / ${escapeHtml(item.unit_name)} (Total ${formatRupiah(item.total)})` : `${formatRupiah(item.unit_price)} / ${escapeHtml(item.unit_name)}`}</div>
                         ${noteBlock}
                         ${buyPriceBlock}
                     </div>
-                    <div class="cart-item-total" style="font-weight:700;font-size:1rem;text-align:right;color:var(--primary);">${formatRupiah(item.total)}</div>
+                    <div class="cart-item-total" style="font-weight:700;font-size:0.95rem;text-align:right;color:var(--primary);flex-shrink:0;white-space:nowrap;">${formatRupiah(item.total)}</div>
                 </div>
-                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--surface-2);padding:8px 10px;border-radius:var(--radius-md);border:1px solid var(--border-color);">
-                    <div class="dropdown" style="flex:1;min-width:110px;">
-                        <button type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%;font-weight:600;color:var(--primary);background-color:var(--primary-bg);border:1px solid rgba(230,57,70,0.2);border-radius:var(--radius-sm);padding:8px 28px 8px 12px;text-align:left;font-size:11px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23e63946' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 10px center;background-size:10px;cursor:pointer;">
+                <!-- Baris 2: Kontrol kemasan + qty + hapus -->
+                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--surface-2);padding:7px 10px;border-radius:var(--radius-md);border:1px solid var(--border-color);">
+                    <div class="dropdown" style="flex:1;min-width:100px;">
+                        <button type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%;font-weight:600;color:var(--primary);background-color:var(--primary-bg);border:1px solid rgba(230,57,70,0.2);border-radius:var(--radius-sm);padding:7px 26px 7px 10px;text-align:left;font-size:11px;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23e63946' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 8px center;background-size:10px;cursor:pointer;">
                             ${escapeHtml(activeLabel)}
                         </button>
                         <ul class="dropdown-menu shadow-lg" style="background:var(--surface-2); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:4px 0; min-width:100%; margin-top:4px;">
@@ -705,13 +724,14 @@ function renderCart() {
                         </ul>
                     </div>
                     <div style="display:flex;align-items:center;background:var(--surface-1);border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-color);box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-                        <button type="button" onclick="updateQty(${item.id}, -1)" style="border:none;background:none;color:var(--text-secondary);padding:6px 12px;cursor:pointer;transition:all 150ms;"><i class="bi bi-dash"></i></button>
-                        <span style="font-weight:700;width:32px;text-align:center;font-size:0.95rem;color:var(--text-primary);">${item.quantity}</span>
-                        <button type="button" onclick="updateQty(${item.id}, 1)" style="border:none;background:none;color:var(--primary);padding:6px 12px;cursor:pointer;transition:all 150ms;"><i class="bi bi-plus"></i></button>
+                        <button type="button" onclick="updateQty(${item.id}, -1)" style="border:none;background:none;color:var(--text-secondary);padding:5px 11px;cursor:pointer;transition:all 150ms;"><i class="bi bi-dash"></i></button>
+                        <span style="font-weight:700;width:30px;text-align:center;font-size:0.9rem;color:var(--text-primary);">${item.quantity}</span>
+                        <button type="button" onclick="updateQty(${item.id}, 1)" style="border:none;background:none;color:var(--primary);padding:5px 11px;cursor:pointer;transition:all 150ms;"><i class="bi bi-plus"></i></button>
                     </div>
-                    <button type="button" onclick="cart = cart.filter(i => i.id != ${item.id}); renderCart();" style="border:1px solid rgba(230,57,70,0.2);background:var(--danger-bg);color:var(--danger);cursor:pointer;padding:6px 12px;border-radius:var(--radius-sm);transition:all 150ms;"><i class="bi bi-trash3"></i></button>
+                    <button type="button" onclick="cart = cart.filter(i => i.id != ${item.id}); renderCart();" style="border:1px solid rgba(230,57,70,0.2);background:var(--danger-bg);color:var(--danger);cursor:pointer;padding:5px 11px;border-radius:var(--radius-sm);transition:all 150ms;"><i class="bi bi-trash3"></i></button>
                 </div>
-                <label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11px;color:var(--text-secondary);cursor:pointer;user-select:none;font-weight:500;">
+                <!-- Baris 3: Harga Custom -->
+                <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--text-secondary);cursor:pointer;user-select:none;font-weight:500;">
                     <input type="checkbox" ${customChecked} onchange="togglePosCustomPrice(${item.id}, this.checked, this)" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;margin:0;">
                     <span><i class="bi bi-pencil-square" style="margin-right:2px;"></i> Terapkan Harga Custom</span>
                 </label>

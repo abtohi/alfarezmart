@@ -58,6 +58,9 @@ $router->get('/reports', 'ReportController@index');
 $router->get('/reports/product-history', 'ReportController@productHistory');
 $router->get('/reports/product-history/export/{id}', 'ReportController@exportProductHistory');
 
+// Catalog
+$router->get('/catalog', 'CatalogController@index');
+
 // ============================================
 // API ROUTES (Returns JSON — auth required)
 // ============================================
