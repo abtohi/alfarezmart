@@ -21,7 +21,7 @@
                     <input type="text" id="catalogSearch" placeholder="Ketik nama produk, merk, barcode..." 
                            style="flex:1; border:none; background:transparent; padding:12px 10px; color:var(--text-primary); font-size:var(--font-size-base); outline:none; font-family:var(--font-family);" autocomplete="off">
                 </div>
-                <div id="catalogSuggestions" style="margin-top:8px;"></div>
+                <div id="catalogSuggestions" style="margin-top:8px; max-height:360px; overflow-y:auto; border-radius:var(--radius-md); scroll-behavior:smooth;"></div>
             </div>
 
             <hr style="border-color:var(--border-color); margin:20px 0;">
@@ -30,8 +30,8 @@
                 <label style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:6px; display:block;">Pilih Berdasarkan Kategori (Bulk)</label>
                 <div style="display:flex; flex-wrap:wrap; gap:10px;">
                     <div id="categorySearchBox" style="flex:1; min-width:200px;"></div>
-                    <button class="btn-success-custom" onclick="addByCategory()" id="btnAddCategory" style="padding:10px 16px; white-space:nowrap; flex-shrink:0;">
-                        <i class="bi bi-collection"></i> Tambah Semua
+                    <button onclick="addByCategory()" id="btnAddCategory" style="padding:10px 18px; white-space:nowrap; flex-shrink:0; border:none; border-radius:var(--radius-md); background:linear-gradient(135deg,#2dd36f,#1a9e4e); color:#fff; font-weight:700; font-size:13px; font-family:var(--font-family); cursor:pointer; display:flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(45,211,111,0.35); transition:all 0.2s; height:44px;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 18px rgba(45,211,111,0.45)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 12px rgba(45,211,111,0.35)'" onmousedown="this.style.transform='scale(0.97)'" onmouseup="this.style.transform=''">
+                        <i class="bi bi-collection-fill" style="font-size:14px;"></i> Tambah Semua
                     </button>
                 </div>
             </div>
@@ -255,18 +255,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function performSearch() {
     const q = searchInput.value.trim();
-    if (q.length < 2) {
+    if (q.length === 0) {
         suggestionsDiv.innerHTML = '';
+        suggestionsDiv.style.display = 'none';
         return;
     }
+    if (q.length < 2) {
+        return;
+    }
+    suggestionsDiv.style.display = 'block';
 
     try {
         const res = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
         
         if (!res || res.length === 0) {
-            suggestionsDiv.innerHTML = `<div style="padding:10px; text-align:center; font-size:12px; color:var(--text-muted);">Produk tidak ditemukan.</div>`;
+            suggestionsDiv.style.display = 'block';
+            suggestionsDiv.innerHTML = `<div style="padding:16px; text-align:center; font-size:12px; color:var(--text-muted);"><i class="bi bi-search" style="font-size:1.5rem; opacity:0.3; display:block; margin-bottom:6px;"></i>Produk tidak ditemukan.</div>`;
             return;
         }
+        suggestionsDiv.style.display = 'block';
 
         suggestionsDiv.innerHTML = res.map(p => {
             const thumbHtml = p.photo 
@@ -345,6 +352,7 @@ async function addByCategory() {
 function addProductToCatalog(product) {
     searchInput.value = '';
     suggestionsDiv.innerHTML = '';
+    suggestionsDiv.style.display = 'none';
     
     if (catalogDraft.some(item => item.id == product.id)) {
         showToast('Produk sudah ada di keranjang katalog.', 'info');
