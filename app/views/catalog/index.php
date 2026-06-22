@@ -463,7 +463,7 @@ function buildCatalogHTML(forPng) {
         }
 
         return `
-        <div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;page-break-inside:avoid;break-inside:avoid;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+        <div class="catalog-item" style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;page-break-inside:avoid;break-inside:avoid;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
             <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;">
                 ${thumbHtml}
                 <div style="flex:1;min-width:0;">
@@ -530,7 +530,7 @@ async function doExport(format) {
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true },
                 jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['css', 'legacy'] }
+                pagebreak:    { mode: ['css', 'legacy'], avoid: '.catalog-item' }
             };
             await html2pdf().set(opt).from(element).save();
             showToast('PDF berhasil diunduh.', 'success');
