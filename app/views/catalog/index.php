@@ -117,6 +117,10 @@
     </div>
 </div>
 
+<!-- Scripts for PDF & PNG generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <!-- STYLES -->
 <style>
     @keyframes slideUp {
@@ -189,15 +193,7 @@ function openExportModal() {
     document.getElementById('catalogExportModal').style.display = 'flex';
 }
 
-function doExport(format) {
-    document.getElementById('catalogExportModal').style.display = 'none';
-    if (format === 'pdf') {
-        generateCatalogInNewTab('pdf');
-    } else {
-        generateCatalogInNewTab('png');
-    }
-}
-
+// Removed old doExport
 // ==============================
 // Init
 // ==============================
@@ -323,12 +319,6 @@ async function addByCategory() {
                     addedCount++;
                 }
             });
-            // Sort draft by label
-            catalogDraft.sort((a, b) => {
-                const la = (a.short_label || a.full_name || '').toLowerCase();
-                const lb = (b.short_label || b.full_name || '').toLowerCase();
-                return la.localeCompare(lb, 'id');
-            });
             saveDraft();
             renderDraft();
             showToast(`${addedCount} produk berhasil ditambahkan ke draft katalog.`, 'success');
@@ -356,12 +346,6 @@ function addProductToCatalog(product) {
         return;
     }
     catalogDraft.push(product);
-    // Sort draft by label
-    catalogDraft.sort((a, b) => {
-        const la = (a.short_label || a.full_name || '').toLowerCase();
-        const lb = (b.short_label || b.full_name || '').toLowerCase();
-        return la.localeCompare(lb, 'id');
-    });
     saveDraft();
     renderDraft();
     showToast('Produk ditambahkan ke katalog.', 'success');
@@ -392,6 +376,13 @@ function saveDraft() {
 }
 
 function renderDraft() {
+    // Selalu pastikan terurut abjad berdasarkan nama label setiap kali di-render
+    catalogDraft.sort((a, b) => {
+        const la = (a.short_label || a.full_name || '').toLowerCase();
+        const lb = (b.short_label || b.full_name || '').toLowerCase();
+        return la.localeCompare(lb, 'id');
+    });
+
     countBadge.textContent = `${catalogDraft.length} Item`;
     
     if (catalogDraft.length === 0) {
@@ -441,7 +432,6 @@ function buildCatalogHTML(forPng) {
             priceRowsHTML = p.packagings.map(pkg => {
                 const ecer = formatRupiah(pkg.sell_price_retail);
                 const grosir = formatRupiah(pkg.sell_price_wholesale);
-                const modal = formatRupiah(pkg.buy_price);
                 const showGrosir = Number(pkg.sell_price_wholesale || 0) > 0 && pkg.sell_price_wholesale !== pkg.sell_price_retail;
                 let tierHTML = '';
                 if (pkg.qty_prices && pkg.qty_prices.length > 0) {
@@ -453,9 +443,8 @@ function buildCatalogHTML(forPng) {
                 <tr style="border-bottom:1px solid #f0f0f0;">
                     <td style="padding:4px 6px;font-size:9pt;color:#374151;font-weight:600;">${pkg.unit_name}<span style="font-weight:400;color:#6b7280;font-size:8.5pt;"> (isi ${pkg.base_qty})</span></td>
                     <td style="padding:4px 6px;font-size:9pt;color:#059669;font-weight:700;text-align:right;">${ecer}</td>
-                    <td style="padding:4px 6px;font-size:8.5pt;color:#6b7280;text-align:right;">${modal}</td>
+                    <td style="padding:4px 6px;font-size:9pt;color:#0284c7;font-weight:700;text-align:right;">${showGrosir ? grosir : '-'}</td>
                 </tr>
-                ${showGrosir ? `<tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:2px 6px;font-size:8.5pt;color:#6b7280;">— Grosir</td><td style="padding:2px 6px;font-size:8.5pt;color:#0284c7;font-weight:700;text-align:right;">${grosir}</td><td></td></tr>` : ''}
                 ${tierHTML ? `<tr><td colspan="3" style="padding:2px 6px 6px;">${tierHTML}</td></tr>` : ''}`;
             }).join('');
         } else {
@@ -477,7 +466,7 @@ function buildCatalogHTML(forPng) {
                     <tr style="background:#f9fafb;">
                         <th style="padding:4px 6px;text-align:left;font-size:8.5pt;font-weight:700;color:#374151;">Kemasan</th>
                         <th style="padding:4px 6px;text-align:right;font-size:8.5pt;font-weight:700;color:#059669;">Harga Ecer</th>
-                        <th style="padding:4px 6px;text-align:right;font-size:8.5pt;font-weight:700;color:#6b7280;">Modal</th>
+                        <th style="padding:4px 6px;text-align:right;font-size:8.5pt;font-weight:700;color:#0284c7;">Harga Grosir</th>
                     </tr>
                 </thead>
                 <tbody>${priceRowsHTML}</tbody>
@@ -485,54 +474,59 @@ function buildCatalogHTML(forPng) {
         </div>`;
     }).join('');
 
-    return `<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Katalog Produk - AlfarezMart</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; color: #111827; }
-  .page { background: #fff; max-width: 794px; margin: 0 auto; padding: 20mm 15mm; min-height: 100vh; }
-  .catalog-header { text-align: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #f0f0f0; }
-  .catalog-title { font-size: 22pt; font-weight: 900; color: #1a1a2e; margin-bottom: 4px; }
-  .catalog-sub { font-size: 10pt; color: #6b7280; }
-  .catalog-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-  @media print {
-    @page { size: A4; margin: 10mm 15mm; }
-    body { background: #fff; }
-    .page { padding: 0; box-shadow: none; max-width: 100%; }
-    .no-print { display: none !important; }
-  }
-</style>
-</head>
-<body>
-<div class="page">
-  <div class="catalog-header">
-    <div class="catalog-title">Katalog Produk</div>
-    <div class="catalog-sub">AlfarezMart &nbsp;&middot;&nbsp; Dicetak pada ${date}</div>
-  </div>
-  <div class="catalog-grid">${cardsHTML}</div>
-</div>
-${forPng ? '' : `<div class="no-print" style="position:fixed;bottom:16px;right:16px;z-index:999;">
-  <button onclick="window.print()" style="padding:12px 24px;background:#e63946;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(230,57,70,0.4);">🖨 Cetak / Simpan PDF</button>
-</div>`}
-</body>
-</html>`;
+    return `<div id="catalogContent" style="background:#fff; max-width:794px; margin:0 auto; padding:20mm 15mm; color:#111827;">
+        <div style="text-align:center; margin-bottom:20px; padding-bottom:16px; border-bottom:2px solid #f0f0f0;">
+            <div style="font-size:22pt; font-weight:900; color:#1a1a2e; margin-bottom:4px;">Katalog Produk</div>
+            <div style="font-size:10pt; color:#6b7280;">AlfarezMart &nbsp;&middot;&nbsp; Dicetak pada ${date}</div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:12px;">${cardsHTML}</div>
+    </div>`;
 }
 
-function generateCatalogInNewTab(format) {
-    const html = buildCatalogHTML(format === 'png');
-    const blob = new Blob([html], { type: 'text/html; charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const newTab = window.open(url, '_blank');
+async function doExport(format) {
+    document.getElementById('catalogExportModal').style.display = 'none';
+    
+    if (catalogDraft.length === 0) {
+        showToast('Draft katalog kosong!', 'warning');
+        return;
+    }
+    
+    showToast('Sedang memproses dokumen...', 'info');
 
-    if (format === 'pdf') {
-        showToast('Halaman katalog dibuka di tab baru. Klik tombol "Cetak / Simpan PDF" atau tekan Ctrl+P.', 'info');
-    } else {
-        // PNG: wait for content to load, then capture with html2canvas if available
-        showToast('Tab katalog dibuka. Gunakan Ctrl+P → "Save as PDF" atau screenshot halaman tersebut untuk PNG.', 'info');
+    // Create a temporary hidden container to render HTML for capture
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.top = '-9999px';
+    tempContainer.innerHTML = buildCatalogHTML(true);
+    document.body.appendChild(tempContainer);
+    
+    const element = tempContainer.querySelector('#catalogContent');
+    
+    try {
+        if (format === 'pdf') {
+            const opt = {
+                margin:       0,
+                filename:     'Katalog_Produk_AlfarezMart.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            await html2pdf().set(opt).from(element).save();
+            showToast('PDF berhasil diunduh.', 'success');
+        } else {
+            const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+            const link = document.createElement('a');
+            link.download = 'Katalog_Produk_AlfarezMart.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+            showToast('PNG berhasil diunduh.', 'success');
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('Gagal men-generate dokumen.', 'error');
+    } finally {
+        document.body.removeChild(tempContainer);
     }
 }
 </script>
