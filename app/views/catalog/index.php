@@ -252,21 +252,23 @@ async function performSearch() {
             if (p.packagings && p.packagings.length > 0) {
                 packagingsHtml = `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border-color);">` + 
                     p.packagings.map(pkg => {
-                        const ecer = Number(pkg.sell_price || 0).toLocaleString('id-ID');
+                        const ecer = Number(pkg.sell_price_retail || 0).toLocaleString('id-ID');
+                        const grosir = Number(pkg.sell_price_wholesale || 0).toLocaleString('id-ID');
                         const modal = Number(pkg.buy_price || 0).toLocaleString('id-ID');
                         let tierRows = '';
                         if (pkg.qty_prices && pkg.qty_prices.length > 0) {
                             tierRows = pkg.qty_prices.map(t => `<span style="display:inline-block; font-size:9px; background:rgba(230,57,70,0.1); color:var(--danger,#e63946); padding:1px 5px; border-radius:4px; margin-top:2px;">Beli ${t.min_qty}+ = Rp${Number(t.unit_price||0).toLocaleString('id-ID')}</span>`).join(' ');
                         }
+                        const showGrosir = grosir !== ecer && Number(pkg.sell_price_wholesale || 0) > 0;
                         return `
                             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
                                 <span style="font-size:10px;color:var(--text-muted);">${pkg.unit_name} (x${pkg.base_qty})</span>
                                 <div style="text-align:right;">
                                     <span style="font-size:10px;font-weight:600;color:var(--success,#2dd36f);">Rp${ecer}</span>
-                                    <span style="font-size:9px;color:var(--text-muted);margin-left:4px;">(modal Rp${modal})</span>
+                                    ${showGrosir ? `<span style="font-size:9px;color:var(--info,#0dcaf0);margin-left:4px;">/grosir Rp${grosir}</span>` : ''}
                                 </div>
                             </div>
-                            ${tierRows ? `<div style="margin-bottom:2px;">${tierRows}</div>` : ''}
+                            ${tierRows ? `<div style="margin-bottom:4px;">${tierRows}</div>` : ''}
                         `;
                     }).join('') + `</div>`;
             }
@@ -418,8 +420,10 @@ function buildCatalogHTML(forPng) {
         let priceRowsHTML = '';
         if (p.packagings && p.packagings.length > 0) {
             priceRowsHTML = p.packagings.map(pkg => {
-                const ecer = formatRupiah(pkg.sell_price);
+                const ecer = formatRupiah(pkg.sell_price_retail);
+                const grosir = formatRupiah(pkg.sell_price_wholesale);
                 const modal = formatRupiah(pkg.buy_price);
+                const showGrosir = Number(pkg.sell_price_wholesale || 0) > 0 && pkg.sell_price_wholesale !== pkg.sell_price_retail;
                 let tierHTML = '';
                 if (pkg.qty_prices && pkg.qty_prices.length > 0) {
                     tierHTML = pkg.qty_prices.map(t =>
@@ -432,6 +436,7 @@ function buildCatalogHTML(forPng) {
                     <td style="padding:4px 6px;font-size:9pt;color:#059669;font-weight:700;text-align:right;">${ecer}</td>
                     <td style="padding:4px 6px;font-size:8.5pt;color:#6b7280;text-align:right;">${modal}</td>
                 </tr>
+                ${showGrosir ? `<tr style="border-bottom:1px solid #f0f0f0;"><td style="padding:2px 6px;font-size:8.5pt;color:#6b7280;">— Grosir</td><td style="padding:2px 6px;font-size:8.5pt;color:#0284c7;font-weight:700;text-align:right;">${grosir}</td><td></td></tr>` : ''}
                 ${tierHTML ? `<tr><td colspan="3" style="padding:2px 6px 6px;">${tierHTML}</td></tr>` : ''}`;
             }).join('');
         } else {
