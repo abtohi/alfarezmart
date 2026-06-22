@@ -508,11 +508,15 @@ async function doExport(format) {
     const tempContainer = document.createElement('div');
     tempContainer.style.position = 'absolute';
     tempContainer.style.left = '-9999px';
-    tempContainer.style.top = '-9999px';
+    tempContainer.style.top = '0';
+    tempContainer.style.width = '794px'; // Force width for rendering
     tempContainer.innerHTML = buildCatalogHTML(true);
     document.body.appendChild(tempContainer);
     
     const element = tempContainer.querySelector('#catalogContent');
+    
+    // Wait for DOM to settle and images to load
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     const titleInput = document.getElementById('catalogTitleInput');
     let titleText = titleInput ? titleInput.value.trim() : 'Katalog Produk';
