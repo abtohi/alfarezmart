@@ -57,7 +57,7 @@
 <div class="page-section" id="catalogBuilderSection">
     
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h2 style="font-size:1.4rem; font-weight:800; margin:0; background:var(--gradient-primary); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Buat Katalog</h2>
+        <h2 style="font-size:1.4rem; font-weight:800; margin:0; background:var(--gradient-primary); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;">Buat Katalog</h2>
         <button onclick="openExportModal()" id="btnGeneratePreview" style="display:flex; align-items:center; gap:8px; padding:11px 20px; border:none; border-radius:var(--radius-md); background:var(--gradient-primary); color:#fff; font-weight:700; font-size:13px; font-family:var(--font-family); cursor:pointer; box-shadow:0 4px 12px rgba(230,57,70,0.35); transition:all 0.2s;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 18px rgba(230,57,70,0.5)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 12px rgba(230,57,70,0.35)'">
             <i class="bi bi-file-earmark-arrow-down-fill"></i> Generate & Cetak
         </button>
@@ -243,7 +243,14 @@ async function performSearch() {
         }
         suggestionsDiv.style.display = 'block';
 
-        suggestionsDiv.innerHTML = res.map(p => {
+        // Sort by label name
+        const sorted = [...res].sort((a, b) => {
+            const la = (a.short_label || a.full_name || '').toLowerCase();
+            const lb = (b.short_label || b.full_name || '').toLowerCase();
+            return la.localeCompare(lb, 'id');
+        });
+
+        suggestionsDiv.innerHTML = sorted.map(p => {
             const thumbHtml = p.photo 
                 ? `<img src="${BASE_URL}${p.photo}" style="width:42px;height:42px;object-fit:contain;border-radius:6px;border:1px solid var(--border-color);">`
                 : `<div style="width:42px;height:42px;background:var(--primary-bg);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--primary);border:1px solid var(--border-color);flex-shrink:0;"><i class="bi bi-box-seam"></i></div>`;
@@ -316,6 +323,12 @@ async function addByCategory() {
                     addedCount++;
                 }
             });
+            // Sort draft by label
+            catalogDraft.sort((a, b) => {
+                const la = (a.short_label || a.full_name || '').toLowerCase();
+                const lb = (b.short_label || b.full_name || '').toLowerCase();
+                return la.localeCompare(lb, 'id');
+            });
             saveDraft();
             renderDraft();
             showToast(`${addedCount} produk berhasil ditambahkan ke draft katalog.`, 'success');
@@ -343,6 +356,12 @@ function addProductToCatalog(product) {
         return;
     }
     catalogDraft.push(product);
+    // Sort draft by label
+    catalogDraft.sort((a, b) => {
+        const la = (a.short_label || a.full_name || '').toLowerCase();
+        const lb = (b.short_label || b.full_name || '').toLowerCase();
+        return la.localeCompare(lb, 'id');
+    });
     saveDraft();
     renderDraft();
     showToast('Produk ditambahkan ke katalog.', 'success');
