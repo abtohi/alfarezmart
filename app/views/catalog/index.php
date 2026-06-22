@@ -1,16 +1,71 @@
 <!-- Catalog Builder View -->
+
+<!-- ========== CUSTOM CONFIRM MODAL ========== -->
+<div id="catalogConfirmModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:20px;">
+    <div style="background:var(--surface-1); border-radius:var(--radius-xl,16px); padding:0; width:100%; max-width:360px; border:1px solid var(--border-color); box-shadow:0 20px 60px rgba(0,0,0,0.5); overflow:hidden; animation:slideUp 0.2s ease;">
+        <div style="padding:24px; text-align:center;">
+            <div style="width:52px;height:52px;border-radius:50%;background:rgba(230,57,70,0.12);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+                <i class="bi bi-trash3-fill" style="font-size:1.4rem;color:var(--danger,#e63946);"></i>
+            </div>
+            <div style="font-weight:800;font-size:1.1rem;color:var(--text-primary);margin-bottom:8px;" id="confirmModalTitle">Kosongkan Katalog?</div>
+            <div style="font-size:13px;color:var(--text-muted);line-height:1.5;" id="confirmModalMessage">Semua produk dalam draft katalog akan dihapus. Tindakan ini tidak bisa dibatalkan.</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--border-color);">
+            <button onclick="catalogConfirmCancel()" style="padding:16px;background:transparent;border:none;border-right:1px solid var(--border-color);font-size:14px;font-weight:600;color:var(--text-muted);font-family:var(--font-family);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">
+                Batal
+            </button>
+            <button id="confirmModalOkBtn" onclick="catalogConfirmOk()" style="padding:16px;background:transparent;border:none;font-size:14px;font-weight:700;color:var(--danger,#e63946);font-family:var(--font-family);cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(230,57,70,0.08)'" onmouseout="this.style.background='transparent'">
+                Kosongkan
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ========== EXPORT FORMAT MODAL ========== -->
+<div id="catalogExportModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.7); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:20px;">
+    <div style="background:var(--surface-1); border-radius:var(--radius-xl,16px); padding:0; width:100%; max-width:380px; border:1px solid var(--border-color); box-shadow:0 20px 60px rgba(0,0,0,0.5); overflow:hidden; animation:slideUp 0.2s ease;">
+        <div style="padding:20px 24px 16px; border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between;">
+            <div>
+                <div style="font-weight:800;font-size:1rem;color:var(--text-primary);">Generate Katalog</div>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Pilih format dokumen</div>
+            </div>
+            <button onclick="document.getElementById('catalogExportModal').style.display='none'" style="width:32px;height:32px;border-radius:50%;background:var(--surface-2);border:none;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div style="padding:20px; display:flex; gap:12px;">
+            <!-- PDF option -->
+            <button onclick="doExport('pdf')" style="flex:1; padding:20px 10px; background:var(--surface-2); border:2px solid var(--border-color); border-radius:var(--radius-lg,12px); cursor:pointer; font-family:var(--font-family); transition:all 0.2s; text-align:center;" onmouseover="this.style.borderColor='var(--primary)';this.style.background='rgba(230,57,70,0.06)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.background='var(--surface-2)'">
+                <i class="bi bi-file-earmark-pdf-fill" style="font-size:2.2rem;color:#e63946;display:block;margin-bottom:10px;"></i>
+                <div style="font-weight:700;font-size:14px;color:var(--text-primary);">PDF</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Buka di tab baru & simpan sebagai PDF</div>
+            </button>
+            <!-- PNG option -->
+            <button onclick="doExport('png')" style="flex:1; padding:20px 10px; background:var(--surface-2); border:2px solid var(--border-color); border-radius:var(--radius-lg,12px); cursor:pointer; font-family:var(--font-family); transition:all 0.2s; text-align:center;" onmouseover="this.style.borderColor='#2dd36f';this.style.background='rgba(45,211,111,0.06)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.background='var(--surface-2)'">
+                <i class="bi bi-file-earmark-image-fill" style="font-size:2.2rem;color:#2dd36f;display:block;margin-bottom:10px;"></i>
+                <div style="font-weight:700;font-size:14px;color:var(--text-primary);">PNG</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Screenshot otomatis & unduh sebagai gambar</div>
+            </button>
+        </div>
+        <div style="padding:0 20px 20px; font-size:11px; color:var(--text-muted); background:var(--info-bg,rgba(13,110,253,0.05)); margin:0 20px; border-radius:8px; padding:10px 12px; margin-bottom:20px; margin-left:20px; margin-right:20px; border-left:3px solid var(--info,#0dcaf0);">
+            <i class="bi bi-info-circle"></i> <strong>Tips PDF:</strong> Di dialog print browser, pilih "Save as PDF" atau "Microsoft Print to PDF" sebagai printer.
+        </div>
+    </div>
+</div>
+
+<!-- ========== MAIN CATALOG BUILDER ========== -->
 <div class="page-section" id="catalogBuilderSection">
     
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
         <h2 style="font-size:1.4rem; font-weight:800; margin:0; background:var(--gradient-primary); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Buat Katalog</h2>
-        <button class="btn-primary-custom" onclick="generatePrintPreview()" id="btnGeneratePreview">
-            <i class="bi bi-printer"></i> Generate & Cetak
+        <button onclick="openExportModal()" id="btnGeneratePreview" style="display:flex; align-items:center; gap:8px; padding:11px 20px; border:none; border-radius:var(--radius-md); background:var(--gradient-primary); color:#fff; font-weight:700; font-size:13px; font-family:var(--font-family); cursor:pointer; box-shadow:0 4px 12px rgba(230,57,70,0.35); transition:all 0.2s;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 18px rgba(230,57,70,0.5)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 12px rgba(230,57,70,0.35)'">
+            <i class="bi bi-file-earmark-arrow-down-fill"></i> Generate & Cetak
         </button>
     </div>
 
-    <div style="display:grid; grid-template-columns: 1fr; gap:20px; margin-bottom:24px;" class="desktop-grid-2">
+    <div style="display:grid; grid-template-columns: 1fr; gap:20px; margin-bottom:24px;">
         
-        <!-- Left Panel: Product Selection -->
+        <!-- Panel: Product Selection -->
         <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:20px; border:1px solid var(--border-color); box-shadow:var(--shadow-sm);">
             <div class="section-title"><i class="bi bi-search" style="color:var(--primary);"></i> Cari Produk</div>
             
@@ -21,7 +76,7 @@
                     <input type="text" id="catalogSearch" placeholder="Ketik nama produk, merk, barcode..." 
                            style="flex:1; border:none; background:transparent; padding:12px 10px; color:var(--text-primary); font-size:var(--font-size-base); outline:none; font-family:var(--font-family);" autocomplete="off">
                 </div>
-                <div id="catalogSuggestions" style="margin-top:8px; max-height:360px; overflow-y:auto; border-radius:var(--radius-md); scroll-behavior:smooth;"></div>
+                <div id="catalogSuggestions" style="margin-top:8px; max-height:360px; overflow-y:auto; border-radius:var(--radius-md); scroll-behavior:smooth; display:none;"></div>
             </div>
 
             <hr style="border-color:var(--border-color); margin:20px 0;">
@@ -47,8 +102,8 @@
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <div class="section-title" style="margin:0;"><i class="bi bi-list-check" style="color:var(--success);"></i> Draft Katalog</div>
         <div style="display:flex; align-items:center; gap:8px;">
-            <button class="btn-outline-custom" style="padding:4px 10px; font-size:11px; color:var(--danger); border-color:var(--danger);" onclick="clearCatalogDraft()">
-                <i class="bi bi-trash"></i> Kosongkan
+            <button onclick="clearCatalogDraft()" style="display:flex; align-items:center; gap:6px; padding:6px 12px; background:transparent; border:1px solid var(--danger,#e63946); color:var(--danger,#e63946); border-radius:var(--radius-md); font-size:11px; font-weight:600; font-family:var(--font-family); cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='rgba(230,57,70,0.08)'" onmouseout="this.style.background='transparent'">
+                <i class="bi bi-trash3"></i> Kosongkan
             </button>
             <span id="catalogCount" class="badge-custom badge-primary" style="font-size:12px;">0 Item</span>
         </div>
@@ -62,20 +117,11 @@
     </div>
 </div>
 
-<!-- ============================================== -->
-<!-- PRINT PREVIEW CONTAINER (Hidden from Normal UI) -->
-<!-- ============================================== -->
-<div id="printContainer" style="display:none; background:#fff; min-height:100vh;">
-    <!-- Rendered content goes here -->
-</div>
-
 <!-- STYLES -->
 <style>
-    /* CSS Grid untuk tampilan Desktop */
-    @media (min-width: 768px) {
-        .desktop-grid-2 {
-            grid-template-columns: 1fr !important; /* Sengaja dibuat 1 kolom agar lebar */
-        }
+    @keyframes slideUp {
+        from { transform: translateY(20px); opacity: 0; }
+        to   { transform: translateY(0);   opacity: 1; }
     }
 
     /* Print Styles */
@@ -90,125 +136,7 @@
             margin: 0 !important;
             padding: 0 !important;
         }
-        /* Hide all normal UI elements */
-        body > *:not(#printContainer) {
-            display: none !important;
-        }
-        #catalogBuilderSection, .navbar-custom, .bottom-nav {
-            display: none !important;
-        }
-        #printContainer {
-            display: block !important;
-            width: 100% !important;
-            background: #fff !important;
-        }
-        
-        /* Katalog Print Elements */
-        .print-header {
-            text-align: center;
-            margin-bottom: 20mm;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 5mm;
-        }
-        .print-title {
-            font-size: 24pt;
-            font-weight: 800;
-            margin: 0 0 2mm 0;
-            color: #1a1a2e;
-        }
-        .print-subtitle {
-            font-size: 11pt;
-            color: #666;
-            margin: 0;
-        }
-        
-        .catalog-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr); /* 2 kolom di A4 */
-            gap: 5mm;
-        }
-        
-        .catalog-card {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 4mm;
-            page-break-inside: avoid;
-            display: flex;
-            gap: 4mm;
-            align-items: flex-start;
-        }
-        
-        .catalog-card-img {
-            width: 35mm;
-            height: 35mm;
-            object-fit: contain;
-            border-radius: 4px;
-            border: 1px solid #eee;
-        }
-        .catalog-card-icon {
-            width: 35mm;
-            height: 35mm;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f8f9fa;
-            border-radius: 4px;
-            border: 1px solid #eee;
-            font-size: 16pt;
-            color: #adb5bd;
-        }
-        
-        .catalog-card-content {
-            flex: 1;
-            min-width: 0;
-        }
-        
-        .catalog-card-title {
-            font-size: 11pt;
-            font-weight: 700;
-            margin: 0 0 2mm 0;
-            line-height: 1.2;
-            color: #111;
-        }
-        
-        .catalog-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 2mm;
-        }
-        .catalog-table th, .catalog-table td {
-            font-size: 8pt;
-            padding: 2px 4px;
-            border: 1px solid #eee;
-        }
-        .catalog-table th {
-            background: #f8f9fa;
-            font-weight: 600;
-            text-align: left;
-            color: #444;
-        }
-        .catalog-table td.num {
-            text-align: right;
-            font-weight: 600;
-        }
-        
-        .catalog-tier {
-            font-size: 8pt;
-            color: #e63946;
-            font-weight: 700;
-            background: #fff0f1;
-            padding: 1px 4px;
-            border-radius: 2px;
-            display: inline-block;
-            margin-top: 1mm;
-        }
-        
-        .catalog-barcode {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 8pt;
-            color: #666;
-            margin-top: 2mm;
-        }
+        /* catalog print page is opened in a new tab — all body is the print content */
     }
 </style>
 
@@ -228,8 +156,52 @@ const categoriesData = [
 ];
 let categorySB;
 
+// ==============================
+// Confirm modal helpers
+// ==============================
+let _confirmCallback = null;
+function showCatalogConfirm(title, message, okLabel, okCallback) {
+    document.getElementById('confirmModalTitle').textContent = title;
+    document.getElementById('confirmModalMessage').textContent = message;
+    document.getElementById('confirmModalOkBtn').textContent = okLabel || 'OK';
+    _confirmCallback = okCallback;
+    const modal = document.getElementById('catalogConfirmModal');
+    modal.style.display = 'flex';
+}
+function catalogConfirmCancel() {
+    document.getElementById('catalogConfirmModal').style.display = 'none';
+    _confirmCallback = null;
+}
+function catalogConfirmOk() {
+    document.getElementById('catalogConfirmModal').style.display = 'none';
+    if (typeof _confirmCallback === 'function') _confirmCallback();
+    _confirmCallback = null;
+}
+
+// ==============================
+// Export modal helpers
+// ==============================
+function openExportModal() {
+    if (catalogDraft.length === 0) {
+        showToast('Draft katalog masih kosong!', 'warning');
+        return;
+    }
+    document.getElementById('catalogExportModal').style.display = 'flex';
+}
+
+function doExport(format) {
+    document.getElementById('catalogExportModal').style.display = 'none';
+    if (format === 'pdf') {
+        generateCatalogInNewTab('pdf');
+    } else {
+        generateCatalogInNewTab('png');
+    }
+}
+
+// ==============================
+// Init
+// ==============================
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize SearchBox
     categorySB = new SearchBox(document.getElementById('categorySearchBox'), {
         options: categoriesData,
         value: '',
@@ -237,22 +209,21 @@ document.addEventListener('DOMContentLoaded', () => {
         searchable: true
     });
 
-    // Load draft from localstorage if any
     const saved = localStorage.getItem('alfarezmart_catalog_draft');
     if (saved) {
         try {
             catalogDraft = JSON.parse(saved);
             renderDraft();
-        } catch (e) {
-            console.error('Failed to parse catalog draft', e);
-        }
+        } catch (e) { console.error('Failed to parse catalog draft', e); }
     }
 
-    // Search input listener
     const runSearch = typeof debounce === 'function' ? debounce(performSearch, 300) : performSearch;
     searchInput.addEventListener('input', () => runSearch());
 });
 
+// ==============================
+// Search
+// ==============================
 async function performSearch() {
     const q = searchInput.value.trim();
     if (q.length === 0) {
@@ -260,16 +231,13 @@ async function performSearch() {
         suggestionsDiv.style.display = 'none';
         return;
     }
-    if (q.length < 2) {
-        return;
-    }
+    if (q.length < 2) return;
     suggestionsDiv.style.display = 'block';
 
     try {
         const res = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
         
         if (!res || res.length === 0) {
-            suggestionsDiv.style.display = 'block';
             suggestionsDiv.innerHTML = `<div style="padding:16px; text-align:center; font-size:12px; color:var(--text-muted);"><i class="bi bi-search" style="font-size:1.5rem; opacity:0.3; display:block; margin-bottom:6px;"></i>Produk tidak ditemukan.</div>`;
             return;
         }
@@ -277,35 +245,43 @@ async function performSearch() {
 
         suggestionsDiv.innerHTML = res.map(p => {
             const thumbHtml = p.photo 
-                ? `<img src="${BASE_URL}${p.photo}" style="width:36px;height:36px;object-fit:contain;border-radius:4px;">`
-                : `<div style="width:36px;height:36px;background:var(--primary-bg);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--primary);"><i class="bi bi-box-seam"></i></div>`;
+                ? `<img src="${BASE_URL}${p.photo}" style="width:42px;height:42px;object-fit:contain;border-radius:6px;border:1px solid var(--border-color);">`
+                : `<div style="width:42px;height:42px;background:var(--primary-bg);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--primary);border:1px solid var(--border-color);flex-shrink:0;"><i class="bi bi-box-seam"></i></div>`;
             
-            // packagings html
             let packagingsHtml = '';
             if (p.packagings && p.packagings.length > 0) {
-                packagingsHtml = `<div style="font-size:10px; color:var(--text-muted); margin-top:4px; padding-top:4px; border-top:1px dashed var(--border-color);">` + 
-                    p.packagings.map(pkg => `
-                        <div style="display:flex;justify-content:space-between; margin-bottom:2px;">
-                            <span>${pkg.unit_name} (x${pkg.base_qty})</span>
-                            <span style="font-weight:600; color:var(--success);">Rp${Number(pkg.sell_price || 0).toLocaleString('id-ID')}</span>
-                        </div>
-                    `).join('') + `</div>`;
-            } else {
-                packagingsHtml = `<div style="font-size:10px; color:var(--text-muted); margin-top:4px; padding-top:4px; border-top:1px dashed var(--border-color);">Harga tidak tersedia</div>`;
+                packagingsHtml = `<div style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--border-color);">` + 
+                    p.packagings.map(pkg => {
+                        const ecer = Number(pkg.sell_price || 0).toLocaleString('id-ID');
+                        const modal = Number(pkg.buy_price || 0).toLocaleString('id-ID');
+                        let tierRows = '';
+                        if (pkg.qty_prices && pkg.qty_prices.length > 0) {
+                            tierRows = pkg.qty_prices.map(t => `<span style="display:inline-block; font-size:9px; background:rgba(230,57,70,0.1); color:var(--danger,#e63946); padding:1px 5px; border-radius:4px; margin-top:2px;">Beli ${t.min_qty}+ = Rp${Number(t.unit_price||0).toLocaleString('id-ID')}</span>`).join(' ');
+                        }
+                        return `
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+                                <span style="font-size:10px;color:var(--text-muted);">${pkg.unit_name} (x${pkg.base_qty})</span>
+                                <div style="text-align:right;">
+                                    <span style="font-size:10px;font-weight:600;color:var(--success,#2dd36f);">Rp${ecer}</span>
+                                    <span style="font-size:9px;color:var(--text-muted);margin-left:4px;">(modal Rp${modal})</span>
+                                </div>
+                            </div>
+                            ${tierRows ? `<div style="margin-bottom:2px;">${tierRows}</div>` : ''}
+                        `;
+                    }).join('') + `</div>`;
             }
 
-            // stringify for onclick
             const pStr = JSON.stringify(p).replace(/'/g, "&#39;");
 
             return `
-            <div data-id="${p.id}" style="padding:10px; background:var(--surface-1); margin-bottom:4px; cursor:pointer; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; gap:10px; transition:all 0.2s;" onclick='addProductToCatalog(${pStr})' onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
-                ${thumbHtml}
+            <div data-id="${p.id}" style="padding:10px 12px; background:var(--surface-1); margin-bottom:4px; cursor:pointer; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; gap:10px; transition:all 0.2s;" onclick='addProductToCatalog(${pStr})' onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
+                <div style="flex-shrink:0;">${thumbHtml}</div>
                 <div style="flex:1; min-width:0;">
-                    <div style="font-weight:600; font-size:13px; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.short_label || p.full_name}</div>
+                    <div style="font-weight:700; font-size:13px; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.short_label || p.full_name}</div>
                     <div style="font-size:11px; color:var(--text-muted);">${p.brand_name || 'Tanpa Merek'}</div>
                     ${packagingsHtml}
                 </div>
-                <div style="color:var(--success); display:flex; align-items:center;"><i class="bi bi-plus-circle"></i></div>
+                <div style="color:var(--success,#2dd36f); display:flex; align-items:center; flex-shrink:0;"><i class="bi bi-plus-circle-fill" style="font-size:1.2rem;"></i></div>
             </div>`;
         }).join('');
     } catch (e) {
@@ -313,6 +289,9 @@ async function performSearch() {
     }
 }
 
+// ==============================
+// Category bulk add
+// ==============================
 async function addByCategory() {
     const catId = categorySB.getValue();
     if (!catId) {
@@ -321,8 +300,8 @@ async function addByCategory() {
     }
 
     const btn = document.getElementById('btnAddCategory');
-    const oriText = btn.innerHTML;
-    btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Memuat...';
+    const oriHTML = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Memuat...';
     btn.disabled = true;
 
     try {
@@ -342,13 +321,16 @@ async function addByCategory() {
             showToast('Tidak ada produk dalam kategori ini.', 'info');
         }
     } catch (e) {
-        showToast('Gagal memuat produk kategori: ' + e.message, 'error');
+        showToast('Gagal memuat produk: ' + e.message, 'error');
     } finally {
-        btn.innerHTML = oriText;
+        btn.innerHTML = oriHTML;
         btn.disabled = false;
     }
 }
 
+// ==============================
+// Draft management
+// ==============================
 function addProductToCatalog(product) {
     searchInput.value = '';
     suggestionsDiv.innerHTML = '';
@@ -358,7 +340,6 @@ function addProductToCatalog(product) {
         showToast('Produk sudah ada di keranjang katalog.', 'info');
         return;
     }
-    
     catalogDraft.push(product);
     saveDraft();
     renderDraft();
@@ -372,10 +353,17 @@ function removeProductFromCatalog(id) {
 }
 
 function clearCatalogDraft() {
-    if (!confirm('Yakin ingin mengosongkan keranjang katalog?')) return;
-    catalogDraft = [];
-    saveDraft();
-    renderDraft();
+    showCatalogConfirm(
+        'Kosongkan Katalog?',
+        'Semua produk dalam draft katalog akan dihapus. Tindakan ini tidak bisa dibatalkan.',
+        'Ya, Kosongkan',
+        () => {
+            catalogDraft = [];
+            saveDraft();
+            renderDraft();
+            showToast('Katalog berhasil dikosongkan.', 'success');
+        }
+    );
 }
 
 function saveDraft() {
@@ -391,113 +379,136 @@ function renderDraft() {
         return;
     }
     
-    draftListDiv.innerHTML = catalogDraft.map(p => {
+    draftListDiv.innerHTML = catalogDraft.map((p, idx) => {
         const thumbHtml = p.photo 
-            ? `<img src="${BASE_URL}${p.photo}" style="width:40px;height:40px;object-fit:contain;border-radius:6px;border:1px solid var(--border-color);">`
-            : `<div style="width:40px;height:40px;background:var(--primary-bg);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--primary);border:1px solid var(--border-color);"><i class="bi bi-box-seam"></i></div>`;
+            ? `<img src="${BASE_URL}${p.photo}" style="width:44px;height:44px;object-fit:contain;border-radius:6px;border:1px solid var(--border-color);flex-shrink:0;">`
+            : `<div style="width:44px;height:44px;background:var(--primary-bg);border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--primary);border:1px solid var(--border-color);flex-shrink:0;"><i class="bi bi-box-seam"></i></div>`;
             
         return `
         <div style="display:flex; align-items:center; gap:12px; padding:12px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-md);">
             ${thumbHtml}
             <div style="flex:1; min-width:0;">
                 <div style="font-weight:600; font-size:13px; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.short_label || p.full_name}</div>
-                <div style="font-size:11px; color:var(--text-muted);">Barcode: ${p.code || '-'} | Kategori: ${p.category_name || '-'}</div>
+                <div style="font-size:11px; color:var(--text-muted);">Barcode: ${p.code || '-'} &middot; ${p.category_name || '-'}</div>
             </div>
-            <button class="btn-outline-custom" style="padding:6px; border-color:var(--danger); color:var(--danger); font-size:12px;" onclick="removeProductFromCatalog(${p.id})">
+            <button style="width:32px;height:32px;border-radius:50%;border:1px solid var(--danger,#e63946);background:transparent;color:var(--danger,#e63946);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;transition:all 0.15s;" onclick="removeProductFromCatalog(${p.id})" onmouseover="this.style.background='rgba(230,57,70,0.1)'" onmouseout="this.style.background='transparent'">
                 <i class="bi bi-x-lg"></i>
             </button>
         </div>`;
     }).join('');
 }
 
-// =====================================
-// PRINT GENERATOR
-// =====================================
+// ==============================
+// Catalog HTML builder
+// ==============================
 function formatRupiah(number) {
-    if (isNaN(number)) return 'Rp0';
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(number);
+    if (!number || isNaN(number)) return 'Rp0';
+    return 'Rp' + Number(number).toLocaleString('id-ID');
 }
 
-function generatePrintPreview() {
-    if (catalogDraft.length === 0) {
-        showToast('Draft katalog masih kosong!', 'warning');
-        return;
-    }
+function buildCatalogHTML(forPng) {
+    const date = new Date().toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' });
 
-    const container = document.getElementById('printContainer');
-    
-    // Header
-    let html = `
-        <div class="print-header">
-            <h1 class="print-title">Katalog Produk</h1>
-            <p class="print-subtitle">AlfarezMart &middot; Dicetak pada ${new Date().toLocaleDateString('id-ID')}</p>
-        </div>
-        <div class="catalog-grid">
-    `;
+    let cardsHTML = catalogDraft.map(p => {
+        const imgSrc = p.photo ? (window.location.origin + '/' + p.photo.replace(/^\//, '')) : '';
+        const thumbHtml = imgSrc
+            ? `<img src="${BASE_URL}${p.photo}" style="width:80px;height:80px;object-fit:contain;border-radius:6px;border:1px solid #e5e7eb;flex-shrink:0;" crossorigin="anonymous">`
+            : `<div style="width:80px;height:80px;background:#f3f4f6;border-radius:6px;border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:28px;">📦</span></div>`;
 
-    // Items
-    catalogDraft.forEach(p => {
-        const thumbHtml = p.photo 
-            ? `<img src="${BASE_URL}${p.photo}" class="catalog-card-img">`
-            : `<div class="catalog-card-icon"><i class="bi bi-box-seam"></i></div>`;
-
-        // Susun tabel kemasan
-        let tableRows = '';
-        let tierHtml = '';
-
+        let priceRowsHTML = '';
         if (p.packagings && p.packagings.length > 0) {
-            p.packagings.forEach(pkg => {
-                tableRows += `
-                    <tr>
-                        <td>${pkg.unit_name || 'Satuan'} (x${pkg.base_qty})</td>
-                        <td class="num">${formatRupiah(pkg.buy_price)}</td>
-                    </tr>
-                `;
-                
-                // Tier prices
+            priceRowsHTML = p.packagings.map(pkg => {
+                const ecer = formatRupiah(pkg.sell_price);
+                const modal = formatRupiah(pkg.buy_price);
+                let tierHTML = '';
                 if (pkg.qty_prices && pkg.qty_prices.length > 0) {
-                    pkg.qty_prices.forEach(tier => {
-                        tierHtml += `<div class="catalog-tier">Beli ${tier.min_qty} ${pkg.unit_name} = ${formatRupiah(tier.unit_price)}/satuan</div> `;
-                    });
+                    tierHTML = pkg.qty_prices.map(t =>
+                        `<div style="font-size:8.5pt;color:#c0392b;background:#fff5f5;padding:2px 6px;border-radius:3px;margin-top:2px;display:inline-block;">Beli ${t.min_qty}+ = ${formatRupiah(t.unit_price)}/${pkg.unit_name}</div>`
+                    ).join(' ');
                 }
-            });
+                return `
+                <tr style="border-bottom:1px solid #f0f0f0;">
+                    <td style="padding:4px 6px;font-size:9pt;color:#374151;font-weight:600;">${pkg.unit_name}<span style="font-weight:400;color:#6b7280;font-size:8.5pt;"> (isi ${pkg.base_qty})</span></td>
+                    <td style="padding:4px 6px;font-size:9pt;color:#059669;font-weight:700;text-align:right;">${ecer}</td>
+                    <td style="padding:4px 6px;font-size:8.5pt;color:#6b7280;text-align:right;">${modal}</td>
+                </tr>
+                ${tierHTML ? `<tr><td colspan="3" style="padding:2px 6px 6px;">${tierHTML}</td></tr>` : ''}`;
+            }).join('');
         } else {
-            tableRows += `<tr><td colspan="2" style="text-align:center;">Harga tidak tersedia</td></tr>`;
+            priceRowsHTML = `<tr><td colspan="3" style="padding:6px;text-align:center;color:#9ca3af;font-size:9pt;">Harga belum tersedia</td></tr>`;
         }
 
-        html += `
-            <div class="catalog-card">
+        return `
+        <div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;page-break-inside:avoid;break-inside:avoid;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+            <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;">
                 ${thumbHtml}
-                <div class="catalog-card-content">
-                    <h3 class="catalog-card-title">${p.short_label || p.full_name}</h3>
-                    <table class="catalog-table">
-                        <thead>
-                            <tr>
-                                <th>Kemasan</th>
-                                <th style="text-align:right;">Harga Modal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${tableRows}
-                        </tbody>
-                    </table>
-                    ${tierHtml ? `<div style="margin-top:2mm;">${tierHtml}</div>` : ''}
-                    <div class="catalog-barcode">Barcode: ${p.code || '-'}</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11pt;font-weight:800;color:#111827;line-height:1.3;margin-bottom:2px;">${p.short_label || p.full_name}</div>
+                    <div style="font-size:8.5pt;color:#6b7280;">${p.brand_name || ''} ${p.category_name ? '· '+p.category_name : ''}</div>
+                    ${p.code ? `<div style="font-size:8pt;color:#9ca3af;margin-top:2px;font-family:monospace;">Barcode: ${p.code}</div>` : ''}
                 </div>
             </div>
-        `;
-    });
+            <table style="width:100%;border-collapse:collapse;border:1px solid #f0f0f0;border-radius:6px;overflow:hidden;">
+                <thead>
+                    <tr style="background:#f9fafb;">
+                        <th style="padding:4px 6px;text-align:left;font-size:8.5pt;font-weight:700;color:#374151;">Kemasan</th>
+                        <th style="padding:4px 6px;text-align:right;font-size:8.5pt;font-weight:700;color:#059669;">Harga Ecer</th>
+                        <th style="padding:4px 6px;text-align:right;font-size:8.5pt;font-weight:700;color:#6b7280;">Modal</th>
+                    </tr>
+                </thead>
+                <tbody>${priceRowsHTML}</tbody>
+            </table>
+        </div>`;
+    }).join('');
 
-    html += `</div>`;
-    container.innerHTML = html;
+    return `<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Katalog Produk - AlfarezMart</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; color: #111827; }
+  .page { background: #fff; max-width: 794px; margin: 0 auto; padding: 20mm 15mm; min-height: 100vh; }
+  .catalog-header { text-align: center; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid #f0f0f0; }
+  .catalog-title { font-size: 22pt; font-weight: 900; color: #1a1a2e; margin-bottom: 4px; }
+  .catalog-sub { font-size: 10pt; color: #6b7280; }
+  .catalog-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  @media print {
+    @page { size: A4; margin: 10mm 15mm; }
+    body { background: #fff; }
+    .page { padding: 0; box-shadow: none; max-width: 100%; }
+    .no-print { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="catalog-header">
+    <div class="catalog-title">Katalog Produk</div>
+    <div class="catalog-sub">AlfarezMart &nbsp;&middot;&nbsp; Dicetak pada ${date}</div>
+  </div>
+  <div class="catalog-grid">${cardsHTML}</div>
+</div>
+${forPng ? '' : `<div class="no-print" style="position:fixed;bottom:16px;right:16px;z-index:999;">
+  <button onclick="window.print()" style="padding:12px 24px;background:#e63946;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(230,57,70,0.4);">🖨 Cetak / Simpan PDF</button>
+</div>`}
+</body>
+</html>`;
+}
 
-    // Tampilkan container, sembunyikan UI normal (handled by @media print, but we also can do it programmatically if we want an in-browser preview modal. For now, window.print() will handle it using CSS).
-    // The CSS @media print already hides everything else and shows printContainer!
-    
-    // Sedikit delay agar gambar termuat sebelum print dialog muncul
-    showToast('Menyiapkan dokumen untuk dicetak...', 'info');
-    setTimeout(() => {
-        window.print();
-    }, 800);
+function generateCatalogInNewTab(format) {
+    const html = buildCatalogHTML(format === 'png');
+    const blob = new Blob([html], { type: 'text/html; charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const newTab = window.open(url, '_blank');
+
+    if (format === 'pdf') {
+        showToast('Halaman katalog dibuka di tab baru. Klik tombol "Cetak / Simpan PDF" atau tekan Ctrl+P.', 'info');
+    } else {
+        // PNG: wait for content to load, then capture with html2canvas if available
+        showToast('Tab katalog dibuka. Gunakan Ctrl+P → "Save as PDF" atau screenshot halaman tersebut untuk PNG.', 'info');
+    }
 }
 </script>
