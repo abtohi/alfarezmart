@@ -70,6 +70,11 @@
             <div class="section-title"><i class="bi bi-search" style="color:var(--primary);"></i> Cari Produk</div>
             
             <div class="form-group" style="margin-bottom:16px;">
+                <label style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:6px; display:block;">Judul Katalog</label>
+                <input type="text" id="catalogTitleInput" value="Katalog Produk" placeholder="Masukkan judul katalog..." style="width:100%; border:1px solid var(--border-color); background:var(--bg-input); padding:10px 12px; border-radius:var(--radius-md); color:var(--text-primary); font-family:var(--font-family); font-size:13px; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border-color)'">
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
                 <label style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:6px; display:block;">Pencarian Multi Keyword</label>
                 <div style="display:flex; align-items:center; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0 12px; transition:all 0.2s;">
                     <i class="bi bi-search" style="color:var(--text-muted); font-size:1.1rem;"></i>
@@ -260,7 +265,10 @@ async function performSearch() {
                         const modal = Number(pkg.buy_price || 0).toLocaleString('id-ID');
                         let tierRows = '';
                         if (pkg.qty_prices && pkg.qty_prices.length > 0) {
-                            tierRows = pkg.qty_prices.map(t => `<span style="display:inline-block; font-size:9px; background:rgba(230,57,70,0.1); color:var(--danger,#e63946); padding:1px 5px; border-radius:4px; margin-top:2px;">Beli ${t.min_qty}+ = Rp${Number(t.unit_price||0).toLocaleString('id-ID')}</span>`).join(' ');
+                            tierRows = pkg.qty_prices.map(t => {
+                                let modeText = t.sale_mode === 'wholesale' ? 'Grosir' : (t.sale_mode === 'retail' ? 'Ecer' : 'Grosir & Ecer');
+                                return `<span style="display:inline-block; font-size:9px; background:rgba(230,57,70,0.1); color:var(--danger,#e63946); padding:1px 5px; border-radius:4px; margin-top:2px;">Beli ${t.min_qty}+ = Rp${Number(t.unit_price||0).toLocaleString('id-ID')} (${modeText})</span>`;
+                            }).join(' ');
                         }
                         const showGrosir = grosir !== ecer && Number(pkg.sell_price_wholesale || 0) > 0;
                         return `
@@ -420,6 +428,8 @@ function formatRupiah(number) {
 
 function buildCatalogHTML(forPng) {
     const date = new Date().toLocaleDateString('id-ID', { day:'numeric', month:'long', year:'numeric' });
+    let titleText = document.getElementById('catalogTitleInput') ? document.getElementById('catalogTitleInput').value.trim() : 'Katalog Produk';
+    if (!titleText) titleText = 'Katalog Produk';
 
     let cardsHTML = catalogDraft.map(p => {
         const imgSrc = p.photo ? (window.location.origin + '/' + p.photo.replace(/^\//, '')) : '';
@@ -435,9 +445,10 @@ function buildCatalogHTML(forPng) {
                 const showGrosir = Number(pkg.sell_price_wholesale || 0) > 0 && pkg.sell_price_wholesale !== pkg.sell_price_retail;
                 let tierHTML = '';
                 if (pkg.qty_prices && pkg.qty_prices.length > 0) {
-                    tierHTML = pkg.qty_prices.map(t =>
-                        `<div style="font-size:8.5pt;color:#c0392b;background:#fff5f5;padding:2px 6px;border-radius:3px;margin-top:2px;display:inline-block;">Beli ${t.min_qty}+ = ${formatRupiah(t.unit_price)}/${pkg.unit_name}</div>`
-                    ).join(' ');
+                    tierHTML = pkg.qty_prices.map(t => {
+                        let modeText = t.sale_mode === 'wholesale' ? 'Grosir' : (t.sale_mode === 'retail' ? 'Ecer' : 'Grosir & Ecer');
+                        return `<div style="font-size:8.5pt;color:#c0392b;background:#fff5f5;padding:2px 6px;border-radius:3px;margin-top:2px;display:inline-block;">Beli ${t.min_qty}+ = ${formatRupiah(t.unit_price)}/${pkg.unit_name} (${modeText})</div>`;
+                    }).join(' ');
                 }
                 return `
                 <tr style="border-bottom:1px solid #f0f0f0;">
@@ -476,7 +487,7 @@ function buildCatalogHTML(forPng) {
 
     return `<div id="catalogContent" style="background:#fff; max-width:794px; margin:0 auto; padding:20mm 15mm; color:#111827;">
         <div style="text-align:center; margin-bottom:20px; padding-bottom:16px; border-bottom:2px solid #f0f0f0;">
-            <div style="font-size:22pt; font-weight:900; color:#1a1a2e; margin-bottom:4px;">Katalog Produk</div>
+            <div style="font-size:22pt; font-weight:900; color:#1a1a2e; margin-bottom:4px;">${titleText}</div>
             <div style="font-size:10pt; color:#6b7280;">AlfarezMart &nbsp;&middot;&nbsp; Dicetak pada ${date}</div>
         </div>
         <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:12px;">${cardsHTML}</div>
@@ -506,11 +517,12 @@ async function doExport(format) {
     try {
         if (format === 'pdf') {
             const opt = {
-                margin:       0,
-                filename:     'Katalog_Produk_AlfarezMart.pdf',
+                margin:       [0.3, 0.3, 0.3, 0.3],
+                filename:     `${titleText.replace(/[^a-z0-9]/gi, '_')}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true },
-                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: ['css', 'legacy'] }
             };
             await html2pdf().set(opt).from(element).save();
             showToast('PDF berhasil diunduh.', 'success');
