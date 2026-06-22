@@ -514,6 +514,10 @@ async function doExport(format) {
     
     const element = tempContainer.querySelector('#catalogContent');
     
+    const titleInput = document.getElementById('catalogTitleInput');
+    let titleText = titleInput ? titleInput.value.trim() : 'Katalog Produk';
+    if (!titleText) titleText = 'Katalog Produk';
+
     try {
         if (format === 'pdf') {
             const opt = {
