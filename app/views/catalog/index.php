@@ -463,34 +463,50 @@ function buildCatalogHTML(forPng) {
         }
 
         return `
-        <div class="catalog-item" style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;page-break-inside:avoid;break-inside:avoid;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-            <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;">
-                ${thumbHtml}
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:11pt;font-weight:800;color:#111827;line-height:1.3;margin-bottom:2px;">${p.short_label || p.full_name}</div>
-                    <div style="font-size:8.5pt;color:#6b7280;">${p.brand_name || ''} ${p.category_name ? '· '+p.category_name : ''}</div>
-                    ${p.code ? `<div style="font-size:8pt;color:#9ca3af;margin-top:2px;font-family:monospace;">Barcode: ${p.code}</div>` : ''}
+            <div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06);height:100%;box-sizing:border-box;">
+                <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;">
+                    ${thumbHtml}
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:11pt;font-weight:800;color:#111827;line-height:1.3;margin-bottom:2px;">${p.short_label || p.full_name}</div>
+                        <div style="font-size:8.5pt;color:#6b7280;">${p.brand_name || ''} ${p.category_name ? '· '+p.category_name : ''}</div>
+                        ${p.code ? `<div style="font-size:8pt;color:#9ca3af;margin-top:2px;font-family:monospace;">Barcode: ${p.code}</div>` : ''}
+                    </div>
                 </div>
-            </div>
-            <table style="width:100%;border-collapse:collapse;border:1px solid #f0f0f0;border-radius:6px;overflow:hidden;">
-                <thead>
-                    <tr style="background:#f9fafb;">
-                        <th style="padding:4px 6px;text-align:left;font-size:8.5pt;font-weight:700;color:#374151;">Kemasan</th>
-                        <th style="padding:4px 6px;text-align:right;font-size:8.5pt;font-weight:700;color:#059669;">Harga Ecer</th>
-                        <th style="padding:4px 6px;text-align:right;font-size:8.5pt;font-weight:700;color:#0284c7;">Harga Grosir</th>
-                    </tr>
-                </thead>
-                <tbody>${priceRowsHTML}</tbody>
-            </table>
-        </div>`;
-    }).join('');
+                <table style="width:100%;border-collapse:collapse;border:1px solid #f0f0f0;border-radius:6px;overflow:hidden;">
+                    <thead>
+                        <tr style="background:#f9fafb;">
+                            <th style="padding:4px 6px;text-align:left;font-size:8.5pt;font-weight:700;color:#374151;">Kemasan</th>
+                            <th style="padding:4px 6px;text-align:right;font-size:8.5pt;font-weight:700;color:#059669;">Harga Ecer</th>
+                            <th style="padding:4px 6px;text-align:right;font-size:8.5pt;font-weight:700;color:#0284c7;">Harga Grosir</th>
+                        </tr>
+                    </thead>
+                    <tbody>${priceRowsHTML}</tbody>
+                </table>
+            </div>`;
+    });
+
+    // Susun array kartu menjadi baris-baris tabel (2 kolom per baris)
+    let tableRows = '';
+    for (let i = 0; i < cardsHTML.length; i += 2) {
+        const leftCard = cardsHTML[i];
+        const rightCard = cardsHTML[i + 1] ? cardsHTML[i + 1] : '';
+        tableRows += `
+        <tr class="catalog-item" style="page-break-inside:avoid; break-inside:avoid;">
+            <td style="width:50%; padding-right:6px; padding-bottom:12px; vertical-align:top;">${leftCard}</td>
+            <td style="width:50%; padding-left:6px; padding-bottom:12px; vertical-align:top;">${rightCard}</td>
+        </tr>`;
+    }
 
     return `<div id="catalogContent" style="background:#fff; max-width:794px; margin:0 auto; padding:20mm 15mm; color:#111827;">
         <div style="text-align:center; margin-bottom:20px; padding-bottom:16px; border-bottom:2px solid #f0f0f0;">
             <div style="font-size:22pt; font-weight:900; color:#1a1a2e; margin-bottom:4px;">${titleText}</div>
             <div style="font-size:10pt; color:#6b7280;">AlfarezMart &nbsp;&middot;&nbsp; Dicetak pada ${date}</div>
         </div>
-        <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:12px;">${cardsHTML}</div>
+        <table style="width:100%; border-collapse:collapse; table-layout:fixed;">
+            <tbody>
+                ${tableRows}
+            </tbody>
+        </table>
     </div>`;
 }
 
