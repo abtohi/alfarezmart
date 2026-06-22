@@ -28,14 +28,9 @@
 
             <div class="form-group" style="margin-bottom:16px;">
                 <label style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:6px; display:block;">Pilih Berdasarkan Kategori (Bulk)</label>
-                <div style="display:flex; gap:10px;">
-                    <select id="categorySelect" class="form-control-dark" style="flex:1;">
-                        <option value="">-- Pilih Kategori --</option>
-                        <?php foreach ($categories ?? [] as $cat): ?>
-                            <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['name']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <button class="btn-success-custom" onclick="addByCategory()" id="btnAddCategory" style="padding:10px 16px; white-space:nowrap;">
+                <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                    <div id="categorySearchBox" style="flex:1; min-width:200px;"></div>
+                    <button class="btn-success-custom" onclick="addByCategory()" id="btnAddCategory" style="padding:10px 16px; white-space:nowrap; flex-shrink:0;">
                         <i class="bi bi-collection"></i> Tambah Semua
                     </button>
                 </div>
@@ -226,7 +221,22 @@ const draftListDiv = document.getElementById('catalogDraftList');
 const emptyState = document.getElementById('emptyCatalogState');
 const countBadge = document.getElementById('catalogCount');
 
+const categoriesData = [
+    <?php foreach ($categories ?? [] as $cat): ?>
+        { value: '<?= $cat['id'] ?>', label: <?= json_encode($cat['name']) ?> },
+    <?php endforeach; ?>
+];
+let categorySB;
+
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize SearchBox
+    categorySB = new SearchBox(document.getElementById('categorySearchBox'), {
+        options: categoriesData,
+        value: '',
+        placeholder: '-- Pilih Kategori --',
+        searchable: true
+    });
+
     // Load draft from localstorage if any
     const saved = localStorage.getItem('alfarezmart_catalog_draft');
     if (saved) {
@@ -263,17 +273,32 @@ async function performSearch() {
                 ? `<img src="${BASE_URL}${p.photo}" style="width:36px;height:36px;object-fit:contain;border-radius:4px;">`
                 : `<div style="width:36px;height:36px;background:var(--primary-bg);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--primary);"><i class="bi bi-box-seam"></i></div>`;
             
+            // packagings html
+            let packagingsHtml = '';
+            if (p.packagings && p.packagings.length > 0) {
+                packagingsHtml = `<div style="font-size:10px; color:var(--text-muted); margin-top:4px; padding-top:4px; border-top:1px dashed var(--border-color);">` + 
+                    p.packagings.map(pkg => `
+                        <div style="display:flex;justify-content:space-between; margin-bottom:2px;">
+                            <span>${pkg.unit_name} (x${pkg.base_qty})</span>
+                            <span style="font-weight:600; color:var(--success);">Rp${Number(pkg.sell_price || 0).toLocaleString('id-ID')}</span>
+                        </div>
+                    `).join('') + `</div>`;
+            } else {
+                packagingsHtml = `<div style="font-size:10px; color:var(--text-muted); margin-top:4px; padding-top:4px; border-top:1px dashed var(--border-color);">Harga tidak tersedia</div>`;
+            }
+
             // stringify for onclick
             const pStr = JSON.stringify(p).replace(/'/g, "&#39;");
 
             return `
-            <div data-id="${p.id}" style="padding:10px; background:var(--surface-1); margin-bottom:4px; cursor:pointer; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; align-items:center; gap:10px; transition:all 0.2s;" onclick='addProductToCatalog(${pStr})' onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
+            <div data-id="${p.id}" style="padding:10px; background:var(--surface-1); margin-bottom:4px; cursor:pointer; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; gap:10px; transition:all 0.2s;" onclick='addProductToCatalog(${pStr})' onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
                 ${thumbHtml}
                 <div style="flex:1; min-width:0;">
                     <div style="font-weight:600; font-size:13px; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.short_label || p.full_name}</div>
                     <div style="font-size:11px; color:var(--text-muted);">${p.brand_name || 'Tanpa Merek'}</div>
+                    ${packagingsHtml}
                 </div>
-                <div style="color:var(--success);"><i class="bi bi-plus-circle"></i></div>
+                <div style="color:var(--success); display:flex; align-items:center;"><i class="bi bi-plus-circle"></i></div>
             </div>`;
         }).join('');
     } catch (e) {
@@ -282,7 +307,7 @@ async function performSearch() {
 }
 
 async function addByCategory() {
-    const catId = document.getElementById('categorySelect').value;
+    const catId = categorySB.getValue();
     if (!catId) {
         showToast('Pilih kategori terlebih dahulu!', 'warning');
         return;
