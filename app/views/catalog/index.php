@@ -99,6 +99,38 @@
             <div style="font-size:11px; color:var(--text-muted); background:var(--info-bg); padding:10px; border-radius:var(--radius-sm); border-left:3px solid var(--info);">
                 <i class="bi bi-info-circle"></i> <strong>Tips:</strong> Produk yang dipilih akan otomatis masuk ke daftar draft katalog di bawah.
             </div>
+
+            <hr style="border-color:var(--border-color); margin:20px 0;">
+
+            <!-- Filter Level Kemasan -->
+            <div class="form-group" style="margin-bottom:14px;">
+                <label style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:8px; display:block;"><i class="bi bi-layers"></i> Tampilkan Level Kemasan</label>
+                <div id="levelFilterWrap" style="display:flex; flex-wrap:wrap; gap:8px;">
+                    <?php foreach ([1,2,3,4,5,6] as $lvl): ?>
+                    <label style="display:flex; align-items:center; gap:5px; padding:6px 12px; background:var(--surface-2); border:1px solid var(--border-color); border-radius:var(--radius-md); cursor:pointer; font-size:12px; font-weight:600; transition:all 0.2s; user-select:none;" id="lvlLabel<?= $lvl ?>">
+                        <input type="checkbox" id="chkLevel<?= $lvl ?>" value="<?= $lvl ?>" checked onchange="onLevelFilterChange()" style="width:14px;height:14px;accent-color:var(--primary);">
+                        Level <?= $lvl ?>
+                    </label>
+                    <?php endforeach; ?>
+                    <button onclick="toggleAllLevels()" id="btnToggleLevels" style="padding:6px 12px; border:1px dashed var(--border-color); border-radius:var(--radius-md); background:transparent; color:var(--text-muted); font-size:11px; cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">Batal Pilih Semua</button>
+                </div>
+            </div>
+
+            <!-- Filter Status Produk -->
+            <div class="form-group" style="margin-bottom:0;">
+                <label style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:8px; display:block;"><i class="bi bi-toggle-on"></i> Filter Status Produk (Tambah Semua)</label>
+                <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; font-weight:500;">
+                        <input type="radio" name="catalogStatusFilter" id="filterAll" value="all" checked style="accent-color:var(--primary);">
+                        <span style="color:var(--text-primary);">Semua Produk</span>
+                    </label>
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px; font-weight:500;">
+                        <input type="radio" name="catalogStatusFilter" id="filterAvailable" value="available" style="accent-color:var(--success);">
+                        <span style="color:var(--success,#2dd36f);"><i class="bi bi-check-circle-fill"></i> Tersedia Saja</span>
+                    </label>
+                </div>
+                <div style="font-size:11px; color:var(--text-muted); margin-top:6px;"><i class="bi bi-info-circle"></i> Filter ini hanya berlaku untuk tombol <strong>Tambah Semua</strong> per kategori.</div>
+            </div>
         </div>
 
     </div>
@@ -305,6 +337,42 @@ async function performSearch() {
 // ==============================
 // Category bulk add
 // ==============================
+// ==============================
+// Filter helpers
+// ==============================
+function getSelectedLevels() {
+    const levels = [];
+    for (let i = 1; i <= 6; i++) {
+        const chk = document.getElementById('chkLevel' + i);
+        if (chk && chk.checked) levels.push(i);
+    }
+    return levels;
+}
+
+function onLevelFilterChange() {
+    const btn = document.getElementById('btnToggleLevels');
+    const allChecked = getSelectedLevels().length === 6;
+    if (btn) btn.textContent = allChecked ? 'Batal Pilih Semua' : 'Pilih Semua';
+}
+
+function toggleAllLevels() {
+    const levels = getSelectedLevels();
+    const shouldCheck = levels.length < 6;
+    for (let i = 1; i <= 6; i++) {
+        const chk = document.getElementById('chkLevel' + i);
+        if (chk) chk.checked = shouldCheck;
+    }
+    onLevelFilterChange();
+}
+
+function getStatusFilter() {
+    const el = document.querySelector('input[name="catalogStatusFilter"]:checked');
+    return el ? el.value : 'all';
+}
+
+// ==============================
+// Category bulk add
+// ==============================
 async function addByCategory() {
     const catId = categorySB.getValue();
     if (!catId) {
@@ -317,11 +385,21 @@ async function addByCategory() {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Memuat...';
     btn.disabled = true;
 
+    const statusFilter = getStatusFilter();
+
     try {
-        const res = await api(`${BASE_URL}api/products?per_page=9999&category=${catId}`);
+        const url = statusFilter === 'available'
+            ? `${BASE_URL}api/products?per_page=9999&category=${catId}&is_available=1`
+            : `${BASE_URL}api/products?per_page=9999&category=${catId}`;
+        const res = await api(url);
         if (res && res.data && res.data.length > 0) {
+            let filtered = res.data;
+            // Client-side fallback filter jika server tidak mendukung is_available param
+            if (statusFilter === 'available') {
+                filtered = res.data.filter(p => p.is_available == 1 || p.is_available === true || p.is_available === '1');
+            }
             let addedCount = 0;
-            res.data.forEach(p => {
+            filtered.forEach(p => {
                 if (!catalogDraft.some(item => item.id == p.id)) {
                     catalogDraft.push(p);
                     addedCount++;
@@ -329,7 +407,11 @@ async function addByCategory() {
             });
             saveDraft();
             renderDraft();
-            showToast(`${addedCount} produk berhasil ditambahkan ke draft katalog.`, 'success');
+            if (addedCount > 0) {
+                showToast(`${addedCount} produk berhasil ditambahkan ke draft katalog.`, 'success');
+            } else {
+                showToast('Tidak ada produk baru yang memenuhi filter.', 'info');
+            }
         } else {
             showToast('Tidak ada produk dalam kategori ini.', 'info');
         }
@@ -431,15 +513,24 @@ function buildCatalogHTML(forPng) {
     let titleText = document.getElementById('catalogTitleInput') ? document.getElementById('catalogTitleInput').value.trim() : 'Katalog Produk';
     if (!titleText) titleText = 'Katalog Produk';
 
+    // Ambil level yang dicentang
+    const selectedLevels = getSelectedLevels();
+
     let cardsHTML = catalogDraft.map(p => {
         const imgSrc = p.photo ? (window.location.origin + '/' + p.photo.replace(/^\//, '')) : '';
         const thumbHtml = imgSrc
             ? `<img src="${BASE_URL}${p.photo}" style="width:80px;height:80px;object-fit:contain;border-radius:6px;border:1px solid #e5e7eb;flex-shrink:0;" crossorigin="anonymous">`
             : `<div style="width:80px;height:80px;background:#f3f4f6;border-radius:6px;border:1px solid #e5e7eb;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span style="font-size:28px;">📦</span></div>`;
 
+        // Filter packagings berdasarkan level yang dipilih
+        const filteredPackagings = (p.packagings || []).filter(pkg => {
+            const lvl = parseInt(pkg.level || 1);
+            return selectedLevels.length === 0 || selectedLevels.includes(lvl);
+        });
+
         let priceRowsHTML = '';
-        if (p.packagings && p.packagings.length > 0) {
-            priceRowsHTML = p.packagings.map(pkg => {
+        if (filteredPackagings.length > 0) {
+            priceRowsHTML = filteredPackagings.map(pkg => {
                 const ecer = formatRupiah(pkg.sell_price_retail);
                 const grosir = formatRupiah(pkg.sell_price_wholesale);
                 const showGrosir = Number(pkg.sell_price_wholesale || 0) > 0 && pkg.sell_price_wholesale !== pkg.sell_price_retail;
@@ -460,6 +551,11 @@ function buildCatalogHTML(forPng) {
             }).join('');
         } else {
             priceRowsHTML = `<tr><td colspan="3" style="padding:6px;text-align:center;color:#9ca3af;font-size:9pt;">Harga belum tersedia</td></tr>`;
+        }
+
+        // Jika semua packaging disaring keluar & ada packaging asli, tampilkan pesan
+        if (filteredPackagings.length === 0 && (p.packagings || []).length > 0) {
+            priceRowsHTML = `<tr><td colspan="3" style="padding:6px;text-align:center;color:#9ca3af;font-size:9pt;">Level kemasan tidak dipilih</td></tr>`;
         }
 
         return `
