@@ -18,6 +18,6 @@ class CatalogController extends Controller
             'categories' => $categories
         ];
 
-        $this->view('layouts/app', 'catalog/index', $data);
+        $this->view('catalog.index', $data);
     }
 }
