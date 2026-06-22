@@ -123,8 +123,8 @@
 </div>
 
 <!-- Scripts for PDF & PNG generation -->
-<script src="<?= BASEURL ?>/js/html2canvas.min.js"></script>
-<script src="<?= BASEURL ?>/js/html2pdf.bundle.min.js"></script>
+<script src="<?= BASE_URL ?>public/js/html2canvas.min.js"></script>
+<script src="<?= BASE_URL ?>public/js/html2pdf.bundle.min.js"></script>
 
 <!-- STYLES -->
 <style>
