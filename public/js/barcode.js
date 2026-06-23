@@ -268,22 +268,56 @@ ${labelsHtml}
     async scanBarcode(inputEl, onScanned) {
         try {
             const modalPromise = this._showScannerModal(inputEl, onScanned);
-            
-            await this.scanner._loadScannerLib();
-            
-            if (!window.ZXing) {
-                throw new Error('Library ZXing gagal dimuat');
-            }
-            
             const status = document.getElementById('scanStatus');
             const success = document.getElementById('scanSuccess');
             const successText = document.getElementById('scanSuccessText');
 
             if (status) {
+                status.innerHTML = '<i class="bi bi-camera"></i> Mengakses perangkat kamera...';
+            }
+
+            // === 1. START CAMERA INSTANTLY BEFORE DOWNLOADING ZXING ===
+            // By doing this first, the user doesn't stare at a black screen for 5 seconds
+            // while the 700KB ZXing library downloads on a slow mobile connection.
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: "environment",
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+            } catch(camErr) {
+                throw new Error(`Gagal akses kamera: ${camErr.message}`);
+            }
+
+            const videoEl = document.getElementById('barcode-video-element');
+            if (!videoEl) {
+                if (stream) stream.getTracks().forEach(t => t.stop());
+                throw new Error('Elemen video tidak ditemukan');
+            }
+            videoEl.srcObject = stream;
+            videoEl.setAttribute('playsinline', true);
+            await videoEl.play();
+
+            // === 2. DOWNLOAD ZXING WHILE CAMERA IS ALREADY SHOWING ===
+            if (!window.ZXing) {
+                if (status) {
+                    status.innerHTML = '<i class="bi bi-cloud-arrow-down"></i> Mengunduh mesin pemindai pintar...';
+                }
+                await this.scanner._loadScannerLib();
+            }
+            
+            if (!window.ZXing) {
+                throw new Error('Library ZXing gagal dimuat');
+            }
+            
+            if (status) {
                 status.innerHTML = '<i class="bi bi-camera-video"></i> Arahkan kamera ke barcode...';
             }
 
-            // Configure ZXing Hints for maximum sensitivity
+            // === 3. CONFIGURE ZXING ===
             const hints = new Map();
             hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
                 ZXing.BarcodeFormat.CODE_128,
@@ -299,28 +333,6 @@ ${labelsHtml}
             const codeReader = new ZXing.BrowserMultiFormatReader(hints);
             this.scanner.html5Qrcode = codeReader;
             this.scanner.isScanning = true;
-
-            // === START CAMERA MANUALLY ===
-            let stream;
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: "environment",
-                        // 720p is the sweet spot: fast hardware initialization, smooth framerate,
-                        // and enough pixel density for barcode decoding.
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    }
-                });
-            } catch(camErr) {
-                throw new Error(`Gagal akses kamera: ${camErr.message}`);
-            }
-
-            const videoEl = document.getElementById('barcode-video-element');
-            if (!videoEl) throw new Error('Elemen video tidak ditemukan');
-            videoEl.srcObject = stream;
-            videoEl.setAttribute('playsinline', true);
-            await videoEl.play();
 
             // Hidden canvas for frame capture + rotation + contrast
             const canvas = document.createElement('canvas');
