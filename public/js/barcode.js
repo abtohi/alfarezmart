@@ -320,13 +320,13 @@ ${labelsHtml}
             // === 3. CONFIGURE ZXING ===
             const hints = new Map();
             hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+                // Only enable the 4 most common retail/inventory formats.
+                // Removing ITF and UPC_A/E fixes an internal ZXing bug that throws
+                // "MultiFormatReader: non-ReaderException from reader: N" and floods the console.
                 ZXing.BarcodeFormat.CODE_128,
                 ZXing.BarcodeFormat.EAN_13,
                 ZXing.BarcodeFormat.EAN_8,
-                ZXing.BarcodeFormat.CODE_39,
-                ZXing.BarcodeFormat.ITF,
-                ZXing.BarcodeFormat.UPC_A,
-                ZXing.BarcodeFormat.UPC_E
+                ZXing.BarcodeFormat.CODE_39
             ]);
             hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
 
@@ -336,7 +336,8 @@ ${labelsHtml}
 
             // Hidden canvas for frame capture + rotation + contrast
             const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            // willReadFrequently: true optimizes performance for getImageData (fixes browser warning)
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
             const drawRotated = (angleDeg, contrast = 1) => {
                 const vw = videoEl.videoWidth;
@@ -367,14 +368,26 @@ ${labelsHtml}
             };
 
             const tryDecode = () => {
+                // Suppress ZXing's internal console.warn/error to prevent it from
+                // flooding the console and lagging the UI thread on unhandled frames.
+                const originalWarn = console.warn;
+                const originalError = console.error;
+                console.warn = () => {};
+                console.error = () => {};
+
+                let resultStr = null;
                 try {
                     const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
                     const binaryBitmap   = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
                     const result         = codeReader.decodeBitmap(binaryBitmap);
-                    return result ? result.getText() : null;
+                    resultStr = result ? result.getText() : null;
                 } catch (e) {
-                    return null;
+                    resultStr = null;
+                } finally {
+                    console.warn = originalWarn;
+                    console.error = originalError;
                 }
+                return resultStr;
             };
 
             // === TIME-SLICED MULTI-ANGLE SCANNING ===
