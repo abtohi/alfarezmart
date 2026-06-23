@@ -77,9 +77,10 @@
             <div class="form-group" style="margin-bottom:16px;">
                 <label style="font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:6px; display:block;">Pencarian Multi Keyword</label>
                 <div style="display:flex; align-items:center; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0 12px; transition:all 0.2s;">
-                    <i class="bi bi-search" style="color:var(--text-muted); font-size:1.1rem;"></i>
+                    <i class="bi bi-upc-scan" id="btnCatalogScan" style="color:var(--primary); font-size:1.2rem; cursor:pointer; flex-shrink:0;" title="Scan Barcode Kamera"></i>
                     <input type="text" id="catalogSearch" placeholder="Ketik nama produk, merk, barcode..." 
                            style="flex:1; border:none; background:transparent; padding:12px 10px; color:var(--text-primary); font-size:var(--font-size-base); outline:none; font-family:var(--font-family);" autocomplete="off">
+                    <i class="bi bi-search" style="color:var(--text-muted); font-size:1.1rem;"></i>
                 </div>
                 <div id="catalogSuggestions" style="margin-top:8px; max-height:360px; overflow-y:auto; border-radius:var(--radius-md); scroll-behavior:smooth; display:none;"></div>
             </div>
@@ -252,6 +253,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const runSearch = typeof debounce === 'function' ? debounce(performSearch, 300) : performSearch;
     searchInput.addEventListener('input', () => runSearch());
+
+    // Barcode Scan Button
+    const btnScan = document.getElementById('btnCatalogScan');
+    if (btnScan) {
+        btnScan.addEventListener('click', () => {
+            if (typeof BarcodeUtil !== 'undefined' && BarcodeUtil.scanBarcode) {
+                const fakeInput = document.createElement('input');
+                BarcodeUtil.scanBarcode(fakeInput, (code) => {
+                    if (code) {
+                        searchInput.value = code;
+                        performSearch();
+                    }
+                });
+            } else {
+                showToast('Scanner belum dimuat.', 'error');
+            }
+        });
+    }
+
+    // Enter key support for physical barcode scanners
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const q = searchInput.value.trim();
+            if (q) performSearch();
+        }
+    });
 });
 
 // ==============================

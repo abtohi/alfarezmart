@@ -56,8 +56,11 @@
         <label style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-bottom:6px; font-weight:600;">
             <i class="bi bi-search"></i> Cari Produk (cth: "Chocolatos 24g")
         </label>
-        <input type="text" id="orderSearchInput" autocomplete="off" placeholder="Ketik nama produk, merk, atau berat..."
-               style="background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:10px; width:100%; font-size:var(--font-size-sm);">
+        <div style="display:flex; align-items:center; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0 10px;">
+            <i class="bi bi-upc-scan" id="btnOrderScan" style="color:var(--primary); font-size:1.2rem; cursor:pointer; margin-right:8px;" title="Scan Barcode Kamera"></i>
+            <input type="text" id="orderSearchInput" autocomplete="off" placeholder="Ketik nama produk, merk, atau berat..."
+                   style="flex:1; background:transparent; color:var(--text-primary); border:none; padding:10px 0; font-size:var(--font-size-sm); outline:none;">
+        </div>
         <div id="orderSearchResults" style="position:absolute; top:100%; left:12px; right:12px; max-height:340px; overflow-y:auto; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-md); z-index:50; display:none; box-shadow:0 8px 24px rgba(0,0,0,0.4); margin-top:4px;"></div>
     </div>
 
@@ -284,9 +287,53 @@
         if (q.length < 1) { elResults.style.display = 'none'; return; }
         searchTimer = setTimeout(() => doSearch(q), 250);
     });
+    
+    elInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const q = elInput.value.trim();
+            if (q) doBarcodeSearch(q);
+        }
+    });
+    
     elInput.addEventListener('focus', () => {
         if (lastResults.length > 0) elResults.style.display = '';
     });
+
+    const btnScan = document.getElementById('btnOrderScan');
+    if (btnScan) {
+        btnScan.addEventListener('click', () => {
+            if (typeof BarcodeUtil !== 'undefined' && BarcodeUtil.scanBarcode) {
+                const fakeInput = document.createElement('input');
+                BarcodeUtil.scanBarcode(fakeInput, (code) => {
+                    if (code) {
+                        elInput.value = code;
+                        doBarcodeSearch(code);
+                    }
+                });
+            } else {
+                showToast('Scanner belum dimuat.', 'error');
+            }
+        });
+    }
+
+    async function doBarcodeSearch(code) {
+        try {
+            const url = `<?= BASE_URL ?>api/products/barcode/${encodeURIComponent(code)}`;
+            const res = await fetch(url, { credentials: 'same-origin' });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.id) {
+                    addItem(data);
+                    elInput.value = '';
+                    elResults.style.display = 'none';
+                    return;
+                }
+            }
+        } catch (err) {}
+        // Fallback to regular search if barcode API fails or not found
+        doSearch(code);
+    }
     document.addEventListener('click', (e) => {
         if (!elResults.contains(e.target) && e.target !== elInput) {
             elResults.style.display = 'none';
