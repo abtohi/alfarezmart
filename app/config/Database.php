@@ -41,10 +41,12 @@ class Database
 
                 $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
                 $options = [
-                    PDO::ATTR_PERSISTENT => false,
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    // PERSISTENT: PHP reuses existing connections instead of opening a new one
+                    // per request. This is the primary fix for max_connections_per_hour.
+                    PDO::ATTR_PERSISTENT         => true,
+                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false
+                    PDO::ATTR_EMULATE_PREPARES   => false
                 ];
                 $this->pdo = new PDO($dsn, $user, $pass, $options);
                 
@@ -103,6 +105,7 @@ class Database
      */
     public function reconnect()
     {
+        // Explicitly close old PDO connection first to prevent connection leak
         $this->pdo = null;
         self::$instance = null;
         return self::getInstance()->getConnection();
