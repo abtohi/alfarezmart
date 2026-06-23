@@ -275,8 +275,6 @@ ${labelsHtml}
                 throw new Error('Library ZXing gagal dimuat');
             }
             
-            await new Promise(r => setTimeout(r, 300));
-            
             const status = document.getElementById('scanStatus');
             const success = document.getElementById('scanSuccess');
             const successText = document.getElementById('scanSuccessText');
@@ -303,14 +301,15 @@ ${labelsHtml}
             this.scanner.isScanning = true;
 
             // === START CAMERA MANUALLY ===
-            // We get the stream ourselves so we can run our own multi-angle loop
             let stream;
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: {
                         facingMode: "environment",
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
+                        // 720p is the sweet spot: fast hardware initialization, smooth framerate,
+                        // and enough pixel density for barcode decoding.
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
                     }
                 });
             } catch(camErr) {
@@ -320,17 +319,13 @@ ${labelsHtml}
             const videoEl = document.getElementById('barcode-video-element');
             if (!videoEl) throw new Error('Elemen video tidak ditemukan');
             videoEl.srcObject = stream;
-            videoEl.setAttribute('playsinline', true); // iOS Safari requirement
+            videoEl.setAttribute('playsinline', true);
             await videoEl.play();
 
             // Hidden canvas for frame capture + rotation + contrast
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
 
-            /**
-             * Draws the current video frame onto canvas rotated by `angleDeg`,
-             * optionally with contrast enhancement.
-             */
             const drawRotated = (angleDeg, contrast = 1) => {
                 const vw = videoEl.videoWidth;
                 const vh = videoEl.videoHeight;
@@ -345,7 +340,6 @@ ${labelsHtml}
                 ctx.drawImage(videoEl, -vw / 2, -vh / 2, vw, vh);
                 ctx.restore();
 
-                // Optionally boost contrast for wavy/faded barcodes
                 if (contrast > 1) {
                     const factor = contrast;
                     const intercept = 128 * (1 - factor);
@@ -360,10 +354,6 @@ ${labelsHtml}
                 }
             };
 
-            /**
-             * Try to decode the current canvas content using ZXing.
-             * Returns decoded string or null.
-             */
             const tryDecode = () => {
                 try {
                     const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
@@ -371,38 +361,37 @@ ${labelsHtml}
                     const result         = codeReader.decodeBitmap(binaryBitmap);
                     return result ? result.getText() : null;
                 } catch (e) {
-                    return null; // NotFoundException is expected on most frames
+                    return null;
                 }
             };
 
-            // === MULTI-ANGLE SCANNING LOOP ===
-            // Angles to try: every 45° so we catch tilted/inverted barcodes instantly
-            const ANGLES    = [0, 45, 90, 135, 180, 270];
-            // For each angle we first try normal contrast, then boosted for wavy plastic
-            const CONTRASTS = [1, 1.5];
-            let loopHandle  = null;
+            // === TIME-SLICED MULTI-ANGLE SCANNING ===
+            // Instead of blocking the UI thread by trying 12 combos in a single frame,
+            // we test 1 combo per frame. This makes the UI butter-smooth while 
+            // still rotating through all angles extremely fast (within ~300ms).
+            const SCAN_CONFIGS = [
+                { deg: 0, ct: 1 }, { deg: 90, ct: 1 }, { deg: 180, ct: 1 },
+                { deg: 45, ct: 1 }, { deg: 135, ct: 1 }, { deg: 270, ct: 1 },
+                { deg: 0, ct: 1.5 }, { deg: 90, ct: 1.5 }, { deg: 180, ct: 1.5 } // wavy plastics
+            ];
+            let configIdx = 0;
+            let loopHandle = null;
 
             const scanLoop = () => {
                 if (!this.scanner.isScanning) return;
                 if (videoEl.readyState < videoEl.HAVE_CURRENT_DATA) {
-                    loopHandle = setTimeout(scanLoop, 50);
+                    loopHandle = requestAnimationFrame(scanLoop);
                     return;
                 }
 
-                let decoded = null;
-
-                outer:
-                for (const deg of ANGLES) {
-                    for (const ct of CONTRASTS) {
-                        drawRotated(deg, ct);
-                        decoded = tryDecode();
-                        if (decoded) break outer;
-                    }
-                }
+                // Process exactly ONE configuration per frame to keep UI responsive
+                const cfg = SCAN_CONFIGS[configIdx];
+                drawRotated(cfg.deg, cfg.ct);
+                const decoded = tryDecode();
 
                 if (decoded && this.scanner.isScanning) {
                     this.scanner.isScanning = false;
-                    clearTimeout(loopHandle);
+                    cancelAnimationFrame(loopHandle);
 
                     // Stop camera stream
                     stream.getTracks().forEach(t => t.stop());
@@ -425,19 +414,19 @@ ${labelsHtml}
                     }, 800);
 
                 } else {
-                    // Schedule next frame — 60ms = ~16fps is a good balance of CPU vs speed
-                    loopHandle = setTimeout(scanLoop, 60);
+                    configIdx = (configIdx + 1) % SCAN_CONFIGS.length;
+                    // Use rAF for maximum smoothness instead of setTimeout
+                    loopHandle = requestAnimationFrame(scanLoop);
                 }
             };
 
             // Override stop() so it also kills our stream + loop
             const origStop = this.scanner.stop.bind(this.scanner);
             this.scanner.stop = () => {
-                clearTimeout(loopHandle);
+                cancelAnimationFrame(loopHandle);
                 if (stream) stream.getTracks().forEach(t => t.stop());
                 videoEl.srcObject = null;
                 origStop();
-                // Restore original stop for next time
                 this.scanner.stop = origStop;
             };
 
