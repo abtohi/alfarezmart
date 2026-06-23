@@ -200,6 +200,32 @@ ${labelsHtml}
      * Show scanner modal UI
      */
     _showScannerModal(inputEl, onScanned) {
+        // Add global focus handler if it doesn't exist
+        if (!window.triggerScannerFocus) {
+            window.triggerScannerFocus = async function() {
+                const ring = document.getElementById('scannerFocusRing');
+                if (ring) {
+                    ring.style.display = 'block';
+                    ring.style.animation = 'none';
+                    ring.offsetHeight; // trigger reflow
+                    ring.style.animation = 'pulse-glow 0.6s ease-out';
+                    setTimeout(() => { ring.style.display = 'none'; }, 600);
+                }
+                const video = document.getElementById('barcode-video-element');
+                if (video && video.srcObject) {
+                    const track = video.srcObject.getVideoTracks()[0];
+                    if (track && track.applyConstraints) {
+                        try {
+                            // Tickle the hardware to trigger autofocus
+                            await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
+                        } catch (e) {
+                            try { await track.applyConstraints({}); } catch(e2) {}
+                        }
+                    }
+                }
+            };
+        }
+
         return AppModal.show({
             title: 'Scan Barcode',
             subtitle: 'Arahkan kamera ke barcode',
@@ -208,9 +234,15 @@ ${labelsHtml}
             iconAccent: 'var(--info)',
             bodyHTML: `
                 <div style="text-align:center;">
-                    <div id="barcode-scanner-video-container" style="width:100%; max-width:400px; height:280px; margin:0 auto; border-radius:var(--radius-md); overflow:hidden; background:#000; position:relative;">
+                    <div id="barcode-scanner-video-container" onclick="window.triggerScannerFocus()" style="width:100%; max-width:400px; height:300px; margin:0 auto; border-radius:var(--radius-md); overflow:hidden; background:#000; position:relative; cursor:pointer;">
                         <video id="barcode-video-element" style="width:100%; height:100%; object-fit:cover;"></video>
-                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:80%; height:40%; border:2px solid rgba(45, 211, 111, 0.5); border-radius:8px; box-shadow:0 0 0 4000px rgba(0,0,0,0.3); pointer-events:none;"></div>
+                        <!-- Larger targeting box for tilted barcodes -->
+                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:90%; height:65%; border:2px solid rgba(45, 211, 111, 0.6); border-radius:12px; box-shadow:0 0 0 4000px rgba(0,0,0,0.3); pointer-events:none;"></div>
+                        <!-- Tap to focus ring -->
+                        <div id="scannerFocusRing" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:70px; height:70px; border:2px solid #fff; border-radius:50%; pointer-events:none; box-shadow: 0 0 10px rgba(255,255,255,0.5);"></div>
+                        <div style="position:absolute; bottom:12px; left:0; width:100%; text-align:center; pointer-events:none;">
+                            <span style="background:rgba(0,0,0,0.5); color:#fff; font-size:10px; padding:4px 8px; border-radius:12px; backdrop-filter:blur(4px);">Ketuk area kamera untuk fokus</span>
+                        </div>
                     </div>
                     <p id="scanStatus" style="font-size:var(--font-size-xs); color:var(--text-muted); margin-top:12px; margin-bottom:8px;">
                         <i class="bi bi-camera-video"></i> Memuat kamera ZXing tingkat lanjut...
@@ -273,7 +305,10 @@ ${labelsHtml}
 
             const videoConstraints = {
                 video: {
-                    facingMode: "environment"
+                    facingMode: "environment",
+                    // Soft request for HD resolution to massively improve detection of very small barcodes
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
                 }
             };
 
