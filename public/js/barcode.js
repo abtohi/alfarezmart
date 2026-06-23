@@ -296,55 +296,153 @@ ${labelsHtml}
                 ZXing.BarcodeFormat.UPC_A,
                 ZXing.BarcodeFormat.UPC_E
             ]);
-            // ENABLE TRY_HARDER: Forces deep analysis of the image for blurry/folded barcodes
             hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
 
             const codeReader = new ZXing.BrowserMultiFormatReader(hints);
             this.scanner.html5Qrcode = codeReader;
             this.scanner.isScanning = true;
 
-            const videoConstraints = {
-                video: {
-                    facingMode: "environment",
-                    // Soft request for HD resolution to massively improve detection of very small barcodes
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 }
+            // === START CAMERA MANUALLY ===
+            // We get the stream ourselves so we can run our own multi-angle loop
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: "environment",
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    }
+                });
+            } catch(camErr) {
+                throw new Error(`Gagal akses kamera: ${camErr.message}`);
+            }
+
+            const videoEl = document.getElementById('barcode-video-element');
+            if (!videoEl) throw new Error('Elemen video tidak ditemukan');
+            videoEl.srcObject = stream;
+            videoEl.setAttribute('playsinline', true); // iOS Safari requirement
+            await videoEl.play();
+
+            // Hidden canvas for frame capture + rotation + contrast
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            /**
+             * Draws the current video frame onto canvas rotated by `angleDeg`,
+             * optionally with contrast enhancement.
+             */
+            const drawRotated = (angleDeg, contrast = 1) => {
+                const vw = videoEl.videoWidth;
+                const vh = videoEl.videoHeight;
+                const rad = angleDeg * Math.PI / 180;
+                const sin = Math.abs(Math.sin(rad));
+                const cos = Math.abs(Math.cos(rad));
+                canvas.width  = Math.round(vw * cos + vh * sin);
+                canvas.height = Math.round(vw * sin + vh * cos);
+                ctx.save();
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.rotate(rad);
+                ctx.drawImage(videoEl, -vw / 2, -vh / 2, vw, vh);
+                ctx.restore();
+
+                // Optionally boost contrast for wavy/faded barcodes
+                if (contrast > 1) {
+                    const factor = contrast;
+                    const intercept = 128 * (1 - factor);
+                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const d = imgData.data;
+                    for (let i = 0; i < d.length; i += 4) {
+                        d[i]   = Math.min(255, Math.max(0, d[i]   * factor + intercept));
+                        d[i+1] = Math.min(255, Math.max(0, d[i+1] * factor + intercept));
+                        d[i+2] = Math.min(255, Math.max(0, d[i+2] * factor + intercept));
+                    }
+                    ctx.putImageData(imgData, 0, 0);
                 }
             };
 
-            try {
-                codeReader.decodeFromConstraints(videoConstraints, 'barcode-video-element', (result, err) => {
-                    if (result && this.scanner.isScanning) {
-                        this.scanner.isScanning = false;
-                        const decodedText = result.getText();
-                        
-                        inputEl.value = decodedText;
-                        inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-                        
-                        if (status) status.style.display = 'none';
-                        if (success) {
-                            success.style.display = 'flex';
-                            if (successText) successText.textContent = `Terdeteksi: ${decodedText}`;
-                        }
-                        
-                        showToast(`Barcode terdeteksi: ${decodedText}`, 'success');
-                        
-                        // Stop reader
-                        setTimeout(() => {
-                            this.scanner.stop();
-                            AppModal.close('scanned');
-                            if (typeof onScanned === 'function') onScanned(decodedText);
-                        }, 800);
+            /**
+             * Try to decode the current canvas content using ZXing.
+             * Returns decoded string or null.
+             */
+            const tryDecode = () => {
+                try {
+                    const luminanceSource = new ZXing.HTMLCanvasElementLuminanceSource(canvas);
+                    const binaryBitmap   = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminanceSource));
+                    const result         = codeReader.decodeBitmap(binaryBitmap);
+                    return result ? result.getText() : null;
+                } catch (e) {
+                    return null; // NotFoundException is expected on most frames
+                }
+            };
+
+            // === MULTI-ANGLE SCANNING LOOP ===
+            // Angles to try: every 45° so we catch tilted/inverted barcodes instantly
+            const ANGLES    = [0, 45, 90, 135, 180, 270];
+            // For each angle we first try normal contrast, then boosted for wavy plastic
+            const CONTRASTS = [1, 1.5];
+            let loopHandle  = null;
+
+            const scanLoop = () => {
+                if (!this.scanner.isScanning) return;
+                if (videoEl.readyState < videoEl.HAVE_CURRENT_DATA) {
+                    loopHandle = setTimeout(scanLoop, 50);
+                    return;
+                }
+
+                let decoded = null;
+
+                outer:
+                for (const deg of ANGLES) {
+                    for (const ct of CONTRASTS) {
+                        drawRotated(deg, ct);
+                        decoded = tryDecode();
+                        if (decoded) break outer;
                     }
-                    if (err && !(err instanceof ZXing.NotFoundException)) {
-                        console.debug("ZXing error:", err);
+                }
+
+                if (decoded && this.scanner.isScanning) {
+                    this.scanner.isScanning = false;
+                    clearTimeout(loopHandle);
+
+                    // Stop camera stream
+                    stream.getTracks().forEach(t => t.stop());
+                    videoEl.srcObject = null;
+
+                    inputEl.value = decoded;
+                    inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+
+                    if (status) status.style.display = 'none';
+                    if (success) {
+                        success.style.display = 'flex';
+                        if (successText) successText.textContent = `Terdeteksi: ${decoded}`;
                     }
-                });
-            } catch (startError) {
-                const errMsg = startError?.message || String(startError);
-                console.error('Start camera error:', errMsg);
-                throw new Error(`Gagal memulai kamera: ${errMsg}`);
-            }
+
+                    showToast(`Barcode terdeteksi: ${decoded}`, 'success');
+
+                    setTimeout(() => {
+                        AppModal.close('scanned');
+                        if (typeof onScanned === 'function') onScanned(decoded);
+                    }, 800);
+
+                } else {
+                    // Schedule next frame — 60ms = ~16fps is a good balance of CPU vs speed
+                    loopHandle = setTimeout(scanLoop, 60);
+                }
+            };
+
+            // Override stop() so it also kills our stream + loop
+            const origStop = this.scanner.stop.bind(this.scanner);
+            this.scanner.stop = () => {
+                clearTimeout(loopHandle);
+                if (stream) stream.getTracks().forEach(t => t.stop());
+                videoEl.srcObject = null;
+                origStop();
+                // Restore original stop for next time
+                this.scanner.stop = origStop;
+            };
+
+            // Kick off the loop
+            scanLoop();
 
             // Wait for modal to close
             try {
@@ -369,3 +467,4 @@ ${labelsHtml}
         }
     },
 };
+
