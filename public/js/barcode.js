@@ -235,17 +235,23 @@ ${labelsHtml}
             bodyHTML: `
                 <div style="text-align:center;">
                     <div id="barcode-scanner-video-container" onclick="window.triggerScannerFocus()" style="width:100%; max-width:400px; height:300px; margin:0 auto; border-radius:var(--radius-md); overflow:hidden; background:#000; position:relative; cursor:pointer;">
-                        <video id="barcode-video-element" style="width:100%; height:100%; object-fit:cover;"></video>
+                        <!-- Loading State (visible while camera is booting) -->
+                        <div id="barcode-loading-overlay" style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--surface-2); color:var(--text-secondary); z-index:2;">
+                            <div class="spinner-border text-primary mb-2" role="status"></div>
+                            <span style="font-size:12px;">Mempersiapkan lensa...</span>
+                        </div>
+                        
+                        <video id="barcode-video-element" style="width:100%; height:100%; object-fit:cover; position:relative; z-index:1;" onloadeddata="document.getElementById('barcode-loading-overlay').style.display='none'"></video>
                         <!-- Larger targeting box for tilted barcodes -->
-                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:90%; height:65%; border:2px solid rgba(45, 211, 111, 0.6); border-radius:12px; box-shadow:0 0 0 4000px rgba(0,0,0,0.3); pointer-events:none;"></div>
+                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:90%; height:65%; border:2px solid rgba(45, 211, 111, 0.6); border-radius:12px; box-shadow:0 0 0 4000px rgba(0,0,0,0.3); pointer-events:none; z-index:3;"></div>
                         <!-- Tap to focus ring -->
-                        <div id="scannerFocusRing" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:70px; height:70px; border:2px solid #fff; border-radius:50%; pointer-events:none; box-shadow: 0 0 10px rgba(255,255,255,0.5);"></div>
-                        <div style="position:absolute; bottom:12px; left:0; width:100%; text-align:center; pointer-events:none;">
-                            <span style="background:rgba(0,0,0,0.5); color:#fff; font-size:10px; padding:4px 8px; border-radius:12px; backdrop-filter:blur(4px);">Ketuk area kamera untuk fokus</span>
+                        <div id="scannerFocusRing" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:70px; height:70px; border:2px solid #fff; border-radius:50%; pointer-events:none; box-shadow: 0 0 10px rgba(255,255,255,0.5); z-index:4;"></div>
+                        <div style="position:absolute; bottom:12px; left:0; width:100%; text-align:center; pointer-events:none; z-index:4;">
+                            <span style="background:rgba(0,0,0,0.6); color:#fff; font-size:10px; padding:4px 8px; border-radius:12px; backdrop-filter:blur(4px);">Ketuk area kamera untuk autofokus</span>
                         </div>
                     </div>
                     <p id="scanStatus" style="font-size:var(--font-size-xs); color:var(--text-muted); margin-top:12px; margin-bottom:8px;">
-                        <i class="bi bi-camera-video"></i> Memuat kamera ZXing tingkat lanjut...
+                        <i class="bi bi-camera-video"></i> Memuat kamera...
                     </p>
                     <div style="background:var(--success-bg); color:var(--success); padding:10px 14px; border-radius:var(--radius-sm); font-size:var(--font-size-xs); display:none; align-items:center; gap:6px; justify-content:center; margin-top:8px;" id="scanSuccess">
                         <i class="bi bi-check-circle-fill"></i> <span id="scanSuccessText">Barcode terdeteksi</span>
@@ -273,19 +279,24 @@ ${labelsHtml}
             const successText = document.getElementById('scanSuccessText');
 
             if (status) {
-                status.innerHTML = '<i class="bi bi-camera"></i> Mengakses perangkat kamera...';
+                status.innerHTML = '<i class="bi bi-camera"></i> Menghidupkan hardware kamera...';
             }
 
+            // Yield to the browser's event loop!
+            // iOS Safari is notorious for blocking the main thread when getUserMedia is called.
+            // By pausing for 1 frame, we force the browser to physically paint the Modal
+            // and the Loading Spinner onto the screen FIRST, so the user knows it's loading.
+            await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 10)));
+
             // === 1. START CAMERA INSTANTLY BEFORE DOWNLOADING ZXING ===
-            // By doing this first, the user doesn't stare at a black screen for 5 seconds
-            // while the 700KB ZXing library downloads on a slow mobile connection.
             let stream;
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        facingMode: "environment",
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
+                        facingMode: "environment"
+                        // Removed width/height constraints entirely! 
+                        // Explicit constraints force iOS Safari to spend 3-5 seconds reconfiguring the hardware pipeline.
+                        // Leaving it empty uses the native hardware preset instantly.
                     }
                 });
             } catch(camErr) {
