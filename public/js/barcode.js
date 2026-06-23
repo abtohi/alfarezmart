@@ -157,12 +157,11 @@ ${labelsHtml}
         isScanning: false,
 
         async _loadScannerLib() {
-            if (window.Html5Qrcode) return true;
+            if (window.ZXing) return true;
 
-            // CDN list: UMD builds that set window.Html5Qrcode correctly
             const cdnUrls = [
-                'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
-                'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js',
+                'https://unpkg.com/@zxing/library@latest/umd/index.min.js',
+                'https://cdn.jsdelivr.net/npm/@zxing/library@latest/umd/index.min.js',
             ];
 
             for (const url of cdnUrls) {
@@ -172,28 +171,25 @@ ${labelsHtml}
                         script.src = url;
                         script.type = 'text/javascript';
                         script.onload = () => {
-                            if (window.Html5Qrcode) {
-                                resolve(true);
-                            } else {
-                                reject(new Error('Html5Qrcode global not available'));
-                            }
+                            if (window.ZXing) resolve(true);
+                            else reject(new Error('ZXing global not available'));
                         };
                         script.onerror = () => reject(new Error('CDN load failed'));
                         document.head.appendChild(script);
                     });
-                    return true; // Successfully loaded
+                    return true;
                 } catch (e) {
                     console.warn('[BarcodeScanner] CDN failed:', url, e.message);
                 }
             }
-            throw new Error('Gagal memuat library scanner. Periksa koneksi internet.');
+            throw new Error('Gagal memuat library ZXing. Periksa koneksi internet.');
         },
 
         stop() {
             this.isScanning = false;
             if (this.html5Qrcode) {
                 try {
-                    this.html5Qrcode.stop().catch(e => console.warn(e));
+                    this.html5Qrcode.reset();
                 } catch(e) {}
                 this.html5Qrcode = null;
             }
@@ -212,9 +208,12 @@ ${labelsHtml}
             iconAccent: 'var(--info)',
             bodyHTML: `
                 <div style="text-align:center;">
-                    <div id="barcode-scanner-video-container" style="width:100%; max-width:400px; margin:0 auto; border-radius:var(--radius-md); overflow:hidden; background:#000;"></div>
+                    <div id="barcode-scanner-video-container" style="width:100%; max-width:400px; height:280px; margin:0 auto; border-radius:var(--radius-md); overflow:hidden; background:#000; position:relative;">
+                        <video id="barcode-video-element" style="width:100%; height:100%; object-fit:cover;"></video>
+                        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:80%; height:40%; border:2px solid rgba(45, 211, 111, 0.5); border-radius:8px; box-shadow:0 0 0 4000px rgba(0,0,0,0.3); pointer-events:none;"></div>
+                    </div>
                     <p id="scanStatus" style="font-size:var(--font-size-xs); color:var(--text-muted); margin-top:12px; margin-bottom:8px;">
-                        <i class="bi bi-camera-video"></i> Memuat kamera scanner tingkat lanjut...
+                        <i class="bi bi-camera-video"></i> Memuat kamera ZXing tingkat lanjut...
                     </p>
                     <div style="background:var(--success-bg); color:var(--success); padding:10px 14px; border-radius:var(--radius-sm); font-size:var(--font-size-xs); display:none; align-items:center; gap:6px; justify-content:center; margin-top:8px;" id="scanSuccess">
                         <i class="bi bi-check-circle-fill"></i> <span id="scanSuccessText">Barcode terdeteksi</span>
@@ -238,14 +237,12 @@ ${labelsHtml}
         try {
             const modalPromise = this._showScannerModal(inputEl, onScanned);
             
-            // Load scanner library
             await this.scanner._loadScannerLib();
             
-            if (!window.Html5Qrcode) {
-                throw new Error('Library scanner gagal dimuat');
+            if (!window.ZXing) {
+                throw new Error('Library ZXing gagal dimuat');
             }
             
-            // Wait for modal DOM to render
             await new Promise(r => setTimeout(r, 300));
             
             const status = document.getElementById('scanStatus');
@@ -256,45 +253,35 @@ ${labelsHtml}
                 status.innerHTML = '<i class="bi bi-camera-video"></i> Arahkan kamera ke barcode...';
             }
 
-            // Create Html5Qrcode instance
-            this.scanner.html5Qrcode = new Html5Qrcode("barcode-scanner-video-container");
-            
-            // Camera constraints for better barcode detection
-            const qrConfig = { 
-                fps: 30, // Increased frame rate for faster detection
-                disableFlip: false,
-                // Limit formats to 1D product barcodes to drastically improve speed and sensitivity for difficult prints
-                formatsToSupport: [
-                    3,  // CODE_39
-                    5,  // CODE_128
-                    8,  // ITF
-                    9,  // EAN_13
-                    10, // EAN_8
-                    14, // UPC_A
-                    15  // UPC_E
-                ],
-                experimentalFeatures: {
-                    useBarCodeDetectorIfSupported: true
-                }
-            };
-            
-            // Video constraints
-            const cameraConstraints = {
-                // Let the browser pick the best native rear camera without forcing unsupported focus modes
-                facingMode: "environment"
-            };
+            // Configure ZXing Hints for maximum sensitivity
+            const hints = new Map();
+            hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+                ZXing.BarcodeFormat.CODE_128,
+                ZXing.BarcodeFormat.EAN_13,
+                ZXing.BarcodeFormat.EAN_8,
+                ZXing.BarcodeFormat.CODE_39,
+                ZXing.BarcodeFormat.ITF,
+                ZXing.BarcodeFormat.UPC_A,
+                ZXing.BarcodeFormat.UPC_E
+            ]);
+            // ENABLE TRY_HARDER: Forces deep analysis of the image for blurry/folded barcodes
+            hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
 
+            const codeReader = new ZXing.BrowserMultiFormatReader(hints);
+            this.scanner.html5Qrcode = codeReader;
             this.scanner.isScanning = true;
 
+            const videoConstraints = {
+                video: {
+                    facingMode: "environment"
+                }
+            };
+
             try {
-                // start(cameraConstraints, config, onSuccess, onError)
-                await this.scanner.html5Qrcode.start(
-                    cameraConstraints,
-                    qrConfig,
-                    (decodedText) => {
-                        // On Success - barcode/QR detected
-                        if (!this.scanner.isScanning) return;
+                codeReader.decodeFromConstraints(videoConstraints, 'barcode-video-element', (result, err) => {
+                    if (result && this.scanner.isScanning) {
                         this.scanner.isScanning = false;
+                        const decodedText = result.getText();
                         
                         inputEl.value = decodedText;
                         inputEl.dispatchEvent(new Event('input', { bubbles: true }));
@@ -307,20 +294,17 @@ ${labelsHtml}
                         
                         showToast(`Barcode terdeteksi: ${decodedText}`, 'success');
                         
+                        // Stop reader
                         setTimeout(() => {
                             this.scanner.stop();
                             AppModal.close('scanned');
                             if (typeof onScanned === 'function') onScanned(decodedText);
                         }, 800);
-                    },
-                    (errorMessage) => {
-                        // On Error / scanning frame - usually can be ignored for continuous scanning
-                        // Only log if it's not the usual frame errors
-                        if (errorMessage && !errorMessage.includes('No barcode or QR code detected')) {
-                            console.debug('Scan error:', errorMessage);
-                        }
                     }
-                );
+                    if (err && !(err instanceof ZXing.NotFoundException)) {
+                        console.debug("ZXing error:", err);
+                    }
+                });
             } catch (startError) {
                 const errMsg = startError?.message || String(startError);
                 console.error('Start camera error:', errMsg);
