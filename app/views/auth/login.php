@@ -272,95 +272,63 @@
             border-width: 2px;
         }
 
-        /* ── PWA Install Banner ── */
-        .pwa-install-banner {
-            display: none;
+        /* ── Mini Install Button ── */
+        .btn-mini-install {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 100;
+            display: none; /* Hidden by default, shown via JS if not standalone */
             align-items: center;
-            gap: 12px;
-            background: linear-gradient(135deg, rgba(230,57,70,0.08) 0%, rgba(76,201,240,0.06) 100%);
-            border: 1px solid rgba(230,57,70,0.2);
-            border-radius: var(--radius-lg);
-            padding: 12px 16px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(8px);
-            animation: bannerSlide 0.4s ease-out;
-            cursor: default;
-        }
-        @keyframes bannerSlide {
-            from { transform: translateY(-12px); opacity: 0; }
-            to   { transform: translateY(0);    opacity: 1; }
-        }
-        .pwa-install-banner .pwa-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            object-fit: cover;
-            flex-shrink: 0;
-            box-shadow: 0 4px 12px rgba(230,57,70,0.25);
-        }
-        .pwa-install-banner .pwa-text {
-            flex: 1;
-            min-width: 0;
-        }
-        .pwa-install-banner .pwa-text strong {
-            display: block;
-            font-size: 0.8rem;
-            font-weight: 700;
+            gap: 6px;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             color: var(--text-primary);
-            margin-bottom: 1px;
-        }
-        .pwa-install-banner .pwa-text span {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            line-height: 1.3;
-        }
-        .pwa-btn-install {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 7px 14px;
-            background: var(--gradient-primary);
-            color: #fff;
-            border: none;
-            border-radius: var(--radius-md);
-            font-family: var(--font-family);
+            border-radius: 30px;
             font-size: 0.75rem;
-            font-weight: 700;
+            font-weight: 600;
             cursor: pointer;
-            white-space: nowrap;
-            flex-shrink: 0;
-            transition: all 0.2s ease;
-            box-shadow: 0 3px 12px rgba(230,57,70,0.35);
-            letter-spacing: 0.3px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         }
-        .pwa-btn-install:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(230,57,70,0.45);
+        .btn-mini-install:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.2);
         }
-        .pwa-btn-install:active {
-            transform: translateY(0);
+        .btn-mini-install i {
+            color: #3DDC84; /* Android Green */
+            font-size: 1.1rem;
         }
-        .pwa-btn-install i {
-            font-size: 0.85rem;
-        }
-        .pwa-btn-dismiss {
-            background: none;
-            border: none;
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: 4px;
-            border-radius: 50%;
-            display: flex;
+        
+        /* Modal Info Install Manual */
+        .manual-install-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            z-index: 9999;
             align-items: center;
             justify-content: center;
-            transition: color 0.15s, background 0.15s;
-            flex-shrink: 0;
-            font-size: 0.9rem;
-            line-height: 1;
+            padding: 24px;
         }
-        .pwa-btn-dismiss:hover {
-            color: var(--text-primary);
-            background: var(--surface-2);
+        .manual-install-card {
+            background: var(--surface-1);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            max-width: 320px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
     </style>
 </head>
@@ -369,19 +337,24 @@
 
     <div class="login-container">
 
-        <!-- PWA Install Banner -->
-        <div class="pwa-install-banner" id="pwaInstallBanner" role="complementary" aria-label="Install Aplikasi">
-            <img src="<?= BASE_URL ?>public/images/Icon.png" alt="AlfarezMart" class="pwa-icon">
-            <div class="pwa-text">
-                <strong>Pasang sebagai Aplikasi</strong>
-                <span>Akses lebih cepat tanpa browser</span>
+        <!-- Mini Install Button -->
+        <button type="button" class="btn-mini-install" id="btnMiniInstall" aria-label="Install Aplikasi Android">
+            <i class="bi bi-android2"></i> Install App
+        </button>
+
+        <!-- Manual Install Guide Modal -->
+        <div class="manual-install-modal" id="manualInstallModal">
+            <div class="manual-install-card">
+                <i class="bi bi-info-circle" style="font-size:2rem; color:var(--info); margin-bottom:12px; display:inline-block;"></i>
+                <h3 style="font-size:1.1rem; margin-bottom:12px;">Cara Install Manual</h3>
+                <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5; margin-bottom:20px;">
+                    Pop-up install otomatis diblokir oleh browser Anda.<br><br>
+                    Untuk menginstal, klik icon menu <strong>(tiga titik di pojok kanan atas)</strong> browser Chrome Anda, lalu pilih <strong>"Tambahkan ke Layar Utama"</strong> atau <strong>"Install Aplikasi"</strong>.
+                </p>
+                <button type="button" onclick="document.getElementById('manualInstallModal').style.display='none'" style="background:var(--primary); color:white; border:none; padding:10px 24px; border-radius:20px; font-weight:600; cursor:pointer;">
+                    Mengerti
+                </button>
             </div>
-            <button type="button" class="pwa-btn-install" id="pwaInstallBtn" aria-label="Install Aplikasi">
-                <i class="bi bi-download"></i> Pasang
-            </button>
-            <button type="button" class="pwa-btn-dismiss" id="pwaDismissBtn" aria-label="Tutup">
-                <i class="bi bi-x"></i>
-            </button>
         </div>
 
         <div class="login-header">
@@ -601,48 +574,40 @@
     // ── PWA Install Logic ──
     (function() {
         let deferredPrompt = null;
-        const banner  = document.getElementById('pwaInstallBanner');
-        const btnInst = document.getElementById('pwaInstallBtn');
-        const btnDism = document.getElementById('pwaDismissBtn');
+        const btnInst = document.getElementById('btnMiniInstall');
+        const manualModal = document.getElementById('manualInstallModal');
 
-        // Jika sudah berjalan sebagai PWA standalone → sembunyikan banner selamanya
-        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
-            return;
+        // Show the button if NOT in standalone mode
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        if (!isStandalone) {
+            btnInst.style.display = 'inline-flex';
         }
 
-        // Jika user sudah pernah dismiss → jangan tampil lagi selama 7 hari
-        const dismissed = localStorage.getItem('pwa_banner_dismissed');
-        if (dismissed && Date.now() - parseInt(dismissed, 10) < 7 * 24 * 60 * 60 * 1000) {
-            return;
-        }
-
-        // Tangkap event install — popup otomatis tetap muncul, tombol manual juga tersedia
+        // Tangkap event install
         window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
             deferredPrompt = e;
-            banner.style.display = 'flex';
         });
 
         // Tombol Install diklik
         btnInst.addEventListener('click', async function() {
-            if (!deferredPrompt) return;
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            deferredPrompt = null;
-            banner.style.display = 'none';
-            if (outcome === 'accepted') {
-                localStorage.removeItem('pwa_banner_dismissed');
+            if (deferredPrompt) {
+                // Show native prompt
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    deferredPrompt = null;
+                    btnInst.style.display = 'none';
+                }
+            } else {
+                // Browser blocks prompt or not supported, show manual guide
+                manualModal.style.display = 'flex';
             }
-        });
-
-        // Tombol X (dismiss)
-        btnDism.addEventListener('click', function() {
-            banner.style.display = 'none';
-            localStorage.setItem('pwa_banner_dismissed', String(Date.now()));
         });
 
         // Setelah berhasil install → sembunyikan
         window.addEventListener('appinstalled', function() {
-            banner.style.display = 'none';
+            btnInst.style.display = 'none';
             deferredPrompt = null;
         });
     })();
