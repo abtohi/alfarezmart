@@ -278,14 +278,10 @@ ${labelsHtml}
                 }
             };
             
-            // Video constraints - try different focus modes
+            // Video constraints
             const cameraConstraints = {
-                facingMode: "environment",
-                // Force HD resolution so small/tight barcodes are captured with enough detail
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                // Force continuous autofocus if the hardware supports it
-                advanced: [{ focusMode: "continuous" }]
+                // Let the browser pick the best native rear camera without forcing unsupported focus modes
+                facingMode: "environment"
             };
 
             this.scanner.isScanning = true;
