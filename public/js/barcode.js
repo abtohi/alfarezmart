@@ -262,8 +262,17 @@ ${labelsHtml}
             // Camera constraints for better barcode detection
             const qrConfig = { 
                 fps: 30, // Increased frame rate for faster detection
-                // qrbox and aspectRatio removed: This prevents the iPhone from cropping/zooming in
                 disableFlip: false,
+                // Limit formats to 1D product barcodes to drastically improve speed and sensitivity for difficult prints
+                formatsToSupport: [
+                    3,  // CODE_39
+                    5,  // CODE_128
+                    8,  // ITF
+                    9,  // EAN_13
+                    10, // EAN_8
+                    14, // UPC_A
+                    15  // UPC_E
+                ],
                 experimentalFeatures: {
                     useBarCodeDetectorIfSupported: true
                 }
@@ -272,6 +281,9 @@ ${labelsHtml}
             // Video constraints - try different focus modes
             const cameraConstraints = {
                 facingMode: "environment",
+                // Force HD resolution so small/tight barcodes are captured with enough detail
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
                 // Force continuous autofocus if the hardware supports it
                 advanced: [{ focusMode: "continuous" }]
             };
