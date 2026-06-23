@@ -304,32 +304,7 @@
             font-size: 1.1rem;
         }
         
-        /* Modal Info Install Manual */
-        .manual-install-modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(5px);
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-        }
-        .manual-install-card {
-            background: var(--surface-1);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 24px;
-            max-width: 320px;
-            text-align: center;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            animation: slideUp 0.3s ease-out;
-        }
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
+        /* Modal Info Install Manual (Removed) */
     </style>
 </head>
 <body>
@@ -342,20 +317,7 @@
             <i class="bi bi-android2"></i> Install App
         </button>
 
-        <!-- Manual Install Guide Modal -->
-        <div class="manual-install-modal" id="manualInstallModal">
-            <div class="manual-install-card">
-                <i class="bi bi-info-circle" style="font-size:2rem; color:var(--info); margin-bottom:12px; display:inline-block;"></i>
-                <h3 style="font-size:1.1rem; margin-bottom:12px;">Cara Install Manual</h3>
-                <p style="font-size:0.85rem; color:var(--text-muted); line-height:1.5; margin-bottom:20px;">
-                    Pop-up install otomatis diblokir oleh browser Anda.<br><br>
-                    Untuk menginstal, klik icon menu <strong>(tiga titik di pojok kanan atas)</strong> browser Chrome Anda, lalu pilih <strong>"Tambahkan ke Layar Utama"</strong> atau <strong>"Install Aplikasi"</strong>.
-                </p>
-                <button type="button" onclick="document.getElementById('manualInstallModal').style.display='none'" style="background:var(--primary); color:white; border:none; padding:10px 24px; border-radius:20px; font-weight:600; cursor:pointer;">
-                    Mengerti
-                </button>
-            </div>
-        </div>
+
 
         <div class="login-header">
             <img src="<?= BASE_URL ?>public/images/Icon.png" alt="AlfarezMart" class="login-logo">
@@ -575,33 +537,27 @@
     (function() {
         let deferredPrompt = null;
         const btnInst = document.getElementById('btnMiniInstall');
-        const manualModal = document.getElementById('manualInstallModal');
 
-        // Show the button if NOT in standalone mode
-        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-        if (!isStandalone) {
-            btnInst.style.display = 'inline-flex';
-        }
-
-        // Tangkap event install
+        // Hanya tangkap event install. Browser menentukannya secara otomatis.
         window.addEventListener('beforeinstallprompt', function(e) {
+            // Mencegah popup muncul otomatis dari browser (opsional, tapi baik untuk kontrol)
             e.preventDefault();
+            // Simpan event sehingga bisa dipicu nanti
             deferredPrompt = e;
+            // Tampilkan tombol hanya KETIKA prompt native tersedia dan siap
+            btnInst.style.display = 'inline-flex';
         });
 
         // Tombol Install diklik
         btnInst.addEventListener('click', async function() {
             if (deferredPrompt) {
-                // Show native prompt
+                // Tampilkan native prompt bawaan HP
                 deferredPrompt.prompt();
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
                     deferredPrompt = null;
                     btnInst.style.display = 'none';
                 }
-            } else {
-                // Browser blocks prompt or not supported, show manual guide
-                manualModal.style.display = 'flex';
             }
         });
 
