@@ -27,7 +27,7 @@ class Database
                 $this->connectMySQL();
                 $this->activeDriver = 'mysql';
                 return;
-            } catch (PDOException $e) {
+            } catch (\Throwable $e) {
                 // MySQL unreachable (offline / server down / connection limit)
                 // Log silently and continue to SQLite fallback
                 error_log('[AlfarezMart] MySQL connection failed, falling back to SQLite: ' . $e->getMessage());
@@ -38,7 +38,7 @@ class Database
         try {
             $this->connectSQLite();
             $this->activeDriver = 'sqlite';
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             if (defined('APP_DEBUG') && APP_DEBUG === 'true') {
                 die("Database Error (SQLite fallback also failed): " . $e->getMessage());
             }
@@ -55,6 +55,16 @@ class Database
         $dbname = defined('DB_DATABASE') ? DB_DATABASE : 'u573283697_alfarezmart';
         $user   = defined('DB_USERNAME') ? DB_USERNAME : 'u573283697_alfarez';
         $pass   = defined('DB_PASSWORD') ? DB_PASSWORD : '';
+
+        // FAST OFFLINE CHECK
+        // On Windows and some systems, PDO ignores ATTR_TIMEOUT when the network adapter is off,
+        // causing the script to hang until max_execution_time is reached (resulting in HTTP 500).
+        // This fsockopen test ensures we instantly fail over to SQLite if the host is unreachable.
+        $socket = @fsockopen($host, $port, $errno, $errstr, 1.5);
+        if (!$socket) {
+            throw new \Exception("Host is unreachable: $errstr");
+        }
+        fclose($socket);
 
         $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
         $options = [
