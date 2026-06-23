@@ -22,6 +22,7 @@
     
     <link rel="icon" type="image/png" href="<?= BASE_URL ?>public/images/mobile_icon.png">
     <link rel="apple-touch-icon" href="<?= BASE_URL ?>public/images/mobile_icon.png">
+    <link rel="manifest" href="<?= BASE_URL ?>manifest.json">
     
     <!-- Bootstrap 5.3 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -533,18 +534,34 @@
         }
     }
 
+    // ── Service Worker Registration ──
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('<?= BASE_URL ?>sw.js')
+                .then(reg => console.log('SW registered on login:', reg.scope))
+                .catch(err => console.log('SW registration failed on login:', err));
+        });
+    }
+
     // ── PWA Install Logic ──
     (function() {
         let deferredPrompt = null;
         const btnInst = document.getElementById('btnMiniInstall');
 
+        // Check if already installed
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        if (isStandalone) {
+            btnInst.style.display = 'none';
+            return;
+        }
+
         // Hanya tangkap event install. Browser menentukannya secara otomatis.
         window.addEventListener('beforeinstallprompt', function(e) {
-            // Mencegah popup muncul otomatis dari browser (opsional, tapi baik untuk kontrol)
+            // Mencegah popup muncul otomatis dari browser
             e.preventDefault();
             // Simpan event sehingga bisa dipicu nanti
             deferredPrompt = e;
-            // Tampilkan tombol hanya KETIKA prompt native tersedia dan siap
+            // Tampilkan tombol KETIKA prompt native tersedia dan siap
             btnInst.style.display = 'inline-flex';
         });
 
