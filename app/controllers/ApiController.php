@@ -1880,12 +1880,27 @@ class ApiController extends Controller
             if (!$row) throw new Exception("Kemasan tidak ditemukan");
             if ($row['level'] == 1) throw new Exception("Satuan terkecil (Level 1) tidak bisa dihapus");
 
+            $stmtPid = $db->prepare("SELECT product_id FROM product_packagings WHERE id = :id");
+            $stmtPid->execute([':id' => $id]);
+            $productId = $stmtPid->fetchColumn();
+
             $stmt = $db->prepare("DELETE FROM product_packagings WHERE id = :id");
             $stmt->execute([':id' => $id]);
 
             // Re-number levels
-            $stmtPid = $db->prepare("SELECT product_id FROM product_packagings WHERE id > 0 LIMIT 0");
-            // Actually get product_id from the deleted row — we need to re-fetch before delete, let's skip renumber for simplicity
+            if ($productId) {
+                $stmtGet = $db->prepare("SELECT id FROM product_packagings WHERE product_id = :pid ORDER BY level ASC");
+                $stmtGet->execute([':pid' => $productId]);
+                $remainingPkgs = $stmtGet->fetchAll(PDO::FETCH_ASSOC);
+                
+                $newLevel = 1;
+                foreach ($remainingPkgs as $pkg) {
+                    $stmtUpdate = $db->prepare("UPDATE product_packagings SET level = :lvl WHERE id = :id");
+                    $stmtUpdate->execute([':lvl' => $newLevel, ':id' => $pkg['id']]);
+                    $newLevel++;
+                }
+            }
+
             $this->json(['success' => true, 'message' => 'Level kemasan berhasil dihapus']);
         } catch (PDOException $e) {
             if ($e->getCode() == '23000' || strpos($e->getMessage(), '1451') !== false) {
@@ -1922,6 +1937,19 @@ class ApiController extends Controller
                     $stmt = $db->prepare("DELETE FROM product_packagings WHERE id = :id");
                     $stmt->execute([':id' => $id]);
                     
+                    if ($productId) {
+                        $stmtGet = $db->prepare("SELECT id FROM product_packagings WHERE product_id = :pid ORDER BY level ASC");
+                        $stmtGet->execute([':pid' => $productId]);
+                        $remainingPkgs = $stmtGet->fetchAll(PDO::FETCH_ASSOC);
+                        
+                        $newLevel = 1;
+                        foreach ($remainingPkgs as $pkg) {
+                            $stmtUpdate = $db->prepare("UPDATE product_packagings SET level = :lvl WHERE id = :id");
+                            $stmtUpdate->execute([':lvl' => $newLevel, ':id' => $pkg['id']]);
+                            $newLevel++;
+                        }
+                    }
+
                     $this->json(['success' => true, 'message' => 'Level kemasan berhasil dihapus (beserta penyesuaian riwayat)']);
                 } catch (Exception $ex) {
                     $this->json(['error' => 'Gagal menyesuaikan riwayat transaksi: ' . $ex->getMessage()], 500);
