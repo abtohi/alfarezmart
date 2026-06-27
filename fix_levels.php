@@ -1,7 +1,10 @@
 <?php
 define('BASE_PATH', __DIR__);
 define('APP_PATH', BASE_PATH . '/app');
-require_once APP_PATH . '/config/Database.php'; // Load only Database config
+define('PUBLIC_PATH', BASE_PATH . '/public');
+define('STORAGE_PATH', dirname(BASE_PATH) . '/storage');
+require_once APP_PATH . '/config/App.php'; // Load .env
+require_once APP_PATH . '/config/Database.php'; // Load Database config
 $db = Database::getInstance()->getConnection();
 
 try {
