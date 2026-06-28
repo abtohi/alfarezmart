@@ -24,11 +24,24 @@ class PurchaseController extends Controller
         $supplierModel = new SupplierModel();
         $salesRepModel = new SalesRepModel();
 
+        try {
+            $salesReps = $salesRepModel->getAllWithSupplier();
+        } catch (Exception $e) {
+            error_log('PurchaseController::create salesReps error: ' . $e->getMessage());
+            $salesReps = [];
+        }
+        try {
+            $suppliers = $supplierModel->all('name', 'ASC');
+        } catch (Exception $e) {
+            error_log('PurchaseController::create suppliers error: ' . $e->getMessage());
+            $suppliers = [];
+        }
+
         $this->view('purchases.create', [
             'title' => 'Input Barang Masuk',
             'activeNav' => 'purchase',
-            'salesReps' => $salesRepModel->getAllWithSupplier(),
-            'suppliers' => $supplierModel->all('name', 'ASC'),
+            'salesReps' => $salesReps,
+            'suppliers' => $suppliers,
         ]);
     }
 
