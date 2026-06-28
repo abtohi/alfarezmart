@@ -832,8 +832,8 @@ window.openSupplierPriceAnalysis = async function() {
             <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:6px;"><i class="bi bi-building" style="margin-right:5px;"></i>Pilih Supplier</label>
             <div style="display:flex;gap:8px;align-items:flex-end;">
                 <div id="spaSupplierSearchboxWrap" style="flex:1;"></div>
-                <button id="spaBtnCari" type="button" class="btn-primary-custom" onclick="_spaTriggerSearch()" style="height:44px;padding:0 16px;display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0;">
-                    <i class="bi bi-search"></i> Cari
+                <button id="spaBtnCari" type="button" onclick="_spaTriggerSearch()" style="height:44px;padding:0 16px;display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0;background:var(--surface-1);border:1px solid var(--border-color);color:var(--text-primary);border-radius:var(--radius-md);font-weight:600;font-size:var(--font-size-sm);cursor:pointer;transition:all 0.2s;">
+                    <i class="bi bi-search" style="color:var(--primary);"></i> Cari
                 </button>
             </div>
             <div id="spaNoSuppliersMsg" style="display:none;margin-top:8px;font-size:var(--font-size-xs);color:var(--warning);">
@@ -877,7 +877,7 @@ window.openSupplierPriceAnalysis = async function() {
         icon: 'bi-truck',
         onSelect: (val, label) => {
             _spaCurrentSupplierId = val;
-            // Don't auto-load anymore – wait for Cari button
+            _spaLoadComparison(val, label);
         }
     });
 };
