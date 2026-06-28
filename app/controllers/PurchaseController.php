@@ -45,7 +45,7 @@ class PurchaseController extends Controller
         ]);
     }
 
-    public function show($id)
+    public function show(string $id)
     {
         $model = new PurchaseModel();
         $purchase = $model->getDetails($id);
@@ -62,7 +62,7 @@ class PurchaseController extends Controller
         ]);
     }
 
-    public function edit($id)
+    public function edit(string $id)
     {
         $model = new PurchaseModel();
         $purchase = $model->getDetails($id);
