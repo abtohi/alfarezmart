@@ -109,6 +109,7 @@ $router->get('/api/storage/invoice-photo', 'ApiController@serveInvoicePhoto');
 // Reports API
 $router->get('/api/reports/product-history/{id}', 'ApiController@getProductHistory');
 $router->get('/api/reports/supplier-price-comparison/{id}', 'ApiController@getSupplierPriceComparison');
+$router->get('/api/reports/suppliers-for-comparison', 'ApiController@getSuppliersForComparison');
 
 // Sales Transactions API
 $router->get('/api/sales/analytics', 'ApiController@getSalesAnalytics');

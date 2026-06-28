@@ -313,15 +313,6 @@ class ApiController extends Controller
                 JOIN products p ON pi.product_id = p.id
                 LEFT JOIN categories cat ON p.category_id = cat.id
                 WHERE pu.supplier_id = :sid
-                  AND pi.product_id IN (
-                      -- Only products that have been bought from at least 2 different suppliers
-                      SELECT product_id
-                      FROM purchase_items pi_inner
-                      JOIN purchases pu_inner ON pi_inner.purchase_id = pu_inner.id
-                      WHERE pu_inner.supplier_id IS NOT NULL
-                      GROUP BY product_id
-                      HAVING COUNT(DISTINCT pu_inner.supplier_id) >= 2
-                  )
                 GROUP BY pi.product_id, p.full_name, p.short_label, cat.name
                 ORDER BY p.full_name ASC
             ");
@@ -379,7 +370,7 @@ class ApiController extends Controller
                 JOIN purchases pu ON pi.purchase_id = pu.id
                 LEFT JOIN suppliers s ON pu.supplier_id = s.id
                 WHERE pi.product_id IN ($placeholders)
-                  AND COALESCE(pu.supplier_id, 0) != :sid
+                  AND COALESCE(pu.supplier_id, 0) != ?
                 GROUP BY pi.product_id, COALESCE(s.id, 0), COALESCE(s.name, 'Supplier Dihapus')
                 ORDER BY last_buy_price ASC
             ");
@@ -465,6 +456,40 @@ class ApiController extends Controller
                 'data'          => $result,
             ]);
 
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Get suppliers that have at least one product purchased from multiple suppliers.
+     */
+    public function getSuppliersForComparison()
+    {
+        try {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("
+                SELECT DISTINCT s.id, s.name
+                FROM suppliers s
+                JOIN purchases pu ON s.id = pu.supplier_id
+                JOIN purchase_items pi ON pu.id = pi.purchase_id
+                WHERE pi.product_id IN (
+                    SELECT product_id
+                    FROM purchase_items pi_inner
+                    JOIN purchases pu_inner ON pi_inner.purchase_id = pu_inner.id
+                    WHERE pu_inner.supplier_id IS NOT NULL
+                    GROUP BY product_id
+                    HAVING COUNT(DISTINCT pu_inner.supplier_id) >= 2
+                )
+                ORDER BY s.name ASC
+            ");
+            $stmt->execute();
+            $suppliers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $this->json([
+                'success' => true,
+                'data' => $suppliers
+            ]);
         } catch (Exception $e) {
             $this->json(['error' => $e->getMessage()], 500);
         }

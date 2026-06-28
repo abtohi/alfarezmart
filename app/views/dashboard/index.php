@@ -750,7 +750,7 @@ window.openSupplierPriceAnalysis = async function() {
     // Load suppliers list
     showToast('Memuat data supplier...', 'info');
     try {
-        const res = await api(`${BASE_URL}api/suppliers`);
+        const res = await api(`${BASE_URL}api/reports/suppliers-for-comparison`);
         _spaSupplierData = (res.success ? (res.data || res) : (Array.isArray(res) ? res : []));
         if (!Array.isArray(_spaSupplierData)) _spaSupplierData = [];
     } catch(e) {
@@ -909,17 +909,18 @@ async function _spaLoadComparison(supplierId, supplierLabel) {
             return;
         }
 
-        const cheapestCount = data.filter(d => d.is_cheapest).length;
-        const expensiveCount = data.length - cheapestCount;
+        const cheapestCount = data.filter(d => d.is_cheapest && d.other_suppliers && d.other_suppliers.length > 0).length;
+        const exclusiveCount = data.filter(d => !d.other_suppliers || d.other_suppliers.length === 0).length;
+        const expensiveCount = data.length - cheapestCount - exclusiveCount;
         const avgSavings = data.reduce((a, b) => a + (b.savings_pct || 0), 0) / (expensiveCount || 1);
 
         let html = `
             <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:10px;">
-                Menampilkan <strong style="color:var(--text-primary);">${data.length} produk</strong> yang bisa dibandingkan untuk supplier <strong style="color:#818cf8;">${escapeHtml(supName)}</strong>
+                Menampilkan <strong style="color:var(--text-primary);">${data.length} produk</strong> untuk supplier <strong style="color:#818cf8;">${escapeHtml(supName)}</strong>
             </div>
             <div class="spa-summary-bar">
                 <div class="spa-summary-chip">
-                    <strong style="color:var(--success);">${cheapestCount}</strong>
+                    <strong style="color:var(--success);">${cheapestCount + exclusiveCount}</strong>
                     <span>Harga Terbaik</span>
                 </div>
                 <div class="spa-summary-chip">
@@ -934,14 +935,23 @@ async function _spaLoadComparison(supplierId, supplierLabel) {
         `;
 
         data.forEach(prod => {
-            const isBest = prod.is_cheapest;
+            const others = prod.other_suppliers || [];
+            const isExclusive = others.length === 0;
+            const isBest = prod.is_cheapest || isExclusive;
+            
             const iconBg = isBest ? 'var(--success-bg)' : 'var(--danger-bg)';
             const iconColor = isBest ? 'var(--success)' : 'var(--danger)';
-            const iconClass = isBest ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill';
+            const iconClass = isBest ? (isExclusive ? 'bi-star-fill' : 'bi-check-circle-fill') : 'bi-exclamation-circle-fill';
             const cardClass = isBest ? 'spa-cheapest' : 'spa-expensive';
-            const badge = isBest
-                ? `<span class="spa-badge spa-badge-best"><i class="bi bi-check-lg"></i> Harga Terbaik</span>`
-                : `<span class="spa-badge spa-badge-expensive">+${prod.savings_pct}% lebih mahal</span>`;
+            
+            let badge = '';
+            if (isExclusive) {
+                badge = `<span class="spa-badge spa-badge-best"><i class="bi bi-shield-check"></i> Eksklusif</span>`;
+            } else if (isBest) {
+                badge = `<span class="spa-badge spa-badge-best"><i class="bi bi-check-lg"></i> Harga Terbaik</span>`;
+            } else {
+                badge = `<span class="spa-badge spa-badge-expensive">+${prod.savings_pct}% lebih mahal</span>`;
+            }
 
             const selNorm = prod.selected_norm_price;
             const selPrice = prod.selected_buy_price;
@@ -950,32 +960,33 @@ async function _spaLoadComparison(supplierId, supplierLabel) {
 
             // Build supplier comparison rows
             let otherRows = '';
-            const others = prod.other_suppliers || [];
+            
+            if (!isExclusive) {
+                // Find cheapest other supplier norm_price
+                let minOtherNorm = Infinity;
+                others.forEach(o => { if (parseFloat(o.norm_price) < minOtherNorm) minOtherNorm = parseFloat(o.norm_price); });
 
-            // Find cheapest other supplier norm_price
-            let minOtherNorm = Infinity;
-            others.forEach(o => { if (parseFloat(o.norm_price) < minOtherNorm) minOtherNorm = parseFloat(o.norm_price); });
+                others.forEach(oth => {
+                    const othNorm = parseFloat(oth.norm_price) || 0;
+                    const isOthCheapest = othNorm === minOtherNorm && !isBest;
+                    const rowClass = isOthCheapest ? 'spa-row-cheapest-other' : '';
+                    const othDate = (oth.last_date || '').split(' ')[0] || '-';
+                    const othUnit = oth.last_unit_name || prod.base_unit;
+                    const diffPct = selNorm > 0 ? (((othNorm - selNorm) / selNorm) * 100).toFixed(1) : 0;
+                    const diffColor = othNorm < selNorm ? 'var(--success)' : (othNorm > selNorm ? 'var(--danger)' : 'var(--text-muted)');
+                    const diffSign = othNorm < selNorm ? '↓' : (othNorm > selNorm ? '↑' : '=');
+                    const diffLabel = othNorm !== selNorm ? `<span style="color:${diffColor};font-size:9px;font-weight:700;">${diffSign}${Math.abs(diffPct)}%</span>` : `<span style="color:var(--text-muted);font-size:9px;">sama</span>`;
 
-            others.forEach(oth => {
-                const othNorm = parseFloat(oth.norm_price) || 0;
-                const isOthCheapest = othNorm === minOtherNorm && !isBest;
-                const rowClass = isOthCheapest ? 'spa-row-cheapest-other' : '';
-                const othDate = (oth.last_date || '').split(' ')[0] || '-';
-                const othUnit = oth.last_unit_name || prod.base_unit;
-                const diffPct = selNorm > 0 ? (((othNorm - selNorm) / selNorm) * 100).toFixed(1) : 0;
-                const diffColor = othNorm < selNorm ? 'var(--success)' : (othNorm > selNorm ? 'var(--danger)' : 'var(--text-muted)');
-                const diffSign = othNorm < selNorm ? '↓' : (othNorm > selNorm ? '↑' : '=');
-                const diffLabel = othNorm !== selNorm ? `<span style="color:${diffColor};font-size:9px;font-weight:700;">${diffSign}${Math.abs(diffPct)}%</span>` : `<span style="color:var(--text-muted);font-size:9px;">sama</span>`;
-
-                otherRows += `
-                    <tr class="${rowClass}">
-                        <td style="color:var(--text-secondary);">${escapeHtml(oth.supplier_name)}</td>
-                        <td><span class="spa-norm-price">Rp ${fmtNumber(Math.round(othNorm))}</span><br><span style="font-size:9px;color:var(--text-muted);">/${prod.base_unit} • ${escapeHtml(othUnit)}</span></td>
-                        <td>${diffLabel}</td>
-                        <td class="spa-date-label">${othDate}</td>
-                    </tr>
-                `;
-            });
+                    otherRows += `
+                        <tr class="${rowClass}">
+                            <td style="color:var(--text-secondary);">${escapeHtml(oth.supplier_name)}</td>
+                            <td><span class="spa-norm-price">Rp ${fmtNumber(Math.round(othNorm))}</span><br><span style="font-size:9px;color:var(--text-muted);">/${prod.base_unit} • ${escapeHtml(othUnit)}</span></td>
+                            <td>${diffLabel}</td>
+                            <td class="spa-date-label">${othDate}</td>
+                        </tr>
+                    `;
+                });
+            }
 
             html += `
                 <div class="spa-product-card ${cardClass}">
@@ -991,6 +1002,7 @@ async function _spaLoadComparison(supplierId, supplierLabel) {
                     </div>
 
                     <table class="spa-price-table">
+                        ${!isExclusive ? `
                         <thead>
                             <tr>
                                 <th>Supplier</th>
@@ -999,9 +1011,10 @@ async function _spaLoadComparison(supplierId, supplierLabel) {
                                 <th>Tgl Beli</th>
                             </tr>
                         </thead>
+                        ` : ''}
                         <tbody>
                             <tr class="spa-row-selected">
-                                <td style="color:#818cf8;font-weight:700;">
+                                <td style="color:#818cf8;font-weight:700;${isExclusive ? 'padding-left:0;' : ''}">
                                     <i class="bi bi-pin-fill" style="font-size:9px;margin-right:3px;"></i>
                                     ${escapeHtml(supName)}
                                 </td>
@@ -1009,8 +1022,15 @@ async function _spaLoadComparison(supplierId, supplierLabel) {
                                     <span class="spa-norm-price">Rp ${fmtNumber(Math.round(selNorm))}</span>
                                     <br><span style="font-size:9px;color:var(--text-muted);">/${prod.base_unit} • ${escapeHtml(selUnit)}</span>
                                 </td>
+                                ${!isExclusive ? `
                                 <td><span style="color:var(--text-muted);font-size:9px;">—</span></td>
                                 <td class="spa-date-label">${selDate}</td>
+                                ` : `
+                                <td colspan="2" style="text-align:right;">
+                                    <span style="color:var(--text-muted);font-size:9px;display:block;">Tgl Beli</span>
+                                    <span class="spa-date-label" style="font-weight:600;">${selDate}</span>
+                                </td>
+                                `}
                             </tr>
                             ${otherRows}
                         </tbody>
