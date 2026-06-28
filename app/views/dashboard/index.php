@@ -830,17 +830,26 @@ window.openSupplierPriceAnalysis = async function() {
 
         <div class="spa-supplier-picker">
             <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:6px;"><i class="bi bi-building" style="margin-right:5px;"></i>Pilih Supplier</label>
-            <div id="spaSupplierSearchboxWrap"></div>
+            <div style="display:flex;gap:8px;align-items:flex-end;">
+                <div id="spaSupplierSearchboxWrap" style="flex:1;"></div>
+                <button id="spaBtnCari" type="button" onclick="_spaTriggerSearch()" style="height:44px;padding:0 16px;border-radius:var(--radius-md);border:none;background:linear-gradient(135deg,#6366f1,#818cf8);color:#fff;font-weight:700;font-size:var(--font-size-sm);cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+                    <i class="bi bi-search"></i> Cari
+                </button>
+            </div>
+            <div id="spaNoSuppliersMsg" style="display:none;margin-top:8px;font-size:var(--font-size-xs);color:var(--warning);">
+                <i class="bi bi-exclamation-triangle"></i> Belum ada data supplier yang bisa dibandingkan. Pastikan ada produk yang pernah dibeli dari lebih dari satu supplier.
+            </div>
         </div>
 
         <div id="spaResultsWrap" class="spa-results-wrap">
             <div class="spa-empty">
                 <i class="bi bi-bar-chart-line"></i>
-                <div style="font-weight:600;margin-bottom:4px;">Pilih supplier untuk memulai</div>
+                <div style="font-weight:600;margin-bottom:4px;">Pilih supplier lalu klik Cari</div>
                 <div style="font-size:var(--font-size-xs);">Hanya produk yang dibeli dari lebih dari 1 supplier yang akan ditampilkan</div>
             </div>
         </div>
     `;
+
 
     AppModal.show({
         title: 'Analisis Harga Supplier',
@@ -855,6 +864,12 @@ window.openSupplierPriceAnalysis = async function() {
 
     // Init SearchBox after DOM is ready
     const supOpts = _spaSupplierData.map(s => ({ value: String(s.id), label: s.name }));
+
+    if (supOpts.length === 0) {
+        const noMsg = document.getElementById('spaNoSuppliersMsg');
+        if (noMsg) noMsg.style.display = 'block';
+    }
+
     _spaSupplierSB = new SearchBox(document.getElementById('spaSupplierSearchboxWrap'), {
         options: supOpts,
         placeholder: '-- Ketik atau pilih supplier --',
@@ -862,9 +877,18 @@ window.openSupplierPriceAnalysis = async function() {
         icon: 'bi-truck',
         onSelect: (val, label) => {
             _spaCurrentSupplierId = val;
-            _spaLoadComparison(val, label);
+            // Don't auto-load anymore – wait for Cari button
         }
     });
+};
+
+window._spaTriggerSearch = function() {
+    if (!_spaCurrentSupplierId) {
+        showToast('Pilih supplier terlebih dahulu', 'warning');
+        return;
+    }
+    const label = _spaSupplierData.find(s => String(s.id) === String(_spaCurrentSupplierId))?.name || '';
+    _spaLoadComparison(_spaCurrentSupplierId, label);
 };
 
 async function _spaLoadComparison(supplierId, supplierLabel) {
