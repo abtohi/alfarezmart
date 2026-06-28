@@ -262,6 +262,214 @@ class ApiController extends Controller
         ]);
     }
 
+    /**
+     * Get products from a supplier compared against prices from other suppliers.
+     * Only returns products that have been purchased from MORE than one supplier.
+     */
+    public function getSupplierPriceComparison(int $id)
+    {
+        try {
+            $supplierId = (int)$id;
+            $db = Database::getInstance()->getConnection();
+
+            // Get all products purchased from this supplier that were also
+            // purchased from at least one other supplier (so we can compare).
+            $stmt = $db->prepare("
+                SELECT
+                    pi.product_id,
+                    p.full_name AS product_name,
+                    p.short_label,
+                    cat.name AS category_name,
+                    -- Latest purchase info for the SELECTED supplier
+                    (SELECT pi2.buy_price
+                     FROM purchase_items pi2
+                     JOIN purchases pu2 ON pi2.purchase_id = pu2.id
+                     WHERE pi2.product_id = pi.product_id AND pu2.supplier_id = :sid2
+                     ORDER BY pu2.purchase_date DESC, pu2.id DESC LIMIT 1
+                    ) AS selected_buy_price,
+                    (SELECT pkg2.base_qty
+                     FROM purchase_items pi2
+                     JOIN purchases pu2 ON pi2.purchase_id = pu2.id
+                     JOIN product_packagings pkg2 ON pi2.packaging_id = pkg2.id
+                     WHERE pi2.product_id = pi.product_id AND pu2.supplier_id = :sid3
+                     ORDER BY pu2.purchase_date DESC, pu2.id DESC LIMIT 1
+                    ) AS selected_base_qty,
+                    (SELECT u2.name
+                     FROM purchase_items pi2
+                     JOIN purchases pu2 ON pi2.purchase_id = pu2.id
+                     JOIN product_packagings pkg2 ON pi2.packaging_id = pkg2.id
+                     JOIN units u2 ON pkg2.unit_id = u2.id
+                     WHERE pi2.product_id = pi.product_id AND pu2.supplier_id = :sid4
+                     ORDER BY pu2.purchase_date DESC, pu2.id DESC LIMIT 1
+                    ) AS selected_unit_name,
+                    (SELECT pu2.purchase_date
+                     FROM purchase_items pi2
+                     JOIN purchases pu2 ON pi2.purchase_id = pu2.id
+                     WHERE pi2.product_id = pi.product_id AND pu2.supplier_id = :sid5
+                     ORDER BY pu2.purchase_date DESC, pu2.id DESC LIMIT 1
+                    ) AS selected_last_date
+                FROM purchase_items pi
+                JOIN purchases pu ON pi.purchase_id = pu.id
+                JOIN products p ON pi.product_id = p.id
+                LEFT JOIN categories cat ON p.category_id = cat.id
+                WHERE pu.supplier_id = :sid
+                  AND pi.product_id IN (
+                      -- Only products that have been bought from at least 2 different suppliers
+                      SELECT product_id
+                      FROM purchase_items pi_inner
+                      JOIN purchases pu_inner ON pi_inner.purchase_id = pu_inner.id
+                      WHERE pu_inner.supplier_id IS NOT NULL
+                      GROUP BY product_id
+                      HAVING COUNT(DISTINCT pu_inner.supplier_id) >= 2
+                  )
+                GROUP BY pi.product_id, p.full_name, p.short_label, cat.name
+                ORDER BY p.full_name ASC
+            ");
+            $stmt->execute([
+                ':sid'  => $supplierId,
+                ':sid2' => $supplierId,
+                ':sid3' => $supplierId,
+                ':sid4' => $supplierId,
+                ':sid5' => $supplierId,
+            ]);
+            $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($products)) {
+                $this->json(['success' => true, 'data' => [], 'supplier_name' => '']);
+                return;
+            }
+
+            // Fetch supplier name
+            $stmtSup = $db->prepare("SELECT name FROM suppliers WHERE id = :id");
+            $stmtSup->execute([':id' => $supplierId]);
+            $supplierName = $stmtSup->fetchColumn() ?: 'Supplier';
+
+            // For each product, get all competitor supplier prices
+            $productIds = array_column($products, 'product_id');
+            $placeholders = implode(',', array_fill(0, count($productIds), '?'));
+
+            $stmtOthers = $db->prepare("
+                SELECT
+                    pi.product_id,
+                    COALESCE(s.id, 0) AS supplier_id,
+                    COALESCE(s.name, 'Supplier Dihapus') AS supplier_name,
+                    (SELECT pi2.buy_price
+                     FROM purchase_items pi2
+                     JOIN purchases pu2 ON pi2.purchase_id = pu2.id
+                     WHERE pi2.product_id = pi.product_id AND COALESCE(pu2.supplier_id, 0) = COALESCE(s.id, 0)
+                     ORDER BY pu2.purchase_date DESC LIMIT 1
+                    ) AS last_buy_price,
+                    (SELECT pkg2.base_qty
+                     FROM purchase_items pi2
+                     JOIN purchases pu2 ON pi2.purchase_id = pu2.id
+                     JOIN product_packagings pkg2 ON pi2.packaging_id = pkg2.id
+                     WHERE pi2.product_id = pi.product_id AND COALESCE(pu2.supplier_id, 0) = COALESCE(s.id, 0)
+                     ORDER BY pu2.purchase_date DESC LIMIT 1
+                    ) AS last_base_qty,
+                    (SELECT u2.name
+                     FROM purchase_items pi2
+                     JOIN purchases pu2 ON pi2.purchase_id = pu2.id
+                     JOIN product_packagings pkg2 ON pi2.packaging_id = pkg2.id
+                     JOIN units u2 ON pkg2.unit_id = u2.id
+                     WHERE pi2.product_id = pi.product_id AND COALESCE(pu2.supplier_id, 0) = COALESCE(s.id, 0)
+                     ORDER BY pu2.purchase_date DESC LIMIT 1
+                    ) AS last_unit_name,
+                    MAX(pu.purchase_date) AS last_date
+                FROM purchase_items pi
+                JOIN purchases pu ON pi.purchase_id = pu.id
+                LEFT JOIN suppliers s ON pu.supplier_id = s.id
+                WHERE pi.product_id IN ($placeholders)
+                  AND COALESCE(pu.supplier_id, 0) != :sid
+                GROUP BY pi.product_id, COALESCE(s.id, 0), COALESCE(s.name, 'Supplier Dihapus')
+                ORDER BY last_buy_price ASC
+            ");
+            $params = array_merge(array_values($productIds), [$supplierId]);
+            $stmtOthers->execute($params);
+            $otherRows = $stmtOthers->fetchAll(PDO::FETCH_ASSOC);
+
+            // Group other suppliers by product_id
+            $othersByProduct = [];
+            foreach ($otherRows as $row) {
+                $othersByProduct[$row['product_id']][] = $row;
+            }
+
+            // Get base unit for each product
+            $stmtUnit = $db->prepare("
+                SELECT pp.product_id, u.name AS base_unit
+                FROM product_packagings pp
+                JOIN units u ON pp.unit_id = u.id
+                WHERE pp.product_id IN ($placeholders) AND pp.level = 1
+            ");
+            $stmtUnit->execute(array_values($productIds));
+            $unitRows = $stmtUnit->fetchAll(PDO::FETCH_ASSOC);
+            $baseUnits = [];
+            foreach ($unitRows as $ur) {
+                $baseUnits[$ur['product_id']] = $ur['base_unit'];
+            }
+
+            // Build final result
+            $result = [];
+            foreach ($products as $prod) {
+                $pid = $prod['product_id'];
+                $others = $othersByProduct[$pid] ?? [];
+
+                // Calculate normalized price per base unit for selected supplier
+                $selBuyPrice = floatval($prod['selected_buy_price'] ?? 0);
+                $selBaseQty  = floatval($prod['selected_base_qty'] ?? 1) ?: 1;
+                $selNormPrice = $selBuyPrice / $selBaseQty;
+
+                // Find minimum normalized price across all other suppliers
+                $minOtherNormPrice = PHP_INT_MAX;
+                foreach ($others as &$oth) {
+                    $othBuyPrice = floatval($oth['last_buy_price'] ?? 0);
+                    $othBaseQty  = floatval($oth['last_base_qty'] ?? 1) ?: 1;
+                    $oth['norm_price'] = $othBuyPrice / $othBaseQty;
+                    if ($oth['norm_price'] < $minOtherNormPrice) {
+                        $minOtherNormPrice = $oth['norm_price'];
+                    }
+                }
+                unset($oth);
+
+                // Determine if selected supplier is the cheapest
+                $isCheapest = $selNormPrice <= $minOtherNormPrice;
+                $cheapestNorm = min($selNormPrice, $minOtherNormPrice === PHP_INT_MAX ? $selNormPrice : $minOtherNormPrice);
+                $savingsPct = $cheapestNorm > 0 && $minOtherNormPrice !== PHP_INT_MAX
+                    ? round((($selNormPrice - $cheapestNorm) / $cheapestNorm) * 100, 1)
+                    : 0;
+
+                $result[] = [
+                    'product_id'         => $pid,
+                    'product_name'       => $prod['product_name'],
+                    'short_label'        => $prod['short_label'],
+                    'category_name'      => $prod['category_name'],
+                    'base_unit'          => $baseUnits[$pid] ?? 'pcs',
+                    'selected_buy_price' => $selBuyPrice,
+                    'selected_unit_name' => $prod['selected_unit_name'],
+                    'selected_last_date' => $prod['selected_last_date'],
+                    'selected_norm_price'=> round($selNormPrice, 2),
+                    'is_cheapest'        => $isCheapest,
+                    'savings_pct'        => $isCheapest ? 0 : $savingsPct,
+                    'other_suppliers'    => $others,
+                ];
+            }
+
+            // Sort: cheapest selected supplier first, then non-cheapest
+            usort($result, function($a, $b) {
+                if ($a['is_cheapest'] !== $b['is_cheapest']) return $b['is_cheapest'] <=> $a['is_cheapest'];
+                return $a['selected_norm_price'] <=> $b['selected_norm_price'];
+            });
+
+            $this->json([
+                'success'       => true,
+                'supplier_name' => $supplierName,
+                'data'          => $result,
+            ]);
+
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function searchProducts()
     {
         try {

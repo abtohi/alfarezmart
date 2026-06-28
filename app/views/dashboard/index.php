@@ -121,6 +121,10 @@
             <div class="action-icon" style="background: var(--warning-bg); color: var(--warning);"><i class="bi bi-tags"></i></div>
             <span class="action-label">Histori Produk</span>
         </a>
+        <a href="javascript:void(0)" onclick="openSupplierPriceAnalysis()" class="quick-action">
+            <div class="action-icon" style="background: rgba(99,102,241,0.12); color: #818cf8;"><i class="bi bi-bar-chart-line-fill"></i></div>
+            <span class="action-label">Analisis Harga</span>
+        </a>
         <a href="<?= BASE_URL ?>sales" class="quick-action">
             <div class="action-icon" style="background: var(--primary-bg); color: var(--primary);"><i class="bi bi-clock-history"></i></div>
             <span class="action-label">Riwayat</span>
@@ -734,4 +738,301 @@ window.executeExport = async function(mode) {
         showToast(e.message, 'error');
     }
 };
+
+// ==========================================
+// SUPPLIER PRICE ANALYSIS MODAL
+// ==========================================
+let _spaSupplierSB = null;
+let _spaCurrentSupplierId = null;
+let _spaSupplierData = [];
+
+window.openSupplierPriceAnalysis = async function() {
+    // Load suppliers list
+    showToast('Memuat data supplier...', 'info');
+    try {
+        const res = await api(`${BASE_URL}api/suppliers`);
+        _spaSupplierData = (res.success ? (res.data || res) : (Array.isArray(res) ? res : []));
+        if (!Array.isArray(_spaSupplierData)) _spaSupplierData = [];
+    } catch(e) {
+        _spaSupplierData = [];
+    }
+
+    const html = `
+        <style>
+            .spa-supplier-picker { margin-bottom: 16px; }
+            .spa-results-wrap { min-height: 120px; }
+            .spa-empty {
+                text-align:center; padding: 40px 0; color: var(--text-muted);
+            }
+            .spa-empty i { font-size: 2.5rem; margin-bottom: 12px; display:block; opacity:0.4; }
+            .spa-product-card {
+                background: var(--surface-1);
+                border: 1px solid var(--border-color);
+                border-radius: var(--radius-lg);
+                padding: 14px;
+                margin-bottom: 10px;
+                transition: border-color 0.2s;
+            }
+            .spa-product-card.spa-cheapest {
+                border-color: var(--success);
+                background: linear-gradient(135deg, var(--success-bg) 0%, var(--surface-1) 100%);
+            }
+            .spa-product-card.spa-expensive {
+                border-color: var(--danger);
+            }
+            .spa-prod-header { display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; }
+            .spa-prod-icon {
+                width:36px; height:36px; border-radius:var(--radius-md);
+                display:flex; align-items:center; justify-content:center;
+                font-size:1rem; flex-shrink:0;
+            }
+            .spa-prod-name { font-weight:700; font-size:var(--font-size-sm); line-height:1.3; }
+            .spa-prod-cat { font-size:var(--font-size-xs); color:var(--text-muted); margin-top:2px; }
+            .spa-badge {
+                font-size:9px; font-weight:700; padding:3px 7px;
+                border-radius:99px; white-space:nowrap; flex-shrink:0;
+            }
+            .spa-badge-best { background:var(--success-bg); color:var(--success); }
+            .spa-badge-expensive { background:var(--danger-bg); color:var(--danger); }
+            .spa-price-table { width:100%; border-collapse:collapse; font-size:var(--font-size-xs); }
+            .spa-price-table th {
+                color:var(--text-muted); font-weight:600; text-align:left;
+                padding:4px 6px; border-bottom:1px solid var(--border-color);
+                font-size:9px; text-transform:uppercase; letter-spacing:0.5px;
+            }
+            .spa-price-table td { padding:5px 6px; vertical-align:middle; }
+            .spa-price-table tr.spa-row-selected { background: rgba(99,102,241,0.08); }
+            .spa-price-table tr.spa-row-cheapest-other td:first-child::before {
+                content: '★ ';
+                color: var(--success);
+            }
+            .spa-norm-price { font-weight:700; font-size:11px; color:var(--text-primary); }
+            .spa-date-label { font-size:9px; color:var(--text-muted); }
+            .spa-loading-card {
+                background:var(--surface-1); border:1px solid var(--border-color);
+                border-radius:var(--radius-lg); padding:16px; margin-bottom:10px;
+                animation: spa-pulse 1.2s ease-in-out infinite;
+            }
+            @keyframes spa-pulse {
+                0%, 100% { opacity:1; }
+                50% { opacity:0.4; }
+            }
+            .spa-skel { background:var(--surface-2); border-radius:4px; height:12px; }
+            .spa-summary-bar {
+                display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;
+            }
+            .spa-summary-chip {
+                background:var(--surface-2); border-radius:var(--radius-md);
+                padding:8px 12px; font-size:var(--font-size-xs); text-align:center; flex:1; min-width:70px;
+            }
+            .spa-summary-chip strong { display:block; font-size:var(--font-size-sm); color:var(--text-primary); font-weight:800; }
+        </style>
+
+        <div class="spa-supplier-picker">
+            <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:6px;"><i class="bi bi-building" style="margin-right:5px;"></i>Pilih Supplier</label>
+            <div id="spaSupplierSearchboxWrap"></div>
+        </div>
+
+        <div id="spaResultsWrap" class="spa-results-wrap">
+            <div class="spa-empty">
+                <i class="bi bi-bar-chart-line"></i>
+                <div style="font-weight:600;margin-bottom:4px;">Pilih supplier untuk memulai</div>
+                <div style="font-size:var(--font-size-xs);">Hanya produk yang dibeli dari lebih dari 1 supplier yang akan ditampilkan</div>
+            </div>
+        </div>
+    `;
+
+    AppModal.show({
+        title: 'Analisis Harga Supplier',
+        subtitle: 'Komparasi harga beli antar supplier',
+        icon: 'bi-bar-chart-line-fill',
+        iconColor: 'rgba(99,102,241,0.12)',
+        iconAccent: '#818cf8',
+        bodyHTML: html,
+        hideFooter: true,
+        centered: true,
+    });
+
+    // Init SearchBox after DOM is ready
+    const supOpts = _spaSupplierData.map(s => ({ value: String(s.id), label: s.name }));
+    _spaSupplierSB = new SearchBox(document.getElementById('spaSupplierSearchboxWrap'), {
+        options: supOpts,
+        placeholder: '-- Ketik atau pilih supplier --',
+        name: 'spaSupplier',
+        icon: 'bi-truck',
+        onSelect: (val, label) => {
+            _spaCurrentSupplierId = val;
+            _spaLoadComparison(val, label);
+        }
+    });
+};
+
+async function _spaLoadComparison(supplierId, supplierLabel) {
+    const wrap = document.getElementById('spaResultsWrap');
+    if (!wrap) return;
+
+    // Show loading skeletons
+    wrap.innerHTML = [
+        `<div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:10px;"><i class="bi bi-hourglass-split" style="margin-right:4px;"></i>Memuat data komparasi untuk <strong>${escapeHtml(supplierLabel)}</strong>...</div>`,
+        ...Array(3).fill(0).map(() => `
+            <div class="spa-loading-card">
+                <div style="display:flex;gap:10px;margin-bottom:10px;">
+                    <div class="spa-skel" style="width:36px;height:36px;border-radius:8px;"></div>
+                    <div style="flex:1;">
+                        <div class="spa-skel" style="width:60%;margin-bottom:6px;"></div>
+                        <div class="spa-skel" style="width:35%;height:9px;"></div>
+                    </div>
+                </div>
+                <div class="spa-skel" style="width:100%;height:60px;"></div>
+            </div>
+        `)
+    ].join('');
+
+    try {
+        const res = await api(`${BASE_URL}api/reports/supplier-price-comparison/${supplierId}`);
+
+        if (res.error) throw new Error(res.error);
+
+        const data = res.data || [];
+        const supName = res.supplier_name || supplierLabel;
+
+        if (data.length === 0) {
+            wrap.innerHTML = `
+                <div class="spa-empty">
+                    <i class="bi bi-inbox"></i>
+                    <div style="font-weight:600;margin-bottom:4px;">Tidak ada data komparasi</div>
+                    <div style="font-size:var(--font-size-xs);">
+                        Tidak ada produk dari <strong>${escapeHtml(supName)}</strong> yang juga pernah dibeli dari supplier lain.
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const cheapestCount = data.filter(d => d.is_cheapest).length;
+        const expensiveCount = data.length - cheapestCount;
+        const avgSavings = data.reduce((a, b) => a + (b.savings_pct || 0), 0) / (expensiveCount || 1);
+
+        let html = `
+            <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:10px;">
+                Menampilkan <strong style="color:var(--text-primary);">${data.length} produk</strong> yang bisa dibandingkan untuk supplier <strong style="color:#818cf8;">${escapeHtml(supName)}</strong>
+            </div>
+            <div class="spa-summary-bar">
+                <div class="spa-summary-chip">
+                    <strong style="color:var(--success);">${cheapestCount}</strong>
+                    <span>Harga Terbaik</span>
+                </div>
+                <div class="spa-summary-chip">
+                    <strong style="color:var(--danger);">${expensiveCount}</strong>
+                    <span>Bisa Lebih Murah</span>
+                </div>
+                <div class="spa-summary-chip">
+                    <strong style="color:var(--warning);">${expensiveCount > 0 ? avgSavings.toFixed(1) + '%' : '-'}</strong>
+                    <span>Rata-rata Selisih</span>
+                </div>
+            </div>
+        `;
+
+        data.forEach(prod => {
+            const isBest = prod.is_cheapest;
+            const iconBg = isBest ? 'var(--success-bg)' : 'var(--danger-bg)';
+            const iconColor = isBest ? 'var(--success)' : 'var(--danger)';
+            const iconClass = isBest ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill';
+            const cardClass = isBest ? 'spa-cheapest' : 'spa-expensive';
+            const badge = isBest
+                ? `<span class="spa-badge spa-badge-best"><i class="bi bi-check-lg"></i> Harga Terbaik</span>`
+                : `<span class="spa-badge spa-badge-expensive">+${prod.savings_pct}% lebih mahal</span>`;
+
+            const selNorm = prod.selected_norm_price;
+            const selPrice = prod.selected_buy_price;
+            const selUnit = prod.selected_unit_name || prod.base_unit;
+            const selDate = prod.selected_last_date ? prod.selected_last_date.split(' ')[0] : '-';
+
+            // Build supplier comparison rows
+            let otherRows = '';
+            const others = prod.other_suppliers || [];
+
+            // Find cheapest other supplier norm_price
+            let minOtherNorm = Infinity;
+            others.forEach(o => { if (parseFloat(o.norm_price) < minOtherNorm) minOtherNorm = parseFloat(o.norm_price); });
+
+            others.forEach(oth => {
+                const othNorm = parseFloat(oth.norm_price) || 0;
+                const isOthCheapest = othNorm === minOtherNorm && !isBest;
+                const rowClass = isOthCheapest ? 'spa-row-cheapest-other' : '';
+                const othDate = (oth.last_date || '').split(' ')[0] || '-';
+                const othUnit = oth.last_unit_name || prod.base_unit;
+                const diffPct = selNorm > 0 ? (((othNorm - selNorm) / selNorm) * 100).toFixed(1) : 0;
+                const diffColor = othNorm < selNorm ? 'var(--success)' : (othNorm > selNorm ? 'var(--danger)' : 'var(--text-muted)');
+                const diffSign = othNorm < selNorm ? '↓' : (othNorm > selNorm ? '↑' : '=');
+                const diffLabel = othNorm !== selNorm ? `<span style="color:${diffColor};font-size:9px;font-weight:700;">${diffSign}${Math.abs(diffPct)}%</span>` : `<span style="color:var(--text-muted);font-size:9px;">sama</span>`;
+
+                otherRows += `
+                    <tr class="${rowClass}">
+                        <td style="color:var(--text-secondary);">${escapeHtml(oth.supplier_name)}</td>
+                        <td><span class="spa-norm-price">Rp ${fmtNumber(Math.round(othNorm))}</span><br><span style="font-size:9px;color:var(--text-muted);">/${prod.base_unit} • ${escapeHtml(othUnit)}</span></td>
+                        <td>${diffLabel}</td>
+                        <td class="spa-date-label">${othDate}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                <div class="spa-product-card ${cardClass}">
+                    <div class="spa-prod-header">
+                        <div class="spa-prod-icon" style="background:${iconBg};color:${iconColor};">
+                            <i class="bi ${iconClass}"></i>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div class="spa-prod-name">${escapeHtml(prod.product_name)}</div>
+                            <div class="spa-prod-cat">${prod.category_name ? escapeHtml(prod.category_name) : 'Tanpa Kategori'}</div>
+                        </div>
+                        ${badge}
+                    </div>
+
+                    <table class="spa-price-table">
+                        <thead>
+                            <tr>
+                                <th>Supplier</th>
+                                <th>Harga Terakhir</th>
+                                <th>Selisih</th>
+                                <th>Tgl Beli</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="spa-row-selected">
+                                <td style="color:#818cf8;font-weight:700;">
+                                    <i class="bi bi-pin-fill" style="font-size:9px;margin-right:3px;"></i>
+                                    ${escapeHtml(supName)}
+                                </td>
+                                <td>
+                                    <span class="spa-norm-price">Rp ${fmtNumber(Math.round(selNorm))}</span>
+                                    <br><span style="font-size:9px;color:var(--text-muted);">/${prod.base_unit} • ${escapeHtml(selUnit)}</span>
+                                </td>
+                                <td><span style="color:var(--text-muted);font-size:9px;">—</span></td>
+                                <td class="spa-date-label">${selDate}</td>
+                            </tr>
+                            ${otherRows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        });
+
+        wrap.innerHTML = html;
+
+    } catch (err) {
+        wrap.innerHTML = `
+            <div class="spa-empty">
+                <i class="bi bi-exclamation-circle"></i>
+                <div style="font-weight:600;margin-bottom:4px;color:var(--danger);">Gagal memuat data</div>
+                <div style="font-size:var(--font-size-xs);">${escapeHtml(err.message)}</div>
+            </div>
+        `;
+    }
+}
+
+function fmtNumber(n) {
+    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
 </script>
