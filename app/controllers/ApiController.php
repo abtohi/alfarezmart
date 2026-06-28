@@ -457,6 +457,11 @@ class ApiController extends Controller
                 return $a['selected_norm_price'] <=> $b['selected_norm_price'];
             });
 
+            // Only include products that have at least one other supplier (multi-supplier products)
+            $result = array_values(array_filter($result, function($item) {
+                return !empty($item['other_suppliers']);
+            }));
+
             $this->json([
                 'success'       => true,
                 'supplier_name' => $supplierName,
