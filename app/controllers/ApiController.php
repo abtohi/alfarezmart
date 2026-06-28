@@ -266,7 +266,7 @@ class ApiController extends Controller
      * Get products from a supplier compared against prices from other suppliers.
      * Only returns products that have been purchased from MORE than one supplier.
      */
-    public function getSupplierPriceComparison(int $id)
+    public function getSupplierPriceComparison(string $id)
     {
         try {
             $supplierId = (int)$id;
