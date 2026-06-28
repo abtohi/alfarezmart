@@ -372,7 +372,6 @@ class ApiController extends Controller
                 WHERE pi.product_id IN ($placeholders)
                   AND COALESCE(pu.supplier_id, 0) != ?
                 GROUP BY pi.product_id, COALESCE(s.id, 0), COALESCE(s.name, 'Supplier Dihapus')
-                ORDER BY last_buy_price ASC
             ");
             $params = array_merge(array_values($productIds), [$supplierId]);
             $stmtOthers->execute($params);
@@ -383,6 +382,14 @@ class ApiController extends Controller
             foreach ($otherRows as $row) {
                 $othersByProduct[$row['product_id']][] = $row;
             }
+            
+            // Sort each product's competitors by last_buy_price ASC
+            foreach ($othersByProduct as $pid => &$others) {
+                usort($others, function($a, $b) {
+                    return floatval($a['last_buy_price'] ?? 0) <=> floatval($b['last_buy_price'] ?? 0);
+                });
+            }
+            unset($others);
 
             // Get base unit for each product
             $stmtUnit = $db->prepare("
