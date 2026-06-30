@@ -42,7 +42,7 @@ class PurchaseModel extends Model
             
             $stmtInsertStock = $this->db->prepare("
                 INSERT INTO stock (product_id, current_qty_base, last_restock_date, last_restock_qty) 
-                VALUES (:id, :qty, CURRENT_DATE, :qty)
+                VALUES (:id, :qty, CURRENT_DATE, :restock_qty)
             ");
             
             $stmtUpdateStock = $this->db->prepare("
@@ -171,7 +171,8 @@ class PurchaseModel extends Model
                 } else {
                     $stmtInsertStock->execute([
                         ':id' => $item['product_id'],
-                        ':qty' => $baseQtyAdded
+                        ':qty' => $baseQtyAdded,
+                        ':restock_qty' => $baseQtyAdded
                     ]);
                 }
 
@@ -474,7 +475,7 @@ class PurchaseModel extends Model
             
             $stmtInsertStock = $this->db->prepare("
                 INSERT INTO stock (product_id, current_qty_base, last_restock_date, last_restock_qty) 
-                VALUES (:id, :qty, CURRENT_DATE, :qty)
+                VALUES (:id, :qty, CURRENT_DATE, :restock_qty)
             ");
             
             $stmtUpdateStock = $this->db->prepare("
@@ -593,7 +594,8 @@ class PurchaseModel extends Model
                 } else {
                     $stmtInsertStock->execute([
                         ':id' => $item['product_id'],
-                        ':qty' => $totalQtyBase
+                        ':qty' => $totalQtyBase,
+                        ':restock_qty' => $totalQtyBase
                     ]);
                 }
 
