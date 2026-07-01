@@ -141,6 +141,10 @@
             <div class="action-icon" style="background: rgba(233, 30, 99, 0.1); color: #e91e63;"><i class="bi bi-journal-richtext"></i></div>
             <span class="action-label">Buat Katalog</span>
         </a>
+        <a href="<?= BASE_URL ?>products/multivariant" class="quick-action">
+            <div class="action-icon" style="background: rgba(156, 39, 176, 0.1); color: #9c27b0;"><i class="bi bi-diagram-3-fill"></i></div>
+            <span class="action-label">Harga Multivarian</span>
+        </a>
         <?php if (($currentUser['level'] ?? '') === 'superadmin'): ?>
         <a href="<?= BASE_URL ?>dashboard/summary" class="quick-action">
             <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-graph-up-arrow"></i></div>

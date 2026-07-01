@@ -41,6 +41,14 @@ class ProductController extends Controller
         ]);
     }
 
+    public function multivariant()
+    {
+        $this->view('products.multivariant', [
+            'title' => 'Harga Produk Multivarian',
+            'activeNav' => 'products'
+        ]);
+    }
+
     public function create()
     {
         $brands = $this->brandModel->all('name', 'ASC');

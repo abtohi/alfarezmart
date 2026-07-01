@@ -584,6 +584,151 @@ class ApiController extends Controller
         $this->json($product);
     }
 
+    public function getProductVariants(int $id)
+    {
+        $model = new ProductModel();
+        $ref = $model->findWithDetails($id);
+        if (!$ref) {
+            $this->json(['success' => false, 'message' => 'Referensi tidak ditemukan'], 404);
+            return;
+        }
+
+        $brandId = $ref['brand_id'];
+        $categoryId = $ref['category_id'];
+        $name = $ref['full_name'] ?: $ref['short_label'];
+
+        if (!$brandId || !$categoryId) {
+            $this->json(['success' => true, 'variants' => []]);
+            return;
+        }
+
+        // Try to extract weight/volume pattern e.g., 50g, 250ml, 30btr, 12pcs
+        $pattern = '/\b(\d+(?:\.\d+)?)\s*(g|gr|gram|kg|ml|l|btr|pcs|lembar|pack)\b/i';
+        preg_match($pattern, $name, $matches);
+        
+        $sql = "SELECT p.id, p.full_name, p.short_label, p.code, b.name as brand_name, c.name as category_name
+                FROM products p
+                LEFT JOIN brands b ON p.brand_id = b.id
+                LEFT JOIN categories c ON p.category_id = c.id
+                WHERE p.brand_id = :bid AND p.category_id = :cid AND p.id != :id AND p.is_active = 1";
+        
+        $params = [':bid' => $brandId, ':cid' => $categoryId, ':id' => $id];
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $allCandidates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $variants = [];
+        if (!empty($matches)) {
+            $weightStr = strtolower(preg_replace('/\s+/', '', $matches[0])); // e.g. "30btr"
+            foreach ($allCandidates as $c) {
+                $cName = $c['full_name'] ?: $c['short_label'];
+                // Check if candidate also contains the exact same weight string
+                $cNameClean = strtolower(preg_replace('/\s+/', '', $cName));
+                if (strpos($cNameClean, $weightStr) !== false) {
+                    $variants[] = $c;
+                }
+            }
+            // Fallback: if strict extraction yields no result, return all
+            if (empty($variants)) {
+                $variants = $allCandidates;
+            }
+        } else {
+            $variants = $allCandidates;
+        }
+
+        $this->json(['success' => true, 'variants' => array_values($variants)]);
+    }
+
+    public function applyMultivariantPricing()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->json(['success' => false, 'message' => 'Method not allowed'], 405);
+            return;
+        }
+        
+        $refId = isset($_POST['reference_id']) ? (int)$_POST['reference_id'] : 0;
+        $targetIds = isset($_POST['target_ids']) && is_array($_POST['target_ids']) ? $_POST['target_ids'] : [];
+
+        if (!$refId || empty($targetIds)) {
+            $this->json(['success' => false, 'message' => 'Data tidak lengkap']);
+            return;
+        }
+
+        $model = new ProductModel();
+        $refPackagings = $model->getPackagings($refId);
+
+        if (empty($refPackagings)) {
+            $this->json(['success' => false, 'message' => 'Produk referensi tidak memiliki kemasan']);
+            return;
+        }
+
+        try {
+            $this->db->beginTransaction();
+
+            foreach ($targetIds as $tId) {
+                $tId = (int)$tId;
+                if ($tId === $refId) continue;
+
+                // Delete existing packagings for target
+                $stmt = $this->db->prepare("DELETE FROM product_packagings WHERE product_id = ?");
+                $stmt->execute([$tId]);
+
+                // Insert new packagings matching reference
+                foreach ($refPackagings as $pkg) {
+                    $stmtPkg = $this->db->prepare("
+                        INSERT INTO product_packagings 
+                        (product_id, unit_id, level, base_qty, buy_price, sell_price_retail, sell_price_wholesale, barcode)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    ");
+                    // Important: Keep original target's barcode or generate new? 
+                    // Safest is to just leave it blank or copy? 
+                    // If we copy, barcodes collide. Better to leave target's barcode blank/NULL if we are recreating, OR 
+                    // ideally, we should map them by level instead of deleting. 
+                    // Since the plan said "ditimpa (di-replace) sepenuhnya", we'll just set barcode to NULL for now or generate.
+                    // Actually, let's just leave barcode empty so user can scan it later.
+                    $stmtPkg->execute([
+                        $tId,
+                        $pkg['unit_id'],
+                        $pkg['level'],
+                        $pkg['base_qty'],
+                        $pkg['buy_price'],
+                        $pkg['sell_price_retail'],
+                        $pkg['sell_price_wholesale'],
+                        null // blank barcode
+                    ]);
+                    $newPkgId = $this->db->lastInsertId();
+
+                    // Copy tier prices
+                    if (!empty($pkg['qty_prices'])) {
+                        foreach ($pkg['qty_prices'] as $t) {
+                            $stmtT = $this->db->prepare("
+                                INSERT INTO product_qty_prices 
+                                (packaging_id, min_qty, unit_price, sale_mode, label, sort_order)
+                                VALUES (?, ?, ?, ?, ?, ?)
+                            ");
+                            $stmtT->execute([
+                                $newPkgId,
+                                $t['min_qty'],
+                                $t['unit_price'],
+                                $t['sale_mode'],
+                                $t['label'],
+                                $t['sort_order']
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            $this->db->commit();
+            $this->json(['success' => true, 'message' => 'Harga berhasil diaplikasikan ke ' . count($targetIds) . ' produk']);
+
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            $this->json(['success' => false, 'message' => 'Gagal: ' . $e->getMessage()]);
+        }
+    }
+
     /**
      * Simpan tier harga spesial per kuantitas untuk satu kemasan
      */

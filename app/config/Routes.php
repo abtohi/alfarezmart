@@ -24,6 +24,7 @@ $router->get('/dashboard', 'DashboardController@index');
 // Products
 $router->get('/products', 'ProductController@index');
 $router->get('/products/create', 'ProductController@create');
+$router->get('/products/multivariant', 'ProductController@multivariant');
 $router->get('/products/{id}', 'ProductController@show');
 $router->get('/products/{id}/edit', 'ProductController@edit');
 
@@ -72,6 +73,8 @@ $router->get('/api/products/export', 'ApiController@exportProducts');
 $router->get('/api/products/names', 'ApiController@getProductNames');
 $router->get('/api/products', 'ApiController@getProducts');
 $router->get('/api/products/search', 'ApiController@searchProducts');
+$router->get('/api/products/{id}/variants', 'ApiController@getProductVariants');
+$router->post('/api/products/multivariant-apply', 'ApiController@applyMultivariantPricing');
 $router->get('/api/products/barcode/{code}', 'ApiController@getByBarcode');
 $router->get('/api/barcode/generate', 'ApiController@generateBarcode');
 $router->get('/api/products/{id}', 'ApiController@getById');
