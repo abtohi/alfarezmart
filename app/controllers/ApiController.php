@@ -789,7 +789,9 @@ class ApiController extends Controller
     }
 
     /**
-     * Update print label (short_label) for thermal receipt
+     * Update print label (short_label) for thermal receipt.
+     * Also accepts optional supplier_product_code and supplier_invoice_name
+     * so the product show page can save them inline without going to the edit page.
      */
     public function updateProductLabel(int $id)
     {
@@ -798,13 +800,33 @@ class ApiController extends Controller
             $model = new ProductModel();
             $shortLabel = $this->input('short_label');
             $invoiceName = $this->input('invoice_name');
+
+            // Supplier fields (optional — only update when explicitly sent)
+            $supplierCode    = $this->input('supplier_product_code');
+            $supplierInvName = $this->input('supplier_invoice_name');
+
             $model->updatePrintLabel((int) $id, $shortLabel, $invoiceName);
+
+            // Save supplier info if provided
+            if ($supplierCode !== null || $supplierInvName !== null) {
+                $supplierData = ['updated_at' => date('Y-m-d H:i:s')];
+                if ($supplierCode !== null) {
+                    $supplierData['supplier_product_code'] = trim($supplierCode) !== '' ? trim($supplierCode) : null;
+                }
+                if ($supplierInvName !== null) {
+                    $supplierData['supplier_invoice_name'] = trim($supplierInvName) !== '' ? trim($supplierInvName) : null;
+                }
+                $model->update($id, $supplierData);
+            }
+
             $product = $model->findWithDetails($id);
             $this->json([
-                'success' => true,
-                'message' => 'Label cetak berhasil disimpan',
-                'short_label' => $product['short_label'],
-                'invoice_name' => $product['invoice_name'],
+                'success'               => true,
+                'message'               => 'Label cetak berhasil disimpan',
+                'short_label'           => $product['short_label'],
+                'invoice_name'          => $product['invoice_name'],
+                'supplier_product_code' => $product['supplier_product_code'] ?? null,
+                'supplier_invoice_name' => $product['supplier_invoice_name'] ?? null,
             ]);
         } catch (Exception $e) {
             $this->json(['error' => $e->getMessage()], 500);

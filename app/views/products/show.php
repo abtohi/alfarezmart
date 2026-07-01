@@ -170,6 +170,55 @@
         </div>
     </div>
 
+
+    <!-- Informasi Supplier (Inline Edit) -->
+    <div style="background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-top:16px;border:1px solid var(--border-color);">
+        <div class="section-title" style="margin-bottom:4px;">
+            <i class="bi bi-building" style="color:var(--info);"></i> Informasi Supplier
+        </div>
+        <p style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:14px;">
+            Kode &amp; nama di invoice supplier — membantu AI Scan Invoice mengenali produk lebih akurat.
+        </p>
+
+        <!-- Kode Barang Supplier -->
+        <div style="margin-bottom:14px;">
+            <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:4px;">
+                <i class="bi bi-hash"></i> Kode Barang Supplier
+            </label>
+            <input type="text"
+                   id="inputSupplierCode"
+                   class="form-control-dark"
+                   placeholder="Cth: CMY-125, INM-001"
+                   value="<?= htmlspecialchars($product['supplier_product_code'] ?? '') ?>"
+                   style="width:100%;">
+        </div>
+
+        <!-- Nama Barang di Invoice Supplier (Multi-nama) -->
+        <div>
+            <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:6px;">
+                <i class="bi bi-card-text"></i> Nama Barang di Invoice Supplier
+                <span style="font-size:10px;color:var(--info);margin-left:4px;">(bisa multi-nama)</span>
+            </label>
+            <div id="showInvoiceNameList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;"></div>
+            <button type="button"
+                    onclick="showAddInvoiceName()"
+                    style="width:100%;border:1px dashed var(--border-color);background:transparent;color:var(--info);padding:6px;border-radius:var(--radius-sm);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;margin-bottom:4px;">
+                <i class="bi bi-plus-circle"></i> Tambah Nama Invoice
+            </button>
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:12px;">
+                <i class="bi bi-info-circle"></i> Tambahkan semua variasi nama produk di invoice supplier.
+            </div>
+        </div>
+
+        <button type="button"
+                id="btnSaveSupplierInfo"
+                class="btn-primary-custom"
+                style="width:100%;padding:10px;background:var(--info);"
+                onclick="saveSupplierInfo(<?= (int)$product['id'] ?>)">
+            <i class="bi bi-check2-circle"></i> Simpan Info Supplier
+        </button>
+    </div>
+
     <!-- Actions -->
     <?php $isStaffShow = (($_SESSION['user_level'] ?? '') === 'staff'); ?>
     <div style="display:flex;gap:8px;margin-top:24px;flex-direction:column;">
@@ -188,6 +237,7 @@
         <?php endif; ?>
     </div>
 </div>
+
 <script>
 function printBarcodeShow(code, title, unit) {
     BarcodeUtil.print({ code, title, subtitle: unit ? `1 ${unit}` : '' });
@@ -523,4 +573,91 @@ function calculateTotalStockPreview() {
     });
     document.getElementById('previewTotalStock').textContent = total;
 }
+
+// ===== SUPPLIER INFO (Inline on Show Page) =====
+
+function showInitInvoiceNameList(namesStr) {
+    const list = document.getElementById('showInvoiceNameList');
+    if (!list) return;
+    list.innerHTML = '';
+    const names = (namesStr || '').split(/[;\n]/).map(n => n.trim()).filter(n => n);
+    names.forEach(n => showAddInvoiceNameItem(n));
+}
+
+function showAddInvoiceName(val) {
+    showAddInvoiceNameItem(val || '');
+    // Focus the newly added input
+    const list = document.getElementById('showInvoiceNameList');
+    if (list) {
+        const inputs = list.querySelectorAll('.show-invoice-name-item');
+        if (inputs.length > 0) inputs[inputs.length - 1].focus();
+    }
+}
+
+function showAddInvoiceNameItem(val) {
+    const list = document.getElementById('showInvoiceNameList');
+    if (!list) return;
+    const div = document.createElement('div');
+    div.style.display = 'flex';
+    div.style.gap = '6px';
+    div.innerHTML = `
+        <input type="text"
+               class="form-control-dark show-invoice-name-item"
+               placeholder="Cth: CIMORY UHT PORORO"
+               style="flex:1;"
+               value="${val ? val.replace(/"/g, '&quot;') : ''}">
+        <button type="button"
+                onclick="this.parentElement.remove()"
+                style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:0 12px;cursor:pointer;">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    `;
+    list.appendChild(div);
+}
+
+function showCollectInvoiceNames() {
+    const inputs = document.querySelectorAll('.show-invoice-name-item');
+    const names = Array.from(inputs).map(inp => inp.value.trim()).filter(v => v);
+    return names.join(';');
+}
+
+async function saveSupplierInfo(id) {
+    const btn = document.getElementById('btnSaveSupplierInfo');
+    const prevText = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Menyimpan...';
+    btn.disabled = true;
+
+    const supplierCode    = document.getElementById('inputSupplierCode')?.value?.trim() || '';
+    const supplierInvName = showCollectInvoiceNames();
+
+    // We still need short_label for the label endpoint (it's required by updatePrintLabel)
+    const shortLabel = document.getElementById('inputShortLabel')?.value?.trim()
+                     || <?= json_encode($product['short_label'] ?? $product['full_name']) ?>;
+
+    try {
+        const csrfToken = document.getElementById('csrfToken')?.value || '';
+        const res = await api(`${BASE_URL}api/products/${id}/label`, 'POST', {
+            csrf_token:             csrfToken,
+            short_label:            shortLabel,
+            invoice_name:           shortLabel,
+            supplier_product_code:  supplierCode,
+            supplier_invoice_name:  supplierInvName,
+        });
+        if (res.success) {
+            showToast(res.message || 'Info supplier disimpan', 'success');
+        }
+    } catch (e) {
+        // api() already shows toast on error
+    } finally {
+        btn.innerHTML = prevText;
+        btn.disabled = false;
+    }
+}
+
+// Initialize supplier invoice name list on page load
+(function() {
+    const initialNames = <?= json_encode($product['supplier_invoice_name'] ?? '') ?>;
+    showInitInvoiceNameList(initialNames);
+})();
 </script>
+
