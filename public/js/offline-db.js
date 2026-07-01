@@ -217,13 +217,14 @@ window.OfflineDB = (function() {
                                       (p.supplier_invoice_name && p.supplier_invoice_name.toLowerCase().includes(word));
                     const brandMatch = p.brand_name && p.brand_name.toLowerCase().includes(word);
                     const codeMatch = p.code && p.code.toLowerCase().includes(word);
+                    const supplierCodeMatch = p.supplier_product_code && p.supplier_product_code.toLowerCase().includes(word);
                     
                     let barcodeMatch = false;
                     if (p.packagings && Array.isArray(p.packagings)) {
                         barcodeMatch = p.packagings.some(pkg => pkg.barcode && pkg.barcode.toLowerCase().includes(word));
                     }
 
-                    return nameMatch || brandMatch || codeMatch || barcodeMatch;
+                    return nameMatch || brandMatch || codeMatch || supplierCodeMatch || barcodeMatch;
                 });
             }).slice(0, 100);
         } catch (e) {
