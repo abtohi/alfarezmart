@@ -926,10 +926,21 @@ async function selectProduct(productSummary) {
 function addProductToCart(product, defaultLevel = 1) {
     let selectedPkg = product.packagings.find(p => p.level == defaultLevel) || product.packagings.find(p => p.level == 1) || product.packagings[0];
     
-    // Ensure all packagings have PPN/diskon initialized and auto-detect custom pricing
+    const existingIndex = purchaseItems.findIndex(i => i.product_id == product.id && i.level == selectedPkg.level);
+
+    if (existingIndex > -1) {
+        // ── Item already in cart: ONLY increment quantity, preserve all user-edited prices ──
+        const existing = purchaseItems[existingIndex];
+        existing.quantity += 1;
+        existing.total = existing.quantity * existing.buy_price;
+        renderCart();
+        showToast(`${product.short_label || product.full_name} +1`);
+        return;
+    }
+
+    // ── New item: initialize packagings and add to cart ──
     const lv1 = product.packagings.find(p => p.level == 1) || product.packagings[0];
     const lv1BaseQty = parseFloat(lv1?.base_qty) || 1;
-    const lv1Buy = parseFloat(lv1?.buy_price) || 0;
     const lv1Ret = parseFloat(lv1?.sell_price_retail) || 0;
     const lv1Who = parseFloat(lv1?.sell_price_wholesale) || 0;
 
@@ -956,35 +967,30 @@ function addProductToCart(product, defaultLevel = 1) {
         }
     });
     
-    const existingIndex = purchaseItems.findIndex(i => i.product_id == product.id && i.level == selectedPkg.level);
-    if (existingIndex > -1) {
-        purchaseItems[existingIndex].quantity += 1;
-        purchaseItems[existingIndex].total = purchaseItems[existingIndex].quantity * purchaseItems[existingIndex].buy_price;
-    } else {
-        purchaseItems.unshift({
-            id: Date.now(),
-            product_id: product.id,
-            name: product.full_name || product.short_label,
-            is_manual_price: false,
-            packagings: product.packagings,
-            level: selectedPkg.level,
-            unit_name: selectedPkg.unit_name,
-            quantity: 1,
-            buy_price: parseFloat(selectedPkg.buy_price) || 0,
-            sell_price_retail: parseFloat(selectedPkg.sell_price_retail) || 0,
-            sell_price_wholesale: parseFloat(selectedPkg.sell_price_wholesale) || 0,
-            last_buy_price: product.last_buy_price ? parseFloat(product.last_buy_price) : (parseFloat(product.packagings.find(p => p.level == 1)?.buy_price) || 0),
-            total: parseFloat(selectedPkg.buy_price) || 0,
-            ppn_pct: 0,
-            diskon_mode: 'rp',
-            diskon_value: 0,
-            harga_nett: parseFloat(selectedPkg.buy_price) || 0
-        });
-    }
+    purchaseItems.unshift({
+        id: Date.now(),
+        product_id: product.id,
+        name: product.full_name || product.short_label,
+        is_manual_price: false,
+        packagings: product.packagings,
+        level: selectedPkg.level,
+        unit_name: selectedPkg.unit_name,
+        quantity: 1,
+        buy_price: parseFloat(selectedPkg.buy_price) || 0,
+        sell_price_retail: parseFloat(selectedPkg.sell_price_retail) || 0,
+        sell_price_wholesale: parseFloat(selectedPkg.sell_price_wholesale) || 0,
+        last_buy_price: product.last_buy_price ? parseFloat(product.last_buy_price) : (parseFloat(product.packagings.find(p => p.level == 1)?.buy_price) || 0),
+        total: parseFloat(selectedPkg.buy_price) || 0,
+        ppn_pct: 0,
+        diskon_mode: 'rp',
+        diskon_value: 0,
+        harga_nett: parseFloat(selectedPkg.buy_price) || 0
+    });
     
     renderCart();
     showToast(`${product.short_label || product.full_name} ditambahkan`);
 }
+
 
 function changeLevel(tempId, newLevel) {
     const item = purchaseItems.find(i => i.id == tempId);
@@ -2619,6 +2625,13 @@ function collectDrawerDataForItem(uid) {
 }
 
 function renderCart() {
+    // ── SAVE ALL OPEN DRAWER DATA BACK TO DATA MODEL FIRST ──
+    // This ensures tier prices and any other drawer edits are not lost
+    // when the DOM is rebuilt.
+    purchaseItems.forEach(item => {
+        collectDrawerDataForItem(item.id);
+    });
+
     emptyState.style.display = purchaseItems.length === 0 ? 'flex' : 'none';
     countBadge.textContent = `${purchaseItems.length} Item`;
 
