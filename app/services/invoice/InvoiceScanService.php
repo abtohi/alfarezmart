@@ -329,13 +329,8 @@ class InvoiceScanService
 
     private function getModelName(): string
     {
-        $model = $this->settingModel->get('ai_model', 'google/gemma-4-31b-it:free');
-        // Remap deprecated / non-vision-capable free models to the current active free model
-        $legacyFree = ['openrouter/auto', 'openrouter/free', 'google/gemini-2.0-flash-exp:free', 'google/gemini-2.0-pro-exp-02-05:free'];
-        if (in_array($model, $legacyFree)) {
-            $model = 'google/gemma-4-31b-it:free';
-        }
-        return $model;
+        $model = $this->settingModel->get('ai_model', 'openrouter/auto');
+        return $model ?: 'openrouter/auto';
     }
 
     // ----------------------------------------------------------------
@@ -367,11 +362,25 @@ class InvoiceScanService
             'nvidia/nemotron-nano-12b-v2-vl:free',
         ];
 
-        // Build the list of models to try
+        // Build the list of models to try:
+        // - Primary: the configured model (default: openrouter/auto)
+        // - Fallbacks: free vision models, only tried if primary returns 429/5xx
+        $FREE_VISION_FALLBACKS = [
+            'google/gemma-4-31b-it:free',
+            'google/gemma-4-26b-a4b-it:free',
+            'nvidia/nemotron-nano-12b-v2-vl:free',
+        ];
+
         $modelsToTry = [$model];
-        if (in_array($model, $FREE_VISION_MODELS)) {
-            // Add remaining free models as fallbacks, excluding the primary
-            foreach ($FREE_VISION_MODELS as $fb) {
+        // Only add free fallbacks if the primary is NOT already one of them
+        // (avoids duplicates and unnecessary retries for paid models)
+        if (!in_array($model, $FREE_VISION_FALLBACKS)) {
+            foreach ($FREE_VISION_FALLBACKS as $fb) {
+                $modelsToTry[] = $fb;
+            }
+        } else {
+            // Primary IS a free model — add remaining free models as fallbacks
+            foreach ($FREE_VISION_FALLBACKS as $fb) {
                 if ($fb !== $model) $modelsToTry[] = $fb;
             }
         }
@@ -391,7 +400,7 @@ class InvoiceScanService
                 ],
                 'response_format' => ['type' => 'json_object'],
                 'temperature'     => 0.1,
-                'max_tokens'      => 3000,
+                'max_tokens'      => 8000, // Increased to prevent output truncation
             ];
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
@@ -405,7 +414,7 @@ class InvoiceScanService
                 'X-Title: AlfarezMart'
             ]);
 
-            // Free tier gets a shorter timeout (55s); paid models get full 110s
+            // Free tier gets a shorter timeout (55s); auto/paid models get full 110s
             $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-nano-12b-v2-vl:free'];
             $timeout = in_array($tryModel, $freeTierModels) ? 55 : 110;
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
@@ -422,20 +431,18 @@ class InvoiceScanService
             }
 
             if ($httpCode === 429) {
-                // Rate limit hit — log and try next model in chain
                 $nextModel = $modelsToTry[$attempt + 1] ?? null;
                 error_log("[AlfarezMart] Model {$tryModel} rate-limited (429). " . ($nextModel ? "Trying: $nextModel" : "No more fallbacks."));
-                $lastError = "Semua model gratis sedang dibatasi (rate limit). Coba lagi dalam beberapa jam atau gunakan model berbayar di Pengaturan.";
-                continue; // try next model
+                $lastError = "Model {$tryModel} sedang dibatasi (rate limit). Mencoba model lain...";
+                continue;
             }
 
             if ($httpCode !== 200) {
                 $errData = json_decode($response, true);
                 $msg = $errData['error']['message'] ?? 'Unknown error';
                 $lastError = "OpenRouter API Error ($httpCode): $msg";
-                // Only retry on 5xx server errors, not on 4xx client errors (except 429 above)
-                if ($httpCode >= 500) continue;
-                break; // 4xx client error, no point retrying with same payload
+                if ($httpCode >= 500) continue; // server error, retry
+                break; // 4xx client error, stop
             }
 
             // Success
@@ -446,7 +453,6 @@ class InvoiceScanService
             return json_decode(trim($content), true);
         }
 
-        // All attempts failed
         throw new \Exception($lastError ?? 'AI gagal memproses gambar setelah mencoba semua model.');
     }
 

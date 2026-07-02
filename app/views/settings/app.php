@@ -60,13 +60,13 @@
 
                     <div style="margin-bottom:10px;">
                         <div class="model-cards-grid">
-                            <div class="model-card <?= (empty($aiModel) || in_array($aiModel, ['openrouter/free','openrouter/auto','google/gemma-4-31b-it:free','google/gemini-2.0-flash-exp:free'])) ? 'selected' : '' ?>" onclick="selectModel('google/gemma-4-31b-it:free', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#34A853);">G</div>
+                            <div class="model-card <?= (empty($aiModel) || in_array($aiModel, ['openrouter/auto', 'openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemini-2.0-flash-exp:free'])) ? 'selected' : '' ?>" onclick="selectModel('openrouter/auto', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">A</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Gemma 4 (31B)</div>
-                                    <div class="model-card-meta">Vision Gratis Aktif</div>
+                                    <div class="model-card-name">Auto (Default)</div>
+                                    <div class="model-card-meta">Pilih model terbaik</div>
                                 </div>
-                                <span class="model-badge model-badge-free">Gratis</span>
+                                <span class="model-badge model-badge-pro">Default</span>
                             </div>
                             
                             <div class="model-card <?= ($aiModel === 'google/gemini-flash-1.5') ? 'selected' : '' ?>" onclick="selectModel('google/gemini-flash-1.5', this)">
