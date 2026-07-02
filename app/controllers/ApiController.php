@@ -769,6 +769,10 @@ class ApiController extends Controller
                         }
                     }
                 }
+
+                // Update the product's last update timestamp so it jumps to the top of the list
+                $stmtUpdate = $this->db->prepare("UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                $stmtUpdate->execute([$tId]);
             }
 
             $this->db->commit();
