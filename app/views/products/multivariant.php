@@ -8,17 +8,18 @@
     
     /* Search Dropdown Custom */
     .mv-search-wrapper { position: relative; }
-    .mv-search-input { width: 100%; padding: 12px 16px; padding-left: 40px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--surface-1); color: var(--text-primary); font-size: 14px; transition: all 0.2s; }
-    .mv-search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); outline: none; background: var(--surface); }
-    .mv-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+    .mv-search-input { width: 100%; padding: 14px 16px; padding-left: 44px; border: 1px solid var(--border-color); border-radius: var(--radius-lg); background: var(--surface); color: var(--text-primary); font-size: 15px; transition: all 0.2s; box-shadow: var(--shadow-sm); }
+    .mv-search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15); outline: none; }
+    .mv-search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--primary); font-size: 18px; }
     
-    .mv-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--surface); border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-top: 4px; box-shadow: var(--shadow-md); z-index: 50; max-height: 300px; overflow-y: auto; display: none; }
-    .mv-dropdown.active { display: block; }
-    .mv-dropdown-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--border-color); transition: background 0.2s; }
-    .mv-dropdown-item:last-child { border-bottom: none; }
-    .mv-dropdown-item:hover { background: var(--surface-1); }
-    .mv-dropdown-item-title { font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
-    .mv-dropdown-item-meta { font-size: 12px; color: var(--text-muted); }
+    .mv-dropdown { position: absolute; top: calc(100% + 8px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--border-color); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); z-index: 50; max-height: 400px; overflow-y: auto; display: none; padding: 8px; }
+    .mv-dropdown.active { display: block; animation: slideDown 0.2s ease-out; }
+    @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    .mv-dropdown-item { padding: 12px; cursor: pointer; border-radius: var(--radius-md); transition: all 0.2s; margin-bottom: 4px; }
+    .mv-dropdown-item:last-child { margin-bottom: 0; }
+    .mv-dropdown-item:hover { background: var(--surface-1); transform: translateX(4px); }
+    .mv-dropdown-item-title { font-weight: 700; color: var(--text-primary); font-size: 14px; margin-bottom: 2px; }
+    .mv-dropdown-item-meta { font-size: 11px; color: var(--text-muted); }
     
     /* Target List */
     .target-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; }
@@ -187,10 +188,28 @@ async function handleSearch(keyword, dropdownEl, onSelectCb) {
                 data.forEach(prod => {
                     const el = document.createElement('div');
                     el.className = 'mv-dropdown-item';
-                    let meta = `${prod.code} | ${prod.category_name || '-'} | ${prod.brand_name || '-'}`;
+                    const photoHtml = (prod.photo || prod.photo_path) 
+                        ? `<div style="width:48px;height:48px;border-radius:6px;overflow:hidden;flex-shrink:0;margin-right:12px;background:var(--surface-1);display:flex;align-items:center;justify-content:center;"><img src="<?= BASE_URL ?>${prod.photo || prod.photo_path}" style="width:100%;height:100%;object-fit:contain;"></div>`
+                        : `<div style="width:48px;height:48px;border-radius:6px;flex-shrink:0;margin-right:12px;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:20px;"><i class="bi bi-box-seam"></i></div>`;
+                    
+                    let pkgHtml = '';
+                    if (prod.packagings && prod.packagings.length > 0) {
+                        pkgHtml = `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px;">`;
+                        prod.packagings.forEach(pkg => {
+                            pkgHtml += `<span style="font-size:10px;padding:2px 6px;border-radius:4px;background:var(--surface-1);border:1px solid var(--border-color);color:var(--text-secondary);"><i class="bi bi-box2"></i> ${pkg.unit_name}: <strong style="color:var(--success);">Rp${parseFloat(pkg.sell_price_retail).toLocaleString('id-ID')}</strong></span>`;
+                        });
+                        pkgHtml += `</div>`;
+                    }
+
+                    el.style.display = 'flex';
+                    el.style.alignItems = 'flex-start';
                     el.innerHTML = `
-                        <div class="mv-dropdown-item-title">${prod.full_name || prod.short_label}</div>
-                        <div class="mv-dropdown-item-meta">${meta}</div>
+                        ${photoHtml}
+                        <div style="flex:1;min-width:0;">
+                            <div class="mv-dropdown-item-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${prod.short_label || prod.full_name}</div>
+                            <div class="mv-dropdown-item-meta">${prod.code} | ${prod.category_name || '-'} | ${prod.brand_name || '-'}</div>
+                            ${pkgHtml}
+                        </div>
                     `;
                     el.addEventListener('click', () => {
                         dropdownEl.classList.remove('active');
@@ -216,8 +235,8 @@ async function onSelectReference(prod) {
         const res = await fetch(`<?= BASE_URL ?>api/products/${prod.id}`);
         const data = await res.json();
         
-        if (data.success && data.product) {
-            referenceProduct = data.product;
+        if (data && !data.error) {
+            referenceProduct = data.product || data;
             
             // Update UI
             document.getElementById('refName').textContent = referenceProduct.full_name || referenceProduct.short_label;

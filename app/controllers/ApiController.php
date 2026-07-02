@@ -597,22 +597,27 @@ class ApiController extends Controller
         $categoryId = $ref['category_id'];
         $name = $ref['full_name'] ?: $ref['short_label'];
 
-        if (!$brandId || !$categoryId) {
-            $this->json(['success' => true, 'variants' => []]);
-            return;
-        }
-
         // Try to extract weight/volume pattern e.g., 50g, 250ml, 30btr, 12pcs
         $pattern = '/\b(\d+(?:\.\d+)?)\s*(g|gr|gram|kg|ml|l|btr|pcs|lembar|pack)\b/i';
         preg_match($pattern, $name, $matches);
         
+        $whereSql = "p.id != :id AND p.is_active = 1";
+        $params = [':id' => $id];
+        
+        if ($brandId) {
+            $whereSql .= " AND p.brand_id = :bid";
+            $params[':bid'] = $brandId;
+        }
+        if ($categoryId) {
+            $whereSql .= " AND p.category_id = :cid";
+            $params[':cid'] = $categoryId;
+        }
+
         $sql = "SELECT p.id, p.full_name, p.short_label, p.code, b.name as brand_name, c.name as category_name
                 FROM products p
                 LEFT JOIN brands b ON p.brand_id = b.id
                 LEFT JOIN categories c ON p.category_id = c.id
-                WHERE p.brand_id = :bid AND p.category_id = :cid AND p.id != :id AND p.is_active = 1";
-        
-        $params = [':bid' => $brandId, ':cid' => $categoryId, ':id' => $id];
+                WHERE $whereSql";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
