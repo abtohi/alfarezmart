@@ -430,10 +430,11 @@ class InvoiceScanService
                 continue; // try next model
             }
 
-            if ($httpCode === 429) {
+            if ($httpCode === 429 || $httpCode === 402) {
                 $nextModel = $modelsToTry[$attempt + 1] ?? null;
-                error_log("[AlfarezMart] Model {$tryModel} rate-limited (429). " . ($nextModel ? "Trying: $nextModel" : "No more fallbacks."));
-                $lastError = "Model {$tryModel} sedang dibatasi (rate limit). Mencoba model lain...";
+                $errCode = ($httpCode === 402) ? 'kredit habis (402)' : 'rate-limited (429)';
+                error_log("[AlfarezMart] Model {$tryModel} {$errCode}. " . ($nextModel ? "Trying: $nextModel" : "No more fallbacks."));
+                $lastError = "Model {$tryModel} ditolak ({$errCode}). Mencoba model lain...";
                 continue;
             }
 
