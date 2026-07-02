@@ -364,7 +364,7 @@
     </div>
     <button id="btnApply" onclick="applyPricing()"
             style="padding: 11px 22px; font-weight: 700; display: flex; align-items: center; gap: 8px; border-radius: var(--radius-md);"
-            class="btn btn-primary">
+            class="btn btn-danger">
         <i class="bi bi-check2-all" style="font-size: 17px;"></i>
         Aplikasikan Harga
     </button>
@@ -676,9 +676,9 @@ function renderTargetGrid() {
                     <div class="mv-pkg-label"><i class="bi bi-box2"></i> ${escHtml(pkg.unit_name || 'Pcs')}</div>
                     <div>
                         <div class="mv-pkg-prices">
-                            <span class="mv-price-chip modal">M: Rp${modal.toLocaleString('id-ID')}</span>
-                            <span class="mv-price-chip ecer">E: Rp${ecer.toLocaleString('id-ID')}</span>
-                            ${grosir > 0 ? `<span class="mv-price-chip grosir">G: Rp${grosir.toLocaleString('id-ID')}</span>` : ''}
+                            <span class="mv-price-chip modal">Modal: Rp${modal.toLocaleString('id-ID')}</span>
+                            <span class="mv-price-chip ecer">Ecer: Rp${ecer.toLocaleString('id-ID')}</span>
+                            ${grosir > 0 ? `<span class="mv-price-chip grosir">Grosir: Rp${grosir.toLocaleString('id-ID')}</span>` : ''}
                         </div>
                         ${tierHtml}
                     </div>
