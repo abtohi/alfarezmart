@@ -672,4 +672,13 @@ class SearchBox {
 // Initialize modal on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
     AppModal.init();
+
+    // Prevent right-click / context menu globally
+    document.addEventListener('contextmenu', e => {
+        // Allow context menu if the user is clicking on an input/textarea
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+            return;
+        }
+        e.preventDefault();
+    });
 });
