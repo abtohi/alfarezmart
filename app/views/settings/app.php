@@ -60,20 +60,20 @@
 
                     <div style="margin-bottom:10px;">
                         <div class="model-cards-grid">
-                            <div class="model-card <?= ($aiModel ?? '') === 'openrouter/auto' || !$aiModel ? 'selected' : '' ?>" onclick="selectModel('openrouter/auto', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">A</div>
+                            <div class="model-card <?= ($aiModel === 'google/gemini-2.0-flash-exp:free' || !$aiModel || $aiModel === 'openrouter/auto' || $aiModel === 'openrouter/free') ? 'selected' : '' ?>" onclick="selectModel('google/gemini-2.0-flash-exp:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#34A853);">G</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Auto Model</div>
-                                    <div class="model-card-meta">Otomatis Terbaik</div>
+                                    <div class="model-card-name">Gemini 2.0 Flash</div>
+                                    <div class="model-card-meta">Otomatis & Cepat</div>
                                 </div>
-                                <span class="model-badge model-badge-pro">Default</span>
+                                <span class="model-badge model-badge-free">Gratis</span>
                             </div>
                             
-                            <div class="model-card <?= ($aiModel ?? '') === 'openrouter/free' ? 'selected' : '' ?>" onclick="selectModel('openrouter/free', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">F</div>
+                            <div class="model-card <?= ($aiModel === 'google/gemini-2.0-pro-exp-02-05:free') ? 'selected' : '' ?>" onclick="selectModel('google/gemini-2.0-pro-exp-02-05:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#0F9D58,#0B8043);">P</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Free Router</div>
-                                    <div class="model-card-meta">Model Gratis</div>
+                                    <div class="model-card-name">Gemini 2.0 Pro</div>
+                                    <div class="model-card-meta">Akurat (Eksperimen)</div>
                                 </div>
                                 <span class="model-badge model-badge-free">Gratis</span>
                             </div>
