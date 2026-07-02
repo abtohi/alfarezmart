@@ -678,35 +678,83 @@ class ApiController extends Controller
                 $tId = (int)$rawId;
                 if ($tId <= 0 || $tId === $refId) continue;
 
-                // Delete existing packagings (CASCADE will also remove qty_prices)
-                $this->db->prepare("DELETE FROM product_packagings WHERE product_id = ?")
-                         ->execute([$tId]);
+            foreach ($targetIds as $rawId) {
+                $tId = (int)$rawId;
+                if ($tId <= 0 || $tId === $refId) continue;
 
-                // Insert each packaging level from reference
+                // ── 1. Ambil kemasan lama dari produk target ──
+                $stmtOld = $this->db->prepare("SELECT id, level FROM product_packagings WHERE product_id = ?");
+                $stmtOld->execute([$tId]);
+                $oldPkgs = [];
+                $level1PkgId = null;
+                foreach ($stmtOld->fetchAll() as $row) {
+                    $lvl = (int)$row['level'];
+                    $oldPkgs[$lvl] = (int)$row['id'];
+                    if ($lvl === 1) {
+                        $level1PkgId = (int)$row['id'];
+                    }
+                }
+
+                // ── 2. Loop referensi, Update atau Insert kemasan target ──
                 foreach ($refPackagings as $pkg) {
-                    $stmtPkg = $this->db->prepare("
-                        INSERT INTO product_packagings
-                            (product_id, unit_id, level, contained_qty, base_qty,
-                             buy_price, sell_price_retail, margin_retail,
-                             sell_price_wholesale, margin_wholesale, barcode)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ");
-                    $stmtPkg->execute([
-                        $tId,
-                        $pkg['unit_id'],
-                        $pkg['level'],
-                        $pkg['contained_qty'] ?? 1,
-                        $pkg['base_qty']       ?? 1,
-                        $pkg['buy_price']              ?? 0,
-                        $pkg['sell_price_retail']      ?? 0,
-                        $pkg['margin_retail']          ?? 0,
-                        $pkg['sell_price_wholesale']   ?? 0,
-                        $pkg['margin_wholesale']        ?? 0,
-                        null   // barcode left blank – no collision
-                    ]);
-                    $newPkgId = (int)$this->db->lastInsertId();
+                    $lvl = (int)$pkg['level'];
 
-                    // Copy tier prices
+                    if (isset($oldPkgs[$lvl])) {
+                        // UPDATE kemasan lama yang ada di level ini
+                        $pkgId = $oldPkgs[$lvl];
+                        $stmtUpdatePkg = $this->db->prepare("
+                            UPDATE product_packagings SET
+                                unit_id = ?, contained_qty = ?, base_qty = ?,
+                                buy_price = ?, sell_price_retail = ?, margin_retail = ?,
+                                sell_price_wholesale = ?, margin_wholesale = ?
+                            WHERE id = ?
+                        ");
+                        $stmtUpdatePkg->execute([
+                            $pkg['unit_id'],
+                            $pkg['contained_qty'] ?? 1,
+                            $pkg['base_qty'] ?? 1,
+                            $pkg['buy_price'] ?? 0,
+                            $pkg['sell_price_retail'] ?? 0,
+                            $pkg['margin_retail'] ?? 0,
+                            $pkg['sell_price_wholesale'] ?? 0,
+                            $pkg['margin_wholesale'] ?? 0,
+                            $pkgId
+                        ]);
+
+                        // Hapus harga tier lama
+                        $this->db->prepare("DELETE FROM product_qty_prices WHERE packaging_id = ?")->execute([$pkgId]);
+
+                        unset($oldPkgs[$lvl]); // Hapus dari daftar sisa
+                    } else {
+                        // INSERT kemasan baru
+                        $stmtInsertPkg = $this->db->prepare("
+                            INSERT INTO product_packagings
+                                (product_id, unit_id, level, contained_qty, base_qty,
+                                 buy_price, sell_price_retail, margin_retail,
+                                 sell_price_wholesale, margin_wholesale, barcode)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ");
+                        $stmtInsertPkg->execute([
+                            $tId,
+                            $pkg['unit_id'],
+                            $lvl,
+                            $pkg['contained_qty'] ?? 1,
+                            $pkg['base_qty'] ?? 1,
+                            $pkg['buy_price'] ?? 0,
+                            $pkg['sell_price_retail'] ?? 0,
+                            $pkg['margin_retail'] ?? 0,
+                            $pkg['sell_price_wholesale'] ?? 0,
+                            $pkg['margin_wholesale'] ?? 0,
+                            null
+                        ]);
+                        $pkgId = (int)$this->db->lastInsertId();
+                    }
+
+                    if ($lvl === 1) {
+                        $level1PkgId = $pkgId; // Simpan level 1 id untuk fallback
+                    }
+
+                    // Insert harga tier baru
                     if (!empty($pkg['qty_prices'])) {
                         $stmtT = $this->db->prepare("
                             INSERT INTO product_qty_prices
@@ -715,15 +763,33 @@ class ApiController extends Controller
                         ");
                         foreach ($pkg['qty_prices'] as $tier) {
                             $stmtT->execute([
-                                $newPkgId,
-                                $tier['min_qty']    ?? 1,
+                                $pkgId,
+                                $tier['min_qty'] ?? 1,
                                 $tier['unit_price'] ?? 0,
-                                $tier['sale_mode']  ?? 'both',
-                                $tier['label']      ?? null,
+                                $tier['sale_mode'] ?? 'both',
+                                $tier['label'] ?? null,
                                 $tier['sort_order'] ?? 0,
                             ]);
                         }
                     }
+                }
+
+                // ── 3. Hapus sisa kemasan target yang levelnya tidak ada di referensi ──
+                if (!empty($oldPkgs)) {
+                    $in = implode(',', array_map('intval', $oldPkgs));
+
+                    // Pindahkan referensi FK (purchase_items, sale_items) ke Level 1
+                    // agar tidak error ON DELETE RESTRICT
+                    if ($level1PkgId) {
+                        $this->db->exec("UPDATE purchase_items SET packaging_id = {$level1PkgId} WHERE packaging_id IN ($in)");
+                        $this->db->exec("UPDATE sale_items SET packaging_id = {$level1PkgId} WHERE packaging_id IN ($in)");
+                    }
+
+                    // Hapus tier prices sisa
+                    $this->db->exec("DELETE FROM product_qty_prices WHERE packaging_id IN ($in)");
+
+                    // Baru hapus kemasan sisanya
+                    $this->db->exec("DELETE FROM product_packagings WHERE id IN ($in)");
                 }
 
                 // Bump updated_at so product rises to top of list
