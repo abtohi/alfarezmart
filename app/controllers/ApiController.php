@@ -678,10 +678,6 @@ class ApiController extends Controller
                 $tId = (int)$rawId;
                 if ($tId <= 0 || $tId === $refId) continue;
 
-            foreach ($targetIds as $rawId) {
-                $tId = (int)$rawId;
-                if ($tId <= 0 || $tId === $refId) continue;
-
                 // ── 1. Ambil kemasan lama dari produk target ──
                 $stmtOld = $this->db->prepare("SELECT id, level FROM product_packagings WHERE product_id = ?");
                 $stmtOld->execute([$tId]);
