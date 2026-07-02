@@ -357,77 +357,97 @@ class InvoiceScanService
             throw new \Exception('API Key AI Scanner belum diatur di Pengaturan Aplikasi.');
         }
 
-        // Prevent infinite loops / memory exhaustion
+        // Prevent timeout issues
         set_time_limit(120);
 
-        $imageBlock = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
-
-        $payload = [
-            'model' => $model,
-            'messages' => [
-                [
-                    'role' => 'system',
-                    'content' => $systemPrompt
-                ],
-                [
-                    'role' => 'user',
-                    'content' => [
-                        [
-                            'type' => 'text',
-                            'text' => $userPrompt
-                        ],
-                        $imageBlock
-                    ]
-                ]
-            ],
-            // Request JSON object
-            'response_format' => ['type' => 'json_object'],
-            'temperature' => 0.1, // Low temp for more deterministic extraction
-            'max_tokens'  => 3000 // Limit output to prevent OpenRouter from reserving too many credits
+        // Free vision model fallback chain — tried in order when 429 rate-limit hit
+        $FREE_VISION_MODELS = [
+            'google/gemma-4-31b-it:free',
+            'google/gemma-4-26b-a4b-it:free',
+            'nvidia/nemotron-nano-12b-v2-vl:free',
         ];
 
-        $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Authorization: Bearer ' . $apiKey,
-            'Content-Type: application/json',
-            'HTTP-Referer: ' . BASE_URL,
-            'X-Title: AlfarezMart'
-        ]);
-        
-        // Lower timeout for free models because their queues can hang indefinitely
-        $freeTier = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free'];
-        $timeout = in_array($model, $freeTier) ? 55 : 110;
-        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-        // SSL verification bypassed for local dev only if needed, but best left on
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
-        $response = curl_exec($ch);
-        $err      = curl_error($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        
-
-
-        if ($err) {
-            throw new \Exception("Koneksi ke OpenRouter gagal: " . $err);
+        // Build the list of models to try
+        $modelsToTry = [$model];
+        if (in_array($model, $FREE_VISION_MODELS)) {
+            // Add remaining free models as fallbacks, excluding the primary
+            foreach ($FREE_VISION_MODELS as $fb) {
+                if ($fb !== $model) $modelsToTry[] = $fb;
+            }
         }
 
-        if ($httpCode !== 200) {
-            $errData = json_decode($response, true);
-            $msg = $errData['error']['message'] ?? 'Unknown error';
-            throw new \Exception("OpenRouter API Error ($httpCode): $msg");
+        $imageBlock = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
+        $lastError  = null;
+
+        foreach ($modelsToTry as $attempt => $tryModel) {
+            $payload = [
+                'model'   => $tryModel,
+                'messages' => [
+                    ['role' => 'system', 'content' => $systemPrompt],
+                    ['role' => 'user',   'content' => [
+                        ['type' => 'text', 'text' => $userPrompt],
+                        $imageBlock
+                    ]]
+                ],
+                'response_format' => ['type' => 'json_object'],
+                'temperature'     => 0.1,
+                'max_tokens'      => 3000,
+            ];
+
+            $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer ' . $apiKey,
+                'Content-Type: application/json',
+                'HTTP-Referer: ' . BASE_URL,
+                'X-Title: AlfarezMart'
+            ]);
+
+            // Free tier gets a shorter timeout (55s); paid models get full 110s
+            $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-nano-12b-v2-vl:free'];
+            $timeout = in_array($tryModel, $freeTierModels) ? 55 : 110;
+            curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+            $response = curl_exec($ch);
+            $err      = curl_error($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($err) {
+                $lastError = "Koneksi ke OpenRouter gagal: " . $err;
+                continue; // try next model
+            }
+
+            if ($httpCode === 429) {
+                // Rate limit hit — log and try next model in chain
+                $nextModel = $modelsToTry[$attempt + 1] ?? null;
+                error_log("[AlfarezMart] Model {$tryModel} rate-limited (429). " . ($nextModel ? "Trying: $nextModel" : "No more fallbacks."));
+                $lastError = "Semua model gratis sedang dibatasi (rate limit). Coba lagi dalam beberapa jam atau gunakan model berbayar di Pengaturan.";
+                continue; // try next model
+            }
+
+            if ($httpCode !== 200) {
+                $errData = json_decode($response, true);
+                $msg = $errData['error']['message'] ?? 'Unknown error';
+                $lastError = "OpenRouter API Error ($httpCode): $msg";
+                // Only retry on 5xx server errors, not on 4xx client errors (except 429 above)
+                if ($httpCode >= 500) continue;
+                break; // 4xx client error, no point retrying with same payload
+            }
+
+            // Success
+            $resData = json_decode($response, true);
+            $content = $resData['choices'][0]['message']['content'] ?? '';
+            $content = preg_replace('/```json\s*/', '', $content);
+            $content = preg_replace('/```\s*/', '',   $content);
+            return json_decode(trim($content), true);
         }
 
-        $resData = json_decode($response, true);
-        $content = $resData['choices'][0]['message']['content'] ?? '';
-
-        // Clean up markdown code blocks if any (though response_format=json_object should prevent it)
-        $content = preg_replace('/```json\s*/', '', $content);
-        $content = preg_replace('/```\s*/', '', $content);
-
-        return json_decode(trim($content), true);
+        // All attempts failed
+        throw new \Exception($lastError ?? 'AI gagal memproses gambar setelah mencoba semua model.');
     }
 
     // ----------------------------------------------------------------
