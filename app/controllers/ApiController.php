@@ -598,18 +598,25 @@ class ApiController extends Controller
         $weightValue = trim((string)($ref['weight_value'] ?? ''));
         $weightUnit  = trim((string)($ref['weight_unit'] ?? ''));
 
-        // Jika brand atau jenis produk kosong, jangan tebak-tebak otomatis
-        if (!$brandId || $productType === '') {
+        // Jika brand kosong, jangan tebak-tebak otomatis
+        if (!$brandId) {
             $this->json(['success' => true, 'variants' => []]);
             return;
         }
 
-        $whereSql = "p.id != :id AND p.is_active = 1 AND p.brand_id = :bid AND p.product_type = :ptype";
+        $whereSql = "p.id != :id AND p.is_active = 1 AND p.brand_id = :bid";
         $params   = [
-            ':id'    => $id,
-            ':bid'   => $brandId,
-            ':ptype' => $productType
+            ':id'  => $id,
+            ':bid' => $brandId
         ];
+
+        // Filter Jenis Produk:
+        // Jika referensi punya jenis, maka target harus berjenis SAMA atau BLANK.
+        // Jika referensi TIDAK punya jenis (blank), maka kita cari target hanya berdasarkan Brand & Volume.
+        if ($productType !== '') {
+            $whereSql .= " AND (p.product_type = :ptype OR p.product_type IS NULL OR p.product_type = '')";
+            $params[':ptype'] = $productType;
+        }
 
         if ($weightValue !== '' && $weightUnit !== '') {
             $whereSql .= " AND p.weight_value = :wv AND p.weight_unit = :wu";
