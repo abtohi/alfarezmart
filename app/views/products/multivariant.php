@@ -201,7 +201,19 @@
 .mv-overlay.show { opacity: 1; pointer-events: auto; }
 .dark-mode .mv-overlay { background: rgba(15,23,42,0.75); }
 
-/* ── Variants count badge ────────────────────────── */
+/* ── Target card pricing ───────────────────────────── */
+.mv-target-card { flex-direction: column; align-items: stretch; gap: 0; padding: 0; }
+.mv-target-card-top { display: flex; align-items: center; gap: 12px; padding: 12px 14px 10px; }
+.mv-target-card-prices { padding: 0 14px 12px; border-top: 1px dashed var(--border-color); margin-top: 2px; padding-top: 10px; }
+.mv-target-pkg-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 6px; }
+.mv-target-pkg-row:last-child { margin-bottom: 0; }
+.mv-pkg-label { font-size: 11px; font-weight: 700; color: var(--text-secondary); display: flex; align-items: center; gap: 4px; min-width: 60px; }
+.mv-pkg-prices { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.mv-price-chip { font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 700; white-space: nowrap; }
+.mv-price-chip.modal { background: rgba(245,158,11,0.1); color: var(--warning); }
+.mv-price-chip.ecer  { background: rgba(16,185,129,0.12); color: var(--success); }
+.mv-price-chip.grosir { background: rgba(59,130,246,0.1); color: var(--info); }
+.mv-tier-chips { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
 .mv-count-badge {
     display: inline-flex; align-items: center; justify-content: center;
     padding: 2px 8px;
@@ -558,10 +570,11 @@ async function loadVariants() {
         const data = await r.json();
         if (data.success && data.variants) {
             targetProducts = data.variants.map(v => ({
-                id:    v.id,
-                name:  v.full_name || v.short_label,
-                meta:  `${v.code || ''} · ${v.category_name || '-'} · ${v.brand_name || '-'}`,
-                photo: v.photo || null
+                id:        v.id,
+                name:      v.full_name || v.short_label,
+                meta:      `${v.code || ''} · ${v.category_name || '-'} · ${v.brand_name || '-'}`,
+                photo:     v.photo || null,
+                packagings: v.packagings || []
             }));
         }
     } catch (e) {
@@ -584,7 +597,8 @@ function onSelectTargetManual(prod) {
     }
     targetProducts.unshift({ id: prod.id, name: prod.full_name || prod.short_label,
         meta: `${prod.code || ''} · ${prod.category_name || '-'} · ${prod.brand_name || '-'}`,
-        photo: prod.photo || null });
+        photo: prod.photo || null,
+        packagings: prod.packagings || [] });
     renderTargetGrid();
     showToast('Produk ditambahkan ke target', 'success');
 }
@@ -618,17 +632,52 @@ function renderTargetGrid() {
             ? `<div class="mv-target-icon" style="overflow:hidden;"><img src="${BASE}${t.photo}" style="width:100%;height:100%;object-fit:contain;"></div>`
             : `<div class="mv-target-icon"><i class="bi bi-box"></i></div>`;
 
+        // Build packaging price rows
+        let pkgRowsHtml = '';
+        if (t.packagings && t.packagings.length > 0) {
+            pkgRowsHtml = t.packagings.map(pkg => {
+                const modal  = parseFloat(pkg.buy_price || 0);
+                const ecer   = parseFloat(pkg.sell_price_retail || 0);
+                const grosir = parseFloat(pkg.sell_price_wholesale || 0);
+
+                let tierHtml = '';
+                if (pkg.qty_prices && pkg.qty_prices.length > 0) {
+                    tierHtml = `<div class="mv-tier-chips">`
+                        + pkg.qty_prices.map(tp =>
+                            `<span class="mv-tier-tag" style="font-size:9px;">≥${parseFloat(tp.min_qty)} : Rp${parseFloat(tp.unit_price).toLocaleString('id-ID')}</span>`
+                        ).join('')
+                        + `</div>`;
+                }
+
+                return `<div class="mv-target-pkg-row">
+                    <div class="mv-pkg-label"><i class="bi bi-box2"></i> ${escHtml(pkg.unit_name || 'Pcs')}</div>
+                    <div>
+                        <div class="mv-pkg-prices">
+                            <span class="mv-price-chip modal">M: Rp${modal.toLocaleString('id-ID')}</span>
+                            <span class="mv-price-chip ecer">E: Rp${ecer.toLocaleString('id-ID')}</span>
+                            ${grosir > 0 ? `<span class="mv-price-chip grosir">G: Rp${grosir.toLocaleString('id-ID')}</span>` : ''}
+                        </div>
+                        ${tierHtml}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
         const card = document.createElement('div');
         card.className = 'mv-target-card';
         card.innerHTML = `
-            ${thumbHtml}
-            <div style="flex:1; min-width:0; padding-right: 24px;">
-                <div class="mv-target-name" title="${escHtml(t.name)}">${escHtml(t.name)}</div>
-                <div class="mv-target-meta">${escHtml(t.meta)}</div>
+            <div class="mv-target-card-top">
+                ${thumbHtml}
+                <div style="flex:1; min-width:0; padding-right: 24px;">
+                    <div class="mv-target-name" title="${escHtml(t.name)}">${escHtml(t.name)}</div>
+                    <div class="mv-target-meta">${escHtml(t.meta)}</div>
+                </div>
+                <button class="mv-target-del" onclick="removeTarget(${t.id})" title="Hapus dari target" style="position:absolute;top:9px;right:9px;">
+                    <i class="bi bi-x"></i>
+                </button>
             </div>
-            <button class="mv-target-del" onclick="removeTarget(${t.id})" title="Hapus dari target">
-                <i class="bi bi-x"></i>
-            </button>`;
+            ${pkgRowsHtml ? `<div class="mv-target-card-prices">${pkgRowsHtml}</div>` : ''}
+        `;
         grid.appendChild(card);
     });
 }

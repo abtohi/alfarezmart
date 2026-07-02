@@ -604,7 +604,7 @@ class ApiController extends Controller
         if ($brandId)    { $whereSql .= " AND p.brand_id    = :bid"; $params[':bid'] = $brandId; }
         if ($categoryId) { $whereSql .= " AND p.category_id = :cid"; $params[':cid'] = $categoryId; }
 
-        $sql = "SELECT p.id, p.full_name, p.short_label, p.code,
+        $sql = "SELECT p.id, p.full_name, p.short_label, p.code, p.photo,
                        b.name as brand_name, c.name as category_name
                 FROM products p
                 LEFT JOIN brands b ON p.brand_id  = b.id
@@ -684,6 +684,9 @@ class ApiController extends Controller
         if (empty($variants)) {
             $variants = $allCandidates;
         }
+
+        // ── Step 5: Attach packagings (with tier prices) to each variant ────────
+        $model->attachPackagingsForProductList($variants);
 
         $this->json(['success' => true, 'variants' => array_values($variants)]);
     }
