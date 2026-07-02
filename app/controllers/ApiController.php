@@ -593,52 +593,95 @@ class ApiController extends Controller
             return;
         }
 
-        $brandId = $ref['brand_id'];
+        $brandId    = $ref['brand_id'];
         $categoryId = $ref['category_id'];
-        $name = $ref['full_name'] ?: $ref['short_label'];
+        $refName    = trim($ref['full_name'] ?: $ref['short_label']);
 
-        // Try to extract weight/volume pattern e.g., 50g, 250ml, 30btr, 12pcs
-        $pattern = '/\b(\d+(?:\.\d+)?)\s*(g|gr|gram|kg|ml|l|btr|pcs|lembar|pack)\b/i';
-        preg_match($pattern, $name, $matches);
-        
+        // ── Step 1: Fetch all candidates in same brand + category ──────────────
         $whereSql = "p.id != :id AND p.is_active = 1";
-        $params = [':id' => $id];
-        
-        if ($brandId) {
-            $whereSql .= " AND p.brand_id = :bid";
-            $params[':bid'] = $brandId;
-        }
-        if ($categoryId) {
-            $whereSql .= " AND p.category_id = :cid";
-            $params[':cid'] = $categoryId;
-        }
+        $params   = [':id' => $id];
 
-        $sql = "SELECT p.id, p.full_name, p.short_label, p.code, b.name as brand_name, c.name as category_name
+        if ($brandId)    { $whereSql .= " AND p.brand_id    = :bid"; $params[':bid'] = $brandId; }
+        if ($categoryId) { $whereSql .= " AND p.category_id = :cid"; $params[':cid'] = $categoryId; }
+
+        $sql = "SELECT p.id, p.full_name, p.short_label, p.code,
+                       b.name as brand_name, c.name as category_name
                 FROM products p
-                LEFT JOIN brands b ON p.brand_id = b.id
+                LEFT JOIN brands b ON p.brand_id  = b.id
                 LEFT JOIN categories c ON p.category_id = c.id
-                WHERE $whereSql";
-        
+                WHERE $whereSql
+                ORDER BY p.full_name ASC";
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         $allCandidates = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        if (empty($allCandidates)) {
+            $this->json(['success' => true, 'variants' => []]);
+            return;
+        }
+
+        // ── Step 2: Helper — strip size/weight/colour tokens, return base name ──
+        $stripTokens = function(string $n): string {
+            // Remove qty/weight/volume tokens like "250ml", "30g", "1kg", "isi 30", "12pcs", etc.
+            $n = preg_replace('/\b\d+(?:[.,]\d+)?\s*(?:g|gr|gram|kg|mg|ml|l|ltr|litre|liter|btr|pcs|pack|pc|keping|lembar|sachet|tab|kapsul|kap)\b/i', '', $n);
+            // Remove "isi N" patterns
+            $n = preg_replace('/\bisi\s*\d+\b/i', '', $n);
+            // Remove standalone numbers at end/start
+            $n = preg_replace('/\b\d+\b/', '', $n);
+            // Remove flavour / colour tokens that are typically 1–2 words in parentheses or after dash
+            $n = preg_replace('/[-–]\s*[^-–]{1,30}$/', '', $n);
+            $n = preg_replace('/\([^)]{1,30}\)/', '', $n);
+            // Collapse whitespace, lowercase, trim
+            return strtolower(trim(preg_replace('/\s+/', ' ', $n)));
+        };
+
+        $refBase = $stripTokens($refName);
+
+        // ── Step 3: Extract the size/weight of the reference product ───────────
+        $sizePattern = '/\b(\d+(?:[.,]\d+)?)\s*(g|gr|gram|kg|mg|ml|l|ltr|btr|pcs|pack|sachet|tab|kapsul|kap|lembar)\b/i';
+        preg_match($sizePattern, $refName, $refSizeMatch);
+        $refSize = !empty($refSizeMatch) ? strtolower(preg_replace('/\s+/', '', $refSizeMatch[0])) : null;
+
+        // ── Step 4: Score & filter candidates ──────────────────────────────────
         $variants = [];
-        if (!empty($matches)) {
-            $weightStr = strtolower(preg_replace('/\s+/', '', $matches[0])); // e.g. "30btr"
-            foreach ($allCandidates as $c) {
-                $cName = $c['full_name'] ?: $c['short_label'];
-                // Check if candidate also contains the exact same weight string
-                $cNameClean = strtolower(preg_replace('/\s+/', '', $cName));
-                if (strpos($cNameClean, $weightStr) !== false) {
-                    $variants[] = $c;
-                }
+        foreach ($allCandidates as $c) {
+            $cName    = trim($c['full_name'] ?: $c['short_label']);
+            $cBase    = $stripTokens($cName);
+
+            // Must share same base product name (>= 60 % common tokens)
+            $refWords = array_filter(explode(' ', $refBase));
+            $cWords   = array_filter(explode(' ', $cBase));
+            if (empty($refWords) || empty($cWords)) continue;
+
+            $common = count(array_intersect($refWords, $cWords));
+            $maxLen = max(count($refWords), count($cWords));
+            $similarity = $maxLen > 0 ? $common / $maxLen : 0;
+
+            // Require strong base-name similarity (≥ 0.6) or exact match of longest word
+            $longestRefWord = '';
+            foreach ($refWords as $w) {
+                if (strlen($w) > strlen($longestRefWord)) $longestRefWord = $w;
             }
-            // Fallback: if strict extraction yields no result, return all
-            if (empty($variants)) {
-                $variants = $allCandidates;
+
+            $passBase = ($similarity >= 0.6)
+                || ($longestRefWord && strlen($longestRefWord) >= 4 && strpos($cBase, $longestRefWord) !== false);
+
+            if (!$passBase) continue;
+
+            // If ref has a size, candidate must also have that SAME size
+            if ($refSize !== null) {
+                preg_match($sizePattern, $cName, $cSizeMatch);
+                $cSize = !empty($cSizeMatch) ? strtolower(preg_replace('/\s+/', '', $cSizeMatch[0])) : null;
+                // Sizes must match exactly; if candidate has no size token, still allow (size might be in label)
+                if ($cSize !== null && $cSize !== $refSize) continue;
             }
-        } else {
+
+            $variants[] = $c;
+        }
+
+        // Fallback: if filtering was too strict, return all same-brand+category candidates
+        if (empty($variants)) {
             $variants = $allCandidates;
         }
 
