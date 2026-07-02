@@ -327,10 +327,9 @@ class InvoiceScanService
 
     private function getModelName(): string
     {
-        $model = $this->settingModel->get('ai_model', 'google/gemini-2.0-flash-exp:free');
-        // Override legacy models that cause errors on free accounts (since they don't support vision for free)
-        if ($model === 'openrouter/auto' || $model === 'openrouter/free') {
-            $model = 'google/gemini-2.0-flash-exp:free';
+        $model = $this->settingModel->get('ai_model', 'openrouter/free');
+        if ($model === 'google/gemini-2.0-flash-exp:free' || $model === 'openrouter/auto') {
+            $model = 'openrouter/free';
         }
         return $model;
     }
