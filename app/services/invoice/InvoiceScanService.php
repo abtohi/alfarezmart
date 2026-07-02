@@ -165,7 +165,9 @@ class InvoiceScanService
             // ================================================================
             // STAGE 6: Self-Correction (if needed)
             // ================================================================
-            if ($hasLowConf || !empty($correctionHints)) {
+            $modelName = $this->getModelName();
+            $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free'];
+            if (($hasLowConf || !empty($correctionHints)) && !in_array($modelName, $freeTierModels)) {
                 $items = $this->selfCorrection->correct(
                     $items,
                     $hasLowConf,
@@ -327,9 +329,11 @@ class InvoiceScanService
 
     private function getModelName(): string
     {
-        $model = $this->settingModel->get('ai_model', 'openrouter/free');
-        if ($model === 'google/gemini-2.0-flash-exp:free' || $model === 'openrouter/auto') {
-            $model = 'openrouter/free';
+        $model = $this->settingModel->get('ai_model', 'google/gemma-4-31b-it:free');
+        // Remap deprecated / non-vision-capable free models to the current active free model
+        $legacyFree = ['openrouter/auto', 'openrouter/free', 'google/gemini-2.0-flash-exp:free', 'google/gemini-2.0-pro-exp-02-05:free'];
+        if (in_array($model, $legacyFree)) {
+            $model = 'google/gemma-4-31b-it:free';
         }
         return $model;
     }
@@ -392,7 +396,11 @@ class InvoiceScanService
             'HTTP-Referer: ' . BASE_URL,
             'X-Title: AlfarezMart'
         ]);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 110);
+        
+        // Lower timeout for free models because their queues can hang indefinitely
+        $freeTier = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free'];
+        $timeout = in_array($model, $freeTier) ? 55 : 110;
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
         // SSL verification bypassed for local dev only if needed, but best left on
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 

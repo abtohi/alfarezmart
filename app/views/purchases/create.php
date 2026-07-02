@@ -300,9 +300,36 @@ async function scanInvoiceWithAI() {
     const btn = document.getElementById('btnScanAI');
     const originalText = btn.innerHTML;
     
-    try {
+    // Progress steps to display during AI processing
+    const progressSteps = [
+        '<i class="bi bi-cloud-upload"></i> Mengirim gambar...',
+        '<i class="spinner-border spinner-border-sm"></i> AI sedang membaca...',
+        '<i class="spinner-border spinner-border-sm"></i> Menganalisa items...',
+        '<i class="spinner-border spinner-border-sm"></i> Hampir selesai...'
+    ];
+    let stepIdx = 0;
+    let progressInterval = null;
+    
+    function startProgressAnimation() {
         btn.disabled = true;
-        btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Memproses AI...';
+        btn.innerHTML = progressSteps[0];
+        stepIdx = 1;
+        progressInterval = setInterval(() => {
+            if (stepIdx < progressSteps.length) {
+                btn.innerHTML = progressSteps[stepIdx];
+                stepIdx++;
+            }
+        }, 8000); // advance step every 8 seconds
+    }
+    
+    function stopProgressAnimation() {
+        if (progressInterval) clearInterval(progressInterval);
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+    
+    try {
+        startProgressAnimation();
         
         const data = {
             csrf_token: csrfVal,
@@ -310,9 +337,9 @@ async function scanInvoiceWithAI() {
             supplier_id: currentSupplierId || null
         };
         
-        // Use custom fetch with 2-minute timeout instead of api() helper
+        // Use custom fetch with 65s timeout (backend free model timeout = 55s)
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 120000); // 2 min
+        const timeout = setTimeout(() => controller.abort(), 65000); // 65 sec
         
         let result;
         try {
@@ -341,7 +368,7 @@ async function scanInvoiceWithAI() {
         } catch(fetchErr) {
             clearTimeout(timeout);
             if (fetchErr.name === 'AbortError') {
-                throw new Error('Request timeout (2 menit). Coba gunakan gambar dengan resolusi lebih rendah.');
+                throw new Error('Request timeout (65 detik). AI sedang sibuk, coba lagi dalam beberapa menit.');
             }
             throw fetchErr;
         }
@@ -430,8 +457,7 @@ async function scanInvoiceWithAI() {
         console.error('Error scanning invoice:', err);
         showToast(err.message || 'Gagal memindai invoice dengan AI', 'error');
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
+        stopProgressAnimation();
     }
 }
 

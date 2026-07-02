@@ -60,20 +60,20 @@
 
                     <div style="margin-bottom:10px;">
                         <div class="model-cards-grid">
-                            <div class="model-card <?= ($aiModel === 'openrouter/free' || !$aiModel || $aiModel === 'openrouter/auto' || strpos($aiModel, 'gemini-2.0-flash-exp:free') !== false) ? 'selected' : '' ?>" onclick="selectModel('openrouter/free', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">F</div>
+                            <div class="model-card <?= (empty($aiModel) || in_array($aiModel, ['openrouter/free','openrouter/auto','google/gemma-4-31b-it:free','google/gemini-2.0-flash-exp:free'])) ? 'selected' : '' ?>" onclick="selectModel('google/gemma-4-31b-it:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#34A853);">G</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Free Router</div>
-                                    <div class="model-card-meta">Gratis (Unpredictable)</div>
+                                    <div class="model-card-name">Gemma 4 (31B)</div>
+                                    <div class="model-card-meta">Vision Gratis Aktif</div>
                                 </div>
                                 <span class="model-badge model-badge-free">Gratis</span>
                             </div>
                             
                             <div class="model-card <?= ($aiModel === 'google/gemini-flash-1.5') ? 'selected' : '' ?>" onclick="selectModel('google/gemini-flash-1.5', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#34A853);">G</div>
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#FBBC04,#F9AB00);">G</div>
                                 <div class="model-card-info">
                                     <div class="model-card-name">Gemini Flash 1.5</div>
-                                    <div class="model-card-meta">Akurat & Stabil</div>
+                                    <div class="model-card-meta">Cepat & Akurat</div>
                                 </div>
                                 <span class="model-badge model-badge-pro">Pro</span>
                             </div>
