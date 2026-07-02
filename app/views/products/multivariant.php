@@ -177,19 +177,24 @@
 
 /* ── Floating bar ────────────────────────────────── */
 .mv-fab {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
+    position: sticky;
+    bottom: 20px;
     background: var(--surface);
-    border-top: 1px solid var(--border-color);
-    box-shadow: 0 -6px 24px rgba(0,0,0,0.08);
-    padding: 14px 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
     display: none;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
     z-index: 40;
+    margin-top: 24px;
 }
-@media (min-width: 992px) { .mv-fab { left: 260px; } }
+@media (max-width: 640px) {
+    .mv-fab { flex-direction: column; align-items: stretch; gap: 12px; }
+    .mv-fab-stats { justify-content: space-between; width: 100%; }
+}
 .mv-fab.visible { display: flex; }
 .mv-fab-stats { display: flex; gap: 24px; }
 .mv-fab-stat  { display: flex; flex-direction: column; }
@@ -295,8 +300,8 @@
                                 <th>Kemasan</th>
                                 <th>Isi</th>
                                 <th>Modal</th>
-                                <th>Ecer</th>
-                                <th>Grosir</th>
+                                <th>Ecer (Selisih &amp; Markup)</th>
+                                <th>Grosir (Selisih &amp; Markup)</th>
                                 <th>Harga Tier</th>
                             </tr>
                         </thead>
@@ -529,14 +534,32 @@ function renderPriceTable() {
                 `<span class="mv-tier-tag">≥${t.min_qty} : ${fmt(t.unit_price)}</span>`
             ).join('');
         }
+        const modal = parseFloat(pkg.buy_price) || 0;
+        const ecer  = parseFloat(pkg.sell_price_retail) || 0;
+        const grosir = parseFloat(pkg.sell_price_wholesale) || 0;
+
+        const selisihEcer = ecer - modal;
+        const markupEcer  = modal > 0 ? (selisihEcer / modal * 100) : 0;
+        const ecerHtml = `
+            <div style="font-weight:700; color:var(--success);">${fmt(ecer)}</div>
+            ${ecer > 0 ? `<div style="font-size:10px; color:var(--text-muted); margin-top:2px;">+${fmt(selisihEcer)} (${markupEcer.toFixed(1)}%)</div>` : ''}
+        `;
+
+        const selisihGrosir = grosir - modal;
+        const markupGrosir  = modal > 0 ? (selisihGrosir / modal * 100) : 0;
+        const grosirHtml = `
+            <div style="font-weight:700; color:var(--info);">${fmt(grosir)}</div>
+            ${grosir > 0 ? `<div style="font-size:10px; color:var(--text-muted); margin-top:2px;">+${fmt(selisihGrosir)} (${markupGrosir.toFixed(1)}%)</div>` : ''}
+        `;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><span class="badge bg-secondary">${pkg.level}</span></td>
             <td><strong>${pkg.unit_name || 'Pcs'}</strong><br><small class="text-muted">${pkg.barcode || ''}</small></td>
             <td>${parseFloat(pkg.base_qty)}</td>
-            <td style="color:var(--warning);">${fmt(pkg.buy_price)}</td>
-            <td style="color:var(--success);font-weight:700;">${fmt(pkg.sell_price_retail)}</td>
-            <td style="color:var(--info);">${fmt(pkg.sell_price_wholesale)}</td>
+            <td style="color:var(--warning); font-weight:700;">${fmt(modal)}</td>
+            <td>${ecerHtml}</td>
+            <td>${grosirHtml}</td>
             <td>${tierHtml}</td>`;
         tbody.appendChild(tr);
     });
