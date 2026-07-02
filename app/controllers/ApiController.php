@@ -651,12 +651,12 @@ class ApiController extends Controller
             $this->json(['success' => false, 'message' => 'Method not allowed'], 405);
             return;
         }
-        
-        $refId = isset($_POST['reference_id']) ? (int)$_POST['reference_id'] : 0;
+
+        $refId     = isset($_POST['reference_id']) ? (int)$_POST['reference_id'] : 0;
         $targetIds = isset($_POST['target_ids']) && is_array($_POST['target_ids']) ? $_POST['target_ids'] : [];
 
         if (!$refId || empty($targetIds)) {
-            $this->json(['success' => false, 'message' => 'Data tidak lengkap']);
+            $this->json(['success' => false, 'message' => 'Data tidak lengkap: reference_id=' . $refId . ', target_ids count=' . count($targetIds)]);
             return;
         }
 
@@ -664,79 +664,88 @@ class ApiController extends Controller
         $refPackagings = $model->getPackagings($refId);
 
         if (empty($refPackagings)) {
-            $this->json(['success' => false, 'message' => 'Produk referensi tidak memiliki kemasan']);
+            $this->json(['success' => false, 'message' => 'Produk referensi tidak memiliki kemasan (id=' . $refId . ')']);
             return;
         }
+
+        $errors  = [];
+        $success = 0;
 
         try {
             $this->db->beginTransaction();
 
-            foreach ($targetIds as $tId) {
-                $tId = (int)$tId;
-                if ($tId === $refId) continue;
+            foreach ($targetIds as $rawId) {
+                $tId = (int)$rawId;
+                if ($tId <= 0 || $tId === $refId) continue;
 
-                // Delete existing packagings for target
-                $stmt = $this->db->prepare("DELETE FROM product_packagings WHERE product_id = ?");
-                $stmt->execute([$tId]);
+                // Delete existing packagings (CASCADE will also remove qty_prices)
+                $this->db->prepare("DELETE FROM product_packagings WHERE product_id = ?")
+                         ->execute([$tId]);
 
-                // Insert new packagings matching reference
+                // Insert each packaging level from reference
                 foreach ($refPackagings as $pkg) {
                     $stmtPkg = $this->db->prepare("
-                        INSERT INTO product_packagings 
-                        (product_id, unit_id, level, base_qty, buy_price, sell_price_retail, sell_price_wholesale, barcode)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO product_packagings
+                            (product_id, unit_id, level, contained_qty, base_qty,
+                             buy_price, sell_price_retail, margin_retail,
+                             sell_price_wholesale, margin_wholesale, barcode)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ");
-                    // Important: Keep original target's barcode or generate new? 
-                    // Safest is to just leave it blank or copy? 
-                    // If we copy, barcodes collide. Better to leave target's barcode blank/NULL if we are recreating, OR 
-                    // ideally, we should map them by level instead of deleting. 
-                    // Since the plan said "ditimpa (di-replace) sepenuhnya", we'll just set barcode to NULL for now or generate.
-                    // Actually, let's just leave barcode empty so user can scan it later.
                     $stmtPkg->execute([
                         $tId,
                         $pkg['unit_id'],
                         $pkg['level'],
-                        $pkg['base_qty'],
-                        $pkg['buy_price'],
-                        $pkg['sell_price_retail'],
-                        $pkg['sell_price_wholesale'],
-                        null // blank barcode
+                        $pkg['contained_qty'] ?? 1,
+                        $pkg['base_qty']       ?? 1,
+                        $pkg['buy_price']              ?? 0,
+                        $pkg['sell_price_retail']      ?? 0,
+                        $pkg['margin_retail']          ?? 0,
+                        $pkg['sell_price_wholesale']   ?? 0,
+                        $pkg['margin_wholesale']        ?? 0,
+                        null   // barcode left blank – no collision
                     ]);
-                    $newPkgId = $this->db->lastInsertId();
+                    $newPkgId = (int)$this->db->lastInsertId();
 
                     // Copy tier prices
                     if (!empty($pkg['qty_prices'])) {
-                        foreach ($pkg['qty_prices'] as $t) {
-                            $stmtT = $this->db->prepare("
-                                INSERT INTO product_qty_prices 
+                        $stmtT = $this->db->prepare("
+                            INSERT INTO product_qty_prices
                                 (packaging_id, min_qty, unit_price, sale_mode, label, sort_order)
-                                VALUES (?, ?, ?, ?, ?, ?)
-                            ");
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        ");
+                        foreach ($pkg['qty_prices'] as $tier) {
                             $stmtT->execute([
                                 $newPkgId,
-                                $t['min_qty'],
-                                $t['unit_price'],
-                                $t['sale_mode'],
-                                $t['label'],
-                                $t['sort_order']
+                                $tier['min_qty']    ?? 1,
+                                $tier['unit_price'] ?? 0,
+                                $tier['sale_mode']  ?? 'both',
+                                $tier['label']      ?? null,
+                                $tier['sort_order'] ?? 0,
                             ]);
                         }
                     }
                 }
 
-                // Update the product's last update timestamp so it jumps to the top of the list
-                $stmtUpdate = $this->db->prepare("UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                $stmtUpdate->execute([$tId]);
+                // Bump updated_at so product rises to top of list
+                $this->db->prepare("UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                         ->execute([$tId]);
+
+                $success++;
             }
 
             $this->db->commit();
-            $this->json(['success' => true, 'message' => 'Harga berhasil diaplikasikan ke ' . count($targetIds) . ' produk']);
+            $this->json([
+                'success' => true,
+                'message' => "Harga berhasil diaplikasikan ke {$success} produk" . (!empty($errors) ? '. Gagal: ' . implode(', ', $errors) : ''),
+            ]);
 
         } catch (Exception $e) {
             $this->db->rollBack();
+            error_log('[AlfarezMart][applyMultivariantPricing] ' . $e->getMessage());
             $this->json(['success' => false, 'message' => 'Gagal: ' . $e->getMessage()]);
         }
     }
+
 
     /**
      * Simpan tier harga spesial per kuantitas untuk satu kemasan
