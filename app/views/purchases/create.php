@@ -798,13 +798,29 @@ function initPurchaseProductSearch() {
 
 function scanProductBarcode() {
     if (typeof BarcodeUtil !== 'undefined' && BarcodeUtil.scanBarcode) {
-        const fakeInput = document.createElement('input');
-        fakeInput.type = 'text';
-        document.body.appendChild(fakeInput);
-        BarcodeUtil.scanBarcode(fakeInput, (code) => {
-            document.body.removeChild(fakeInput);
-            searchInput.value = code;
-            searchInput.dispatchEvent(new Event('input'));
+        BarcodeUtil.scanBarcode(null, async (code) => {
+            if (!code) return;
+            code = code.trim();
+            // Directly call barcode API — no input event dispatch to avoid "kosong" error
+            try {
+                const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(code)}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data && data.id) {
+                        if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+                        addProductToCart(data);
+                        if (searchInput) { searchInput.value = ''; }
+                        if (suggestionsDiv) { suggestionsDiv.innerHTML = ''; }
+                        return;
+                    }
+                }
+            } catch (e) { /* network error, fallback below */ }
+            // Barcode not found — fallback: fill search input for manual selection
+            showToast(`Barcode tidak ditemukan: ${code}`, 'warning');
+            if (searchInput) {
+                searchInput.value = code;
+                performProductSearch();
+            }
         });
     } else {
         const code = prompt('Masukkan kode barcode:');
@@ -815,22 +831,26 @@ function scanProductBarcode() {
     }
 }
 
+
 async function performProductSearch() {
     const q = searchInput.value.trim();
     if (q.length === 0) { suggestionsDiv.innerHTML = ''; return; }
     
-    // Barcode check
+    // Barcode check — use raw fetch to avoid throwing error toast on 404
     if (/^\d{8,14}$/.test(q)) {
         try {
-            const data = await api(`${BASE_URL}api/products/barcode/${q}`);
-            if (data && data.id) {
-                if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                addProductToCart(data);
-                searchInput.value = '';
-                suggestionsDiv.innerHTML = '';
-                return;
+            const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data && data.id) {
+                    if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+                    addProductToCart(data);
+                    searchInput.value = '';
+                    suggestionsDiv.innerHTML = '';
+                    return;
+                }
             }
-        } catch (e) { /* fallback to text search */ }
+        } catch (e) { /* network error, fall through to text search */ }
     }
 
     if (q.length < 2) {
