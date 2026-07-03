@@ -21,7 +21,7 @@ class SupplierProductModel extends Model
         }
 
         $stmt = $this->db->prepare("
-            SELECT p.id, p.full_name, p.short_label, p.product_type, p.variant,
+            SELECT p.id, p.full_name, p.short_label, p.product_type, p.variant, p.photo,
                    b.name as brand_name, c.name as category_name,
                    sp.last_buy_price, sp.last_purchase_date, sp.purchase_count
             FROM supplier_products sp
@@ -77,7 +77,7 @@ class SupplierProductModel extends Model
         }
 
         $stmt = $this->db->prepare("
-            SELECT p.id, p.full_name, p.short_label, p.product_type, p.variant,
+            SELECT p.id, p.full_name, p.short_label, p.product_type, p.variant, p.photo,
                    b.name as brand_name, c.name as category_name,
                    sp.last_buy_price, sp.purchase_count,
                    1 as is_supplier_product

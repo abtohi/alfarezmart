@@ -1046,6 +1046,7 @@ function addProductToCart(product, defaultLevel = 1) {
         id: Date.now(),
         product_id: product.id,
         name: product.full_name || product.short_label,
+        photo: product.photo,
         is_manual_price: false,
         packagings: product.packagings,
         level: selectedPkg.level,
@@ -2757,10 +2758,20 @@ function renderCart() {
                 <input type="checkbox" class="item-select-chk" value="${item.id}" style="width:18px;height:18px;accent-color:var(--danger);cursor:pointer;" onchange="updateMassSelect()">
             </div>
 
-            <!-- Product Name -->
-            <div style="font-weight:700;font-size:var(--font-size-sm);margin-bottom:12px;padding-right:28px;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
-                ${item.name}
-                ${hasPkgs ? `<span style="font-size:9px;background:var(--info-bg);color:var(--info);padding:2px 6px;border-radius:8px;white-space:nowrap;">${item.packagings.length} kemasan</span>` : ''}
+            <!-- Product Name & Photo -->
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px; padding-right:28px;">
+                ${item.photo 
+                    ? `<div style="width:48px;height:48px;border-radius:var(--radius-sm);overflow:hidden;background:transparent;flex-shrink:0;border:1px solid var(--border-color);">
+                           <img src="${BASE_URL}${item.photo.replace(/"/g, '&quot;')}" style="width:100%;height:100%;object-fit:contain;" loading="lazy">
+                       </div>`
+                    : `<div style="width:48px;height:48px;background:var(--primary-bg);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--primary);flex-shrink:0;border:1px solid var(--border-color);">
+                           <i class="bi bi-box-seam" style="font-size:1.4rem;"></i>
+                       </div>`
+                }
+                <div style="font-weight:700;font-size:var(--font-size-sm);color:var(--text-primary);display:flex;flex-direction:column;gap:4px;">
+                    ${item.name}
+                    ${hasPkgs ? `<span style="font-size:9px;background:var(--info-bg);color:var(--info);padding:2px 6px;border-radius:8px;white-space:nowrap;width:fit-content;">${item.packagings.length} kemasan</span>` : ''}
+                </div>
             </div>
             ${priceSummary ? `<div style="margin-bottom:10px;">${priceSummary}</div>` : ''}
 
