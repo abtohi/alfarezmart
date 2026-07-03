@@ -298,6 +298,7 @@ class ThermalPrinter {
             'kilogram': 'kg', 'gram': 'gr', 'meter': 'mtr', 'roll': 'roll',
             'gross': 'grs', 'kodi': 'kdi', 'ikat': 'ikt', 'slop': 'slp',
             'box': 'box', 'pack': 'pack', 'set': 'set', 'unit': 'unit',
+            'setengah': 'stg', 'seperempat': '1/4', 'papan': 'ppn', 'bungkusan': 'bks'
         };
         return map[u] || u.substring(0, 5);
     }
@@ -406,7 +407,7 @@ class ThermalPrinter {
 
             const unitPrice = parseFloat(item.unit_price) || 0;
             const qty = item.quantity || 0;
-            const unitAbbr = this.abbreviateUnit(item.unit_name || 'pcs');
+            const unitAbbr = item.unit_abbr || this.abbreviateUnit(item.unit_name || 'pcs');
             const itemTotal = parseFloat(item.total) || (qty * unitPrice);
 
             // Format: "  1bks x Rp17.000"  (space after x)
@@ -658,7 +659,7 @@ class ThermalPrinter {
             const name = item.print_name || item.name || 'Item';
             const unitPrice = parseFloat(item.unit_price) || 0;
             const itemTotal = parseFloat(item.total) || 0;
-            const unitAbbr = this.abbreviateUnit(item.unit_name || 'pcs');
+            const unitAbbr = item.unit_abbr || this.abbreviateUnit(item.unit_name || 'pcs');
             itemsHtml += `<tr><td colspan="3" class="item-name">${this._escapeHtml(name)}</td></tr>`;
             itemsHtml += `<tr class="item-detail">
                 <td style="padding-bottom: 6px;">${item.quantity} ${this._escapeHtml(unitAbbr)}</td>

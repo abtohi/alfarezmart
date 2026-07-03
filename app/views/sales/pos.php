@@ -603,6 +603,7 @@ function addProductToCart(product) {
             packagings: product.packagings,
             level: selectedPkg.level,
             unit_name: selectedPkg.unit_name,
+            unit_abbr: selectedPkg.unit_abbr,
             quantity: 1,
             use_custom_price: false,
             custom_line_total: null,
@@ -642,6 +643,7 @@ function changeLevel(id, newLevel) {
     if (pkg) {
         item.level = parseInt(newLevel, 10);
         item.unit_name = pkg.unit_name;
+        item.unit_abbr = pkg.unit_abbr;
         item.use_custom_price = false;
         item.custom_line_total = null;
         item.custom_unit_price = null;
@@ -1568,12 +1570,14 @@ window.addCustomProductToCart = function(name, qty, unit, totalPrice) {
         packagings: [{
             level: 1,
             unit_name: unit,
+            unit_abbr: unit.substring(0, 5),
             sell_price_retail: unitPrice,
             sell_price_wholesale: unitPrice,
             qty_prices: []
         }],
         level: 1,
         unit_name: unit,
+        unit_abbr: unit.substring(0, 5),
         quantity: qty,
         use_custom_price: true,
         custom_line_total: totalPrice,
@@ -1676,6 +1680,7 @@ async function loadSaleForEdit(id) {
                     packagings = [{
                         level: item.packaging_level || 1,
                         unit_name: item.unit_name,
+                        unit_abbr: item.unit_name ? item.unit_name.substring(0, 5) : '',
                         sell_price_retail: item.unit_price,
                         sell_price_wholesale: item.unit_price,
                         buy_price: item.buy_price || 0,
@@ -1706,6 +1711,7 @@ async function loadSaleForEdit(id) {
                     packagings: packagings,
                     level: isCustom ? 1 : savedLevel,
                     unit_name: item.unit_name,
+                    unit_abbr: item.unit_abbr || (item.unit_name ? item.unit_name.substring(0, 5) : ''),
                     quantity: parseFloat(item.quantity),
                     use_custom_price: isCustomPrice,
                     custom_line_total: isCustomPrice ? parseFloat(item.total_price) : null,
