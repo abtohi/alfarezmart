@@ -293,8 +293,8 @@
     let debounceTimer;
     let isProcessing = false;
     let lastTransaction = null;
-    const trxModal = new bootstrap.Modal(document.getElementById('trxModal'));
-    const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+    let trxModal;
+    let resultModal;
 
     // Prefix Data for Auto-Detect
     const OPERATOR_PREFIX = {
@@ -307,6 +307,8 @@
     };
 
     document.addEventListener('DOMContentLoaded', () => {
+        trxModal = new bootstrap.Modal(document.getElementById('trxModal'));
+        resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
         loadBalance();
         loadRecentTransactions();
     });
