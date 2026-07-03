@@ -206,7 +206,11 @@ if (($currentUser['level'] ?? '') === 'staff') {
 $router = new Router();
 
 // Load routes
-require_once APP_PATH . '/config/Routes.php';
+$routesPath = APP_PATH . '/config/Routes.php';
+if (function_exists('opcache_invalidate')) {
+    opcache_invalidate($routesPath, true);
+}
+require_once $routesPath;
 
 // Release session lock for GET API requests to prevent hanging/timeouts
 if (strpos($uri, '/api/') === 0 && $_SERVER['REQUEST_METHOD'] === 'GET') {
