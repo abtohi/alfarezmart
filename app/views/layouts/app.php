@@ -305,7 +305,7 @@ if ($userLevel === 'staff') {
     
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '12.15'; // Update this to force client reloads
+    const APP_VERSION = '12.16'; // Update this to force client reloads
     
     // Self-healing cache buster
     if (localStorage.getItem('app_version') !== APP_VERSION) {
@@ -384,6 +384,41 @@ if ($userLevel === 'staff') {
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') closeFullPhoto();
     });
+    </script>
+
+    <!-- Global Barcode Beep Sound (Web Audio API - no external files needed) -->
+    <script>
+    window.playBarcodeBeep = (function() {
+        let _ctx = null;
+        function getCtx() {
+            if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
+            // Resume context if suspended (browser autoplay policy)
+            if (_ctx.state === 'suspended') _ctx.resume();
+            return _ctx;
+        }
+        function beep(freq, startTime, duration, vol) {
+            const ctx = getCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, startTime);
+            gain.gain.setValueAtTime(vol, startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+            osc.start(startTime);
+            osc.stop(startTime + duration);
+        }
+        return function playBarcodeBeep() {
+            try {
+                const ctx = getCtx();
+                const now = ctx.currentTime;
+                // Two short tones: high-pitch bip + slightly lower bip
+                beep(1800, now,        0.07, 0.35);
+                beep(2200, now + 0.09, 0.07, 0.35);
+            } catch(e) { /* Silent fail if audio API not available */ }
+        };
+    })();
     </script>
 
     <!-- Activity Logger: fire-and-forget, silent, no impact on UX -->

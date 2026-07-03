@@ -48,12 +48,14 @@ async function lookupBarcode() {
         const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/barcode/${encodeURIComponent(code)}`);
         if (!res.ok) throw new Error('Not found');
         const data = await res.json();
+        if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
         showProductResult(data);
     } catch (e) {
         if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
             try {
                 const p = await OfflineDB.findByBarcode(code);
                 if (p) {
+                    if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
                     showProductResultOffline(p);
                     return;
                 }
@@ -95,6 +97,7 @@ async function lookupBarcode() {
             if (!res.ok) throw new Error('Search failed');
             const searchData = await res.json();
             if (searchData.length === 1) {
+                if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
                 fetchProductDetail(searchData[0].id);
             } else if (searchData.length > 0) {
                 resultDiv.innerHTML = searchData.map(p => `

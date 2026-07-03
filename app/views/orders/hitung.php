@@ -285,6 +285,11 @@
         const q = elInput.value.trim();
         clearTimeout(searchTimer);
         if (q.length < 1) { elResults.style.display = 'none'; return; }
+        // Auto-detect barcode if string looks like 8-14 digits without spaces
+        if (/^\d{8,14}$/.test(q)) {
+            searchTimer = setTimeout(() => doBarcodeSearch(q), 300);
+            return;
+        }
         searchTimer = setTimeout(() => doSearch(q), 250);
     });
     
@@ -324,6 +329,7 @@
             if (res.ok) {
                 const data = await res.json();
                 if (data && data.id) {
+                    if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
                     addItem(data);
                     elInput.value = '';
                     elResults.style.display = 'none';
@@ -429,7 +435,7 @@
         const pkgId = packaging ? parseInt(packaging.id, 10) : 0;
         
         const displayName = product.full_name || product.short_label || product.invoice_name || 'Produk';
-        orderItems.push({
+        orderItems.unshift({
             product_id: parseInt(product.id, 10),
             packagings: packs,
             packaging_id: pkgId,

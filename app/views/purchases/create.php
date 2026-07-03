@@ -824,6 +824,7 @@ async function performProductSearch() {
         try {
             const data = await api(`${BASE_URL}api/products/barcode/${q}`);
             if (data && data.id) {
+                if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
                 addProductToCart(data);
                 searchInput.value = '';
                 suggestionsDiv.innerHTML = '';

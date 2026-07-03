@@ -410,6 +410,7 @@ async function processBarcodeScan(q, inpEl, sugEl) {
         }
 
         if (result && result.id) {
+            if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
             addProductToCart(result);
             if (inpEl) inpEl.value = '';
             if (sugEl) sugEl.innerHTML = '';
