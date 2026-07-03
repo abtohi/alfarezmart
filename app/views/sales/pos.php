@@ -480,6 +480,12 @@ async function performSearch(q) {
             return;
         }
         
+        // Sort by display label (short_label if not empty, else full_name) ascending
+        items.sort((a, b) => {
+            const getLabel = (p) => (p.short_label && p.short_label.trim() !== '') ? p.short_label : (p.full_name || '');
+            return getLabel(a).localeCompare(getLabel(b), 'id', { sensitivity: 'base' });
+        });
+        
         sug.innerHTML = items.map(p => {
             const name = escapeHtml(p.short_label || p.full_name);
             const brand = escapeHtml(p.brand_name || '');
