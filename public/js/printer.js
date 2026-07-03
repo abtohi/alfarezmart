@@ -536,6 +536,72 @@ class ThermalPrinter {
         });
     }
 
+    async printDigitalReceipt(transaction, options = {}, storeSettings = null) {
+        if (!this.characteristic) {
+            throw new Error('Printer belum terhubung. Hubungkan printer terlebih dahulu.');
+        }
+
+        if (storeSettings) {
+            this.storeSettings = storeSettings;
+        } else {
+            await this.loadStoreSettings();
+        }
+
+        const dateStr = transaction.created_at || new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const storeName = this.storeSettings?.name || 'AlfarezMart';
+        const storeAddr = this.storeSettings?.address || 'Toko Kami';
+
+        const printData = [
+            this.INIT,
+            this.ALIGN_CENTER,
+            this.TEXT_BOLD_ON,
+            this.DOUBLE_HEIGHT_ON,
+            this._encodeString(storeName + '\n'),
+            this.TEXT_BOLD_OFF,
+            this.DOUBLE_HEIGHT_OFF,
+            this._encodeString(storeAddr + '\n'),
+            this._encodeString('================================\n'),
+            this.ALIGN_LEFT,
+            this._encodeString(`No:  ${transaction.ref_id}\n`),
+            this._encodeString(`Tgl: ${dateStr}\n`),
+            this.ALIGN_CENTER,
+            this._encodeString('================================\n'),
+            this.ALIGN_LEFT,
+            this._encodeString(`PRODUK : ${transaction.product_name}\n`),
+            this._encodeString(`ID/NO  : ${transaction.customer_no}\n`),
+        ];
+
+        if (transaction.customer_name) {
+            printData.push(this._encodeString(`NAMA   : ${transaction.customer_name}\n`));
+        }
+
+        printData.push(
+            this.ALIGN_CENTER,
+            this._encodeString('================================\n')
+        );
+
+        if (transaction.sn && transaction.sn !== '-') {
+            printData.push(
+                this.TEXT_BOLD_ON,
+                this._encodeString(`SN/TOKEN:\n${transaction.sn}\n`),
+                this.TEXT_BOLD_OFF,
+                this._encodeString('================================\n')
+            );
+        }
+
+        const price = parseInt(transaction.sell_price).toLocaleString('id-ID');
+        printData.push(
+            this.ALIGN_LEFT,
+            this._encodeString(`TOTAL BAYAR : Rp${price}\n`),
+            this.ALIGN_CENTER,
+            this._encodeString('================================\n'),
+            this._encodeString('Terima kasih telah berbelanja\n'),
+            this._encodeString('= Semoga Berkah =\n\n\n\n')
+        );
+
+        await this.printRaw(printData);
+    }
+
     async print(cart, total, invoiceNumber, options = {}) {
         if (!this.characteristic) {
             throw new Error('Printer belum terhubung. Hubungkan printer terlebih dahulu.');

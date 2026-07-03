@@ -63,6 +63,13 @@ $router->get('/reports/product-history/export/{id}', 'ReportController@exportPro
 $router->get('/catalog', 'CatalogController@index');
 
 // ============================================
+// PPOB / Produk Digital (Digiflazz)
+// ============================================
+$router->get('/ppob', 'DigiflazzController@index');
+$router->get('/ppob/settings', 'DigiflazzController@settings');
+$router->get('/ppob/history', 'DigiflazzController@history');
+
+// ============================================
 // API ROUTES (Returns JSON — auth required)
 // ============================================
 
@@ -98,6 +105,21 @@ $router->post('/api/settings/app', 'ApiController@saveAppSettings');
 
 // AI Agent API
 $router->post('/api/ai/scan-invoice', 'ApiController@scanInvoiceAI');
+
+// PPOB API
+$router->get('/api/ppob/balance', 'DigiflazzController@apiGetBalance');
+$router->get('/api/ppob/products/{category}', 'DigiflazzController@apiGetProducts');
+$router->get('/api/ppob/brands/{category}', 'DigiflazzController@apiGetBrands');
+$router->post('/api/ppob/inquiry-pln', 'DigiflazzController@apiInquiryPLN');
+$router->post('/api/ppob/inquiry-pasca', 'DigiflazzController@apiInquiryPostpaid');
+$router->post('/api/ppob/transaction', 'DigiflazzController@apiCreateTransaction');
+$router->post('/api/ppob/pay-pasca', 'DigiflazzController@apiPayPostpaid');
+$router->get('/api/ppob/transactions', 'DigiflazzController@apiGetTransactions');
+$router->get('/api/ppob/transaction/{refId}', 'DigiflazzController@apiGetTransaction');
+$router->post('/api/ppob/sync-prices', 'DigiflazzController@apiSyncPrices');
+
+// Webhook (PUBLIC — no auth)
+$router->post('/api/ppob/webhook', 'DigiflazzController@webhook');
 
 // Purchases API
 $router->get('/api/purchases', 'ApiController@getPurchases');

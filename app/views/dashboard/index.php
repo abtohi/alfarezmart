@@ -103,6 +103,12 @@
     <!-- Quick Actions -->
     <div class="section-title">Aksi Cepat</div>
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 24px; text-align: center;">
+        <a href="<?= BASE_URL ?>ppob" class="quick-action">
+            <div class="action-icon" style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15)); color: #818cf8;">
+                <i class="bi bi-phone-fill"></i>
+            </div>
+            <span class="action-label">Produk Digital</span>
+        </a>
         <a href="<?= BASE_URL ?>customers" class="quick-action">
             <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-people-fill"></i></div>
             <span class="action-label">Pelanggan</span>
