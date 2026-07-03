@@ -96,9 +96,9 @@ class ProductModel extends Model
             $whereSql .= ' AND ' . implode(' AND ', $whereClauses);
         }
 
-        $orderSql = "ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.full_name ASC";
+        $orderSql = "ORDER BY COALESCE(p.updated_at, p.created_at) DESC, COALESCE(p.short_label, p.full_name) ASC";
         if (!empty($words)) {
-            $orderSql = "ORDER BY p.full_name ASC";
+            $orderSql = "ORDER BY COALESCE(p.short_label, p.full_name) ASC";
         }
 
         $stmt = $this->db->prepare("
@@ -374,9 +374,9 @@ class ProductModel extends Model
         $params[':limit'] = $perPage;
         $params[':offset'] = $offset;
 
-        $orderSql = "ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.full_name ASC";
+        $orderSql = "ORDER BY COALESCE(p.updated_at, p.created_at) DESC, COALESCE(p.short_label, p.full_name) ASC";
         if (!empty(trim($search))) {
-            $orderSql = "ORDER BY p.full_name ASC";
+            $orderSql = "ORDER BY COALESCE(p.short_label, p.full_name) ASC";
         }
 
         // Fetch product with smallest level packaging info
