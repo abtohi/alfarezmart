@@ -431,6 +431,12 @@
         if (existing) { existing.qty++; renderList(); return; }
         
         const packs = Array.isArray(product.packagings) && product.packagings.length > 0 ? product.packagings : [];
+        const fallbackBasePrice = parseFloat(product.last_buy_price) || 0;
+        packs.forEach(pk => {
+            if (!pk.buy_price || parseFloat(pk.buy_price) === 0) {
+                pk.buy_price = fallbackBasePrice * (parseFloat(pk.base_qty) || 1);
+            }
+        });
         const packaging = packs.length > 0 ? packs[0] : null;
         const pkgId = packaging ? parseInt(packaging.id, 10) : 0;
         
@@ -442,7 +448,7 @@
             name: displayName,
             short_label: product.short_label || product.invoice_name || displayName,
             unit_name: packaging ? (packaging.unit_name || 'pcs') : (product.unit_small_name || 'pcs'),
-            buy_price: packaging ? parseFloat(packaging.buy_price || 0) : parseFloat(product.buy_price_small || 0),
+            buy_price: packaging ? parseFloat(packaging.buy_price || 0) : fallbackBasePrice,
             qty: 1,
             base_qty: packaging ? parseInt(packaging.base_qty || 1, 10) : 1
         });

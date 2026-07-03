@@ -68,7 +68,7 @@
             </button>
         </div>
         <div class="search-input-wrapper" style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0 12px; display:flex; align-items:center; gap:8px;">
-            <i class="bi bi-upc-scan" style="color:var(--primary); font-size:1.2rem; cursor:pointer;" onclick="BarcodeUtil.scanBarcode(document.getElementById('posSearch'))" title="Scan Barcode Kamera"></i>
+            <i class="bi bi-upc-scan" style="color:var(--primary); font-size:1.2rem; cursor:pointer;" onclick="openPosScanner()" title="Scan Barcode Kamera"></i>
             <input type="text" id="posSearch" placeholder="Scan barcode atau ketik nama produk..." 
                    style="flex:1;border:none;background:transparent;padding:12px 8px;color:var(--text-primary);font-size:var(--font-size-base);outline:none;font-family:var(--font-family);" autocomplete="off" autofocus>
             <i class="bi bi-search" style="color:var(--text-muted); font-size:1rem;"></i>
@@ -391,6 +391,18 @@ function initPosSearch() {
             barcodeTimeout = setTimeout(() => { barcodeBuffer = ''; }, 50);
         }
     });
+}
+
+function openPosScanner() {
+    const inp = document.getElementById('posSearch');
+    const sug = document.getElementById('posSuggestions');
+    if (typeof BarcodeUtil !== 'undefined') {
+        BarcodeUtil.scanBarcode(inp, (code) => {
+            if (code) {
+                processBarcodeScan(code, inp, sug);
+            }
+        });
+    }
 }
 
 async function processBarcodeScan(q, inpEl, sugEl) {
