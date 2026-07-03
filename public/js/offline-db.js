@@ -201,7 +201,7 @@ window.OfflineDB = (function() {
         });
     }
 
-    async function searchProducts(query) {
+    async function searchProducts(query, isPos = false) {
         if (!query) return [];
         query = query.toLowerCase().trim();
         const words = query.split(/\s+/).filter(w => w.length > 0);
@@ -210,6 +210,8 @@ window.OfflineDB = (function() {
         try {
             const all = await getAllProducts();
             return all.filter(p => {
+                if (isPos && p.is_available !== undefined && p.is_available != 1) return false;
+                
                 return words.every(word => {
                     const nameMatch = (p.full_name && p.full_name.toLowerCase().includes(word)) ||
                                       (p.short_label && p.short_label.toLowerCase().includes(word)) ||
@@ -239,13 +241,15 @@ window.OfflineDB = (function() {
         }
     }
 
-    async function findByBarcode(barcode) {
+    async function findByBarcode(barcode, isPos = false) {
         if (!barcode) return null;
         barcode = barcode.replace(/\s+/g, '').toLowerCase();
         
         try {
             const all = await getAllProducts();
             return all.find(p => {
+                if (isPos && p.is_available !== undefined && p.is_available != 1) return false;
+                
                 let match = false;
                 if (p.code) {
                     let pCode = p.code.replace(/\s+/g, '').toLowerCase();
