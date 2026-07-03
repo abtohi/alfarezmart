@@ -7,6 +7,7 @@ require_once __DIR__ . '/../core/Controller.php';
 require_once __DIR__ . '/../services/DigiflazzService.php';
 require_once __DIR__ . '/../models/DigiflazzModel.php';
 require_once __DIR__ . '/../models/UserModel.php';
+require_once __DIR__ . '/../models/SettingModel.php';
 
 class DigiflazzController extends Controller {
     private DigiflazzService $digiService;
