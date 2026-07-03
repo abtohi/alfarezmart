@@ -801,7 +801,8 @@ function scanProductBarcode() {
         BarcodeUtil.scanBarcode(null, async (code) => {
             if (!code) return;
             code = code.trim();
-            // Directly call barcode API — no input event dispatch to avoid "kosong" error
+
+            // ── Step 1: Try exact barcode API ──
             try {
                 const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(code)}`);
                 if (resp.ok) {
@@ -809,17 +810,43 @@ function scanProductBarcode() {
                     if (data && data.id) {
                         if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
                         addProductToCart(data);
-                        if (searchInput) { searchInput.value = ''; }
-                        if (suggestionsDiv) { suggestionsDiv.innerHTML = ''; }
+                        if (searchInput) searchInput.value = '';
+                        if (suggestionsDiv) suggestionsDiv.innerHTML = '';
                         return;
                     }
                 }
-            } catch (e) { /* network error, fallback below */ }
-            // Barcode not found — fallback: fill search input for manual selection
+            } catch (e) { /* network error, try text search */ }
+
+            // ── Step 2: Fallback to text search with the barcode string ──
+            try {
+                const url = filterBySupplierSales && !isOtherMode && currentSupplierId
+                    ? `${BASE_URL}api/purchases/search-products?q=${encodeURIComponent(code)}&supplier_id=${currentSupplierId}${currentSalesRepId ? '&sales_rep_id='+currentSalesRepId : ''}`
+                    : `${BASE_URL}api/products/search?q=${encodeURIComponent(code)}`;
+                const sResp = await fetch(url);
+                if (sResp.ok) {
+                    const results = await sResp.json();
+                    if (Array.isArray(results) && results.length === 1) {
+                        // Exactly 1 match — auto-add immediately
+                        if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+                        addProductToCart(results[0]);
+                        if (searchInput) searchInput.value = '';
+                        if (suggestionsDiv) suggestionsDiv.innerHTML = '';
+                        return;
+                    } else if (Array.isArray(results) && results.length > 1) {
+                        // Multiple results — show list for manual selection
+                        if (searchInput) {
+                            searchInput.value = code;
+                            performProductSearch();
+                        }
+                        return;
+                    }
+                }
+            } catch (e) { /* search also failed */ }
+
+            // ── Step 3: Nothing found anywhere ──
             showToast(`Barcode tidak ditemukan: ${code}`, 'warning');
             if (searchInput) {
                 searchInput.value = code;
-                performProductSearch();
             }
         });
     } else {
@@ -830,6 +857,7 @@ function scanProductBarcode() {
         }
     }
 }
+
 
 
 async function performProductSearch() {
