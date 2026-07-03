@@ -69,6 +69,12 @@ $router->get('/ppob', 'DigiflazzController@index');
 $router->get('/ppob/settings', 'DigiflazzController@settings');
 $router->get('/ppob/history', 'DigiflazzController@history');
 
+// PPOB API Endpoints
+$router->post('/api/ppob/settings', 'DigiflazzController@apiSaveSettings');
+$router->get('/api/ppob/balance', 'DigiflazzController@apiGetBalance');
+$router->post('/api/ppob/sync-prices', 'DigiflazzController@apiSyncPrices');
+$router->post('/api/ppob/webhook', 'DigiflazzController@webhook');
+
 // ============================================
 // API ROUTES (Returns JSON — auth required)
 // ============================================

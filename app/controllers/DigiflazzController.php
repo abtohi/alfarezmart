@@ -240,6 +240,23 @@ class DigiflazzController extends Controller {
             exit;
         }
 
+        // Fetch Webhook Secret from DB
+        $settingModel = new SettingModel();
+        $secret = $settingModel->get('digiflazz_webhook_secret', '');
+
+        // Verify Signature if Secret is configured
+        if (!empty($secret)) {
+            $headerSignature = $_SERVER['HTTP_X_HUB_SIGNATURE'] ?? '';
+            $expectedSignature = 'sha1=' . hash_hmac('sha1', $payload, $secret);
+            
+            if (!hash_equals($expectedSignature, $headerSignature)) {
+                error_log("Webhook verification failed. Expected: $expectedSignature, Got: $headerSignature");
+                http_response_code(403);
+                echo "Invalid signature";
+                exit;
+            }
+        }
+
         $trx = $data['data'];
         $refId = $trx['ref_id'] ?? '';
         $status = strtolower($trx['status'] ?? '');
@@ -250,10 +267,6 @@ class DigiflazzController extends Controller {
         if ($status === 'gagal') $status = 'failed';
         else if ($status === 'sukses') $status = 'success';
 
-        // Validasi webhook secret atau signature jika ada di header
-        $expectedSecret = $_ENV['DIGIFLAZZ_WEBHOOK_SECRET'] ?? '';
-        $headerSecret = $_SERVER['HTTP_X_DIGIFLAZZ_EVENT'] ?? $_SERVER['HTTP_X_HUB_SIGNATURE'] ?? ''; // Example check, adjust based on actual Digiflazz docs if they send a specific header
-        
         // Update transaction status
         $this->digiModel->updateTransactionStatus($refId, $status, $message, $sn, null, $trx);
 
