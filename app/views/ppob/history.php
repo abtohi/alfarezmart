@@ -1,4 +1,4 @@
-<?php require_once APP_PATH . '/views/layouts/app.php'; ?>
+
 
 <div class="page-section">
     <div class="d-flex align-items-center mb-4">
@@ -72,4 +72,4 @@
     }
 </script>
 
-<?php require_once APP_PATH . '/views/layouts/footer.php'; ?>
+

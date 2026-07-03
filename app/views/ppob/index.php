@@ -1,4 +1,4 @@
-<?php require_once APP_PATH . '/views/layouts/app.php'; ?>
+
 
 <!-- Custom CSS for PPOB -->
 <style>
@@ -688,4 +688,4 @@
     }
 </script>
 
-<?php require_once APP_PATH . '/views/layouts/footer.php'; ?>
+
