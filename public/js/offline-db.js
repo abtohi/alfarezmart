@@ -229,8 +229,9 @@ window.OfflineDB = (function() {
                     return nameMatch || brandMatch || codeMatch || supplierCodeMatch || barcodeMatch;
                 });
             }).sort((a, b) => {
-                const nameA = (a.short_label || a.full_name || '').toLowerCase();
-                const nameB = (b.short_label || b.full_name || '').toLowerCase();
+                const getLabel = (p) => (p.short_label && p.short_label.trim() !== '') ? p.short_label : (p.full_name || '');
+                const nameA = getLabel(a).toLowerCase();
+                const nameB = getLabel(b).toLowerCase();
                 if (nameA < nameB) return -1;
                 if (nameA > nameB) return 1;
                 return 0;
