@@ -4,8 +4,6 @@
  * Handles all communication with Digiflazz API
  */
 
-require_once __DIR__ . '/../models/SettingModel.php';
-
 class DigiflazzService {
     private $username;
     private $apiKey;
