@@ -121,9 +121,16 @@
                 <h4 style="margin:0;font-weight:700;">Produk Digital</h4>
                 <div style="font-size:12px;opacity:0.9;">Layanan PPOB Digiflazz</div>
             </div>
-            <div class="ppob-balance">
-                <i class="bi bi-wallet2"></i>
-                <span id="digi-balance">Loading...</span>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div class="ppob-balance">
+                    <i class="bi bi-wallet2"></i>
+                    <span id="digi-balance">Loading...</span>
+                </div>
+                <?php if (in_array($currentUser['level'] ?? '', ['superadmin', 'admin'])): ?>
+                <a href="<?= BASE_URL ?>ppob/settings" title="Pengaturan API PPOB" style="color:white;opacity:0.85;font-size:1.2rem;padding:4px;line-height:1;">
+                    <i class="bi bi-gear-fill"></i>
+                </a>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -165,7 +172,14 @@
 
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div class="section-title mb-0">Transaksi Terakhir</div>
-            <a href="<?= BASE_URL ?>ppob/history" class="text-primary text-decoration-none" style="font-size:12px;font-weight:600;">Lihat Semua <i class="bi bi-chevron-right"></i></a>
+            <div style="display:flex;align-items:center;gap:10px;">
+                <?php if (in_array($currentUser['level'] ?? '', ['superadmin', 'admin'])): ?>
+                <a href="<?= BASE_URL ?>ppob/settings" class="text-muted text-decoration-none" style="font-size:12px;font-weight:600;" title="Pengaturan API">
+                    <i class="bi bi-gear"></i> API
+                </a>
+                <?php endif; ?>
+                <a href="<?= BASE_URL ?>ppob/history" class="text-primary text-decoration-none" style="font-size:12px;font-weight:600;">Lihat Semua <i class="bi bi-chevron-right"></i></a>
+            </div>
         </div>
         
         <!-- Riwayat Singkat -->
