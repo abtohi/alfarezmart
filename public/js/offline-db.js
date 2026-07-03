@@ -226,6 +226,12 @@ window.OfflineDB = (function() {
 
                     return nameMatch || brandMatch || codeMatch || supplierCodeMatch || barcodeMatch;
                 });
+            }).sort((a, b) => {
+                const nameA = (a.full_name || '').toLowerCase();
+                const nameB = (b.full_name || '').toLowerCase();
+                if (nameA < nameB) return -1;
+                if (nameA > nameB) return 1;
+                return 0;
             }).slice(0, 100);
         } catch (e) {
             console.error("Offline search failed", e);

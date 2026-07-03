@@ -96,13 +96,18 @@ class ProductModel extends Model
             $whereSql .= ' AND ' . implode(' AND ', $whereClauses);
         }
 
+        $orderSql = "ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.full_name ASC";
+        if (!empty($words)) {
+            $orderSql = "ORDER BY p.full_name ASC";
+        }
+
         $stmt = $this->db->prepare("
             SELECT p.*, b.name as brand_name, c.name as category_name
             FROM products p
             LEFT JOIN brands b ON p.brand_id = b.id
             LEFT JOIN categories c ON p.category_id = c.id
             WHERE $whereSql
-            ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.full_name ASC
+            $orderSql
             LIMIT :lim
         ");
         
@@ -369,6 +374,11 @@ class ProductModel extends Model
         $params[':limit'] = $perPage;
         $params[':offset'] = $offset;
 
+        $orderSql = "ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.full_name ASC";
+        if (!empty(trim($search))) {
+            $orderSql = "ORDER BY p.full_name ASC";
+        }
+
         // Fetch product with smallest level packaging info
         $stmt = $this->db->prepare("
             SELECT p.*, b.name as brand_name, c.name as category_name,
@@ -377,7 +387,7 @@ class ProductModel extends Model
             LEFT JOIN brands b ON p.brand_id = b.id
             LEFT JOIN categories c ON p.category_id = c.id
             {$where}
-            ORDER BY COALESCE(p.updated_at, p.created_at) DESC, p.full_name ASC
+            {$orderSql}
             LIMIT :limit OFFSET :offset
         ");
         
