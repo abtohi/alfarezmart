@@ -2,8 +2,8 @@
 .env
 .env.local
 .env.*.local
-config.php
-settings.php
+/config.php
+/settings.php
 
 # Sensitive Database Files
 database.sqlite
