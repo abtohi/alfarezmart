@@ -117,6 +117,7 @@ $router->post('/api/ppob/pay-pasca', 'DigiflazzController@apiPayPostpaid');
 $router->get('/api/ppob/transactions', 'DigiflazzController@apiGetTransactions');
 $router->get('/api/ppob/transaction/{refId}', 'DigiflazzController@apiGetTransaction');
 $router->post('/api/ppob/sync-prices', 'DigiflazzController@apiSyncPrices');
+$router->post('/api/ppob/settings', 'DigiflazzController@apiSaveSettings');
 
 // Webhook (PUBLIC — no auth)
 $router->post('/api/ppob/webhook', 'DigiflazzController@webhook');

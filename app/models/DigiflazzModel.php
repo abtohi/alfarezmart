@@ -217,8 +217,36 @@ class DigiflazzModel {
      * Get transaction history
      */
     public function getTransactions($limit = 50, $offset = 0) {
-        $stmt = $this->db->prepare("SELECT * FROM digi_transactions ORDER BY created_at DESC LIMIT ? OFFSET ?");
-        $stmt->execute([$limit, $offset]);
+        $stmt = $this->db->prepare("
+            SELECT t.*, u.name as agent_name 
+            FROM digi_transactions t
+            LEFT JOIN users u ON t.user_id = u.id
+            ORDER BY t.created_at DESC 
+            LIMIT :limit OFFSET :offset
+        ");
+        
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get transaction stats for Laporan
+     */
+    public function getTransactionStats() {
+        $stmt = $this->db->query("
+            SELECT 
+                COUNT(*) as total_trx,
+                SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success_count,
+                SUM(CASE WHEN status = 'pending' OR status = 'processing' THEN 1 ELSE 0 END) as pending_count,
+                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_count,
+                SUM(CASE WHEN status = 'success' THEN sell_price ELSE 0 END) as total_revenue,
+                SUM(CASE WHEN status = 'success' THEN modal_price ELSE 0 END) as total_cost,
+                SUM(CASE WHEN status = 'success' THEN profit ELSE 0 END) as total_profit
+            FROM digi_transactions
+        ");
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 }

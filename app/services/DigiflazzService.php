@@ -4,6 +4,8 @@
  * Handles all communication with Digiflazz API
  */
 
+require_once __DIR__ . '/../models/SettingModel.php';
+
 class DigiflazzService {
     private $username;
     private $apiKey;
@@ -11,9 +13,10 @@ class DigiflazzService {
     private $baseUrl = 'https://api.digiflazz.com/v1';
 
     public function __construct() {
-        $this->username = $_ENV['DIGIFLAZZ_USERNAME'] ?? '';
-        $this->apiKey = $_ENV['DIGIFLAZZ_API_KEY'] ?? '';
-        $this->mode = $_ENV['DIGIFLAZZ_MODE'] ?? 'development';
+        $settingModel = new SettingModel();
+        $this->username = $settingModel->get('digiflazz_username', '');
+        $this->apiKey = $settingModel->get('digiflazz_api_key', '');
+        $this->mode = $settingModel->get('digiflazz_mode', 'development');
     }
 
     /**

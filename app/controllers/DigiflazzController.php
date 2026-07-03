@@ -33,12 +33,22 @@ class DigiflazzController extends Controller {
     public function settings() {
         AuthController::requireAuth();
         AuthController::requireLevel(['superadmin', 'admin']);
-        $this->view('ppob/settings', ['title' => 'Pengaturan PPOB']);
+        
+        $settingModel = new SettingModel();
+        $settings = [
+            'username' => $settingModel->get('digiflazz_username', ''),
+            'api_key' => $settingModel->get('digiflazz_api_key', ''),
+            'webhook_secret' => $settingModel->get('digiflazz_webhook_secret', ''),
+            'mode' => $settingModel->get('digiflazz_mode', 'development')
+        ];
+
+        $this->view('ppob/settings', ['title' => 'Pengaturan PPOB', 'settings' => $settings]);
     }
 
     public function history() {
         AuthController::requireAuth();
-        $this->view('ppob/history', ['title' => 'Riwayat PPOB']);
+        $stats = $this->digiModel->getTransactionStats();
+        $this->view('ppob/history', ['title' => 'Laporan Transaksi Prabayar', 'stats' => $stats]);
     }
 
     /**
@@ -172,16 +182,45 @@ class DigiflazzController extends Controller {
         }
 
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Failed to fetch from API']);
+        echo json_encode(['success' => false, 'message' => 'Failed to fetch from API: ' . ($res['message'] ?? 'Unknown Error')]);
+        exit;
+    }
+
+    public function apiSaveSettings() {
+        AuthController::requireAuth();
+        AuthController::requireLevel(['superadmin', 'admin']);
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $settingModel = new SettingModel();
+        
+        if (isset($data['username'])) $settingModel->set('digiflazz_username', trim($data['username']));
+        if (isset($data['api_key'])) $settingModel->set('digiflazz_api_key', trim($data['api_key']));
+        if (isset($data['webhook_secret'])) $settingModel->set('digiflazz_webhook_secret', trim($data['webhook_secret']));
+        if (isset($data['mode'])) $settingModel->set('digiflazz_mode', trim($data['mode']));
+
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'message' => 'Pengaturan berhasil disimpan']);
         exit;
     }
 
     public function apiGetTransactions() {
         AuthController::requireAuth();
-        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
         $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+        $status_filter = $_GET['status'] ?? 'all';
         
         $transactions = $this->digiModel->getTransactions($limit, $offset);
+        
+        if ($status_filter !== 'all') {
+            $transactions = array_filter($transactions, function($t) use ($status_filter) {
+                if ($status_filter === 'pending') {
+                    return in_array($t['status'], ['pending', 'processing']);
+                }
+                return $t['status'] === $status_filter;
+            });
+            $transactions = array_values($transactions);
+        }
+
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'data' => $transactions]);
         exit;

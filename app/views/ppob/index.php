@@ -293,8 +293,6 @@
     let debounceTimer;
     let isProcessing = false;
     let lastTransaction = null;
-    let trxModal;
-    let resultModal;
 
     // Prefix Data for Auto-Detect
     const OPERATOR_PREFIX = {
@@ -307,8 +305,6 @@
     };
 
     document.addEventListener('DOMContentLoaded', () => {
-        trxModal = new bootstrap.Modal(document.getElementById('trxModal'));
-        resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
         loadBalance();
         loadRecentTransactions();
     });
@@ -558,7 +554,12 @@
             nameRow.style.setProperty('display', 'none', 'important');
         }
 
-        trxModal.show();
+        const modalEl = document.getElementById('trxModal');
+        if (typeof bootstrap !== 'undefined') {
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        } else {
+            console.error('Bootstrap JS is not loaded yet');
+        }
     }
 
     async function processTransaction() {
@@ -583,7 +584,11 @@
             });
             const data = await res.json();
             
-            trxModal.hide();
+            const trxModalEl = document.getElementById('trxModal');
+            if (typeof bootstrap !== 'undefined') {
+                const instance = bootstrap.Modal.getInstance(trxModalEl);
+                if (instance) instance.hide();
+            }
             
             // Build result view
             const rIcon = document.getElementById('result-icon');
@@ -622,7 +627,10 @@
                 lastTransaction = null;
             }
             
-            resultModal.show();
+            const resultModalEl = document.getElementById('resultModal');
+            if (typeof bootstrap !== 'undefined') {
+                bootstrap.Modal.getOrCreateInstance(resultModalEl).show();
+            }
             
         } catch (e) {
             console.error(e);
