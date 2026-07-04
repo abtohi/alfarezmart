@@ -68,13 +68,22 @@ class DigiflazzService {
      * Inquiry PLN Prepaid Customer Name
      */
     public function inquiryPLN($customerNo) {
-        $sign = md5($this->username . $this->apiKey . $customerNo);
+        $refId = uniqid('PLNINQ');
+        $sign = md5($this->username . $this->apiKey . $refId);
         $payload = [
+            'commands' => 'pln-subscribe',
+            'buyer_sku_code' => 'pln',
             'username' => $this->username,
             'customer_no' => $customerNo,
+            'ref_id' => $refId,
             'sign' => $sign
         ];
-        return $this->sendRequest('/inquiry-pln', $payload);
+        
+        if ($this->mode === 'development') {
+            $payload['testing'] = true;
+        }
+
+        return $this->sendRequest('/transaction', $payload);
     }
 
     /**

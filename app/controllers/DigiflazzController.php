@@ -65,8 +65,36 @@ class DigiflazzController extends Controller {
 
     public function apiGetProducts(string $category) {
         AuthController::requireAuth();
-        $brand = $_GET['brand'] ?? null;
-        $products = $this->digiModel->getProducts($category, $brand);
+        $brand = $_GET['brand'] ?? '';
+        $type = $_GET['type'] ?? 'prepaid';
+        
+        $products = $this->digiModel->getProducts($category, $brand, $type);
+        
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'data' => $products]);
+        exit;
+    }
+
+    public function apiSearchProducts() {
+        AuthController::requireAuth();
+        AuthController::requireLevel(['superadmin', 'admin']);
+        $q = $_GET['q'] ?? '';
+        
+        if (strlen($q) < 2) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Query too short']);
+            exit;
+        }
+
+        $stmt = $this->digiModel->db->prepare("
+            SELECT buyer_sku_code, product_name, seller_price, sell_price, is_custom_price 
+            FROM digi_products 
+            WHERE product_name LIKE :q OR buyer_sku_code LIKE :q 
+            ORDER BY product_name ASC LIMIT 50
+        ");
+        $stmt->execute(['q' => "%$q%"]);
+        $products = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'data' => $products]);
         exit;
@@ -259,24 +287,63 @@ class DigiflazzController extends Controller {
     public function apiSaveMarkupRules() {
         AuthController::requireAuth();
         AuthController::requireLevel(['superadmin', 'admin']);
+
         $data = json_decode(file_get_contents('php://input'), true);
-        
-        $rules = $data['rules'] ?? [];
-        foreach ($rules as $rule) {
-            if (!empty($rule['category'])) {
+        if (isset($data['rules']) && is_array($data['rules'])) {
+            foreach ($data['rules'] as $rule) {
                 $this->digiModel->saveMarkupRule(
-                    $rule['category'],
-                    $rule['markup_type'] ?? 'fixed',
-                    (float)($rule['markup_value'] ?? 0)
+                    $rule['category'] ?? '', 
+                    $rule['markup_type'] ?? 'fixed', 
+                    floatval($rule['markup_value'] ?? 0)
                 );
             }
+            $this->digiModel->applyAllMarkups();
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => 'Markup rules saved and applied']);
+            exit;
         }
 
-        // Re-apply all markups after saving
-        $this->digiModel->applyAllMarkups();
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Invalid data']);
+        exit;
+    }
+
+    public function apiSaveCustomPrice() {
+        AuthController::requireAuth();
+        AuthController::requireLevel(['superadmin', 'admin']);
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $sku = trim($data['sku'] ?? '');
+        $sellPrice = floatval($data['sell_price'] ?? 0);
+
+        if ($sku && $sellPrice >= 0) {
+            $this->digiModel->updateCustomPrice($sku, $sellPrice);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => 'Custom price saved']);
+            exit;
+        }
 
         header('Content-Type: application/json');
-        echo json_encode(['success' => true, 'message' => 'Markup berhasil disimpan dan diterapkan ke semua produk']);
+        echo json_encode(['success' => false, 'message' => 'Invalid data']);
+        exit;
+    }
+
+    public function apiResetCustomPrice() {
+        AuthController::requireAuth();
+        AuthController::requireLevel(['superadmin', 'admin']);
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $sku = trim($data['sku'] ?? '');
+
+        if ($sku) {
+            $this->digiModel->resetCustomPrice($sku);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'message' => 'Custom price reset to auto markup']);
+            exit;
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Invalid data']);
         exit;
     }
 

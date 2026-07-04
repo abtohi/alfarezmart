@@ -102,8 +102,36 @@ class DigiflazzModel {
             )
         ");
 
-        // Update sell_price = seller_price + markup, rounded to nearest 100
-        $this->db->exec("UPDATE digi_products SET sell_price = CEIL((seller_price + markup) / 100) * 100");
+        try {
+            // Add is_custom_price column if it doesn't exist
+            $this->db->exec("ALTER TABLE digi_products ADD COLUMN is_custom_price TINYINT(1) DEFAULT 0");
+        } catch (\Exception $e) {
+            // Ignore if column already exists
+        }
+
+        // Update sell_price = seller_price + markup, rounded to nearest 100, ONLY for non-custom prices
+        $this->db->exec("UPDATE digi_products SET sell_price = CEIL((seller_price + markup) / 100) * 100 WHERE is_custom_price = 0");
+    }
+
+    /**
+     * Update specific product selling price (Custom Price)
+     */
+    public function updateCustomPrice($sku, $sellPrice) {
+        $stmt = $this->db->prepare("UPDATE digi_products SET sell_price = :sell_price, is_custom_price = 1 WHERE buyer_sku_code = :sku");
+        return $stmt->execute([
+            'sell_price' => $sellPrice,
+            'sku' => $sku
+        ]);
+    }
+
+    /**
+     * Reset specific product selling price to auto markup
+     */
+    public function resetCustomPrice($sku) {
+        $stmt = $this->db->prepare("UPDATE digi_products SET is_custom_price = 0 WHERE buyer_sku_code = :sku");
+        $stmt->execute(['sku' => $sku]);
+        $this->applyAllMarkups(); // Re-apply to update the sell_price of this specific product
+        return true;
     }
 
     /**

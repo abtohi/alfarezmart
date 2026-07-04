@@ -225,6 +225,24 @@
         </div>
     </div>
 
+            <div class="mt-4" style="border-top:1px dashed var(--border-color);padding-top:16px;">
+                <h6 style="font-size:var(--font-size-sm);font-weight:700;margin-bottom:10px;">Manajemen Harga Jual Spesifik (Per Produk)</h6>
+                <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:12px;">Cari produk untuk mengatur harga jualnya secara manual (mengabaikan markup otomatis).</div>
+                
+                <div class="d-flex gap-2 mb-3">
+                    <input type="text" id="search-product-sku" class="ppob-field" placeholder="Cari nama produk atau SKU..." style="flex:1;">
+                    <button class="ppob-btn-secondary" onclick="searchCustomPriceProduct()">
+                        <i class="bi bi-search"></i> Cari
+                    </button>
+                </div>
+                
+                <div id="custom-price-results" style="display:none;background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-md);max-height:300px;overflow-y:auto;">
+                    <!-- Results populated via JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ===== SECTION 4: WEBHOOK ===== -->
     <div class="card card-custom mb-4" style="border:1px solid var(--border-color);border-radius:var(--radius-lg);overflow:hidden;">
         <div style="background:linear-gradient(135deg,rgba(139,92,246,0.12),transparent);border-bottom:1px solid var(--border-color);padding:14px 20px;display:flex;align-items:center;gap:12px;">
@@ -671,5 +689,77 @@ async function saveMarkupRules() {
         btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Simpan & Terapkan Semua';
         btn.disabled = false;
     }
+}
+
+// Custom Price Search
+async function searchCustomPriceProduct() {
+    const q = document.getElementById('search-product-sku').value;
+    if (!q) return;
+    const resDiv = document.getElementById('custom-price-results');
+    resDiv.style.display = 'block';
+    resDiv.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;"><span class="spinner-border spinner-border-sm"></span> Mencari...</div>';
+    
+    try {
+        const res = await fetch(`<?= BASE_URL ?>api/ppob/products/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (data.success && data.data.length > 0) {
+            let html = '<div style="display:grid;gap:1px;background:var(--border-color);">';
+            data.data.forEach(p => {
+                const isCustom = parseInt(p.is_custom_price) === 1;
+                const modal = parseInt(p.seller_price).toLocaleString('id-ID');
+                html += `
+                <div style="background:var(--surface-2);padding:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:200px;">
+                        <div style="font-weight:700;font-size:12px;">${p.product_name}</div>
+                        <div style="font-size:10px;color:var(--text-muted);">SKU: ${p.buyer_sku_code} | Modal: Rp ${modal}</div>
+                        ${isCustom ? '<span class="badge bg-warning text-dark" style="font-size:8px;">Harga Manual</span>' : '<span class="badge bg-info" style="font-size:8px;">Auto Markup</span>'}
+                    </div>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <span style="font-size:12px;font-weight:600;">Rp</span>
+                        <input type="number" id="cp-${p.buyer_sku_code}" class="ppob-field" value="${p.sell_price}" style="width:100px;padding:6px;font-size:12px;" ${!isCustom ? 'placeholder="Auto"' : ''}>
+                        <button onclick="saveCustomPrice('${p.buyer_sku_code}')" class="btn btn-sm btn-primary" style="font-size:11px;padding:6px 10px;"><i class="bi bi-save"></i></button>
+                        ${isCustom ? `<button onclick="resetCustomPrice('${p.buyer_sku_code}')" class="btn btn-sm btn-outline-danger" style="font-size:11px;padding:6px 10px;" title="Reset ke Auto Markup"><i class="bi bi-arrow-counterclockwise"></i></button>` : ''}
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+            resDiv.innerHTML = html;
+        } else {
+            resDiv.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--text-muted);">Produk tidak ditemukan</div>';
+        }
+    } catch (e) {
+        resDiv.innerHTML = '<div style="padding:16px;text-align:center;font-size:12px;color:var(--danger);">Error koneksi pencarian</div>';
+    }
+}
+
+async function saveCustomPrice(sku) {
+    const val = document.getElementById(`cp-${sku}`).value;
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/ppob/custom-price', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({sku: sku, sell_price: val})
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert('Harga jual custom berhasil disimpan!');
+            searchCustomPriceProduct(); // reload
+        } else {
+            alert('Gagal: ' + data.message);
+        }
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function resetCustomPrice(sku) {
+    if (!confirm('Kembalikan ke Auto Markup?')) return;
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/ppob/custom-price/reset', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({sku: sku})
+        });
+        const data = await res.json();
+        if (data.success) {
+            searchCustomPriceProduct(); // reload
+        }
+    } catch(e) { alert('Error: ' + e.message); }
 }
 </script>

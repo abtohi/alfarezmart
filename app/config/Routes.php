@@ -114,6 +114,7 @@ $router->post('/api/ai/scan-invoice', 'ApiController@scanInvoiceAI');
 
 // PPOB API
 $router->get('/api/ppob/balance', 'DigiflazzController@apiGetBalance');
+$router->get('/api/ppob/products/search', 'DigiflazzController@apiSearchProducts');
 $router->get('/api/ppob/products/{category}', 'DigiflazzController@apiGetProducts');
 $router->get('/api/ppob/brands/{category}', 'DigiflazzController@apiGetBrands');
 $router->post('/api/ppob/inquiry-pln', 'DigiflazzController@apiInquiryPLN');
@@ -126,6 +127,8 @@ $router->post('/api/ppob/sync-prices', 'DigiflazzController@apiSyncPrices');
 $router->post('/api/ppob/settings', 'DigiflazzController@apiSaveSettings');
 
 $router->post('/api/ppob/markup-rules', 'DigiflazzController@apiSaveMarkupRules');
+$router->post('/api/ppob/custom-price', 'DigiflazzController@apiSaveCustomPrice');
+$router->post('/api/ppob/custom-price/reset', 'DigiflazzController@apiResetCustomPrice');
 
 // Webhook (PUBLIC — no auth)
 $router->post('/api/ppob/webhook', 'DigiflazzController@webhook');

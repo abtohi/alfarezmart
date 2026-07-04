@@ -470,10 +470,32 @@
 
                 <div class="d-flex gap-2">
                     <button class="btn-ppob-secondary flex-fill" data-bs-dismiss="modal" onclick="closeCategory()">Tutup</button>
-                    <button class="btn-ppob-primary flex-fill" id="btn-print-receipt" onclick="printReceipt()" style="padding:11px 20px;">
+                    <button class="btn-ppob-primary flex-fill" id="btn-print-receipt" onclick="promptPrintReceipt()" style="padding:11px 20px;">
                         <i class="bi bi-printer me-1"></i> Cetak Struk
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Input Harga Jual (Cetak Struk) -->
+<div class="modal fade" id="printReceiptModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header" style="border-bottom:1px solid var(--border-color);background:var(--surface-1);">
+                <h6 class="modal-title fw-bold" style="font-family:var(--font-family);">Harga Cetak Struk</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="font-size:12px;"></button>
+            </div>
+            <div class="modal-body text-center" style="padding:20px;">
+                <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">Sesuaikan harga jual (Total Bayar) yang akan dicetak di struk fisik/PDF pelanggan.</p>
+                <div class="input-group mb-3">
+                    <span class="input-group-text" style="background:var(--surface-2);border-color:var(--border-color);font-size:14px;font-weight:600;">Rp</span>
+                    <input type="number" id="input-print-price" class="form-control" style="font-size:16px;font-weight:700;text-align:right;" autofocus>
+                </div>
+                <button class="btn-ppob-primary w-100" onclick="executePrintReceipt()">
+                    <i class="bi bi-printer me-1"></i> Cetak Sekarang
+                </button>
             </div>
         </div>
     </div>
@@ -679,10 +701,10 @@
             if (data.success && data.data.length > 0) {
                 currentProducts = data.data;
                 const list = document.getElementById('product-list');
-                const minPrice = Math.min(...data.data.map(p => parseInt(p.sell_price)));
+                const minPrice = Math.min(...data.data.map(p => parseInt(p.seller_price)));
                 data.data.forEach(p => {
-                    const price = parseInt(p.sell_price).toLocaleString('id-ID');
-                    const isCheapest = parseInt(p.sell_price) === minPrice;
+                    const price = parseInt(p.seller_price).toLocaleString('id-ID'); // Hanya tampilkan Harga Modal
+                    const isCheapest = parseInt(p.seller_price) === minPrice;
                     const desc = p.description ? `<div class="product-desc">${p.description.substring(0, 40)}${p.description.length > 40 ? '...' : ''}</div>` : '';
                     const cutoff = (p.start_cut_off && p.end_cut_off) ? `<div class="badge-cutoff"><i class="bi bi-clock"></i> ${p.start_cut_off} - ${p.end_cut_off}</div>` : '';
                     const cheapestBadge = isCheapest ? '<div class="badge-cheapest">⚡ Termurah</div>' : '';
@@ -691,6 +713,7 @@
                         <div class="product-name">${p.product_name}</div>
                         ${desc}
                         <div>
+                            <div class="product-modal-price" style="margin-bottom:2px;">Modal</div>
                             <div class="product-price">Rp${price}</div>
                             ${cutoff}
                         </div>
@@ -863,18 +886,58 @@
         document.getElementById('customer-no').value = no;
         handleCustomerNoInput();
     }
-    async function printReceipt() {
+    
+    function promptPrintReceipt() {
         if (!lastTransaction) return;
-        const btn = document.getElementById('btn-print-receipt');
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-        try {
-            const res = await fetch('<?= BASE_URL ?>api/settings/receipt');
-            const data = await res.json();
-            const storeSettings = { name: '<?= htmlspecialchars($_ENV['STORE_NAME'] ?? 'AlfarezMart') ?>', address: '<?= htmlspecialchars($_ENV['STORE_ADDRESS'] ?? '') ?>', phone: '<?= htmlspecialchars($_ENV['STORE_PHONE'] ?? '') ?>' };
-            if (window.Printer && typeof window.Printer.printDigitalReceipt === 'function') {
-                await window.Printer.printDigitalReceipt(lastTransaction, data.data || {}, storeSettings);
-            } else { alert('Printer Bluetooth belum tersedia.'); }
-        } catch (e) { alert('Gagal mencetak struk: ' + e.message); }
-        finally { btn.innerHTML = '<i class="bi bi-printer me-1"></i> Cetak Struk'; }
+        const defaultPrice = lastTransaction.sell_price || selectedProduct?.sell_price || 0;
+        document.getElementById('input-print-price').value = parseInt(defaultPrice);
+        const modal = new bootstrap.Modal(document.getElementById('printReceiptModal'));
+        modal.show();
+    }
+
+    function executePrintReceipt() {
+        if (!lastTransaction) return;
+        const printPrice = document.getElementById('input-print-price').value;
+        lastTransaction.custom_print_price = printPrice;
+        
+        bootstrap.Modal.getInstance(document.getElementById('printReceiptModal')).hide();
+        
+        const date = new Date().toLocaleString('id-ID');
+        const priceStr = parseInt(printPrice).toLocaleString('id-ID');
+        const win = window.open('', '_blank');
+        win.document.write(`
+            <html>
+            <head><title>Struk Transaksi</title>
+            <style>
+                body { font-family: monospace; padding: 20px; font-size:12px; width: 300px; margin: 0 auto; color:#000; }
+                .center { text-align: center; }
+                .line { border-bottom: 1px dashed #000; margin: 10px 0; }
+                .row { display: flex; justify-content: space-between; margin-bottom: 4px; }
+            </style>
+            </head>
+            <body>
+                <div class="center">
+                    <h3 style="margin:0 0 5px;">ALFAREZ MART</h3>
+                    <div>Struk Pembayaran PPOB</div>
+                    <div style="font-size:10px;">${date}</div>
+                </div>
+                <div class="line"></div>
+                <div class="row"><span>Produk:</span><span>${lastTransaction.product_name}</span></div>
+                <div class="row"><span>No Tujuan:</span><span>${lastTransaction.customer_no}</span></div>
+                ${lastTransaction.customer_name ? `<div class="row"><span>Nama:</span><span>${lastTransaction.customer_name}</span></div>` : ''}
+                <div class="row"><span>SN/Token:</span><span>${lastTransaction.sn || '-'}</span></div>
+                <div class="row"><span>Status:</span><span>SUKSES</span></div>
+                <div class="line"></div>
+                <div class="row" style="font-weight:bold;font-size:14px;"><span>Total Bayar:</span><span>Rp ${priceStr}</span></div>
+                <div class="line"></div>
+                <div class="center" style="margin-top:20px;">Terima Kasih</div>
+                <script>window.print(); window.onafterprint = () => window.close();</script>
+            </body>
+            </html>
+        `);
+    }
+
+    function printReceipt() {
+        promptPrintReceipt();
     }
 </script>
