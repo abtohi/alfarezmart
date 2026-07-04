@@ -43,6 +43,7 @@ class DigiflazzModel {
             foreach ($productsData as $item) {
                 // Determine normalized category
                 $category = $this->normalizeCategory($item['category'] ?? '');
+                $price = $item['price'] ?? $item['admin'] ?? 0;
                 
                 $stmt->execute([
                     'sku' => $item['buyer_sku_code'],
@@ -50,7 +51,7 @@ class DigiflazzModel {
                     'category' => $category,
                     'brand' => $item['brand'],
                     'type' => $type,
-                    'price' => $item['price'] ?? 0,
+                    'price' => $price,
                     'buyer_status' => $item['buyer_product_status'] ? 1 : 0,
                     'seller_status' => $item['seller_product_status'] ? 1 : 0,
                     'desc' => $item['desc'] ?? '',

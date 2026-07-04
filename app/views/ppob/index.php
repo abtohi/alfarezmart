@@ -658,10 +658,56 @@
         }
     }
 
-    function confirmTransaction(product) {
+    async function confirmTransaction(product) {
         const no = document.getElementById('customer-no').value;
         if (!no) { alert('Silakan isi nomor tujuan terlebih dahulu'); document.getElementById('customer-no').focus(); return; }
+        
         selectedProduct = product;
+        
+        if (product.type === 'postpaid' || product.type === 'pascabayar') {
+            const inqBox = document.getElementById('inquiry-result');
+            inqBox.style.display = 'block';
+            inqBox.style.background = 'var(--info-bg)';
+            inqBox.style.color = 'var(--info)';
+            inqBox.style.border = '1px solid rgba(76,201,240,0.25)';
+            inqBox.innerHTML = `<div class="d-flex align-items-center gap-2"><span class="spinner-border spinner-border-sm"></span> Mengecek Tagihan...</div>`;
+            
+            try {
+                const res = await fetch('<?= BASE_URL ?>api/ppob/inquiry-pasca', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({sku: product.buyer_sku_code, customer_no: no})
+                });
+                const data = await res.json();
+                if (data.success && data.data && data.data.customer_name) {
+                    customerName = data.data.customer_name;
+                    selectedProduct.sell_price = data.data.selling_price; 
+                    selectedProduct.ref_id = data.data.ref_id;
+                    
+                    inqBox.style.background = 'var(--success-bg)';
+                    inqBox.style.color = 'var(--success)';
+                    inqBox.style.border = '1px solid rgba(46,196,182,0.25)';
+                    inqBox.innerHTML = `<div class="fw-bold"><i class="bi bi-person-check-fill me-1"></i>${customerName}</div><div style="font-size:10px;opacity:0.8;margin-top:2px;">Tagihan ditemukan.</div>`;
+                    
+                    showConfirmModal(selectedProduct, no);
+                } else {
+                    customerName = null;
+                    inqBox.style.background = 'var(--danger-bg)';
+                    inqBox.style.color = 'var(--danger)';
+                    inqBox.style.border = '1px solid rgba(230,57,70,0.25)';
+                    inqBox.innerHTML = `<div class="fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Gagal Cek Tagihan</div><div style="font-size:10px;opacity:0.8;margin-top:2px;">${data.message || 'Tagihan tidak ditemukan atau sudah dibayar.'}</div>`;
+                }
+            } catch (e) {
+                inqBox.style.background = 'var(--danger-bg)';
+                inqBox.style.color = 'var(--danger)';
+                inqBox.style.border = '1px solid rgba(230,57,70,0.25)';
+                inqBox.innerHTML = `<div class="fw-bold"><i class="bi bi-wifi-off me-1"></i>Gagal koneksi</div>`;
+            }
+        } else {
+            showConfirmModal(selectedProduct, no);
+        }
+    }
+
+    function showConfirmModal(product, no) {
         document.getElementById('confirm-product-name').textContent = product.product_name;
         document.getElementById('confirm-brand').textContent = product.brand;
         document.getElementById('confirm-target').textContent = no;
@@ -682,7 +728,13 @@
         try {
             const res = await fetch('<?= BASE_URL ?>api/ppob/transaction', {
                 method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({sku: selectedProduct.buyer_sku_code, customer_no: no, customer_name: customerName})
+                body: JSON.stringify({
+                    sku: selectedProduct.buyer_sku_code, 
+                    customer_no: no, 
+                    customer_name: customerName,
+                    ref_id: selectedProduct.ref_id,
+                    sell_price: selectedProduct.sell_price
+                })
             });
             const data = await res.json();
             const trxModal = bootstrap.Modal.getInstance(document.getElementById('trxModal'));

@@ -95,12 +95,39 @@ class DigiflazzController extends Controller {
         exit;
     }
 
+    public function apiInquiryPostpaid() {
+        AuthController::requireAuth();
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        $sku = $data['sku'] ?? '';
+        $customerNo = $data['customer_no'] ?? '';
+        
+        if (empty($sku) || empty($customerNo)) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'SKU and Customer No required']);
+            exit;
+        }
+
+        $refId = 'INQ-' . date('YmdHis') . '-' . rand(1000, 9999);
+        $res = $this->digiService->inquiryPostpaid($sku, $customerNo, $refId);
+
+        if ($res['success'] && isset($res['data'])) {
+            // Append ref_id so frontend can use it to pay
+            $res['data']['ref_id'] = $refId;
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode($res);
+        exit;
+    }
+
     public function apiCreateTransaction() {
         AuthController::requireAuth();
         $data = json_decode(file_get_contents('php://input'), true);
         
         $sku = $data['sku'] ?? '';
         $customerNo = $data['customer_no'] ?? '';
+        $refIdPostpaid = $data['ref_id'] ?? null; // from inquiry
         
         if (empty($sku) || empty($customerNo)) {
             header('Content-Type: application/json');
@@ -115,9 +142,10 @@ class DigiflazzController extends Controller {
             exit;
         }
 
-        // Generate unique ref_id: DIGI-TIMESTAMP-RANDOM
-        $refId = 'DIGI-' . date('YmdHis') . '-' . rand(1000, 9999);
+        // Generate unique ref_id for prepaid, or use postpaid ref_id
+        $refId = $refIdPostpaid ? $refIdPostpaid : 'DIGI-' . date('YmdHis') . '-' . rand(1000, 9999);
         $currentUser = $_SESSION['user'] ?? ['id' => 1]; // Fallback ID 1
+        $isPostpaid = (strtolower($product['type']) === 'postpaid' || strtolower($product['type']) === 'pascabayar');
 
         // Insert pending transaction to DB
         $dbData = [
@@ -128,8 +156,8 @@ class DigiflazzController extends Controller {
             'product_name' => $product['product_name'],
             'category' => $product['category'],
             'brand' => $product['brand'],
-            'type' => $product['type'],
-            'sell_price' => $product['sell_price'],
+            'type' => $isPostpaid ? 'postpaid' : 'prepaid',
+            'sell_price' => $data['sell_price'] ?? $product['sell_price'],
             'modal_price' => $product['seller_price'],
             'status' => 'pending',
             'user_id' => $currentUser['id'] ?? 1
@@ -138,7 +166,11 @@ class DigiflazzController extends Controller {
         $this->digiModel->createTransaction($dbData);
 
         // Send request to Digiflazz
-        $res = $this->digiService->createTransaction($sku, $customerNo, $refId);
+        if ($isPostpaid) {
+            $res = $this->digiService->payPostpaid($sku, $customerNo, $refId);
+        } else {
+            $res = $this->digiService->createTransaction($sku, $customerNo, $refId);
+        }
 
         // Update DB with initial response
         if ($res['success'] && isset($res['data'])) {
@@ -154,7 +186,7 @@ class DigiflazzController extends Controller {
             $this->digiModel->updateTransactionStatus($refId, $status, $message, $sn, $trxId, $res['data']);
             
             // Modify response to include sell_price for frontend receipt
-            $res['data']['sell_price'] = $product['sell_price'];
+            $res['data']['sell_price'] = $dbData['sell_price'];
         } else {
             $this->digiModel->updateTransactionStatus($refId, 'failed', $res['message']);
         }
@@ -168,17 +200,27 @@ class DigiflazzController extends Controller {
         AuthController::requireAuth();
         AuthController::requireLevel(['superadmin', 'admin']);
         
-        $res = $this->digiService->getPriceList('prepaid');
-        
-        if ($res['success'] && isset($res['data'])) {
-            $success = $this->digiModel->syncPriceList($res['data'], 'prepaid');
+        $resPrepaid = $this->digiService->getPriceList('prepaid');
+        $successPrepaid = false;
+        if ($resPrepaid['success'] && isset($resPrepaid['data']) && is_array($resPrepaid['data']) && !isset($resPrepaid['data']['rc'])) {
+            $successPrepaid = $this->digiModel->syncPriceList($resPrepaid['data'], 'prepaid');
+        }
+
+        $resPostpaid = $this->digiService->getPriceList('pasca');
+        $successPostpaid = false;
+        if ($resPostpaid['success'] && isset($resPostpaid['data']) && is_array($resPostpaid['data']) && !isset($resPostpaid['data']['rc'])) {
+            $successPostpaid = $this->digiModel->syncPriceList($resPostpaid['data'], 'postpaid');
+        }
+
+        if ($successPrepaid || $successPostpaid) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => $success, 'message' => $success ? 'Sync success' : 'Sync failed']);
+            echo json_encode(['success' => true, 'message' => 'Sync success']);
             exit;
         }
 
+        $errMsg = $resPrepaid['data']['message'] ?? $resPrepaid['message'] ?? 'Rate limit / Unknown Error';
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Failed to fetch from API: ' . ($res['message'] ?? 'Unknown Error')]);
+        echo json_encode(['success' => false, 'message' => 'Gagal sinkronisasi: ' . $errMsg]);
         exit;
     }
 
