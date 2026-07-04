@@ -151,6 +151,80 @@
         </div>
     </div>
 
+    <!-- ===== SECTION 3.5: MARKUP HARGA ===== -->
+    <div class="card card-custom mb-4" style="border:1px solid var(--border-color);border-radius:var(--radius-lg);overflow:hidden;">
+        <div style="background:linear-gradient(135deg,rgba(249,115,22,0.1),transparent);border-bottom:1px solid var(--border-color);padding:14px 20px;display:flex;align-items:center;gap:12px;">
+            <div class="stat-icon" style="width:34px;height:34px;font-size:0.95rem;margin-bottom:0;flex-shrink:0;background:rgba(249,115,22,0.12);color:#f97316;"><i class="bi bi-percent"></i></div>
+            <div>
+                <div style="font-weight:700;font-size:var(--font-size-sm);font-family:var(--font-family);">Pengaturan Markup Harga</div>
+                <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Atur keuntungan otomatis per kategori produk. Diterapkan ke semua produk setelah disimpan.</div>
+            </div>
+        </div>
+        <div style="padding:20px;">
+            <div style="background:var(--info-bg);border:1px solid rgba(76,201,240,0.25);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:16px;font-size:var(--font-size-xs);color:var(--info);">
+                <i class="bi bi-info-circle-fill me-1"></i>
+                Harga jual = Harga modal Digiflazz + Markup. Markup <strong>fixed</strong> = Rp nominal tetap. Markup <strong>persentase</strong> = % dari harga modal.
+            </div>
+
+            <div id="markup-rules-table">
+                <?php
+                $categoryLabels = [
+                    'pulsa'        => ['label' => 'Pulsa', 'icon' => 'bi-phone', 'color' => '#ef4444'],
+                    'data'         => ['label' => 'Paket Data', 'icon' => 'bi-wifi', 'color' => '#3b82f6'],
+                    'pln'          => ['label' => 'Token PLN', 'icon' => 'bi-lightning-charge', 'color' => '#eab308'],
+                    'ewallet'      => ['label' => 'E-Wallet', 'icon' => 'bi-wallet', 'color' => '#06b6d4'],
+                    'game'         => ['label' => 'Voucher Game', 'icon' => 'bi-controller', 'color' => '#8b5cf6'],
+                    'bpjs'         => ['label' => 'BPJS', 'icon' => 'bi-hospital', 'color' => '#10b981'],
+                    'multifinance' => ['label' => 'Angsuran/Kredit', 'icon' => 'bi-building', 'color' => '#f97316'],
+                    'bank'         => ['label' => 'Transfer Bank', 'icon' => 'bi-bank', 'color' => '#64748b'],
+                ];
+                $rulesByCategory = [];
+                foreach (($markupRules ?? []) as $rule) {
+                    $rulesByCategory[$rule['category']] = $rule;
+                }
+                ?>
+                <div style="display:grid;gap:10px;">
+                    <?php foreach ($categoryLabels as $catKey => $catInfo): ?>
+                    <?php $rule = $rulesByCategory[$catKey] ?? ['markup_type' => 'fixed', 'markup_value' => 2000]; ?>
+                    <div style="background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:12px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <div style="display:flex;align-items:center;gap:8px;min-width:150px;">
+                            <i class="<?= $catInfo['icon'] ?>" style="color:<?= $catInfo['color'] ?>;font-size:1rem;"></i>
+                            <span style="font-weight:700;font-size:var(--font-size-xs);color:var(--text-primary);font-family:var(--font-family);"><?= $catInfo['label'] ?></span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px;">
+                            <div class="ppob-select-wrap" style="width:130px;">
+                                <select class="ppob-field" id="markup-type-<?= $catKey ?>" style="padding:8px 10px;font-size:12px;">
+                                    <option value="fixed" <?= $rule['markup_type'] === 'fixed' ? 'selected' : '' ?>>Rp (Fixed)</option>
+                                    <option value="percentage" <?= $rule['markup_type'] === 'percentage' ? 'selected' : '' ?>>% (Persentase)</option>
+                                </select>
+                                <i class="bi bi-chevron-down ppob-select-icon"></i>
+                            </div>
+                            <div style="position:relative;flex:1;">
+                                <input type="number" class="ppob-field" id="markup-val-<?= $catKey ?>"
+                                    value="<?= number_format((float)$rule['markup_value'], 0, '.', '') ?>"
+                                    min="0" step="100"
+                                    style="padding:8px 10px;font-size:12px;text-align:right;"
+                                    placeholder="0">
+                            </div>
+                            <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;" id="markup-preview-<?= $catKey ?>">
+                                +Rp <?= number_format((float)$rule['markup_value'], 0, ',', '.') ?>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <div style="margin-top:16px;display:flex;gap:10px;align-items:center;">
+                <button class="ppob-btn-primary" id="btn-save-markup" onclick="saveMarkupRules()" style="min-width:180px;">
+                    <i class="bi bi-check2-circle me-1"></i> Simpan & Terapkan Semua
+                </button>
+                <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Markup akan langsung diperbarui ke semua produk.</div>
+            </div>
+            <div id="markup-status" style="display:none;margin-top:12px;"></div>
+        </div>
+    </div>
+
     <!-- ===== SECTION 4: WEBHOOK ===== -->
     <div class="card card-custom mb-4" style="border:1px solid var(--border-color);border-radius:var(--radius-lg);overflow:hidden;">
         <div style="background:linear-gradient(135deg,rgba(139,92,246,0.12),transparent);border-bottom:1px solid var(--border-color);padding:14px 20px;display:flex;align-items:center;gap:12px;">
@@ -567,4 +641,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const apiKey = document.getElementById('cfg-apikey').value;
     if (apiKey.length > 5) cekSaldo();
 });
+
+// Save Markup Rules
+async function saveMarkupRules() {
+    const btn = document.getElementById('btn-save-markup');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
+    btn.disabled = true;
+    const categories = ['pulsa','data','pln','ewallet','game','bpjs','multifinance','bank'];
+    const rules = categories.map(cat => ({
+        category: cat,
+        markup_type: document.getElementById(`markup-type-${cat}`)?.value || 'fixed',
+        markup_value: parseFloat(document.getElementById(`markup-val-${cat}`)?.value || 0)
+    }));
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/ppob/markup-rules', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({rules})
+        });
+        const data = await res.json();
+        if (data.success) {
+            showStatus('markup-status','success','Markup berhasil disimpan dan diterapkan ke semua produk!');
+            setTimeout(() => document.getElementById('markup-status').style.display='none', 5000);
+        } else {
+            showStatus('markup-status','danger', data.message || 'Gagal menyimpan markup.');
+        }
+    } catch(err) {
+        showStatus('markup-status','danger','Error: ' + err.message);
+    } finally {
+        btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Simpan & Terapkan Semua';
+        btn.disabled = false;
+    }
+}
 </script>

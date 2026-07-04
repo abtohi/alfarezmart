@@ -89,24 +89,50 @@ class DigiflazzModel {
      * Apply markups and update sell_price in products table
      */
     public function applyAllMarkups() {
-        // Simple logic for now: Default markup of 10% or Rp2000
-        $stmt = $this->db->prepare("
+        // Apply category-specific markup from digi_markup_rules table
+        $this->db->exec("
             UPDATE digi_products p
-            LEFT JOIN digi_markup_rules r 
-                ON (r.category = p.category OR r.category IS NULL)
-                AND (r.brand = p.brand OR r.brand IS NULL)
+            LEFT JOIN digi_markup_rules r ON r.category = p.category AND r.brand IS NULL AND r.is_active = 1
             SET p.markup = COALESCE(
-                    CASE 
-                        WHEN r.markup_type = 'percentage' THEN (p.seller_price * (r.markup_value / 100))
-                        ELSE r.markup_value
-                    END,
-                    2000 -- default fallback markup
-                )
+                CASE 
+                    WHEN r.markup_type = 'percentage' THEN (p.seller_price * (r.markup_value / 100))
+                    ELSE r.markup_value
+                END,
+                2000
+            )
         ");
-        $stmt->execute();
 
-        // Update sell_price = seller_price + markup
+        // Update sell_price = seller_price + markup, rounded to nearest 100
         $this->db->exec("UPDATE digi_products SET sell_price = CEIL((seller_price + markup) / 100) * 100");
+    }
+
+    /**
+     * Get all markup rules
+     */
+    public function getMarkupRules() {
+        $stmt = $this->db->query("SELECT * FROM digi_markup_rules ORDER BY category");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Save (upsert) a markup rule
+     */
+    public function saveMarkupRule($category, $markupType, $markupValue) {
+        $stmt = $this->db->prepare("
+            INSERT INTO digi_markup_rules (category, brand, markup_type, markup_value)
+            VALUES (:cat, NULL, :type, :val)
+            ON DUPLICATE KEY UPDATE markup_type = :type, markup_value = :val
+        ");
+        return $stmt->execute(['cat' => $category, 'type' => $markupType, 'val' => $markupValue]);
+    }
+
+    /**
+     * Get a single transaction by ref_id
+     */
+    public function getTransactionByRefId($refId) {
+        $stmt = $this->db->prepare("SELECT * FROM digi_transactions WHERE ref_id = ? LIMIT 1");
+        $stmt->execute([$refId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     /**

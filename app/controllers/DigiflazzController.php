@@ -38,7 +38,9 @@ class DigiflazzController extends Controller {
             'mode' => $settingModel->get('digiflazz_mode', 'development')
         ];
 
-        $this->view('ppob/settings', ['title' => 'Pengaturan PPOB', 'settings' => $settings]);
+        $markupRules = $this->digiModel->getMarkupRules();
+
+        $this->view('ppob/settings', ['title' => 'Pengaturan PPOB', 'settings' => $settings, 'markupRules' => $markupRules]);
     }
 
     public function history() {
@@ -238,6 +240,43 @@ class DigiflazzController extends Controller {
 
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'message' => 'Pengaturan berhasil disimpan']);
+        exit;
+    }
+
+    public function apiGetTransaction(string $refId) {
+        AuthController::requireAuth();
+        $trx = $this->digiModel->getTransactionByRefId($refId);
+        if (!$trx) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Transaksi tidak ditemukan']);
+            exit;
+        }
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'data' => $trx]);
+        exit;
+    }
+
+    public function apiSaveMarkupRules() {
+        AuthController::requireAuth();
+        AuthController::requireLevel(['superadmin', 'admin']);
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        $rules = $data['rules'] ?? [];
+        foreach ($rules as $rule) {
+            if (!empty($rule['category'])) {
+                $this->digiModel->saveMarkupRule(
+                    $rule['category'],
+                    $rule['markup_type'] ?? 'fixed',
+                    (float)($rule['markup_value'] ?? 0)
+                );
+            }
+        }
+
+        // Re-apply all markups after saving
+        $this->digiModel->applyAllMarkups();
+
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'message' => 'Markup berhasil disimpan dan diterapkan ke semua produk']);
         exit;
     }
 

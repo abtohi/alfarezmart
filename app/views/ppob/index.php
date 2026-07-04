@@ -99,15 +99,49 @@
         font-size: var(--font-size-xs);
         font-weight: 600;
         color: var(--text-primary);
-        margin-bottom: 8px;
+        margin-bottom: 4px;
         line-height: 1.4;
         font-family: var(--font-family);
+        flex: 1;
+    }
+    .product-desc {
+        font-size: 10px;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+        line-height: 1.3;
     }
     .product-price {
         font-size: var(--font-size-sm);
         font-weight: 800;
         color: var(--primary);
         font-family: var(--font-family);
+    }
+    .product-modal-price {
+        font-size: 9px;
+        color: var(--text-muted);
+        font-weight: 400;
+    }
+    .badge-cheapest {
+        display: inline-block;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: #fff;
+        font-size: 8px;
+        font-weight: 800;
+        padding: 2px 6px;
+        border-radius: 6px;
+        margin-bottom: 4px;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+    }
+    .badge-cutoff {
+        display: inline-block;
+        background: var(--warning-bg);
+        color: var(--warning);
+        font-size: 9px;
+        font-weight: 600;
+        padding: 1px 5px;
+        border-radius: 4px;
+        margin-top: 3px;
     }
     .ppob-input {
         width: 100%;
@@ -645,9 +679,22 @@
             if (data.success && data.data.length > 0) {
                 currentProducts = data.data;
                 const list = document.getElementById('product-list');
+                const minPrice = Math.min(...data.data.map(p => parseInt(p.sell_price)));
                 data.data.forEach(p => {
                     const price = parseInt(p.sell_price).toLocaleString('id-ID');
-                    list.innerHTML += `<div class="product-card" onclick='confirmTransaction(${JSON.stringify(p).replace(/'/g, "\\'")})'><div class="product-name">${p.product_name}</div><div class="product-price">Rp${price}</div></div>`;
+                    const isCheapest = parseInt(p.sell_price) === minPrice;
+                    const desc = p.description ? `<div class="product-desc">${p.description.substring(0, 40)}${p.description.length > 40 ? '...' : ''}</div>` : '';
+                    const cutoff = (p.start_cut_off && p.end_cut_off) ? `<div class="badge-cutoff"><i class="bi bi-clock"></i> ${p.start_cut_off} - ${p.end_cut_off}</div>` : '';
+                    const cheapestBadge = isCheapest ? '<div class="badge-cheapest">⚡ Termurah</div>' : '';
+                    list.innerHTML += `<div class="product-card" onclick='confirmTransaction(${JSON.stringify(p).replace(/'/g, "\\'")})'>
+                        ${cheapestBadge}
+                        <div class="product-name">${p.product_name}</div>
+                        ${desc}
+                        <div>
+                            <div class="product-price">Rp${price}</div>
+                            ${cutoff}
+                        </div>
+                    </div>`;
                 });
             } else {
                 document.getElementById('product-list').innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:24px;font-size:var(--font-size-sm);color:var(--text-muted);"><i class="bi bi-inbox" style="font-size:24px;display:block;margin-bottom:8px;"></i>Produk tidak tersedia</div>`;
@@ -744,9 +791,18 @@
             if (data.success && data.data) {
                 lastTransaction = {...data.data, product_name: selectedProduct.product_name, customer_no: no, customer_name: customerName, sell_price: data.data.sell_price || selectedProduct.sell_price};
                 const status = (data.data.status||'').toLowerCase();
-                if (status === 'sukses') { rIcon.innerHTML = '<i class="bi bi-check-circle-fill" style="color:var(--success);"></i>'; rTitle.textContent = 'Transaksi Sukses'; }
-                else if (status === 'pending') { rIcon.innerHTML = '<i class="bi bi-clock-fill" style="color:var(--warning);"></i>'; rTitle.textContent = 'Sedang Diproses'; }
-                else { rIcon.innerHTML = '<i class="bi bi-x-circle-fill" style="color:var(--danger);"></i>'; rTitle.textContent = 'Transaksi Gagal'; }
+                if (status === 'sukses') { 
+                    rIcon.innerHTML = '<i class="bi bi-check-circle-fill" style="color:var(--success);"></i>'; 
+                    rTitle.textContent = 'Transaksi Sukses'; 
+                } else if (status === 'pending') { 
+                    rIcon.innerHTML = '<i class="bi bi-clock-fill" style="color:var(--warning);"></i>'; 
+                    rTitle.textContent = 'Sedang Diproses'; 
+                    // Start polling
+                    if (data.data.ref_id) pollTransactionStatus(data.data.ref_id);
+                } else { 
+                    rIcon.innerHTML = '<i class="bi bi-x-circle-fill" style="color:var(--danger);"></i>'; 
+                    rTitle.textContent = 'Transaksi Gagal'; 
+                }
                 document.getElementById('result-desc').textContent = data.data.message || '';
                 document.getElementById('result-sn').textContent = data.data.sn || '-';
             } else {
@@ -759,6 +815,38 @@
             bootstrap.Modal.getOrCreateInstance(document.getElementById('resultModal')).show();
         } catch (e) { console.error(e); alert('Gagal memproses transaksi. Cek koneksi internet.'); }
         finally { isProcessing = false; btn.innerHTML = 'Proses Sekarang'; btn.disabled = false; }
+    }
+
+    let pollCount = 0;
+    let pollTimer = null;
+    async function pollTransactionStatus(refId) {
+        pollCount = 0;
+        clearInterval(pollTimer);
+        pollTimer = setInterval(async () => {
+            pollCount++;
+            if (pollCount > 24) { clearInterval(pollTimer); return; } // max 2 minutes
+            try {
+                const res = await fetch(`<?= BASE_URL ?>api/ppob/transaction/${refId}`);
+                const data = await res.json();
+                if (data.success && data.data) {
+                    const status = data.data.status;
+                    if (status === 'success') {
+                        clearInterval(pollTimer);
+                        document.getElementById('result-icon').innerHTML = '<i class="bi bi-check-circle-fill" style="color:var(--success);"></i>';
+                        document.getElementById('result-title').textContent = 'Transaksi Sukses!';
+                        document.getElementById('result-desc').textContent = data.data.message || 'Pembayaran berhasil diproses.';
+                        document.getElementById('result-sn').textContent = data.data.sn || '-';
+                        if (lastTransaction) lastTransaction.sn = data.data.sn || lastTransaction.sn;
+                        loadRecentTransactions();
+                    } else if (status === 'failed') {
+                        clearInterval(pollTimer);
+                        document.getElementById('result-icon').innerHTML = '<i class="bi bi-x-circle-fill" style="color:var(--danger);"></i>';
+                        document.getElementById('result-title').textContent = 'Transaksi Gagal';
+                        document.getElementById('result-desc').textContent = data.data.message || 'Transaksi ditolak.';
+                    }
+                }
+            } catch(e) { /* ignore polling error */ }
+        }, 5000); // poll every 5 seconds
     }
 
     function copySN() {
