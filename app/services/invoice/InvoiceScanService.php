@@ -420,7 +420,8 @@ class InvoiceScanService
                 ],
                 'response_format' => ['type' => 'json_object'],
                 'temperature'     => 0.1,
-                'max_tokens'      => 8000, // Increased to prevent output truncation
+                // max_tokens intentionally NOT set — let OpenRouter/model use its full output capacity.
+                // Setting a fixed limit risks truncating long invoices. The model's natural max is always used.
             ];
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
@@ -466,15 +467,64 @@ class InvoiceScanService
                 break; // 4xx client error, stop
             }
 
-            // Success
-            $resData = json_decode($response, true);
-            $content = $resData['choices'][0]['message']['content'] ?? '';
-            $content = preg_replace('/```json\s*/', '', $content);
-            $content = preg_replace('/```\s*/', '',   $content);
-            return json_decode(trim($content), true);
+            // Success — parse response
+            $resData        = json_decode($response, true);
+            $finishReason   = $resData['choices'][0]['finish_reason'] ?? 'stop';
+            $content        = $resData['choices'][0]['message']['content'] ?? '';
+            $content        = preg_replace('/```json\s*/', '', $content);
+            $content        = preg_replace('/```\s*/',     '', $content);
+            $content        = trim($content);
+
+            $parsed = json_decode($content, true);
+
+            // If clean parse failed AND finish_reason is 'length', the output was truncated.
+            // Attempt to repair the truncated JSON before giving up.
+            if ($parsed === null && $finishReason === 'length') {
+                error_log("[AlfarezMart] Output truncated by model (finish_reason=length). Attempting JSON repair.");
+                $parsed = $this->repairTruncatedJson($content);
+            }
+
+            return $parsed;
         }
 
         throw new \Exception($lastError ?? 'AI gagal memproses gambar setelah mencoba semua model.');
+    }
+
+    /**
+     * Attempt to recover a valid JSON array from a response that was cut off mid-stream.
+     *
+     * Strategy:
+     *  1. Find the last COMPLETE object (ends with `}`) before the cut.
+     *  2. Close the array and re-parse.
+     *
+     * Returns the recovered array (possibly with fewer items than the invoice has),
+     * or null if recovery is impossible.
+     */
+    private function repairTruncatedJson(string $raw): ?array
+    {
+        // Find the position of the last complete JSON object closing brace
+        $lastBrace = strrpos($raw, '}');
+        if ($lastBrace === false) {
+            return null; // Nothing recoverable
+        }
+
+        // Truncate after the last closing brace and close the array
+        $repaired = substr($raw, 0, $lastBrace + 1) . ']';
+
+        // Make sure it starts with '['
+        $openBracket = strpos($repaired, '[');
+        if ($openBracket === false) {
+            return null;
+        }
+        $repaired = substr($repaired, $openBracket);
+
+        $result = json_decode($repaired, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($result) && count($result) > 0) {
+            error_log('[AlfarezMart] JSON repair succeeded — recovered ' . count($result) . ' item(s) from truncated response.');
+            return $result;
+        }
+
+        return null;
     }
 
     // ----------------------------------------------------------------
