@@ -660,19 +660,39 @@
                 body: JSON.stringify({customer_no: no})
             });
             const data = await res.json();
-            if (data.success && data.data && data.data.name) {
-                customerName = data.data.name;
-                inqBox.style.background = 'var(--success-bg)';
-                inqBox.style.color = 'var(--success)';
-                inqBox.style.border = '1px solid rgba(46,196,182,0.25)';
-                inqBox.innerHTML = `<div class="fw-bold"><i class="bi bi-person-check-fill me-1"></i>${customerName}</div><div style="font-size:10px;opacity:0.8;margin-top:2px;">Daya: ${data.data.segment_power||'-'} · ID: ${data.data.subscriber_id||no}</div>`;
-                loadProducts('PLN');
+            if (data.success && data.data) {
+                const status = (data.data.status || '').toLowerCase();
+                if (status === 'sukses' || status === 'success') {
+                    // Parsing dari format: NOMORMETER/NAMA/TARIF/DAYA
+                    const infoStr = data.data.sn || data.data.desc || '';
+                    const parts = infoStr.split('/');
+                    const idPln = parts[0] || no;
+                    const name = parts[1] || 'Nama Tidak Diketahui';
+                    let segment = (parts[2] || '') + ' / ' + (parts[3] || '');
+                    if (segment === ' / ') segment = '-';
+
+                    customerName = name;
+                    inqBox.style.background = 'var(--success-bg)';
+                    inqBox.style.color = 'var(--success)';
+                    inqBox.style.border = '1px solid rgba(46,196,182,0.25)';
+                    inqBox.innerHTML = `<div class="fw-bold"><i class="bi bi-person-check-fill me-1"></i>${customerName}</div><div style="font-size:10px;opacity:0.8;margin-top:2px;">Daya: ${segment} &middot; ID: ${idPln}</div>`;
+                    loadProducts('PLN');
+                } else {
+                    customerName = null;
+                    inqBox.style.background = 'var(--danger-bg)';
+                    inqBox.style.color = 'var(--danger)';
+                    inqBox.style.border = '1px solid rgba(230,57,70,0.25)';
+                    const msg = data.data.message || 'ID Tidak Ditemukan atau salah.';
+                    inqBox.innerHTML = `<div class="fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Pengecekan Gagal</div><div style="font-size:10px;opacity:0.8;margin-top:2px;">${msg}</div>`;
+                    document.getElementById('product-list').innerHTML = '';
+                }
             } else {
                 customerName = null;
                 inqBox.style.background = 'var(--danger-bg)';
                 inqBox.style.color = 'var(--danger)';
                 inqBox.style.border = '1px solid rgba(230,57,70,0.25)';
-                inqBox.innerHTML = `<div class="fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>ID Tidak Ditemukan</div><div style="font-size:10px;opacity:0.8;margin-top:2px;">Periksa kembali nomor pelanggan.</div>`;
+                const msg = data.message || 'Gagal terhubung ke provider.';
+                inqBox.innerHTML = `<div class="fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>Error</div><div style="font-size:10px;opacity:0.8;margin-top:2px;">${msg}</div>`;
                 document.getElementById('product-list').innerHTML = '';
             }
         } catch (e) {
@@ -931,7 +951,7 @@
                 <div class="row" style="font-weight:bold;font-size:14px;"><span>Total Bayar:</span><span>Rp ${priceStr}</span></div>
                 <div class="line"></div>
                 <div class="center" style="margin-top:20px;">Terima Kasih</div>
-                <scr` + `ipt>window.print(); window.onafterprint = () => window.close();</scr` + `ipt>
+                <script>window.print(); window.onafterprint = () => window.close();<\/script>
             </body>
             </html>
         `);

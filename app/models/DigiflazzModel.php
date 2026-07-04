@@ -6,7 +6,7 @@
 require_once __DIR__ . '/../config/Database.php';
 
 class DigiflazzModel {
-    private $db;
+    public \PDO $db;
 
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
@@ -15,7 +15,7 @@ class DigiflazzModel {
     /**
      * Sync Price List from Digiflazz API response
      */
-    public function syncPriceList($productsData, $type = 'prepaid') {
+    public function syncPriceList(array $productsData, string $type = 'prepaid') {
         $this->db->beginTransaction();
         try {
             $stmt = $this->db->prepare("
@@ -72,7 +72,7 @@ class DigiflazzModel {
         }
     }
 
-    private function normalizeCategory($apiCategory) {
+    private function normalizeCategory(string $apiCategory) {
         $cat = strtolower(trim($apiCategory));
         if (strpos($cat, 'pulsa') !== false) return 'pulsa';
         if (strpos($cat, 'data') !== false) return 'data';
@@ -116,7 +116,7 @@ class DigiflazzModel {
     /**
      * Update specific product selling price (Custom Price)
      */
-    public function updateCustomPrice($sku, $sellPrice) {
+    public function updateCustomPrice(string $sku, float $sellPrice) {
         $stmt = $this->db->prepare("UPDATE digi_products SET sell_price = :sell_price, is_custom_price = 1 WHERE buyer_sku_code = :sku");
         return $stmt->execute([
             'sell_price' => $sellPrice,
@@ -127,7 +127,7 @@ class DigiflazzModel {
     /**
      * Reset specific product selling price to auto markup
      */
-    public function resetCustomPrice($sku) {
+    public function resetCustomPrice(string $sku) {
         $stmt = $this->db->prepare("UPDATE digi_products SET is_custom_price = 0 WHERE buyer_sku_code = :sku");
         $stmt->execute(['sku' => $sku]);
         $this->applyAllMarkups(); // Re-apply to update the sell_price of this specific product
@@ -145,7 +145,7 @@ class DigiflazzModel {
     /**
      * Save (upsert) a markup rule
      */
-    public function saveMarkupRule($category, $markupType, $markupValue) {
+    public function saveMarkupRule(string $category, string $markupType, float $markupValue) {
         $stmt = $this->db->prepare("
             INSERT INTO digi_markup_rules (category, brand, markup_type, markup_value)
             VALUES (:cat, NULL, :type, :val)
@@ -157,7 +157,7 @@ class DigiflazzModel {
     /**
      * Get a single transaction by ref_id
      */
-    public function getTransactionByRefId($refId) {
+    public function getTransactionByRefId(string $refId) {
         $stmt = $this->db->prepare("SELECT * FROM digi_transactions WHERE ref_id = ? LIMIT 1");
         $stmt->execute([$refId]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -166,7 +166,7 @@ class DigiflazzModel {
     /**
      * Get products for frontend by category and brand
      */
-    public function getProducts($category, $brand = null) {
+    public function getProducts(string $category, ?string $brand = null, string $type = 'prepaid') {
         $sql = "SELECT * FROM digi_products 
                 WHERE category = :cat AND is_active = 1 AND buyer_product_status = 1";
         $params = ['cat' => $category];
@@ -186,7 +186,7 @@ class DigiflazzModel {
     /**
      * Get distinct brands for a category
      */
-    public function getBrands($category) {
+    public function getBrands(string $category) {
         $stmt = $this->db->prepare("SELECT DISTINCT brand FROM digi_products WHERE category = ? AND is_active = 1 AND buyer_product_status = 1 ORDER BY brand");
         $stmt->execute([$category]);
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -195,7 +195,7 @@ class DigiflazzModel {
     /**
      * Get a specific product by SKU
      */
-    public function getProductBySku($sku) {
+    public function getProductBySku(string $sku) {
         $stmt = $this->db->prepare("SELECT * FROM digi_products WHERE buyer_sku_code = ?");
         $stmt->execute([$sku]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -204,7 +204,7 @@ class DigiflazzModel {
     /**
      * Create a new transaction log
      */
-    public function createTransaction($data) {
+    public function createTransaction(array $data) {
         $stmt = $this->db->prepare("
             INSERT INTO digi_transactions (
                 ref_id, buyer_sku_code, customer_no, customer_name, product_name, 
@@ -239,7 +239,7 @@ class DigiflazzModel {
     /**
      * Update transaction status (usually called by webhook)
      */
-    public function updateTransactionStatus($refId, $status, $message, $sn = null, $trxId = null, $rawResponse = null) {
+    public function updateTransactionStatus(string $refId, string $status, string $message, ?string $sn = null, ?string $trxId = null, $rawResponse = null) {
         $sql = "UPDATE digi_transactions SET status = :status, message = :message";
         $params = [
             'ref_id' => $refId,

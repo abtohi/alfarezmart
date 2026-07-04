@@ -95,12 +95,13 @@ class PromptBuilder
         $lines[] = '5. Harga dalam format Rupiah Indonesia. Jika tertulis "5.500" artinya Rp 5.500, bukan Rp 5,5.';
         $lines[] = '6. Perhatikan tanda desimal: titik (.) adalah pemisah ribuan, koma (,) adalah desimal.';
         $lines[] = '7. Kemasan/satuan: kenali istilah seperti CTN=Karton, DUS=Karton, PCS/BTL/BKS=satuan kecil, dll.';
-        $lines[] = '8. PENTING (KOLOM QTY BSR/TGH/KCL): Jika invoice memiliki kolom qty terpisah bernama BSR, TGH, dan KCL, isi nilai angka dari masing-masing kolom tersebut ke dalam field "qty_bsr", "qty_tgh", dan "qty_kcl" di JSON.';
+        $lines[] = '8. PENTING (HALUSINASI): JANGAN menebak atau mengarang nama barang. Tulis persis seperti apa adanya yang tertulis di nota, meskipun ejaannya aneh atau disingkat.';
+        $lines[] = '9. PENTING (KOLOM QTY BSR/TGH/KCL): Jika invoice memiliki kolom qty terpisah bernama BSR, TGH, dan KCL, isi nilai angka dari masing-masing kolom tersebut ke dalam field "qty_bsr", "qty_tgh", dan "qty_kcl" di JSON.';
         $lines[] = '   - Jika tidak ada kolom tersebut, biarkan null atau 0.';
-        $lines[] = '9. PENTING (TOTAL HARGA): Angka Total Harga (total_price) PASTI berada di KOLOM PALING KANAN tabel.';
+        $lines[] = '10. PENTING (TOTAL HARGA): Angka Total Harga (total_price) PASTI berada di KOLOM PALING KANAN tabel.';
         $lines[] = '   - PERHATIAN: Terkadang angka Total Harga dicetak PADA BARIS BARU TEPAT DI BAWAH baris produk, di posisi paling kanan (contoh: baris pertama 153.000 di tengah, lalu di bawahnya ada 17.000 di ujung kanan. Maka total_price = 17000).';
         $lines[] = '   - JANGAN mengambil harga per karton yang ada di tengah-tengah kolom. Selalu cari angka paling kanan.';
-        $lines[] = '10. PENTING (HARGA SATUAN): Biarkan "unit_price" = null. Sistem kami akan menghitung otomatis dari (total_price / qty). JANGAN isi unit_price.';
+        $lines[] = '11. PENTING (HARGA SATUAN): Biarkan "unit_price" = null. Sistem kami akan menghitung otomatis dari (total_price / qty). JANGAN isi unit_price.';
         $lines[] = '';
 
         if ($isCorrectionPass) {

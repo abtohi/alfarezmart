@@ -138,6 +138,17 @@ class InvoiceScanService
             // STAGE 4: First AI Call (OpenRouter)
             // ================================================================
             $aiResponse = $this->callOpenRouter($prompts['system'], $prompts['user'], $imageB64, $imageInfo['format']);
+            
+            // Reconnect DB if dropped due to long API call timeout (MySQL wait_timeout)
+            if (!Database::getInstance()->ping()) {
+                $this->db = Database::getInstance()->reconnect();
+                // Re-initialize components that depend on PDO to use the new connection
+                $this->settingModel = new SettingModel();
+                $this->productModel = new ProductModel();
+                $this->promptBuilder = new PromptBuilder($this->db, $this->settingModel);
+                $this->templateLearner = new TemplateLearner($this->db);
+            }
+
             if (empty($aiResponse)) {
                 throw new \Exception('AI gagal memproses gambar atau mengembalikan respons kosong.');
             }
@@ -167,7 +178,12 @@ class InvoiceScanService
             // ================================================================
             $modelName = $this->getModelName();
             $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free'];
-            if (($hasLowConf || !empty($correctionHints)) && !in_array($modelName, $freeTierModels)) {
+            
+            // OPTIMIZATION: Only run self-correction if average confidence is below 60%
+            // or if more than half of the items need correction. This speeds up the process significantly.
+            $needsMajorCorrection = ($avgConf < 0.60) || (count($correctionHints) > 0 && count($correctionHints) >= count($items) * 0.5);
+            
+            if ($needsMajorCorrection && !in_array($modelName, $freeTierModels)) {
                 $items = $this->selfCorrection->correct(
                     $items,
                     $hasLowConf,
@@ -182,6 +198,10 @@ class InvoiceScanService
                         return $this->callOpenRouter($sys, $usr, $img, $imageInfo['format'], $key, $mod);
                     },
                     function($rawAiResp) use ($allProducts, $supplierProducts) {
+                        // DB connection check again for the inner callback (just in case)
+                        if (!Database::getInstance()->ping()) {
+                            $this->db = Database::getInstance()->reconnect();
+                        }
                         return $this->runExtractionPipeline($rawAiResp, $allProducts, $supplierProducts)['items'];
                     }
                 );
@@ -423,7 +443,7 @@ class InvoiceScanService
             $response = curl_exec($ch);
             $err      = curl_error($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+            // curl_close is deprecated in PHP 8.0+ and objects are auto-closed
 
             if ($err) {
                 $lastError = "Koneksi ke OpenRouter gagal: " . $err;

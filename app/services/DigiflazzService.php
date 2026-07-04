@@ -5,10 +5,10 @@
  */
 
 class DigiflazzService {
-    private $username;
-    private $apiKey;
-    private $mode;
-    private $baseUrl = 'https://api.digiflazz.com/v1';
+    private string $username;
+    private string $apiKey;
+    private string $mode;
+    private string $baseUrl = 'https://api.digiflazz.com/v1';
 
     public function __construct() {
         $settingModel = new SettingModel();
@@ -33,7 +33,7 @@ class DigiflazzService {
     /**
      * Get Price List (prepaid / pasca)
      */
-    public function getPriceList($type = 'prepaid') {
+    public function getPriceList(string $type = 'prepaid') {
         $sign = md5($this->username . $this->apiKey . "pricelist");
         $payload = [
             'cmd' => $type,
@@ -46,7 +46,7 @@ class DigiflazzService {
     /**
      * Create Prepaid Transaction
      */
-    public function createTransaction($sku, $customerNo, $refId) {
+    public function createTransaction(string $sku, string $customerNo, string $refId) {
         $sign = md5($this->username . $this->apiKey . $refId);
         $payload = [
             'username' => $this->username,
@@ -67,7 +67,7 @@ class DigiflazzService {
     /**
      * Inquiry PLN Prepaid Customer Name
      */
-    public function inquiryPLN($customerNo) {
+    public function inquiryPLN(string $customerNo) {
         $refId = uniqid('PLNINQ');
         $sign = md5($this->username . $this->apiKey . $refId);
         $payload = [
@@ -89,7 +89,7 @@ class DigiflazzService {
     /**
      * Inquiry Postpaid Bill
      */
-    public function inquiryPostpaid($sku, $customerNo, $refId) {
+    public function inquiryPostpaid(string $sku, string $customerNo, string $refId) {
         $sign = md5($this->username . $this->apiKey . $refId);
         $payload = [
             'commands' => 'inq-pasca',
@@ -110,7 +110,7 @@ class DigiflazzService {
     /**
      * Pay Postpaid Bill
      */
-    public function payPostpaid($sku, $customerNo, $refId) {
+    public function payPostpaid(string $sku, string $customerNo, string $refId) {
         $sign = md5($this->username . $this->apiKey . $refId);
         $payload = [
             'commands' => 'pay-pasca',
@@ -131,7 +131,7 @@ class DigiflazzService {
     /**
      * Send HTTP POST request to Digiflazz API
      */
-    private function sendRequest($endpoint, $payload) {
+    private function sendRequest(string $endpoint, array $payload) {
         if (empty($this->username) || empty($this->apiKey)) {
             return [
                 'success' => false,
@@ -158,7 +158,7 @@ class DigiflazzService {
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $err = curl_error($ch);
-        curl_close($ch);
+        // curl_close is deprecated in PHP 8.0+
 
         if ($err) {
             return [
