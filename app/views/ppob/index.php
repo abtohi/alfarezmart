@@ -931,7 +931,7 @@
                 <div class="row" style="font-weight:bold;font-size:14px;"><span>Total Bayar:</span><span>Rp ${priceStr}</span></div>
                 <div class="line"></div>
                 <div class="center" style="margin-top:20px;">Terima Kasih</div>
-                <script>window.print(); window.onafterprint = () => window.close();</script>
+                <scr` + `ipt>window.print(); window.onafterprint = () => window.close();</scr` + `ipt>
             </body>
             </html>
         `);
