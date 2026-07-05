@@ -4,9 +4,13 @@
  */
 class ProductController extends Controller
 {
+    /** @var ProductModel */
     private $productModel;
+    /** @var BrandModel */
     private $brandModel;
+    /** @var CategoryModel */
     private $categoryModel;
+    /** @var UnitModel */
     private $unitModel;
 
     public function __construct()
@@ -64,7 +68,7 @@ class ProductController extends Controller
         ]);
     }
 
-    public function show($id)
+    public function show(string $id)
     {
         $product = $this->productModel->findWithDetails($id);
         if (!$product) {
@@ -73,16 +77,29 @@ class ProductController extends Controller
         }
 
         $packagings = $this->productModel->getPackagings($id);
+        
+        $supplierProductModel = new SupplierProductModel();
+        $salesRepModel = new SalesRepModel();
+        
+        $suppliers = $supplierProductModel->getProductSuppliers($id);
+        $salesReps = [];
+        if (!empty($suppliers)) {
+            // Get all active sales reps for these suppliers
+            $supplierIds = array_column($suppliers, 'id');
+            $salesReps = $salesRepModel->getActiveBySupplierIds($supplierIds);
+        }
 
         $this->view('products.show', [
             'title' => $product['short_label'] ?: $product['full_name'],
             'activeNav' => 'products',
             'product' => $product,
             'packagings' => $packagings,
+            'suppliers' => $suppliers,
+            'salesReps' => $salesReps
         ]);
     }
 
-    public function edit($id)
+    public function edit(string $id)
     {
         $this->blockStaffMutations('mengedit');
         $product = $this->productModel->findWithDetails($id);

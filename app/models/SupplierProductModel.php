@@ -36,6 +36,22 @@ class SupplierProductModel extends Model
     }
 
     /**
+     * Get distinct suppliers that supply a specific product
+     */
+    public function getProductSuppliers($productId)
+    {
+        $stmt = $this->db->prepare("
+            SELECT DISTINCT s.id, s.name
+            FROM supplier_products sp
+            JOIN suppliers s ON sp.supplier_id = s.id
+            WHERE sp.product_id = :pid
+            ORDER BY s.name ASC
+        ");
+        $stmt->execute([':pid' => $productId]);
+        return $stmt->fetchAll();
+    }
+
+    /**
      * Search products by supplier with keyword filter
      */
     public function searchBySupplier($supplierId, $keyword, $salesRepId = null, $limit = 20)

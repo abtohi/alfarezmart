@@ -49,6 +49,146 @@
         </div>
     </div>
 
+    <!-- Supplier & Sales Info -->
+    <?php if (!empty($suppliers)): ?>
+    <div style="background:var(--surface-1);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px;border:1px solid var(--border-color);">
+        <h3 style="font-size:var(--font-size-sm);font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;color:var(--text-primary);">
+            <i class="bi bi-truck" style="color:var(--primary);"></i> Informasi Supplier
+        </h3>
+        
+        <div style="display:flex;flex-direction:column;gap:12px;">
+            <div>
+                <label style="font-size:12px;color:var(--text-muted);margin-bottom:4px;display:block;">Pilih Supplier</label>
+                <select id="supplierSelect" class="form-control" style="border-radius:var(--radius-md);background:var(--surface-2);border-color:var(--border-color);" onchange="updateSalesRepOptions()">
+                    <option value="">-- Pilih Supplier --</option>
+                    <?php foreach ($suppliers as $sup): ?>
+                        <option value="<?= $sup['id'] ?>"><?= htmlspecialchars($sup['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            
+            <div id="salesRepContainer" style="display:none;background:var(--surface-2);padding:12px;border-radius:var(--radius-md);border:1px dashed var(--border-color);">
+                <label style="font-size:12px;color:var(--text-muted);margin-bottom:8px;display:block;">Sales Representative</label>
+                
+                <!-- If multiple sales reps -->
+                <div id="multipleSalesReps" style="display:none;gap:8px;flex-direction:column;">
+                    <select id="salesRepSelect" class="form-control" style="border-radius:var(--radius-md);border-color:var(--border-color);" onchange="updateWhatsAppLink()">
+                        <!-- options injected via JS -->
+                    </select>
+                </div>
+                
+                <!-- Single sales rep -->
+                <div id="singleSalesRep" style="display:none;align-items:center;justify-content:space-between;background:var(--surface-1);padding:10px 12px;border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="width:36px;height:36px;background:var(--primary-bg);color:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <div>
+                            <div id="singleSalesName" style="font-weight:600;font-size:var(--font-size-sm);color:var(--text-primary);">Nama Sales</div>
+                            <div id="singleSalesPhone" style="font-size:11px;color:var(--text-muted);">08xx</div>
+                        </div>
+                    </div>
+                </div>
+
+                <a id="waContactBtn" href="#" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:white;padding:10px;border-radius:var(--radius-md);text-decoration:none;font-weight:600;font-size:14px;margin-top:12px;transition:all 0.2s;box-shadow:0 4px 6px rgba(37,211,102,0.2);">
+                    <i class="bi bi-whatsapp" style="font-size:1.1rem;"></i> Hubungi Sales (WhatsApp)
+                </a>
+                
+                <div id="noSalesMsg" style="display:none;font-size:12px;color:var(--text-muted);text-align:center;padding:10px 0;">
+                    <i class="bi bi-info-circle"></i> Tidak ada sales aktif untuk supplier ini.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const allSalesReps = <?= json_encode($salesReps) ?>;
+        
+        function updateSalesRepOptions() {
+            const supplierId = document.getElementById('supplierSelect').value;
+            const container = document.getElementById('salesRepContainer');
+            const multiContainer = document.getElementById('multipleSalesReps');
+            const singleContainer = document.getElementById('singleSalesRep');
+            const waBtn = document.getElementById('waContactBtn');
+            const noMsg = document.getElementById('noSalesMsg');
+            const select = document.getElementById('salesRepSelect');
+            
+            if (!supplierId) {
+                container.style.display = 'none';
+                return;
+            }
+            
+            container.style.display = 'block';
+            
+            const reps = allSalesReps.filter(sr => sr.supplier_id == supplierId);
+            
+            if (reps.length === 0) {
+                multiContainer.style.display = 'none';
+                singleContainer.style.display = 'none';
+                waBtn.style.display = 'none';
+                noMsg.style.display = 'block';
+            } else if (reps.length === 1) {
+                multiContainer.style.display = 'none';
+                noMsg.style.display = 'none';
+                waBtn.style.display = 'flex';
+                
+                singleContainer.style.display = 'flex';
+                document.getElementById('singleSalesName').textContent = reps[0].name;
+                document.getElementById('singleSalesPhone').textContent = reps[0].phone || '-';
+                
+                updateWhatsAppUrl(reps[0]);
+            } else {
+                singleContainer.style.display = 'none';
+                noMsg.style.display = 'none';
+                waBtn.style.display = 'flex';
+                multiContainer.style.display = 'flex';
+                
+                select.innerHTML = '';
+                reps.forEach((rep, index) => {
+                    const opt = document.createElement('option');
+                    opt.value = index; // use array index for easy access
+                    opt.textContent = rep.name + (rep.phone ? ' (' + rep.phone + ')' : '');
+                    select.appendChild(opt);
+                });
+                
+                // Select first by default
+                updateWhatsAppUrl(reps[0]);
+            }
+        }
+        
+        function updateWhatsAppLink() {
+            const supplierId = document.getElementById('supplierSelect').value;
+            const reps = allSalesReps.filter(sr => sr.supplier_id == supplierId);
+            const select = document.getElementById('salesRepSelect');
+            if (select.value !== "" && reps[select.value]) {
+                updateWhatsAppUrl(reps[select.value]);
+            }
+        }
+        
+        function updateWhatsAppUrl(rep) {
+            const waBtn = document.getElementById('waContactBtn');
+            if (rep && rep.phone) {
+                // Clean phone number (replace starting 0 with 62)
+                let phone = rep.phone.replace(/\D/g, '');
+                if (phone.startsWith('0')) {
+                    phone = '62' + phone.substring(1);
+                }
+                const productName = <?= json_encode($product['full_name']) ?>;
+                const text = encodeURIComponent(`Halo, saya mau order ${productName}`);
+                waBtn.href = `https://wa.me/${phone}?text=${text}`;
+                waBtn.style.opacity = '1';
+                waBtn.style.pointerEvents = 'auto';
+                waBtn.innerHTML = '<i class="bi bi-whatsapp" style="font-size:1.1rem;"></i> Hubungi ' + rep.name;
+            } else {
+                waBtn.href = '#';
+                waBtn.style.opacity = '0.5';
+                waBtn.style.pointerEvents = 'none';
+                waBtn.innerHTML = '<i class="bi bi-whatsapp" style="font-size:1.1rem;"></i> Nomor WA tidak tersedia';
+            }
+        }
+    </script>
+    <?php endif; ?>
+
     <!-- Packaging & Prices -->
     <div class="section-title" style="margin-bottom:12px;">Level Kemasan & Harga</div>
     

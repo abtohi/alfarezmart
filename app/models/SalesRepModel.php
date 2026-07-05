@@ -28,6 +28,23 @@ class SalesRepModel extends Model
     }
 
     /**
+     * Get all active sales reps for an array of supplier IDs
+     */
+    public function getActiveBySupplierIds(array $supplierIds)
+    {
+        if (empty($supplierIds)) return [];
+        $in = implode(',', array_map('intval', $supplierIds));
+        $stmt = $this->db->query("
+            SELECT sr.*, s.name as supplier_name 
+            FROM sales_reps sr 
+            JOIN suppliers s ON sr.supplier_id = s.id 
+            WHERE sr.supplier_id IN ($in) AND sr.status = 'Aktif'
+            ORDER BY s.name ASC, sr.name ASC
+        ");
+        return $stmt->fetchAll();
+    }
+
+    /**
      * Get all active sales reps with supplier name, and optionally include a specific ID even if inactive
      */
     public function getAllWithSupplier($includeId = null)
