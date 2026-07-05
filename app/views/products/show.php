@@ -3,6 +3,8 @@
  * @var string $csrfToken
  * @var array $product
  * @var array $packagings
+ * @var array $suppliers
+ * @var array $salesReps
  */
 ?>
 <!-- Product Detail View -->

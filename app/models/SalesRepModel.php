@@ -9,7 +9,7 @@ class SalesRepModel extends Model
     /**
      * Get all sales reps for a specific supplier
      */
-    public function getBySupplier($supplierId, $activeOnly = false)
+    public function getBySupplier(int $supplierId, bool $activeOnly = false)
     {
         $sql = "
             SELECT sr.*, s.name as supplier_name
@@ -75,7 +75,7 @@ class SalesRepModel extends Model
     /**
      * Find with supplier info
      */
-    public function findWithSupplier($id)
+    public function findWithSupplier(int $id)
     {
         $stmt = $this->db->prepare("
             SELECT sr.*, s.name as supplier_name

@@ -10,7 +10,7 @@ class SupplierProductModel extends Model
     /**
      * Get products associated with a supplier (from purchase history)
      */
-    public function getProductsBySupplier($supplierId, $salesRepId = null)
+    public function getProductsBySupplier(int $supplierId, ?int $salesRepId = null)
     {
         $where = "WHERE sp.supplier_id = :sid";
         $params = [':sid' => $supplierId];
@@ -38,7 +38,7 @@ class SupplierProductModel extends Model
     /**
      * Get distinct suppliers that supply a specific product
      */
-    public function getProductSuppliers($productId)
+    public function getProductSuppliers(int $productId)
     {
         $stmt = $this->db->prepare("
             SELECT DISTINCT s.id, s.name
@@ -54,7 +54,7 @@ class SupplierProductModel extends Model
     /**
      * Search products by supplier with keyword filter
      */
-    public function searchBySupplier($supplierId, $keyword, $salesRepId = null, $limit = 20)
+    public function searchBySupplier(int $supplierId, string $keyword, ?int $salesRepId = null, int $limit = 20)
     {
         $words = array_filter(explode(' ', trim($keyword)), 'strlen');
         $params = [':sid' => $supplierId];
@@ -122,7 +122,7 @@ class SupplierProductModel extends Model
      * Upsert supplier-product relationship
      * Called automatically when a purchase is saved
      */
-    public function trackSupplierProduct($supplierId, $productId, $salesRepId = null, $buyPrice = null)
+    public function trackSupplierProduct(int $supplierId, int $productId, ?int $salesRepId = null, ?float $buyPrice = null)
     {
         // Check if exists
         $stmt = $this->db->prepare("
@@ -168,7 +168,7 @@ class SupplierProductModel extends Model
     /**
      * Remove product from supplier
      */
-    public function removeSupplierProduct($supplierId, $productId)
+    public function removeSupplierProduct(int $supplierId, int $productId)
     {
         $stmt = $this->db->prepare("DELETE FROM supplier_products WHERE supplier_id = :sid AND product_id = :pid");
         return $stmt->execute([':sid' => $supplierId, ':pid' => $productId]);
