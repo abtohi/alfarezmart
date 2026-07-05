@@ -115,8 +115,8 @@ class TableParser
         $summaryKeywords = [
             'total', 'subtotal', 'grand total', 'jumlah', 'total keseluruhan',
             'total invoice', 'total nota', 'total tagihan', 'ppn', 'pajak',
-            'diskon', 'discount total', 'freight', 'ongkos kirim', 'biaya kirim',
-            'shipping', 'handling', 'admin fee', 'biaya admin',
+            'diskon', 'discount', 'discount total', 'freight', 'ongkos kirim', 'biaya kirim',
+            'shipping', 'handling', 'admin fee', 'biaya admin', 'potongan', 'potongan harga'
         ];
 
         // Exact match
@@ -124,14 +124,19 @@ class TableParser
             return true;
         }
 
-        // Starts with total/jumlah and has no code
-        foreach (['total ', 'jumlah ', 'sub total'] as $prefix) {
+        // Starts with prefix and has NO code
+        $prefixes = ['total ', 'jumlah ', 'sub total ', 'diskon ', 'discount ', 'potongan '];
+        foreach ($prefixes as $prefix) {
             if (strpos($nameLower, $prefix) === 0 && empty($item['supplier_code'])) {
-                return true;
+                // To avoid matching "Total Mineral Water 600ml" as a summary row,
+                // check if it lacks a positive qty, has a negative price, or contains '%'
+                if ($item['qty'] <= 0 || $item['total_price'] < 0 || strpos($nameLower, '%') !== false) {
+                    return true;
+                }
             }
         }
 
-        // Row has no qty but has a very large "total" (looks like invoice total)
+        // Check if row has no qty but has a very large "total" (looks like invoice total)
         if ($item['qty'] <= 0 && $item['total_price'] > 0 && $item['unit_price'] <= 0) {
             // Could be a footer total — check if name suggests it
             if (strpos($nameLower, 'total') !== false || strpos($nameLower, 'tagihan') !== false) {

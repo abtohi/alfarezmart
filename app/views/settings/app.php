@@ -58,24 +58,24 @@
 
                     <input type="hidden" id="ai_model" name="ai_model" value="<?= htmlspecialchars($aiModel ?? 'openrouter/auto') ?>">
 
-                    <div style="margin-bottom:10px;">
-                        <div class="model-cards-grid">
-                            <div class="model-card <?= (empty($aiModel) || in_array($aiModel, ['openrouter/auto', 'openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemini-2.0-flash-exp:free'])) ? 'selected' : '' ?>" onclick="selectModel('openrouter/auto', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">A</div>
-                                <div class="model-card-info">
-                                    <div class="model-card-name">Auto (Default)</div>
-                                    <div class="model-card-meta">Pilih model terbaik</div>
+                    <div class="custom-dropdown" id="aiModelDropdown" style="position:relative; margin-bottom:16px;">
+                        <div class="dropdown-selected" onclick="toggleModelDropdown()" style="display:flex; align-items:center; justify-content:space-between; padding:12px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <div id="selectedModelIcon" class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">A</div>
+                                <div>
+                                    <div id="selectedModelName" style="font-weight:600; color:var(--text-primary); font-size:13px;">Auto (Default)</div>
+                                    <div id="selectedModelId" style="font-size:11px; color:var(--text-muted);">openrouter/auto</div>
                                 </div>
-                                <span class="model-badge model-badge-pro">Default</span>
                             </div>
-                            
-                            <div class="model-card <?= ($aiModel === 'google/gemini-flash-1.5') ? 'selected' : '' ?>" onclick="selectModel('google/gemini-flash-1.5', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#FBBC04,#F9AB00);">G</div>
-                                <div class="model-card-info">
-                                    <div class="model-card-name">Gemini Flash 1.5</div>
-                                    <div class="model-card-meta">Cepat & Akurat</div>
-                                </div>
-                                <span class="model-badge model-badge-pro">Pro</span>
+                            <i class="bi bi-chevron-down" style="color:var(--text-muted);"></i>
+                        </div>
+                        
+                        <div class="dropdown-list" id="aiModelList" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); margin-top:4px; z-index:100; box-shadow:0 4px 12px rgba(0,0,0,0.15); max-height:300px; display:flex; flex-direction:column; overflow:hidden; opacity:0; visibility:hidden; transition:opacity 0.2s, visibility 0.2s;">
+                            <div style="padding:10px; border-bottom:1px solid var(--border-color); background:var(--surface-1);">
+                                <input type="text" id="aiModelSearch" placeholder="Cari model AI..." onkeyup="filterModels()" style="width:100%; padding:8px 12px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-primary); color:var(--text-primary); font-size:13px;">
+                            </div>
+                            <div id="aiModelItems" style="overflow-y:auto; flex:1;">
+                                <!-- Model items injected via JS -->
                             </div>
                         </div>
                     </div>
@@ -300,6 +300,21 @@
 }
 .model-badge-free { background: rgba(46,196,182,0.15); color: var(--success); }
 .model-badge-pro  { background: rgba(76,201,240,0.15); color: var(--info); }
+/* ── Dropdown Styles ─────────────────────────────── */
+.custom-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.custom-dropdown-item:hover {
+    background: rgba(230,57,70,0.04);
+}
+.custom-dropdown-item.active {
+    background: rgba(230,57,70,0.08);
+}
 </style>
 
 <script>
@@ -310,6 +325,103 @@
         if (cardEl) cardEl.classList.add('selected');
         document.getElementById('ai_model').value = modelId;
     }
+
+    const scannerModels = [
+        { id: 'openrouter/auto', name: 'Auto (Default)', meta: 'Pilih model terbaik otomatis', icon: 'A', bg: 'linear-gradient(135deg,#5c5c5c,#2c2c2c)', badge: 'Default', badgeClass: 'pro' },
+        { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', meta: 'Cepat & Akurat (Paid)', icon: 'G', bg: 'linear-gradient(135deg,#FBBC04,#F9AB00)', badge: 'Pro', badgeClass: 'pro' },
+        { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', meta: 'Paling Cerdas (Paid)', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#34A853)', badge: 'Pro', badgeClass: 'pro' },
+        { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash', meta: 'Handal & Cepat (Paid)', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#1AA260)', badge: 'Pro', badgeClass: 'pro' },
+        { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', meta: 'Cepat (Paid)', icon: 'O', bg: 'linear-gradient(135deg,#10a37f,#0b7057)', badge: 'Pro', badgeClass: 'pro' },
+        { id: 'openai/gpt-4o', name: 'GPT-4o', meta: 'Cerdas (Paid)', icon: 'O', bg: 'linear-gradient(135deg,#10a37f,#000000)', badge: 'Pro', badgeClass: 'pro' },
+        { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', meta: 'Akurat (Paid)', icon: 'C', bg: 'linear-gradient(135deg,#d97757,#b35f42)', badge: 'Pro', badgeClass: 'pro' },
+        { id: 'google/gemma-4-31b-it:free', name: 'Gemma 4 31B', meta: 'Terbaik (Gratis)', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#FBBC04)', badge: 'Free', badgeClass: 'free' },
+        { id: 'google/gemma-4-26b-a4b-it:free', name: 'Gemma 4 26B', meta: 'Sangat Cepat (Gratis)', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#FBBC04)', badge: 'Free', badgeClass: 'free' },
+        { id: 'nvidia/nemotron-nano-12b-v2-vl:free', name: 'Nemotron VL', meta: 'Akurat (Gratis)', icon: 'N', bg: 'linear-gradient(135deg,#76b900,#3a5b00)', badge: 'Free', badgeClass: 'free' }
+    ];
+
+    function renderModels(filterText = '') {
+        const container = document.getElementById('aiModelItems');
+        if (!container) return;
+        container.innerHTML = '';
+        
+        const currentModel = document.getElementById('ai_model').value || 'openrouter/auto';
+        const filtered = scannerModels.filter(m => 
+            m.name.toLowerCase().includes(filterText.toLowerCase()) || 
+            m.id.toLowerCase().includes(filterText.toLowerCase())
+        );
+        
+        if (filtered.length === 0) {
+            container.innerHTML = '<div style="padding:12px; text-align:center; color:var(--text-muted); font-size:12px;">Tidak ditemukan</div>';
+            return;
+        }
+
+        filtered.forEach(m => {
+            const isActive = m.id === currentModel;
+            const item = document.createElement('div');
+            item.className = `custom-dropdown-item ${isActive ? 'active' : ''}`;
+            item.onclick = () => selectDropdownModel(m);
+            
+            item.innerHTML = `
+                <div class="model-card-icon" style="background:${m.bg}; width:28px; height:28px; font-size:12px;">${m.icon}</div>
+                <div style="flex:1;">
+                    <div style="font-size:12px; font-weight:600; color:var(--text-primary);">${m.name}</div>
+                    <div style="font-size:10px; color:var(--text-muted);">${m.id}</div>
+                </div>
+                <span class="model-badge model-badge-${m.badgeClass}" style="font-size:8px;">${m.badge}</span>
+            `;
+            container.appendChild(item);
+        });
+        
+        // Update selected display
+        const activeModel = scannerModels.find(m => m.id === currentModel) || scannerModels[0];
+        document.getElementById('selectedModelIcon').textContent = activeModel.icon;
+        document.getElementById('selectedModelIcon').style.background = activeModel.bg;
+        document.getElementById('selectedModelName').textContent = activeModel.name;
+        document.getElementById('selectedModelId').textContent = activeModel.id;
+    }
+
+    function toggleModelDropdown() {
+        const list = document.getElementById('aiModelList');
+        if (list.style.opacity === '1') {
+            list.style.opacity = '0';
+            list.style.visibility = 'hidden';
+        } else {
+            list.style.display = 'flex';
+            // slight delay to allow display:flex to apply before transition
+            setTimeout(() => {
+                list.style.opacity = '1';
+                list.style.visibility = 'visible';
+                document.getElementById('aiModelSearch').focus();
+            }, 10);
+        }
+    }
+
+    function selectDropdownModel(modelObj) {
+        document.getElementById('ai_model').value = modelObj.id;
+        renderModels(document.getElementById('aiModelSearch').value);
+        toggleModelDropdown();
+    }
+
+    function filterModels() {
+        renderModels(document.getElementById('aiModelSearch').value);
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const dropdown = document.getElementById('aiModelDropdown');
+        if (dropdown && !dropdown.contains(e.target)) {
+            const list = document.getElementById('aiModelList');
+            if (list) {
+                list.style.opacity = '0';
+                list.style.visibility = 'hidden';
+            }
+        }
+    });
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+        renderModels();
+    });
 
     function selectChatModel(modelId, cardEl) {
         document.querySelectorAll('#chat-settings-form .model-card').forEach(c => c.classList.remove('selected'));

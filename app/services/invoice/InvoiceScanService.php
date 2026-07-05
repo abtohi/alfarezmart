@@ -179,9 +179,8 @@ class InvoiceScanService
             $modelName = $this->getModelName();
             $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free'];
             
-            // OPTIMIZATION: Only run self-correction if average confidence is below 60%
-            // or if more than half of the items need correction. This speeds up the process significantly.
-            $needsMajorCorrection = ($avgConf < 0.60) || (count($correctionHints) > 0 && count($correctionHints) >= count($items) * 0.5);
+            // OPTIMIZATION: Only run self-correction if average confidence is VERY low (< 40%)
+            $needsMajorCorrection = ($avgConf < 0.40);
             
             if ($needsMajorCorrection && !in_array($modelName, $freeTierModels)) {
                 $items = $this->selfCorrection->correct(
@@ -375,12 +374,7 @@ class InvoiceScanService
         // Prevent timeout issues
         set_time_limit(120);
 
-        // Free vision model fallback chain — tried in order when 429 rate-limit hit
-        $FREE_VISION_MODELS = [
-            'google/gemma-4-31b-it:free',
-            'google/gemma-4-26b-a4b-it:free',
-            'nvidia/nemotron-nano-12b-v2-vl:free',
-        ];
+        $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-nano-12b-v2-vl:free'];
 
         // Build the list of models to try:
         // - Primary: the configured model (default: openrouter/auto)
@@ -409,6 +403,8 @@ class InvoiceScanService
         $lastError  = null;
 
         foreach ($modelsToTry as $attempt => $tryModel) {
+            $isFreeModel = in_array($tryModel, $freeTierModels);
+
             $payload = [
                 'model'   => $tryModel,
                 'messages' => [
@@ -418,11 +414,16 @@ class InvoiceScanService
                         $imageBlock
                     ]]
                 ],
-                'response_format' => ['type' => 'json_object'],
                 'temperature'     => 0.1,
-                // max_tokens intentionally NOT set — let OpenRouter/model use its full output capacity.
-                // Setting a fixed limit risks truncating long invoices. The model's natural max is always used.
             ];
+
+            if (!$isFreeModel) {
+                $payload['response_format'] = ['type' => 'json_object'];
+            }
+
+            if ($tryModel !== 'openrouter/auto') {
+                $payload['max_tokens'] = $isFreeModel ? 4096 : 8192;
+            }
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -436,7 +437,6 @@ class InvoiceScanService
             ]);
 
             // Free tier gets a shorter timeout (55s); auto/paid models get full 110s
-            $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-nano-12b-v2-vl:free'];
             $timeout = in_array($tryModel, $freeTierModels) ? 55 : 110;
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);

@@ -19,8 +19,8 @@
  */
 class InvoiceValidator
 {
-    /** Tolerance ratio for per-item validation (5%) */
-    const ITEM_TOLERANCE = 0.05;
+    /** Tolerance ratio for per-item validation (10%) */
+    const ITEM_TOLERANCE = 0.10;
 
     /** Tolerance ratio for invoice cross-validation (3%) */
     const INVOICE_TOLERANCE = 0.03;
@@ -57,7 +57,6 @@ class InvoiceValidator
             $validatedItems[] = $result;
 
             if ($result['validation_failed'] ?? false) {
-                $allValid = true; // Still continue, don't abort
                 $allValid = false;
                 $correctionNeeded[] = [
                     'name'   => $result['name'],

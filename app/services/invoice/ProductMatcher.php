@@ -391,7 +391,7 @@ class ProductMatcher
             $score = 0;
             $lvl   = (int)$pkg['level'];
 
-            // 1. Semantic Hint Match (Highest Priority: +50)
+            // 1. Semantic Hint Match (+50)
             if ($hintLevel > 0 && $lvl === $hintLevel) {
                 $score += 50;
             }
@@ -404,15 +404,17 @@ class ProductMatcher
                 }
             }
 
-            // 3. Price Match (+30)
+            // 3. Price Match (Highest Priority: +150)
+            // If the price matches within 5%, it's almost certainly this packaging level
+            // regardless of what the unit is called.
             $dbPrice = (float)($pkg['buy_price'] ?? 0);
             if ($unitPrice > 0 && $dbPrice > 0) {
                 $diff = abs($dbPrice - $unitPrice);
                 $pct  = $diff / max($dbPrice, $unitPrice);
-                if ($pct <= 0.05) {
-                    $score += 30;
+                if ($pct <= 0.07) {
+                    $score += 150;
                 } elseif ($pct <= 0.20) {
-                    $score += 15;
+                    $score += 80;
                 }
             }
 
