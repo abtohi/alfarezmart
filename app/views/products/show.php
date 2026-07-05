@@ -61,12 +61,7 @@
         <div style="display:flex;flex-direction:column;gap:16px;">
             <div>
                 <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:8px;">Pilih Supplier Pembelian</label>
-                <select id="supplierSelect" class="form-select-dark" onchange="updateSalesRepOptions()">
-                    <option value="">-- Pilih Supplier --</option>
-                    <?php foreach ($suppliers as $sup): ?>
-                        <option value="<?= $sup['id'] ?>"><?= htmlspecialchars($sup['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div id="supplierSearchBox"></div>
             </div>
             
             <div id="salesRepContainer" style="display:none;background:var(--surface-2);padding:16px;border-radius:var(--radius-md);border:1px dashed var(--border-color);">
@@ -74,9 +69,7 @@
                 
                 <!-- If multiple sales reps -->
                 <div id="multipleSalesReps" style="display:none;flex-direction:column;gap:12px;">
-                    <select id="salesRepSelect" class="form-select-dark" onchange="updateWhatsAppLink()">
-                        <!-- options injected via JS -->
-                    </select>
+                    <div id="salesRepSearchBox"></div>
                 </div>
                 
                 <!-- Single sales rep -->
@@ -105,9 +98,29 @@
 
     <script>
         const allSalesReps = <?= json_encode($salesReps) ?>;
+        const suppliersData = [
+            <?php foreach ($suppliers as $sup): ?>
+                { value: "<?= $sup['id'] ?>", label: <?= json_encode($sup['name']) ?> },
+            <?php endforeach; ?>
+        ];
         
-        function updateSalesRepOptions() {
-            const supplierId = document.getElementById('supplierSelect').value;
+        let supplierSB;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            if (document.getElementById('supplierSearchBox')) {
+                supplierSB = new SearchBox(document.getElementById('supplierSearchBox'), {
+                    options: suppliersData,
+                    placeholder: '-- Pilih Supplier --',
+                    icon: 'bi-truck',
+                    name: 'supplier_id',
+                    onChange: (val) => {
+                        updateSalesRepOptions(val);
+                    }
+                });
+            }
+        });
+        
+        function updateSalesRepOptions(supplierId) {
             const container = document.getElementById('salesRepContainer');
             const multiContainer = document.getElementById('multipleSalesReps');
             const singleContainer = document.getElementById('singleSalesRep');
@@ -145,25 +158,30 @@
                 waBtn.style.display = 'flex';
                 multiContainer.style.display = 'flex';
                 
-                select.innerHTML = '';
-                reps.forEach((rep, index) => {
-                    const opt = document.createElement('option');
-                    opt.value = index; // use array index for easy access
-                    opt.textContent = rep.name + (rep.phone ? ' (' + rep.phone + ')' : '');
-                    select.appendChild(opt);
-                });
+                const sbOptions = reps.map((rep, index) => ({
+                    value: String(index),
+                    label: rep.name + (rep.phone ? ' (' + rep.phone + ')' : '')
+                }));
+
+                if (typeof salesRepSB === 'undefined' || !salesRepSB) {
+                    window.salesRepSB = new SearchBox(document.getElementById('salesRepSearchBox'), {
+                        options: sbOptions,
+                        placeholder: '-- Pilih Sales Rep --',
+                        icon: 'bi-person',
+                        name: 'sales_rep_index',
+                        onChange: (val) => {
+                            if (val !== "" && reps[val]) {
+                                updateWhatsAppUrl(reps[val]);
+                            }
+                        }
+                    });
+                } else {
+                    window.salesRepSB.setOptions(sbOptions);
+                }
                 
                 // Select first by default
+                window.salesRepSB.select("0", sbOptions[0].label);
                 updateWhatsAppUrl(reps[0]);
-            }
-        }
-        
-        function updateWhatsAppLink() {
-            const supplierId = document.getElementById('supplierSelect').value;
-            const reps = allSalesReps.filter(sr => sr.supplier_id == supplierId);
-            const select = document.getElementById('salesRepSelect');
-            if (select.value !== "" && reps[select.value]) {
-                updateWhatsAppUrl(reps[select.value]);
             }
         }
         
