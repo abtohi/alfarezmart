@@ -82,44 +82,57 @@ class PromptBuilder
     private function buildSystemPrompt(bool $isCorrectionPass): string
     {
         $lines = [];
-        $lines[] = 'Kamu adalah OCR invoice otomatis.';
-        $lines[] = 'Tugas: Ekstrak data invoice/faktur menjadi JSON array valid.';
+
+        $lines[] = 'Kamu adalah sistem OCR dan analisis invoice yang sangat akurat.';
+        $lines[] = 'Tugasmu adalah membaca gambar invoice/faktur supplier dan mengekstrak data menjadi JSON yang valid.';
         $lines[] = '';
-        $lines[] = 'ATURAN WAJIB (Ikuti dengan ketat 100%):';
-        $lines[] = '1. OUTPUT HARUS JSON ARRAY. DILARANG memberi penjelasan teks di luar JSON.';
-        $lines[] = '2. BACA HEADER KOLOM dulu untuk memahami letak harga, qty, dan diskon.';
-        $lines[] = '3. KOORDINAT: Kolom TOTAL HARGA (total_price) selalu di ujung PALING KANAN. Jangan ambil harga dari kolom tengah.';
-        $lines[] = '4. KOORDINAT: Kolom KODE BARANG (jika ada) biasanya di ujung PALING KIRI (sebelum nama barang).';
-        $lines[] = '5. QTY (NUMBER): HANYA ANGKA PERTAMA SAJA. Jika tertulis "1 TIN x10", maka qty = 1. Jangan masukkan teks ke dalam kolom qty.';
-        $lines[] = '6. BSR/TGH/KCL: Kadang QTY terbagi 3 kolom (Besar/Tengah/Kecil). Jika ada, ambil qty sesuai kolomnya (misal: "qty_kcl": 1).';
-        $lines[] = '7. KEMASAN: Jika satuan tidak jelas, amati harga per unit vs daftar produk supplier. Misal: jika qty=4, total=32.000 -> unit_price=8.000. Jika 8.000 adalah harga Renceng, maka unit = "Renceng".';
-        $lines[] = '8. HARGA: Format angka saja (12000, bukan Rp12.000 atau 12.000). Desimal gunakan titik (12.5).';
-        $lines[] = '9. FORMAT: Jika nilai tidak ada/kosong, isi dengan null.';
-        $lines[] = '10. NAMA BARANG SULIT: Seringkali nama barang di nota dot matrix ditulis dengan format aneh, misal: "1 TIN x10 : R.MANSION 16" atau "2 SLP x10 : R.GERBANG EKS 12". JANGAN PERNAH MENGABAIKAN BARIS INI! Ambil teks di ujung kanan sebagai nama barang (misalnya "R.MANSION 16", "R.GERBANG EKS 12").';
+
+        $lines[] = '## ATURAN WAJIB:';
+        $lines[] = '1. Selalu kembalikan JSON array yang valid — tidak ada markdown, tidak ada penjelasan di luar JSON.';
+        $lines[] = '2. Baca SEMUA baris item dalam tabel invoice. Jangan lewatkan satu pun.';
+        $lines[] = '3. Jika ada nilai yang tidak terbaca, gunakan null (bukan 0 atau string kosong).';
+        $lines[] = '4. Pahami konteks: qty × unit_price HARUS menghasilkan total_price yang masuk akal.';
+        $lines[] = '5. Harga dalam format Rupiah Indonesia. Jika tertulis "5.500" artinya Rp 5.500, bukan Rp 5,5.';
+        $lines[] = '6. Perhatikan tanda desimal: titik (.) adalah pemisah ribuan, koma (,) adalah desimal.';
+        $lines[] = '7. Kemasan/satuan: kenali istilah seperti CTN=Karton, DUS=Karton, PCS/BTL/BKS=satuan kecil, dll.';
+        $lines[] = '8. PENTING (KOLOM QTY BSR/TGH/KCL): Jika invoice memiliki kolom qty terpisah bernama BSR, TGH, dan KCL, isi nilai angka dari masing-masing kolom tersebut ke dalam field "qty_bsr", "qty_tgh", dan "qty_kcl" di JSON.';
+        $lines[] = '   - Jika tidak ada kolom tersebut, biarkan null atau 0.';
+        $lines[] = '9. PENTING (TOTAL HARGA): Angka Total Harga (total_price) PASTI berada di KOLOM PALING KANAN tabel.';
+        $lines[] = '   - PERHATIAN: Terkadang angka Total Harga dicetak PADA BARIS BARU TEPAT DI BAWAH baris produk, di posisi paling kanan (contoh: baris pertama 153.000 di tengah, lalu di bawahnya ada 17.000 di ujung kanan. Maka total_price = 17000).';
+        $lines[] = '   - JANGAN mengambil harga per karton yang ada di tengah-tengah kolom. Selalu cari angka paling kanan.';
+        $lines[] = '10. PENTING (HARGA SATUAN): Biarkan "unit_price" = null. Sistem kami akan menghitung otomatis dari (total_price / qty). JANGAN isi unit_price.';
         $lines[] = '';
 
         if ($isCorrectionPass) {
-            $lines[] = 'MODE KOREKSI ULANG:';
-            $lines[] = 'Periksa ulang item pada daftar koreksi di bawah. Pastikan Qty * Harga Satuan = Total Harga.';
+            $lines[] = '## MODE: KOREKSI ULANG';
+            $lines[] = 'Ini adalah scan ulang karena hasil sebelumnya memiliki inkonsistensi.';
+            $lines[] = 'Perhatikan khusus item yang disebutkan dalam DAFTAR KOREKSI di bawah.';
+            $lines[] = 'Pastikan qty × unit_price = total_price untuk setiap baris.';
             $lines[] = '';
         }
 
-        $lines[] = 'FORMAT JSON YANG DIHARAPKAN:';
+        $lines[] = '## FORMAT OUTPUT JSON:';
+        $lines[] = 'Kembalikan HANYA JSON array berikut (tidak ada teks lain):';
         $lines[] = '[';
         $lines[] = '  {';
-        $lines[] = '    "name": "NAMA BARANG DI INVOICE",';
-        $lines[] = '    "supplier_invoice_name": "NAMA PERSIS DI INVOICE",';
-        $lines[] = '    "supplier_code": "KODE BARANG",';
+        $lines[] = '    "name": "Nama produk/barang di invoice",';
+        $lines[] = '    "supplier_invoice_name": "Nama persis di invoice (jika beda dari name)",';
+        $lines[] = '    "supplier_code": "Kode barang supplier jika ada",';
         $lines[] = '    "qty": 2,';
         $lines[] = '    "unit": "Karton",';
         $lines[] = '    "qty_bsr": 0,';
-        $lines[] = '    "qty_tgh": 0,';
+        $lines[] = '    "qty_tgh": 2,';
         $lines[] = '    "qty_kcl": 0,';
-        $lines[] = '    "unit_price": 5000,';
-        $lines[] = '    "total_price": 10000,';
+        $lines[] = '    "unit_price": null,';
+        $lines[] = '    "total_price": 17000,';
         $lines[] = '    "discount": 0,';
-        $lines[] = '    "brand": "Merk",';
-        $lines[] = '    "variant": "Varian"';
+        $lines[] = '    "brand": "Nama merk jika tertulis",';
+        $lines[] = '    "variant": "Varian produk jika ada (misal: Merah, 500ml)",';
+        $lines[] = '    "weight": null,';
+        $lines[] = '    "weight_unit": null,';
+        $lines[] = '    "size": "12x300ml",';
+        $lines[] = '    "barcode": null,';
+        $lines[] = '    "notes": "Catatan tambahan jika relevan"';
         $lines[] = '  }';
         $lines[] = ']';
 
@@ -136,31 +149,37 @@ class PromptBuilder
     ): string {
         $parts = [];
 
-        // === BAGIAN 1: INSTRUKSI USER ===
-        if (!empty($userPrompt)) {
-            $parts[] = "=== INSTRUKSI USER ===\n" . $userPrompt;
+        // === BAGIAN 1: INSTRUKSI USER (tidak diubah) ===
+        $parts[] = "=== INSTRUKSI UTAMA ===\n" . $userPrompt;
+
+        // === BAGIAN 2: HINT KUALITAS GAMBAR ===
+        if (!empty($imageHints['hints'])) {
+            $parts[] = "=== INFO KUALITAS GAMBAR ===\n" . implode("\n", $imageHints['hints']);
         }
 
-        // === BAGIAN 2: DAFTAR PRODUK SUPPLIER INI ===
+        // === BAGIAN 3: KONTEKS PRODUK SUPPLIER ===
         if (!empty($supplierProducts)) {
-            $lines   = ["=== REFERENSI PRODUK & HARGA MODAL ==="];
-            $lines[] = "Gunakan data ini untuk mencocokkan Nama Barang, Kode Barang, dan menebak Satuan (Unit) dari harganya:";
+            $lines   = ["=== DAFTAR PRODUK SUPPLIER INI ==="];
+            $lines[] = "Gunakan daftar ini untuk mencocokkan nama/kode barang di invoice:";
             $count   = 0;
             foreach ($supplierProducts as $p) {
-                if ($count >= 40) { // Limit to 40 to save tokens
+                if ($count >= 80) { // Limit to avoid token overflow
                     $lines[] = "... dan " . (count($supplierProducts) - $count) . " produk lainnya";
                     break;
                 }
                 $line = "- [{$p['code']}] {$p['full_name']}";
                 if (!empty($p['supplier_product_code'])) {
-                    $line .= " (Kode Sup: {$p['supplier_product_code']})";
+                    $line .= " (Kode Supplier: {$p['supplier_product_code']})";
+                }
+                if (!empty($p['supplier_invoice_name'])) {
+                    $line .= " [Nama Invoice: {$p['supplier_invoice_name']}]";
                 }
                 if (!empty($p['packagings'])) {
                     $pkgParts = [];
                     foreach ($p['packagings'] as $pkg) {
-                        $pkgParts[] = "{$pkg['unit_name']}@Rp" . number_format($pkg['buy_price'], 0, '', '');
+                        $pkgParts[] = "{$pkg['unit_name']}@Rp" . number_format($pkg['buy_price'], 0, ',', '.');
                     }
-                    $line .= " | Kemasan: " . implode(', ', $pkgParts);
+                    $line .= " — Kemasan: " . implode(', ', $pkgParts);
                 }
                 $lines[] = $line;
                 $count++;
@@ -168,10 +187,30 @@ class PromptBuilder
             $parts[] = implode("\n", $lines);
         }
 
-        // === BAGIAN 3: DAFTAR KOREKSI ===
+        // === BAGIAN 4: TEMPLATE INVOICE SEBELUMNYA ===
+        if (!empty($template)) {
+            $lines   = ["=== TEMPLATE INVOICE SEBELUMNYA (DARI SUPPLIER YANG SAMA) ==="];
+            $lines[] = "Invoice supplier ini sebelumnya memiliki format kolom berikut:";
+            if (!empty($template['column_map'])) {
+                $colMap = is_string($template['column_map'])
+                    ? json_decode($template['column_map'], true)
+                    : $template['column_map'];
+                if (is_array($colMap)) {
+                    foreach ($colMap as $semantic => $aliases) {
+                        $lines[] = "- {$semantic}: " . (is_array($aliases) ? implode(', ', $aliases) : $aliases);
+                    }
+                }
+            }
+            if (!empty($template['scan_count'])) {
+                $lines[] = "(Template dari {$template['scan_count']} scan sebelumnya)";
+            }
+            $parts[] = implode("\n", $lines);
+        }
+
+        // === BAGIAN 5: DAFTAR KOREKSI (hanya pada correction pass) ===
         if ($isCorrectionPass && !empty($correctionHints)) {
-            $lines   = ["=== DAFTAR KOREKSI ==="];
-            $lines[] = "Ada masalah pada item-item ini, tolong baca ulang fotonya dengan sangat teliti:";
+            $lines   = ["=== DAFTAR ITEM YANG PERLU DIKOREKSI ==="];
+            $lines[] = "Fokus pada item-item ini karena hasil scan pertama tidak konsisten:";
             foreach ($correctionHints as $hint) {
                 $line = "- \"{$hint['name']}\"";
                 if (!empty($hint['issues'])) {
@@ -181,6 +220,13 @@ class PromptBuilder
             }
             $parts[] = implode("\n", $lines);
         }
+
+        // === BAGIAN 6: PERINTAH AKHIR & PENEKANAN ===
+        $parts[] = "=== PERINTAH KHUSUS BSR/TGH/KCL & HARGA ===\n" .
+                   "1. QTY: Jika ada kolom BSR, TGH, atau KCL, masukkan angka qty-nya ke `qty_bsr`, `qty_tgh`, atau `qty_kcl`.\n" .
+                   "2. TOTAL HARGA: Cari angka di posisi PALING KANAN. Jika ada angka menyempil di baris bawahnya tapi posisinya di paling kanan (ujung), ITULAH `total_price` yang benar (contoh: 17.000 atau 20.500).\n" .
+                   "3. UNIT PRICE: SELALU kembalikan `null` untuk `unit_price`. Jangan diisi angka apapun.\n\n" .
+                   "=== PERINTAH ===\nBaca gambar invoice di atas dan kembalikan JSON array sesuai format. Tidak ada teks selain JSON.";
 
         return implode("\n\n", $parts);
     }
