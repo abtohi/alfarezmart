@@ -90,11 +90,12 @@ class PromptBuilder
         $lines[] = '2. BACA HEADER KOLOM dulu untuk memahami letak harga, qty, dan diskon.';
         $lines[] = '3. KOORDINAT: Kolom TOTAL HARGA (total_price) selalu di ujung PALING KANAN. Jangan ambil harga dari kolom tengah.';
         $lines[] = '4. KOORDINAT: Kolom KODE BARANG (jika ada) biasanya di ujung PALING KIRI (sebelum nama barang).';
-        $lines[] = '5. BSR/TGH/KCL: Kadang QTY terbagi 3 kolom (Besar/Tengah/Kecil). Jika ada, ambil qty sesuai kolomnya (misal: "qty_kcl": 1).';
-        $lines[] = '6. KEMASAN: Jika satuan tidak jelas, amati harga per unit vs daftar produk supplier. Misal: jika qty=4, total=32.000 -> unit_price=8.000. Jika 8.000 adalah harga Renceng, maka unit = "Renceng".';
-        $lines[] = '7. HARGA: Format angka saja (12000, bukan Rp12.000 atau 12.000). Desimal gunakan titik (12.5).';
-        $lines[] = '8. FORMAT: Jika nilai tidak ada/kosong, isi dengan null.';
-        $lines[] = '9. FORMAT NAMA BARANG: Jika nama barang diawali dengan titik dua atau ada sisipan seperti "x10 : R.MANSION", maka ambil nama aslinya (misal "R.MANSION"). Jangan anggap itu sebagai header atau diabaikan.';
+        $lines[] = '5. QTY (NUMBER): HANYA ANGKA PERTAMA SAJA. Jika tertulis "1 TIN x10", maka qty = 1. Jangan masukkan teks ke dalam kolom qty.';
+        $lines[] = '6. BSR/TGH/KCL: Kadang QTY terbagi 3 kolom (Besar/Tengah/Kecil). Jika ada, ambil qty sesuai kolomnya (misal: "qty_kcl": 1).';
+        $lines[] = '7. KEMASAN: Jika satuan tidak jelas, amati harga per unit vs daftar produk supplier. Misal: jika qty=4, total=32.000 -> unit_price=8.000. Jika 8.000 adalah harga Renceng, maka unit = "Renceng".';
+        $lines[] = '8. HARGA: Format angka saja (12000, bukan Rp12.000 atau 12.000). Desimal gunakan titik (12.5).';
+        $lines[] = '9. FORMAT: Jika nilai tidak ada/kosong, isi dengan null.';
+        $lines[] = '10. NAMA BARANG SULIT: Seringkali nama barang di nota dot matrix ditulis dengan format aneh, misal: "1 TIN x10 : R.MANSION 16" atau "2 SLP x10 : R.GERBANG EKS 12". JANGAN PERNAH MENGABAIKAN BARIS INI! Ambil teks di ujung kanan sebagai nama barang (misalnya "R.MANSION 16", "R.GERBANG EKS 12").';
         $lines[] = '';
 
         if ($isCorrectionPass) {

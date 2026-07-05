@@ -317,10 +317,14 @@ class LayoutAnalyzer
         if ($raw === null || $raw === '') return $default;
         if (is_numeric($raw)) return max(0, (float)$raw);
 
-        $str = preg_replace('/[^0-9.,]/', '', (string)$raw);
-        // Handle "1,5" as 1.5
-        $str = str_replace(',', '.', $str);
-        return max(0, (float)$str);
+        $str = (string)$raw;
+        // Extract the FIRST sequence of numbers (e.g., "1 TIN x10" -> "1")
+        if (preg_match('/^[^\d]*(\d+(?:[.,]\d+)?)/', $str, $matches)) {
+            $val = str_replace(',', '.', $matches[1]);
+            return max(0, (float)$val);
+        }
+
+        return $default;
     }
 
     /**
