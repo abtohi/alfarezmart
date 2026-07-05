@@ -61,7 +61,7 @@
         <div style="display:flex;flex-direction:column;gap:16px;">
             <div>
                 <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:8px;">Pilih Supplier Pembelian</label>
-                <select id="supplierSelect" class="form-control-dark" style="width:100%;" onchange="updateSalesRepOptions()">
+                <select id="supplierSelect" class="form-select-dark" onchange="updateSalesRepOptions()">
                     <option value="">-- Pilih Supplier --</option>
                     <?php foreach ($suppliers as $sup): ?>
                         <option value="<?= $sup['id'] ?>"><?= htmlspecialchars($sup['name']) ?></option>
@@ -74,7 +74,7 @@
                 
                 <!-- If multiple sales reps -->
                 <div id="multipleSalesReps" style="display:none;flex-direction:column;gap:12px;">
-                    <select id="salesRepSelect" class="form-control-dark" style="width:100%;" onchange="updateWhatsAppLink()">
+                    <select id="salesRepSelect" class="form-select-dark" onchange="updateWhatsAppLink()">
                         <!-- options injected via JS -->
                     </select>
                 </div>
