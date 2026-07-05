@@ -53,15 +53,15 @@
 
     <!-- Supplier & Sales Info -->
     <?php if (!empty($suppliers)): ?>
-    <div style="background:var(--surface-1);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px;border:1px solid var(--border-color);">
-        <h3 style="font-size:var(--font-size-sm);font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;color:var(--text-primary);">
+    <div style="background:var(--surface-1);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;border:1px solid var(--border-color);">
+        <h3 style="font-size:var(--font-size-sm);font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;color:var(--text-primary);">
             <i class="bi bi-truck" style="color:var(--primary);"></i> Informasi Supplier
         </h3>
         
-        <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;flex-direction:column;gap:16px;">
             <div>
-                <label style="font-size:12px;color:var(--text-muted);margin-bottom:4px;display:block;">Pilih Supplier</label>
-                <select id="supplierSelect" class="form-control" style="border-radius:var(--radius-md);background:var(--surface-2);border-color:var(--border-color);" onchange="updateSalesRepOptions()">
+                <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:8px;">Pilih Supplier Pembelian</label>
+                <select id="supplierSelect" class="form-control-dark" style="width:100%;" onchange="updateSalesRepOptions()">
                     <option value="">-- Pilih Supplier --</option>
                     <?php foreach ($suppliers as $sup): ?>
                         <option value="<?= $sup['id'] ?>"><?= htmlspecialchars($sup['name']) ?></option>
@@ -69,34 +69,34 @@
                 </select>
             </div>
             
-            <div id="salesRepContainer" style="display:none;background:var(--surface-2);padding:12px;border-radius:var(--radius-md);border:1px dashed var(--border-color);">
-                <label style="font-size:12px;color:var(--text-muted);margin-bottom:8px;display:block;">Sales Representative</label>
+            <div id="salesRepContainer" style="display:none;background:var(--surface-2);padding:16px;border-radius:var(--radius-md);border:1px dashed var(--border-color);">
+                <label style="font-size:var(--font-size-xs);color:var(--text-muted);display:block;margin-bottom:8px;">Kontak Sales Representative</label>
                 
                 <!-- If multiple sales reps -->
-                <div id="multipleSalesReps" style="display:none;gap:8px;flex-direction:column;">
-                    <select id="salesRepSelect" class="form-control" style="border-radius:var(--radius-md);border-color:var(--border-color);" onchange="updateWhatsAppLink()">
+                <div id="multipleSalesReps" style="display:none;flex-direction:column;gap:12px;">
+                    <select id="salesRepSelect" class="form-control-dark" style="width:100%;" onchange="updateWhatsAppLink()">
                         <!-- options injected via JS -->
                     </select>
                 </div>
                 
                 <!-- Single sales rep -->
-                <div id="singleSalesRep" style="display:none;align-items:center;justify-content:space-between;background:var(--surface-1);padding:10px 12px;border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);">
-                    <div style="display:flex;align-items:center;gap:10px;">
-                        <div style="width:36px;height:36px;background:var(--primary-bg);color:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+                <div id="singleSalesRep" style="display:none;align-items:center;background:var(--surface-1);padding:12px 16px;border-radius:var(--radius-md);border:1px solid var(--border-color);">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:40px;height:40px;background:var(--primary-bg);color:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">
                             <i class="bi bi-person-fill"></i>
                         </div>
                         <div>
                             <div id="singleSalesName" style="font-weight:600;font-size:var(--font-size-sm);color:var(--text-primary);">Nama Sales</div>
-                            <div id="singleSalesPhone" style="font-size:11px;color:var(--text-muted);">08xx</div>
+                            <div id="singleSalesPhone" style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:2px;">08xx</div>
                         </div>
                     </div>
                 </div>
 
-                <a id="waContactBtn" href="#" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:white;padding:10px;border-radius:var(--radius-md);text-decoration:none;font-weight:600;font-size:14px;margin-top:12px;transition:all 0.2s;box-shadow:0 4px 6px rgba(37,211,102,0.2);">
-                    <i class="bi bi-whatsapp" style="font-size:1.1rem;"></i> Hubungi Sales (WhatsApp)
+                <a id="waContactBtn" href="#" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#25D366;color:white;padding:12px 16px;border-radius:var(--radius-md);text-decoration:none;font-weight:600;font-size:var(--font-size-sm);margin-top:16px;transition:all 0.2s;box-shadow:0 4px 10px rgba(37,211,102,0.2);">
+                    <i class="bi bi-whatsapp" style="font-size:1.2rem;"></i> <span id="waBtnText">Hubungi Sales (WhatsApp)</span>
                 </a>
                 
-                <div id="noSalesMsg" style="display:none;font-size:12px;color:var(--text-muted);text-align:center;padding:10px 0;">
+                <div id="noSalesMsg" style="display:none;font-size:var(--font-size-xs);color:var(--text-muted);text-align:center;padding:12px 0;">
                     <i class="bi bi-info-circle"></i> Tidak ada sales aktif untuk supplier ini.
                 </div>
             </div>
@@ -180,12 +180,12 @@
                 waBtn.href = `https://wa.me/${phone}?text=${text}`;
                 waBtn.style.opacity = '1';
                 waBtn.style.pointerEvents = 'auto';
-                waBtn.innerHTML = '<i class="bi bi-whatsapp" style="font-size:1.1rem;"></i> Hubungi ' + rep.name;
+                document.getElementById('waBtnText').textContent = 'Hubungi ' + rep.name;
             } else {
                 waBtn.href = '#';
                 waBtn.style.opacity = '0.5';
                 waBtn.style.pointerEvents = 'none';
-                waBtn.innerHTML = '<i class="bi bi-whatsapp" style="font-size:1.1rem;"></i> Nomor WA tidak tersedia';
+                document.getElementById('waBtnText').textContent = 'Nomor WA tidak tersedia';
             }
         }
     </script>
