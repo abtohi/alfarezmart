@@ -193,9 +193,7 @@
                 if (phone.startsWith('0')) {
                     phone = '62' + phone.substring(1);
                 }
-                const productName = <?= json_encode($product['full_name']) ?>;
-                const text = encodeURIComponent(`Halo, saya mau order ${productName}`);
-                waBtn.href = `https://wa.me/${phone}?text=${text}`;
+                waBtn.href = `https://wa.me/${phone}`;
                 waBtn.style.opacity = '1';
                 waBtn.style.pointerEvents = 'auto';
                 document.getElementById('waBtnText').textContent = 'Hubungi ' + rep.name;
