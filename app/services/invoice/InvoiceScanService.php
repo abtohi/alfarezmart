@@ -138,17 +138,6 @@ class InvoiceScanService
             // STAGE 4: First AI Call (OpenRouter)
             // ================================================================
             $aiResponse = $this->callOpenRouter($prompts['system'], $prompts['user'], $imageB64, $imageInfo['format']);
-            
-            // Reconnect DB if dropped due to long API call timeout (MySQL wait_timeout)
-            if (!Database::getInstance()->ping()) {
-                $this->db = Database::getInstance()->reconnect();
-                // Re-initialize components that depend on PDO to use the new connection
-                $this->settingModel = new SettingModel();
-                $this->productModel = new ProductModel();
-                $this->promptBuilder = new PromptBuilder($this->db, $this->settingModel);
-                $this->templateLearner = new TemplateLearner($this->db);
-            }
-
             if (empty($aiResponse)) {
                 throw new \Exception('AI gagal memproses gambar atau mengembalikan respons kosong.');
             }
@@ -178,11 +167,7 @@ class InvoiceScanService
             // ================================================================
             $modelName = $this->getModelName();
             $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free'];
-            
-            // OPTIMIZATION: Only run self-correction if average confidence is VERY low (< 40%)
-            $needsMajorCorrection = ($avgConf < 0.40);
-            
-            if ($needsMajorCorrection && !in_array($modelName, $freeTierModels)) {
+            if (($hasLowConf || !empty($correctionHints)) && !in_array($modelName, $freeTierModels)) {
                 $items = $this->selfCorrection->correct(
                     $items,
                     $hasLowConf,
@@ -197,10 +182,6 @@ class InvoiceScanService
                         return $this->callOpenRouter($sys, $usr, $img, $imageInfo['format'], $key, $mod);
                     },
                     function($rawAiResp) use ($allProducts, $supplierProducts) {
-                        // DB connection check again for the inner callback (just in case)
-                        if (!Database::getInstance()->ping()) {
-                            $this->db = Database::getInstance()->reconnect();
-                        }
                         return $this->runExtractionPipeline($rawAiResp, $allProducts, $supplierProducts)['items'];
                     }
                 );
@@ -374,7 +355,12 @@ class InvoiceScanService
         // Prevent timeout issues
         set_time_limit(120);
 
-        $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-nano-12b-v2-vl:free'];
+        // Free vision model fallback chain — tried in order when 429 rate-limit hit
+        $FREE_VISION_MODELS = [
+            'google/gemma-4-31b-it:free',
+            'google/gemma-4-26b-a4b-it:free',
+            'nvidia/nemotron-nano-12b-v2-vl:free',
+        ];
 
         // Build the list of models to try:
         // - Primary: the configured model (default: openrouter/auto)
@@ -403,8 +389,6 @@ class InvoiceScanService
         $lastError  = null;
 
         foreach ($modelsToTry as $attempt => $tryModel) {
-            $isFreeModel = in_array($tryModel, $freeTierModels);
-
             $payload = [
                 'model'   => $tryModel,
                 'messages' => [
@@ -414,16 +398,10 @@ class InvoiceScanService
                         $imageBlock
                     ]]
                 ],
+                'response_format' => ['type' => 'json_object'],
                 'temperature'     => 0.1,
+                'max_tokens'      => 8000, // Increased to prevent output truncation
             ];
-
-            if (!$isFreeModel) {
-                $payload['response_format'] = ['type' => 'json_object'];
-            }
-
-            if ($tryModel !== 'openrouter/auto') {
-                $payload['max_tokens'] = $isFreeModel ? 4096 : 8192;
-            }
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -437,6 +415,7 @@ class InvoiceScanService
             ]);
 
             // Free tier gets a shorter timeout (55s); auto/paid models get full 110s
+            $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-nano-12b-v2-vl:free'];
             $timeout = in_array($tryModel, $freeTierModels) ? 55 : 110;
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
@@ -444,18 +423,17 @@ class InvoiceScanService
             $response = curl_exec($ch);
             $err      = curl_error($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            // curl_close is deprecated in PHP 8.0+ and objects are auto-closed
+            curl_close($ch);
 
             if ($err) {
                 $lastError = "Koneksi ke OpenRouter gagal: " . $err;
                 continue; // try next model
             }
 
-            if ($httpCode === 429 || $httpCode === 402) {
+            if ($httpCode === 429) {
                 $nextModel = $modelsToTry[$attempt + 1] ?? null;
-                $errCode = ($httpCode === 402) ? 'kredit habis (402)' : 'rate-limited (429)';
-                error_log("[AlfarezMart] Model {$tryModel} {$errCode}. " . ($nextModel ? "Trying: $nextModel" : "No more fallbacks."));
-                $lastError = "Model {$tryModel} ditolak ({$errCode}). Mencoba model lain...";
+                error_log("[AlfarezMart] Model {$tryModel} rate-limited (429). " . ($nextModel ? "Trying: $nextModel" : "No more fallbacks."));
+                $lastError = "Model {$tryModel} sedang dibatasi (rate limit). Mencoba model lain...";
                 continue;
             }
 
@@ -467,64 +445,15 @@ class InvoiceScanService
                 break; // 4xx client error, stop
             }
 
-            // Success — parse response
-            $resData        = json_decode($response, true);
-            $finishReason   = $resData['choices'][0]['finish_reason'] ?? 'stop';
-            $content        = $resData['choices'][0]['message']['content'] ?? '';
-            $content        = preg_replace('/```json\s*/', '', $content);
-            $content        = preg_replace('/```\s*/',     '', $content);
-            $content        = trim($content);
-
-            $parsed = json_decode($content, true);
-
-            // If clean parse failed AND finish_reason is 'length', the output was truncated.
-            // Attempt to repair the truncated JSON before giving up.
-            if ($parsed === null && $finishReason === 'length') {
-                error_log("[AlfarezMart] Output truncated by model (finish_reason=length). Attempting JSON repair.");
-                $parsed = $this->repairTruncatedJson($content);
-            }
-
-            return $parsed;
+            // Success
+            $resData = json_decode($response, true);
+            $content = $resData['choices'][0]['message']['content'] ?? '';
+            $content = preg_replace('/```json\s*/', '', $content);
+            $content = preg_replace('/```\s*/', '',   $content);
+            return json_decode(trim($content), true);
         }
 
         throw new \Exception($lastError ?? 'AI gagal memproses gambar setelah mencoba semua model.');
-    }
-
-    /**
-     * Attempt to recover a valid JSON array from a response that was cut off mid-stream.
-     *
-     * Strategy:
-     *  1. Find the last COMPLETE object (ends with `}`) before the cut.
-     *  2. Close the array and re-parse.
-     *
-     * Returns the recovered array (possibly with fewer items than the invoice has),
-     * or null if recovery is impossible.
-     */
-    private function repairTruncatedJson(string $raw): ?array
-    {
-        // Find the position of the last complete JSON object closing brace
-        $lastBrace = strrpos($raw, '}');
-        if ($lastBrace === false) {
-            return null; // Nothing recoverable
-        }
-
-        // Truncate after the last closing brace and close the array
-        $repaired = substr($raw, 0, $lastBrace + 1) . ']';
-
-        // Make sure it starts with '['
-        $openBracket = strpos($repaired, '[');
-        if ($openBracket === false) {
-            return null;
-        }
-        $repaired = substr($repaired, $openBracket);
-
-        $result = json_decode($repaired, true);
-        if (json_last_error() === JSON_ERROR_NONE && is_array($result) && count($result) > 0) {
-            error_log('[AlfarezMart] JSON repair succeeded — recovered ' . count($result) . ' item(s) from truncated response.');
-            return $result;
-        }
-
-        return null;
     }
 
     // ----------------------------------------------------------------

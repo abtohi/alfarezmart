@@ -44,14 +44,11 @@ class LayoutAnalyzer
         ],
         'discount' => [
             'diskon', 'discount', 'disc', 'pot', 'potongan', 'dis', 'rab',
-            'rabat', 'diskon %', 'disc%', 'd1%', 'd2%',
+            'rabat', 'diskon %', 'disc%',
         ],
         'code' => [
             'kode', 'code', 'no', 'no.', 'sku', 'item code', 'kode barang',
             'kode produk', 'barcode', 'id', 'artikel',
-        ],
-        'ppn' => [
-            'ppn', 'pajak', 'tax', 'vat', 'ppn%',
         ],
     ];
 
@@ -61,9 +58,9 @@ class LayoutAnalyzer
      */
     const PACKAGING_LEVEL_HINTS = [
         3 => ['bsr', 'big', 'karton', 'carton', 'ctn', 'case', 'master', 'dus',
-              'outer', 'box', 'kardus', 'krt', 'kotak', 'dos', 'crt', 'ttn', 'tin', 'sak'],
+              'outer', 'box', 'kardus', 'krt', 'kotak', 'dos'],
         2 => ['tgh', 'inner', 'pack', 'pak', 'renteng', 'slop', 'mid', 'bundle',
-              'wrap', 'set', 'lusin', 'dozen', 'dz', 'slp'],
+              'wrap', 'set', 'lusin', 'dozen', 'dz'],
         1 => ['kcl', 'pcs', 'ecer', 'satuan', 'biji', 'buah', 'unit', 'btl',
               'botol', 'bks', 'bungkus', 'sachet', 'scht', 'lembar', 'lbr',
               'kaleng', 'klg', 'kg', 'liter', 'ltr', 'gr', 'gram'],
@@ -235,20 +232,16 @@ class LayoutAnalyzer
         $qtyKcl = $this->parseQty($get('qty_kcl', ['kcl']), 0);
 
         // Only override if they actually have a valid number > 0
-        // AND there is a clear indication that it's a split qty (i.e. not just qty fallback)
-        $hasSplitQty = ($qtyBsr > 0 || $qtyTgh > 0 || $qtyKcl > 0) && ($qtyBsr !== $qty && $qtyTgh !== $qty && $qtyKcl !== $qty);
-        
-        if ($hasSplitQty) {
-            if ($qtyBsr > 0) {
-                $qty  = $qtyBsr;
-                $unit = 'bsr';
-            } elseif ($qtyTgh > 0) {
-                $qty  = $qtyTgh;
-                $unit = 'tgh';
-            } elseif ($qtyKcl > 0) {
-                $qty  = $qtyKcl;
-                $unit = 'kcl';
-            }
+        // And if the AI outputs exactly the number, we trust it more than the generic unit column
+        if ($qtyBsr > 0) {
+            $qty  = $qtyBsr;
+            $unit = 'bsr';
+        } elseif ($qtyTgh > 0) {
+            $qty  = $qtyTgh;
+            $unit = 'tgh';
+        } elseif ($qtyKcl > 0) {
+            $qty  = $qtyKcl;
+            $unit = 'kcl';
         }
 
         // --- Extract prices ---
@@ -317,14 +310,10 @@ class LayoutAnalyzer
         if ($raw === null || $raw === '') return $default;
         if (is_numeric($raw)) return max(0, (float)$raw);
 
-        $str = (string)$raw;
-        // Extract the FIRST sequence of numbers (e.g., "1 TIN x10" -> "1")
-        if (preg_match('/^[^\d]*(\d+(?:[.,]\d+)?)/', $str, $matches)) {
-            $val = str_replace(',', '.', $matches[1]);
-            return max(0, (float)$val);
-        }
-
-        return $default;
+        $str = preg_replace('/[^0-9.,]/', '', (string)$raw);
+        // Handle "1,5" as 1.5
+        $str = str_replace(',', '.', $str);
+        return max(0, (float)$str);
     }
 
     /**
@@ -382,11 +371,10 @@ class LayoutAnalyzer
         // If value >= 1000, assume already correct
         if ($value >= 1000) return $value;
 
-        // Only scale if it looks like a meaningful abbreviation with a decimal point (e.g. 5.5 → 5500)
-        // OR if contextExpected strongly suggests it. We should not blindly scale 500 to 500,000.
-        $hasDecimal = (floor($value) != $value);
-        
-        if ($hasDecimal || $contextExpected >= 1000) {
+        // If value has decimal part and < 1000, it's likely abbreviated (e.g. 5.5 → 5500)
+        if ($value < 1000) {
+            // Only scale if it looks like a meaningful abbreviation
+            // 5.5 → 5500, 12 → 12000, 0.5 → 500
             $scaled = $value * 1000;
 
             // Sanity check: if context is given, pick the one closer to it
@@ -397,10 +385,7 @@ class LayoutAnalyzer
                 return $value;
             }
 
-            // If it has decimal and no context, it's very likely an abbreviation
-            if ($hasDecimal) {
-                return $scaled;
-            }
+            return $scaled;
         }
 
         return $value;
