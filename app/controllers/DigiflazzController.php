@@ -143,6 +143,13 @@ class DigiflazzController extends Controller {
         }
 
         $res = $this->digiService->inquiryPLN($customerNo);
+        
+        $rc = $res['data']['rc'] ?? '';
+        if ($res['success'] && $rc !== '00') {
+            $res['success'] = false;
+            $res['message'] = $res['data']['message'] ?? 'Gagal memverifikasi ID Pelanggan PLN.';
+        }
+
         header('Content-Type: application/json');
         echo json_encode($res);
         exit;

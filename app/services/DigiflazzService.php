@@ -108,6 +108,10 @@ class DigiflazzService {
             'sign' => $sign
         ];
         
+        if ($this->mode === 'development') {
+            $payload['testing'] = true;
+        }
+        
         return $this->sendRequest('/inquiry-pln', $payload);
     }
 
