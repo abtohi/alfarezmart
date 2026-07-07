@@ -474,18 +474,37 @@
             <div class="modal-body p-4">
                 <p class="small text-muted">Klik tombol di bawah untuk menyalin nomor khusus Digiflazz ke kolom input saat transaksi.</p>
                 <div class="list-group list-group-flush">
-                    <button class="list-group-item list-group-item-action fw-bold text-success" onclick="useTestNo('087800001230')">Simulasi SUKSES (087800001230)</button>
-                    <button class="list-group-item list-group-item-action fw-bold text-warning" onclick="useTestNo('087800001231')">Simulasi PENDING (087800001231)</button>
-                    <button class="list-group-item list-group-item-action fw-bold text-danger" onclick="useTestNo('087800001232')">Simulasi GAGAL (087800001232)</button>
-                    <button class="list-group-item list-group-item-action fw-bold text-primary" onclick="useTestNo('087800001233')">Simulasi SN Tidak Ada (087800001233)</button>
-                    <button class="list-group-item list-group-item-action fw-bold text-dark" onclick="useTestNo('087800001234')">Simulasi GAGAL Lintas Transaksi (087800001234)</button>
+                    <button class="list-group-item list-group-item-action fw-bold text-success" onclick="useTestNo('087800001230')">Simulasi TRX Sukses (087800001230)</button>
+                    <button class="list-group-item list-group-item-action fw-bold text-warning" onclick="useTestNo('087800001231')">Simulasi TRX Pending (087800001231)</button>
+                    <button class="list-group-item list-group-item-action fw-bold text-danger" onclick="useTestNo('087800001232')">Simulasi TRX Gagal (087800001232)</button>
+                    
+                    <div class="px-3 py-2 small fw-bold text-muted mt-2" style="background:var(--surface-2);">Testing Inquiry PLN / Pascabayar</div>
+                    <button class="list-group-item list-group-item-action fw-bold text-success" onclick="useTestNo('530000000001')">PLN Inq Sukses (530000000001)</button>
+                    <button class="list-group-item list-group-item-action fw-bold text-danger" onclick="useTestNo('530000000003')">PLN Inq Gagal (530000000003)</button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Processing Modal (Blocking UI during purchase) -->
+<!-- Custom Confirm Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="border-radius:20px;border:none;background:var(--surface-1);">
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3"><i class="bi bi-question-circle text-primary" style="font-size:50px;"></i></div>
+                <h5 class="fw-bold mb-3" id="confirmTitle" style="color:var(--text-primary);">Konfirmasi</h5>
+                <p class="small mb-4" id="confirmMessage" style="color:var(--text-secondary);"></p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-secondary flex-grow-1 rounded-pill" data-bs-dismiss="modal">Batal</button>
+                    <button class="btn btn-primary flex-grow-1 rounded-pill fw-bold" id="confirmBtnYes">Ya, Lanjutkan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->(Blocking UI during purchase) -->
 <div class="modal" id="loadingModal" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content text-center p-4 border-0" style="background: transparent;">
@@ -751,7 +770,7 @@ function renderProducts(products) {
 // 6. Inquiry (Cek Tagihan / Cek Nama PLN)
 async function performInquiry() {
     const no = document.getElementById('customer-no').value;
-    if(!no) { alert('Masukkan nomor tujuan/ID pelanggan!'); return; }
+    if(!no) { showAlert('⚠️ Masukkan nomor tujuan/ID pelanggan!', 'warning'); return; }
     
     const btn = document.getElementById('btn-inquiry');
     btn.disabled = true; btn.innerHTML = 'Loading...';
@@ -774,11 +793,11 @@ async function performInquiry() {
                 document.getElementById('inq-detail-label').style.display = 'none';
                 document.getElementById('inq-detail').style.display = 'none';
                 document.getElementById('btn-pay-postpaid').style.display = 'none'; // Prabayar pilih produk di bawah
-            } else { alert('ID pelanggan PLN tidak ditemukan'); }
+            } else { showAlert('❌ ' + (data.message || 'ID pelanggan PLN tidak ditemukan'), 'danger'); }
         } else if (currentType === 'postpaid') {
             // Cek Tagihan Pascabayar
             // Ambil SKU pertama dari currentProducts (asumsi 1 kategori 1 SKU utama untuk cek, atau user bisa pilih dulu. Di sini simplifikasi ambil index 0)
-            if(currentProducts.length === 0) { alert('Produk pascabayar belum tersedia/sync.'); btn.disabled=false; btn.innerHTML='Cek Detail'; return; }
+            if(currentProducts.length === 0) { showAlert('⚠️ Produk pascabayar belum tersedia/sync.', 'warning'); btn.disabled=false; btn.innerHTML='Cek Detail'; return; }
             
             const sku = currentProducts[0].buyer_sku_code; // Usually generic SKU
             const res = await fetch('<?= BASE_URL ?>api/ppob/inquiry-pasca', {
@@ -798,9 +817,9 @@ async function performInquiry() {
                 document.getElementById('inq-price').innerText = formatRp(data.data.selling_price);
                 
                 document.getElementById('btn-pay-postpaid').style.display = 'inline-block';
-            } else { alert('Tagihan tidak ditemukan atau sudah dibayar'); }
+            } else { showAlert('❌ ' + (data.message || 'Tagihan tidak ditemukan atau sudah dibayar'), 'danger'); }
         }
-    } catch(e) { alert('Terjadi kesalahan jaringan'); }
+    } catch(e) { showAlert('❌ Terjadi kesalahan jaringan', 'danger'); }
     
     btn.disabled = false; btn.innerText = (currentType==='prepaid') ? 'Cek Nama' : 'Cek Tagihan';
 }
@@ -808,22 +827,23 @@ async function performInquiry() {
 // 7. Confirm Purchase (Prepaid)
 async function confirmPurchase(product) {
     const no = document.getElementById('customer-no').value;
-    if(!no) { alert('Masukkan nomor HP/Tujuan terlebih dahulu!'); return; }
+    if(!no) { showAlert('⚠️ Masukkan nomor HP/Tujuan terlebih dahulu!', 'warning'); return; }
     
-    if(confirm(`Yakin memproses:\n\nProduk: ${product.product_name}\nNomor: ${no}\nHarga: ${formatRp(product.seller_price)}`)) {
+    showConfirm('Konfirmasi Transaksi', `Produk: <b>${product.product_name}</b><br>Nomor: <b>${no}</b><br>Harga: <b>${formatRp(product.seller_price)}</b>`, () => {
         processTransaction({
             sku: product.buyer_sku_code,
             customer_no: no,
             sell_price: product.seller_price,
             product_name: product.product_name
         });
-    }
+    });
 }
 
 // 8. Pay Postpaid
 async function payPostpaid() {
     if(!selectedInqData) return;
-    if(confirm(`Yakin membayar tagihan sebesar ${formatRp(selectedInqData.selling_price)}?`)) {
+    
+    showConfirm('Bayar Tagihan', `Yakin membayar tagihan sebesar <b>${formatRp(selectedInqData.selling_price)}</b>?`, () => {
         processTransaction({
             sku: selectedInqData.sku,
             customer_no: selectedInqData.customer_no,
@@ -831,7 +851,7 @@ async function payPostpaid() {
             sell_price: selectedInqData.selling_price,
             product_name: selectedInqData.customer_name
         });
-    }
+    });
 }
 
 // 9. Execute Transaction API
@@ -929,6 +949,16 @@ function showAlert(msg, type='info') {
         <div id="${id}" style="background:${colors[type] || '#0dcaf0'};color:white;padding:14px 20px;border-radius:12px;font-weight:600;box-shadow:0 5px 15px rgba(0,0,0,0.3);animation:slideInRight 0.3s ease;">${msg}</div>
     `;
     setTimeout(() => document.getElementById(id)?.remove(), 4000);
+}
+
+// Helper: Custom Confirm Modal
+function showConfirm(title, message, onYes) {
+    document.getElementById('confirmTitle').innerText = title;
+    document.getElementById('confirmMessage').innerHTML = message;
+    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    const btn = document.getElementById('confirmBtnYes');
+    btn.onclick = () => { modal.hide(); onYes(); };
+    modal.show();
 }
 
 // Test Case Helper
