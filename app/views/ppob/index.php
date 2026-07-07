@@ -82,7 +82,7 @@
     font-weight: 700;
     font-size: 18px;
     margin-bottom: 15px;
-    color: var(--text-color);
+    color: var(--text-primary);
 }
 .cat-grid {
     display: grid;
@@ -124,7 +124,7 @@
 .cat-name {
     font-size: 13px;
     font-weight: 600;
-    color: var(--text-color);
+    color: var(--text-primary);
 }
 
 /* Testing Mode Alert */
@@ -158,7 +158,7 @@
     font-weight: 600;
     transition: all 0.3s ease;
     width: 100%;
-    color: var(--text-color);
+    color: var(--text-primary);
 }
 .glass-input:focus {
     outline: none;
@@ -191,7 +191,7 @@
     border-color: var(--primary);
     background: rgba(var(--primary-rgb), 0.05);
 }
-.prod-name { font-size: 14px; font-weight: 700; color: var(--text-color); margin-bottom: 5px; }
+.prod-name { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 5px; }
 .prod-desc { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .prod-price { font-size: 16px; font-weight: 800; color: var(--primary); }
 
@@ -205,12 +205,12 @@
     display: none;
 }
 .inq-label { font-size: 12px; color: var(--text-muted); }
-.inq-value { font-size: 16px; font-weight: 700; color: var(--text-color); margin-bottom: 10px; }
+.inq-value { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; }
 
 /* Custom Modal Animations & Styling */
 .modal-content {
     background: var(--bg-modal) !important;
-    color: var(--text-color);
+    color: var(--text-primary);
 }
 .modal.fade .modal-dialog {
     transform: scale(0.95);
