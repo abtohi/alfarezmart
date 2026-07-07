@@ -283,7 +283,7 @@
             <div class="cat-icon orange"><i class="bi bi-lightning-charge"></i></div>
             <div class="cat-name">Token PLN</div>
         </div>
-        <div class="cat-card" onclick="openTrxModal('E-Wallet', 'e-money', 'prepaid')">
+        <div class="cat-card" onclick="openTrxModal('E-Wallet', 'ewallet', 'prepaid')">
             <div class="cat-icon green"><i class="bi bi-wallet"></i></div>
             <div class="cat-name">E-Wallet</div>
         </div>
