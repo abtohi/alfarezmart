@@ -207,7 +207,11 @@
 .inq-label { font-size: 12px; color: var(--text-muted); }
 .inq-value { font-size: 16px; font-weight: 700; color: var(--text-color); margin-bottom: 10px; }
 
-/* Custom Modal Animations */
+/* Custom Modal Animations & Styling */
+.modal-content {
+    background: var(--bg-modal) !important;
+    color: var(--text-color);
+}
 .modal.fade .modal-dialog {
     transform: scale(0.95);
     transition: transform 0.3s ease-out;
@@ -395,6 +399,9 @@
                         <option value="MANDIRI">MANDIRI</option>
                         <option value="BRI">BRI</option>
                         <option value="BNI">BNI</option>
+                        <option value="SHOPEEPAY">SHOPEEPAY</option>
+                        <option value="GOPAY">GOPAY</option>
+                        <option value="JAGO">BANK JAGO</option>
                     </select>
                 </div>
                 <div class="mb-4">
@@ -641,12 +648,56 @@ async function loadProducts(category, type) {
         document.getElementById('product-loading').style.display = 'none';
         if (data.success && data.data.length > 0) {
             currentProducts = data.data;
-            if(type === 'prepaid') renderProducts(data.data);
+            if(type === 'prepaid') {
+                if (category === 'pulsa' || category === 'data') {
+                    document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3">Silakan masukkan nomor HP untuk melihat produk.</div>`;
+                    filterProductsByPrefix(document.getElementById('customer-no').value);
+                } else {
+                    renderProducts(data.data);
+                }
+            }
         } else {
             document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3">Produk tidak tersedia/belum disync.</div>`;
         }
     } catch(e) { console.error(e); }
 }
+
+// Provider Prefix Detection
+function detectProvider(phone) {
+    if (!phone || phone.length < 4) return null;
+    const prefix = phone.substring(0, 4);
+    const prefixes = {
+        '0811': 'TELKOMSEL', '0812': 'TELKOMSEL', '0813': 'TELKOMSEL', '0821': 'TELKOMSEL', '0822': 'TELKOMSEL', '0852': 'TELKOMSEL', '0853': 'TELKOMSEL', '0851': 'TELKOMSEL',
+        '0814': 'INDOSAT', '0815': 'INDOSAT', '0816': 'INDOSAT', '0855': 'INDOSAT', '0856': 'INDOSAT', '0857': 'INDOSAT', '0858': 'INDOSAT',
+        '0817': 'XL', '0818': 'XL', '0819': 'XL', '0859': 'XL', '0877': 'XL', '0878': 'XL', 
+        '0838': 'AXIS', '0831': 'AXIS', '0832': 'AXIS', '0833': 'AXIS',
+        '0895': 'THREE', '0896': 'THREE', '0897': 'THREE', '0898': 'THREE', '0899': 'THREE',
+        '0881': 'SMARTFREN', '0882': 'SMARTFREN', '0883': 'SMARTFREN', '0884': 'SMARTFREN', '0885': 'SMARTFREN', '0886': 'SMARTFREN', '0887': 'SMARTFREN', '0888': 'SMARTFREN', '0889': 'SMARTFREN'
+    };
+    return prefixes[prefix] || null;
+}
+
+function filterProductsByPrefix(phone) {
+    if (currentCategory !== 'pulsa' && currentCategory !== 'data') return;
+    const provider = detectProvider(phone);
+    
+    if (provider) {
+        const filtered = currentProducts.filter(p => (p.brand || '').toUpperCase() === provider);
+        if (filtered.length > 0) {
+            renderProducts(filtered);
+        } else {
+            document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3">Produk ${provider} tidak tersedia.</div>`;
+        }
+    } else {
+        document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3">Masukkan awalan nomor HP yang valid (min 4 digit).</div>`;
+    }
+}
+
+document.getElementById('customer-no').addEventListener('input', (e) => {
+    if (currentCategory === 'pulsa' || currentCategory === 'data') {
+        filterProductsByPrefix(e.target.value);
+    }
+});
 
 function renderProducts(products) {
     const grid = document.getElementById('product-grid');
