@@ -719,12 +719,12 @@ async function loadProducts(category, type) {
         if (data.success && data.data.length > 0) {
             currentProducts = data.data;
             if(type === 'prepaid') {
-                if (category === 'pulsa' || category === 'data') {
+                if (category === 'pulsa' || category === 'data' || category === 'sms_nelpon') {
                     document.getElementById('brand-filter-container').style.display = 'none';
                     document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3">Silakan masukkan nomor HP untuk melihat produk.</div>`;
                     filterProductsByPrefix(document.getElementById('customer-no').value);
                 } else {
-                    renderBrandFilters(data.data);
+                    renderFilters(data.data, 'brand');
                     renderProducts(data.data);
                 }
             }
@@ -766,9 +766,11 @@ function filterProductsByPrefix(phone) {
         const filtered = currentProducts.filter(p => (p.brand || '').toUpperCase().includes(digiBrand));
         
         if (filtered.length > 0) {
+            renderFilters(filtered, 'sub_category');
             renderProducts(filtered);
             document.getElementById('product-search-container').style.display = filtered.length > 5 ? 'block' : 'none';
         } else {
+            document.getElementById('brand-filter-container').style.display = 'none';
             document.getElementById('product-search-container').style.display = 'none';
             document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-4"><i class="bi bi-inbox fs-1 mb-2 d-block opacity-50"></i>Produk ${provider} sedang tidak tersedia.</div>`;
         }
@@ -794,13 +796,13 @@ document.getElementById('search-product').addEventListener('input', (e) => {
     });
 });
 
-function renderBrandFilters(products) {
+function renderFilters(products, filterKey = 'brand') {
     const container = document.getElementById('brand-filter-container');
     container.innerHTML = '';
     
-    // Get unique brands
-    const brands = [...new Set(products.map(p => p.brand))].filter(b => b);
-    if (brands.length <= 1) {
+    // Get unique filter values (ignoring null/empty)
+    const items = [...new Set(products.map(p => p[filterKey]))].filter(b => b);
+    if (items.length <= 1) {
         container.style.display = 'none';
         return;
     }
@@ -811,19 +813,19 @@ function renderBrandFilters(products) {
     const allBtn = document.createElement('button');
     allBtn.className = 'btn btn-sm btn-primary rounded-pill fw-bold px-3';
     allBtn.innerText = 'Semua';
-    allBtn.onclick = (e) => filterByBrand('', e.target);
+    allBtn.onclick = (e) => filterList('', filterKey, e.target, products);
     container.appendChild(allBtn);
     
-    brands.forEach(brand => {
+    items.forEach(val => {
         const btn = document.createElement('button');
         btn.className = 'btn btn-sm btn-outline-primary rounded-pill fw-bold px-3 border-2';
-        btn.innerText = brand;
-        btn.onclick = (e) => filterByBrand(brand, e.target);
+        btn.innerText = val;
+        btn.onclick = (e) => filterList(val, filterKey, e.target, products);
         container.appendChild(btn);
     });
 }
 
-function filterByBrand(brand, clickedBtn) {
+function filterList(val, filterKey, clickedBtn, originalProducts) {
     // Update active button styling
     const container = document.getElementById('brand-filter-container');
     container.querySelectorAll('button').forEach(b => {
@@ -832,10 +834,10 @@ function filterByBrand(brand, clickedBtn) {
     
     clickedBtn.className = 'btn btn-sm btn-primary rounded-pill fw-bold px-3';
     
-    if (!brand) {
-        renderProducts(currentProducts);
+    if (!val) {
+        renderProducts(originalProducts);
     } else {
-        const filtered = currentProducts.filter(p => p.brand === brand);
+        const filtered = originalProducts.filter(p => p[filterKey] === val);
         renderProducts(filtered);
     }
 }

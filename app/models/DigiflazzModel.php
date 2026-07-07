@@ -20,16 +20,17 @@ class DigiflazzModel {
         try {
             $stmt = $this->db->prepare("
                 INSERT INTO digi_products (
-                    buyer_sku_code, product_name, category, brand, type, 
+                    buyer_sku_code, product_name, category, sub_category, brand, type, 
                     seller_price, buyer_product_status, seller_product_status, 
                     description, start_cut_off, end_cut_off, last_synced_at
                 ) VALUES (
-                    :sku, :name, :category, :brand, :type, 
+                    :sku, :name, :category, :sub_cat, :brand, :type, 
                     :price, :buyer_status, :seller_status, 
                     :desc, :start_cut, :end_cut, NOW()
                 ) ON DUPLICATE KEY UPDATE 
                     product_name = VALUES(product_name),
                     category = VALUES(category),
+                    sub_category = VALUES(sub_category),
                     brand = VALUES(brand),
                     seller_price = VALUES(seller_price),
                     buyer_product_status = VALUES(buyer_product_status),
@@ -43,12 +44,14 @@ class DigiflazzModel {
             foreach ($productsData as $item) {
                 // Determine normalized category
                 $category = $this->normalizeCategory($item['category'] ?? '');
+                $subCat = $this->determineSubCategory($category, $item['product_name']);
                 $price = $item['price'] ?? $item['admin'] ?? 0;
                 
                 $stmt->execute([
                     'sku' => $item['buyer_sku_code'],
                     'name' => $item['product_name'],
                     'category' => $category,
+                    'sub_cat' => $subCat,
                     'brand' => $item['brand'],
                     'type' => $type,
                     'price' => $price,
@@ -84,6 +87,41 @@ class DigiflazzModel {
         if (strpos($cat, 'multifinance') !== false || strpos($cat, 'finance') !== false) return 'multifinance';
         if (strpos($cat, 'bank') !== false || strpos($cat, 'transfer') !== false) return 'bank';
         return $cat;
+    }
+
+    private function determineSubCategory(string $category, string $productName) {
+        if ($category !== 'data' && $category !== 'sms_nelpon') return null;
+        
+        $name = strtoupper($productName);
+        
+        if ($category === 'data') {
+            if (strpos($name, 'COMBO SAKTI') !== false) return 'Combo Sakti';
+            if (strpos($name, 'SAKTI') !== false) return 'Sakti';
+            if (strpos($name, 'OMG') !== false) return 'Data OMG!';
+            if (strpos($name, 'FLASH') !== false) return 'Flash';
+            if (strpos($name, 'BULK') !== false) return 'Bulk / Inject';
+            if (strpos($name, 'GIGAMAX') !== false) return 'Gigamax';
+            if (strpos($name, 'KETENGAN') !== false) return 'Ketengan';
+            if (strpos($name, 'MAXSTREAM') !== false) return 'Maxstream';
+            if (strpos($name, 'YELLOW') !== false) return 'Yellow';
+            if (strpos($name, 'FREEDOM') !== false) return 'Freedom';
+            if (strpos($name, 'XTRA') !== false) return 'Xtra';
+            if (strpos($name, 'AIGO') !== false) return 'Aigo';
+            if (strpos($name, 'BRONET') !== false) return 'Bronet';
+            if (strpos($name, 'HAPPY') !== false) return 'Happy';
+            if (strpos($name, 'UNLIMITED') !== false) return 'Unlimited';
+            if (strpos($name, 'KUOTA') !== false || strpos($name, 'DATA') !== false) return 'Data Reguler';
+            return 'Lainnya';
+        }
+        
+        if ($category === 'sms_nelpon') {
+            if (strpos($name, 'ALL OPERATOR') !== false || strpos($name, 'SEMUA OPERATOR') !== false || strpos($name, 'SEMUA OPR') !== false) return 'Nelpon Semua Operator';
+            if (strpos($name, 'SESAMA') !== false) return 'Nelpon Sesama';
+            if (strpos($name, 'SMS') !== false) return 'Paket SMS';
+            return 'Lainnya';
+        }
+        
+        return null;
     }
 
     /**

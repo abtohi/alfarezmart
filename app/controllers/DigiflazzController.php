@@ -266,6 +266,10 @@ class DigiflazzController extends Controller {
         AuthController::requireAuth();
         AuthController::requireLevel(['superadmin', 'admin']);
         
+        // Prevent timeout during massive digiflazz catalog sync
+        set_time_limit(0);
+        ini_set('memory_limit', '512M');
+        
         $body = json_decode(file_get_contents('php://input'), true);
         $requestedType = strtolower(trim($body['type'] ?? 'all'));
 
