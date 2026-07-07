@@ -1,4 +1,11 @@
-
+<style>
+/* Dark Mode Overrides */
+.card { background: var(--surface-1) !important; color: var(--text-primary) !important; }
+.table { color: var(--text-primary) !important; border-color: var(--border-color) !important; }
+.table-light { background-color: var(--surface-2) !important; color: var(--text-primary) !important; }
+.table-hover tbody tr:hover { background-color: var(--surface-2) !important; color: var(--text-primary) !important; }
+.modal-content { background: var(--bg-modal) !important; color: var(--text-primary) !important; }
+</style>
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4 class="fw-bold mb-0"><i class="bi bi-tags text-primary me-2"></i> Daftar Harga PPOB</h4>

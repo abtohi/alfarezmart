@@ -219,6 +219,15 @@
 .modal.show .modal-dialog {
     transform: scale(1);
 }
+.list-group-item {
+    background: var(--surface-1);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+.list-group-item:hover {
+    background: var(--surface-2);
+    color: var(--primary);
+}
 </style>
 
 <div class="container-fluid py-4 ppob-wrapper">
@@ -380,9 +389,9 @@
 <div class="modal fade" id="depositModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 20px; border: none;">
-            <div class="modal-header border-0 bg-primary text-white">
+            <div class="modal-header border-0" style="background: var(--surface-2);">
                 <h5 class="modal-title fw-bold"><i class="bi bi-wallet2 me-2"></i>Topup Saldo Digiflazz</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="alert alert-info rounded-3" style="font-size: 13px;">
@@ -424,7 +433,7 @@
             <h4 class="fw-bold mb-1">Tiket Deposit Berhasil</h4>
             <p class="text-muted small mb-4">Silakan transfer sesuai instruksi di bawah ini.</p>
             
-            <div class="bg-light rounded-3 p-3 mb-3 text-start">
+            <div class="rounded-3 p-3 mb-3 text-start" style="background: var(--surface-2);">
                 <div class="small text-muted mb-1">Transfer Tepat Sesuai Nominal (Penting!):</div>
                 <h2 class="text-primary fw-bold mb-3" id="dr-amount">Rp 0</h2>
                 
@@ -446,9 +455,9 @@
 <div class="modal fade" id="testCaseModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content" style="border-radius: 20px;">
-            <div class="modal-header bg-warning border-0">
-                <h5 class="modal-title fw-bold text-dark"><i class="bi bi-magic me-2"></i>Bantuan Test Sandbox</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <div class="modal-header border-0" style="background: var(--warning-bg);">
+                <h5 class="modal-title fw-bold" style="color: var(--warning);"><i class="bi bi-magic me-2"></i>Bantuan Test Sandbox</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
             </div>
             <div class="modal-body p-4">
                 <p class="small text-muted">Klik tombol di bawah untuk menyalin nomor khusus Digiflazz ke kolom input saat transaksi.</p>

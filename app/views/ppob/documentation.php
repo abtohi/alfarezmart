@@ -1,4 +1,18 @@
-
+<style>
+/* Dark Mode Overrides */
+.card { background: var(--surface-1) !important; color: var(--text-primary) !important; }
+.list-group-item { background: var(--surface-1) !important; color: var(--text-primary) !important; border-color: var(--border-color) !important; }
+.list-group-item:hover { background: var(--surface-2) !important; color: var(--primary) !important; }
+.table { color: var(--text-primary) !important; border-color: var(--border-color) !important; }
+.table-light { background-color: var(--surface-2) !important; color: var(--text-primary) !important; }
+code.bg-light { background-color: var(--surface-2) !important; color: var(--text-primary) !important; }
+.border-success { border-color: var(--success) !important; }
+.border-warning { border-color: var(--warning) !important; }
+.border-danger { border-color: var(--danger) !important; }
+.text-success { color: var(--success) !important; }
+.text-warning { color: var(--warning) !important; }
+.text-danger { color: var(--danger) !important; }
+</style>
 <div class="container-fluid py-4">
     <div class="row">
         <!-- Sidebar Navigation -->
@@ -84,19 +98,19 @@
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <div class="p-3 border rounded border-success" style="background: #f0fdf4;">
+                            <div class="p-3 border rounded border-success" style="background: var(--success-bg);">
                                 <h6 class="text-success fw-bold">087800001230</h6>
                                 <p class="mb-0 small">Gunakan nomor ini sebagai Nomor Tujuan agar transaksi langsung berstatus <strong>Sukses</strong>.</p>
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <div class="p-3 border rounded border-warning" style="background: #fffbeb;">
+                            <div class="p-3 border rounded border-warning" style="background: var(--warning-bg);">
                                 <h6 class="text-warning fw-bold">087800001231</h6>
                                 <p class="mb-0 small">Gunakan nomor ini agar transaksi <strong>Pending</strong> selamanya.</p>
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <div class="p-3 border rounded border-danger" style="background: #fef2f2;">
+                            <div class="p-3 border rounded border-danger" style="background: var(--danger-bg);">
                                 <h6 class="text-danger fw-bold">087800001232</h6>
                                 <p class="mb-0 small">Gunakan nomor ini agar transaksi berstatus <strong>Gagal</strong> dan direfund.</p>
                             </div>
