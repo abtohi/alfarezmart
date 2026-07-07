@@ -181,23 +181,25 @@
     background: var(--surface-1);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 15px;
+    padding: 16px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.25s ease;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 110px;
+    min-height: 125px;
     position: relative;
     overflow: hidden;
 }
 .prod-card:hover {
     border-color: var(--primary);
-    background: rgba(var(--primary-rgb), 0.05);
+    background: var(--surface-2);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
 }
-.prod-name { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 5px; }
-.prod-desc { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.prod-price { font-size: 16px; font-weight: 800; color: var(--primary); }
+.prod-name { font-size: 13.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; line-height: 1.35; letter-spacing: -0.2px; }
+.prod-desc { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.45; }
+.prod-price { font-size: 15.5px; font-weight: 800; color: var(--primary); margin-top: auto; }
 
 /* Inquriy Result Box */
 .inquiry-box {
@@ -354,13 +356,13 @@
             <div class="modal-body p-4">
                 <input type="hidden" id="trx-type" value="prepaid">
                 <input type="hidden" id="trx-category" value="">
-                
+                                <!-- Input Section -->
                 <div class="mb-4">
-                    <label class="form-label fw-bold text-muted small text-uppercase">Nomor Tujuan / Pelanggan</label>
-                    <div class="input-group">
-                        <input type="text" id="customer-no" class="form-control glass-input" placeholder="Masukkan nomor (mis: 0812... / 112233...)">
-                        <!-- Tombol Cek PLN / Cek Tagihan akan muncul secara dinamis di samping input -->
-                        <button class="btn btn-primary px-4 fw-bold" id="btn-inquiry" style="display: none; border-radius: 0 12px 12px 0;" onclick="performInquiry()">Cek Detail</button>
+                    <label class="form-label fw-bold small text-muted text-uppercase" style="letter-spacing: 0.5px;">Nomor Tujuan / Pelanggan</label>
+                    <div class="d-flex position-relative align-items-center">
+                        <input type="text" class="form-control glass-input w-100" id="customer-no" placeholder="Masukkan nomor..." style="padding-right:110px;">
+                        <div id="provider-badge" class="position-absolute end-0 me-3 fw-bold" style="font-size:10px;display:none;padding:5px 10px;border-radius:20px;background:var(--primary);color:#fff;text-transform:uppercase;letter-spacing:0.5px;pointer-events:none; margin-right: 60px !important;"></div>
+                        <button class="btn btn-primary position-absolute end-0 h-100 px-4" id="btn-inquiry" onclick="performInquiry()" style="display:none; border-radius: 0 12px 12px 0;">Cek</button>
                     </div>
                 </div>
 
@@ -660,6 +662,8 @@ function openTrxModal(title, category, type) {
     // Reset UI
     document.getElementById('inquiry-box').style.display = 'none';
     document.getElementById('btn-inquiry').style.display = 'none';
+    document.getElementById('provider-badge').style.display = 'none';
+    document.getElementById('customer-no').style.paddingRight = '20px';
     document.getElementById('btn-pay-postpaid').style.display = 'none';
     document.getElementById('product-list-container').style.display = 'block';
     document.getElementById('product-grid').innerHTML = '';
@@ -668,6 +672,7 @@ function openTrxModal(title, category, type) {
         // Tagihan Pasca: Harus Cek Dulu
         document.getElementById('customer-no').placeholder = 'Masukkan ID Pelanggan';
         document.getElementById('btn-inquiry').style.display = 'block';
+        document.getElementById('customer-no').style.paddingRight = '100px';
         document.getElementById('product-list-container').style.display = 'none'; // Sembunyikan list produk
         // Auto load products in background just to get SKU for inquiry
         loadProducts(category, type); 
@@ -675,13 +680,15 @@ function openTrxModal(title, category, type) {
         // PLN Prabayar: Opsional Cek Nama (Inquiry PLN)
         document.getElementById('customer-no').placeholder = 'Masukkan Nomor Meter/IDPEL';
         document.getElementById('btn-inquiry').style.display = 'block';
+        document.getElementById('customer-no').style.paddingRight = '120px';
         document.getElementById('btn-inquiry').innerText = 'Cek Nama';
         // Auto load products to buy
         loadProducts(category, type);
     } else {
         // Pulsa / Data biasa: Auto search on input
         document.getElementById('customer-no').placeholder = 'Masukkan Nomor HP (0812...)';
-        // Auto load products to buy based on prefix logic (simplified here)
+        document.getElementById('customer-no').style.paddingRight = '100px';
+        // Auto load products to buy based on prefix logic
         loadProducts(category, type);
     }
 
@@ -730,16 +737,27 @@ function detectProvider(phone) {
 function filterProductsByPrefix(phone) {
     if (currentCategory !== 'pulsa' && currentCategory !== 'data') return;
     const provider = detectProvider(phone);
+    const badge = document.getElementById('provider-badge');
     
     if (provider) {
-        const filtered = currentProducts.filter(p => (p.brand || '').toUpperCase() === provider);
+        badge.innerText = provider;
+        badge.style.display = 'block';
+        
+        // Brand logic map for Digiflazz (which might use slightly different naming)
+        let digiBrand = provider;
+        if(provider === 'THREE') digiBrand = 'TRI';
+        
+        // Filter case-insensitive and partial match
+        const filtered = currentProducts.filter(p => (p.brand || '').toUpperCase().includes(digiBrand));
+        
         if (filtered.length > 0) {
             renderProducts(filtered);
         } else {
-            document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3">Produk ${provider} tidak tersedia.</div>`;
+            document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-4"><i class="bi bi-inbox fs-1 mb-2 d-block opacity-50"></i>Produk ${provider} sedang tidak tersedia.</div>`;
         }
     } else {
-        document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3">Masukkan awalan nomor HP yang valid (min 4 digit).</div>`;
+        badge.style.display = 'none';
+        document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-4"><i class="bi bi-search fs-1 mb-2 d-block opacity-50"></i>Masukkan awalan nomor HP yang valid untuk melihat produk.</div>`;
     }
 }
 

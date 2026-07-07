@@ -171,6 +171,12 @@ class DigiflazzController extends Controller {
         $refId = 'INQ-' . date('YmdHis') . '-' . rand(1000, 9999);
         $res = $this->digiService->inquiryPostpaid($sku, $customerNo, $refId);
 
+        $rc = $res['data']['rc'] ?? '';
+        if ($res['success'] && $rc !== '00') {
+            $res['success'] = false;
+            $res['message'] = $res['data']['message'] ?? 'Tagihan tidak ditemukan atau gagal dicek.';
+        }
+
         if ($res['success'] && isset($res['data'])) {
             // Append ref_id so frontend can use it to pay
             $res['data']['ref_id'] = $refId;
