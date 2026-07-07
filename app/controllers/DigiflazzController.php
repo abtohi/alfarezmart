@@ -440,6 +440,15 @@ class DigiflazzController extends Controller {
      * WEBHOOK ENDPOINT
      * ==========================================
      */
+    public function webhookTest() {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true, 
+            'message' => 'Endpoint Webhook Aktif. Silakan gunakan method POST untuk menerima callback dari Digiflazz.'
+        ]);
+        exit;
+    }
+
     public function webhook() {
         $payload = file_get_contents('php://input');
         $data = json_decode($payload, true);
