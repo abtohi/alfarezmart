@@ -518,6 +518,14 @@ class DigiflazzController extends Controller {
         // Log incoming webhook for debugging
         error_log("[Digiflazz Webhook] Received: " . $payload);
 
+        // Handle Digiflazz Ping Event
+        if (isset($data['hook_id']) && !isset($data['data'])) {
+            error_log("[Digiflazz Webhook] Ping received for hook_id: " . $data['hook_id']);
+            http_response_code(200);
+            echo json_encode(['status' => 'ok', 'message' => 'Ping received']);
+            exit;
+        }
+
         if (!$data || !isset($data['data'])) {
             http_response_code(400);
             echo json_encode(['status' => 'error', 'message' => 'Invalid payload']);
