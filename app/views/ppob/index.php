@@ -160,6 +160,10 @@
     width: 100%;
     color: var(--text-primary);
 }
+.glass-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.8;
+}
 .glass-input:focus {
     outline: none;
     border-color: var(--primary);
@@ -231,6 +235,9 @@
 .list-group-item:hover {
     background: var(--surface-2);
     color: var(--primary);
+}
+.text-muted {
+    color: var(--text-muted) !important;
 }
 </style>
 
