@@ -140,7 +140,7 @@
     align-items: center;
 }
 .dev-alert-text {
-    color: #b45309;
+    color: #f59e0b;
     font-size: 14px;
 }
 .dev-alert .btn-sm {
@@ -291,6 +291,8 @@
             <div class="cat-icon blue"><i class="bi bi-phone-vibrate"></i></div>
             <div class="cat-name">HP Pasca</div>
         </div>
+    </div><!-- end .cat-grid Pascabayar -->
+
     <!-- Admin Tools Section -->
     <h4 class="section-title mt-4">PPOB Admin Tools</h4>
     <div class="row g-3 mb-5">
@@ -466,6 +468,59 @@
     </div>
 </div>
 
+<!-- Premium Result Modal -->
+<div class="modal fade" id="resultModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="border-radius: 24px; overflow: hidden;">
+            <div class="modal-body p-0">
+                <div class="text-center py-5 px-4" style="background: var(--surface-1);">
+                    <div style="font-size: 60px; line-height: 1; margin-bottom: 15px;" id="result-icon">⏳</div>
+                    <div id="result-title" class="fw-bold fs-4 text-warning">Sedang Diproses</div>
+                    <div class="text-muted small mt-1 mb-4" id="result-msg">Menunggu konfirmasi dari provider</div>
+                    
+                    <div style="background: var(--surface-2); border-radius: 16px; padding: 20px; text-align: left; margin-bottom: 20px;">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">Nomor Tujuan</span>
+                            <span class="fw-bold" id="result-customer">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">Produk</span>
+                            <span class="fw-bold" id="result-product">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">Harga</span>
+                            <span class="fw-bold text-primary" id="result-price">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">SN/Token</span>
+                            <span class="fw-bold" id="result-sn" style="max-width: 180px; word-break: break-all; text-align: right;">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted small">Ref ID</span>
+                            <span class="text-muted" id="result-refid" style="font-size: 11px;">-</span>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-warning w-100 rounded-pill fw-bold py-2 mb-2" id="result-recheck-btn" style="display:none;">
+                        🔄 Cek Status Terbaru
+                    </button>
+                    <button class="btn btn-secondary w-100 rounded-pill py-2" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container-ppob" style="position: fixed; top: 80px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 300px;">
+</div>
+
+<style>
+@keyframes slideInRight {
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+</style>
 
 <script>
 // Format Currency IDR
@@ -511,9 +566,9 @@ async function requestDeposit() {
     const owner = document.getElementById('depo-owner').value;
     const btn = document.getElementById('btn-depo');
 
-    if(!amount || !bank || !owner) { alert('Harap isi semua kolom deposit.'); return; }
+    if(!amount || !bank || !owner) { showAlert('⚠️ Harap isi semua kolom deposit.', 'warning'); return; }
     
-    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Loading...';
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
     try {
         const res = await fetch('<?= BASE_URL ?>api/ppob/deposit', {
             method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -521,15 +576,17 @@ async function requestDeposit() {
         });
         const data = await res.json();
         if(data.success && data.data) {
-            document.getElementById('dr-amount').innerText = formatRp(data.data.amount);
-            document.getElementById('dr-account').innerText = data.data.notes.split(' ').find(w => /^[0-9]+$/.test(w)) || '-';
-            document.getElementById('dr-bank-name').innerText = data.data.notes;
+            // Digiflazz returns notes as a string with transfer instruction
+            const notes = data.data.notes || '';
+            document.getElementById('dr-amount').innerText = formatRp(data.data.amount || amount);
+            document.getElementById('dr-account').innerText = data.data.trx_id || notes;
+            document.getElementById('dr-bank-name').innerText = bank + ' - ' + notes;
             depositModal.hide();
             depoResultModal.show();
         } else {
-            alert(data.message || 'Gagal request deposit');
+            showAlert('❌ ' + (data.message || 'Gagal request deposit'), 'danger');
         }
-    } catch(e) { alert('Terjadi kesalahan server'); }
+    } catch(e) { showAlert('❌ Terjadi kesalahan server', 'danger'); }
     btn.disabled = false; btn.innerText = 'Minta Tiket Deposit';
 }
 
@@ -710,18 +767,87 @@ async function processTransaction(payload) {
         loadingModal.hide();
         
         if(data.success) {
-            // Tampilkan alert Sukses, atau redirect ke History.
-            // Untuk PPOB v2, notifikasi ringkas
-            const status = data.data.status || 'Pending';
-            alert(`Transaksi Berhasil Dicatat!\nStatus: ${status}\nSN/Pesan: ${data.data.sn || data.data.message}`);
+            const status = (data.data.status || 'pending').toLowerCase();
+            const isPending = status === 'pending' || status === 'processing';
+            const isSuccess = status === 'success' || status === 'sukses';
+            
+            let iconEl = isPending ? '⏳' : (isSuccess ? '✅' : '❌');
+            let statusText = isPending ? 'Sedang Diproses' : (isSuccess ? 'Transaksi Sukses!' : 'Transaksi Gagal');
+            let colorClass = isPending ? 'text-warning' : (isSuccess ? 'text-success' : 'text-danger');
+            let sn = data.data.sn || '-';
+            let msg = data.data.message || '';
+            let refId = payload.ref_id || data.data.ref_id || '';
+
+            document.getElementById('result-icon').innerText = iconEl;
+            document.getElementById('result-title').innerText = statusText;
+            document.getElementById('result-title').className = 'fw-bold fs-4 ' + colorClass;
+            document.getElementById('result-customer').innerText = payload.customer_no || '-';
+            document.getElementById('result-product').innerText = payload.product_name || '-';
+            document.getElementById('result-price').innerText = formatRp(payload.sell_price || 0);
+            document.getElementById('result-sn').innerText = sn;
+            document.getElementById('result-msg').innerText = msg;
+            document.getElementById('result-refid').innerText = refId;
+
+            // Show re-check button only for pending
+            const reCheckBtn = document.getElementById('result-recheck-btn');
+            if(isPending && refId) {
+                reCheckBtn.style.display = 'block';
+                reCheckBtn.onclick = () => checkTransactionStatus(payload.sku || '', payload.customer_no, refId);
+            } else {
+                reCheckBtn.style.display = 'none';
+            }
+
+            const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+            resultModal.show();
             fetchBalance(); // Refresh balance
         } else {
-            alert(`Gagal: ${data.message}`);
+            showAlert('❌ Gagal: ' + (data.message || 'Terjadi kesalahan'), 'danger');
         }
     } catch(e) {
         loadingModal.hide();
-        alert('Terjadi kesalahan jaringan saat transaksi.');
+        showAlert('❌ Terjadi kesalahan jaringan saat transaksi.', 'danger');
     }
+}
+
+// 10. Check transaction status (polling)
+async function checkTransactionStatus(sku, customerNo, refId) {
+    const reCheckBtn = document.getElementById('result-recheck-btn');
+    reCheckBtn.disabled = true;
+    reCheckBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Mengecek...';
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/ppob/check-transaction', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ref_id: refId, sku: sku, customer_no: customerNo})
+        });
+        const data = await res.json();
+        if(data.success && data.data) {
+            const status = (data.data.status || 'pending').toLowerCase();
+            const isSuccess = status === 'success' || status === 'sukses';
+            const isFailed = status === 'failed' || status === 'gagal';
+            
+            if(isSuccess || isFailed) {
+                document.getElementById('result-title').innerText = isSuccess ? 'Transaksi Sukses!' : 'Transaksi Gagal';
+                document.getElementById('result-title').className = 'fw-bold fs-4 ' + (isSuccess ? 'text-success' : 'text-danger');
+                document.getElementById('result-icon').innerText = isSuccess ? '✅' : '❌';
+                document.getElementById('result-sn').innerText = data.data.sn || '-';
+                reCheckBtn.style.display = 'none';
+            } else {
+                reCheckBtn.disabled = false;
+                reCheckBtn.innerText = '🔄 Cek Status Lagi';
+            }
+        }
+    } catch(e) { reCheckBtn.disabled = false; reCheckBtn.innerText = '🔄 Cek Status Lagi'; }
+}
+
+// Helper: show non-blocking alert
+function showAlert(msg, type='info') {
+    const container = document.getElementById('toast-container-ppob');
+    const id = 'toast-' + Date.now();
+    const colors = {info:'#0dcaf0',success:'#22c55e',danger:'#ef4444',warning:'#f59e0b'};
+    container.innerHTML += `
+        <div id="${id}" style="background:${colors[type] || '#0dcaf0'};color:white;padding:14px 20px;border-radius:12px;font-weight:600;box-shadow:0 5px 15px rgba(0,0,0,0.3);animation:slideInRight 0.3s ease;">${msg}</div>
+    `;
+    setTimeout(() => document.getElementById(id)?.remove(), 4000);
 }
 
 // Test Case Helper
