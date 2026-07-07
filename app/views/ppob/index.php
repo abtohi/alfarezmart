@@ -445,12 +445,13 @@
             <p class="text-muted small mb-4">Silakan transfer sesuai instruksi di bawah ini.</p>
             
             <div class="rounded-3 p-3 mb-3 text-start" style="background: var(--surface-2);">
-                <div class="small text-muted mb-1">Transfer Tepat Sesuai Nominal (Penting!):</div>
-                <h2 class="text-primary fw-bold mb-3" id="dr-amount">Rp 0</h2>
+                <div class="small text-muted mb-1">Transfer Tepat Sesuai Nominal (Termasuk 3 Digit Terakhir):</div>
+                <h2 class="text-primary fw-bold mb-3" id="dr-amount" style="letter-spacing: 1px;">Rp 0</h2>
                 
-                <div class="small text-muted mb-1">Ke Rekening:</div>
-                <div class="fw-bold fs-5 mb-1" id="dr-account">000000000</div>
-                <div class="small fw-bold" id="dr-bank-name">BANK - A.N NAMA</div>
+                <div class="small text-muted mb-2">Instruksi Pembayaran:</div>
+                <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.05); border: 1px dashed var(--border-active);">
+                    <div class="fw-bold" id="dr-notes" style="font-size: 14px; line-height: 1.5; color: var(--text-primary);">Memuat instruksi...</div>
+                </div>
             </div>
             
             <div class="small text-danger mb-4 fw-bold">
@@ -603,10 +604,20 @@ async function requestDeposit() {
         const data = await res.json();
         if(data.success && data.data) {
             // Digiflazz returns notes as a string with transfer instruction
-            const notes = data.data.notes || '';
-            document.getElementById('dr-amount').innerText = formatRp(data.data.amount || amount);
-            document.getElementById('dr-account').innerText = data.data.trx_id || notes;
-            document.getElementById('dr-bank-name').innerText = bank + ' - ' + notes;
+            const notes = data.data.notes || 'Silakan cek mutasi atau panduan transfer dari Digiflazz.';
+            const finalAmount = data.data.amount || amount;
+            
+            // Format nominal and highlight last 3 digits
+            const amountStr = parseInt(finalAmount).toString();
+            let formattedAmountHTML = formatRp(finalAmount);
+            if (amountStr.length > 3) {
+                const head = amountStr.slice(0, -3);
+                const tail = amountStr.slice(-3);
+                formattedAmountHTML = `Rp ${parseInt(head).toLocaleString('id-ID')}.<span class="text-warning fw-bolder fs-1">${tail}</span>`;
+            }
+            
+            document.getElementById('dr-amount').innerHTML = formattedAmountHTML;
+            document.getElementById('dr-notes').innerText = notes;
             getDepositModal().hide();
             getDepoResultModal().show();
         } else {
