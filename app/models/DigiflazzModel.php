@@ -69,7 +69,13 @@ class DigiflazzModel {
             $this->db->commit();
             return true;
         } catch (Exception $e) {
-            $this->db->rollBack();
+            try {
+                if ($this->db->inTransaction()) {
+                    $this->db->rollBack();
+                }
+            } catch (Exception $e2) {
+                // Ignore rollback errors
+            }
             error_log("Failed to sync price list: " . $e->getMessage());
             return false;
         }
@@ -140,13 +146,6 @@ class DigiflazzModel {
                 2000
             )
         ");
-
-        try {
-            // Add is_custom_price column if it doesn't exist
-            $this->db->exec("ALTER TABLE digi_products ADD COLUMN is_custom_price TINYINT(1) DEFAULT 0");
-        } catch (\Exception $e) {
-            // Ignore if column already exists
-        }
 
         // Update sell_price = seller_price + markup, rounded to nearest 100, ONLY for non-custom prices
         $this->db->exec("UPDATE digi_products SET sell_price = CEIL((seller_price + markup) / 100) * 100 WHERE is_custom_price = 0");
