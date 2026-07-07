@@ -385,6 +385,10 @@
 
                 <!-- Product List -->
                 <div id="product-list-container" style="display: none;">
+                    
+                    <!-- Brand Filter Tabs (For E-Wallet, Game, etc) -->
+                    <div id="brand-filter-container" class="mb-3 d-flex gap-2 overflow-auto pb-2" style="display:none; white-space:nowrap; scrollbar-width: none;"></div>
+
                     <!-- Search Product Input (Useful for huge lists) -->
                     <div class="mb-3 position-relative" id="product-search-container" style="display:none;">
                         <input type="text" class="form-control glass-input" id="search-product" placeholder="Cari paket / nominal..." style="padding-left:35px; border-radius:12px;">
@@ -669,6 +673,9 @@ function openTrxModal(title, category, type) {
     document.getElementById('inquiry-box').style.display = 'none';
     document.getElementById('btn-inquiry').style.display = 'none';
     document.getElementById('provider-badge').style.display = 'none';
+    document.getElementById('brand-filter-container').style.display = 'none';
+    document.getElementById('product-search-container').style.display = 'none';
+    document.getElementById('search-product').value = '';
     document.getElementById('customer-no').style.paddingRight = '20px';
     document.getElementById('btn-pay-postpaid').style.display = 'none';
     document.getElementById('product-list-container').style.display = 'block';
@@ -713,9 +720,11 @@ async function loadProducts(category, type) {
             currentProducts = data.data;
             if(type === 'prepaid') {
                 if (category === 'pulsa' || category === 'data') {
+                    document.getElementById('brand-filter-container').style.display = 'none';
                     document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3">Silakan masukkan nomor HP untuk melihat produk.</div>`;
                     filterProductsByPrefix(document.getElementById('customer-no').value);
                 } else {
+                    renderBrandFilters(data.data);
                     renderProducts(data.data);
                 }
             }
@@ -785,9 +794,59 @@ document.getElementById('search-product').addEventListener('input', (e) => {
     });
 });
 
+function renderBrandFilters(products) {
+    const container = document.getElementById('brand-filter-container');
+    container.innerHTML = '';
+    
+    // Get unique brands
+    const brands = [...new Set(products.map(p => p.brand))].filter(b => b);
+    if (brands.length <= 1) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.style.display = 'flex';
+    
+    // "Semua" button
+    const allBtn = document.createElement('button');
+    allBtn.className = 'btn btn-sm btn-primary rounded-pill fw-bold px-3';
+    allBtn.innerText = 'Semua';
+    allBtn.onclick = (e) => filterByBrand('', e.target);
+    container.appendChild(allBtn);
+    
+    brands.forEach(brand => {
+        const btn = document.createElement('button');
+        btn.className = 'btn btn-sm btn-outline-primary rounded-pill fw-bold px-3 border-2';
+        btn.innerText = brand;
+        btn.onclick = (e) => filterByBrand(brand, e.target);
+        container.appendChild(btn);
+    });
+}
+
+function filterByBrand(brand, clickedBtn) {
+    // Update active button styling
+    const container = document.getElementById('brand-filter-container');
+    container.querySelectorAll('button').forEach(b => {
+        b.className = 'btn btn-sm btn-outline-primary rounded-pill fw-bold px-3 border-2';
+    });
+    
+    clickedBtn.className = 'btn btn-sm btn-primary rounded-pill fw-bold px-3';
+    
+    if (!brand) {
+        renderProducts(currentProducts);
+    } else {
+        const filtered = currentProducts.filter(p => p.brand === brand);
+        renderProducts(filtered);
+    }
+}
+
 function renderProducts(products) {
     const grid = document.getElementById('product-grid');
     grid.innerHTML = '';
+    
+    if (currentCategory !== 'pulsa' && currentCategory !== 'data') {
+        document.getElementById('product-search-container').style.display = products.length > 5 ? 'block' : 'none';
+    }
     products.forEach(p => {
         const card = document.createElement('div');
         card.className = 'prod-card';
