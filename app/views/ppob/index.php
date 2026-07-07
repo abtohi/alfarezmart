@@ -460,9 +460,21 @@
                 <div class="small text-muted mb-1">Transfer Tepat Sesuai Nominal (Termasuk 3 Digit Terakhir):</div>
                 <h2 class="text-primary fw-bold mb-3" id="dr-amount" style="letter-spacing: 1px;">Rp 0</h2>
                 
-                <div class="small text-muted mb-2">Instruksi Pembayaran:</div>
-                <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.05); border: 1px dashed var(--border-active);">
-                    <div class="fw-bold" id="dr-notes" style="font-size: 14px; line-height: 1.5; color: var(--text-primary);">Memuat instruksi...</div>
+                <div id="dr-parsed-dest" style="display: none;">
+                    <div class="small text-muted mb-2">Tujuan Transfer:</div>
+                    <div class="p-3 rounded mb-3 d-flex justify-content-between align-items-center" style="background: rgba(255, 255, 255, 0.05); border: 1px dashed var(--border-active);">
+                        <div>
+                            <div class="text-muted small fw-bold text-uppercase" id="dr-bank-name">BANK</div>
+                            <div class="fw-bold text-primary" id="dr-acc-no" style="font-size: 22px; letter-spacing: 1.5px;">0000000000</div>
+                            <div class="text-muted small">a.n. <span class="fw-bold text-light" id="dr-acc-name">NAMA REKENING</span></div>
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary rounded-pill fw-bold" onclick="navigator.clipboard.writeText(document.getElementById('dr-acc-no').innerText); this.innerText='Disalin!'; setTimeout(()=>this.innerText='Salin', 2000);"><i class="bi bi-clipboard me-1"></i>Salin</button>
+                    </div>
+                </div>
+                
+                <div class="small text-muted mb-2">Pesan Sistem / Instruksi Asli:</div>
+                <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color);">
+                    <div class="fw-bold" id="dr-notes" style="font-size: 13px; line-height: 1.5; color: var(--text-muted);">Memuat instruksi...</div>
                 </div>
             </div>
             
@@ -649,6 +661,20 @@ async function requestDeposit() {
             
             document.getElementById('dr-amount').innerHTML = formattedAmountHTML;
             document.getElementById('dr-notes').innerText = notes;
+            
+            // Try to parse the notes to get Bank, Acc No, and Name
+            // e.g. "Silahkan transfer ... ke BCA 123456 a/n PT Digiflazz"
+            const match = notes.match(/ke\s+([A-Za-z0-9\s]+?)\s+(\d+)\s+a\/?n\/?\s+(.*)/i);
+            const parsedContainer = document.getElementById('dr-parsed-dest');
+            if (match) {
+                document.getElementById('dr-bank-name').innerText = match[1].trim();
+                document.getElementById('dr-acc-no').innerText = match[2];
+                document.getElementById('dr-acc-name').innerText = match[3].replace(/[.]$/, '').trim(); // remove trailing dots
+                parsedContainer.style.display = 'block';
+            } else {
+                parsedContainer.style.display = 'none';
+            }
+            
             getDepositModal().hide();
             getDepoResultModal().show();
         } else {
