@@ -219,6 +219,10 @@
 .modal.show .modal-dialog {
     transform: scale(1);
 }
+.modal-content {
+    background: var(--bg-modal) !important;
+    color: var(--text-primary) !important;
+}
 .list-group-item {
     background: var(--surface-1);
     color: var(--text-primary);
