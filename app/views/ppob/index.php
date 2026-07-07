@@ -287,7 +287,7 @@
             <div class="cat-icon green"><i class="bi bi-wallet"></i></div>
             <div class="cat-name">E-Wallet</div>
         </div>
-        <div class="cat-card" onclick="openTrxModal('Voucher Game', 'games', 'prepaid')">
+        <div class="cat-card" onclick="openTrxModal('Voucher Game', 'game', 'prepaid')">
             <div class="cat-icon purple"><i class="bi bi-controller"></i></div>
             <div class="cat-name">Games</div>
         </div>
