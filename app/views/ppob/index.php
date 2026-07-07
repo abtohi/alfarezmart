@@ -193,7 +193,7 @@
     background: rgba(var(--primary-rgb), 0.05);
 }
 .prod-name { font-size: 14px; font-weight: 700; color: var(--text-color); margin-bottom: 5px; }
-.prod-desc { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.prod-desc { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .prod-price { font-size: 16px; font-weight: 800; color: var(--primary); }
 
 /* Inquriy Result Box */
