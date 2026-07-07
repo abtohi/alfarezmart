@@ -461,8 +461,8 @@
 <div class="modal" id="loadingModal" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content text-center p-4 border-0" style="background: transparent;">
-            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
-            <h5 class="mt-3 text-white fw-bold shadow-sm">Memproses...</h5>
+            <div class="spinner-border text-primary" style="width: 2rem; height: 2rem; border-width: 0.2rem;" role="status"></div>
+            <div class="mt-3 text-white fw-semibold shadow-sm" style="font-size: 0.95rem; letter-spacing: 0.5px;">Memproses...</div>
         </div>
     </div>
 </div>
@@ -526,16 +526,19 @@
 const formatRp = (num) => 'Rp' + parseInt(num).toLocaleString('id-ID');
 
 // Modals
-const trxModal = new bootstrap.Modal(document.getElementById('trxModal'));
-const depositModal = new bootstrap.Modal(document.getElementById('depositModal'));
-const depoResultModal = new bootstrap.Modal(document.getElementById('depoResultModal'));
-const testCaseModal = new bootstrap.Modal(document.getElementById('testCaseModal'));
-const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
-
+let trxModal, depositModal, depoResultModal, testCaseModal, loadingModal;
 let currentCategory = '';
 let currentType = '';
 let currentProducts = [];
 let selectedInqData = null; // Storing postpaid / PLN inquiry data
+
+document.addEventListener('DOMContentLoaded', () => {
+    trxModal = new bootstrap.Modal(document.getElementById('trxModal'));
+    depositModal = new bootstrap.Modal(document.getElementById('depositModal'));
+    depoResultModal = new bootstrap.Modal(document.getElementById('depoResultModal'));
+    testCaseModal = new bootstrap.Modal(document.getElementById('testCaseModal'));
+    loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
+});
 
 // 1. Fetch Live Balance on load
 async function fetchBalance() {
