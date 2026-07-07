@@ -525,20 +525,17 @@
 // Format Currency IDR
 const formatRp = (num) => 'Rp' + parseInt(num).toLocaleString('id-ID');
 
-// Modals
-let trxModal, depositModal, depoResultModal, testCaseModal, loadingModal;
+// Modals (Lazy Initialization to avoid bootstrap load race conditions)
+function getTrxModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('trxModal')); }
+function getDepositModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('depositModal')); }
+function getDepoResultModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('depoResultModal')); }
+function getTestCaseModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('testCaseModal')); }
+function getLoadingModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('loadingModal')); }
+
 let currentCategory = '';
 let currentType = '';
 let currentProducts = [];
 let selectedInqData = null; // Storing postpaid / PLN inquiry data
-
-document.addEventListener('DOMContentLoaded', () => {
-    trxModal = new bootstrap.Modal(document.getElementById('trxModal'));
-    depositModal = new bootstrap.Modal(document.getElementById('depositModal'));
-    depoResultModal = new bootstrap.Modal(document.getElementById('depoResultModal'));
-    testCaseModal = new bootstrap.Modal(document.getElementById('testCaseModal'));
-    loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
-});
 
 // 1. Fetch Live Balance on load
 async function fetchBalance() {
@@ -558,7 +555,7 @@ fetchBalance();
 
 // 2. Open Deposit
 function openDepositModal() {
-    depositModal.show();
+    getDepositModal().show();
 }
 
 // 3. Request Deposit
@@ -583,8 +580,8 @@ async function requestDeposit() {
             document.getElementById('dr-amount').innerText = formatRp(data.data.amount || amount);
             document.getElementById('dr-account').innerText = data.data.trx_id || notes;
             document.getElementById('dr-bank-name').innerText = bank + ' - ' + notes;
-            depositModal.hide();
-            depoResultModal.show();
+            getDepositModal().hide();
+            getDepoResultModal().show();
         } else {
             showAlert('❌ ' + (data.message || 'Gagal request deposit'), 'danger');
         }
@@ -631,7 +628,7 @@ function openTrxModal(title, category, type) {
         loadProducts(category, type);
     }
 
-    trxModal.show();
+    getTrxModal().show();
 }
 
 // 5. Load Products
@@ -757,8 +754,8 @@ async function payPostpaid() {
 
 // 9. Execute Transaction API
 async function processTransaction(payload) {
-    trxModal.hide();
-    loadingModal.show();
+    getTrxModal().hide();
+    getLoadingModal().show();
     
     try {
         const res = await fetch('<?= BASE_URL ?>api/ppob/transaction', {
@@ -766,7 +763,7 @@ async function processTransaction(payload) {
             body: JSON.stringify(payload)
         });
         const data = await res.json();
-        loadingModal.hide();
+        getLoadingModal().hide();
         
         if(data.success) {
             const status = (data.data.status || 'pending').toLowerCase();
@@ -806,7 +803,7 @@ async function processTransaction(payload) {
             showAlert('❌ Gagal: ' + (data.message || 'Terjadi kesalahan'), 'danger');
         }
     } catch(e) {
-        loadingModal.hide();
+        getLoadingModal().hide();
         showAlert('❌ Terjadi kesalahan jaringan saat transaksi.', 'danger');
     }
 }
@@ -853,10 +850,10 @@ function showAlert(msg, type='info') {
 }
 
 // Test Case Helper
-function openTestCaseModal() { testCaseModal.show(); }
+function openTestCaseModal() { getTestCaseModal().show(); }
 function useTestNo(no) {
     document.getElementById('customer-no').value = no;
-    testCaseModal.hide();
+    getTestCaseModal().hide();
     // Jika modal trx belum terbuka, biarkan user buka sendiri,
     // Jika sedang terbuka, input terisi otomatis.
 }
