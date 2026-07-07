@@ -320,6 +320,10 @@
                 <div class="category-icon" style="color:#3b82f6;"><i class="bi bi-wifi"></i></div>
                 <div class="category-label">Data</div>
             </div>
+            <div class="category-card" onclick="openCategory('sms_nelpon','SMS & Nelpon')">
+                <div class="category-icon" style="color:#f59e0b;"><i class="bi bi-chat-dots"></i></div>
+                <div class="category-label">SMS & Telepon</div>
+            </div>
             <div class="category-card" onclick="openCategory('pln','Token PLN')">
                 <div class="category-icon" style="color:#eab308;"><i class="bi bi-lightning-charge"></i></div>
                 <div class="category-label">PLN</div>
@@ -468,11 +472,18 @@
                     </div>
                 </div>
 
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap" id="result-actions">
                     <button class="btn-ppob-secondary flex-fill" data-bs-dismiss="modal" onclick="closeCategory()">Tutup</button>
                     <button class="btn-ppob-primary flex-fill" id="btn-print-receipt" onclick="promptPrintReceipt()" style="padding:11px 20px;">
                         <i class="bi bi-printer me-1"></i> Cetak Struk
                     </button>
+                </div>
+                <!-- Refresh button for pending transactions -->
+                <div id="result-check-status" style="display:none;margin-top:10px;">
+                    <button onclick="manualCheckStatus()" style="width:100%;background:var(--warning-bg);color:var(--warning);border:1px solid rgba(255,183,3,0.3);border-radius:var(--radius-md);padding:10px;font-weight:700;font-size:var(--font-size-sm);cursor:pointer;font-family:var(--font-family);transition:background var(--transition-fast);" onmouseover="this.style.background='rgba(255,183,3,0.2)'" onmouseout="this.style.background='var(--warning-bg)'">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Cek Status Terbaru
+                    </button>
+                    <div style="font-size:10px;color:var(--text-muted);text-align:center;margin-top:4px;">Klik jika status tidak berubah dalam beberapa menit</div>
                 </div>
             </div>
         </div>
@@ -583,7 +594,7 @@
         customerName = null;
         if (cat === 'ewallet' || cat === 'game' || cat === 'multifinance') {
             loadBrands(cat);
-        } else if (cat === 'pulsa' || cat === 'data') {
+        } else if (cat === 'pulsa' || cat === 'data' || cat === 'sms_nelpon') {
             document.getElementById('customer-no').placeholder = 'Masukkan Nomor HP';
         } else if (cat === 'pln') {
             document.getElementById('customer-no').placeholder = 'Masukkan No. Meter / ID Pelanggan';
@@ -617,7 +628,7 @@
     function handleCustomerNoInput() {
         clearTimeout(debounceTimer);
         const no = document.getElementById('customer-no').value.replace(/\D/g, '');
-        if (currentCategory === 'pulsa' || currentCategory === 'data') {
+        if (currentCategory === 'pulsa' || currentCategory === 'data' || currentCategory === 'sms_nelpon') {
             if (no.length >= 4) {
                 const prefix = no.substring(0, 4);
                 let detectedBrand = null;
@@ -834,17 +845,24 @@
             if (data.success && data.data) {
                 lastTransaction = {...data.data, product_name: selectedProduct.product_name, customer_no: no, customer_name: customerName, sell_price: data.data.sell_price || selectedProduct.sell_price};
                 const status = (data.data.status||'').toLowerCase();
-                if (status === 'sukses') { 
+                const isPending = status === 'pending' || status === 'processing';
+                const isSuccess = status === 'sukses' || status === 'success';
+                if (isSuccess) { 
                     rIcon.innerHTML = '<i class="bi bi-check-circle-fill" style="color:var(--success);"></i>'; 
                     rTitle.textContent = 'Transaksi Sukses'; 
-                } else if (status === 'pending') { 
+                    document.getElementById('result-check-status').style.display = 'none';
+                } else if (isPending) { 
                     rIcon.innerHTML = '<i class="bi bi-clock-fill" style="color:var(--warning);"></i>'; 
-                    rTitle.textContent = 'Sedang Diproses'; 
-                    // Start polling
+                    rTitle.textContent = 'Sedang Diproses';
+                    document.getElementById('result-check-status').style.display = 'block';
+                    // Store ref_id for manual check
+                    document.getElementById('result-check-status').dataset.refId = data.data.ref_id || '';
+                    // Start auto-polling
                     if (data.data.ref_id) pollTransactionStatus(data.data.ref_id);
                 } else { 
                     rIcon.innerHTML = '<i class="bi bi-x-circle-fill" style="color:var(--danger);"></i>'; 
                     rTitle.textContent = 'Transaksi Gagal'; 
+                    document.getElementById('result-check-status').style.display = 'none';
                 }
                 document.getElementById('result-desc').textContent = data.data.message || '';
                 document.getElementById('result-sn').textContent = data.data.sn || '-';
@@ -862,14 +880,21 @@
 
     let pollCount = 0;
     let pollTimer = null;
+    let currentPollRefId = null;
+
     async function pollTransactionStatus(refId) {
+        currentPollRefId = refId;
         pollCount = 0;
         clearInterval(pollTimer);
         pollTimer = setInterval(async () => {
             pollCount++;
             if (pollCount > 24) { clearInterval(pollTimer); return; } // max 2 minutes
             try {
-                const res = await fetch(`<?= BASE_URL ?>api/ppob/transaction/${refId}`);
+                // Use the check-transaction endpoint which actively polls Digiflazz
+                const res = await fetch(`<?= BASE_URL ?>api/ppob/check-transaction`, {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ref_id: refId})
+                });
                 const data = await res.json();
                 if (data.success && data.data) {
                     const status = data.data.status;
@@ -879,6 +904,7 @@
                         document.getElementById('result-title').textContent = 'Transaksi Sukses!';
                         document.getElementById('result-desc').textContent = data.data.message || 'Pembayaran berhasil diproses.';
                         document.getElementById('result-sn').textContent = data.data.sn || '-';
+                        document.getElementById('result-check-status').style.display = 'none';
                         if (lastTransaction) lastTransaction.sn = data.data.sn || lastTransaction.sn;
                         loadRecentTransactions();
                     } else if (status === 'failed') {
@@ -886,10 +912,52 @@
                         document.getElementById('result-icon').innerHTML = '<i class="bi bi-x-circle-fill" style="color:var(--danger);"></i>';
                         document.getElementById('result-title').textContent = 'Transaksi Gagal';
                         document.getElementById('result-desc').textContent = data.data.message || 'Transaksi ditolak.';
+                        document.getElementById('result-check-status').style.display = 'none';
                     }
                 }
             } catch(e) { /* ignore polling error */ }
-        }, 5000); // poll every 5 seconds
+        }, 7000); // poll every 7 seconds
+    }
+
+    async function manualCheckStatus() {
+        const btn = document.querySelector('#result-check-status button');
+        const refId = document.getElementById('result-check-status').dataset.refId || currentPollRefId;
+        if (!refId) return;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memeriksa...';
+        btn.disabled = true;
+        try {
+            const res = await fetch(`<?= BASE_URL ?>api/ppob/check-transaction`, {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ref_id: refId})
+            });
+            const data = await res.json();
+            if (data.success && data.data) {
+                const status = data.data.status;
+                if (status === 'success') {
+                    clearInterval(pollTimer);
+                    document.getElementById('result-icon').innerHTML = '<i class="bi bi-check-circle-fill" style="color:var(--success);"></i>';
+                    document.getElementById('result-title').textContent = 'Transaksi Sukses!';
+                    document.getElementById('result-desc').textContent = data.data.message || 'Pembayaran berhasil.';
+                    document.getElementById('result-sn').textContent = data.data.sn || '-';
+                    document.getElementById('result-check-status').style.display = 'none';
+                    if (lastTransaction) lastTransaction.sn = data.data.sn || lastTransaction.sn;
+                    loadRecentTransactions();
+                } else if (status === 'failed') {
+                    clearInterval(pollTimer);
+                    document.getElementById('result-icon').innerHTML = '<i class="bi bi-x-circle-fill" style="color:var(--danger);"></i>';
+                    document.getElementById('result-title').textContent = 'Transaksi Gagal';
+                    document.getElementById('result-desc').textContent = data.data.message || 'Transaksi ditolak.';
+                    document.getElementById('result-check-status').style.display = 'none';
+                } else {
+                    document.getElementById('result-desc').textContent = 'Status masih diproses. Coba lagi beberapa saat.';
+                }
+            }
+        } catch(e) {
+            alert('Gagal memeriksa status. Cek koneksi internet.');
+        } finally {
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Cek Status Terbaru';
+            btn.disabled = false;
+        }
     }
 
     function copySN() {

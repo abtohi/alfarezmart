@@ -125,6 +125,7 @@ $router->get('/api/ppob/transactions', 'DigiflazzController@apiGetTransactions')
 $router->get('/api/ppob/transaction/{refId}', 'DigiflazzController@apiGetTransaction');
 $router->post('/api/ppob/sync-prices', 'DigiflazzController@apiSyncPrices');
 $router->post('/api/ppob/settings', 'DigiflazzController@apiSaveSettings');
+$router->post('/api/ppob/check-transaction', 'DigiflazzController@apiCheckTransaction');
 
 $router->post('/api/ppob/markup-rules', 'DigiflazzController@apiSaveMarkupRules');
 $router->post('/api/ppob/custom-price', 'DigiflazzController@apiSaveCustomPrice');

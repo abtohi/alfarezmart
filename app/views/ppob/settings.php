@@ -569,5 +569,4 @@ document.addEventListener('DOMContentLoaded', () => {
     if (apiKey.length > 5) cekSaldo();
 });
 
-}
 </script>

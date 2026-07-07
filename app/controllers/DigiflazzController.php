@@ -230,27 +230,92 @@ class DigiflazzController extends Controller {
         AuthController::requireAuth();
         AuthController::requireLevel(['superadmin', 'admin']);
         
-        $resPrepaid = $this->digiService->getPriceList('prepaid');
-        $successPrepaid = false;
-        if ($resPrepaid['success'] && isset($resPrepaid['data']) && is_array($resPrepaid['data']) && !isset($resPrepaid['data']['rc'])) {
-            $successPrepaid = $this->digiModel->syncPriceList($resPrepaid['data'], 'prepaid');
-        }
+        $body = json_decode(file_get_contents('php://input'), true);
+        $requestedType = strtolower(trim($body['type'] ?? 'all'));
 
-        $resPostpaid = $this->digiService->getPriceList('pasca');
+        $successPrepaid  = false;
         $successPostpaid = false;
-        if ($resPostpaid['success'] && isset($resPostpaid['data']) && is_array($resPostpaid['data']) && !isset($resPostpaid['data']['rc'])) {
-            $successPostpaid = $this->digiModel->syncPriceList($resPostpaid['data'], 'postpaid');
+        $errMsg = '';
+
+        // Sync prepaid if requested
+        if ($requestedType === 'all' || $requestedType === 'prepaid') {
+            $resPrepaid = $this->digiService->getPriceList('prepaid');
+            if ($resPrepaid['success'] && isset($resPrepaid['data']) && is_array($resPrepaid['data']) && !isset($resPrepaid['data']['rc'])) {
+                $successPrepaid = $this->digiModel->syncPriceList($resPrepaid['data'], 'prepaid');
+            } else {
+                $errMsg = $resPrepaid['data']['message'] ?? $resPrepaid['message'] ?? 'Gagal sync prabayar';
+            }
         }
 
+        // Sync postpaid if requested
+        if ($requestedType === 'all' || $requestedType === 'postpaid') {
+            $resPostpaid = $this->digiService->getPriceList('pasca');
+            if ($resPostpaid['success'] && isset($resPostpaid['data']) && is_array($resPostpaid['data']) && !isset($resPostpaid['data']['rc'])) {
+                $successPostpaid = $this->digiModel->syncPriceList($resPostpaid['data'], 'postpaid');
+            } else {
+                $errMsg = $resPostpaid['data']['message'] ?? $resPostpaid['message'] ?? 'Gagal sync pascabayar';
+            }
+        }
+
+        header('Content-Type: application/json');
         if ($successPrepaid || $successPostpaid) {
+            echo json_encode(['success' => true, 'message' => 'Sinkronisasi berhasil']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Gagal sinkronisasi: ' . ($errMsg ?: 'Rate limit / Unknown Error')]);
+        }
+        exit;
+    }
+
+    /**
+     * Check current status of a pending transaction by calling Digiflazz API
+     * (used when webhook hasn't fired yet)
+     */
+    public function apiCheckTransaction() {
+        AuthController::requireAuth();
+        $data = json_decode(file_get_contents('php://input'), true);
+        $refId = trim($data['ref_id'] ?? '');
+
+        if (empty($refId)) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'message' => 'Sync success']);
+            echo json_encode(['success' => false, 'message' => 'ref_id diperlukan']);
             exit;
         }
 
-        $errMsg = $resPrepaid['data']['message'] ?? $resPrepaid['message'] ?? 'Rate limit / Unknown Error';
+        // Lookup local transaction first
+        $trx = $this->digiModel->getTransactionByRefId($refId);
+        if (!$trx) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Transaksi tidak ditemukan']);
+            exit;
+        }
+
+        // If already in final state, just return it
+        if (in_array($trx['status'], ['success', 'failed', 'refunded'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'data' => $trx]);
+            exit;
+        }
+
+        // Poll Digiflazz for current status (re-send transaction with same ref_id)
+        // Digiflazz returns the current status when ref_id already exists
+        $res = $this->digiService->checkTransaction($trx['buyer_sku_code'], $trx['customer_no'], $refId);
+
+        if ($res['success'] && isset($res['data']['status'])) {
+            $rawStatus = strtolower(trim($res['data']['status']));
+            switch ($rawStatus) {
+                case 'sukses': case 'success': $status = 'success'; break;
+                case 'gagal': case 'failed': case 'fail': $status = 'failed'; break;
+                default: $status = 'pending';
+            }
+            $sn  = $res['data']['sn'] ?? null;
+            $msg = $res['data']['message'] ?? '';
+            $trxId = $res['data']['trx_id'] ?? null;
+            $this->digiModel->updateTransactionStatus($refId, $status, $msg, $sn, $trxId, $res['data']);
+            $trx = $this->digiModel->getTransactionByRefId($refId);
+        }
+
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Gagal sinkronisasi: ' . $errMsg]);
+        echo json_encode(['success' => true, 'data' => $trx]);
         exit;
     }
 
@@ -380,11 +445,11 @@ class DigiflazzController extends Controller {
         $data = json_decode($payload, true);
         
         // Log incoming webhook for debugging
-        error_log("Digiflazz Webhook Received: " . $payload);
+        error_log("[Digiflazz Webhook] Received: " . $payload);
 
         if (!$data || !isset($data['data'])) {
             http_response_code(400);
-            echo "Invalid payload";
+            echo json_encode(['status' => 'error', 'message' => 'Invalid payload']);
             exit;
         }
 
@@ -395,31 +460,57 @@ class DigiflazzController extends Controller {
         // Verify Signature if Secret is configured
         if (!empty($secret)) {
             $headerSignature = $_SERVER['HTTP_X_HUB_SIGNATURE'] ?? '';
-            $expectedSignature = 'sha1=' . hash_hmac('sha1', $payload, $secret);
-            
-            if (!hash_equals($expectedSignature, $headerSignature)) {
-                error_log("Webhook verification failed. Expected: $expectedSignature, Got: $headerSignature");
-                http_response_code(403);
-                echo "Invalid signature";
-                exit;
+            if (!empty($headerSignature)) {
+                $expectedSignature = 'sha1=' . hash_hmac('sha1', $payload, $secret);
+                if (!hash_equals($expectedSignature, $headerSignature)) {
+                    error_log("[Digiflazz Webhook] Signature mismatch. Expected: $expectedSignature, Got: $headerSignature");
+                    http_response_code(403);
+                    echo json_encode(['status' => 'error', 'message' => 'Invalid signature']);
+                    exit;
+                }
             }
         }
 
         $trx = $data['data'];
-        $refId = $trx['ref_id'] ?? '';
-        $status = strtolower($trx['status'] ?? '');
-        $message = $trx['message'] ?? '';
-        $sn = $trx['sn'] ?? '';
+        $refId    = $trx['ref_id']    ?? '';
+        $trxId    = $trx['trx_id']    ?? null;
+        $rawStatus = strtolower(trim($trx['status'] ?? ''));
+        $message  = $trx['message']   ?? '';
+        $sn       = $trx['sn']        ?? '';
         
-        // Map status
-        if ($status === 'gagal') $status = 'failed';
-        else if ($status === 'sukses') $status = 'success';
+        // Normalize Digiflazz status strings → our internal enum
+        // Digiflazz may send: 'Sukses', 'sukses', 'Gagal', 'gagal', 'Pending', 'pending', 'processing'
+        switch ($rawStatus) {
+            case 'sukses':
+            case 'success':
+                $status = 'success';
+                break;
+            case 'gagal':
+            case 'failed':
+            case 'fail':
+                $status = 'failed';
+                break;
+            case 'pending':
+            case 'processing':
+            default:
+                $status = 'pending';
+                break;
+        }
 
-        // Update transaction status
-        $this->digiModel->updateTransactionStatus($refId, $status, $message, $sn, null, $trx);
+        error_log("[Digiflazz Webhook] ref_id=$refId status=$status message=$message sn=$sn");
+
+        if (empty($refId)) {
+            error_log("[Digiflazz Webhook] Missing ref_id in payload");
+            http_response_code(200);
+            echo json_encode(['status' => 'ok', 'message' => 'No ref_id, skipped']);
+            exit;
+        }
+
+        // Update transaction in DB
+        $this->digiModel->updateTransactionStatus($refId, $status, $message, $sn, $trxId, $trx);
 
         http_response_code(200);
-        echo "OK";
+        echo json_encode(['status' => 'ok']);
         exit;
     }
 }

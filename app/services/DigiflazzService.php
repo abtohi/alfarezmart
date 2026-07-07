@@ -65,6 +65,23 @@ class DigiflazzService {
     }
 
     /**
+     * Check status of an existing prepaid transaction.
+     * Digiflazz returns current status when the same ref_id is re-submitted.
+     * Use this to poll for pending transactions when webhook hasn't fired.
+     */
+    public function checkTransaction(string $sku, string $customerNo, string $refId) {
+        $sign = md5($this->username . $this->apiKey . $refId);
+        $payload = [
+            'username'       => $this->username,
+            'buyer_sku_code' => $sku,
+            'customer_no'    => $customerNo,
+            'ref_id'         => $refId,
+            'sign'           => $sign
+        ];
+        return $this->sendRequest('/transaction', $payload);
+    }
+
+    /**
      * Inquiry PLN Prepaid Customer Name
      */
     public function inquiryPLN(string $customerNo) {

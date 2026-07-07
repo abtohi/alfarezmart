@@ -76,6 +76,7 @@ class DigiflazzModel {
         $cat = strtolower(trim($apiCategory));
         if (strpos($cat, 'pulsa') !== false) return 'pulsa';
         if (strpos($cat, 'data') !== false) return 'data';
+        if (strpos($cat, 'sms') !== false || strpos($cat, 'nelpon') !== false) return 'sms_nelpon';
         if (strpos($cat, 'pln') !== false) return 'pln';
         if (strpos($cat, 'e-money') !== false || strpos($cat, 'ewallet') !== false) return 'ewallet';
         if (strpos($cat, 'game') !== false) return 'game';
@@ -240,10 +241,10 @@ class DigiflazzModel {
      * Update transaction status (usually called by webhook)
      */
     public function updateTransactionStatus(string $refId, string $status, string $message, ?string $sn = null, ?string $trxId = null, $rawResponse = null) {
-        $sql = "UPDATE digi_transactions SET status = :status, message = :message";
+        $sql = "UPDATE digi_transactions SET status = :status, message = :message, updated_at = NOW()";
         $params = [
-            'ref_id' => $refId,
-            'status' => $status,
+            'ref_id'  => $refId,
+            'status'  => $status,
             'message' => $message
         ];
 
@@ -265,7 +266,9 @@ class DigiflazzModel {
         $sql .= " WHERE ref_id = :ref_id";
         
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute($params);
+        $result = $stmt->execute($params);
+        error_log("[DigiflazzModel] updateTransactionStatus ref_id=$refId status=$status rows=" . $stmt->rowCount());
+        return $result;
     }
 
     /**
