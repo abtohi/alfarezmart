@@ -307,4 +307,32 @@ class DigiflazzModel {
         ");
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+
+    /**
+     * Create deposit log
+     */
+    public function createDepositLog(array $data) {
+        $stmt = $this->db->prepare("
+            INSERT INTO digi_deposits (amount, bank, owner_name, status, notes, raw_response)
+            VALUES (:amount, :bank, :owner_name, :status, :notes, :raw)
+        ");
+        return $stmt->execute([
+            'amount' => $data['amount'],
+            'bank' => $data['bank'],
+            'owner_name' => $data['owner_name'],
+            'status' => $data['status'] ?? 'pending',
+            'notes' => $data['notes'] ?? '',
+            'raw' => isset($data['raw']) ? json_encode($data['raw']) : null
+        ]);
+    }
+
+    /**
+     * Get recent deposits
+     */
+    public function getDeposits($limit = 20) {
+        $stmt = $this->db->prepare("SELECT * FROM digi_deposits ORDER BY created_at DESC LIMIT :limit");
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

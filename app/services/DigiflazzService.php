@@ -31,6 +31,22 @@ class DigiflazzService {
     }
 
     /**
+     * Request Deposit Ticket
+     */
+    public function createDeposit(float $amount, string $bank, string $ownerName) {
+        $sign = md5($this->username . $this->apiKey . "deposit");
+        $payload = [
+            'username' => $this->username,
+            'amount' => $amount,
+            'Bank' => $bank,
+            'owner_name' => $ownerName,
+            'sign' => $sign
+        ];
+        return $this->sendRequest('/deposit', $payload);
+    }
+
+
+    /**
      * Get Price List (prepaid / pasca)
      */
     public function getPriceList(string $type = 'prepaid') {

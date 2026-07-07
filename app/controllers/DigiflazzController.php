@@ -22,8 +22,9 @@ class DigiflazzController extends Controller {
 
     public function index() {
         AuthController::requireAuth();
-        // Return view (lazy-loaded SPA style)
-        $this->view('ppob/index', ['title' => 'Produk Digital']);
+        $settingModel = new SettingModel();
+        $mode = $settingModel->get('digiflazz_mode', 'development');
+        $this->view('ppob/index', ['title' => 'Produk Digital (PPOB)', 'mode' => $mode]);
     }
 
     public function settings() {
@@ -41,6 +42,16 @@ class DigiflazzController extends Controller {
         $markupRules = $this->digiModel->getMarkupRules();
 
         $this->view('ppob/settings', ['title' => 'Pengaturan PPOB', 'settings' => $settings, 'markupRules' => $markupRules]);
+    }
+
+    public function priceList() {
+        AuthController::requireAuth();
+        $this->view('ppob/price_list', ['title' => 'Daftar Harga PPOB']);
+    }
+
+    public function documentation() {
+        AuthController::requireAuth();
+        $this->view('ppob/documentation', ['title' => 'Dokumentasi PPOB']);
     }
 
     public function history() {
@@ -65,10 +76,22 @@ class DigiflazzController extends Controller {
 
     public function apiGetProducts(string $category) {
         AuthController::requireAuth();
-        $brand = $_GET['brand'] ?? '';
+        $brand = $_GET['brand'] ?? null;
         $type = $_GET['type'] ?? 'prepaid';
         
         $products = $this->digiModel->getProducts($category, $brand, $type);
+        
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'data' => $products]);
+        exit;
+    }
+
+    public function apiGetAllProducts() {
+        AuthController::requireAuth();
+        
+        // Return all products for datatable
+        $stmt = $this->digiModel->db->query("SELECT * FROM digi_products WHERE is_active = 1 AND buyer_product_status = 1 ORDER BY category ASC, brand ASC");
+        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'data' => $products]);
@@ -333,6 +356,45 @@ class DigiflazzController extends Controller {
 
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'message' => 'Pengaturan berhasil disimpan']);
+        exit;
+    }
+
+    public function apiCreateDeposit() {
+        AuthController::requireAuth();
+        AuthController::requireLevel(['superadmin', 'admin']);
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $amount = floatval($data['amount'] ?? 0);
+        $bank = trim($data['bank'] ?? '');
+        $ownerName = trim($data['owner_name'] ?? '');
+
+        if ($amount < 50000) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Minimal deposit adalah Rp 50.000']);
+            exit;
+        }
+        if (empty($bank) || empty($ownerName)) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Pilih bank dan isi nama pengirim']);
+            exit;
+        }
+
+        $res = $this->digiService->createDeposit($amount, $bank, $ownerName);
+        
+        if ($res['success'] && isset($res['data'])) {
+            // Log to database
+            $this->digiModel->createDepositLog([
+                'amount' => $amount,
+                'bank' => $bank,
+                'owner_name' => $ownerName,
+                'status' => 'pending',
+                'notes' => $res['data']['notes'] ?? '',
+                'raw' => $res['data']
+            ]);
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode($res);
         exit;
     }
 

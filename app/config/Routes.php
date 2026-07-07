@@ -66,8 +66,10 @@ $router->get('/catalog', 'CatalogController@index');
 // PPOB / Produk Digital (Digiflazz)
 // ============================================
 $router->get('/ppob', 'DigiflazzController@index');
-$router->get('/ppob/settings', 'DigiflazzController@settings');
 $router->get('/ppob/history', 'DigiflazzController@history');
+$router->get('/ppob/settings', 'DigiflazzController@settings');
+$router->get('/ppob/prices', 'DigiflazzController@priceList');
+$router->get('/ppob/docs', 'DigiflazzController@documentation');
 
 // PPOB API Endpoints
 $router->post('/api/ppob/settings', 'DigiflazzController@apiSaveSettings');
@@ -114,6 +116,7 @@ $router->post('/api/ai/scan-invoice', 'ApiController@scanInvoiceAI');
 
 // PPOB API
 $router->get('/api/ppob/balance', 'DigiflazzController@apiGetBalance');
+$router->get('/api/ppob/products/all', 'DigiflazzController@apiGetAllProducts');
 $router->get('/api/ppob/products/search', 'DigiflazzController@apiSearchProducts');
 $router->get('/api/ppob/products/{category}', 'DigiflazzController@apiGetProducts');
 $router->get('/api/ppob/brands/{category}', 'DigiflazzController@apiGetBrands');
@@ -126,6 +129,7 @@ $router->get('/api/ppob/transaction/{refId}', 'DigiflazzController@apiGetTransac
 $router->post('/api/ppob/sync-prices', 'DigiflazzController@apiSyncPrices');
 $router->post('/api/ppob/settings', 'DigiflazzController@apiSaveSettings');
 $router->post('/api/ppob/check-transaction', 'DigiflazzController@apiCheckTransaction');
+$router->post('/api/ppob/deposit', 'DigiflazzController@apiCreateDeposit');
 
 $router->post('/api/ppob/markup-rules', 'DigiflazzController@apiSaveMarkupRules');
 $router->post('/api/ppob/custom-price', 'DigiflazzController@apiSaveCustomPrice');
