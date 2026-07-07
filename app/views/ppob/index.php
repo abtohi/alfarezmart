@@ -383,8 +383,14 @@
                     </div>
                 </div>
 
-                <!-- Grid Produk (Hanya untuk Prabayar) -->
-                <div id="product-list-container">
+                <!-- Product List -->
+                <div id="product-list-container" style="display: none;">
+                    <!-- Search Product Input (Useful for huge lists) -->
+                    <div class="mb-3 position-relative" id="product-search-container" style="display:none;">
+                        <input type="text" class="form-control glass-input" id="search-product" placeholder="Cari paket / nominal..." style="padding-left:35px; border-radius:12px;">
+                        <i class="bi bi-search position-absolute text-muted" style="left:12px; top:50%; transform:translateY(-50%);"></i>
+                    </div>
+
                     <label class="form-label fw-bold text-muted small text-uppercase mt-3 mb-0" id="label-product">Pilih Produk</label>
                     <div id="product-loading" class="text-center py-4" style="display:none;">
                         <span class="spinner-border text-primary"></span>
@@ -752,11 +758,14 @@ function filterProductsByPrefix(phone) {
         
         if (filtered.length > 0) {
             renderProducts(filtered);
+            document.getElementById('product-search-container').style.display = filtered.length > 5 ? 'block' : 'none';
         } else {
+            document.getElementById('product-search-container').style.display = 'none';
             document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-4"><i class="bi bi-inbox fs-1 mb-2 d-block opacity-50"></i>Produk ${provider} sedang tidak tersedia.</div>`;
         }
     } else {
         badge.style.display = 'none';
+        document.getElementById('product-search-container').style.display = 'none';
         document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-4"><i class="bi bi-search fs-1 mb-2 d-block opacity-50"></i>Masukkan awalan nomor HP yang valid untuk melihat produk.</div>`;
     }
 }
@@ -765,6 +774,15 @@ document.getElementById('customer-no').addEventListener('input', (e) => {
     if (currentCategory === 'pulsa' || currentCategory === 'data') {
         filterProductsByPrefix(e.target.value);
     }
+});
+
+document.getElementById('search-product').addEventListener('input', (e) => {
+    const keyword = e.target.value.toLowerCase();
+    const cards = document.querySelectorAll('.prod-card');
+    cards.forEach(card => {
+        const text = card.innerText.toLowerCase();
+        card.style.display = text.includes(keyword) ? 'flex' : 'none';
+    });
 });
 
 function renderProducts(products) {
