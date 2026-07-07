@@ -512,11 +512,28 @@ class DigiflazzController extends Controller {
     }
 
     public function webhook() {
+        // --- IP WHITELIST CHECK ---
+        $allowedIps = ['52.74.250.133', '127.0.0.1', '::1'];
+        $clientIp = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'];
+        
+        if (strpos($clientIp, ',') !== false) {
+            $clientIps = explode(',', $clientIp);
+            $clientIp = trim($clientIps[0]);
+        }
+
+        if (!in_array($clientIp, $allowedIps)) {
+            error_log("[Digiflazz Webhook] Access denied for IP: " . $clientIp);
+            http_response_code(403);
+            echo json_encode(['status' => 'error', 'message' => 'Forbidden IP']);
+            exit;
+        }
+        // --- END IP WHITELIST CHECK ---
+
         $payload = file_get_contents('php://input');
         $data = json_decode($payload, true);
         
         // Log incoming webhook for debugging
-        error_log("[Digiflazz Webhook] Received: " . $payload);
+        error_log("[Digiflazz Webhook] Received from IP {$clientIp}: " . $payload);
 
         // Handle Digiflazz Ping Event
         if (isset($data['hook_id']) && !isset($data['data'])) {
