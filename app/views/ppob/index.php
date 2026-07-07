@@ -747,7 +747,7 @@ async function loadProducts(category, type) {
             if(type === 'prepaid') {
                 if (category === 'pulsa' || category === 'data' || category === 'sms_nelpon') {
                     document.getElementById('brand-filter-container').style.display = 'none';
-                    document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3">Silakan masukkan nomor HP untuk melihat produk.</div>`;
+                    document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3" style="grid-column: 1 / -1;">Silakan masukkan nomor HP untuk melihat produk.</div>`;
                     filterProductsByPrefix(document.getElementById('customer-no').value);
                 } else {
                     renderFilters(data.data, 'brand');
@@ -755,7 +755,7 @@ async function loadProducts(category, type) {
                 }
             }
         } else {
-            document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3">Produk tidak tersedia/belum disync.</div>`;
+            document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3" style="grid-column: 1 / -1;">Produk tidak tersedia/belum disync.</div>`;
         }
     } catch(e) { console.error(e); }
 }
@@ -798,12 +798,12 @@ function filterProductsByPrefix(phone) {
         } else {
             document.getElementById('brand-filter-container').style.display = 'none';
             document.getElementById('product-search-container').style.display = 'none';
-            document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-4"><i class="bi bi-inbox fs-1 mb-2 d-block opacity-50"></i>Produk ${provider} sedang tidak tersedia.</div>`;
+            document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-4" style="grid-column: 1 / -1;"><i class="bi bi-inbox fs-1 mb-2 d-block opacity-50"></i>Produk ${provider} sedang tidak tersedia.</div>`;
         }
     } else {
         badge.style.display = 'none';
         document.getElementById('product-search-container').style.display = 'none';
-        document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-4"><i class="bi bi-search fs-1 mb-2 d-block opacity-50"></i>Masukkan awalan nomor HP yang valid untuk melihat produk.</div>`;
+        document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-4" style="grid-column: 1 / -1;"><i class="bi bi-search fs-1 mb-2 d-block opacity-50"></i>Masukkan awalan nomor HP yang valid untuk melihat produk.</div>`;
     }
 }
 
