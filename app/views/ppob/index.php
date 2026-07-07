@@ -506,7 +506,7 @@
     </div>
 </div>
 
-<!-- Loading Modal -->(Blocking UI during purchase) -->
+<!-- Loading Modal (Blocking UI during purchase) -->
 <div class="modal" id="loadingModal" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content text-center p-4 border-0" style="background: transparent;">
