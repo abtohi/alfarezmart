@@ -381,7 +381,9 @@ class DigiflazzController extends Controller {
 
         $res = $this->digiService->createDeposit($amount, $bank, $ownerName);
         
-        if ($res['success'] && isset($res['data'])) {
+        // Digiflazz returns rc="00" for success, and rc inside 'data'
+        $rc = $res['data']['rc'] ?? '';
+        if ($res['success'] && $rc === '00') {
             // Log to database
             $this->digiModel->createDepositLog([
                 'amount' => $amount,
@@ -391,6 +393,10 @@ class DigiflazzController extends Controller {
                 'notes' => $res['data']['notes'] ?? '',
                 'raw' => $res['data']
             ]);
+        } else {
+            // Override success flag to false so frontend knows it failed
+            $res['success'] = false;
+            $res['message'] = $res['data']['message'] ?? 'Gagal melakukan request tiket deposit ke server.';
         }
 
         header('Content-Type: application/json');

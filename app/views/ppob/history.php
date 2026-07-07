@@ -49,7 +49,7 @@
     </div>
 
     <!-- Table Card -->
-    <div class="card card-custom" style="border:1px solid var(--border-color);border-radius:var(--radius-lg);overflow:hidden;">
+    <div class="card card-custom" style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);overflow:hidden;">
         <!-- Tabs -->
         <div style="background:var(--surface-2);border-bottom:1px solid var(--border-color);padding:0 16px;display:flex;gap:4px;">
             <button id="tab-all" onclick="loadTab('all',event)"
@@ -70,8 +70,8 @@
             </button>
         </div>
         <!-- Table -->
-        <div class="table-responsive">
-            <table style="width:100%;border-collapse:collapse;font-size:var(--font-size-sm);font-family:var(--font-family);color:var(--text-primary);">
+        <div class="table-responsive" style="background:var(--surface-1);">
+            <table style="width:100%;background:var(--surface-1);border-collapse:collapse;font-size:var(--font-size-sm);font-family:var(--font-family);color:var(--text-primary);">
                 <thead>
                     <tr style="background:var(--surface-3);">
                         <th style="padding:12px 16px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);white-space:nowrap;">Tanggal</th>
@@ -139,7 +139,7 @@
                     const profit = parseInt(trx.profit || 0);
                     const profitColor = profit > 0 ? 'color:var(--success);' : 'color:var(--text-muted);';
                     tbody.innerHTML += `
-                        <tr style="border-bottom:1px solid var(--border-color);transition:background var(--transition-fast);${rowAccent}" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${rowAccent ? '' : 'transparent'}'">
+                        <tr style="border-bottom:1px solid var(--border-color);transition:background var(--transition-fast);${rowAccent}" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${rowAccent ? rowAccent.replace('background:','') : 'var(--surface-1)'}'">
                             <td style="padding:12px 16px;white-space:nowrap;">
                                 <div style="font-weight:600;font-size:var(--font-size-xs);">${dateStr}</div>
                                 <div style="font-size:10px;color:var(--text-muted);">${timeStr}</div>
