@@ -548,22 +548,13 @@ class DigiflazzController extends Controller {
     }
 
     public function webhook() {
-        // --- IP WHITELIST CHECK ---
-        $allowedIps = ['52.74.250.133', '127.0.0.1', '::1'];
+        // --- IP WHITELIST CHECK REMOVED ---
+        // Digiflazz uses multiple IPs now, and signature verification is sufficient.
         $clientIp = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'];
-        
         if (strpos($clientIp, ',') !== false) {
             $clientIps = explode(',', $clientIp);
             $clientIp = trim($clientIps[0]);
         }
-
-        if (!in_array($clientIp, $allowedIps)) {
-            error_log("[Digiflazz Webhook] Access denied for IP: " . $clientIp);
-            http_response_code(403);
-            echo json_encode(['status' => 'error', 'message' => 'Forbidden IP']);
-            exit;
-        }
-        // --- END IP WHITELIST CHECK ---
 
         $payload = file_get_contents('php://input');
         $data = json_decode($payload, true);
