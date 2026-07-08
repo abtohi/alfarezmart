@@ -677,19 +677,12 @@ async function requestDeposit() {
     const btn = document.getElementById('btn-depo');
 
     if(!amount || !bank || !owner) { showAlert('⚠️ Harap isi semua kolom deposit.', 'warning'); return; }
-    
-    // Map E-Wallets to BCA per Digiflazz docs
-    let apiBank = bank;
-    const isEwallet = ['FLIP', 'SHOPEEPAY', 'GOPAY'].includes(bank);
-    if (isEwallet) {
-        apiBank = 'BCA';
-    }
 
     btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading...';
     try {
         const res = await fetch('<?= BASE_URL ?>api/ppob/deposit', {
             method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({amount, bank: apiBank, owner_name: owner})
+            body: JSON.stringify({amount, bank: bank, owner_name: owner})
         });
         const data = await res.json();
         if(data.success && data.data) {
@@ -707,13 +700,7 @@ async function requestDeposit() {
             }
             
             document.getElementById('dr-amount').innerHTML = formattedAmountHTML;
-            
-            // Add custom e-wallet instruction prefix
-            let displayNotes = notes;
-            if (isEwallet) {
-                displayNotes = `Buka aplikasi ${bank}, pilih menu Transfer ke Bank BCA. ${notes}`;
-            }
-            document.getElementById('dr-notes').innerText = displayNotes;
+            document.getElementById('dr-notes').innerText = notes;
             
             // Try to parse the notes to get Bank, Acc No, and Name
             const match = notes.match(/ke\s+(?:rekening\s+)?([a-zA-Z\s]+?)\s+(\d{8,})\s*a\.?\/?n\.?\s+(.*)/i) 
@@ -728,7 +715,7 @@ async function requestDeposit() {
                 // Try just finding any long digit sequence as the account number
                 const digitsMatch = notes.match(/(\d{10,})/);
                 if(digitsMatch) {
-                    document.getElementById('dr-bank-name').innerText = apiBank; // using selected bank
+                    document.getElementById('dr-bank-name').innerText = bank; // using selected bank
                     document.getElementById('dr-acc-no').innerText = digitsMatch[1];
                     document.getElementById('dr-acc-name').innerText = "Digiflazz";
                     parsedContainer.style.display = 'block';
