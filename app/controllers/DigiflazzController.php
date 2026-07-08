@@ -795,7 +795,7 @@ class DigiflazzController extends Controller {
         // Update transaction in DB
         $this->digiModel->updateTransactionStatus($refId, $status, $message, $sn, $trxId, $trx);
 
-        @file_put_contents(BASE_PATH . '/storage/webhook.log', "SUCCESS: Updated $refId to $status\n\n", FILE_APPEND);
+        @file_put_contents(STORAGE_PATH . '/logs/webhook.log', "SUCCESS: Updated $refId to $status\n\n", FILE_APPEND);
 
         http_response_code(200);
         echo json_encode(['status' => 'ok']);

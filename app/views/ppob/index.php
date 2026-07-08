@@ -1102,10 +1102,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 let REQUIRE_PIN_ACTIVE = REQUIRE_PIN;
 
+// Global variable for polling
+let autoPollInterval = null;
+
 // 10. Execute Transaction API
 async function executeTransactionAPI(payload) {
     getTrxModal().hide();
     getLoadingModal().show();
+    
+    if (autoPollInterval) {
+        clearInterval(autoPollInterval);
+        autoPollInterval = null;
+    }
     
     try {
         const res = await fetch('<?= BASE_URL ?>api/ppob/transaction', {
@@ -1152,7 +1160,26 @@ async function executeTransactionAPI(payload) {
             const reCheckBtn = document.getElementById('result-recheck-btn');
             if(isPending && refId) {
                 reCheckBtn.style.display = 'block';
+                reCheckBtn.disabled = true; // Disabled initially because we auto-poll
+                reCheckBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Mengecek otomatis...';
                 reCheckBtn.onclick = () => checkTransactionStatus(payload.sku || '', payload.customer_no, refId);
+                
+                // Auto-poll logic
+                let pollCount = 0;
+                autoPollInterval = setInterval(async () => {
+                    pollCount++;
+                    if (pollCount > 15) { // Stop polling after 45 seconds (15 * 3s)
+                        clearInterval(autoPollInterval);
+                        reCheckBtn.disabled = false;
+                        reCheckBtn.innerText = '🔄 Cek Status Lagi';
+                        return;
+                    }
+                    
+                    const done = await checkTransactionStatus(payload.sku || '', payload.customer_no, refId, true);
+                    if (done) {
+                        clearInterval(autoPollInterval);
+                    }
+                }, 3000); // 3 seconds interval
             } else {
                 reCheckBtn.style.display = 'none';
             }
@@ -1162,6 +1189,12 @@ async function executeTransactionAPI(payload) {
 
             const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
             resultModal.show();
+            
+            // Listen to modal close to stop polling
+            document.getElementById('resultModal').addEventListener('hidden.bs.modal', function () {
+                if (autoPollInterval) clearInterval(autoPollInterval);
+            });
+
             fetchBalance(); // Refresh balance
         } else {
             // Check if server is asking for PIN (could happen if page was cached and PIN was set later)
@@ -1180,10 +1213,13 @@ async function executeTransactionAPI(payload) {
 }
 
 // 10. Check transaction status (polling)
-async function checkTransactionStatus(sku, customerNo, refId) {
+// isAuto parameter prevents button text from flickering during auto-poll
+async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
     const reCheckBtn = document.getElementById('result-recheck-btn');
-    reCheckBtn.disabled = true;
-    reCheckBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Mengecek...';
+    if (!isAuto) {
+        reCheckBtn.disabled = true;
+        reCheckBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Mengecek...';
+    }
     try {
         const res = await fetch('<?= BASE_URL ?>api/ppob/check-transaction', {
             method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -1208,12 +1244,23 @@ async function checkTransactionStatus(sku, customerNo, refId) {
                     lastTrxData.sn = data.data.sn || '-';
                 }
                 document.getElementById('result-print-btn').style.display = isSuccess ? 'block' : 'none';
+                return true; // Polling finished
             } else {
-                reCheckBtn.disabled = false;
-                reCheckBtn.innerText = '🔄 Cek Status Lagi';
+                if (!isAuto) {
+                    reCheckBtn.disabled = false;
+                    reCheckBtn.innerText = '🔄 Cek Status Lagi';
+                }
+                return false; // Still pending
             }
         }
-    } catch(e) { reCheckBtn.disabled = false; reCheckBtn.innerText = '🔄 Cek Status Lagi'; }
+    } catch(e) { 
+        if (!isAuto) {
+            reCheckBtn.disabled = false; 
+            reCheckBtn.innerText = '🔄 Cek Status Lagi'; 
+        }
+        return false;
+    }
+    return false;
 }
 
 // 11. Print PPOB Receipt
