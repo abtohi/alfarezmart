@@ -443,10 +443,6 @@
                         <option value="MANDIRI">MANDIRI</option>
                         <option value="BRI">BRI</option>
                         <option value="BNI">BNI</option>
-                        <option value="FLIP">FLIP</option>
-                        <option value="SHOPEEPAY">SHOPEEPAY</option>
-                        <option value="GOPAY">GOPAY</option>
-                        <option value="JAGO">BANK JAGO</option>
                     </select>
                 </div>
                 <div class="mb-4">
@@ -688,7 +684,7 @@ async function requestDeposit() {
         const data = await res.json();
         if(data.success && data.data) {
             // Digiflazz returns notes as a string with transfer instruction
-            const notes = data.data.notes || 'Silakan cek mutasi atau panduan transfer dari Digiflazz.';
+            const notes = data.data.notes || 'Instruksi transfer otomatis tidak tersedia dari API Digiflazz untuk metode ini. Silakan buka aplikasi resmi Digiflazz untuk melihat instruksi lengkap.';
             const finalAmount = data.data.amount || amount;
             
             // Format nominal and highlight last 3 digits
