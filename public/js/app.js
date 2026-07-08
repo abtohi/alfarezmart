@@ -53,6 +53,7 @@ window.addEventListener('appinstalled', () => {
 document.addEventListener('DOMContentLoaded', async () => {
     initSearch();
     initHeaderScroll();
+    initPullToRefresh();
     
     // Initialize Offline DB
     try {
@@ -680,4 +681,81 @@ async function showOfflineSupplierDetail(id) {
         showToast('Gagal memuat data supplier offline.', 'error');
         console.error(e);
     }
+}
+
+// Pull to Refresh Implementation
+function initPullToRefresh() {
+    let touchStartY = 0;
+    let touchMoveY = 0;
+    let isPulling = false;
+    let isRefreshing = false;
+    const ptrIndicator = document.getElementById('ptr-indicator');
+    const ptrIcon = document.getElementById('ptr-icon');
+    const ptrSpinner = document.getElementById('ptr-spinner');
+    if (!ptrIndicator) return;
+
+    const pullThreshold = 70; // Distance needed to trigger refresh
+    const maxPull = 120;
+
+    document.addEventListener('touchstart', (e) => {
+        if (window.scrollY === 0 && !isRefreshing) {
+            touchStartY = e.touches[0].clientY;
+            isPulling = true;
+            ptrIndicator.style.transition = 'none';
+        }
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!isPulling || isRefreshing) return;
+        touchMoveY = e.touches[0].clientY;
+        const pullDist = touchMoveY - touchStartY;
+
+        // Only handle pull down, not push up
+        if (pullDist > 0 && window.scrollY === 0) {
+            // Prevent default scroll behavior
+            if (e.cancelable) e.preventDefault();
+            
+            // Add resistance
+            const resistanceDist = pullDist < maxPull ? pullDist : maxPull + (pullDist - maxPull) * 0.2;
+            
+            ptrIndicator.style.opacity = Math.min(resistanceDist / pullThreshold, 1);
+            ptrIndicator.style.transform = `translateY(${resistanceDist}px)`;
+
+            if (resistanceDist > pullThreshold) {
+                ptrIcon.style.transform = 'rotate(180deg)';
+            } else {
+                ptrIcon.style.transform = 'rotate(0deg)';
+            }
+        }
+    }, { passive: false });
+
+    document.addEventListener('touchend', (e) => {
+        if (!isPulling || isRefreshing) return;
+        isPulling = false;
+        const pullDist = touchMoveY - touchStartY;
+
+        ptrIndicator.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+
+        if (pullDist > pullThreshold && window.scrollY === 0) {
+            // Trigger refresh
+            isRefreshing = true;
+            ptrIcon.style.display = 'none';
+            ptrSpinner.style.display = 'inline-block';
+            ptrIndicator.style.transform = `translateY(${pullThreshold}px)`;
+            
+            // Reload page or sync
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 600);
+        } else {
+            // Reset
+            ptrIndicator.style.transform = 'translateY(0)';
+            ptrIndicator.style.opacity = 0;
+            setTimeout(() => {
+                ptrIcon.style.transform = 'rotate(0deg)';
+            }, 300);
+        }
+        touchStartY = 0;
+        touchMoveY = 0;
+    });
 }

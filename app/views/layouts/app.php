@@ -147,6 +147,14 @@ if ($userLevel === 'staff') {
 
     <!-- Main Content Area -->
     <main class="app-content" id="appContent">
+        <!-- Pull to Refresh Indicator -->
+        <div id="ptr-indicator" style="position: absolute; top: -50px; left: 0; width: 100%; text-align: center; z-index: 999; display: flex; justify-content: center; align-items: center; transition: transform 0.2s ease, opacity 0.2s ease; opacity: 0; pointer-events: none;">
+            <div style="background: var(--surface-1); box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 50%; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; border: 1px solid var(--border-color);">
+                <i class="bi bi-arrow-down-short text-primary fs-3" id="ptr-icon" style="transition: transform 0.3s ease;"></i>
+                <div class="spinner-border text-primary spinner-border-sm" id="ptr-spinner" style="display: none;" role="status"></div>
+            </div>
+        </div>
+
         <?= $content ?? '' ?>
     </main>
 
@@ -305,7 +313,7 @@ if ($userLevel === 'staff') {
     
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '13.16'; // Update this to force client reloads
+    const APP_VERSION = '13.17'; // Update this to force client reloads
     
     // Self-healing cache buster
     if (localStorage.getItem('app_version') !== APP_VERSION) {
