@@ -136,8 +136,38 @@
                     const d = new Date(trx.created_at);
                     const dateStr = d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
                     const timeStr = d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const hours = String(d.getHours()).padStart(2, '0');
+                    const minutes = String(d.getMinutes()).padStart(2, '0');
+                    const seconds = String(d.getSeconds()).padStart(2, '0');
+                    const fullDateStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
                     const profit = parseInt(trx.profit || 0);
                     const profitColor = profit > 0 ? 'color:var(--success);' : 'color:var(--text-muted);';
+
+                    let complaintBtns = '';
+                    if (trx.status === 'failed' && trx.raw_response) {
+                        try {
+                            const raw = JSON.parse(trx.raw_response);
+                            if (raw.wa || raw.tele) {
+                                const msg = `S2.${trx.customer_no}, ${fullDateStr} ref Id: ${trx.ref_id}, gagal, bisa dibantu infokan alasan gagalnya?`;
+                                const encodedMsg = encodeURIComponent(msg);
+                                complaintBtns += '<div style="margin-top:6px;display:flex;gap:4px;justify-content:center;">';
+                                if (raw.wa) {
+                                    let waNum = raw.wa.replace(/[^0-9]/g, '');
+                                    if (waNum.startsWith('0')) waNum = '62' + waNum.substring(1);
+                                    complaintBtns += `<a href="https://wa.me/${waNum}?text=${encodedMsg}" target="_blank" style="background:#25D366;color:#fff;font-size:9px;padding:3px 6px;border-radius:4px;text-decoration:none;font-weight:600;"><i class="bi bi-whatsapp"></i> WA</a>`;
+                                }
+                                if (raw.tele) {
+                                    let teleUsername = raw.tele.replace('@', '');
+                                    complaintBtns += `<a href="https://t.me/${teleUsername}?text=${encodedMsg}" target="_blank" style="background:#0088cc;color:#fff;font-size:9px;padding:3px 6px;border-radius:4px;text-decoration:none;font-weight:600;"><i class="bi bi-telegram"></i> Tele</a>`;
+                                }
+                                complaintBtns += '</div>';
+                            }
+                        } catch(e) {}
+                    }
+
                     tbody.innerHTML += `
                         <tr style="border-bottom:1px solid var(--border-color);transition:background var(--transition-fast);${rowAccent}" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${rowAccent ? rowAccent.replace('background:','') : 'var(--surface-1)'}'">
                             <td style="padding:12px 16px;white-space:nowrap;">
@@ -156,7 +186,10 @@
                             <td style="padding:12px 8px;text-align:center;">
                                 <span style="font-family:monospace;font-size:10px;color:var(--text-secondary);word-break:break-all;">${trx.sn || '-'}</span>
                             </td>
-                            <td style="padding:12px 16px 12px 8px;text-align:center;">${badge}</td>
+                            <td style="padding:12px 16px 12px 8px;text-align:center;">
+                                ${badge}
+                                ${complaintBtns}
+                            </td>
                         </tr>`;
                 });
             } else {
