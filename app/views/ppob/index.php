@@ -1027,8 +1027,22 @@ function processTransaction(payload) {
             bootstrap.Modal.getOrCreateInstance(document.getElementById('pinModal')).show();
         }, 50);
     } else {
+        // REQUIRE_PIN may be stale (cached page). Include empty pin and let server decide.
+        // If server rejects with PIN error, showPinAndRetry() will handle it.
         executeTransactionAPI(payload);
     }
+}
+
+// Show PIN modal and retry a pending payload
+function showPinAndRetry(payload) {
+    pendingTrxPayload = payload;
+    document.getElementById('trx-pin-input').value = '';
+    // Force update REQUIRE_PIN so next transactions also show PIN
+    // eslint-disable-next-line no-global-assign
+    REQUIRE_PIN_ACTIVE = true;
+    setTimeout(() => {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('pinModal')).show();
+    }, 100);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1039,10 +1053,15 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if(pendingTrxPayload) {
             pendingTrxPayload.pin = pin;
-            executeTransactionAPI(pendingTrxPayload);
+            // Wait for pin modal to close, then execute
+            document.getElementById('pinModal').addEventListener('hidden.bs.modal', () => {
+                executeTransactionAPI(pendingTrxPayload);
+            }, { once: true });
         }
     });
 });
+
+let REQUIRE_PIN_ACTIVE = REQUIRE_PIN;
 
 // 10. Execute Transaction API
 async function executeTransactionAPI(payload) {
@@ -1092,7 +1111,14 @@ async function executeTransactionAPI(payload) {
             resultModal.show();
             fetchBalance(); // Refresh balance
         } else {
-            showAlert('❌ Gagal: ' + (data.message || 'Terjadi kesalahan'), 'danger');
+            // Check if server is asking for PIN (could happen if page was cached and PIN was set later)
+            const msg = data.message || '';
+            if (msg.toLowerCase().includes('pin')) {
+                // Show PIN modal and retry with same payload
+                showPinAndRetry(payload);
+            } else {
+                showAlert('❌ Gagal: ' + (msg || 'Terjadi kesalahan'), 'danger');
+            }
         }
     } catch(e) {
         getLoadingModal().hide();
