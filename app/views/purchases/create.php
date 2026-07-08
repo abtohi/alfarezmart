@@ -1,4 +1,8 @@
 <!-- Purchases Create View — Sales → Supplier (auto) → Product -->
+<style>
+/* Prevent pull-to-refresh on mobile devices */
+body { overscroll-behavior-y: none !important; }
+</style>
 <?php /** @var string $csrfToken */ ?>
 <div class="page-section">
     <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;">

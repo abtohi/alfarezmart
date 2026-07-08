@@ -1,4 +1,8 @@
 <!-- Product Edit View -->
+<style>
+/* Prevent pull-to-refresh on mobile devices */
+body { overscroll-behavior-y: none !important; }
+</style>
 <?php
 /**
  * @var array $units
