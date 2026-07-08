@@ -7,44 +7,44 @@
                 <i class="bi bi-arrow-left"></i>
             </a>
             <div>
-                <h4 class="m-0 fw-bold" style="font-family:var(--font-family);font-size:var(--font-size-lg);">Laporan Transaksi PPOB</h4>
-                <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:2px;">Riwayat & statistik transaksi Digiflazz</div>
+                <h4 class="m-0 fw-bold" style="font-family:var(--font-family);font-size:1.05rem;">Laporan Transaksi</h4>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Riwayat & statistik Digiflazz</div>
             </div>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <div style="background:var(--success-bg);border:1px solid rgba(46,196,182,0.25);color:var(--success);font-size:var(--font-size-xs);padding:6px 12px;border-radius:var(--radius-sm);font-weight:700;display:flex;align-items:center;gap:6px;">
+            <div style="background:var(--success-bg);border:1px solid rgba(46,196,182,0.25);color:var(--success);font-size:10px;padding:4px 8px;border-radius:var(--radius-sm);font-weight:700;display:flex;align-items:center;gap:4px;">
                 <i class="bi bi-check-circle-fill"></i> Sukses: <?= intval($stats['success_count'] ?? 0) ?>
             </div>
-            <div style="background:var(--danger-bg);border:1px solid rgba(230,57,70,0.25);color:var(--danger);font-size:var(--font-size-xs);padding:6px 12px;border-radius:var(--radius-sm);font-weight:700;display:flex;align-items:center;gap:6px;">
+            <div style="background:var(--danger-bg);border:1px solid rgba(230,57,70,0.25);color:var(--danger);font-size:10px;padding:4px 8px;border-radius:var(--radius-sm);font-weight:700;display:flex;align-items:center;gap:4px;">
                 <i class="bi bi-x-circle-fill"></i> Gagal: <?= intval($stats['failed_count'] ?? 0) ?>
             </div>
-            <div style="background:var(--info-bg);border:1px solid rgba(76,201,240,0.25);color:var(--info);font-size:var(--font-size-xs);padding:6px 12px;border-radius:var(--radius-sm);font-weight:700;display:flex;align-items:center;gap:6px;">
+            <div style="background:var(--info-bg);border:1px solid rgba(76,201,240,0.25);color:var(--info);font-size:10px;padding:4px 8px;border-radius:var(--radius-sm);font-weight:700;display:flex;align-items:center;gap:4px;">
                 <i class="bi bi-clock-fill"></i> Pending: <?= intval($stats['pending_count'] ?? 0) ?>
             </div>
         </div>
     </div>
 
     <!-- Summary Cards -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:20px;">
-        <div class="stat-card" style="margin-bottom:0;display:flex;flex-direction:column;justify-content:center;padding:18px;">
-            <div class="stat-icon blue" style="width:38px;height:38px;font-size:1.1rem;margin-bottom:10px;"><i class="bi bi-receipt"></i></div>
-            <div class="stat-value" style="font-size:1.5rem;font-weight:800;"><?= intval($stats['total_trx'] ?? 0) ?></div>
-            <div class="stat-label" style="font-size:9px;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;">Total Transaksi</div>
+    <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:10px;margin-bottom:20px;">
+        <div class="stat-card" style="margin-bottom:0;display:flex;flex-direction:column;justify-content:center;padding:12px;border-radius:12px;">
+            <div class="stat-icon blue" style="width:28px;height:28px;font-size:0.9rem;margin-bottom:8px;"><i class="bi bi-receipt"></i></div>
+            <div class="stat-value" style="font-size:1.1rem;font-weight:700;"><?= intval($stats['total_trx'] ?? 0) ?></div>
+            <div class="stat-label" style="font-size:9px;margin-top:2px;text-transform:uppercase;letter-spacing:0.3px;color:var(--text-muted);">Total Transaksi</div>
         </div>
-        <div class="stat-card" style="margin-bottom:0;display:flex;flex-direction:column;justify-content:center;padding:18px;">
-            <div class="stat-icon green" style="width:38px;height:38px;font-size:1.1rem;margin-bottom:10px;"><i class="bi bi-cash-stack"></i></div>
-            <div class="stat-value" style="font-size:1.15rem;font-weight:800;">Rp <?= number_format($stats['total_revenue'] ?? 0, 0, ',', '.') ?></div>
-            <div class="stat-label" style="font-size:9px;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;">Total Penjualan</div>
+        <div class="stat-card" style="margin-bottom:0;display:flex;flex-direction:column;justify-content:center;padding:12px;border-radius:12px;">
+            <div class="stat-icon green" style="width:28px;height:28px;font-size:0.9rem;margin-bottom:8px;"><i class="bi bi-cash-stack"></i></div>
+            <div class="stat-value" style="font-size:0.95rem;font-weight:700;">Rp <?= number_format($stats['total_revenue'] ?? 0, 0, ',', '.') ?></div>
+            <div class="stat-label" style="font-size:9px;margin-top:2px;text-transform:uppercase;letter-spacing:0.3px;color:var(--text-muted);">Total Penjualan</div>
         </div>
-        <div class="stat-card" style="margin-bottom:0;display:flex;flex-direction:column;justify-content:center;padding:18px;">
-            <div class="stat-icon orange" style="width:38px;height:38px;font-size:1.1rem;margin-bottom:10px;"><i class="bi bi-cart-dash"></i></div>
-            <div class="stat-value" style="font-size:1.15rem;font-weight:800;">Rp <?= number_format($stats['total_cost'] ?? 0, 0, ',', '.') ?></div>
-            <div class="stat-label" style="font-size:9px;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;">Total Modal</div>
+        <div class="stat-card" style="margin-bottom:0;display:flex;flex-direction:column;justify-content:center;padding:12px;border-radius:12px;">
+            <div class="stat-icon orange" style="width:28px;height:28px;font-size:0.9rem;margin-bottom:8px;"><i class="bi bi-cart-dash"></i></div>
+            <div class="stat-value" style="font-size:0.95rem;font-weight:700;">Rp <?= number_format($stats['total_cost'] ?? 0, 0, ',', '.') ?></div>
+            <div class="stat-label" style="font-size:9px;margin-top:2px;text-transform:uppercase;letter-spacing:0.3px;color:var(--text-muted);">Total Modal</div>
         </div>
-        <div class="stat-card" style="margin-bottom:0;display:flex;flex-direction:column;justify-content:center;padding:18px;">
-            <div class="stat-icon purple" style="width:38px;height:38px;font-size:1.1rem;margin-bottom:10px;"><i class="bi bi-graph-up-arrow"></i></div>
-            <div class="stat-value" style="font-size:1.15rem;font-weight:800;color:var(--success);">Rp <?= number_format($stats['total_profit'] ?? 0, 0, ',', '.') ?></div>
-            <div class="stat-label" style="font-size:9px;margin-top:4px;text-transform:uppercase;letter-spacing:0.5px;">Total Profit</div>
+        <div class="stat-card" style="margin-bottom:0;display:flex;flex-direction:column;justify-content:center;padding:12px;border-radius:12px;">
+            <div class="stat-icon purple" style="width:28px;height:28px;font-size:0.9rem;margin-bottom:8px;"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="stat-value" style="font-size:0.95rem;font-weight:700;color:var(--success);">Rp <?= number_format($stats['total_profit'] ?? 0, 0, ',', '.') ?></div>
+            <div class="stat-label" style="font-size:9px;margin-top:2px;text-transform:uppercase;letter-spacing:0.3px;color:var(--text-muted);">Total Profit</div>
         </div>
     </div>
 
