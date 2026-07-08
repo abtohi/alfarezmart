@@ -181,7 +181,7 @@
                     legend: {
                         position: 'right',
                         labels: {
-                            color: '#a0a0a0',
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary').trim() || '#a0a0a0',
                             font: { size: 10, family: 'Inter' }
                         }
                     }

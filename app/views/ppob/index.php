@@ -11,7 +11,7 @@
 
 /* Hero Section */
 .ppob-hero {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    background: var(--gradient-header);
     border-radius: 20px;
     padding: 20px 25px;
     position: relative;
@@ -47,7 +47,7 @@
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: #94a3b8;
+    color: rgba(255,255,255,0.7);
     margin-bottom: 4px;
 }
 .hero-balance {
@@ -266,6 +266,18 @@
 .text-muted {
     color: var(--text-muted) !important;
 }
+
+/* Light theme overrides for PPOB */
+:root[data-theme="light"] .btn-close { filter: none; }
+:root[data-theme="light"] .glass-input { background: var(--surface-2); }
+:root[data-theme="light"] .form-select.glass-input { background: var(--surface-2); }
+:root[data-theme="light"] .ppob-hero { color: white; }
+:root[data-theme="light"] .ppob-hero .hero-title { color: rgba(255,255,255,0.8); }
+:root[data-theme="light"] .ppob-hero .hero-balance { color: #fff; }
+:root[data-theme="light"] .ppob-hero .btn-deposit { color: #fff; }
+:root[data-theme="light"] .alert-info { background: var(--info-bg); border-color: rgba(37,99,235,0.3); color: var(--info); }
+:root[data-theme="light"] .prod-card { background: var(--surface-2); }
+:root[data-theme="light"] .prod-card:hover { background: var(--surface-3); }
 </style>
 
 <div class="container-fluid py-4 ppob-wrapper">
@@ -592,11 +604,11 @@
 </div>
 
 <!-- Loading Modal (Blocking UI during purchase) -->
-<div class="modal" id="loadingModal" data-bs-backdrop="static" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content text-center p-4 border-0" style="background: transparent;">
-            <div class="spinner-border text-primary" style="width: 2rem; height: 2rem; border-width: 0.2rem;" role="status"></div>
-            <div class="mt-3 text-white fw-semibold shadow-sm" style="font-size: 0.95rem; letter-spacing: 0.5px;">Memproses...</div>
+<div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered d-flex justify-content-center">
+        <div class="modal-content text-center border-0" style="background: transparent !important; box-shadow: none !important; align-items: center;">
+            <div class="spinner-border text-primary" style="width: 4rem; height: 4rem; border-width: 0.35rem;" role="status"></div>
+            <div class="mt-3 text-white fw-bold fs-5" style="letter-spacing: 1px; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);">Memproses...</div>
         </div>
     </div>
 </div>

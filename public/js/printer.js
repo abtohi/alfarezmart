@@ -548,58 +548,104 @@ class ThermalPrinter {
         }
 
         const dateStr = transaction.created_at || new Date().toISOString().slice(0, 19).replace('T', ' ');
-        const storeName = this.storeSettings?.name || 'AlfarezMart';
-        const storeAddr = this.storeSettings?.address || 'Toko Kami';
+        const storeName = this.storeSettings?.store_name || 'AlfarezMart';
+        const storeAddr = this.storeSettings?.store_address || 'Toko Kami';
+        const width = this.getLineWidth();
 
-        const printData = [
-            this.INIT,
-            this.ALIGN_CENTER,
-            this.TEXT_BOLD_ON,
-            this.DOUBLE_HEIGHT_ON,
-            this._encodeString(storeName + '\n'),
-            this.TEXT_BOLD_OFF,
-            this.DOUBLE_HEIGHT_OFF,
-            this._encodeString(storeAddr + '\n'),
-            this._encodeString('================================\n'),
-            this.ALIGN_LEFT,
-            this._encodeString(`No:  ${transaction.ref_id}\n`),
-            this._encodeString(`Tgl: ${dateStr}\n`),
-            this.ALIGN_CENTER,
-            this._encodeString('================================\n'),
-            this.ALIGN_LEFT,
-            this._encodeString(`PRODUK : ${transaction.product_name}\n`),
-            this._encodeString(`ID/NO  : ${transaction.customer_no}\n`),
-        ];
+        // Build string manually
+        let data = '';
+        
+        // Helper to center text
+        const center = (text) => {
+            const lines = text.split('\\n');
+            return lines.map(line => {
+                if (line.length >= width) return line;
+                const pad = Math.floor((width - line.length) / 2);
+                return ' '.repeat(pad) + line;
+            }).join('\\n');
+        };
+
+        // Header
+        data += '\\x1B@'; // Init
+        data += '\\x1Ba\\x01'; // Align Center
+        data += '\\x1BE\\x01'; // Bold On
+        data += storeName + '\\n';
+        data += '\\x1BE\\x00'; // Bold Off
+        data += storeAddr + '\\n';
+        data += '-'.repeat(width) + '\\n';
+
+        // Details
+        data += '\\x1Ba\\x00'; // Align Left
+        data += `No:  ${transaction.ref_id}\\n`;
+        data += `Tgl: ${dateStr}\\n`;
+        data += '-'.repeat(width) + '\\n';
+        data += `PRODUK : ${transaction.product_name}\\n`;
+        data += `ID/NO  : ${transaction.customer_no}\\n`;
 
         if (transaction.customer_name) {
-            printData.push(this._encodeString(`NAMA   : ${transaction.customer_name}\n`));
+            data += `NAMA   : ${transaction.customer_name}\\n`;
         }
 
-        printData.push(
-            this.ALIGN_CENTER,
-            this._encodeString('================================\n')
-        );
+        data += '-'.repeat(width) + '\\n';
 
         if (transaction.sn && transaction.sn !== '-') {
-            printData.push(
-                this.TEXT_BOLD_ON,
-                this._encodeString(`SN/TOKEN:\n${transaction.sn}\n`),
-                this.TEXT_BOLD_OFF,
-                this._encodeString('================================\n')
-            );
+            data += '\\x1BE\\x01'; // Bold On
+            data += `SN/TOKEN:\\n${transaction.sn}\\n`;
+            data += '\\x1BE\\x00'; // Bold Off
+            data += '-'.repeat(width) + '\\n';
         }
 
         const price = parseInt(transaction.sell_price).toLocaleString('id-ID');
-        printData.push(
-            this.ALIGN_LEFT,
-            this._encodeString(`TOTAL BAYAR : Rp${price}\n`),
-            this.ALIGN_CENTER,
-            this._encodeString('================================\n'),
-            this._encodeString('Terima kasih telah berbelanja\n'),
-            this._encodeString('= Semoga Berkah =\n\n\n\n')
-        );
+        data += `TOTAL BAYAR : Rp${price}\\n`;
+        data += '-'.repeat(width) + '\\n';
+        
+        // Footer
+        data += '\\x1Ba\\x01'; // Align Center
+        data += 'Terima kasih telah berbelanja\\n';
+        data += '= Semoga Berkah =\\n\\n\\n\\n';
 
-        await this.printRaw(printData);
+        const encoder = new TextEncoder();
+        let payload = encoder.encode(data);
+
+        // Inject logo if available
+        if (this.storeSettings?.store_logo) {
+            try {
+                const logoBytes = await this._buildLogoRaster(this.storeSettings.store_logo);
+                if (logoBytes && logoBytes.length > 0) {
+                    const prefix = encoder.encode('\\x1B@\\x1Ba\\x01');
+                    const restPayload = payload.slice(2); // Skip the first \\x1B@
+                    const combined = new Uint8Array(prefix.length + logoBytes.length + restPayload.length);
+                    combined.set(prefix, 0);
+                    combined.set(logoBytes, prefix.length);
+                    combined.set(restPayload, prefix.length + logoBytes.length);
+                    payload = combined;
+                }
+            } catch(e) {
+                console.error('[ThermalPrinter] Logo generation error:', e);
+            }
+        }
+
+        // Send payload in chunks
+        const CHUNK_SIZE = 64;
+        for (let i = 0; i < payload.length; i += CHUNK_SIZE) {
+            const chunk = payload.slice(i, i + CHUNK_SIZE);
+            if (chunk.length === 0) continue;
+
+            try {
+                if (this.characteristic.properties.writeWithoutResponse) {
+                    await this.characteristic.writeValueWithoutResponse(chunk);
+                } else if (this.characteristic.properties.write) {
+                    await this.characteristic.writeValue(chunk);
+                } else {
+                    throw new Error('Printer characteristic tidak support write operations');
+                }
+                // Small delay to prevent buffer overflow
+                await new Promise(r => setTimeout(r, 20));
+            } catch (err) {
+                console.error('[ThermalPrinter] Chunk write failed', err);
+                throw err;
+            }
+        }
     }
 
     async print(cart, total, invoiceNumber, options = {}) {

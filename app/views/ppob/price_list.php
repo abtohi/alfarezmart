@@ -1,10 +1,56 @@
 <style>
-/* Dark Mode Overrides */
+/* Dark/Light Mode Overrides */
 .card { background: var(--surface-1) !important; color: var(--text-primary) !important; }
 .table { color: var(--text-primary) !important; border-color: var(--border-color) !important; }
 .table-light { background-color: var(--surface-2) !important; color: var(--text-primary) !important; }
 .table-hover tbody tr:hover { background-color: var(--surface-2) !important; color: var(--text-primary) !important; }
 .modal-content { background: var(--bg-modal) !important; color: var(--text-primary) !important; }
+.table > :not(caption) > * > * {
+    background-color: var(--surface-1) !important;
+    color: var(--text-primary) !important;
+    border-bottom-color: var(--border-color) !important;
+}
+.table thead.table-light th {
+    background-color: var(--surface-2) !important;
+    color: var(--text-secondary) !important;
+}
+/* DataTables styling */
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select {
+    background: var(--surface-2) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    padding: 6px 10px !important;
+}
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_length label,
+.dataTables_wrapper .dataTables_filter label {
+    color: var(--text-muted) !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    color: var(--text-primary) !important;
+    background: var(--surface-2) !important;
+    border-color: var(--border-color) !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: var(--primary) !important;
+    color: #fff !important;
+    border-color: var(--primary) !important;
+}
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: var(--surface-3) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
+}
+code {
+    background: var(--surface-2) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 11px;
+}
 </style>
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
