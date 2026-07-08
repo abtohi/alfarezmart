@@ -172,9 +172,9 @@
 .glass-input {
     background: var(--surface-2);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 15px 20px;
-    font-size: 16px;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 14px;
     font-weight: 600;
     transition: all 0.3s ease;
     width: 100%;
@@ -193,21 +193,26 @@
 /* Product Grid */
 .product-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 15px;
-    margin-top: 20px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 15px;
+}
+@media (min-width: 768px) {
+    .product-grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    }
 }
 .prod-card {
     background: var(--surface-1);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 16px;
+    border-radius: 10px;
+    padding: 12px;
     cursor: pointer;
     transition: all 0.25s ease;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 125px;
+    min-height: 90px;
     position: relative;
     overflow: hidden;
 }
@@ -217,9 +222,9 @@
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(0,0,0,0.08);
 }
-.prod-name { font-size: 13.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; line-height: 1.35; letter-spacing: -0.2px; }
-.prod-desc { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
-.prod-price { font-size: 15.5px; font-weight: 800; color: var(--primary); margin-top: auto; }
+.prod-name { font-size: 11.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; line-height: 1.35; letter-spacing: -0.2px; }
+.prod-desc { font-size: 9px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.35; white-space: pre-wrap; word-break: break-word; }
+.prod-price { font-size: 13px; font-weight: 800; color: var(--primary); margin-top: auto; }
 
 /* Inquriy Result Box */
 .inquiry-box {
@@ -390,11 +395,11 @@
                 <input type="hidden" id="trx-category" value="">
                                 <!-- Input Section -->
                 <div class="mb-4">
-                    <label class="form-label fw-bold small text-muted text-uppercase" style="letter-spacing: 0.5px;">Nomor Tujuan / Pelanggan</label>
+                    <label class="form-label fw-bold small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;">Nomor Tujuan / Pelanggan</label>
                     <div class="d-flex position-relative align-items-center">
                         <input type="text" class="form-control glass-input w-100" id="customer-no" placeholder="Masukkan nomor..." style="padding-right:110px;">
-                        <div id="provider-badge" class="position-absolute end-0 me-3 fw-bold" style="font-size:10px;display:none;padding:5px 10px;border-radius:20px;background:var(--primary);color:#fff;text-transform:uppercase;letter-spacing:0.5px;pointer-events:none; margin-right: 60px !important;"></div>
-                        <button class="btn btn-primary position-absolute end-0 h-100 px-4" id="btn-inquiry" onclick="performInquiry()" style="display:none; border-radius: 0 12px 12px 0;">Cek</button>
+                        <div id="provider-badge" class="position-absolute end-0 me-3 fw-bold" style="font-size:9px;display:none;padding:4px 8px;border-radius:12px;background:var(--primary);color:#fff;text-transform:uppercase;letter-spacing:0.5px;pointer-events:none; margin-right: 45px !important;"></div>
+                        <button class="btn btn-primary position-absolute end-0 h-100 px-3" id="btn-inquiry" onclick="performInquiry()" style="display:none; border-radius: 0 10px 10px 0; font-size:13px;">Cek</button>
                     </div>
                 </div>
 
