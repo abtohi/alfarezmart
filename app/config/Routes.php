@@ -138,6 +138,7 @@ $router->post('/api/ppob/custom-price/reset', 'DigiflazzController@apiResetCusto
 // Webhook (PUBLIC — no auth)
 $router->post('/api/ppob/webhook', 'DigiflazzController@webhook');
 $router->get('/api/ppob/webhook', 'DigiflazzController@webhookTest');
+$router->get('/api/ppob/webhook-log', 'DigiflazzController@webhookLog');
 
 // Purchases API
 $router->get('/api/purchases', 'ApiController@getPurchases');

@@ -547,6 +547,18 @@ class DigiflazzController extends Controller {
         exit;
     }
 
+    public function webhookLog() {
+        AuthController::requireAuth(); // Ensure only logged-in users can view logs
+        $logFile = BASE_PATH . '/storage/webhook.log';
+        if (file_exists($logFile)) {
+            header('Content-Type: text/plain');
+            echo file_get_contents($logFile);
+        } else {
+            echo "Belum ada log webhook yang diterima. File tidak ditemukan: " . $logFile;
+        }
+        exit;
+    }
+
     public function webhook() {
         // --- IP WHITELIST CHECK REMOVED ---
         // Digiflazz uses multiple IPs now, and signature verification is sufficient.
