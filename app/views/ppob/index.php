@@ -435,14 +435,16 @@
                         <option value="MANDIRI">MANDIRI</option>
                         <option value="BRI">BRI</option>
                         <option value="BNI">BNI</option>
+                        <option value="FLIP">FLIP</option>
                         <option value="SHOPEEPAY">SHOPEEPAY</option>
                         <option value="GOPAY">GOPAY</option>
                         <option value="JAGO">BANK JAGO</option>
                     </select>
                 </div>
                 <div class="mb-4">
-                    <label class="form-label fw-bold small">Nama Pemilik Rekening Anda</label>
+                    <label class="form-label fw-bold small">Nama Pemilik Rekening Anda <span class="text-danger">*</span></label>
                     <input type="text" class="form-control glass-input" id="depo-owner" placeholder="Nama sesuai rekening pentransfer">
+                    <div class="form-text mt-2 text-warning" style="font-size: 11px;"><i class="bi bi-info-circle"></i> Wajib diisi (Ketentuan Digiflazz) agar deposit masuk otomatis.</div>
                 </div>
                 <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold" onclick="requestDeposit()" id="btn-depo">
                     Minta Tiket Deposit
@@ -477,8 +479,8 @@
                 </div>
                 
                 <div class="small text-muted mb-2">Pesan Sistem / Instruksi Asli:</div>
-                <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color);">
-                    <div class="fw-bold" id="dr-notes" style="font-size: 13px; line-height: 1.5; color: var(--text-muted);">Memuat instruksi...</div>
+                <div class="p-3 rounded" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-color);">
+                    <div class="fw-bold" id="dr-notes" style="font-size: 14px; line-height: 1.6; color: var(--text-primary);">Memuat instruksi...</div>
                 </div>
             </div>
             
@@ -668,7 +670,9 @@ async function requestDeposit() {
             
             // Try to parse the notes to get Bank, Acc No, and Name
             // e.g. "Silahkan transfer ... ke BCA 123456 a/n PT Digiflazz"
-            const match = notes.match(/ke\s+([A-Za-z0-9\s]+?)\s+(\d+)\s+a\/?n\/?\s+(.*)/i);
+            // or "Transfer nominal Rp... ke rekening BCA 123456 a.n PT Digiflazz"
+            const match = notes.match(/ke\s+(?:rekening\s+)?([a-zA-Z\s]+?)\s+(\d{8,})\s*a\.?\/?n\.?\s+(.*)/i) 
+                          || notes.match(/(BCA|MANDIRI|BRI|BNI|FLIP|SHOPEEPAY|GOPAY)\s+(\d{8,})\s*a\.?\/?n\.?\s+(.*)/i);
             const parsedContainer = document.getElementById('dr-parsed-dest');
             if (match) {
                 document.getElementById('dr-bank-name').innerText = match[1].trim();
@@ -676,7 +680,16 @@ async function requestDeposit() {
                 document.getElementById('dr-acc-name').innerText = match[3].replace(/[.]$/, '').trim(); // remove trailing dots
                 parsedContainer.style.display = 'block';
             } else {
-                parsedContainer.style.display = 'none';
+                // Try just finding any long digit sequence as the account number
+                const digitsMatch = notes.match(/(\d{10,})/);
+                if(digitsMatch) {
+                    document.getElementById('dr-bank-name').innerText = bank; // using selected bank
+                    document.getElementById('dr-acc-no').innerText = digitsMatch[1];
+                    document.getElementById('dr-acc-name').innerText = "Digiflazz";
+                    parsedContainer.style.display = 'block';
+                } else {
+                    parsedContainer.style.display = 'none';
+                }
             }
             
             getDepositModal().hide();
