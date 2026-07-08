@@ -360,7 +360,7 @@ class DigiflazzModel {
     /**
      * Get transaction data for Analytics Dashboard
      */
-    public function getAnalyticsData($startDate, $endDate) {
+    public function getAnalyticsData(string $startDate, string $endDate) {
         $sql = "SELECT id, ref_id, buyer_sku_code, category, product_name, type, sell_price, modal_price, status, raw_response, created_at, updated_at 
                 FROM digi_transactions 
                 WHERE created_at >= :start_date AND created_at <= :end_date
