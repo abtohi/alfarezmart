@@ -301,7 +301,9 @@ class DigiflazzModel {
             $params['raw'] = json_encode($rawResponse);
         }
 
-        $sql .= " WHERE ref_id = :ref_id";
+        // Prevent race condition: Do not update to 'pending' if the transaction is already 'success' or 'failed'
+        $sql .= " WHERE ref_id = :ref_id AND (status = 'pending' OR :status_check != 'pending')";
+        $params['status_check'] = $status;
         
         $stmt = $this->db->prepare($sql);
         $result = $stmt->execute($params);
