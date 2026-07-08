@@ -1020,10 +1020,12 @@ async function payPostpaid() {
 // 9. Process Transaction (Check PIN if required)
 function processTransaction(payload) {
     if (REQUIRE_PIN) {
-        getTrxModal().hide();
         pendingTrxPayload = payload;
         document.getElementById('trx-pin-input').value = '';
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('pinModal')).show();
+        // Small delay ensures any closing modal animation has finished
+        setTimeout(() => {
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('pinModal')).show();
+        }, 50);
     } else {
         executeTransactionAPI(payload);
     }
@@ -1143,9 +1145,21 @@ function showAlert(msg, type='info') {
 function showConfirm(title, message, onYes) {
     document.getElementById('confirmTitle').innerText = title;
     document.getElementById('confirmMessage').innerHTML = message;
-    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    const modalEl = document.getElementById('confirmModal');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
     const btn = document.getElementById('confirmBtnYes');
-    btn.onclick = () => { modal.hide(); onYes(); };
+    
+    // Avoid stacking listeners
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+    
+    newBtn.addEventListener('click', () => {
+        modal.hide();
+        // Wait for close animation (Bootstrap fade ~300ms) before calling onYes
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            onYes();
+        }, { once: true });
+    });
     modal.show();
 }
 
