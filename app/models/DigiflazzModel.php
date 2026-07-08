@@ -301,14 +301,23 @@ class DigiflazzModel {
             $params['raw'] = json_encode($rawResponse);
         }
 
-        // Prevent race condition: Do not update to 'pending' if the transaction is already 'success' or 'failed'
-        $sql .= " WHERE ref_id = :ref_id AND (status = 'pending' OR :status_check != 'pending')";
-        $params['status_check'] = $status;
+        // Prevent race condition: If we are updating TO 'pending', only do so if the current status is STILL 'pending'.
+        // If we are updating to 'success' or 'failed', we can overwrite whatever is there.
+        if ($status === 'pending') {
+            $sql .= " WHERE ref_id = :ref_id AND status = 'pending'";
+        } else {
+            $sql .= " WHERE ref_id = :ref_id";
+        }
         
-        $stmt = $this->db->prepare($sql);
-        $result = $stmt->execute($params);
-        error_log("[DigiflazzModel] updateTransactionStatus ref_id=$refId status=$status rows=" . $stmt->rowCount());
-        return $result;
+        try {
+            $stmt = $this->db->prepare($sql);
+            $result = $stmt->execute($params);
+            error_log("[DigiflazzModel] updateTransactionStatus ref_id=$refId status=$status rows=" . $stmt->rowCount());
+            return $result;
+        } catch (PDOException $e) {
+            error_log("[DigiflazzModel] SQL Error in updateTransactionStatus: " . $e->getMessage() . " SQL: " . $sql);
+            return false;
+        }
     }
 
     /**
