@@ -1190,6 +1190,7 @@ async function checkTransactionStatus(sku, customerNo, refId) {
                 document.getElementById('result-title').className = 'fw-bold fs-4 ' + (isSuccess ? 'text-success' : 'text-danger');
                 document.getElementById('result-icon').innerText = isSuccess ? '✅' : '❌';
                 document.getElementById('result-sn').innerText = data.data.sn || '-';
+                document.getElementById('result-msg').innerText = data.data.message || '';
                 reCheckBtn.style.display = 'none';
 
                 // Update last trx data with new SN and show print button
