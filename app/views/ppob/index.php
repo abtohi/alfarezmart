@@ -600,6 +600,9 @@
                     <button class="btn btn-warning w-100 rounded-pill fw-bold py-2 mb-2" id="result-recheck-btn" style="display:none;">
                         🔄 Cek Status Terbaru
                     </button>
+                    <button class="btn btn-primary w-100 rounded-pill fw-bold py-2 mb-2" id="result-print-btn" style="display:none;" onclick="printPpobReceipt()">
+                        <i class="bi bi-printer me-2"></i>Cetak Struk
+                    </button>
                     <button class="btn btn-secondary w-100 rounded-pill py-2" data-bs-dismiss="modal">Tutup</button>
                 </div>
             </div>
@@ -636,6 +639,7 @@ let currentCategory = '';
 let currentType = '';
 let currentProducts = [];
 let selectedInqData = null; // Storing postpaid / PLN inquiry data
+let lastTrxData = null; // Storing last transaction result for print receipt
 
 // 1. Fetch Live Balance on load
 async function fetchBalance() {
@@ -1098,6 +1102,17 @@ async function executeTransactionAPI(payload) {
             document.getElementById('result-msg').innerText = msg;
             document.getElementById('result-refid').innerText = refId;
 
+            // Store last transaction for printing
+            lastTrxData = {
+                ref_id: refId,
+                product_name: payload.product_name || '-',
+                customer_no: payload.customer_no || '-',
+                customer_name: payload.customer_name || '',
+                sn: sn,
+                sell_price: payload.sell_price || 0,
+                created_at: new Date().toLocaleString('id-ID')
+            };
+
             // Show re-check button only for pending
             const reCheckBtn = document.getElementById('result-recheck-btn');
             if(isPending && refId) {
@@ -1106,6 +1121,9 @@ async function executeTransactionAPI(payload) {
             } else {
                 reCheckBtn.style.display = 'none';
             }
+
+            // Show print button for success or pending (user may want to print receipt early)
+            document.getElementById('result-print-btn').style.display = (isSuccess || isPending) ? 'block' : 'none';
 
             const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
             resultModal.show();
@@ -1148,12 +1166,83 @@ async function checkTransactionStatus(sku, customerNo, refId) {
                 document.getElementById('result-icon').innerText = isSuccess ? '✅' : '❌';
                 document.getElementById('result-sn').innerText = data.data.sn || '-';
                 reCheckBtn.style.display = 'none';
+
+                // Update last trx data with new SN and show print button
+                if (lastTrxData) {
+                    lastTrxData.sn = data.data.sn || '-';
+                }
+                document.getElementById('result-print-btn').style.display = isSuccess ? 'block' : 'none';
             } else {
                 reCheckBtn.disabled = false;
                 reCheckBtn.innerText = '🔄 Cek Status Lagi';
             }
         }
     } catch(e) { reCheckBtn.disabled = false; reCheckBtn.innerText = '🔄 Cek Status Lagi'; }
+}
+
+// 11. Print PPOB Receipt
+async function printPpobReceipt() {
+    if (!lastTrxData) { showAlert('⚠️ Data transaksi tidak ditemukan', 'warning'); return; }
+    
+    // Check if ThermalPrinter is available (from printer.js)
+    if (typeof ThermalPrinter !== 'undefined') {
+        const printer = window._ppobPrinter || (window._ppobPrinter = new ThermalPrinter());
+        
+        try {
+            // Try auto-reconnect first, then ask to connect
+            if (!printer.isConnected()) {
+                const reconnected = await printer.tryAutoReconnect();
+                if (!reconnected) {
+                    await printer.connect();
+                }
+            }
+            await printer.printDigitalReceipt(lastTrxData);
+            showAlert('✅ Struk berhasil dicetak!', 'success');
+        } catch (e) {
+            console.warn('Bluetooth print failed:', e.message);
+            // Fallback to browser print
+            printPpobReceiptBrowser();
+        }
+    } else {
+        printPpobReceiptBrowser();
+    }
+}
+
+// Browser Fallback Print for PPOB Receipt
+function printPpobReceiptBrowser() {
+    if (!lastTrxData) return;
+    const d = lastTrxData;
+    const hasSN = d.sn && d.sn !== '-';
+    const w = window.open('', '_blank', 'width=320,height=600');
+    w.document.write(`<!DOCTYPE html><html><head><title>Struk PPOB</title>
+<style>
+    body { font-family: 'Courier New', monospace; font-size: 12px; width: 260px; margin: 0 auto; padding: 10px; color: #000; }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
+    .line { border-top: 1px dashed #000; margin: 6px 0; }
+    .row { display: flex; justify-content: space-between; margin: 3px 0; }
+    .sn-box { background: #f0f0f0; border: 1px solid #999; border-radius: 6px; padding: 8px; margin: 8px 0; text-align: center; font-size: 14px; font-weight: bold; letter-spacing: 1px; word-break: break-all; }
+    @media print { body { margin: 0; padding: 5px; } .no-print { display: none; } }
+</style></head><body>
+<div class="center bold" style="font-size:16px;">STRUK PEMBAYARAN</div>
+<div class="center" style="font-size:10px; margin-bottom: 6px;">Produk Digital (PPOB)</div>
+<div class="line"></div>
+<div class="row"><span>No. Ref</span><span>${d.ref_id}</span></div>
+<div class="row"><span>Tanggal</span><span>${d.created_at}</span></div>
+<div class="line"></div>
+<div class="row"><span>Produk</span><span class="bold">${d.product_name}</span></div>
+<div class="row"><span>ID/No.</span><span>${d.customer_no}</span></div>
+${d.customer_name ? `<div class="row"><span>Nama</span><span>${d.customer_name}</span></div>` : ''}
+<div class="line"></div>
+${hasSN ? `<div class="center bold" style="font-size:11px;">SN / TOKEN</div><div class="sn-box">${d.sn}</div><div class="line"></div>` : ''}
+<div class="row"><span class="bold">TOTAL BAYAR</span><span class="bold">Rp${parseInt(d.sell_price).toLocaleString('id-ID')}</span></div>
+<div class="line"></div>
+<div class="center" style="font-size:10px; margin-top:8px;">Terima kasih telah berbelanja<br>= Semoga Berkah =</div>
+<br>
+<div class="center no-print"><button onclick="window.print()" style="padding:8px 24px; font-size:14px; cursor:pointer;">🖨️ Print</button></div>
+</body></html>`);
+    w.document.close();
+    setTimeout(() => w.print(), 300);
 }
 
 // Helper: show non-blocking alert
