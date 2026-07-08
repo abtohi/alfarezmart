@@ -80,12 +80,13 @@
                         <th style="padding:12px 8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);">Modal</th>
                         <th style="padding:12px 8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);">Jual</th>
                         <th style="padding:12px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);">SN / Token</th>
+                        <th style="padding:12px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);">Seller</th>
                         <th style="padding:12px 16px 12px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);">Status</th>
                     </tr>
                 </thead>
                 <tbody id="history-tbody">
                     <tr>
-                        <td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">
+                        <td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">
                             <span class="spinner-border spinner-border-sm me-2" style="color:var(--primary);"></span>Memuat data...
                         </td>
                     </tr>
@@ -111,7 +112,7 @@
             el.style.color = isActive ? 'var(--text-primary)' : 'var(--text-muted)';
             el.style.fontWeight = isActive ? '700' : '600';
         });
-        document.getElementById('history-tbody').innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);"><span class="spinner-border spinner-border-sm me-2" style="color:var(--primary);"></span>Memuat...</td></tr>`;
+        document.getElementById('history-tbody').innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);"><span class="spinner-border spinner-border-sm me-2" style="color:var(--primary);"></span>Memuat...</td></tr>`;
         loadHistory(status);
     }
 
@@ -146,11 +147,20 @@
                     const profit = parseInt(trx.profit || 0);
                     const profitColor = profit > 0 ? 'color:var(--success);' : 'color:var(--text-muted);';
 
+                    let sellerName = '-';
                     let complaintBtns = '';
-                    if (trx.status === 'failed' && trx.raw_response) {
+                    if (trx.raw_response) {
                         try {
                             const raw = JSON.parse(trx.raw_response);
-                            if (raw.wa || raw.tele) {
+                            if (raw.tele) {
+                                sellerName = raw.tele;
+                            } else if (raw.wa) {
+                                sellerName = raw.wa;
+                            } else {
+                                sellerName = 'Digiflazz';
+                            }
+
+                            if (trx.status === 'failed' && (raw.wa || raw.tele)) {
                                 const msg = `S2.${trx.customer_no}, ${fullDateStr} ref Id: ${trx.ref_id}, gagal, bisa dibantu infokan alasan gagalnya?`;
                                 const encodedMsg = encodeURIComponent(msg);
                                 complaintBtns += '<div style="margin-top:6px;display:flex;gap:4px;justify-content:center;">';
@@ -186,6 +196,9 @@
                             <td style="padding:12px 8px;text-align:center;">
                                 <span style="font-family:monospace;font-size:10px;color:var(--text-secondary);word-break:break-all;">${trx.sn || '-'}</span>
                             </td>
+                            <td style="padding:12px 8px;text-align:center;">
+                                <span style="font-size:10px;font-weight:600;color:var(--text-secondary);">${sellerName}</span>
+                            </td>
                             <td style="padding:12px 16px 12px 8px;text-align:center;">
                                 ${badge}
                                 ${complaintBtns}
@@ -193,11 +206,11 @@
                         </tr>`;
                 });
             } else {
-                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:48px;color:var(--text-muted);font-size:var(--font-size-sm);"><i class="bi bi-inbox" style="font-size:28px;display:block;margin-bottom:10px;opacity:0.4;"></i>Tidak ada transaksi</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:48px;color:var(--text-muted);font-size:var(--font-size-sm);"><i class="bi bi-inbox" style="font-size:28px;display:block;margin-bottom:10px;opacity:0.4;"></i>Tidak ada transaksi</td></tr>`;
             }
         } catch (e) {
             console.error(e);
-            document.getElementById('history-tbody').innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--danger);font-size:var(--font-size-sm);"><i class="bi bi-exclamation-triangle-fill me-2"></i>Gagal memuat data.</td></tr>`;
+            document.getElementById('history-tbody').innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--danger);font-size:var(--font-size-sm);"><i class="bi bi-exclamation-triangle-fill me-2"></i>Gagal memuat data.</td></tr>`;
         }
     }
 </script>

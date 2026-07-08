@@ -70,6 +70,7 @@ $router->get('/ppob/history', 'DigiflazzController@history');
 $router->get('/ppob/settings', 'DigiflazzController@settings');
 $router->get('/ppob/prices', 'DigiflazzController@priceList');
 $router->get('/ppob/docs', 'DigiflazzController@documentation');
+$router->get('/ppob/summary', 'DigiflazzController@summaryView');
 
 // PPOB API Endpoints
 $router->post('/api/ppob/settings', 'DigiflazzController@apiSaveSettings');
@@ -140,6 +141,7 @@ $router->post('/api/ppob/webhook', 'DigiflazzController@webhook');
 $router->get('/api/ppob/webhook', 'DigiflazzController@webhookTest');
 $router->get('/api/ppob/webhook-log', 'DigiflazzController@webhookLog');
 $router->get('/api/ppob/request-log', 'DigiflazzController@requestLog');
+$router->get('/api/ppob/summary', 'DigiflazzController@apiGetSummary');
 
 // Purchases API
 $router->get('/api/purchases', 'ApiController@getPurchases');

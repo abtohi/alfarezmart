@@ -52,7 +52,12 @@ class DigiflazzController extends Controller {
 
     public function documentation() {
         AuthController::requireAuth();
-        $this->view('ppob/documentation', ['title' => 'Dokumentasi PPOB']);
+        $this->view('ppob/documentation', ['title' => 'Dokumentasi & API']);
+    }
+
+    public function summaryView() {
+        AuthController::requireAuth();
+        $this->view('ppob/summary', ['title' => 'Analytics PPOB']);
     }
 
     public function history() {
@@ -530,6 +535,133 @@ class DigiflazzController extends Controller {
 
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'data' => $transactions]);
+        exit;
+    }
+
+    public function apiGetSummary() {
+        AuthController::requireAuth();
+        $range = $_GET['range'] ?? 'this_month';
+        $category = $_GET['category'] ?? 'all';
+
+        $startDate = date('Y-m-d');
+        $endDate = date('Y-m-d');
+
+        if ($range === 'today') {
+            $startDate = date('Y-m-d');
+            $endDate = date('Y-m-d');
+        } else if ($range === 'yesterday') {
+            $startDate = date('Y-m-d', strtotime('-1 day'));
+            $endDate = date('Y-m-d', strtotime('-1 day'));
+        } else if ($range === '7days') {
+            $startDate = date('Y-m-d', strtotime('-7 days'));
+            $endDate = date('Y-m-d');
+        } else if ($range === 'this_month') {
+            $startDate = date('Y-m-01');
+            $endDate = date('Y-m-t');
+        } else if ($range === 'all') {
+            $startDate = '2000-01-01';
+            $endDate = date('Y-m-d');
+        }
+
+        $transactions = $this->digiModel->getAnalyticsData($startDate, $endDate);
+
+        // Process data in PHP
+        $categories = [];
+        $sellers = [];
+        $totalTrx = 0;
+        $totalProfit = 0;
+        $totalSuccess = 0;
+
+        foreach ($transactions as $trx) {
+            if ($category !== 'all' && strtolower($trx['category']) !== strtolower($category)) {
+                continue;
+            }
+
+            $totalTrx++;
+            
+            // Category count
+            $catName = $trx['category'] ?: 'Lainnya';
+            if (!isset($categories[$catName])) {
+                $categories[$catName] = 0;
+            }
+            $categories[$catName]++;
+
+            // Status check
+            $isSuccess = ($trx['status'] === 'success');
+            if ($isSuccess) {
+                $totalSuccess++;
+                $totalProfit += ($trx['sell_price'] - $trx['modal_price']);
+            }
+            $isFailed = ($trx['status'] === 'failed');
+
+            // Processing Time (only if success or failed, not pending)
+            $processTime = null;
+            if ($isSuccess || $isFailed) {
+                $created = strtotime($trx['created_at']);
+                $updated = strtotime($trx['updated_at']);
+                $processTime = max(0, $updated - $created);
+            }
+
+            // Extract seller
+            $sellerName = 'Digiflazz';
+            if (!empty($trx['raw_response'])) {
+                $raw = json_decode($trx['raw_response'], true);
+                if (isset($raw['tele']) && !empty($raw['tele'])) {
+                    $sellerName = $raw['tele'];
+                } else if (isset($raw['wa']) && !empty($raw['wa'])) {
+                    $sellerName = $raw['wa'];
+                }
+            }
+
+            if (!isset($sellers[$sellerName])) {
+                $sellers[$sellerName] = [
+                    'name' => $sellerName,
+                    'total' => 0,
+                    'success' => 0,
+                    'failed' => 0,
+                    'process_time_sum' => 0,
+                    'process_time_count' => 0
+                ];
+            }
+
+            $sellers[$sellerName]['total']++;
+            if ($isSuccess) $sellers[$sellerName]['success']++;
+            if ($isFailed) $sellers[$sellerName]['failed']++;
+            
+            if ($processTime !== null) {
+                $sellers[$sellerName]['process_time_sum'] += $processTime;
+                $sellers[$sellerName]['process_time_count']++;
+            }
+        }
+
+        $sellerResults = [];
+        foreach ($sellers as $s) {
+            $s['success_rate'] = $s['total'] > 0 ? round(($s['success'] / $s['total']) * 100, 1) : 0;
+            $s['failed_rate'] = $s['total'] > 0 ? round(($s['failed'] / $s['total']) * 100, 1) : 0;
+            $s['avg_process_time'] = $s['process_time_count'] > 0 ? round($s['process_time_sum'] / $s['process_time_count'], 1) : 0;
+            $sellerResults[] = $s;
+        }
+
+        // Sort sellers by total descending
+        usort($sellerResults, function($a, $b) {
+            return $b['total'] <=> $a['total'];
+        });
+
+        $globalSuccessRate = $totalTrx > 0 ? round(($totalSuccess / $totalTrx) * 100, 1) : 0;
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true,
+            'data' => [
+                'metrics' => [
+                    'total' => $totalTrx,
+                    'success_rate' => $globalSuccessRate,
+                    'profit' => $totalProfit
+                ],
+                'categories' => $categories,
+                'sellers' => $sellerResults
+            ]
+        ]);
         exit;
     }
 

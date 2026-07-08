@@ -358,6 +358,21 @@ class DigiflazzModel {
     }
 
     /**
+     * Get transaction data for Analytics Dashboard
+     */
+    public function getAnalyticsData($startDate, $endDate) {
+        $sql = "SELECT id, ref_id, buyer_sku_code, category, product_name, type, sell_price, modal_price, status, raw_response, created_at, updated_at 
+                FROM digi_transactions 
+                WHERE created_at >= :start_date AND created_at <= :end_date
+                ORDER BY created_at DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':start_date', $startDate . ' 00:00:00');
+        $stmt->bindValue(':end_date', $endDate . ' 23:59:59');
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Create deposit log
      */
     public function createDepositLog(array $data) {

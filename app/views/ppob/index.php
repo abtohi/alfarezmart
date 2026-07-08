@@ -358,24 +358,29 @@
     <!-- Admin Tools Section -->
     <h4 class="section-title mt-4">PPOB Admin Tools</h4>
     <div class="row g-3 mb-5">
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md">
+            <a href="<?= BASE_URL ?>ppob/summary" class="btn btn-outline-info w-100 py-3 rounded-4" style="background: var(--surface-1);">
+                <i class="bi bi-bar-chart-line-fill d-block fs-4 mb-1"></i> Analytics
+            </a>
+        </div>
+        <div class="col-6 col-md">
             <a href="<?= BASE_URL ?>ppob/prices" class="btn btn-outline-primary w-100 py-3 rounded-4" style="background: var(--surface-1);">
                 <i class="bi bi-tags d-block fs-4 mb-1"></i> Daftar Harga
             </a>
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md">
             <a href="<?= BASE_URL ?>ppob/history" class="btn btn-outline-success w-100 py-3 rounded-4" style="background: var(--surface-1);">
                 <i class="bi bi-clock-history d-block fs-4 mb-1"></i> Histori Transaksi
             </a>
         </div>
-        <div class="col-6 col-md-3">
+        <div class="col-6 col-md">
             <a href="<?= BASE_URL ?>ppob/settings" class="btn btn-outline-warning w-100 py-3 rounded-4" style="background: var(--surface-1);">
                 <i class="bi bi-gear d-block fs-4 mb-1"></i> Pengaturan
             </a>
         </div>
-        <div class="col-6 col-md-3">
-            <a href="<?= BASE_URL ?>ppob/docs" class="btn btn-outline-info w-100 py-3 rounded-4" style="background: var(--surface-1);">
-                <i class="bi bi-book d-block fs-4 mb-1"></i> Dokumentasi & API
+        <div class="col-6 col-md">
+            <a href="<?= BASE_URL ?>ppob/docs" class="btn btn-outline-secondary w-100 py-3 rounded-4" style="background: var(--surface-1);">
+                <i class="bi bi-book d-block fs-4 mb-1"></i> API Docs
             </a>
         </div>
     </div>
