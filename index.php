@@ -147,7 +147,7 @@ $uri = rtrim($uri, '/');
 if (empty($uri)) $uri = '/';
 
 // Public routes that don't require authentication
-$publicRoutes = ['/login', '/api/auth/login', '/logout', '/setup'];
+$publicRoutes = ['/login', '/api/auth/login', '/logout', '/setup', '/api/ppob/webhook'];
 $isPublicRoute = in_array($uri, $publicRoutes);
 $isStaticFile = preg_match('/\.(css|js|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|webp|json)$/i', $uri);
 

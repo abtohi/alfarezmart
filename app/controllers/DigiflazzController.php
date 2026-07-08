@@ -559,8 +559,14 @@ class DigiflazzController extends Controller {
         $payload = file_get_contents('php://input');
         $data = json_decode($payload, true);
         
+        $headers = getallheaders();
+        $logData = date('Y-m-d H:i:s') . " - IP: $clientIp\n";
+        $logData .= "Headers: " . json_encode($headers) . "\n";
+        $logData .= "Payload: " . $payload . "\n";
+        
         // Log incoming webhook for debugging
         error_log("[Digiflazz Webhook] Received from IP {$clientIp}: " . $payload);
+        @file_put_contents(BASE_PATH . '/storage/webhook.log', $logData, FILE_APPEND);
 
         // Handle Digiflazz Ping Event
         if (isset($data['hook_id']) && !isset($data['data'])) {
@@ -587,6 +593,7 @@ class DigiflazzController extends Controller {
                 $expectedSignature = 'sha1=' . hash_hmac('sha1', $payload, $secret);
                 if (!hash_equals($expectedSignature, $headerSignature)) {
                     error_log("[Digiflazz Webhook] Signature mismatch. Expected: $expectedSignature, Got: $headerSignature");
+                    @file_put_contents(BASE_PATH . '/storage/webhook.log', "ERROR: Signature mismatch. Expected: $expectedSignature, Got: $headerSignature\n\n", FILE_APPEND);
                     http_response_code(403);
                     echo json_encode(['status' => 'error', 'message' => 'Invalid signature']);
                     exit;
@@ -631,6 +638,8 @@ class DigiflazzController extends Controller {
 
         // Update transaction in DB
         $this->digiModel->updateTransactionStatus($refId, $status, $message, $sn, $trxId, $trx);
+
+        @file_put_contents(BASE_PATH . '/storage/webhook.log', "SUCCESS: Updated $refId to $status\n\n", FILE_APPEND);
 
         http_response_code(200);
         echo json_encode(['status' => 'ok']);
