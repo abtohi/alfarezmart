@@ -198,7 +198,7 @@
     box-shadow: 0 6px 16px rgba(0,0,0,0.08);
 }
 .prod-name { font-size: 13.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; line-height: 1.35; letter-spacing: -0.2px; }
-.prod-desc { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.45; }
+.prod-desc { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
 .prod-price { font-size: 15.5px; font-weight: 800; color: var(--primary); margin-top: auto; }
 
 /* Inquriy Result Box */
@@ -278,6 +278,10 @@
         <div class="cat-card" onclick="openTrxModal('Data', 'data', 'prepaid')">
             <div class="cat-icon purple"><i class="bi bi-wifi"></i></div>
             <div class="cat-name">Paket Data</div>
+        </div>
+        <div class="cat-card" onclick="openTrxModal('SMS & Nelpon', 'sms_nelpon', 'prepaid')">
+            <div class="cat-icon blue"><i class="bi bi-telephone"></i></div>
+            <div class="cat-name">SMS & Nelpon</div>
         </div>
         <div class="cat-card" onclick="openTrxModal('Token PLN', 'pln', 'prepaid')">
             <div class="cat-icon orange"><i class="bi bi-lightning-charge"></i></div>
