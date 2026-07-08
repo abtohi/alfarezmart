@@ -534,6 +534,26 @@
     </div>
 </div>
 
+<!-- PIN Verification Modal -->
+<div class="modal fade" id="pinModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="border-radius:20px;border:none;background:var(--surface-1);">
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3"><i class="bi bi-shield-lock text-warning" style="font-size:50px;"></i></div>
+                <h5 class="fw-bold mb-3" style="color:var(--text-primary);">Masukkan PIN</h5>
+                <p class="small mb-3" style="color:var(--text-secondary);">Transaksi PPOB ini membutuhkan PIN otorisasi.</p>
+                <div class="mb-4 position-relative">
+                    <input type="password" class="form-control glass-input text-center fs-4" id="trx-pin-input" placeholder="••••" style="letter-spacing: 5px;">
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-secondary flex-grow-1 rounded-pill" data-bs-dismiss="modal">Batal</button>
+                    <button class="btn btn-warning flex-grow-1 rounded-pill fw-bold" id="pinBtnVerify">Verifikasi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Loading Modal (Blocking UI during purchase) -->
 <div class="modal" id="loadingModal" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -599,6 +619,9 @@
 </style>
 
 <script>
+const REQUIRE_PIN = <?= isset($requirePin) && $requirePin ? 'true' : 'false' ?>;
+let pendingTrxPayload = null;
+
 // Format Currency IDR
 const formatRp = (num) => 'Rp' + parseInt(num).toLocaleString('id-ID');
 
@@ -994,8 +1017,33 @@ async function payPostpaid() {
     });
 }
 
-// 9. Execute Transaction API
-async function processTransaction(payload) {
+// 9. Process Transaction (Check PIN if required)
+function processTransaction(payload) {
+    if (REQUIRE_PIN) {
+        getTrxModal().hide();
+        pendingTrxPayload = payload;
+        document.getElementById('trx-pin-input').value = '';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('pinModal')).show();
+    } else {
+        executeTransactionAPI(payload);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('pinBtnVerify')?.addEventListener('click', () => {
+        const pin = document.getElementById('trx-pin-input').value;
+        if(!pin) { showAlert('⚠️ Masukkan PIN!', 'warning'); return; }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('pinModal')).hide();
+        
+        if(pendingTrxPayload) {
+            pendingTrxPayload.pin = pin;
+            executeTransactionAPI(pendingTrxPayload);
+        }
+    });
+});
+
+// 10. Execute Transaction API
+async function executeTransactionAPI(payload) {
     getTrxModal().hide();
     getLoadingModal().show();
     

@@ -24,7 +24,8 @@ class DigiflazzController extends Controller {
         AuthController::requireAuth();
         $settingModel = new SettingModel();
         $mode = $settingModel->get('digiflazz_mode', 'development');
-        $this->view('ppob/index', ['title' => 'Produk Digital (PPOB)', 'mode' => $mode]);
+        $requirePin = !empty($settingModel->get('digiflazz_pin', ''));
+        $this->view('ppob/index', ['title' => 'Produk Digital (PPOB)', 'mode' => $mode, 'requirePin' => $requirePin]);
     }
 
     public function settings() {
@@ -190,6 +191,17 @@ class DigiflazzController extends Controller {
     public function apiCreateTransaction() {
         AuthController::requireAuth();
         $data = json_decode(file_get_contents('php://input'), true);
+        
+        $settingModel = new SettingModel();
+        $pin = $settingModel->get('digiflazz_pin', '');
+        if (!empty($pin)) {
+            if (!isset($data['pin']) || $data['pin'] !== $pin) {
+                header('Content-Type: application/json');
+                http_response_code(403);
+                echo json_encode(['success' => false, 'message' => 'PIN PPOB salah atau tidak dimasukkan']);
+                exit;
+            }
+        }
         
         $sku = $data['sku'] ?? '';
         $customerNo = $data['customer_no'] ?? '';
@@ -370,6 +382,7 @@ class DigiflazzController extends Controller {
         if (isset($data['api_key'])) $settingModel->set('digiflazz_api_key', trim($data['api_key']));
         if (isset($data['webhook_secret'])) $settingModel->set('digiflazz_webhook_secret', trim($data['webhook_secret']));
         if (isset($data['mode'])) $settingModel->set('digiflazz_mode', trim($data['mode']));
+        if (isset($data['pin'])) $settingModel->set('digiflazz_pin', trim($data['pin']));
 
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'message' => 'Pengaturan berhasil disimpan']);

@@ -78,6 +78,18 @@
                     <div class="ppob-hint">Digunakan untuk memvalidasi callback webhook dari Digiflazz. Atur di <strong>Digiflazz → Atur Koneksi → API → Webhook Secret</strong>.</div>
                 </div>
 
+                <!-- Transaction PIN -->
+                <div style="margin-bottom:20px;">
+                    <label class="ppob-label"><i class="bi bi-shield-lock me-1" style="color:var(--warning);"></i>PIN Transaksi PPOB <span style="font-size:10px;color:var(--text-muted);font-weight:500;">(Opsional)</span></label>
+                    <div style="position:relative;">
+                        <input type="password" class="ppob-field" id="cfg-pin"
+                            value="<?= htmlspecialchars($settings['digiflazz_pin'] ?? '') ?>"
+                            placeholder="Kosongkan jika tidak butuh PIN" style="padding-right:44px;">
+                        <button type="button" onclick="togglePwd('cfg-pin',this)" class="ppob-eye-btn"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <div class="ppob-hint">Jika diisi, setiap kali kasir melakukan transaksi PPOB akan dimintai PIN ini.</div>
+                </div>
+
                 <div style="display:flex;gap:10px;flex-wrap:wrap;">
                     <button type="submit" id="btn-save-cfg" class="ppob-btn-primary" style="min-width:160px;">
                         <i class="bi bi-save me-1"></i> Simpan Pengaturan
@@ -442,7 +454,8 @@ async function saveSettings(e) {
                 username: document.getElementById('cfg-username').value,
                 api_key: document.getElementById('cfg-apikey').value,
                 webhook_secret: document.getElementById('cfg-webhook').value,
-                mode: document.getElementById('cfg-mode').value
+                mode: document.getElementById('cfg-mode').value,
+                pin: document.getElementById('cfg-pin').value
             })
         });
         const data = await res.json();
