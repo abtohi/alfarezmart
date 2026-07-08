@@ -549,7 +549,7 @@ class DigiflazzController extends Controller {
 
     public function webhookLog() {
         AuthController::requireAuth(); // Ensure only logged-in users can view logs
-        $logFile = BASE_PATH . '/storage/webhook.log';
+        $logFile = STORAGE_PATH . '/logs/webhook.log';
         if (file_exists($logFile)) {
             header('Content-Type: text/plain');
             echo file_get_contents($logFile);
@@ -561,7 +561,7 @@ class DigiflazzController extends Controller {
 
     public function requestLog() {
         AuthController::requireAuth(); // Ensure only logged-in users can view logs
-        $logFile = BASE_PATH . '/storage/digiflazz_debug.log';
+        $logFile = STORAGE_PATH . '/logs/digiflazz_debug.log';
         if (file_exists($logFile)) {
             header('Content-Type: text/plain');
             echo file_get_contents($logFile);
@@ -590,7 +590,7 @@ class DigiflazzController extends Controller {
         
         // Log incoming webhook for debugging
         error_log("[Digiflazz Webhook] Received from IP {$clientIp}: " . $payload);
-        @file_put_contents(BASE_PATH . '/storage/webhook.log', $logData, FILE_APPEND);
+        @file_put_contents(STORAGE_PATH . '/logs/webhook.log', $logData, FILE_APPEND);
 
         // Handle Digiflazz Ping Event
         if (isset($data['hook_id']) && !isset($data['data'])) {
@@ -617,7 +617,7 @@ class DigiflazzController extends Controller {
                 $expectedSignature = 'sha1=' . hash_hmac('sha1', $payload, $secret);
                 if (!hash_equals($expectedSignature, $headerSignature)) {
                     error_log("[Digiflazz Webhook] Signature mismatch. Expected: $expectedSignature, Got: $headerSignature");
-                    @file_put_contents(BASE_PATH . '/storage/webhook.log', "ERROR: Signature mismatch. Expected: $expectedSignature, Got: $headerSignature\n\n", FILE_APPEND);
+                    @file_put_contents(STORAGE_PATH . '/logs/webhook.log', "ERROR: Signature mismatch. Expected: $expectedSignature, Got: $headerSignature\n\n", FILE_APPEND);
                     http_response_code(403);
                     echo json_encode(['status' => 'error', 'message' => 'Invalid signature']);
                     exit;

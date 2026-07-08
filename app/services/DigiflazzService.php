@@ -207,7 +207,7 @@ class DigiflazzService {
             $logData .= "cURL Error:\n" . $err . "\n";
         }
         $logData .= str_repeat("-", 50) . "\n\n";
-        @file_put_contents(dirname(__DIR__, 2) . '/storage/digiflazz_debug.log', $logData, FILE_APPEND);
+        @file_put_contents(STORAGE_PATH . '/logs/digiflazz_debug.log', $logData, FILE_APPEND);
         // ----------------------------------------------------
 
         if (json_last_error() !== JSON_ERROR_NONE) {
