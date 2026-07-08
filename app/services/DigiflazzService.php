@@ -197,6 +197,18 @@ class DigiflazzService {
         }
 
         $decodedResponse = json_decode($response, true);
+        
+        // --- CATCHER / LOGGER FOR ALL DIGIFLAZZ REQUESTS ---
+        $logData = date('Y-m-d H:i:s') . " | Endpoint: $endpoint\n";
+        $logData .= "Request Payload:\n" . $jsonPayload . "\n";
+        $logData .= "Response Code: " . $httpCode . "\n";
+        $logData .= "Response Body:\n" . $response . "\n";
+        if ($err) {
+            $logData .= "cURL Error:\n" . $err . "\n";
+        }
+        $logData .= str_repeat("-", 50) . "\n\n";
+        @file_put_contents(dirname(__DIR__, 2) . '/storage/digiflazz_debug.log', $logData, FILE_APPEND);
+        // ----------------------------------------------------
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             return [

@@ -139,6 +139,7 @@ $router->post('/api/ppob/custom-price/reset', 'DigiflazzController@apiResetCusto
 $router->post('/api/ppob/webhook', 'DigiflazzController@webhook');
 $router->get('/api/ppob/webhook', 'DigiflazzController@webhookTest');
 $router->get('/api/ppob/webhook-log', 'DigiflazzController@webhookLog');
+$router->get('/api/ppob/request-log', 'DigiflazzController@requestLog');
 
 // Purchases API
 $router->get('/api/purchases', 'ApiController@getPurchases');
