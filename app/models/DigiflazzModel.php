@@ -92,6 +92,7 @@ class DigiflazzModel {
         if (strpos($cat, 'bpjs') !== false) return 'bpjs';
         if (strpos($cat, 'multifinance') !== false || strpos($cat, 'finance') !== false) return 'multifinance';
         if (strpos($cat, 'bank') !== false || strpos($cat, 'transfer') !== false) return 'bank';
+        if (strpos($cat, 'tv') !== false) return 'tv';
         return $cat;
     }
 

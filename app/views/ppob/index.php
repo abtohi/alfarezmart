@@ -295,6 +295,10 @@
             <div class="cat-icon purple"><i class="bi bi-controller"></i></div>
             <div class="cat-name">Games</div>
         </div>
+        <div class="cat-card" onclick="openTrxModal('TV Voucher', 'tv', 'prepaid')">
+            <div class="cat-icon blue"><i class="bi bi-tv"></i></div>
+            <div class="cat-name">TV Voucher</div>
+        </div>
     </div>
 
     <!-- Pascabayar Section -->
@@ -319,6 +323,10 @@
         <div class="cat-card" onclick="openTrxModal('HP Pascabayar', 'hp', 'postpaid')">
             <div class="cat-icon blue"><i class="bi bi-phone-vibrate"></i></div>
             <div class="cat-name">HP Pasca</div>
+        </div>
+        <div class="cat-card" onclick="openTrxModal('TV & Internet', 'tv', 'postpaid')">
+            <div class="cat-icon orange"><i class="bi bi-router"></i></div>
+            <div class="cat-name">TV & Internet</div>
         </div>
     </div><!-- end .cat-grid Pascabayar -->
 
