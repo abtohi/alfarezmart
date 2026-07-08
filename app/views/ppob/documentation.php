@@ -1,4 +1,4 @@
-﻿<style>
+<style>
 /* ===== Dark Mode Overrides - Documentation Page ===== */
 .card {
     background: var(--surface-1) !important;
@@ -80,6 +80,13 @@ code {
 </style>
 
 <div class="container-fluid py-4">
+    <!-- Back Button -->
+    <div class="mb-4">
+        <a href="<?= BASE_URL ?>ppob" class="btn btn-outline-secondary rounded-pill fw-bold" style="background: var(--surface-1); border-color: var(--border-color); color: var(--text-primary);">
+            <i class="bi bi-arrow-left me-2"></i> Kembali ke PPOB
+        </a>
+    </div>
+
     <div class="row">
         <!-- Sidebar -->
         <div class="col-md-3 mb-4">
