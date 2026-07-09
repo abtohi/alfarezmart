@@ -269,9 +269,14 @@ $csrfToken = $csrfToken ?? '';
 
 <script>
 let customerModal;
+function getCustomerModal() {
+    if (!customerModal) {
+        customerModal = new bootstrap.Modal(document.getElementById('customerModal'));
+    }
+    return customerModal;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    customerModal = new bootstrap.Modal(document.getElementById('customerModal'));
-    
     document.getElementById('customerForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         const id = document.getElementById('customerId').value;
@@ -289,7 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if(data.success) {
                 showAlert('✅ ' + data.message, 'success');
-                customerModal.hide();
+                getCustomerModal().hide();
                 setTimeout(() => window.location.reload(), 1000);
             } else {
                 showAlert('❌ ' + data.message, 'danger');
@@ -308,7 +313,7 @@ function openAddModal() {
     document.getElementById('modalTitle').innerText = 'Tambah Pelanggan';
     document.getElementById('plnFields').style.display = 'none';
     toggleFields();
-    customerModal.show();
+    getCustomerModal().show();
 }
 
 function editCustomer(c) {
@@ -325,7 +330,7 @@ function editCustomer(c) {
     }
     
     toggleFields();
-    customerModal.show();
+    getCustomerModal().show();
 }
 
 function toggleFields() {
