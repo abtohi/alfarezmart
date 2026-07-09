@@ -790,7 +790,7 @@ async function requestDeposit() {
             if (bank === 'SHOPEEPAY') {
                 document.getElementById('dr-bank-name').innerText = 'BCA';
                 document.getElementById('dr-acc-no').innerText = '6042888890';
-                document.getElementById('dr-acc-name').innerText = 'AlfarezMart';
+                document.getElementById('dr-acc-name').innerText = 'PT DIGIFLAZZ INTERKONEKSI INDONESIA';
                 parsedContainer.style.display = 'block';
             } else if (match) {
                 document.getElementById('dr-bank-name').innerText = match[1].trim();
