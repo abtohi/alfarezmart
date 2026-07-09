@@ -786,7 +786,13 @@ async function requestDeposit() {
             const match = notes.match(/ke\s+(?:rekening\s+)?([a-zA-Z\s]+?)\s+(\d{8,})\s*a\.?\/?n\.?\s+(.*)/i) 
                           || notes.match(/(BCA|MANDIRI|BRI|BNI|FLIP|SHOPEEPAY|GOPAY)\s+(\d{8,})\s*a\.?\/?n\.?\s+(.*)/i);
             const parsedContainer = document.getElementById('dr-parsed-dest');
-            if (match) {
+            
+            if (bank === 'SHOPEEPAY') {
+                document.getElementById('dr-bank-name').innerText = 'BCA';
+                document.getElementById('dr-acc-no').innerText = '6042888890';
+                document.getElementById('dr-acc-name').innerText = 'AlfarezMart';
+                parsedContainer.style.display = 'block';
+            } else if (match) {
                 document.getElementById('dr-bank-name').innerText = match[1].trim();
                 document.getElementById('dr-acc-no').innerText = match[2];
                 document.getElementById('dr-acc-name').innerText = match[3].replace(/[.]$/, '').trim(); // remove trailing dots
