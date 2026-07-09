@@ -1,6 +1,4 @@
-<?php include __DIR__ . '/../layouts/app.php'; ?>
 <?php 
-ob_start(); 
 /** @var string $csrfToken */
 $csrfToken = $csrfToken ?? '';
 ?>
@@ -429,7 +427,3 @@ function deleteCustomer(id) {
 }
 </script>
 
-<?php
-$content = ob_get_clean();
-require __DIR__ . '/../layouts/app.php';
-?>
