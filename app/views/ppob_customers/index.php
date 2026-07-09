@@ -5,14 +5,27 @@ $csrfToken = $csrfToken ?? '';
 
 <style>
 /* Glassmorphism styling */
-.glass-header {
+.page-header {
     background: var(--surface-1);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border-color);
-    position: sticky;
-    top: 60px; /* Adjust based on your header height */
-    z-index: 100;
-    padding: 15px 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 20px;
+    margin: 20px auto;
+    max-width: 800px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.page-title {
+    color: var(--text-primary);
+    font-weight: 800;
+    margin-bottom: 4px;
+    font-size: 1.25rem;
+}
+.page-subtitle {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0;
 }
 .customer-card {
     background: var(--surface-1);
@@ -117,11 +130,11 @@ $csrfToken = $csrfToken ?? '';
 }
 </style>
 
-<div class="glass-header">
-    <div class="d-flex justify-content-between align-items-center">
+<div class="container-fluid px-3">
+    <div class="page-header">
         <div>
-            <h4 class="mb-0 fw-bold">Pelanggan PPOB</h4>
-            <div class="text-muted small">Kelola data kontak transaksi PPOB</div>
+            <h1 class="page-title">Pelanggan PPOB</h1>
+            <p class="page-subtitle">Kelola data kontak transaksi PPOB</p>
         </div>
         <button class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" onclick="openAddModal()">
             <i class="bi bi-plus-lg me-2"></i> Tambah
@@ -153,10 +166,10 @@ $csrfToken = $csrfToken ?? '';
     <!-- Customer List -->
     <div id="customer-list">
         <?php if(empty($customers)): ?>
-            <div class="text-center py-5">
-                <div class="mb-3" style="font-size: 60px; color: var(--border-color);"><i class="bi bi-person-x"></i></div>
-                <h5 class="text-muted fw-bold">Belum ada pelanggan</h5>
-                <p class="text-muted small">Klik tombol tambah untuk menyimpan pelanggan baru.</p>
+            <div class="text-center py-5 my-5">
+                <div class="mb-3" style="font-size: 64px; color: var(--border-color); opacity: 0.5;"><i class="bi bi-person-x"></i></div>
+                <h5 class="fw-bold" style="color: var(--text-primary);">Belum ada pelanggan</h5>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Klik tombol tambah untuk menyimpan pelanggan baru.</p>
             </div>
         <?php else: ?>
             <?php foreach($customers as $c): 
