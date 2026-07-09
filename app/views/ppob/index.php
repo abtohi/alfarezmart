@@ -371,6 +371,11 @@
     <h4 class="section-title mt-4">PPOB Admin Tools</h4>
     <div class="row g-3 mb-5">
         <div class="col-6 col-md">
+            <a href="<?= BASE_URL ?>ppob/customers" class="btn btn-outline-danger w-100 py-3 rounded-4" style="background: var(--surface-1);">
+                <i class="bi bi-person-lines-fill d-block fs-4 mb-1"></i> Pelanggan
+            </a>
+        </div>
+        <div class="col-6 col-md">
             <a href="<?= BASE_URL ?>ppob/summary" class="btn btn-outline-info w-100 py-3 rounded-4" style="background: var(--surface-1);">
                 <i class="bi bi-bar-chart-line-fill d-block fs-4 mb-1"></i> Analytics
             </a>
@@ -414,9 +419,15 @@
                 <div class="mb-4">
                     <label class="form-label fw-bold small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;">Nomor Tujuan / Pelanggan</label>
                     <div class="d-flex position-relative align-items-center">
-                        <input type="text" class="form-control glass-input w-100" id="customer-no" placeholder="Masukkan nomor..." style="padding-right:110px;">
-                        <div id="provider-badge" class="position-absolute end-0 me-3 fw-bold" style="font-size:9px;display:none;padding:4px 8px;border-radius:12px;background:var(--primary);color:#fff;text-transform:uppercase;letter-spacing:0.5px;pointer-events:none; margin-right: 45px !important;"></div>
-                        <button class="btn btn-primary position-absolute end-0 h-100 px-3" id="btn-inquiry" onclick="performInquiry()" style="display:none; border-radius: 0 10px 10px 0; font-size:13px;">Cek</button>
+                        <input type="text" class="form-control glass-input w-100" id="customer-no" placeholder="Masukkan nomor..." style="padding-right:150px;">
+                        
+                        <!-- Contact Button -->
+                        <button type="button" class="btn text-primary position-absolute h-100 px-3" onclick="openContactBook()" style="right: 70px; border-radius: 0; z-index: 5;" title="Buku Kontak" id="btn-contact-book">
+                            <i class="bi bi-person-lines-fill fs-5"></i>
+                        </button>
+
+                        <div id="provider-badge" class="position-absolute end-0 fw-bold" style="font-size:9px;display:none;padding:4px 8px;border-radius:12px;background:var(--primary);color:#fff;text-transform:uppercase;letter-spacing:0.5px;pointer-events:none; margin-right: 45px !important; right: 45px;"></div>
+                        <button class="btn btn-primary position-absolute end-0 h-100 px-3" id="btn-inquiry" onclick="performInquiry()" style="display:none; border-radius: 0 10px 10px 0; font-size:13px; z-index: 10;">Cek</button>
                     </div>
                 </div>
 
@@ -659,6 +670,30 @@
     </div>
 </div>
 
+<!-- Contact Book Modal -->
+<div class="modal fade" id="contactModal" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 20px; border: none; background: var(--surface-1);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Buku Kontak PPOB</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
+            </div>
+            <div class="modal-body p-4 pt-2">
+                <div class="position-relative mb-3 mt-2">
+                    <input type="text" class="form-control glass-input" id="search-contact" placeholder="Cari nama / nomor..." style="padding-left: 35px; border-radius: 12px;">
+                    <i class="bi bi-search position-absolute text-muted" style="left:12px; top:50%; transform:translateY(-50%);"></i>
+                </div>
+                <div id="contact-loading" class="text-center py-4" style="display:none;">
+                    <span class="spinner-border text-primary"></span>
+                </div>
+                <div id="contact-list" class="d-flex flex-column gap-2">
+                    <!-- Contacts will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Toast Container -->
 <div id="toast-container-ppob" style="position: fixed; top: 80px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 300px;">
 </div>
@@ -683,12 +718,14 @@ function getDepositModal() { return bootstrap.Modal.getOrCreateInstance(document
 function getDepoResultModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('depoResultModal')); }
 function getTestCaseModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('testCaseModal')); }
 function getLoadingModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('loadingModal')); }
+function getContactModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('contactModal')); }
 
 let currentCategory = '';
 let currentType = '';
 let currentProducts = [];
 let selectedInqData = null; // Storing postpaid / PLN inquiry data
 let lastTrxData = null; // Storing last transaction result for print receipt
+let contactsData = []; // Store fetched contacts
 
 // 1. Fetch Live Balance on load
 async function fetchBalance() {
@@ -824,6 +861,90 @@ function openTrxModal(title, category, type) {
 
     getTrxModal().show();
 }
+
+function openContactBook() {
+    getContactModal().show();
+    document.getElementById('contact-loading').style.display = 'block';
+    document.getElementById('contact-list').innerHTML = '';
+    
+    // Determine which classification of contacts to load based on current category
+    let typeMap = {
+        'pulsa': 'hp',
+        'data': 'hp',
+        'sms_nelpon': 'hp',
+        'ewallet': 'hp',
+        'pln': 'pln',
+        'game': 'game',
+        'tv': 'tv'
+    };
+    let contactType = typeMap[currentCategory] || 'hp'; // fallback to hp
+
+    fetch(`${BASE_URL}api/ppob/customers?type=${contactType}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('contact-loading').style.display = 'none';
+            if(data.success) {
+                contactsData = data.data;
+                renderContacts(contactsData);
+            }
+        })
+        .catch(() => {
+            document.getElementById('contact-loading').style.display = 'none';
+            showAlert('❌ Gagal memuat daftar kontak', 'danger');
+        });
+}
+
+function renderContacts(data) {
+    const list = document.getElementById('contact-list');
+    list.innerHTML = '';
+    
+    if(data.length === 0) {
+        list.innerHTML = '<div class="text-center text-muted small py-4">Belum ada kontak tersimpan untuk layanan ini.</div>';
+        return;
+    }
+
+    data.forEach(c => {
+        let title = c.customer_name || 'Tanpa Nama';
+        let detail = c.customer_no;
+        if(c.type === 'pln' && c.pln_name) detail += ` • ${c.pln_name}`;
+        
+        let html = `
+        <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center mb-2" style="background:var(--surface-2); cursor:pointer;" onclick="selectContact('${c.customer_no}')">
+            <div>
+                <div class="fw-bold mb-1" style="font-size:14px; color:var(--text-primary);">${title}</div>
+                <div class="text-muted small">${detail}</div>
+            </div>
+            <i class="bi bi-chevron-right text-muted"></i>
+        </div>`;
+        list.insertAdjacentHTML('beforeend', html);
+    });
+}
+
+document.getElementById('search-contact').addEventListener('input', function(e) {
+    const q = e.target.value.toLowerCase();
+    const filtered = contactsData.filter(c => 
+        (c.customer_name && c.customer_name.toLowerCase().includes(q)) || 
+        (c.customer_no && c.customer_no.toLowerCase().includes(q)) ||
+        (c.pln_name && c.pln_name.toLowerCase().includes(q))
+    );
+    renderContacts(filtered);
+});
+
+function selectContact(no) {
+    document.getElementById('customer-no').value = no;
+    getContactModal().hide();
+    
+    // Trigger input event to re-evaluate provider badge / search products
+    const event = new Event('input', { bubbles: true });
+    document.getElementById('customer-no').dispatchEvent(event);
+    
+    // Auto trigger provider check or validation
+    if(currentCategory !== 'pln' && currentCategory !== 'game' && currentCategory !== 'tv') {
+        checkProvider();
+    }
+}
+
+// 5. Load Product Categories based on Tab (Prepaid/Postpaid)
 
 // 5. Load Products
 async function loadProducts(category, type) {

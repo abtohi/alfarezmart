@@ -71,6 +71,7 @@ $router->get('/ppob/settings', 'DigiflazzController@settings');
 $router->get('/ppob/prices', 'DigiflazzController@priceList');
 $router->get('/ppob/docs', 'DigiflazzController@documentation');
 $router->get('/ppob/summary', 'DigiflazzController@summaryView');
+$router->get('/ppob/customers', 'PpobCustomerController@index');
 
 // PPOB API Endpoints
 $router->post('/api/ppob/settings', 'DigiflazzController@apiSaveSettings');
@@ -135,6 +136,13 @@ $router->post('/api/ppob/deposit', 'DigiflazzController@apiCreateDeposit');
 $router->post('/api/ppob/markup-rules', 'DigiflazzController@apiSaveMarkupRules');
 $router->post('/api/ppob/custom-price', 'DigiflazzController@apiSaveCustomPrice');
 $router->post('/api/ppob/custom-price/reset', 'DigiflazzController@apiResetCustomPrice');
+
+// PPOB Customers API
+$router->get('/api/ppob/customers', 'PpobCustomerController@getByType');
+$router->post('/api/ppob/customers', 'PpobCustomerController@create');
+$router->post('/api/ppob/customers/update', 'PpobCustomerController@update');
+$router->post('/api/ppob/customers/delete', 'PpobCustomerController@delete');
+$router->post('/api/ppob/customers/check-pln', 'PpobCustomerController@checkPln');
 
 // Webhook (PUBLIC — no auth)
 $router->post('/api/ppob/webhook', 'DigiflazzController@webhook');
