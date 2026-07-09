@@ -300,14 +300,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await res.json();
             
             if(data.success) {
-                showAlert('✅ ' + data.message, 'success');
+                showToast('✅ ' + data.message, 'success');
                 getCustomerModal().hide();
                 setTimeout(() => window.location.reload(), 1000);
             } else {
-                showAlert('❌ ' + data.message, 'danger');
+                showToast('❌ ' + data.message, 'danger');
             }
         } catch(err) {
-            showAlert('❌ Terjadi kesalahan', 'danger');
+            showToast('❌ Terjadi kesalahan', 'danger');
         }
         btnSave.disabled = false;
         btnSave.innerText = originalText;
@@ -376,7 +376,7 @@ function toggleFields() {
 
 async function cekNamaPln() {
     const no = document.getElementById('customerNo').value;
-    if(!no) { showAlert('⚠️ Masukkan nomor meter terlebih dahulu', 'warning'); return; }
+    if(!no) { showToast('⚠️ Masukkan nomor meter terlebih dahulu', 'warning'); return; }
 
     const btn = document.getElementById('btnCekPln');
     const originalText = btn.innerText;
@@ -403,14 +403,14 @@ async function cekNamaPln() {
             if(alias.value === '') {
                 alias.value = data.data.name;
             }
-            showAlert('✅ Berhasil cek nama PLN', 'success');
+            showToast('✅ Berhasil cek nama PLN', 'success');
         } else {
-            showAlert('❌ ' + (data.message || 'Gagal cek nomor'), 'danger');
+            showToast('❌ ' + (data.message || 'Gagal cek nomor'), 'danger');
             document.getElementById('plnName').value = '';
             document.getElementById('plnPower').value = '';
         }
     } catch(err) {
-        showAlert('❌ Terjadi kesalahan jaringan', 'danger');
+        showToast('❌ Terjadi kesalahan jaringan', 'danger');
     }
 
     btn.disabled = false;
@@ -442,13 +442,13 @@ function deleteCustomer(id) {
     .then(res => res.json())
     .then(data => {
         if(data.success) {
-            showAlert('✅ ' + data.message, 'success');
+            showToast('✅ ' + data.message, 'success');
             setTimeout(() => window.location.reload(), 1000);
         } else {
-            showAlert('❌ ' + data.message, 'danger');
+            showToast('❌ ' + data.message, 'danger');
         }
     })
-    .catch(() => showAlert('❌ Terjadi kesalahan jaringan', 'danger'));
+    .catch(() => showToast('❌ Terjadi kesalahan jaringan', 'danger'));
 }
 </script>
 

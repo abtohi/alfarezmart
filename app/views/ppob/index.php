@@ -977,7 +977,7 @@ function detectProvider(phone) {
     if (!phone || phone.length < 4) return null;
     const prefix = phone.substring(0, 4);
     const prefixes = {
-        '0811': 'TELKOMSEL', '0812': 'TELKOMSEL', '0813': 'TELKOMSEL', '0821': 'TELKOMSEL', '0822': 'TELKOMSEL', '0852': 'TELKOMSEL', '0853': 'TELKOMSEL', '0851': 'TELKOMSEL',
+        '0811': 'TELKOMSEL', '0812': 'TELKOMSEL', '0813': 'TELKOMSEL', '0821': 'TELKOMSEL', '0822': 'TELKOMSEL', '0823': 'TELKOMSEL', '0852': 'TELKOMSEL', '0853': 'TELKOMSEL', '0851': 'TELKOMSEL',
         '0814': 'INDOSAT', '0815': 'INDOSAT', '0816': 'INDOSAT', '0855': 'INDOSAT', '0856': 'INDOSAT', '0857': 'INDOSAT', '0858': 'INDOSAT',
         '0817': 'XL', '0818': 'XL', '0819': 'XL', '0859': 'XL', '0877': 'XL', '0878': 'XL', 
         '0838': 'AXIS', '0831': 'AXIS', '0832': 'AXIS', '0833': 'AXIS',
@@ -1254,10 +1254,16 @@ async function executeTransactionAPI(payload) {
             body: JSON.stringify(payload)
         });
         const data = await res.json();
-        getLoadingModal().hide();
         
-        if(data.success) {
-            const status = (data.data.status || 'pending').toLowerCase();
+        // Sembunyikan loading modal secara total sebelum lanjut
+        const loadingModalObj = getLoadingModal();
+        loadingModalObj.hide();
+        
+        // Tambahkan delay agar animasi hide selesai sebelum show modal baru,
+        // mencegah backdrop modal bentrok di Bootstrap 5
+        setTimeout(() => {
+            if(data.success) {
+                const status = (data.data.status || 'pending').toLowerCase();
             const isPending = status === 'pending' || status === 'processing';
             const isSuccess = status === 'success' || status === 'sukses';
             
@@ -1320,13 +1326,13 @@ async function executeTransactionAPI(payload) {
             // Show print button for success or pending (user may want to print receipt early)
             document.getElementById('result-print-btn').style.display = (isSuccess || isPending) ? 'block' : 'none';
 
-            const resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+            const resultModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('resultModal'));
             resultModal.show();
             
             // Listen to modal close to stop polling
             document.getElementById('resultModal').addEventListener('hidden.bs.modal', function () {
                 if (autoPollInterval) clearInterval(autoPollInterval);
-            });
+            }, { once: true });
 
             fetchBalance(); // Refresh balance
         } else {
@@ -1339,6 +1345,7 @@ async function executeTransactionAPI(payload) {
                 showAlert('❌ Gagal: ' + (msg || 'Terjadi kesalahan'), 'danger');
             }
         }
+    }, 400); // 400ms delay to wait for loadingModal to hide
     } catch(e) {
         getLoadingModal().hide();
         showAlert('❌ Terjadi kesalahan jaringan saat transaksi.', 'danger');
