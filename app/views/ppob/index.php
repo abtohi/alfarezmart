@@ -603,7 +603,7 @@
                 <h5 class="fw-bold mb-3" style="color:var(--text-primary);">Masukkan PIN</h5>
                 <p class="small mb-3" style="color:var(--text-secondary);">Transaksi PPOB ini membutuhkan PIN otorisasi.</p>
                 <div class="mb-4 position-relative">
-                    <input type="password" class="form-control glass-input text-center fs-4" id="trx-pin-input" placeholder="••••" style="letter-spacing: 5px;">
+                    <input type="tel" inputmode="numeric" pattern="[0-9]*" class="form-control glass-input text-center fs-4" id="trx-pin-input" placeholder="••••" style="letter-spacing: 5px; -webkit-text-security: disc;">
                 </div>
                 <div class="d-flex gap-2">
                     <button class="btn btn-secondary flex-grow-1 rounded-pill" data-bs-dismiss="modal">Batal</button>
@@ -1405,7 +1405,7 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
 
 // 11. Print PPOB Receipt
 async function printPpobReceipt() {
-    if (!lastTrxData) { showAlert('⚠️ Data transaksi tidak ditemukan', 'warning'); return; }
+    if (!lastTrxData) { showToast('⚠️ Data transaksi tidak ditemukan', 'warning'); return; }
     
     // Check if ThermalPrinter is available (from printer.js)
     if (typeof ThermalPrinter !== 'undefined') {
@@ -1420,11 +1420,13 @@ async function printPpobReceipt() {
                 }
             }
             await printer.printDigitalReceipt(lastTrxData);
-            showAlert('✅ Struk berhasil dicetak!', 'success');
+            showToast('✅ Struk berhasil dicetak di Printer Thermal!', 'success');
         } catch (e) {
             console.warn('Bluetooth print failed:', e.message);
-            // Fallback to browser print
-            printPpobReceiptBrowser();
+            // Fallback to browser print with prompt
+            if(confirm('Koneksi Printer Thermal gagal atau dibatalkan. Cetak melalui Web Browser?')) {
+                printPpobReceiptBrowser();
+            }
         }
     } else {
         printPpobReceiptBrowser();
@@ -1436,36 +1438,53 @@ function printPpobReceiptBrowser() {
     if (!lastTrxData) return;
     const d = lastTrxData;
     const hasSN = d.sn && d.sn !== '-';
-    const w = window.open('', '_blank', 'width=320,height=600');
+    const w = window.open('', '_blank', 'width=380,height=700');
     w.document.write(`<!DOCTYPE html><html><head><title>Struk PPOB</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-    body { font-family: 'Courier New', monospace; font-size: 12px; width: 260px; margin: 0 auto; padding: 10px; color: #000; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; font-size: 13px; width: 300px; margin: 0 auto; padding: 20px; color: #111; background: #fff; }
+    * { box-sizing: border-box; }
     .center { text-align: center; }
-    .bold { font-weight: bold; }
-    .line { border-top: 1px dashed #000; margin: 6px 0; }
-    .row { display: flex; justify-content: space-between; margin: 3px 0; }
-    .sn-box { background: #f0f0f0; border: 1px solid #999; border-radius: 6px; padding: 8px; margin: 8px 0; text-align: center; font-size: 14px; font-weight: bold; letter-spacing: 1px; word-break: break-all; }
-    @media print { body { margin: 0; padding: 5px; } .no-print { display: none; } }
+    .bold { font-weight: 700; }
+    .logo { width: 55px; height: 55px; object-fit: contain; margin-bottom: 12px; border-radius: 12px; }
+    .header { margin-bottom: 20px; border-bottom: 2px dashed #ddd; padding-bottom: 15px; }
+    .store-name { font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; color: #000; }
+    .store-desc { font-size: 11px; color: #666; }
+    .line { border-top: 1px dashed #ddd; margin: 12px 0; }
+    .row { display: flex; justify-content: space-between; margin: 8px 0; align-items: flex-start; line-height: 1.4; }
+    .label { color: #555; width: 35%; font-size: 12px; }
+    .value { font-weight: 600; width: 65%; text-align: right; word-break: break-word; color: #000; }
+    .sn-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 15px 12px; margin: 15px 0; text-align: center; }
+    .sn-title { font-size: 10px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+    .sn-value { font-size: 15px; font-weight: 800; color: #000; letter-spacing: 1px; word-break: break-all; }
+    .total-row { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px dashed #000; font-size: 16px; font-weight: 800; color: #000; }
+    .footer { text-align: center; margin-top: 30px; font-size: 11px; color: #666; line-height: 1.5; }
+    .print-btn { display: block; width: 100%; padding: 14px; background: #0f0f1a; color: #fff; text-align: center; border: none; border-radius: 10px; font-weight: 600; font-size: 14px; margin-top: 25px; cursor: pointer; transition: background 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+    .print-btn:active { background: #000; transform: scale(0.98); }
+    @media print { body { width: 100%; padding: 0; } .no-print { display: none !important; } .header { border-bottom: 1px dashed #000; } .line { border-top: 1px dashed #000; } .sn-box { background: transparent; border: 1px dashed #000; } }
 </style></head><body>
-<div class="center bold" style="font-size:16px;">STRUK PEMBAYARAN</div>
-<div class="center" style="font-size:10px; margin-bottom: 6px;">Produk Digital (PPOB)</div>
+<div class="header center">
+    <img src="<?= BASE_URL ?>public/images/mobile_icon.png" class="logo" alt="Logo">
+    <div class="store-name">ALFAREZMART</div>
+    <div class="store-desc">Struk Pembayaran Produk Digital</div>
+</div>
+<div class="row"><span class="label">No. Ref</span><span class="value">${d.ref_id}</span></div>
+<div class="row"><span class="label">Tanggal</span><span class="value">${d.created_at}</span></div>
 <div class="line"></div>
-<div class="row"><span>No. Ref</span><span>${d.ref_id}</span></div>
-<div class="row"><span>Tanggal</span><span>${d.created_at}</span></div>
+<div class="row"><span class="label">Produk</span><span class="value">${d.product_name}</span></div>
+<div class="row"><span class="label">ID / No.</span><span class="value">${d.customer_no}</span></div>
+${d.customer_name ? `<div class="row"><span class="label">Nama</span><span class="value">${d.customer_name}</span></div>` : ''}
 <div class="line"></div>
-<div class="row"><span>Produk</span><span class="bold">${d.product_name}</span></div>
-<div class="row"><span>ID/No.</span><span>${d.customer_no}</span></div>
-${d.customer_name ? `<div class="row"><span>Nama</span><span>${d.customer_name}</span></div>` : ''}
-<div class="line"></div>
-${hasSN ? `<div class="center bold" style="font-size:11px;">SN / TOKEN</div><div class="sn-box">${d.sn}</div><div class="line"></div>` : ''}
-<div class="row"><span class="bold">TOTAL BAYAR</span><span class="bold">Rp${parseInt(d.sell_price).toLocaleString('id-ID')}</span></div>
-<div class="line"></div>
-<div class="center" style="font-size:10px; margin-top:8px;">Terima kasih telah berbelanja<br>= Semoga Berkah =</div>
-<br>
-<div class="center no-print"><button onclick="window.print()" style="padding:8px 24px; font-size:14px; cursor:pointer;">🖨️ Print</button></div>
+${hasSN ? `<div class="sn-box"><div class="sn-title">SN / TOKEN</div><div class="sn-value">${d.sn}</div></div>` : ''}
+<div class="total-row"><span>TOTAL BAYAR</span><span>Rp ${parseInt(d.sell_price).toLocaleString('id-ID')}</span></div>
+<div class="footer">
+    <div class="bold" style="color:#000; margin-bottom:4px; font-size: 12px;">Terima kasih telah berbelanja</div>
+    <div>= Semoga Berkah =</div>
+</div>
+<button class="no-print print-btn" onclick="window.print()">🖨️ Cetak Struk</button>
 </body></html>`);
     w.document.close();
-    setTimeout(() => w.print(), 300);
 }
 
 // Helper: show non-blocking alert
