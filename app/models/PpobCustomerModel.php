@@ -17,19 +17,19 @@ class PpobCustomerModel {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getByType($type) {
+    public function getByType(string $type) {
         $stmt = $this->db->prepare("SELECT * FROM ppob_customers WHERE type = :type ORDER BY created_at DESC");
         $stmt->execute(['type' => $type]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getById($id) {
+    public function getById(int|string $id) {
         $stmt = $this->db->prepare("SELECT * FROM ppob_customers WHERE id = :id");
         $stmt->execute(['id' => $id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function create($data) {
+    public function create(array $data) {
         $stmt = $this->db->prepare("
             INSERT INTO ppob_customers (type, customer_name, customer_no, pln_name, pln_power)
             VALUES (:type, :customer_name, :customer_no, :pln_name, :pln_power)
@@ -44,7 +44,7 @@ class PpobCustomerModel {
         ]);
     }
 
-    public function update($id, $data) {
+    public function update(int|string $id, array $data) {
         $stmt = $this->db->prepare("
             UPDATE ppob_customers 
             SET type = :type, 
@@ -65,7 +65,7 @@ class PpobCustomerModel {
         ]);
     }
 
-    public function delete($id) {
+    public function delete(int|string $id) {
         $stmt = $this->db->prepare("DELETE FROM ppob_customers WHERE id = :id");
         return $stmt->execute(['id' => $id]);
     }

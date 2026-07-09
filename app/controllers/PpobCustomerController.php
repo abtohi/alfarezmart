@@ -4,7 +4,7 @@
  * Handles PPOB Customers management
  */
 class PpobCustomerController extends Controller {
-    private $model;
+    private PpobCustomerModel $model;
 
     public function __construct() {
         require_once __DIR__ . '/../models/PpobCustomerModel.php';
@@ -140,7 +140,7 @@ class PpobCustomerController extends Controller {
         $this->jsonResponse(['success' => true, 'data' => $customers]);
     }
 
-    private function jsonResponse($data) {
+    private function jsonResponse(array $data) {
         header('Content-Type: application/json');
         echo json_encode($data);
         exit;
