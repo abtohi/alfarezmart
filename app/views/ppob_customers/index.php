@@ -139,9 +139,14 @@ $csrfToken = $csrfToken ?? '';
 
 <div class="container-fluid px-3">
     <div class="page-header">
-        <div>
-            <h1 class="page-title">Pelanggan PPOB</h1>
-            <p class="page-subtitle">Kelola data kontak transaksi PPOB</p>
+        <div class="d-flex align-items-center gap-3">
+            <a href="<?= BASE_URL ?>ppob" class="btn rounded-circle shadow-sm d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; color: var(--text-primary); background: var(--surface-2); border: 1px solid var(--border-color); text-decoration: none; transition: all 0.2s;">
+                <i class="bi bi-arrow-left fs-5"></i>
+            </a>
+            <div>
+                <h1 class="page-title">Pelanggan PPOB</h1>
+                <p class="page-subtitle">Kelola data kontak transaksi PPOB</p>
+            </div>
         </div>
         <button class="btn btn-primary-custom rounded-pill px-4 fw-bold shadow-sm" onclick="openAddModal()">
             <i class="bi bi-plus-lg me-2"></i> Tambah
