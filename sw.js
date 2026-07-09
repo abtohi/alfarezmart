@@ -2,8 +2,8 @@
  * AlfarezMart PWA - Service Worker
  * Cache Strategy: Cache First for assets, Network First for API
  */
-const CACHE_NAME = 'alfarezmart-cache-v13.20';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v13.20';
+const CACHE_NAME = 'alfarezmart-cache-v13.21';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v13.21';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -144,7 +144,7 @@ self.addEventListener('fetch', event => {
                         }
                     });
                 }
-            }, 800); // 800ms timeout for weak signal fast fallback
+            }, 5000); // 5000ms timeout for weak signal fast fallback
 
             fetch(event.request, { cache: 'no-cache' })
                 .then(response => {
