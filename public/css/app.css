@@ -98,6 +98,34 @@ body {
 .app-toast.warning { background: var(--warning); color: var(--text-inverse); }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
 
+/* Bootstrap Utilities Override for Dark Mode / Form Constraints */
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+label.form-label, 
+label.form-label.text-muted {
+    color: var(--text-secondary) !important;
+    letter-spacing: 0.5px;
+}
+
+.glass-input::placeholder,
+.form-control::placeholder {
+    color: var(--text-secondary) !important;
+    opacity: 0.6 !important;
+}
+
+.form-control, .glass-input, .form-select {
+    color: var(--text-primary) !important;
+    background-color: var(--surface-2);
+    border-color: var(--border-color);
+}
+.form-control:focus, .glass-input:focus, .form-select:focus {
+    color: var(--text-primary) !important;
+    background-color: var(--surface-2);
+    border-color: var(--primary);
+}
+
 /* Sections */
 .page-section { padding: 16px; max-width: 100%; overflow-x: hidden; box-sizing: border-box; }
 .app-content { overflow-x: hidden; }
