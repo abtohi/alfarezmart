@@ -121,12 +121,19 @@ $csrfToken = $csrfToken ?? '';
     border-radius: 10px;
     padding: 12px 16px;
     font-size: 14px;
-    color: var(--text-primary);
+    color: var(--text-primary) !important;
+}
+.glass-input::placeholder {
+    color: var(--text-secondary) !important;
+    opacity: 0.7 !important;
 }
 .glass-input:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+.modal-content label.text-muted {
+    color: var(--text-secondary) !important;
 }
 </style>
 
@@ -136,7 +143,7 @@ $csrfToken = $csrfToken ?? '';
             <h1 class="page-title">Pelanggan PPOB</h1>
             <p class="page-subtitle">Kelola data kontak transaksi PPOB</p>
         </div>
-        <button class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" onclick="openAddModal()">
+        <button class="btn btn-primary-custom rounded-pill px-4 fw-bold shadow-sm" onclick="openAddModal()">
             <i class="bi bi-plus-lg me-2"></i> Tambah
         </button>
     </div>
@@ -239,7 +246,7 @@ $csrfToken = $csrfToken ?? '';
                         <label class="form-label small fw-bold text-muted text-uppercase" id="lblCustomerNo">Nomor HP</label>
                         <div class="d-flex position-relative align-items-center">
                             <input type="text" class="form-control glass-input w-100" name="customer_no" id="customerNo" required>
-                            <button type="button" class="btn btn-primary position-absolute end-0 h-100 px-3" id="btnCekPln" onclick="cekNamaPln()" style="display:none; border-radius: 0 10px 10px 0; font-size:13px;">Cek Nama</button>
+                            <button type="button" class="btn btn-primary-custom position-absolute end-0 h-100 px-3" id="btnCekPln" onclick="cekNamaPln()" style="display:none; border-radius: 0 10px 10px 0; font-size:13px;">Cek Nama</button>
                         </div>
                     </div>
 
@@ -260,7 +267,7 @@ $csrfToken = $csrfToken ?? '';
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold mt-2" id="btnSave">Simpan Pelanggan</button>
+                    <button type="submit" class="btn btn-primary-custom w-100 py-3 rounded-pill fw-bold mt-2" id="btnSave">Simpan Pelanggan</button>
                 </form>
             </div>
         </div>
