@@ -418,16 +418,17 @@
                                 <!-- Input Section -->
                 <div class="mb-4">
                     <label class="form-label fw-bold small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;">Nomor Tujuan / Pelanggan</label>
-                    <div class="d-flex position-relative align-items-center">
-                        <input type="text" class="form-control glass-input w-100" id="customer-no" placeholder="Masukkan nomor..." style="padding-right:150px;">
+                    <div class="input-group glass-input p-0 d-flex align-items-center" style="overflow: hidden;">
+                        <input type="text" class="form-control border-0 bg-transparent text-white shadow-none" id="customer-no" placeholder="Masukkan nomor..." style="font-size: 14px; padding: 12px 16px;">
+                        
+                        <div id="provider-badge" class="fw-bold me-2" style="font-size:9px;display:none;padding:4px 8px;border-radius:12px;background:var(--primary);color:#fff;text-transform:uppercase;letter-spacing:0.5px;"></div>
                         
                         <!-- Contact Button -->
-                        <button type="button" class="btn text-primary position-absolute h-100 px-3" onclick="openContactBook()" style="right: 70px; border-radius: 0; z-index: 5;" title="Buku Kontak" id="btn-contact-book">
+                        <button type="button" class="btn text-primary bg-transparent border-0 px-3 m-0" onclick="openContactBook()" title="Buku Kontak" id="btn-contact-book">
                             <i class="bi bi-person-lines-fill fs-5"></i>
                         </button>
 
-                        <div id="provider-badge" class="position-absolute end-0 fw-bold" style="font-size:9px;display:none;padding:4px 8px;border-radius:12px;background:var(--primary);color:#fff;text-transform:uppercase;letter-spacing:0.5px;pointer-events:none; margin-right: 45px !important; right: 45px;"></div>
-                        <button class="btn btn-primary position-absolute end-0 h-100 px-3" id="btn-inquiry" onclick="performInquiry()" style="display:none; border-radius: 0 10px 10px 0; font-size:13px; z-index: 10;">Cek</button>
+                        <button class="btn btn-primary px-4 fw-bold m-0" id="btn-inquiry" onclick="performInquiry()" style="display:none; border-radius: 0; font-size:13px; align-self: stretch;">Cek</button>
                     </div>
                 </div>
 

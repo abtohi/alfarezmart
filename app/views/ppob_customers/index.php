@@ -244,9 +244,9 @@ $csrfToken = $csrfToken ?? '';
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted text-uppercase" id="lblCustomerNo">Nomor HP</label>
-                        <div class="d-flex position-relative align-items-center">
-                            <input type="text" class="form-control glass-input w-100" name="customer_no" id="customerNo" required>
-                            <button type="button" class="btn btn-primary-custom position-absolute end-0 h-100 px-3" id="btnCekPln" onclick="cekNamaPln()" style="display:none; border-radius: 0 10px 10px 0; font-size:13px;">Cek Nama</button>
+                        <div class="input-group glass-input p-0 d-flex align-items-center" style="overflow: hidden;">
+                            <input type="text" class="form-control border-0 bg-transparent text-white shadow-none" name="customer_no" id="customerNo" required style="font-size: 14px; padding: 12px 16px;">
+                            <button type="button" class="btn btn-primary-custom h-100 px-4 fw-bold m-0" id="btnCekPln" onclick="cekNamaPln()" style="display:none; border-radius: 0; font-size:13px; align-self: stretch;">Cek Nama</button>
                         </div>
                     </div>
 
