@@ -493,9 +493,9 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label small text-muted mb-1 fw-bold">Harga Jual Baru</label>
-                    <div class="input-group">
-                        <span class="input-group-text glass-input border-end-0 text-muted fw-bold">Rp</span>
-                        <input type="number" class="form-control glass-input border-start-0 ps-2 fw-bold" id="sp-sell-price" placeholder="Masukkan harga jual" style="font-size: 16px; color: var(--text-primary);">
+                    <div class="d-flex align-items-stretch" style="border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--surface-2);">
+                        <div class="d-flex align-items-center justify-content-center px-3 fw-bold text-muted" style="background: rgba(0,0,0,0.03); border-right: 1px solid var(--border-color);">Rp</div>
+                        <input type="number" class="form-control border-0 bg-transparent ps-3 fw-bold shadow-none" id="sp-sell-price" placeholder="Masukkan harga jual" style="font-size: 16px; color: var(--text-primary); padding: 12px 0;">
                     </div>
                     <div class="mt-2 text-end">
                         <small id="sp-profit-preview" class="fw-bold" style="color: var(--success); display: none;">Untung: Rp0</small>
@@ -727,9 +727,9 @@
 
                     <div class="mb-3" id="custom-price-container" style="display:none; text-align: left; padding: 0 10px;">
                         <label class="form-label small text-muted mb-1 fw-bold">Harga Jual (Bisa Diubah Untuk Struk)</label>
-                        <div class="input-group">
-                            <span class="input-group-text glass-input border-end-0 text-muted fw-bold">Rp</span>
-                            <input type="number" class="form-control glass-input border-start-0 ps-2 fw-bold" id="custom-print-price" placeholder="0" style="font-size: 16px;">
+                        <div class="d-flex align-items-stretch" style="border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--surface-2);">
+                            <div class="d-flex align-items-center justify-content-center px-3 fw-bold text-muted" style="background: rgba(0,0,0,0.03); border-right: 1px solid var(--border-color);">Rp</div>
+                            <input type="number" class="form-control border-0 bg-transparent ps-3 fw-bold shadow-none" id="custom-print-price" placeholder="0" style="font-size: 16px; color: var(--text-primary); padding: 12px 0;">
                         </div>
                     </div>
 
