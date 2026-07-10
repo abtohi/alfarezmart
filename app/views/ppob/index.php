@@ -1265,23 +1265,22 @@ function renderProducts(products) {
         
         const sellPrice = getPpobSellPrice(p.buyer_sku_code);
         let priceHtml = `<div class="prod-price">${formatRp(p.seller_price)}</div>`;
-        let profitHtml = '';
         
         if (sellPrice && sellPrice > p.seller_price) {
             const profit = sellPrice - p.seller_price;
             const pct = ((profit / p.seller_price) * 100).toFixed(1);
             priceHtml = `
-                <div class="d-flex flex-column">
-                    <span class="text-muted text-decoration-line-through" style="font-size: 0.75rem; opacity: 0.7;">${formatRp(p.seller_price)}</span>
-                    <span class="prod-price text-success">${formatRp(sellPrice)}</span>
+                <div class="prod-price">${formatRp(p.seller_price)}</div>
+                <div class="mt-1" style="font-size: 0.75rem;">
+                    <span class="text-success fw-bold">Jual: ${formatRp(sellPrice)}</span>
+                    <span class="text-muted ms-1" style="opacity: 0.8;">(+${formatRp(profit)} / ${pct}%)</span>
                 </div>
             `;
-            profitHtml = `<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 ms-2" style="font-size: 0.65rem; padding: 4px 6px;">+${formatRp(profit)} (${pct}%)</span>`;
         } else if (sellPrice) {
             priceHtml = `
-                <div class="d-flex flex-column">
-                    <span class="text-muted text-decoration-line-through" style="font-size: 0.75rem; opacity: 0.7;">${formatRp(p.seller_price)}</span>
-                    <span class="prod-price text-warning">${formatRp(sellPrice)}</span>
+                <div class="prod-price">${formatRp(p.seller_price)}</div>
+                <div class="mt-1" style="font-size: 0.75rem;">
+                    <span class="text-warning fw-bold">Jual: ${formatRp(sellPrice)}</span>
                 </div>
             `;
         }
@@ -1293,7 +1292,7 @@ function renderProducts(products) {
                 <i class="bi bi-gear-fill" style="font-size: 1rem;"></i>
             </button>
             <div class="pe-4">
-                <div class="prod-name d-flex align-items-center flex-wrap">${p.product_name} ${profitHtml}</div>
+                <div class="prod-name">${p.product_name}</div>
                 <div class="prod-desc">${p.description || ''}</div>
             </div>
             <div class="mt-2">
