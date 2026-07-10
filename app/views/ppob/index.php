@@ -1293,6 +1293,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }, { once: true });
         }
     });
+
+    // Auto connect printer in the background on page load
+    setTimeout(async () => {
+        if (typeof ThermalPrinter !== 'undefined' && navigator.bluetooth) {
+            let printer = window._ppobPrinter = new ThermalPrinter();
+            if (printer.hasSavedDevice()) {
+                console.log("[PPOB] Printer tersimpan ditemukan. Mencoba auto-connect di background...");
+                await printer.tryAutoReconnect();
+            }
+        }
+    }, 1500); // Wait 1.5s so it doesn't block UI rendering
 });
 
 let REQUIRE_PIN_ACTIVE = REQUIRE_PIN;
