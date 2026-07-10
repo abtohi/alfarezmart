@@ -671,17 +671,31 @@
                             <span class="text-muted small">SN/Token</span>
                             <span class="fw-bold" id="result-sn" style="max-width: 180px; word-break: break-all; text-align: right;">-</span>
                         </div>
+                        <div id="result-pln-details" style="display:none; border-top: 1px dashed var(--border-color); padding-top: 8px; margin-top: 8px;">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Nama Mtr</span>
+                                <span class="fw-bold" id="result-pln-name" style="text-align: right;">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Tarif/Daya</span>
+                                <span class="fw-bold" id="result-pln-power" style="text-align: right;">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Jml kWh</span>
+                                <span class="fw-bold" id="result-pln-kwh" style="text-align: right;">-</span>
+                            </div>
+                        </div>
                         <div class="d-flex justify-content-between">
                             <span class="text-muted small">Ref ID</span>
                             <span class="text-muted" id="result-refid" style="font-size: 11px;">-</span>
                         </div>
                     </div>
 
-                    <div class="mb-3" id="custom-price-container" style="display:none; text-align: left;">
+                    <div class="mb-3" id="custom-price-container" style="display:none; text-align: left; padding: 0 10px;">
                         <label class="form-label small text-muted mb-1 fw-bold">Harga Jual (Bisa Diubah Untuk Struk)</label>
-                        <div class="input-group" style="box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-radius: 12px; overflow: hidden;">
-                            <span class="input-group-text bg-white border-end-0 text-muted" style="border-color: var(--border-color);">Rp</span>
-                            <input type="number" class="form-control border-start-0 ps-0 fw-bold" id="custom-print-price" placeholder="0" style="border-color: var(--border-color); font-size: 16px;">
+                        <div class="input-group">
+                            <span class="input-group-text glass-input border-end-0 text-muted fw-bold">Rp</span>
+                            <input type="number" class="form-control glass-input border-start-0 ps-2 fw-bold" id="custom-print-price" placeholder="0" style="font-size: 16px;">
                         </div>
                     </div>
 
@@ -1393,9 +1407,29 @@ async function executeTransactionAPI(payload) {
                 document.getElementById('result-actions').style.display = 'flex';
                 document.getElementById('custom-price-container').style.display = 'block';
                 document.getElementById('custom-print-price').value = parseInt(payload.sell_price || 0);
+                document.getElementById('custom-print-price').className = 'form-control glass-input';
+                
+                // PLN UI Parsing
+                const isPln = payload.product_name && payload.product_name.toLowerCase().includes('pln');
+                const resultPlnDetails = document.getElementById('result-pln-details');
+                if (isPln && sn && sn !== '-' && sn.includes('/')) {
+                    const parts = sn.split('/');
+                    if (parts.length >= 4) {
+                        document.getElementById('result-sn').innerText = parts[0];
+                        document.getElementById('result-pln-name').innerText = parts[1] || '-';
+                        document.getElementById('result-pln-power').innerText = parts.length > 4 ? `${parts[2]}/${parts[3]}` : parts[2];
+                        document.getElementById('result-pln-kwh').innerText = parts.length > 4 ? parts[4] : parts[3];
+                        resultPlnDetails.style.display = 'block';
+                    } else {
+                        resultPlnDetails.style.display = 'none';
+                    }
+                } else {
+                    resultPlnDetails.style.display = 'none';
+                }
             } else {
                 document.getElementById('result-actions').style.display = 'none';
                 document.getElementById('custom-price-container').style.display = 'none';
+                document.getElementById('result-pln-details').style.display = 'none';
             }
             
             // Auto prompt save contact if PLN
@@ -1462,6 +1496,20 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
                 if (isSuccess) {
                     document.getElementById('result-actions').style.display = 'flex';
                     document.getElementById('custom-price-container').style.display = 'block';
+                    
+                    // PLN UI Parsing for polling success
+                    const isPln = lastTrxData && lastTrxData.product_name && lastTrxData.product_name.toLowerCase().includes('pln');
+                    const resultPlnDetails = document.getElementById('result-pln-details');
+                    if (isPln && lastTrxData.sn && lastTrxData.sn !== '-' && lastTrxData.sn.includes('/')) {
+                        const parts = lastTrxData.sn.split('/');
+                        if (parts.length >= 4) {
+                            document.getElementById('result-sn').innerText = parts[0];
+                            document.getElementById('result-pln-name').innerText = parts[1] || '-';
+                            document.getElementById('result-pln-power').innerText = parts.length > 4 ? `${parts[2]}/${parts[3]}` : parts[2];
+                            document.getElementById('result-pln-kwh').innerText = parts.length > 4 ? parts[4] : parts[3];
+                            resultPlnDetails.style.display = 'block';
+                        }
+                    }
                 } else {
                     document.getElementById('result-actions').style.display = 'none';
                     document.getElementById('custom-price-container').style.display = 'none';
