@@ -1,4 +1,6 @@
-
+<script>
+    const csrfToken = '<?= $csrfToken ?? "" ?>';
+</script>
 <style>
 /* =========================================================
    PPOB Premium Design System
@@ -1356,6 +1358,11 @@ async function executeTransactionAPI(payload) {
             // Show action buttons for success or pending (user may want to print receipt early)
             document.getElementById('result-actions').style.display = (isSuccess || isPending) ? 'flex' : 'none';
             
+            // Auto prompt save contact if PLN
+            if (isSuccess && currentCategory === 'pln') {
+                promptSavePlnContact(payload.customer_no, payload.customer_name || '');
+            }
+
             // Listen to modal close to stop polling
             document.getElementById('resultModal').addEventListener('hidden.bs.modal', function () {
                 if (autoPollInterval) clearInterval(autoPollInterval);
@@ -1411,6 +1418,11 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
                     lastTrxData.sn = data.data.sn || '-';
                 }
                 document.getElementById('result-actions').style.display = isSuccess ? 'flex' : 'none';
+                
+                if (isSuccess && currentCategory === 'pln') {
+                    promptSavePlnContact(customerNo, lastTrxData ? lastTrxData.customer_name : '');
+                }
+
                 return true; // Polling finished
             } else {
                 if (!isAuto) {
@@ -1629,12 +1641,12 @@ function printPpobReceiptBrowser() {
     <div class="store-name">ALFAREZMART</div>
     <div class="store-desc">Struk Pembayaran Produk Digital</div>
 </div>
-<div class="row"><span class="label">No. Ref</span><span class="value">${d.ref_id}</span></div>
-<div class="row"><span class="label">Tanggal</span><span class="value">${d.created_at}</span></div>
+<div class="row"><div class="label">No. Ref</div><div class="value">${d.ref_id}</div></div>
+<div class="row"><div class="label">Tanggal</div><div class="value">${d.created_at}</div></div>
 <div class="line"></div>
-<div class="row"><span class="label">Produk</span><span class="value">${d.product_name}</span></div>
-<div class="row"><span class="label">ID / No.</span><span class="value">${d.customer_no}</span></div>
-${d.customer_name ? `<div class="row"><span class="label">Nama</span><span class="value">${d.customer_name}</span></div>` : ''}
+<div class="row"><div class="label">Produk</div><div class="value">${d.product_name}</div></div>
+<div class="row"><div class="label">ID / No.</div><div class="value">${d.customer_no}</div></div>
+${d.customer_name ? `<div class="row"><div class="label">Nama</div><div class="value">${d.customer_name}</div></div>` : ''}
 <div class="line"></div>
 ${hasSN ? `<div class="sn-box"><div class="sn-title">SN / TOKEN</div><div class="sn-value">${d.sn}</div></div>` : ''}
 <div class="total-row"><span>TOTAL BAYAR</span><span>Rp ${parseInt(d.sell_price).toLocaleString('id-ID')}</span></div>
@@ -1645,6 +1657,46 @@ ${hasSN ? `<div class="sn-box"><div class="sn-title">SN / TOKEN</div><div class=
 <button class="no-print print-btn" onclick="window.print()">🖨️ Cetak Struk</button>
 </body></html>`);
     w.document.close();
+}
+
+async function promptSavePlnContact(customerNo, defaultName) {
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/ppob/customers?type=pln');
+        const data = await res.json();
+        if (data.success && data.data) {
+            const exists = data.data.some(c => c.customer_no === customerNo);
+            if (exists) return; // Don't show if already saved
+        }
+        
+        // Use timeout to prevent modal conflict
+        setTimeout(async () => {
+            if (confirm(`Nomor PLN ${customerNo} belum ada di daftar pelanggan.\nApakah Anda ingin menyimpannya?`)) {
+                const alias = prompt('Masukkan nama alias untuk pelanggan PLN ini:', defaultName || '');
+                if (alias !== null && alias.trim() !== '') {
+                    const formData = new URLSearchParams();
+                    formData.append('type', 'pln');
+                    formData.append('customer_no', customerNo);
+                    formData.append('customer_name', alias.trim());
+                    formData.append('pln_name', defaultName || '');
+                    formData.append('csrf_token', csrfToken);
+                    
+                    const saveRes = await fetch('<?= BASE_URL ?>api/ppob/customers', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: formData.toString()
+                    });
+                    const saveData = await saveRes.json();
+                    if (saveData.success) {
+                        showToast('✅ Pelanggan PLN berhasil disimpan', 'success');
+                    } else {
+                        showToast('❌ Gagal menyimpan: ' + saveData.message, 'danger');
+                    }
+                }
+            }
+        }, 500);
+    } catch (e) {
+        console.error('Error checking pln contact:', e);
+    }
 }
 
 // Helper: show non-blocking alert

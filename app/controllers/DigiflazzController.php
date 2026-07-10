@@ -25,7 +25,8 @@ class DigiflazzController extends Controller {
         $settingModel = new SettingModel();
         $mode = $settingModel->get('digiflazz_mode', 'development');
         $requirePin = !empty($settingModel->get('digiflazz_pin', ''));
-        $this->view('ppob/index', ['title' => 'Produk Digital (PPOB)', 'mode' => $mode, 'requirePin' => $requirePin]);
+        $csrfToken = (new Security())->getCSRFToken();
+        $this->view('ppob/index', ['title' => 'Produk Digital (PPOB)', 'mode' => $mode, 'requirePin' => $requirePin, 'csrfToken' => $csrfToken]);
     }
 
     public function settings() {
