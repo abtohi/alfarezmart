@@ -879,7 +879,7 @@ async function requestDeposit() {
                           || notes.match(/(BCA|MANDIRI|BRI|BNI|FLIP|SHOPEEPAY|GOPAY)\s+(\d{8,})\s*a\.?\/?n\.?\s+(.*)/i);
             const parsedContainer = document.getElementById('dr-parsed-dest');
             
-            if (bank === 'SHOPEEPAY') {
+            if (bank === 'SHOPEEPAY' || bank === 'FLIP') {
                 document.getElementById('dr-bank-name').innerText = 'BCA';
                 document.getElementById('dr-acc-no').innerText = '6042888890';
                 document.getElementById('dr-acc-name').innerText = 'PT DIGIFLAZZ INTERKONEKSI INDONESIA';
