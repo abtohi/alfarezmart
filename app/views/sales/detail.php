@@ -128,7 +128,7 @@
 
 </div>
 
-<script src="<?= BASE_URL ?>public/js/printer_v2.js"></script>
+<script src="<?= BASE_URL ?>public/js/printer_v3.js"></script>
 <script>
     const STORE_SETTINGS = <?= json_encode($storeSettings) ?>;
     const SALE_DATA = <?= json_encode($sale) ?>;
