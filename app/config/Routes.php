@@ -135,6 +135,7 @@ $router->post('/api/ppob/deposit', 'DigiflazzController@apiCreateDeposit');
 
 $router->post('/api/ppob/markup-rules', 'DigiflazzController@apiSaveMarkupRules');
 $router->post('/api/ppob/custom-price', 'DigiflazzController@apiSaveCustomPrice');
+$router->post('/api/ppob/custom-price/bulk', 'DigiflazzController@apiSaveCustomPricesBulk');
 $router->post('/api/ppob/custom-price/reset', 'DigiflazzController@apiResetCustomPrice');
 
 // PPOB Customers API

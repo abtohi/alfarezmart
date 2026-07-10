@@ -1188,13 +1188,63 @@ function getPpobSellPrices() {
 }
 
 function getPpobSellPrice(sku) {
+    if (typeof currentProducts !== 'undefined') {
+        const p = currentProducts.find(x => x.buyer_sku_code === sku);
+        if (p && p.is_custom_price == 1 && p.sell_price > 0) {
+            return parseInt(p.sell_price, 10);
+        }
+    }
+    // Fallback to local storage
     return getPpobSellPrices()[sku];
 }
 
-function savePpobSellPrice(sku, price) {
+async function savePpobSellPrice(sku, price) {
+    // Save to local storage for instant fallback
     const prices = getPpobSellPrices();
     prices[sku] = parseInt(price, 10);
     localStorage.setItem('ppob_sell_prices', JSON.stringify(prices));
+
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/ppob/custom-price', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({sku: sku, sell_price: price})
+        });
+        const data = await res.json();
+        if(data.success) {
+            if (typeof currentProducts !== 'undefined') {
+                const p = currentProducts.find(x => x.buyer_sku_code === sku);
+                if (p) {
+                    p.sell_price = price;
+                    p.is_custom_price = 1;
+                }
+            }
+        }
+    } catch(e) { console.error('Failed to save to server'); }
+}
+
+async function deletePpobSellPrice(sku) {
+    const prices = getPpobSellPrices();
+    delete prices[sku];
+    localStorage.setItem('ppob_sell_prices', JSON.stringify(prices));
+
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/ppob/custom-price/reset', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({sku: sku})
+        });
+        const data = await res.json();
+        if(data.success) {
+            if (typeof currentProducts !== 'undefined') {
+                const p = currentProducts.find(x => x.buyer_sku_code === sku);
+                if (p) {
+                    p.sell_price = p.seller_price;
+                    p.is_custom_price = 0;
+                }
+            }
+        }
+    } catch(e) { console.error('Failed to delete from server'); }
 }
 
 window.openSetPriceModal = function(e, productStr) {
@@ -1234,16 +1284,25 @@ function updateProfitPreview() {
     }
 }
 
-document.getElementById('btn-save-price')?.addEventListener('click', () => {
+document.getElementById('btn-save-price')?.addEventListener('click', async () => {
     const sku = document.getElementById('sp-sku').value;
     const sell = document.getElementById('sp-sell-price').value;
+    
+    const btn = document.getElementById('btn-save-price');
+    const ogText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Menyimpan...';
+    btn.disabled = true;
+
     if (sell && parseInt(sell) > 0) {
-        savePpobSellPrice(sku, sell);
+        await savePpobSellPrice(sku, sell);
+        showToast('Harga jual berhasil disimpan di server', 'success');
     } else {
-        const prices = getPpobSellPrices();
-        delete prices[sku];
-        localStorage.setItem('ppob_sell_prices', JSON.stringify(prices));
+        await deletePpobSellPrice(sku);
+        showToast('Harga jual dikembalikan ke default', 'info');
     }
+    
+    btn.innerHTML = ogText;
+    btn.disabled = false;
     bootstrap.Modal.getOrCreateInstance(document.getElementById('setPriceModal')).hide();
     
     if (typeof currentProducts !== 'undefined') {
@@ -1252,6 +1311,25 @@ document.getElementById('btn-save-price')?.addEventListener('click', () => {
         } else {
            renderProducts(currentProducts);
         }
+    }
+});
+
+// Auto-sync existing local prices to server on load
+document.addEventListener('DOMContentLoaded', async () => {
+    const prices = getPpobSellPrices();
+    if (Object.keys(prices).length > 0) {
+        try {
+            const res = await fetch('<?= BASE_URL ?>api/ppob/custom-price/bulk', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({prices: prices})
+            });
+            const data = await res.json();
+            if(data.success) {
+                console.log(data.message);
+                localStorage.removeItem('ppob_sell_prices');
+            }
+        } catch(e) {}
     }
 });
 

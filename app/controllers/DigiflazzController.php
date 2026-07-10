@@ -476,6 +476,25 @@ class DigiflazzController extends Controller {
         echo json_encode(['success' => false, 'message' => 'Invalid data']);
         exit;
     }
+    public function apiSaveCustomPricesBulk() {
+        AuthController::requireAuth();
+        AuthController::requireLevel(['superadmin', 'admin']);
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $prices = $data['prices'] ?? [];
+        
+        $count = 0;
+        foreach ($prices as $sku => $sellPrice) {
+            if ($sku && floatval($sellPrice) >= 0) {
+                $this->digiModel->updateCustomPrice($sku, floatval($sellPrice));
+                $count++;
+            }
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'message' => "Berhasil sinkronisasi $count harga kustom"]);
+        exit;
+    }
 
     public function apiSaveCustomPrice() {
         AuthController::requireAuth();
