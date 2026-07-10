@@ -1621,7 +1621,7 @@ async function printPpobReceipt() {
             }
             
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Mencetak...';
-            await printer.printPpobReceipt(lastTrxData);
+            await printer.printDigitalReceipt(lastTrxData);
             showToast('✅ Struk berhasil dikirim ke printer', 'success');
         } else {
             // Fallback to browser print if no printer.js
