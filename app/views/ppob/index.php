@@ -1271,9 +1271,9 @@ function renderProducts(products) {
             const pct = ((profit / p.seller_price) * 100).toFixed(1);
             priceHtml = `
                 <div class="prod-price">${formatRp(p.seller_price)}</div>
-                <div class="mt-1" style="font-size: 0.75rem;">
+                <div class="mt-1 d-flex flex-column" style="font-size: 0.75rem;">
                     <span class="text-success fw-bold">Jual: ${formatRp(sellPrice)}</span>
-                    <span class="text-muted ms-1" style="opacity: 0.8;">(+${formatRp(profit)} / ${pct}%)</span>
+                    <span class="text-muted" style="font-size: 0.6rem; opacity: 0.7; margin-top: -2px;">(+${formatRp(profit)} / ${pct}%)</span>
                 </div>
             `;
         } else if (sellPrice) {
