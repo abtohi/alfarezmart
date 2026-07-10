@@ -2,8 +2,8 @@
  * AlfarezMart PWA - Service Worker
  * Cache Strategy: Cache First for assets, Network First for API
  */
-const CACHE_NAME = 'alfarezmart-cache-v13.29';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v13.29';
+const CACHE_NAME = 'alfarezmart-cache-v13.31';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v13.31';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -122,8 +122,11 @@ self.addEventListener('fetch', event => {
         event.respondWith(
             caches.match(event.request, { ignoreSearch: true }).then(cached => {
                 return cached || fetch(event.request, { cache: 'no-cache' }).then(response => {
+                    if (!response || response.status !== 200 || response.type === 'opaque' || !event.request.url.startsWith('http')) {
+                        return response;
+                    }
                     const clone = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone).catch(e => console.warn('Cache error:', e)));
                     return response;
                 });
             })
@@ -149,8 +152,10 @@ self.addEventListener('fetch', event => {
             fetch(event.request, { cache: 'no-cache' })
                 .then(response => {
                     clearTimeout(timeoutId);
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                    if (response && response.status === 200 && response.type !== 'opaque' && event.request.url.startsWith('http')) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone).catch(e => console.warn('Cache error:', e)));
+                    }
                     if (!isResolved) {
                         isResolved = true;
                         resolve(response);
