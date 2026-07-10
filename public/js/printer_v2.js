@@ -102,6 +102,72 @@ class ThermalPrinter {
     }
 
     /**
+     * Helper to safely connect and find characteristic with retries and specific UUID querying
+     * to prevent GATT Server crashes on cheap thermal printers (like RPP02N)
+     */
+    async _connectAndFindCharacteristic(device) {
+        let server = null;
+        let characteristic = null;
+        
+        let retries = 3;
+        while (retries > 0) {
+            try {
+                server = await device.gatt.connect();
+                // Tunggu 1000ms agar GATT Server benar-benar stabil sebelum meminta services
+                await new Promise(r => setTimeout(r, 1000));
+                
+                // Coba ambil spesifik service UUID alih-alih mengambil semua service (yang sering membuat RPP02N crash)
+                const uuidsToTry = [
+                    '000018f0-0000-1000-8000-00805f9b34fb',
+                    'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+                    '49535343-fe7d-4ae5-8fa9-9fafd205e455'
+                ];
+                
+                for (const uuid of uuidsToTry) {
+                    try {
+                        const service = await server.getPrimaryService(uuid);
+                        const characteristics = await service.getCharacteristics();
+                        for (const char of characteristics) {
+                            if (char.properties.write || char.properties.writeWithoutResponse) {
+                                characteristic = char;
+                                break;
+                            }
+                        }
+                    } catch (e) {
+                        // ignore error if this specific service doesn't exist
+                    }
+                    if (characteristic) break;
+                }
+                
+                if (characteristic) {
+                    return { server, characteristic };
+                } else {
+                    // Fallback to old method just in case
+                    const services = await server.getPrimaryServices();
+                    for (const service of services) {
+                        const characteristics = await service.getCharacteristics();
+                        for (const char of characteristics) {
+                            if (char.properties.write || char.properties.writeWithoutResponse) {
+                                characteristic = char;
+                                break;
+                            }
+                        }
+                        if (characteristic) break;
+                    }
+                    if (characteristic) return { server, characteristic };
+                    throw new Error('Printer tidak mendukung penulisan data.');
+                }
+            } catch (err) {
+                console.warn(`[ThermalPrinter] GATT connect attempt failed, retries left: ${retries - 1}`, err);
+                retries--;
+                if (retries === 0) throw err;
+                await new Promise(r => setTimeout(r, 200));
+            }
+        }
+        throw new Error('Gagal menghubungkan ke GATT Server setelah retries.');
+    }
+
+    /**
      * Try silent auto-reconnect using getDevices() API (Chrome 85+)
      * This does NOT show a device chooser dialog
      */
@@ -111,38 +177,19 @@ class ThermalPrinter {
 
         // If we still have a device object from a previous session, try reconnecting directly
         if (this.device) {
-            let retries = 3;
-            while (retries > 0) {
-                try {
-                    console.log('[ThermalPrinter] Reconnecting to existing device:', this.device.name);
-                    this.server = await this.device.gatt.connect();
-                    // Medium delay to allow GATT connection to stabilize
-                    await new Promise(r => setTimeout(r, 800));
-                    
-                    const services = await this.server.getPrimaryServices();
-                    for (const service of services) {
-                        const characteristics = await service.getCharacteristics();
-                        for (const char of characteristics) {
-                            if (char.properties.write || char.properties.writeWithoutResponse) {
-                                this.characteristic = char;
-                                this._autoReconnected = true;
-                                this.device.addEventListener('gattserverdisconnected', this._disconnectHandler);
-                                console.log('[ThermalPrinter] Reconnected to:', this.device.name);
-                                return true;
-                            }
-                        }
-                    }
-                    throw new Error('Printer tidak mendukung penulisan data.');
-                } catch (e) {
-                    console.warn(`[ThermalPrinter] Direct reconnect attempt failed, retries left: ${retries - 1}`, e);
-                    retries--;
-                    if (retries === 0) {
-                        this.server = null;
-                        this.characteristic = null;
-                    } else {
-                        await new Promise(r => setTimeout(r, 1000));
-                    }
-                }
+            try {
+                console.log('[ThermalPrinter] Reconnecting to existing device:', this.device.name);
+                const result = await this._connectAndFindCharacteristic(this.device);
+                this.server = result.server;
+                this.characteristic = result.characteristic;
+                this._autoReconnected = true;
+                this.device.addEventListener('gattserverdisconnected', this._disconnectHandler);
+                console.log('[ThermalPrinter] Reconnected to:', this.device.name);
+                return true;
+            } catch (e) {
+                console.warn(`[ThermalPrinter] Direct reconnect attempt failed:`, e);
+                this.server = null;
+                this.characteristic = null;
             }
         }
 
@@ -175,34 +222,16 @@ class ThermalPrinter {
                     }
 
                     // Try GATT connect with retries
-                    let retries = 3;
-                    while (retries > 0) {
-                        try {
-                            this.server = await found.gatt.connect();
-                            // Medium delay to allow GATT connection to stabilize
-                            await new Promise(r => setTimeout(r, 800));
-                            
-                            const services = await this.server.getPrimaryServices();
-
-                            for (const service of services) {
-                                const characteristics = await service.getCharacteristics();
-                                for (const char of characteristics) {
-                                    if (char.properties.write || char.properties.writeWithoutResponse) {
-                                        this.characteristic = char;
-                                        this._autoReconnected = true;
-                                        found.addEventListener('gattserverdisconnected', this._disconnectHandler);
-                                        console.log('[ThermalPrinter] Auto-reconnected to:', found.name);
-                                        return true;
-                                    }
-                                }
-                            }
-                            throw new Error('Printer tidak mendukung penulisan data.');
-                        } catch (err) {
-                            console.warn(`[ThermalPrinter] Auto-reconnect GATT attempt failed, retries left: ${retries - 1}`, err);
-                            retries--;
-                            if (retries === 0) throw err;
-                            await new Promise(r => setTimeout(r, 1000));
-                        }
+                    try {
+                        const result = await this._connectAndFindCharacteristic(found);
+                        this.server = result.server;
+                        this.characteristic = result.characteristic;
+                        this._autoReconnected = true;
+                        found.addEventListener('gattserverdisconnected', this._disconnectHandler);
+                        console.log('[ThermalPrinter] Auto-reconnected to:', found.name);
+                        return true;
+                    } catch (err) {
+                        console.warn(`[ThermalPrinter] Auto-reconnect GATT attempt failed:`, err);
                     }
                 }
             }
@@ -253,35 +282,13 @@ class ThermalPrinter {
                 ],
             });
 
-            let retries = 3;
-            while (retries > 0) {
-                try {
-                    this.server = await this.device.gatt.connect();
-                    // Medium delay to allow GATT connection to stabilize
-                    await new Promise(r => setTimeout(r, 800));
-                    
-                    const services = await this.server.getPrimaryServices();
-
-                    for (const service of services) {
-                        const characteristics = await service.getCharacteristics();
-                        for (const char of characteristics) {
-                            if (char.properties.write || char.properties.writeWithoutResponse) {
-                                this.characteristic = char;
-                                this.saveLastDevice(this.device);
-                                this.device.addEventListener('gattserverdisconnected', this._disconnectHandler);
-                                console.log('[ThermalPrinter] Printer terhubung:', this.device.name);
-                                return true;
-                            }
-                        }
-                    }
-                    throw new Error('Printer tidak mendukung penulisan data.');
-                } catch (err) {
-                    console.warn(`[ThermalPrinter] GATT connect attempt failed, retries left: ${retries - 1}`, err);
-                    retries--;
-                    if (retries === 0) throw err;
-                    await new Promise(r => setTimeout(r, 1000));
-                }
-            }
+            const result = await this._connectAndFindCharacteristic(this.device);
+            this.server = result.server;
+            this.characteristic = result.characteristic;
+            this.saveLastDevice(this.device);
+            this.device.addEventListener('gattserverdisconnected', this._disconnectHandler);
+            console.log('[ThermalPrinter] Printer terhubung:', this.device.name);
+            return true;
         } catch (e) {
             console.error('[ThermalPrinter] Connection error:', e);
             if (e.name === 'NotFoundError') {
