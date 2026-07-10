@@ -881,8 +881,16 @@ class DigiflazzController extends Controller {
 
         if (!$response) {
             http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'API sedang gangguan atau tidak dapat diakses']);
+            echo json_encode(['success' => false, 'message' => 'API Cek Nama sedang gangguan atau tidak dapat diakses']);
             return;
+        }
+
+        // Handle dead API that returns 404 or unexpected HTML/JSON without success field
+        $decoded = json_decode($response, true);
+        if ($httpCode >= 400 && (!is_array($decoded) || !isset($decoded['success']))) {
+             http_response_code(200); // Return 200 so UI can parse message
+             echo json_encode(['success' => false, 'message' => 'Layanan Cek Nama e-Wallet sedang offline dari provider pusat.']);
+             return;
         }
 
         http_response_code($httpCode);
