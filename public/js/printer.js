@@ -575,18 +575,28 @@ class ThermalPrinter {
         data += '-'.repeat(width) + '\n';
 
         // Details
+        // Details
         data += '\x1Ba\x00'; // Align Left
-        data += `No:  ${transaction.ref_id}\n`;
-        data += `Tgl: ${dateStr}\n`;
+        
+        const padRight = (str, len) => {
+            if (!str) return ' '.repeat(len);
+            const s = String(str);
+            return s.length >= len ? s.substring(0, len) : s + ' '.repeat(len - s.length);
+        };
+        const row = (label, value) => {
+            if (!value) return '';
+            return `${padRight(label, 10)}: ${value}\n`;
+        };
+
+        data += row('NO. REF', transaction.ref_id);
+        data += row('TANGGAL', dateStr);
         data += '-'.repeat(width) + '\n';
-        data += `PRODUK : ${transaction.product_name}\n`;
-        data += `ID/NO  : ${transaction.customer_no}\n`;
+        data += row('PRODUK', transaction.product_name);
+        data += row('ID/NO', transaction.customer_no);
 
         if (transaction.customer_name) {
-            data += `NAMA   : ${transaction.customer_name}\n`;
+            data += row('NAMA', transaction.customer_name);
         }
-
-        data += '-'.repeat(width) + '\n';
 
         if (transaction.sn && transaction.sn !== '-') {
             let snTitle = "SN/TOKEN:";
@@ -602,12 +612,12 @@ class ThermalPrinter {
                     const plnTarifPower = parts.length > 4 ? `${parts[2]}/${parts[3]}` : parts[2];
                     const plnKwh = parts.length > 4 ? parts[4] : parts[3];
                     
-                    data += `NAMA MTR: ${plnName}\n`;
-                    data += `DAYA    : ${plnTarifPower}\n`;
-                    data += `JML KWH : ${plnKwh}\n`;
-                    data += '-'.repeat(width) + '\n';
+                    data += row('NAMA MTR', plnName);
+                    data += row('TARIF/DAYA', plnTarifPower);
+                    data += row('JML KWH', plnKwh);
                 }
             }
+            data += '-'.repeat(width) + '\n';
             
             data += '\x1Ba\x01'; // Align Center
             data += '\x1BE\x01'; // Bold On

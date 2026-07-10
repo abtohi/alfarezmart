@@ -700,13 +700,16 @@
                     </div>
 
                     <div class="row g-2 mb-2" id="result-actions" style="display:none;">
+                        <div class="col-12 text-center mb-1">
+                            <span id="printer-status-badge" class="badge bg-secondary" style="font-size: 10px; font-weight: 500; display: none;"><i class="bi bi-printer me-1"></i>Printer: Belum Terhubung</span>
+                        </div>
                         <div class="col-6">
-                            <button class="btn btn-primary w-100 rounded-pill fw-bold py-2" onclick="printPpobReceipt()">
+                            <button class="btn btn-primary w-100 rounded-pill fw-bold py-2" id="btn-print-receipt" onclick="printPpobReceipt()">
                                 <i class="bi bi-printer me-1"></i>Cetak
                             </button>
                         </div>
                         <div class="col-6">
-                            <button class="btn btn-success w-100 rounded-pill fw-bold py-2" onclick="sharePpobReceipt()">
+                            <button class="btn btn-success w-100 rounded-pill fw-bold py-2" id="btn-share-receipt" onclick="sharePpobReceipt()">
                                 <i class="bi bi-share me-1"></i>Kirim
                             </button>
                         </div>
@@ -1409,6 +1412,19 @@ async function executeTransactionAPI(payload) {
                 document.getElementById('custom-print-price').value = parseInt(payload.sell_price || 0);
                 document.getElementById('custom-print-price').className = 'form-control glass-input';
                 
+                // Update printer badge
+                if (typeof window._ppobPrinter !== 'undefined' && window._ppobPrinter.isConnected()) {
+                    const badge = document.getElementById('printer-status-badge');
+                    badge.className = 'badge bg-success';
+                    badge.innerHTML = '<i class="bi bi-bluetooth me-1"></i>Printer: Terhubung';
+                    badge.style.display = 'inline-block';
+                } else if (navigator.bluetooth) {
+                    const badge = document.getElementById('printer-status-badge');
+                    badge.className = 'badge bg-secondary';
+                    badge.innerHTML = '<i class="bi bi-printer me-1"></i>Printer: Belum Terhubung';
+                    badge.style.display = 'inline-block';
+                }
+                
                 // PLN UI Parsing
                 const isPln = payload.product_name && payload.product_name.toLowerCase().includes('pln');
                 const resultPlnDetails = document.getElementById('result-pln-details');
@@ -1497,6 +1513,19 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
                     document.getElementById('result-actions').style.display = 'flex';
                     document.getElementById('custom-price-container').style.display = 'block';
                     
+                    // Update printer badge
+                    if (typeof window._ppobPrinter !== 'undefined' && window._ppobPrinter.isConnected()) {
+                        const badge = document.getElementById('printer-status-badge');
+                        badge.className = 'badge bg-success';
+                        badge.innerHTML = '<i class="bi bi-bluetooth me-1"></i>Printer: Terhubung';
+                        badge.style.display = 'inline-block';
+                    } else if (navigator.bluetooth) {
+                        const badge = document.getElementById('printer-status-badge');
+                        badge.className = 'badge bg-secondary';
+                        badge.innerHTML = '<i class="bi bi-printer me-1"></i>Printer: Belum Terhubung';
+                        badge.style.display = 'inline-block';
+                    }
+                    
                     // PLN UI Parsing for polling success
                     const isPln = lastTrxData && lastTrxData.product_name && lastTrxData.product_name.toLowerCase().includes('pln');
                     const resultPlnDetails = document.getElementById('result-pln-details');
@@ -1548,26 +1577,39 @@ async function printPpobReceipt() {
         lastTrxData.sell_price = parseInt(customPriceInput.value) || lastTrxData.sell_price;
     }
     
-    // Check if ThermalPrinter is available (from printer.js)
-    if (typeof ThermalPrinter !== 'undefined') {
-        const printer = window._ppobPrinter || (window._ppobPrinter = new ThermalPrinter());
-        
-        try {
-            // Try auto-reconnect first, then ask to connect
-            if (!printer.isConnected()) {
-                const reconnected = await printer.tryAutoReconnect();
-                if (!reconnected) {
-                    await printer.connect();
+    const btn = document.getElementById('btn-print-receipt');
+    const badge = document.getElementById('printer-status-badge');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Memproses...';
+    btn.disabled = true;
+
+    try {
+        // Check if ThermalPrinter is available (from printer.js)
+        if (typeof ThermalPrinter !== 'undefined') {
+            const printer = window._ppobPrinter || (window._ppobPrinter = new ThermalPrinter());
+            
+            if (navigator.bluetooth && !printer.isConnected()) {
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menghubungkan...';
+                await printer.connect();
+                if (badge) {
+                    badge.className = 'badge bg-success';
+                    badge.innerHTML = '<i class="bi bi-bluetooth me-1"></i>Printer: Terhubung';
                 }
             }
-            await printer.printDigitalReceipt(lastTrxData);
-            showToast('✅ Struk berhasil dicetak di Printer Thermal!', 'success');
-        } catch (e) {
-            console.warn('Bluetooth print failed:', e.message);
-            showToast('❌ Koneksi Printer Thermal gagal: ' + e.message, 'danger');
+            
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Mencetak...';
+            await printer.printPpobReceipt(lastTrxData);
+            showToast('✅ Struk berhasil dikirim ke printer', 'success');
+        } else {
+            // Fallback to browser print if no printer.js
+            printPpobReceiptBrowser();
         }
-    } else {
-        showToast('❌ Fitur Printer Thermal tidak didukung di perangkat ini', 'danger');
+    } catch (e) {
+        console.error(e);
+        showToast('❌ Gagal mencetak: ' + (e.message || 'Printer tidak ditemukan/dibatalkan'), 'danger');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     }
 }
 
@@ -1592,7 +1634,7 @@ async function sharePpobReceipt() {
         lastTrxData.sell_price = parseInt(customPriceInput.value) || lastTrxData.sell_price;
     }
     
-    const btn = document.querySelector('button[onclick="sharePpobReceipt()"]');
+    const btn = document.getElementById('btn-share-receipt');
     const originalText = btn.innerHTML;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memproses...';
     btn.disabled = true;
