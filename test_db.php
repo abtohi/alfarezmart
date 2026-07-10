@@ -1,7 +1,5 @@
 <?php
-$conn = mysqli_connect('127.0.0.1', 'root', '', 'alfarezmart');
-if (!$conn) die('Connect Error');
-$res = mysqli_query($conn, 'SELECT * FROM digi_deposit_logs ORDER BY id DESC LIMIT 5');
-while ($row = mysqli_fetch_assoc($res)) {
-    echo "ID: " . $row['id'] . "\nBank: " . $row['bank'] . "\nNotes: " . $row['notes'] . "\nRaw: " . $row['raw'] . "\n\n";
-}
+$db = new PDO('mysql:host=localhost;dbname=AlfarezMart', 'root', '');
+$stmt = $db->query("SELECT sn FROM digi_transactions WHERE product_name LIKE '%PLN%' AND status = 'success' ORDER BY id DESC LIMIT 5");
+print_r($stmt->fetchAll(PDO::FETCH_ASSOC));
+?>

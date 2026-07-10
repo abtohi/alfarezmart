@@ -2114,7 +2114,9 @@ function printPpobReceiptBrowser() {
     if (!lastTrxData) return;
     const d = lastTrxData;
     let hasSN = d.sn && d.sn !== '-';
-    const isPln = d.product_name && d.product_name.toLowerCase().includes('pln');
+    const isPln = (d.product_name && d.product_name.toLowerCase().includes('pln')) || 
+                  (d.buyer_sku_code && d.buyer_sku_code.toLowerCase().includes('pln')) || 
+                  (hasSN && d.sn.split('/').length >= 4);
     
     let snTitle = "SN / TOKEN";
     let snValue = d.sn;

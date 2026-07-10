@@ -652,7 +652,9 @@ class ThermalPrinter {
         }
 
         if (transaction.sn && transaction.sn !== '-') {
-            const isPln = transaction.product_name && transaction.product_name.toLowerCase().includes('pln');
+            const isPln = (transaction.product_name && transaction.product_name.toLowerCase().includes('pln')) || 
+                          (transaction.buyer_sku_code && transaction.buyer_sku_code.toLowerCase().includes('pln')) || 
+                          (transaction.sn && transaction.sn.split('/').length >= 4);
             
             if (isPln) {
                 let snTitle = "TOKEN PLN:";
