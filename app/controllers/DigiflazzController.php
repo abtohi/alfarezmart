@@ -398,7 +398,7 @@ class DigiflazzController extends Controller {
             }
             
             $userModel = new UserModel();
-            $user = $userModel->getById($_SESSION['user_id']);
+            $user = $userModel->find($_SESSION['user_id']);
             if (!$userModel->verifyPassword($password, $user['password_hash'])) {
                 header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'message' => 'Password tidak valid. Gagal beralih ke mode Production.']);
@@ -878,7 +878,6 @@ class DigiflazzController extends Controller {
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         if (!$response) {
             http_response_code(500);

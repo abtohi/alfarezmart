@@ -169,7 +169,7 @@ class DigiflazzService {
         if (empty($this->username) || empty($this->apiKey)) {
             return [
                 'success' => false,
-                'message' => 'Digiflazz API credentials are not configured in .env'
+                'message' => 'Username atau API Key Digiflazz belum dikonfigurasi di menu Pengaturan PPOB.'
             ];
         }
 
