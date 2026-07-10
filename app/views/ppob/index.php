@@ -597,6 +597,31 @@
     </div>
 </div>
 
+<!-- Save PLN Contact Modal -->
+<div class="modal fade" id="savePlnContactModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="border-radius:20px;border:none;background:var(--surface-1);">
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3"><i class="bi bi-person-plus-fill text-primary" style="font-size:50px;"></i></div>
+                <h5 class="fw-bold mb-3" style="color:var(--text-primary);">Simpan Pelanggan Baru</h5>
+                <p class="small mb-3" id="savePlnContactMessage" style="color:var(--text-secondary);"></p>
+                
+                <div class="mb-4 text-start">
+                    <label class="form-label fw-bold small" style="color:var(--text-primary);">Nama Alias <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control glass-input" id="savePlnContactAlias" placeholder="Contoh: Rumah Budi">
+                    <input type="hidden" id="savePlnContactNo">
+                    <input type="hidden" id="savePlnContactDefaultName">
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button class="btn btn-secondary flex-grow-1 rounded-pill" data-bs-dismiss="modal">Lain Kali</button>
+                    <button class="btn btn-primary flex-grow-1 rounded-pill fw-bold" id="btnExecuteSavePln" onclick="executeSavePlnContact()">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- PIN Verification Modal -->
 <div class="modal fade" id="pinModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -1668,34 +1693,63 @@ async function promptSavePlnContact(customerNo, defaultName) {
             if (exists) return; // Don't show if already saved
         }
         
-        // Use timeout to prevent modal conflict
-        setTimeout(async () => {
-            if (confirm(`Nomor PLN ${customerNo} belum ada di daftar pelanggan.\nApakah Anda ingin menyimpannya?`)) {
-                const alias = prompt('Masukkan nama alias untuk pelanggan PLN ini:', defaultName || '');
-                if (alias !== null && alias.trim() !== '') {
-                    const formData = new URLSearchParams();
-                    formData.append('type', 'pln');
-                    formData.append('customer_no', customerNo);
-                    formData.append('customer_name', alias.trim());
-                    formData.append('pln_name', defaultName || '');
-                    formData.append('csrf_token', csrfToken);
-                    
-                    const saveRes = await fetch('<?= BASE_URL ?>api/ppob/customers', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: formData.toString()
-                    });
-                    const saveData = await saveRes.json();
-                    if (saveData.success) {
-                        showToast('✅ Pelanggan PLN berhasil disimpan', 'success');
-                    } else {
-                        showToast('❌ Gagal menyimpan: ' + saveData.message, 'danger');
-                    }
-                }
-            }
+        // Populate modal data and show it
+        setTimeout(() => {
+            document.getElementById('savePlnContactMessage').innerHTML = `Nomor PLN <b>${customerNo}</b> belum ada di daftar pelanggan. Apakah Anda ingin menyimpannya?`;
+            document.getElementById('savePlnContactAlias').value = defaultName || '';
+            document.getElementById('savePlnContactNo').value = customerNo;
+            document.getElementById('savePlnContactDefaultName').value = defaultName || '';
+            
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('savePlnContactModal'));
+            modal.show();
         }, 500);
     } catch (e) {
         console.error('Error checking pln contact:', e);
+    }
+}
+
+async function executeSavePlnContact() {
+    const alias = document.getElementById('savePlnContactAlias').value;
+    const customerNo = document.getElementById('savePlnContactNo').value;
+    const defaultName = document.getElementById('savePlnContactDefaultName').value;
+    const btn = document.getElementById('btnExecuteSavePln');
+    
+    if (alias === null || alias.trim() === '') {
+        showToast('⚠️ Nama Alias tidak boleh kosong', 'warning');
+        return;
+    }
+    
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
+    btn.disabled = true;
+
+    try {
+        const formData = new URLSearchParams();
+        formData.append('type', 'pln');
+        formData.append('customer_no', customerNo);
+        formData.append('customer_name', alias.trim());
+        formData.append('pln_name', defaultName || '');
+        formData.append('csrf_token', csrfToken);
+        
+        const saveRes = await fetch('<?= BASE_URL ?>api/ppob/customers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
+        });
+        const saveData = await saveRes.json();
+        
+        if (saveData.success) {
+            showToast('✅ Pelanggan PLN berhasil disimpan', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('savePlnContactModal')).hide();
+        } else {
+            showToast('❌ Gagal menyimpan: ' + saveData.message, 'danger');
+        }
+    } catch (e) {
+        console.error('Error saving pln contact:', e);
+        showToast('❌ Gagal menyimpan karena gangguan jaringan', 'danger');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     }
 }
 
