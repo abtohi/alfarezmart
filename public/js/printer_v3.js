@@ -635,6 +635,7 @@ class ThermalPrinter {
         };
 
         data += row('NO. REF', transaction.ref_id);
+        data += row('TRX ID', transaction.trx_id || '-');
         data += row('TANGGAL', dateStr);
         data += '-'.repeat(width) + '\n';
         data += row('PRODUK', transaction.product_name);

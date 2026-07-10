@@ -723,6 +723,10 @@
                             <span class="text-muted small">Ref ID</span>
                             <span class="text-muted" id="result-refid" style="font-size: 11px;">-</span>
                         </div>
+                        <div class="d-flex justify-content-between mt-1">
+                            <span class="text-muted small">Trx ID</span>
+                            <span class="text-muted fw-bold" id="result-trxid" style="font-size: 11px;">-</span>
+                        </div>
                     </div>
 
                     <div class="mb-3" id="custom-price-container" style="display:none; text-align: left; padding: 0 10px;">
@@ -1360,16 +1364,18 @@ async function performInquiry() {
     btn.disabled = false; btn.innerText = (currentType==='prepaid') ? 'Cek Nama' : 'Cek Tagihan';
 }
 
-// 7. Confirm Purchase (Prepaid)
 async function confirmPurchase(product) {
     const no = document.getElementById('customer-no').value;
     if(!no) { showAlert('⚠️ Masukkan nomor HP/Tujuan terlebih dahulu!', 'warning'); return; }
     
-    showConfirm('Konfirmasi Transaksi', `Produk: <b>${product.product_name}</b><br>Nomor: <b>${no}</b><br>Harga: <b>${formatRp(product.seller_price)}</b>`, () => {
+    const customSellPrice = typeof getPpobSellPrice === 'function' ? getPpobSellPrice(product.buyer_sku_code) : null;
+    const finalPrice = customSellPrice && customSellPrice > 0 ? customSellPrice : product.seller_price;
+    
+    showConfirm('Konfirmasi Transaksi', `Produk: <b>${product.product_name}</b><br>Nomor: <b>${no}</b><br>Harga: <b>${formatRp(finalPrice)}</b>`, () => {
         processTransaction({
             sku: product.buyer_sku_code,
             customer_no: no,
-            sell_price: product.seller_price,
+            sell_price: finalPrice,
             product_name: product.product_name
         });
     });
@@ -1497,6 +1503,7 @@ async function executeTransactionAPI(payload) {
             let sn = data.data.sn || '-';
             let msg = data.data.message || '';
             let refId = payload.ref_id || data.data.ref_id || '';
+            let trxId = data.data.trx_id || data.data.digiflazz_trx_id || '-';
 
             document.getElementById('result-icon').innerText = iconEl;
             document.getElementById('result-title').innerText = statusText;
@@ -1507,10 +1514,12 @@ async function executeTransactionAPI(payload) {
             document.getElementById('result-sn').innerText = sn;
             document.getElementById('result-msg').innerText = msg;
             document.getElementById('result-refid').innerText = refId;
+            document.getElementById('result-trxid').innerText = trxId;
 
             // Store last transaction for printing
             lastTrxData = {
                 ref_id: refId,
+                trx_id: trxId,
                 product_name: payload.product_name || '-',
                 customer_no: payload.customer_no || '-',
                 customer_name: payload.customer_name || '',
@@ -1560,7 +1569,6 @@ async function executeTransactionAPI(payload) {
                 document.getElementById('result-actions').style.display = 'flex';
                 document.getElementById('custom-price-container').style.display = 'block';
                 document.getElementById('custom-print-price').value = parseInt(payload.sell_price || 0);
-                document.getElementById('custom-print-price').className = 'form-control glass-input';
                 
                 // Update printer badge
                 let printer = window._ppobPrinter;
@@ -2028,6 +2036,7 @@ function printPpobReceiptBrowser() {
     <div class="store-desc">Struk Pembayaran Produk Digital</div>
 </div>
 <div class="row"><div class="label">No. Ref</div><div class="value">${d.ref_id}</div></div>
+<div class="row"><div class="label">Trx ID</div><div class="value">${d.trx_id || '-'}</div></div>
 <div class="row"><div class="label">Tanggal</div><div class="value">${d.created_at}</div></div>
 <div class="line"></div>
 <div class="row"><div class="label">Produk</div><div class="value">${d.product_name}</div></div>

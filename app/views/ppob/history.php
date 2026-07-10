@@ -161,7 +161,8 @@
                             }
 
                             if (trx.status === 'failed' && (raw.wa || raw.tele)) {
-                                const msg = `S2.${trx.customer_no}, ${fullDateStr} ref Id: ${trx.ref_id}, gagal, bisa dibantu infokan alasan gagalnya?`;
+                                const trxIdText = trx.digiflazz_trx_id || trx.ref_id;
+                                const msg = `S2.${trx.customer_no}, ${fullDateStr} trx Id: ${trxIdText}, gagal, bisa dibantu infokan alasan gagalnya?`;
                                 const encodedMsg = encodeURIComponent(msg);
                                 complaintBtns += '<div style="margin-top:6px;display:flex;gap:4px;justify-content:center;">';
                                 if (raw.wa) {
@@ -194,7 +195,8 @@
                             <td style="padding:12px 8px;text-align:right;font-weight:700;font-size:var(--font-size-xs);white-space:nowrap;">Rp ${parseInt(trx.modal_price||0).toLocaleString('id-ID')}</td>
                             <td style="padding:12px 8px;text-align:right;font-weight:700;font-size:var(--font-size-xs);white-space:nowrap;">Rp ${parseInt(trx.sell_price||0).toLocaleString('id-ID')}<br><span style="font-size:9px;${profitColor}font-weight:700;">+${profit.toLocaleString('id-ID')}</span></td>
                             <td style="padding:12px 8px;text-align:center;">
-                                <span style="font-family:monospace;font-size:10px;color:var(--text-secondary);word-break:break-all;">${trx.sn || '-'}</span>
+                                <div style="font-family:monospace;font-size:10px;color:var(--text-primary);word-break:break-all;" title="SN">${trx.sn || '-'}</div>
+                                <div style="font-family:monospace;font-size:9px;color:var(--text-muted);word-break:break-all;margin-top:2px;" title="Trx ID">Trx: ${trx.digiflazz_trx_id || '-'}</div>
                             </td>
                             <td style="padding:12px 8px;text-align:center;">
                                 <span style="font-size:10px;font-weight:600;color:var(--text-secondary);">${sellerName}</span>
