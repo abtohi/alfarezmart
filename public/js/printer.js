@@ -116,8 +116,8 @@ class ThermalPrinter {
                 try {
                     console.log('[ThermalPrinter] Reconnecting to existing device:', this.device.name);
                     this.server = await this.device.gatt.connect();
-                    // Small delay to allow GATT connection to stabilize
-                    await new Promise(r => setTimeout(r, 500));
+                    // Medium delay to allow GATT connection to stabilize
+                    await new Promise(r => setTimeout(r, 800));
                     
                     const services = await this.server.getPrimaryServices();
                     for (const service of services) {
@@ -179,8 +179,8 @@ class ThermalPrinter {
                     while (retries > 0) {
                         try {
                             this.server = await found.gatt.connect();
-                            // Small delay to allow GATT connection to stabilize
-                            await new Promise(r => setTimeout(r, 500));
+                            // Medium delay to allow GATT connection to stabilize
+                            await new Promise(r => setTimeout(r, 800));
                             
                             const services = await this.server.getPrimaryServices();
 
@@ -257,8 +257,8 @@ class ThermalPrinter {
             while (retries > 0) {
                 try {
                     this.server = await this.device.gatt.connect();
-                    // Small delay to allow GATT connection to stabilize
-                    await new Promise(r => setTimeout(r, 500));
+                    // Medium delay to allow GATT connection to stabilize
+                    await new Promise(r => setTimeout(r, 800));
                     
                     const services = await this.server.getPrimaryServices();
 
