@@ -13,8 +13,13 @@ class DigiflazzService {
     public function __construct() {
         $settingModel = new SettingModel();
         $this->username = $settingModel->get('digiflazz_username', '');
-        $this->apiKey = $settingModel->get('digiflazz_api_key', '');
         $this->mode = $settingModel->get('digiflazz_mode', 'development');
+        
+        if ($this->mode === 'production') {
+            $this->apiKey = $settingModel->get('digiflazz_api_key_prod', '');
+        } else {
+            $this->apiKey = $settingModel->get('digiflazz_api_key_dev', '');
+        }
     }
 
     /**

@@ -36,7 +36,8 @@ class DigiflazzController extends Controller {
         $settingModel = new SettingModel();
         $settings = [
             'username' => $settingModel->get('digiflazz_username', ''),
-            'api_key' => $settingModel->get('digiflazz_api_key', ''),
+            'api_key_dev' => $settingModel->get('digiflazz_api_key_dev', ''),
+            'api_key_prod' => $settingModel->get('digiflazz_api_key_prod', ''),
             'webhook_secret' => $settingModel->get('digiflazz_webhook_secret', ''),
             'mode' => $settingModel->get('digiflazz_mode', 'development')
         ];
@@ -384,10 +385,32 @@ class DigiflazzController extends Controller {
         $data = json_decode(file_get_contents('php://input'), true);
         $settingModel = new SettingModel();
         
+        $currentMode = $settingModel->get('digiflazz_mode', 'development');
+        $newMode = trim($data['mode'] ?? '');
+        
+        if ($newMode === 'production' && $currentMode !== 'production') {
+            // Require password verification
+            $password = $data['password'] ?? '';
+            if (empty($password)) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Password wajib diisi untuk beralih ke mode Production.']);
+                exit;
+            }
+            
+            $userModel = new UserModel();
+            $user = $userModel->getById($_SESSION['user_id']);
+            if (!$userModel->verifyPassword($password, $user['password_hash'])) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Password tidak valid. Gagal beralih ke mode Production.']);
+                exit;
+            }
+        }
+        
         if (isset($data['username'])) $settingModel->set('digiflazz_username', trim($data['username']));
-        if (isset($data['api_key'])) $settingModel->set('digiflazz_api_key', trim($data['api_key']));
+        if (isset($data['api_key_dev'])) $settingModel->set('digiflazz_api_key_dev', trim($data['api_key_dev']));
+        if (isset($data['api_key_prod'])) $settingModel->set('digiflazz_api_key_prod', trim($data['api_key_prod']));
         if (isset($data['webhook_secret'])) $settingModel->set('digiflazz_webhook_secret', trim($data['webhook_secret']));
-        if (isset($data['mode'])) $settingModel->set('digiflazz_mode', trim($data['mode']));
+        if ($newMode) $settingModel->set('digiflazz_mode', $newMode);
         if (isset($data['pin'])) $settingModel->set('digiflazz_pin', trim($data['pin']));
 
         header('Content-Type: application/json');

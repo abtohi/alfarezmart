@@ -54,17 +54,28 @@
                     </div>
                 </div>
 
-                <!-- API Key -->
-                <div style="margin-bottom:16px;">
-                    <label class="ppob-label"><i class="bi bi-shield-lock-fill me-1" style="color:var(--danger);"></i>API Key</label>
-                    <div style="position:relative;">
-                        <input type="password" class="ppob-field" id="cfg-apikey"
-                            value="<?= htmlspecialchars($settings['api_key'] ?? '') ?>"
-                            placeholder="dev-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required style="padding-right:44px;">
-                        <button type="button" onclick="togglePwd('cfg-apikey',this)" class="ppob-eye-btn"><i class="bi bi-eye"></i></button>
+                <!-- API Keys -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                    <div>
+                        <label class="ppob-label"><i class="bi bi-shield-lock-fill me-1" style="color:var(--danger);"></i>API Key (Development)</label>
+                        <div style="position:relative;">
+                            <input type="password" class="ppob-field" id="cfg-apikey-dev"
+                                value="<?= htmlspecialchars($settings['api_key_dev'] ?? '') ?>"
+                                placeholder="dev-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" style="padding-right:44px;">
+                            <button type="button" onclick="togglePwd('cfg-apikey-dev',this)" class="ppob-eye-btn"><i class="bi bi-eye"></i></button>
+                        </div>
                     </div>
-                    <div class="ppob-hint">Dapatkan di: <strong>Dashboard Digiflazz → Profil → API Key</strong></div>
+                    <div>
+                        <label class="ppob-label"><i class="bi bi-shield-lock-fill me-1" style="color:var(--success);"></i>API Key (Production)</label>
+                        <div style="position:relative;">
+                            <input type="password" class="ppob-field" id="cfg-apikey-prod"
+                                value="<?= htmlspecialchars($settings['api_key_prod'] ?? '') ?>"
+                                placeholder="prod-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" style="padding-right:44px;">
+                            <button type="button" onclick="togglePwd('cfg-apikey-prod',this)" class="ppob-eye-btn"><i class="bi bi-eye"></i></button>
+                        </div>
+                    </div>
                 </div>
+                <div class="ppob-hint mb-3" style="margin-top:-10px;">Dapatkan di: <strong>Dashboard Digiflazz ' Profil ' API Key</strong></div>          </div>
 
                 <!-- Webhook Secret -->
                 <div style="margin-bottom:20px;">
@@ -395,6 +406,23 @@
     }
 </style>
 
+<!-- Password Modal -->
+<div class="modal fade" id="passwordModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="border-radius:16px;border:none;background:var(--surface-1);">
+            <div class="modal-header border-0" style="background:var(--surface-2);border-radius:16px 16px 0 0;padding:15px 20px;">
+                <h6 class="modal-title fw-bold" style="color:var(--text-primary);"><i class="bi bi-shield-lock-fill me-2" style="color:var(--danger);"></i>Verifikasi Keamanan</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p style="font-size:12px;color:var(--text-muted);margin-bottom:15px;">Masukkan password Anda untuk beralih ke mode <strong>Production</strong>.</p>
+                <input type="password" class="form-control mb-3 text-center shadow-none" id="auth-password" placeholder="Password" style="border-radius:10px;background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border-color);">
+                <button type="button" class="btn w-100 fw-bold" style="background:var(--primary);color:#fff;border-radius:10px;" onclick="submitSettingsWithPassword()">Konfirmasi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function togglePwd(id, btn) {
     const inp = document.getElementById(id);
@@ -440,9 +468,31 @@ function copyWebhook() {
     });
 }
 
-// Save Settings
-async function saveSettings(e) {
+const initialMode = '<?= $settings['mode'] ?? 'development' ?>';
+
+function saveSettings(e) {
     e.preventDefault();
+    const mode = document.getElementById('cfg-mode').value;
+    if (mode === 'production' && initialMode !== 'production') {
+        document.getElementById('auth-password').value = '';
+        const modal = new bootstrap.Modal(document.getElementById('passwordModal'));
+        modal.show();
+    } else {
+        sendSettings('');
+    }
+}
+
+function submitSettingsWithPassword() {
+    const pwd = document.getElementById('auth-password').value;
+    if (!pwd) {
+        showStatus('cfg-status','danger','Password wajib diisi!');
+        return;
+    }
+    bootstrap.Modal.getInstance(document.getElementById('passwordModal')).hide();
+    sendSettings(pwd);
+}
+
+async function sendSettings(password) {
     const btn = document.getElementById('btn-save-cfg');
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
     btn.disabled = true;
@@ -452,16 +502,18 @@ async function saveSettings(e) {
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({
                 username: document.getElementById('cfg-username').value,
-                api_key: document.getElementById('cfg-apikey').value,
+                api_key_dev: document.getElementById('cfg-apikey-dev').value,
+                api_key_prod: document.getElementById('cfg-apikey-prod').value,
                 webhook_secret: document.getElementById('cfg-webhook').value,
                 mode: document.getElementById('cfg-mode').value,
-                pin: document.getElementById('cfg-pin').value
+                pin: document.getElementById('cfg-pin').value,
+                password: password
             })
         });
         const data = await res.json();
         if (data.success) {
             showStatus('cfg-status','success','Pengaturan berhasil disimpan!');
-            setTimeout(() => document.getElementById('cfg-status').style.display='none', 4000);
+            setTimeout(() => { location.reload(); }, 1500);
         } else {
             showStatus('cfg-status','danger', data.message || 'Gagal menyimpan.');
         }
