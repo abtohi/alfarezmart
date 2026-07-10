@@ -589,9 +589,35 @@ class ThermalPrinter {
         data += '-'.repeat(width) + '\n';
 
         if (transaction.sn && transaction.sn !== '-') {
+            let snTitle = "SN/TOKEN:";
+            let snValue = transaction.sn;
+            const isPln = transaction.product_name && transaction.product_name.toLowerCase().includes('pln');
+            
+            if (isPln && transaction.sn.includes('/')) {
+                const parts = transaction.sn.split('/');
+                if (parts.length >= 4) {
+                    snTitle = "TOKEN PLN:";
+                    snValue = parts[0];
+                    const plnName = parts[1] || '';
+                    const plnTarifPower = parts.length > 4 ? `${parts[2]}/${parts[3]}` : parts[2];
+                    const plnKwh = parts.length > 4 ? parts[4] : parts[3];
+                    
+                    data += `NAMA MTR: ${plnName}\n`;
+                    data += `DAYA    : ${plnTarifPower}\n`;
+                    data += `JML KWH : ${plnKwh}\n`;
+                    data += '-'.repeat(width) + '\n';
+                }
+            }
+            
+            data += '\x1Ba\x01'; // Align Center
             data += '\x1BE\x01'; // Bold On
-            data += `SN/TOKEN:\n${transaction.sn}\n`;
+            // Use double height and width for Token (ESC ! 48)
+            data += '\x1B!\x30'; 
+            data += `${snTitle}\n${snValue}\n`;
+            // Reset to normal (ESC ! 0)
+            data += '\x1B!\x00'; 
             data += '\x1BE\x00'; // Bold Off
+            data += '\x1Ba\x00'; // Align Left
             data += '-'.repeat(width) + '\n';
         }
 

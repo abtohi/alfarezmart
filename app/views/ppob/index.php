@@ -677,6 +677,14 @@
                         </div>
                     </div>
 
+                    <div class="mb-3" id="custom-price-container" style="display:none; text-align: left;">
+                        <label class="form-label small text-muted mb-1 fw-bold">Harga Jual (Bisa Diubah Untuk Struk)</label>
+                        <div class="input-group" style="box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-radius: 12px; overflow: hidden;">
+                            <span class="input-group-text bg-white border-end-0 text-muted" style="border-color: var(--border-color);">Rp</span>
+                            <input type="number" class="form-control border-start-0 ps-0 fw-bold" id="custom-print-price" placeholder="0" style="border-color: var(--border-color); font-size: 16px;">
+                        </div>
+                    </div>
+
                     <div class="row g-2 mb-2" id="result-actions" style="display:none;">
                         <div class="col-6">
                             <button class="btn btn-primary w-100 rounded-pill fw-bold py-2" onclick="printPpobReceipt()">
@@ -1381,7 +1389,14 @@ async function executeTransactionAPI(payload) {
             }
 
             // Show action buttons for success or pending (user may want to print receipt early)
-            document.getElementById('result-actions').style.display = (isSuccess || isPending) ? 'flex' : 'none';
+            if (isSuccess || isPending) {
+                document.getElementById('result-actions').style.display = 'flex';
+                document.getElementById('custom-price-container').style.display = 'block';
+                document.getElementById('custom-print-price').value = parseInt(payload.sell_price || 0);
+            } else {
+                document.getElementById('result-actions').style.display = 'none';
+                document.getElementById('custom-price-container').style.display = 'none';
+            }
             
             // Auto prompt save contact if PLN
             if (isSuccess && currentCategory === 'pln') {
@@ -1441,8 +1456,16 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
                 // Update last trx data with new SN and show print button
                 if (lastTrxData) {
                     lastTrxData.sn = data.data.sn || '-';
+                    document.getElementById('custom-print-price').value = parseInt(lastTrxData.sell_price || 0);
                 }
-                document.getElementById('result-actions').style.display = isSuccess ? 'flex' : 'none';
+                
+                if (isSuccess) {
+                    document.getElementById('result-actions').style.display = 'flex';
+                    document.getElementById('custom-price-container').style.display = 'block';
+                } else {
+                    document.getElementById('result-actions').style.display = 'none';
+                    document.getElementById('custom-price-container').style.display = 'none';
+                }
                 
                 if (isSuccess && currentCategory === 'pln') {
                     promptSavePlnContact(customerNo, lastTrxData ? lastTrxData.customer_name : '');
@@ -1471,6 +1494,12 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
 async function printPpobReceipt() {
     if (!lastTrxData) { showToast('⚠️ Data transaksi tidak ditemukan', 'warning'); return; }
     
+    // Override sell price with custom input if valid
+    const customPriceInput = document.getElementById('custom-print-price');
+    if (customPriceInput && customPriceInput.value) {
+        lastTrxData.sell_price = parseInt(customPriceInput.value) || lastTrxData.sell_price;
+    }
+    
     // Check if ThermalPrinter is available (from printer.js)
     if (typeof ThermalPrinter !== 'undefined') {
         const printer = window._ppobPrinter || (window._ppobPrinter = new ThermalPrinter());
@@ -1496,12 +1525,24 @@ async function printPpobReceipt() {
 
 // Preview Web Receipt
 function previewPpobReceipt() {
+    if (!lastTrxData) { showToast('⚠️ Data transaksi tidak ditemukan', 'warning'); return; }
+    // Override sell price with custom input if valid
+    const customPriceInput = document.getElementById('custom-print-price');
+    if (customPriceInput && customPriceInput.value) {
+        lastTrxData.sell_price = parseInt(customPriceInput.value) || lastTrxData.sell_price;
+    }
     printPpobReceiptBrowser();
 }
 
 // Share Receipt Image
 async function sharePpobReceipt() {
     if (!lastTrxData) { showToast('⚠️ Data transaksi tidak ditemukan', 'warning'); return; }
+    
+    // Override sell price with custom input if valid
+    const customPriceInput = document.getElementById('custom-print-price');
+    if (customPriceInput && customPriceInput.value) {
+        lastTrxData.sell_price = parseInt(customPriceInput.value) || lastTrxData.sell_price;
+    }
     
     const btn = document.querySelector('button[onclick="sharePpobReceipt()"]');
     const originalText = btn.innerHTML;
@@ -1522,6 +1563,38 @@ async function sharePpobReceipt() {
 
         const d = lastTrxData;
         const hasSN = d.sn && d.sn !== '-';
+        const isPln = d.product_name && d.product_name.toLowerCase().includes('pln');
+        
+        let snTitle = "SN / TOKEN";
+        let snValue = d.sn;
+        let plnDetailsHtml = '';
+        
+        // Parse PLN SN (format: Token/Name/Tarif/Power/Kwh)
+        if (isPln && d.sn.includes('/')) {
+            const parts = d.sn.split('/');
+            if (parts.length >= 4) {
+                snTitle = "TOKEN PLN";
+                snValue = parts[0];
+                const plnName = parts[1] || '';
+                const plnTarifPower = parts.length > 4 ? `${parts[2]}/${parts[3]}` : parts[2];
+                const plnKwh = parts.length > 4 ? parts[4] : parts[3];
+                
+                plnDetailsHtml = `
+                <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
+                    <span style="color:#555;">Nama Mtr</span>
+                    <span style="font-weight: 600; text-align: right;">${plnName}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
+                    <span style="color:#555;">Tarif/Daya</span>
+                    <span style="font-weight: 600; text-align: right;">${plnTarifPower}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
+                    <span style="color:#555;">Jml kWh</span>
+                    <span style="font-weight: 600; text-align: right;">${plnKwh}</span>
+                </div>
+                `;
+            }
+        }
         
         // Create a temporary hidden container for the receipt
         const container = document.createElement('div');
@@ -1561,11 +1634,12 @@ async function sharePpobReceipt() {
                 <span style="color:#555;">Nama</span>
                 <span style="font-weight: 600; text-align: right;">${d.customer_name}</span>
             </div>` : ''}
+            ${plnDetailsHtml}
             <div style="border-top: 1px dashed #ddd; margin: 12px 0;"></div>
             ${hasSN ? `
             <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 15px 12px; margin: 15px 0; text-align: center;">
-                <div style="font-size: 10px; color: #666; margin-bottom: 6px; font-weight: 700;">SN / TOKEN</div>
-                <div style="font-size: 15px; font-weight: 800; color: #000; letter-spacing: 1px; word-break: break-all;">${d.sn}</div>
+                <div style="font-size: 11px; color: #666; margin-bottom: 8px; font-weight: 800;">${snTitle}</div>
+                <div style="font-size: ${snValue.length > 25 ? '16px' : '20px'}; font-weight: 900; color: #000; letter-spacing: 1px; word-break: break-all; font-family: monospace;">${snValue}</div>
             </div>` : ''}
             <div style="display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px dashed #000; font-size: 16px; font-weight: 800; color: #000;">
                 <span>TOTAL BAYAR</span>
@@ -1619,11 +1693,6 @@ async function sharePpobReceipt() {
                 URL.revokeObjectURL(url);
                 showToast('✅ Struk berhasil diunduh (perangkat tidak mendukung Web Share)', 'success');
             }
-        }, 'image/png');
-
-    } catch (error) {
-        console.error('Error sharing receipt:', error);
-        showToast('❌ Gagal membagikan struk', 'danger');
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -1635,11 +1704,34 @@ function printPpobReceiptBrowser() {
     if (!lastTrxData) return;
     const d = lastTrxData;
     const hasSN = d.sn && d.sn !== '-';
+    const isPln = d.product_name && d.product_name.toLowerCase().includes('pln');
+    
+    let snTitle = "SN / TOKEN";
+    let snValue = d.sn;
+    let plnDetailsHtml = '';
+    
+    if (isPln && d.sn.includes('/')) {
+        const parts = d.sn.split('/');
+        if (parts.length >= 4) {
+            snTitle = "TOKEN PLN";
+            snValue = parts[0];
+            const plnName = parts[1] || '';
+            const plnTarifPower = parts.length > 4 ? `${parts[2]}/${parts[3]}` : parts[2];
+            const plnKwh = parts.length > 4 ? parts[4] : parts[3];
+            
+            plnDetailsHtml = `
+            <div class="row"><div class="label">Nama Mtr</div><div class="value">${plnName}</div></div>
+            <div class="row"><div class="label">Tarif/Daya</div><div class="value">${plnTarifPower}</div></div>
+            <div class="row"><div class="label">Jml kWh</div><div class="value">${plnKwh}</div></div>
+            `;
+        }
+    }
+    
     const w = window.open('', '_blank', 'width=380,height=700');
     w.document.write(`<!DOCTYPE html><html><head><title>Struk PPOB</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
     body { font-family: 'Inter', sans-serif; font-size: 13px; width: 300px; margin: 0 auto; padding: 20px; color: #111; background: #fff; }
     * { box-sizing: border-box; }
     .center { text-align: center; }
@@ -1653,8 +1745,8 @@ function printPpobReceiptBrowser() {
     .label { color: #555; width: 35%; font-size: 12px; }
     .value { font-weight: 600; width: 65%; text-align: right; word-break: break-word; color: #000; }
     .sn-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 15px 12px; margin: 15px 0; text-align: center; }
-    .sn-title { font-size: 10px; color: #666; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
-    .sn-value { font-size: 15px; font-weight: 800; color: #000; letter-spacing: 1px; word-break: break-all; }
+    .sn-title { font-size: 11px; color: #666; margin-bottom: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+    .sn-value { font-size: ${snValue.length > 25 ? '16px' : '20px'}; font-weight: 900; color: #000; letter-spacing: 1px; word-break: break-all; font-family: monospace; }
     .total-row { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px dashed #000; font-size: 16px; font-weight: 800; color: #000; }
     .footer { text-align: center; margin-top: 30px; font-size: 11px; color: #666; line-height: 1.5; }
     .print-btn { display: block; width: 100%; padding: 14px; background: #0f0f1a; color: #fff; text-align: center; border: none; border-radius: 10px; font-weight: 600; font-size: 14px; margin-top: 25px; cursor: pointer; transition: background 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
@@ -1672,14 +1764,12 @@ function printPpobReceiptBrowser() {
 <div class="row"><div class="label">Produk</div><div class="value">${d.product_name}</div></div>
 <div class="row"><div class="label">ID / No.</div><div class="value">${d.customer_no}</div></div>
 ${d.customer_name ? `<div class="row"><div class="label">Nama</div><div class="value">${d.customer_name}</div></div>` : ''}
+${plnDetailsHtml}
 <div class="line"></div>
-${hasSN ? `<div class="sn-box"><div class="sn-title">SN / TOKEN</div><div class="sn-value">${d.sn}</div></div>` : ''}
+${hasSN ? `<div class="sn-box"><div class="sn-title">${snTitle}</div><div class="sn-value">${snValue}</div></div>` : ''}
 <div class="total-row"><span>TOTAL BAYAR</span><span>Rp ${parseInt(d.sell_price).toLocaleString('id-ID')}</span></div>
-<div class="footer">
-    <div class="bold" style="color:#000; margin-bottom:4px; font-size: 12px;">Terima kasih telah berbelanja</div>
-    <div>= Semoga Berkah =</div>
-</div>
-<button class="no-print print-btn" onclick="window.print()">🖨️ Cetak Struk</button>
+<div class="footer"><div class="bold" style="color:#000;margin-bottom:4px;">Terima kasih telah berbelanja</div><div>= Semoga Berkah =</div></div>
+<button class="print-btn no-print" onclick="window.print()">🖨️ Cetak Struk Sekarang</button>
 </body></html>`);
     w.document.close();
 }
