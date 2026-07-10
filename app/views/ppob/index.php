@@ -494,7 +494,7 @@
                     <label class="form-label small text-muted mb-1 fw-bold">Harga Jual Baru</label>
                     <div class="d-flex align-items-stretch" style="border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--surface-2);">
                         <div class="d-flex align-items-center justify-content-center px-3 fw-bold text-muted" style="background: rgba(0,0,0,0.03); border-right: 1px solid var(--border-color);">Rp</div>
-                        <input type="number" class="form-control border-0 bg-transparent ps-3 fw-bold shadow-none" id="sp-sell-price" placeholder="Masukkan harga jual" style="font-size: 16px; color: var(--text-primary); padding: 12px 0;">
+                        <input type="number" class="form-control border-0 bg-transparent ps-2 fw-bold shadow-none" id="sp-sell-price" placeholder="Masukkan harga jual" style="font-size: 16px; color: var(--text-primary); padding: 12px 15px;">
                     </div>
                     <div class="mt-2 text-end">
                         <small id="sp-profit-preview" class="fw-bold" style="color: var(--success); display: none;">Untung: Rp0</small>
@@ -732,7 +732,7 @@
                         <label class="form-label small text-muted mb-1 fw-bold">Harga Jual (Bisa Diubah Untuk Struk)</label>
                         <div class="d-flex align-items-stretch" style="border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--surface-2);">
                             <div class="d-flex align-items-center justify-content-center px-3 fw-bold text-muted" style="background: rgba(0,0,0,0.03); border-right: 1px solid var(--border-color);">Rp</div>
-                            <input type="number" class="form-control border-0 bg-transparent ps-3 fw-bold shadow-none" id="custom-print-price" placeholder="0" style="font-size: 16px; color: var(--text-primary); padding: 12px 0;">
+                            <input type="number" class="form-control border-0 bg-transparent ps-2 fw-bold shadow-none" id="custom-print-price" placeholder="0" style="font-size: 16px; color: var(--text-primary); padding: 12px 15px;">
                         </div>
                     </div>
 
@@ -929,7 +929,6 @@ function openTrxModal(title, category, type) {
     document.getElementById('brand-filter-container').style.display = 'none';
     document.getElementById('product-search-container').style.display = 'none';
     document.getElementById('search-product').value = '';
-    document.getElementById('customer-no').style.paddingRight = '20px';
     document.getElementById('btn-pay-postpaid').style.display = 'none';
     document.getElementById('product-list-container').style.display = 'block';
     document.getElementById('product-grid').innerHTML = '';
@@ -938,7 +937,6 @@ function openTrxModal(title, category, type) {
         // Tagihan Pasca: Harus Cek Dulu
         document.getElementById('customer-no').placeholder = 'Masukkan ID Pelanggan';
         document.getElementById('btn-inquiry').style.display = 'block';
-        document.getElementById('customer-no').style.paddingRight = '100px';
         document.getElementById('product-list-container').style.display = 'none'; // Sembunyikan list produk
         // Auto load products in background just to get SKU for inquiry
         loadProducts(category, type); 
@@ -946,20 +944,17 @@ function openTrxModal(title, category, type) {
         // PLN Prabayar: Opsional Cek Nama (Inquiry PLN)
         document.getElementById('customer-no').placeholder = 'Masukkan Nomor Meter/IDPEL';
         document.getElementById('btn-inquiry').style.display = 'block';
-        document.getElementById('customer-no').style.paddingRight = '120px';
         document.getElementById('btn-inquiry').innerText = 'Cek Nama';
         // Auto load products to buy
         loadProducts(category, type);
     } else if (category === 'ewallet') {
         document.getElementById('customer-no').placeholder = 'Masukkan Nomor HP/Akun';
         document.getElementById('btn-inquiry').style.display = 'block';
-        document.getElementById('customer-no').style.paddingRight = '120px';
         document.getElementById('btn-inquiry').innerText = 'Cek Nama';
         loadProducts(category, type);
     } else {
         // Pulsa / Data biasa: Auto search on input
         document.getElementById('customer-no').placeholder = 'Masukkan Nomor HP (0812...)';
-        document.getElementById('customer-no').style.paddingRight = '100px';
         // Auto load products to buy based on prefix logic
         loadProducts(category, type);
     }
@@ -1502,7 +1497,7 @@ async function confirmPurchase(product) {
     if(!no) { showAlert('⚠️ Masukkan nomor HP/Tujuan terlebih dahulu!', 'warning'); return; }
     
     const customSellPrice = typeof getPpobSellPrice === 'function' ? getPpobSellPrice(product.buyer_sku_code) : null;
-    const finalPrice = customSellPrice && customSellPrice > 0 ? customSellPrice : product.seller_price;
+    const finalPrice = customSellPrice && customSellPrice > 0 ? customSellPrice : (product.sell_price || product.seller_price);
     
     showConfirm('Konfirmasi Transaksi', `Produk: <b>${product.product_name}</b><br>Nomor: <b>${no}</b><br>Harga: <b>${formatRp(finalPrice)}</b>`, () => {
         processTransaction({
