@@ -123,6 +123,7 @@ $router->get('/api/ppob/products/search', 'DigiflazzController@apiSearchProducts
 $router->get('/api/ppob/products/{category}', 'DigiflazzController@apiGetProducts');
 $router->get('/api/ppob/brands/{category}', 'DigiflazzController@apiGetBrands');
 $router->post('/api/ppob/inquiry-pln', 'DigiflazzController@apiInquiryPLN');
+$router->post('/api/ppob/cek-ewallet', 'DigiflazzController@apiCekEwallet');
 $router->post('/api/ppob/inquiry-pasca', 'DigiflazzController@apiInquiryPostpaid');
 $router->post('/api/ppob/transaction', 'DigiflazzController@apiCreateTransaction');
 $router->post('/api/ppob/pay-pasca', 'DigiflazzController@apiPayPostpaid');

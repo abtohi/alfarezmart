@@ -821,4 +821,49 @@ class DigiflazzController extends Controller {
         echo json_encode(['status' => 'ok']);
         exit;
     }
+
+    // Proxy for E-Wallet Check
+    public function apiCekEwallet() {
+        header('Content-Type: application/json');
+        AuthController::requireAuth();
+
+        $data = json_decode(file_get_contents('php://input'), true);
+        $bank = $data['account_bank'] ?? '';
+        $number = $data['account_number'] ?? '';
+
+        if (empty($bank) || empty($number)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Parameter tidak lengkap']);
+            return;
+        }
+
+        $url = 'https://netovas.com/api/cekrek/v1/account-inquiry';
+        $postData = http_build_query([
+            'account_bank' => $bank,
+            'account_number' => $number
+        ]);
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/x-www-form-urlencoded'
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if (!$response) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'API sedang gangguan atau tidak dapat diakses']);
+            return;
+        }
+
+        http_response_code($httpCode);
+        echo $response;
+    }
 }

@@ -950,6 +950,12 @@ function openTrxModal(title, category, type) {
         document.getElementById('btn-inquiry').innerText = 'Cek Nama';
         // Auto load products to buy
         loadProducts(category, type);
+    } else if (category === 'ewallet') {
+        document.getElementById('customer-no').placeholder = 'Masukkan Nomor HP/Akun';
+        document.getElementById('btn-inquiry').style.display = 'block';
+        document.getElementById('customer-no').style.paddingRight = '120px';
+        document.getElementById('btn-inquiry').innerText = 'Cek Nama';
+        loadProducts(category, type);
     } else {
         // Pulsa / Data biasa: Auto search on input
         document.getElementById('customer-no').placeholder = 'Masukkan Nomor HP (0812...)';
@@ -1411,6 +1417,44 @@ async function performInquiry() {
                 document.getElementById('inq-detail').style.display = 'none';
                 document.getElementById('btn-pay-postpaid').style.display = 'none'; // Prabayar pilih produk di bawah
             } else { showAlert('❌ ' + (data.message || 'ID pelanggan PLN tidak ditemukan'), 'danger'); }
+        } else if (currentCategory === 'ewallet') {
+            // Cek Nama E-Wallet
+            const activeBrandBtn = document.querySelector('#brand-filter-container .btn-primary');
+            let brand = activeBrandBtn ? activeBrandBtn.innerText : '';
+            if (brand === 'Semua' && typeof currentProducts !== 'undefined' && currentProducts.length > 0) {
+                 brand = currentProducts[0].brand; 
+            }
+            if (!brand || brand === 'Semua') {
+                showAlert('⚠️ Pilih penyedia E-Wallet terlebih dahulu (misal: DANA, GOPAY)', 'warning');
+                btn.disabled = false; btn.innerText = 'Cek Nama';
+                return;
+            }
+            
+            // Map brand to account_bank
+            const brandMap = {
+                'GOPAY': 'gopay', 'GO PAY': 'gopay',
+                'DANA': 'dana',
+                'OVO': 'ovo',
+                'SHOPEEPAY': 'shopeepay', 'SHOPEE PAY': 'shopeepay',
+                'LINKAJA': 'linkaja', 'LINK AJA': 'linkaja'
+            };
+            const accountBank = brandMap[brand.toUpperCase()] || brand.toLowerCase().replace(/\s/g, '');
+            
+            const res = await fetch('<?= BASE_URL ?>api/ppob/cek-ewallet', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({account_bank: accountBank, account_number: no})
+            });
+            const data = await res.json();
+            if (data.success && data.data && data.data.account_holder) {
+                inqBox.style.display = 'block';
+                document.getElementById('inq-name').innerText = data.data.account_holder;
+                document.getElementById('inq-price').innerText = '-';
+                document.getElementById('inq-detail-label').style.display = 'none';
+                document.getElementById('inq-detail').style.display = 'none';
+                document.getElementById('btn-pay-postpaid').style.display = 'none';
+            } else {
+                showAlert('❌ ' + (data.message || 'Akun e-wallet tidak ditemukan'), 'danger');
+            }
         } else if (currentType === 'postpaid') {
             // Cek Tagihan Pascabayar
             // Ambil SKU pertama dari currentProducts (asumsi 1 kategori 1 SKU utama untuk cek, atau user bisa pilih dulu. Di sini simplifikasi ambil index 0)
