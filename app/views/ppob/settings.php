@@ -29,7 +29,7 @@
                 <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Username dan API Key dari dashboard member Digiflazz</div>
             </div>
         </div>
-        <div style="padding:20px;">
+        <div style="padding:24px;">
             <form id="form-api-settings" onsubmit="saveSettings(event)">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
                     <!-- Username -->
@@ -75,7 +75,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="ppob-hint mb-3" style="margin-top:-10px;">Dapatkan di: <strong>Dashboard Digiflazz ' Profil ' API Key</strong></div>          </div>
+                <div class="ppob-hint mb-3" style="margin-top:-10px;">Dapatkan di: <strong>Dashboard Digiflazz ' Profil ' API Key</strong></div>
 
                 <!-- Webhook Secret -->
                 <div style="margin-bottom:20px;">
@@ -123,7 +123,7 @@
                 <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Cek saldo deposit dan status koneksi API secara real-time</div>
             </div>
         </div>
-        <div style="padding:20px;">
+        <div style="padding:24px;">
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
                 <div style="background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:14px;text-align:center;">
                     <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:6px;">Saldo Deposit</div>
@@ -157,7 +157,7 @@
                 <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Tarik daftar produk terbaru dari Digiflazz ke database lokal</div>
             </div>
         </div>
-        <div style="padding:20px;">
+        <div style="padding:24px;">
             <div style="background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:16px;font-size:var(--font-size-xs);color:var(--text-muted);line-height:1.6;">
                 <i class="bi bi-info-circle-fill me-2" style="color:var(--info);"></i>
                 Sinkronisasi mengunduh seluruh daftar produk dari <code style="background:var(--surface-3);padding:1px 5px;border-radius:4px;">api.digiflazz.com/v1/price-list</code> dan menyimpannya ke database lokal. Disarankan dilakukan setelah mengganti API Key atau secara berkala.
@@ -183,7 +183,7 @@
                 <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Notifikasi otomatis status transaksi dari Digiflazz ke sistem Anda</div>
             </div>
         </div>
-        <div style="padding:20px;">
+        <div style="padding:24px;">
             <p style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:12px;">Daftarkan URL berikut ke panel Digiflazz (<strong>Atur Koneksi → API → Webhook URL</strong>) agar status transaksi diperbarui otomatis tanpa perlu refresh manual.</p>
 
             <!-- Webhook URL copy -->
@@ -241,7 +241,7 @@
                 <div style="font-size:var(--font-size-xs);color:var(--text-muted);">Endpoint dan format signature untuk integrasi API</div>
             </div>
         </div>
-        <div style="padding:20px;">
+        <div style="padding:24px;">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                 <div style="background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:12px;">
                     <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Endpoint Utama</div>
@@ -608,13 +608,14 @@ async function syncProducts(type) {
 
 // Clear Credentials
 function confirmClearSettings() {
-    if (!confirm('⚠️ Yakin ingin menghapus semua kredensial API Digiflazz?\nLayanan PPOB akan berhenti berfungsi hingga Anda mengisi ulang.')) return;
+    if (!confirm('Apakah Anda Yakin ingin menghapus semua kredensial API Digiflazz?\nLayanan PPOB akan berhenti berfungsi hingga Anda mengisi ulang.')) return;
     fetch('<?= BASE_URL ?>api/ppob/settings', {
         method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({username:'',api_key:'',webhook_secret:'',mode:'development'})
+        body: JSON.stringify({username:'',api_key_dev:'',api_key_prod:'',webhook_secret:'',mode:'development'})
     }).then(() => {
         document.getElementById('cfg-username').value = '';
-        document.getElementById('cfg-apikey').value = '';
+        document.getElementById('cfg-apikey-dev').value = '';
+        document.getElementById('cfg-apikey-prod').value = '';
         document.getElementById('cfg-webhook').value = '';
         document.getElementById('cfg-mode').value = 'development';
         updateModeBadge('development');
@@ -630,8 +631,9 @@ fetch('https://api.ipify.org?format=json')
 
 // Auto cek saldo on load
 document.addEventListener('DOMContentLoaded', () => {
-    const apiKey = document.getElementById('cfg-apikey').value;
-    if (apiKey.length > 5) cekSaldo();
+    const apiKeyDev = document.getElementById('cfg-apikey-dev').value;
+    const apiKeyProd = document.getElementById('cfg-apikey-prod').value;
+    if (apiKeyDev.length > 5 || apiKeyProd.length > 5) cekSaldo();
 });
 
 </script>
