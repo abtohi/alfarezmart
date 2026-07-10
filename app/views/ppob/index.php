@@ -1445,15 +1445,27 @@ async function performInquiry() {
                 body: JSON.stringify({account_bank: accountBank, account_number: no})
             });
             const data = await res.json();
-            if (data.success && data.data && data.data.account_holder) {
+            
+            let accountName = null;
+            if (data && typeof data === 'object') {
+                if (data.data) {
+                    accountName = data.data.account_holder || data.data.account_name || data.data.name || data.data.accountName || data.data.customer_name;
+                }
+                if (!accountName) {
+                    accountName = data.account_holder || data.account_name || data.accountName || data.name || data.customer_name;
+                }
+            }
+
+            if (res.ok && accountName) {
                 inqBox.style.display = 'block';
-                document.getElementById('inq-name').innerText = data.data.account_holder;
+                document.getElementById('inq-name').innerText = accountName;
                 document.getElementById('inq-price').innerText = '-';
                 document.getElementById('inq-detail-label').style.display = 'none';
                 document.getElementById('inq-detail').style.display = 'none';
                 document.getElementById('btn-pay-postpaid').style.display = 'none';
             } else {
-                showAlert('❌ ' + (data.message || 'Akun e-wallet tidak ditemukan'), 'danger');
+                console.error("E-Wallet Check Error Response:", data);
+                showAlert('❌ ' + (data.message || data.detail || 'Akun e-wallet tidak ditemukan'), 'danger');
             }
         } else if (currentType === 'postpaid') {
             // Cek Tagihan Pascabayar
