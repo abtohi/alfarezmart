@@ -615,15 +615,7 @@
     </div>
 </div>
 
-<!-- Loading Modal (Blocking UI during purchase) -->
-<div class="modal fade" id="loadingModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered d-flex justify-content-center">
-        <div class="modal-content text-center border-0" style="background: transparent !important; box-shadow: none !important; align-items: center;">
-            <div class="spinner-border text-primary" style="width: 4rem; height: 4rem; border-width: 0.35rem;" role="status"></div>
-            <div class="mt-3 text-white fw-bold fs-5" style="letter-spacing: 1px; text-shadow: 0px 2px 4px rgba(0,0,0,0.5);">Memproses...</div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Premium Result Modal -->
 <div class="modal fade" id="resultModal" tabindex="-1">
@@ -658,12 +650,24 @@
                         </div>
                     </div>
 
-                    <button class="btn btn-warning w-100 rounded-pill fw-bold py-2 mb-2" id="result-recheck-btn" style="display:none;">
-                        🔄 Cek Status Terbaru
-                    </button>
-                    <button class="btn btn-primary w-100 rounded-pill fw-bold py-2 mb-2" id="result-print-btn" style="display:none;" onclick="printPpobReceipt()">
-                        <i class="bi bi-printer me-2"></i>Cetak Struk
-                    </button>
+                    <div class="row g-2 mb-2" id="result-actions" style="display:none;">
+                        <div class="col-6">
+                            <button class="btn btn-primary w-100 rounded-pill fw-bold py-2" onclick="printPpobReceipt()">
+                                <i class="bi bi-printer me-1"></i>Cetak
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-success w-100 rounded-pill fw-bold py-2" onclick="sharePpobReceipt()">
+                                <i class="bi bi-share me-1"></i>Kirim
+                            </button>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <button class="btn btn-outline-primary w-100 rounded-pill py-2" onclick="previewPpobReceipt()">
+                                <i class="bi bi-eye me-1"></i>Preview Web
+                            </button>
+                        </div>
+                    </div>
+                    
                     <button class="btn btn-secondary w-100 rounded-pill py-2" data-bs-dismiss="modal">Tutup</button>
                 </div>
             </div>
@@ -718,7 +722,6 @@ function getTrxModal() { return bootstrap.Modal.getOrCreateInstance(document.get
 function getDepositModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('depositModal')); }
 function getDepoResultModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('depoResultModal')); }
 function getTestCaseModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('testCaseModal')); }
-function getLoadingModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('loadingModal')); }
 function getContactModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('contactModal')); }
 
 let currentCategory = '';
@@ -1245,10 +1248,27 @@ let REQUIRE_PIN_ACTIVE = REQUIRE_PIN;
 // Global variable for polling
 let autoPollInterval = null;
 
-// 10. Execute Transaction API
 async function executeTransactionAPI(payload) {
     getTrxModal().hide();
-    getLoadingModal().show();
+    
+    const resultModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('resultModal'));
+    // Set to loading state immediately
+    document.getElementById('result-icon').innerText = '⏳';
+    document.getElementById('result-title').innerText = 'Memproses...';
+    document.getElementById('result-title').className = 'fw-bold fs-4 text-warning';
+    document.getElementById('result-customer').innerText = payload.customer_no || '-';
+    document.getElementById('result-product').innerText = payload.product_name || '-';
+    document.getElementById('result-price').innerText = formatRp(payload.sell_price || 0);
+    document.getElementById('result-sn').innerText = '-';
+    document.getElementById('result-msg').innerText = 'Harap tunggu...';
+    document.getElementById('result-refid').innerText = payload.ref_id || '-';
+    document.getElementById('result-actions').style.display = 'none';
+    
+    // Check if recheck btn exists in DOM, if so hide it
+    const existingRecheck = document.getElementById('result-recheck-btn');
+    if(existingRecheck) existingRecheck.style.display = 'none';
+    
+    resultModal.show();
     
     if (autoPollInterval) {
         clearInterval(autoPollInterval);
@@ -1262,12 +1282,7 @@ async function executeTransactionAPI(payload) {
         });
         const data = await res.json();
         
-        // Sembunyikan loading modal secara total sebelum lanjut
-        const loadingModalObj = getLoadingModal();
-        loadingModalObj.hide();
-        
-        // Tambahkan delay agar animasi hide selesai sebelum show modal baru,
-        // mencegah backdrop modal bentrok di Bootstrap 5
+        // Wait a bit to ensure smooth transition
         setTimeout(() => {
             if(data.success) {
                 const status = (data.data.status || 'pending').toLowerCase();
@@ -1302,13 +1317,23 @@ async function executeTransactionAPI(payload) {
                 created_at: new Date().toLocaleString('id-ID')
             };
 
+            // Remove existing recheck btn if we created one before to avoid duplicates
+            let reCheckBtn = document.getElementById('result-recheck-btn');
+            if(reCheckBtn) reCheckBtn.remove();
+
             // Show re-check button only for pending
-            const reCheckBtn = document.getElementById('result-recheck-btn');
             if(isPending && refId) {
-                reCheckBtn.style.display = 'block';
+                // Create a new recheck button
+                reCheckBtn = document.createElement('button');
+                reCheckBtn.id = 'result-recheck-btn';
+                reCheckBtn.className = 'btn btn-warning w-100 rounded-pill fw-bold py-2 mb-2';
                 reCheckBtn.disabled = true; // Disabled initially because we auto-poll
                 reCheckBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Mengecek otomatis...';
                 reCheckBtn.onclick = () => checkTransactionStatus(payload.sku || '', payload.customer_no, refId);
+                
+                // Insert it before result-actions
+                const actionsDiv = document.getElementById('result-actions');
+                actionsDiv.parentNode.insertBefore(reCheckBtn, actionsDiv);
                 
                 // Auto-poll logic
                 let pollCount = 0;
@@ -1326,15 +1351,10 @@ async function executeTransactionAPI(payload) {
                         clearInterval(autoPollInterval);
                     }
                 }, 3000); // 3 seconds interval
-            } else {
-                reCheckBtn.style.display = 'none';
             }
 
-            // Show print button for success or pending (user may want to print receipt early)
-            document.getElementById('result-print-btn').style.display = (isSuccess || isPending) ? 'block' : 'none';
-
-            const resultModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('resultModal'));
-            resultModal.show();
+            // Show action buttons for success or pending (user may want to print receipt early)
+            document.getElementById('result-actions').style.display = (isSuccess || isPending) ? 'flex' : 'none';
             
             // Listen to modal close to stop polling
             document.getElementById('resultModal').addEventListener('hidden.bs.modal', function () {
@@ -1390,7 +1410,7 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
                 if (lastTrxData) {
                     lastTrxData.sn = data.data.sn || '-';
                 }
-                document.getElementById('result-print-btn').style.display = isSuccess ? 'block' : 'none';
+                document.getElementById('result-actions').style.display = isSuccess ? 'flex' : 'none';
                 return true; // Polling finished
             } else {
                 if (!isAuto) {
@@ -1430,13 +1450,146 @@ async function printPpobReceipt() {
             showToast('✅ Struk berhasil dicetak di Printer Thermal!', 'success');
         } catch (e) {
             console.warn('Bluetooth print failed:', e.message);
-            // Fallback to browser print with prompt
-            if(confirm('Koneksi Printer Thermal gagal atau dibatalkan. Cetak melalui Web Browser?')) {
-                printPpobReceiptBrowser();
-            }
+            showToast('❌ Koneksi Printer Thermal gagal: ' + e.message, 'danger');
         }
     } else {
-        printPpobReceiptBrowser();
+        showToast('❌ Fitur Printer Thermal tidak didukung di perangkat ini', 'danger');
+    }
+}
+
+// Preview Web Receipt
+function previewPpobReceipt() {
+    printPpobReceiptBrowser();
+}
+
+// Share Receipt Image
+async function sharePpobReceipt() {
+    if (!lastTrxData) { showToast('⚠️ Data transaksi tidak ditemukan', 'warning'); return; }
+    
+    const btn = document.querySelector('button[onclick="sharePpobReceipt()"]');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memproses...';
+    btn.disabled = true;
+
+    try {
+        // Ensure html2canvas is loaded
+        if (typeof html2canvas === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = '<?= BASE_URL ?>public/js/html2canvas.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        const d = lastTrxData;
+        const hasSN = d.sn && d.sn !== '-';
+        
+        // Create a temporary hidden container for the receipt
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        container.style.background = '#ffffff';
+        container.style.width = '320px';
+        container.style.padding = '20px';
+        container.style.fontFamily = 'sans-serif';
+        container.style.color = '#111';
+        
+        container.innerHTML = `
+            <div style="text-align:center; margin-bottom: 20px; border-bottom: 2px dashed #ddd; padding-bottom: 15px;">
+                <div style="font-size: 18px; font-weight: 800; color: #000; margin-bottom: 4px;">ALFAREZMART</div>
+                <div style="font-size: 11px; color: #666;">Struk Pembayaran Produk Digital</div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
+                <span style="color:#555;">No. Ref</span>
+                <span style="font-weight: 600; text-align: right;">${d.ref_id}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
+                <span style="color:#555;">Tanggal</span>
+                <span style="font-weight: 600; text-align: right;">${d.created_at}</span>
+            </div>
+            <div style="border-top: 1px dashed #ddd; margin: 12px 0;"></div>
+            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
+                <span style="color:#555;">Produk</span>
+                <span style="font-weight: 600; text-align: right;">${d.product_name}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
+                <span style="color:#555;">ID / No.</span>
+                <span style="font-weight: 600; text-align: right;">${d.customer_no}</span>
+            </div>
+            ${d.customer_name ? `
+            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
+                <span style="color:#555;">Nama</span>
+                <span style="font-weight: 600; text-align: right;">${d.customer_name}</span>
+            </div>` : ''}
+            <div style="border-top: 1px dashed #ddd; margin: 12px 0;"></div>
+            ${hasSN ? `
+            <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 15px 12px; margin: 15px 0; text-align: center;">
+                <div style="font-size: 10px; color: #666; margin-bottom: 6px; font-weight: 700;">SN / TOKEN</div>
+                <div style="font-size: 15px; font-weight: 800; color: #000; letter-spacing: 1px; word-break: break-all;">${d.sn}</div>
+            </div>` : ''}
+            <div style="display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px dashed #000; font-size: 16px; font-weight: 800; color: #000;">
+                <span>TOTAL BAYAR</span>
+                <span>Rp ${parseInt(d.sell_price).toLocaleString('id-ID')}</span>
+            </div>
+            <div style="text-align: center; margin-top: 30px; font-size: 12px; color: #666; line-height: 1.5;">
+                <div style="font-weight: 700; color:#000; margin-bottom:4px;">Terima kasih telah berbelanja</div>
+                <div>= Semoga Berkah =</div>
+            </div>
+        `;
+        document.body.appendChild(container);
+
+        // Render to canvas
+        const canvas = await html2canvas(container, {
+            scale: 2, // Higher quality
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#ffffff'
+        });
+        
+        document.body.removeChild(container);
+
+        // Share the image
+        canvas.toBlob(async (blob) => {
+            if (!blob) {
+                showToast('❌ Gagal membuat gambar struk', 'danger');
+                return;
+            }
+            const file = new File([blob], `Struk_PPOB_${d.ref_id}.png`, { type: 'image/png' });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        title: 'Struk Pembayaran AlfarezMart',
+                        text: `Struk Pembayaran ${d.product_name}`,
+                        files: [file]
+                    });
+                    showToast('✅ Berhasil membagikan struk!', 'success');
+                } catch (err) {
+                    console.log('Share canceled or failed', err);
+                }
+            } else {
+                // Fallback: trigger download if Web Share API doesn't support files
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = file.name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast('✅ Struk berhasil diunduh (perangkat tidak mendukung Web Share)', 'success');
+            }
+        }, 'image/png');
+
+    } catch (error) {
+        console.error('Error sharing receipt:', error);
+        showToast('❌ Gagal membagikan struk', 'danger');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
     }
 }
 

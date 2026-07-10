@@ -557,52 +557,52 @@ class ThermalPrinter {
         
         // Helper to center text
         const center = (text) => {
-            const lines = text.split('\\n');
+            const lines = text.split('\n');
             return lines.map(line => {
                 if (line.length >= width) return line;
                 const pad = Math.floor((width - line.length) / 2);
                 return ' '.repeat(pad) + line;
-            }).join('\\n');
+            }).join('\n');
         };
 
         // Header
-        data += '\\x1B@'; // Init
-        data += '\\x1Ba\\x01'; // Align Center
-        data += '\\x1BE\\x01'; // Bold On
-        data += storeName + '\\n';
-        data += '\\x1BE\\x00'; // Bold Off
-        data += storeAddr + '\\n';
-        data += '-'.repeat(width) + '\\n';
+        data += '\x1B@'; // Init
+        data += '\x1Ba\x01'; // Align Center
+        data += '\x1BE\x01'; // Bold On
+        data += storeName + '\n';
+        data += '\x1BE\x00'; // Bold Off
+        data += storeAddr + '\n';
+        data += '-'.repeat(width) + '\n';
 
         // Details
-        data += '\\x1Ba\\x00'; // Align Left
-        data += `No:  ${transaction.ref_id}\\n`;
-        data += `Tgl: ${dateStr}\\n`;
-        data += '-'.repeat(width) + '\\n';
-        data += `PRODUK : ${transaction.product_name}\\n`;
-        data += `ID/NO  : ${transaction.customer_no}\\n`;
+        data += '\x1Ba\x00'; // Align Left
+        data += `No:  ${transaction.ref_id}\n`;
+        data += `Tgl: ${dateStr}\n`;
+        data += '-'.repeat(width) + '\n';
+        data += `PRODUK : ${transaction.product_name}\n`;
+        data += `ID/NO  : ${transaction.customer_no}\n`;
 
         if (transaction.customer_name) {
-            data += `NAMA   : ${transaction.customer_name}\\n`;
+            data += `NAMA   : ${transaction.customer_name}\n`;
         }
 
-        data += '-'.repeat(width) + '\\n';
+        data += '-'.repeat(width) + '\n';
 
         if (transaction.sn && transaction.sn !== '-') {
-            data += '\\x1BE\\x01'; // Bold On
-            data += `SN/TOKEN:\\n${transaction.sn}\\n`;
-            data += '\\x1BE\\x00'; // Bold Off
-            data += '-'.repeat(width) + '\\n';
+            data += '\x1BE\x01'; // Bold On
+            data += `SN/TOKEN:\n${transaction.sn}\n`;
+            data += '\x1BE\x00'; // Bold Off
+            data += '-'.repeat(width) + '\n';
         }
 
         const price = parseInt(transaction.sell_price).toLocaleString('id-ID');
-        data += `TOTAL BAYAR : Rp${price}\\n`;
-        data += '-'.repeat(width) + '\\n';
+        data += `TOTAL BAYAR : Rp${price}\n`;
+        data += '-'.repeat(width) + '\n';
         
         // Footer
-        data += '\\x1Ba\\x01'; // Align Center
-        data += 'Terima kasih telah berbelanja\\n';
-        data += '= Semoga Berkah =\\n\\n\\n\\n';
+        data += '\x1Ba\x01'; // Align Center
+        data += 'Terima kasih telah berbelanja\n';
+        data += '= Semoga Berkah =\n\n\n\n';
 
         const encoder = new TextEncoder();
         let payload = encoder.encode(data);
@@ -612,8 +612,8 @@ class ThermalPrinter {
             try {
                 const logoBytes = await this._buildLogoRaster(this.storeSettings.store_logo);
                 if (logoBytes && logoBytes.length > 0) {
-                    const prefix = encoder.encode('\\x1B@\\x1Ba\\x01');
-                    const restPayload = payload.slice(2); // Skip the first \\x1B@
+                    const prefix = encoder.encode('\x1B@\x1Ba\x01');
+                    const restPayload = payload.slice(2); // Skip the first \x1B@
                     const combined = new Uint8Array(prefix.length + logoBytes.length + restPayload.length);
                     combined.set(prefix, 0);
                     combined.set(logoBytes, prefix.length);
