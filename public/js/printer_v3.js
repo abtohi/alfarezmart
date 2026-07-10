@@ -635,8 +635,14 @@ class ThermalPrinter {
         };
 
         data += row('NO. REF', transaction.ref_id);
-        data += row('TRX ID', transaction.trx_id || '-');
+        data += row('TRX ID', transaction.digiflazz_trx_id || transaction.trx_id || '-');
         data += row('TANGGAL', dateStr);
+        data += '-'.repeat(width) + '\n';
+        data += '\x1Ba\x01'; // Align Center
+        data += '\x1BE\x01'; // Bold On
+        data += 'TRANSAKSI BERHASIL\n';
+        data += '\x1BE\x00'; // Bold Off
+        data += '\x1Ba\x00'; // Align Left
         data += '-'.repeat(width) + '\n';
         data += row('PRODUK', transaction.product_name);
         data += row('ID/NO', transaction.customer_no);
@@ -646,36 +652,45 @@ class ThermalPrinter {
         }
 
         if (transaction.sn && transaction.sn !== '-') {
-            let snTitle = "SN/TOKEN:";
-            let snValue = transaction.sn;
             const isPln = transaction.product_name && transaction.product_name.toLowerCase().includes('pln');
             
-            if (isPln && transaction.sn.includes('/')) {
-                const parts = transaction.sn.split('/');
-                if (parts.length >= 4) {
-                    snTitle = "TOKEN PLN:";
-                    snValue = parts[0];
-                    const plnName = parts[1] || '';
-                    const plnTarifPower = parts.length > 4 ? `${parts[2]}/${parts[3]}` : parts[2];
-                    const plnKwh = parts.length > 4 ? parts[4] : parts[3];
-                    
-                    data += row('NAMA MTR', plnName);
-                    data += row('TARIF/DAYA', plnTarifPower);
-                    data += row('JML KWH', plnKwh);
+            if (isPln) {
+                let snTitle = "TOKEN PLN:";
+                let snValue = transaction.sn;
+                if (transaction.sn.includes('/')) {
+                    const parts = transaction.sn.split('/');
+                    if (parts.length >= 4) {
+                        snValue = parts[0];
+                        const plnName = parts[1] || '';
+                        const plnTarifPower = parts.length > 4 ? `${parts[2]}/${parts[3]}` : parts[2];
+                        const plnKwh = parts.length > 4 ? parts[4] : parts[3];
+                        
+                        data += row('NAMA MTR', plnName);
+                        data += row('TARIF/DAYA', plnTarifPower);
+                        data += row('JML KWH', plnKwh);
+                    }
+                }
+                data += '-'.repeat(width) + '\n';
+                data += '\x1Ba\x01'; // Align Center
+                data += '\x1BE\x01'; // Bold On
+                data += '\x1B!\x30'; // Double height and width
+                data += `${snTitle}\n${snValue}\n`;
+                data += '\x1B!\x00'; // Reset size
+                data += '\x1BE\x00'; // Bold Off
+                data += '\x1Ba\x00'; // Align Left
+                data += '-'.repeat(width) + '\n';
+            } else {
+                // Parse format for DANA / E-Wallet (NAMA: ..., NOMINAL: ..., REFF: ...)
+                if (transaction.sn.toUpperCase().includes('NAMA:') && transaction.sn.toUpperCase().includes('REFF:')) {
+                    const snStr = transaction.sn;
+                    const namaMatch = snStr.match(/NAMA:\s*([^,]+)/i);
+                    const reffMatch = snStr.match(/REFF:\s*([^,]+)/i);
+                    if (namaMatch && namaMatch[1]) data += row('NAMA AKUN', namaMatch[1].trim());
+                    if (reffMatch && reffMatch[1]) data += row('SN/REF', reffMatch[1].trim());
+                } else {
+                    data += row('SN/REF', transaction.sn);
                 }
             }
-            data += '-'.repeat(width) + '\n';
-            
-            data += '\x1Ba\x01'; // Align Center
-            data += '\x1BE\x01'; // Bold On
-            // Use double height and width for Token (ESC ! 48)
-            data += '\x1B!\x30'; 
-            data += `${snTitle}\n${snValue}\n`;
-            // Reset to normal (ESC ! 0)
-            data += '\x1B!\x00'; 
-            data += '\x1BE\x00'; // Bold Off
-            data += '\x1Ba\x00'; // Align Left
-            data += '-'.repeat(width) + '\n';
         }
 
         const price = parseInt(transaction.sell_price).toLocaleString('id-ID');

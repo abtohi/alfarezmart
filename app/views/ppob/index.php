@@ -2101,12 +2101,13 @@ async function sharePpobReceipt() {
 function printPpobReceiptBrowser() {
     if (!lastTrxData) return;
     const d = lastTrxData;
-    const hasSN = d.sn && d.sn !== '-';
+    let hasSN = d.sn && d.sn !== '-';
     const isPln = d.product_name && d.product_name.toLowerCase().includes('pln');
     
     let snTitle = "SN / TOKEN";
     let snValue = d.sn;
     let plnDetailsHtml = '';
+    let otherSnHtml = '';
     
     if (isPln && d.sn.includes('/')) {
         const parts = d.sn.split('/');
@@ -2123,6 +2124,17 @@ function printPpobReceiptBrowser() {
             <div class="row"><div class="label">Jml kWh</div><div class="value">${plnKwh}</div></div>
             `;
         }
+    } else if (!isPln && hasSN) {
+        if (d.sn.toUpperCase().includes('NAMA:') && d.sn.toUpperCase().includes('REFF:')) {
+            const snStr = d.sn;
+            const namaMatch = snStr.match(/NAMA:\s*([^,]+)/i);
+            const reffMatch = snStr.match(/REFF:\s*([^,]+)/i);
+            if (namaMatch && namaMatch[1]) otherSnHtml += `<div class="row"><div class="label">Nama Akun</div><div class="value">${namaMatch[1].trim()}</div></div>`;
+            if (reffMatch && reffMatch[1]) otherSnHtml += `<div class="row"><div class="label">SN/Ref</div><div class="value">${reffMatch[1].trim()}</div></div>`;
+        } else {
+            otherSnHtml = `<div class="row"><div class="label">SN / Ref</div><div class="value">${d.sn}</div></div>`;
+        }
+        hasSN = false; // Hide big bold sn-box for non-PLN
     }
     
     const w = window.open('', '_blank', 'width=380,height=700');
@@ -2135,9 +2147,10 @@ function printPpobReceiptBrowser() {
     .center { text-align: center; }
     .bold { font-weight: 700; }
     .logo { width: 55px; height: 55px; object-fit: contain; margin-bottom: 12px; border-radius: 12px; }
-    .header { margin-bottom: 20px; border-bottom: 2px dashed #ddd; padding-bottom: 15px; }
+    .header { margin-bottom: 15px; border-bottom: 2px dashed #ddd; padding-bottom: 15px; }
     .store-name { font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; color: #000; }
     .store-desc { font-size: 11px; color: #666; }
+    .trx-success { font-size: 14px; font-weight: 800; color: #000; margin: 15px 0 10px; border: 1px solid #000; padding: 6px; border-radius: 6px; }
     .line { border-top: 1px dashed #ddd; margin: 12px 0; }
     .row { display: flex; justify-content: space-between; margin: 8px 0; align-items: flex-start; line-height: 1.4; }
     .label { color: #555; width: 35%; font-size: 12px; }
@@ -2149,7 +2162,7 @@ function printPpobReceiptBrowser() {
     .footer { text-align: center; margin-top: 30px; font-size: 11px; color: #666; line-height: 1.5; }
     .print-btn { display: block; width: 100%; padding: 14px; background: #0f0f1a; color: #fff; text-align: center; border: none; border-radius: 10px; font-weight: 600; font-size: 14px; margin-top: 25px; cursor: pointer; transition: background 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
     .print-btn:active { background: #000; transform: scale(0.98); }
-    @media print { body { width: 100%; padding: 0; } .no-print { display: none !important; } .header { border-bottom: 1px dashed #000; } .line { border-top: 1px dashed #000; } .sn-box { background: transparent; border: 1px dashed #000; } }
+    @media print { body { width: 100%; padding: 0; } .no-print { display: none !important; } .header { border-bottom: 1px dashed #000; } .line { border-top: 1px dashed #000; } .sn-box { background: transparent; border: 1px dashed #000; } .trx-success { border: 1px dashed #000; } }
 </style></head><body>
 <div class="header center">
     <img src="<?= BASE_URL ?>public/images/mobile_icon.png" class="logo" alt="Logo">
@@ -2157,13 +2170,14 @@ function printPpobReceiptBrowser() {
     <div class="store-desc">Struk Pembayaran Produk Digital</div>
 </div>
 <div class="row"><div class="label">No. Ref</div><div class="value">${d.ref_id}</div></div>
-<div class="row"><div class="label">Trx ID</div><div class="value">${d.trx_id || '-'}</div></div>
+<div class="row"><div class="label">Trx ID</div><div class="value">${d.digiflazz_trx_id || d.trx_id || '-'}</div></div>
 <div class="row"><div class="label">Tanggal</div><div class="value">${d.created_at}</div></div>
-<div class="line"></div>
+<div class="center trx-success">TRANSAKSI BERHASIL</div>
 <div class="row"><div class="label">Produk</div><div class="value">${d.product_name}</div></div>
 <div class="row"><div class="label">ID / No.</div><div class="value">${d.customer_no}</div></div>
 ${d.customer_name ? `<div class="row"><div class="label">Nama</div><div class="value">${d.customer_name}</div></div>` : ''}
 ${plnDetailsHtml}
+${otherSnHtml}
 <div class="line"></div>
 ${hasSN ? `<div class="sn-box"><div class="sn-title">${snTitle}</div><div class="sn-value">${snValue}</div></div>` : ''}
 <div class="total-row"><span>TOTAL BAYAR</span><span>Rp ${parseInt(d.sell_price).toLocaleString('id-ID')}</span></div>
