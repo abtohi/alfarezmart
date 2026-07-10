@@ -111,26 +111,38 @@ class ThermalPrinter {
 
         // If we still have a device object from a previous session, try reconnecting directly
         if (this.device) {
-            try {
-                console.log('[ThermalPrinter] Reconnecting to existing device:', this.device.name);
-                this.server = await this.device.gatt.connect();
-                const services = await this.server.getPrimaryServices();
-                for (const service of services) {
-                    const characteristics = await service.getCharacteristics();
-                    for (const char of characteristics) {
-                        if (char.properties.write || char.properties.writeWithoutResponse) {
-                            this.characteristic = char;
-                            this._autoReconnected = true;
-                            this.device.addEventListener('gattserverdisconnected', this._disconnectHandler);
-                            console.log('[ThermalPrinter] Reconnected to:', this.device.name);
-                            return true;
+            let retries = 3;
+            while (retries > 0) {
+                try {
+                    console.log('[ThermalPrinter] Reconnecting to existing device:', this.device.name);
+                    this.server = await this.device.gatt.connect();
+                    // Small delay to allow GATT connection to stabilize
+                    await new Promise(r => setTimeout(r, 500));
+                    
+                    const services = await this.server.getPrimaryServices();
+                    for (const service of services) {
+                        const characteristics = await service.getCharacteristics();
+                        for (const char of characteristics) {
+                            if (char.properties.write || char.properties.writeWithoutResponse) {
+                                this.characteristic = char;
+                                this._autoReconnected = true;
+                                this.device.addEventListener('gattserverdisconnected', this._disconnectHandler);
+                                console.log('[ThermalPrinter] Reconnected to:', this.device.name);
+                                return true;
+                            }
                         }
                     }
+                    throw new Error('Printer tidak mendukung penulisan data.');
+                } catch (e) {
+                    console.warn(`[ThermalPrinter] Direct reconnect attempt failed, retries left: ${retries - 1}`, e);
+                    retries--;
+                    if (retries === 0) {
+                        this.server = null;
+                        this.characteristic = null;
+                    } else {
+                        await new Promise(r => setTimeout(r, 1000));
+                    }
                 }
-            } catch (e) {
-                console.log('[ThermalPrinter] Direct reconnect failed:', e.message);
-                this.server = null;
-                this.characteristic = null;
             }
         }
 
