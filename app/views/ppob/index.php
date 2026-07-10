@@ -1693,6 +1693,11 @@ async function sharePpobReceipt() {
                 URL.revokeObjectURL(url);
                 showToast('✅ Struk berhasil diunduh (perangkat tidak mendukung Web Share)', 'success');
             }
+        }, 'image/png');
+
+    } catch (error) {
+        console.error('Error sharing receipt:', error);
+        showToast('❌ Gagal membagikan struk', 'danger');
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
