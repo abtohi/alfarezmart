@@ -1413,10 +1413,20 @@ async function executeTransactionAPI(payload) {
                 document.getElementById('custom-print-price').className = 'form-control glass-input';
                 
                 // Update printer badge
-                if (typeof window._ppobPrinter !== 'undefined' && window._ppobPrinter.isConnected()) {
+                let printer = window._ppobPrinter;
+                if (!printer && typeof ThermalPrinter !== 'undefined') {
+                    printer = window._ppobPrinter = new ThermalPrinter();
+                }
+                
+                if (printer && printer.isConnected()) {
                     const badge = document.getElementById('printer-status-badge');
                     badge.className = 'badge bg-success';
                     badge.innerHTML = '<i class="bi bi-bluetooth me-1"></i>Printer: Terhubung';
+                    badge.style.display = 'inline-block';
+                } else if (printer && printer.hasSavedDevice()) {
+                    const badge = document.getElementById('printer-status-badge');
+                    badge.className = 'badge bg-info text-dark';
+                    badge.innerHTML = '<i class="bi bi-bluetooth me-1"></i>Printer: Tersimpan (Tidur)';
                     badge.style.display = 'inline-block';
                 } else if (navigator.bluetooth) {
                     const badge = document.getElementById('printer-status-badge');
@@ -1514,10 +1524,20 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
                     document.getElementById('custom-price-container').style.display = 'block';
                     
                     // Update printer badge
-                    if (typeof window._ppobPrinter !== 'undefined' && window._ppobPrinter.isConnected()) {
+                    let printer = window._ppobPrinter;
+                    if (!printer && typeof ThermalPrinter !== 'undefined') {
+                        printer = window._ppobPrinter = new ThermalPrinter();
+                    }
+                    
+                    if (printer && printer.isConnected()) {
                         const badge = document.getElementById('printer-status-badge');
                         badge.className = 'badge bg-success';
                         badge.innerHTML = '<i class="bi bi-bluetooth me-1"></i>Printer: Terhubung';
+                        badge.style.display = 'inline-block';
+                    } else if (printer && printer.hasSavedDevice()) {
+                        const badge = document.getElementById('printer-status-badge');
+                        badge.className = 'badge bg-info text-dark';
+                        badge.innerHTML = '<i class="bi bi-bluetooth me-1"></i>Printer: Tersimpan (Tidur)';
                         badge.style.display = 'inline-block';
                     } else if (navigator.bluetooth) {
                         const badge = document.getElementById('printer-status-badge');
@@ -1590,7 +1610,10 @@ async function printPpobReceipt() {
             
             if (navigator.bluetooth && !printer.isConnected()) {
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menghubungkan...';
-                await printer.connect();
+                const reconnected = await printer.tryAutoReconnect();
+                if (!reconnected) {
+                    await printer.connect();
+                }
                 if (badge) {
                     badge.className = 'badge bg-success';
                     badge.innerHTML = '<i class="bi bi-bluetooth me-1"></i>Printer: Terhubung';
