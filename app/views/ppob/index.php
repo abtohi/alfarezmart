@@ -420,17 +420,16 @@
                                 <!-- Input Section -->
                 <div class="mb-4">
                     <label class="form-label fw-bold small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;">Nomor Tujuan / Pelanggan</label>
-                    <div class="input-group glass-input p-0 d-flex align-items-center" style="overflow: hidden;">
-                        <input type="text" class="form-control border-0 bg-transparent text-white shadow-none" id="customer-no" placeholder="Masukkan nomor..." style="font-size: 14px; padding: 12px 16px;">
+                    <div class="d-flex align-items-center w-100" style="border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-2); overflow: hidden; padding-right: 8px;">
+                        <input type="text" class="form-control border-0 bg-transparent shadow-none flex-grow-1" id="customer-no" placeholder="Masukkan nomor..." style="font-size: 14px; padding: 14px 16px; min-width: 0; color: var(--text-primary);">
                         
-                        <div id="provider-badge" class="fw-bold me-2" style="font-size:9px;display:none;padding:4px 8px;border-radius:12px;background:var(--primary);color:#fff;text-transform:uppercase;letter-spacing:0.5px;"></div>
+                        <div id="provider-badge" class="fw-bold flex-shrink-0" style="font-size:10px; display:none; padding:5px 10px; border-radius:8px; background:var(--primary); color:#fff; text-transform:uppercase; letter-spacing:0.5px; white-space: nowrap;"></div>
                         
                         <!-- Contact Button -->
-                        <button type="button" class="btn text-primary bg-transparent border-0 px-3 m-0" onclick="openContactBook()" title="Buku Kontak" id="btn-contact-book">
+                        <button type="button" class="btn text-primary bg-transparent border-0 px-2 m-0 flex-shrink-0" onclick="openContactBook()" title="Buku Kontak" id="btn-contact-book">
                             <i class="bi bi-person-lines-fill fs-5"></i>
                         </button>
-
-                        <button class="btn btn-primary px-4 fw-bold m-0" id="btn-inquiry" onclick="performInquiry()" style="display:none; border-radius: 0; font-size:13px; align-self: stretch;">Cek</button>
+                        <button class="btn btn-primary px-4 fw-bold m-0 flex-shrink-0" id="btn-inquiry" onclick="performInquiry()" style="display:none; border-radius: 8px; font-size:13px; align-self: stretch; margin: 4px 0 4px 4px !important;">Cek</button>
                     </div>
                 </div>
 
