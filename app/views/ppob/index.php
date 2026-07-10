@@ -476,6 +476,40 @@
     </div>
 </div>
 
+<!-- Set Harga Jual Modal -->
+<div class="modal fade" id="setPriceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 20px; border: none; background: var(--surface-1);">
+            <div class="modal-header border-0" style="background: var(--surface-2); border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title fw-bold" style="color: var(--text-primary);"><i class="bi bi-gear-fill me-2" style="color: var(--primary);"></i>Atur Harga Jual</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
+            </div>
+            <div class="modal-body p-4" style="color: var(--text-primary);">
+                <input type="hidden" id="sp-sku">
+                <input type="hidden" id="sp-base-price">
+                <div class="mb-4 text-center">
+                    <h6 class="fw-bold mb-1" id="sp-product-name" style="color: var(--primary);">Nama Produk</h6>
+                    <div class="text-muted small">Harga Modal: <span id="sp-base-price-text" class="fw-bold" style="color: var(--text-primary);">Rp0</span></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small text-muted mb-1 fw-bold">Harga Jual Baru</label>
+                    <div class="input-group">
+                        <span class="input-group-text glass-input border-end-0 text-muted fw-bold">Rp</span>
+                        <input type="number" class="form-control glass-input border-start-0 ps-2 fw-bold" id="sp-sell-price" placeholder="Masukkan harga jual" style="font-size: 16px; color: var(--text-primary);">
+                    </div>
+                    <div class="mt-2 text-end">
+                        <small id="sp-profit-preview" class="fw-bold" style="color: var(--success); display: none;">Untung: Rp0</small>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-4 px-4">
+                <button type="button" class="btn btn-secondary rounded-pill fw-bold px-4" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary flex-grow-1 rounded-pill fw-bold" id="btn-save-price"><i class="bi bi-check-circle me-2"></i>Simpan Harga</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Deposit Modal -->
 <div class="modal fade" id="depositModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -1142,6 +1176,81 @@ function filterList(val, filterKey, clickedBtn, originalProducts) {
     }
 }
 
+// PPOB Selling Prices Logic
+function getPpobSellPrices() {
+    try {
+        return JSON.parse(localStorage.getItem('ppob_sell_prices')) || {};
+    } catch(e) { return {}; }
+}
+
+function getPpobSellPrice(sku) {
+    return getPpobSellPrices()[sku];
+}
+
+function savePpobSellPrice(sku, price) {
+    const prices = getPpobSellPrices();
+    prices[sku] = parseInt(price, 10);
+    localStorage.setItem('ppob_sell_prices', JSON.stringify(prices));
+}
+
+window.openSetPriceModal = function(e, productStr) {
+    e.stopPropagation(); // Prevent confirmPurchase
+    const product = JSON.parse(decodeURIComponent(productStr));
+    const currentSell = getPpobSellPrice(product.buyer_sku_code) || '';
+    
+    document.getElementById('sp-sku').value = product.buyer_sku_code;
+    document.getElementById('sp-base-price').value = product.seller_price;
+    document.getElementById('sp-product-name').innerText = product.product_name;
+    document.getElementById('sp-base-price-text').innerText = formatRp(product.seller_price);
+    document.getElementById('sp-sell-price').value = currentSell;
+    
+    updateProfitPreview();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('setPriceModal')).show();
+}
+
+document.getElementById('sp-sell-price')?.addEventListener('input', updateProfitPreview);
+
+function updateProfitPreview() {
+    const base = parseInt(document.getElementById('sp-base-price').value) || 0;
+    const sell = parseInt(document.getElementById('sp-sell-price').value) || 0;
+    const preview = document.getElementById('sp-profit-preview');
+    
+    if (sell > base) {
+        const profit = sell - base;
+        const pct = ((profit / base) * 100).toFixed(1);
+        preview.style.display = 'block';
+        preview.style.color = 'var(--success)';
+        preview.innerText = `Untung: ${formatRp(profit)} (${pct}%)`;
+    } else if (sell > 0 && sell <= base) {
+        preview.style.display = 'block';
+        preview.style.color = 'var(--danger)';
+        preview.innerText = `Rugi / Seri!`;
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+document.getElementById('btn-save-price')?.addEventListener('click', () => {
+    const sku = document.getElementById('sp-sku').value;
+    const sell = document.getElementById('sp-sell-price').value;
+    if (sell && parseInt(sell) > 0) {
+        savePpobSellPrice(sku, sell);
+    } else {
+        const prices = getPpobSellPrices();
+        delete prices[sku];
+        localStorage.setItem('ppob_sell_prices', JSON.stringify(prices));
+    }
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('setPriceModal')).hide();
+    
+    if (typeof currentProducts !== 'undefined') {
+        if(currentCategory === 'pulsa' || currentCategory === 'data') {
+           filterProductsByPrefix(document.getElementById('customer-no').value);
+        } else {
+           renderProducts(currentProducts);
+        }
+    }
+});
+
 function renderProducts(products) {
     const grid = document.getElementById('product-grid');
     grid.innerHTML = '';
@@ -1151,14 +1260,45 @@ function renderProducts(products) {
     }
     products.forEach(p => {
         const card = document.createElement('div');
-        card.className = 'prod-card';
+        card.className = 'prod-card position-relative';
         card.onclick = () => confirmPurchase(p);
+        
+        const sellPrice = getPpobSellPrice(p.buyer_sku_code);
+        let priceHtml = `<div class="prod-price">${formatRp(p.seller_price)}</div>`;
+        let profitHtml = '';
+        
+        if (sellPrice && sellPrice > p.seller_price) {
+            const profit = sellPrice - p.seller_price;
+            const pct = ((profit / p.seller_price) * 100).toFixed(1);
+            priceHtml = `
+                <div class="d-flex flex-column">
+                    <span class="text-muted text-decoration-line-through" style="font-size: 0.75rem; opacity: 0.7;">${formatRp(p.seller_price)}</span>
+                    <span class="prod-price text-success">${formatRp(sellPrice)}</span>
+                </div>
+            `;
+            profitHtml = `<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 ms-2" style="font-size: 0.65rem; padding: 4px 6px;">+${formatRp(profit)} (${pct}%)</span>`;
+        } else if (sellPrice) {
+            priceHtml = `
+                <div class="d-flex flex-column">
+                    <span class="text-muted text-decoration-line-through" style="font-size: 0.75rem; opacity: 0.7;">${formatRp(p.seller_price)}</span>
+                    <span class="prod-price text-warning">${formatRp(sellPrice)}</span>
+                </div>
+            `;
+        }
+
+        const encodedProduct = encodeURIComponent(JSON.stringify(p));
+        
         card.innerHTML = `
-            <div>
-                <div class="prod-name">${p.product_name}</div>
+            <button class="btn btn-sm position-absolute top-0 end-0 m-2" style="z-index: 2; padding: 4px 8px; border-radius: 8px; background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border-color);" onclick="openSetPriceModal(event, '${encodedProduct}')">
+                <i class="bi bi-gear-fill" style="font-size: 1rem;"></i>
+            </button>
+            <div class="pe-4">
+                <div class="prod-name d-flex align-items-center flex-wrap">${p.product_name} ${profitHtml}</div>
                 <div class="prod-desc">${p.description || ''}</div>
             </div>
-            <div class="prod-price">${formatRp(p.seller_price)}</div>
+            <div class="mt-2">
+                ${priceHtml}
+            </div>
         `;
         grid.appendChild(card);
     });
@@ -1527,7 +1667,8 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
                 // Update last trx data with new SN and show print button
                 if (lastTrxData) {
                     lastTrxData.sn = data.data.sn || '-';
-                    document.getElementById('custom-print-price').value = parseInt(lastTrxData.sell_price || 0);
+                    const configuredPrice = typeof getPpobSellPrice === 'function' ? getPpobSellPrice(lastTrxData.sku) : null;
+                    document.getElementById('custom-print-price').value = parseInt(configuredPrice || lastTrxData.sell_price || 0);
                 }
                 
                 if (isSuccess) {
