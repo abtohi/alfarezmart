@@ -91,13 +91,55 @@
 }
 
 .hero-balance-amount {
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 800;
     margin: 0;
     letter-spacing: -0.5px;
     background: linear-gradient(to right, #ffffff, #e2e8f0);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+/* PPOB Brand Header */
+.ppob-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ppob-header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ppob-logo-img {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
+}
+
+.ppob-brand-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.ppob-brand-name {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.1;
+}
+
+.ppob-brand-tagline {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
 }
 
 /* Elegant Price Sync Button */
@@ -369,7 +411,34 @@
 :root[data-theme="light"] .btn-close { filter: none; }
 :root[data-theme="light"] .glass-input { background: var(--surface-2); }
 :root[data-theme="light"] .form-select.glass-input { background: var(--surface-2); }
-:root[data-theme="light"] .ppob-hero { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
+:root[data-theme="light"] .ppob-hero { 
+    background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%) !important; 
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    color: #0f172a !important;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.06) !important;
+}
+:root[data-theme="light"] .hero-label-title { color: #475569 !important; }
+:root[data-theme="light"] .hero-balance-amount { 
+    background: linear-gradient(to right, #0f172a, #334155) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
+:root[data-theme="light"] .btn-sync-prices {
+    background: rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    color: #475569 !important;
+}
+:root[data-theme="light"] .btn-sync-prices:hover {
+    background: rgba(37, 99, 235, 0.1) !important;
+    border-color: rgba(37, 99, 235, 0.3) !important;
+    color: #2563eb !important;
+}
+:root[data-theme="light"] .hero-icon-container {
+    background: rgba(37, 99, 235, 0.08) !important;
+    border: 1px solid rgba(37, 99, 235, 0.2) !important;
+    color: #2563eb !important;
+    box-shadow: 0 8px 20px -6px rgba(37, 99, 235, 0.15) !important;
+}
 :root[data-theme="light"] .alert-info { background: var(--info-bg); border-color: rgba(37,99,235,0.3); color: var(--info); }
 :root[data-theme="light"] .prod-card { background: var(--surface-2); }
 :root[data-theme="light"] .prod-card:hover { background: var(--surface-3); }
@@ -377,6 +446,17 @@
 
 <div class="container-fluid py-4 ppob-wrapper">
     
+    <!-- PPOB Brand Header -->
+    <div class="ppob-page-header">
+        <div class="ppob-header-brand">
+            <img src="<?= BASE_URL ?>public/images/Icon.png" alt="AlfarezMart Logo" class="ppob-logo-img">
+            <div class="ppob-brand-text">
+                <span class="ppob-brand-name">AlfarezMart</span>
+                <span class="ppob-brand-tagline">Produk Digital & PPOB</span>
+            </div>
+        </div>
+    </div>
+
     <!-- Hero / Balance Section -->
     <div class="ppob-hero">
         <div class="hero-content-wrapper">
