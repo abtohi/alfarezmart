@@ -169,9 +169,14 @@
 <div class="container py-4">
     <!-- Header Section -->
     <div class="summary-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-        <div>
-            <h4 class="mb-2 fw-bold text-primary"><i class="bi bi-bar-chart-line-fill me-2"></i>PPOB Analytics</h4>
-            <p class="text-muted mb-0" style="font-size: 14px;">Tinjauan performa transaksi, kecepatan seller, dan estimasi keuntungan</p>
+        <div class="d-flex align-items-start gap-3">
+            <a href="<?= BASE_URL ?>ppob" class="btn btn-outline-secondary" style="border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" title="Kembali ke Dashboard">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h4 class="mb-2 fw-bold text-primary"><i class="bi bi-bar-chart-line-fill me-2"></i>PPOB Analytics</h4>
+                <p class="text-muted mb-0" style="font-size: 14px;">Tinjauan performa transaksi, kecepatan seller, dan estimasi keuntungan</p>
+            </div>
         </div>
         <div>
             <a href="<?= BASE_URL ?>ppob/history" class="btn btn-primary shadow-sm" style="border-radius: var(--radius-md); font-weight: 600; padding: 10px 20px;">
