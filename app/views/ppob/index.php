@@ -1053,6 +1053,12 @@ async function loadProducts(category, type) {
     try {
         const res = await fetch(`<?= BASE_URL ?>api/ppob/products/${category}?type=${type}`);
         const data = await res.json();
+        
+        // Race condition check: Only proceed if this is still the active category/type
+        if (currentCategory !== category || currentType !== type) {
+            return;
+        }
+        
         document.getElementById('product-loading').style.display = 'none';
         if (data.success && data.data.length > 0) {
             currentProducts = data.data;
@@ -1088,7 +1094,7 @@ function detectProvider(phone) {
 }
 
 function filterProductsByPrefix(phone) {
-    if (currentCategory !== 'pulsa' && currentCategory !== 'data') return;
+    if (currentCategory !== 'pulsa' && currentCategory !== 'data' && currentCategory !== 'sms_nelpon') return;
     const provider = detectProvider(phone);
     const badge = document.getElementById('provider-badge');
     
@@ -1120,7 +1126,7 @@ function filterProductsByPrefix(phone) {
 }
 
 document.getElementById('customer-no').addEventListener('input', (e) => {
-    if (currentCategory === 'pulsa' || currentCategory === 'data') {
+    if (currentCategory === 'pulsa' || currentCategory === 'data' || currentCategory === 'sms_nelpon') {
         filterProductsByPrefix(e.target.value);
     }
 });
