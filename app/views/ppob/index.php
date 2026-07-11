@@ -16,7 +16,7 @@
     background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 24px;
-    padding: 24px 30px;
+    padding: 18px 26px;
     position: relative;
     overflow: hidden;
     color: white;
@@ -24,7 +24,7 @@
     display: flex;
     flex-direction: column;
     margin-bottom: 25px;
-    gap: 20px;
+    gap: 14px;
     transition: all 0.3s ease;
 }
 
@@ -58,8 +58,8 @@
 }
 
 .hero-logo-pure {
-    width: 76px;
-    height: 76px;
+    width: 88px;
+    height: 88px;
     object-fit: contain;
     flex-shrink: 0;
     filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
