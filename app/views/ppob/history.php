@@ -612,12 +612,15 @@
     .trx-success { font-size: 14px; font-weight: 800; color: #000; margin: 15px 0 10px; border: 1px solid #000; padding: 6px; border-radius: 6px; }
     .line { border-top: 1px dashed #ddd; margin: 12px 0; }
     .row { display: flex; justify-content: space-between; margin: 8px 0; align-items: flex-start; line-height: 1.4; }
+    .row.small-info { margin: 4px 0; font-size: 10.5px; }
+    .row.small-info .label { color: #555; width: 35%; font-size: 10.5px; }
+    .row.small-info .value { font-weight: 500; width: 65%; text-align: right; word-break: break-word; color: #000; font-size: 10.5px; }
     .label { color: #555; width: 35%; font-size: 12px; }
     .value { font-weight: 600; width: 65%; text-align: right; word-break: break-word; color: #000; }
     .sn-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 15px 12px; margin: 15px 0; text-align: center; }
-    .sn-title { font-size: 11px; color: #666; margin-bottom: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
-    .sn-value { font-size: ${snValue.length > 25 ? '13px' : '16px'}; font-weight: 900; color: #000; letter-spacing: 0.5px; word-break: break-all; font-family: monospace; }
-    .total-row { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px dashed #000; font-size: 16px; font-weight: 800; color: #000; }
+    .sn-title { font-size: 9px; color: #111; margin-bottom: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+    .sn-value { font-size: ${snValue.length > 25 ? '13px' : '17px'}; font-weight: 900; color: #000; letter-spacing: 0.5px; word-break: break-all; font-family: monospace; }
+    .total-row { display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px dashed #000; font-size: 14.5px; font-weight: 900; color: #000; }
     .footer { text-align: center; margin-top: 30px; font-size: 11px; color: #666; line-height: 1.5; }
     .print-btn { display: block; width: 100%; padding: 14px; background: #0f0f1a; color: #fff; text-align: center; border: none; border-radius: 10px; font-weight: 600; font-size: 14px; margin-top: 25px; cursor: pointer; transition: background 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
     .print-btn:active { background: #000; transform: scale(0.98); }
@@ -628,9 +631,9 @@
     <div class="store-name">ALFAREZMART</div>
     <div class="store-desc">Struk Pembayaran Produk Digital</div>
 </div>
-<div class="row"><div class="label">No. Ref</div><div class="value">${d.ref_id}</div></div>
-<div class="row"><div class="label">Trx ID</div><div class="value">${d.digiflazz_trx_id || d.ref_id}</div></div>
-<div class="row"><div class="label">Tanggal</div><div class="value">${d.created_at}</div></div>
+<div class="row small-info"><div class="label">No. Ref</div><div class="value">${d.ref_id}</div></div>
+<div class="row small-info"><div class="label">Trx ID</div><div class="value">${d.digiflazz_trx_id || d.ref_id}</div></div>
+<div class="row small-info"><div class="label">Tanggal</div><div class="value">${d.created_at}</div></div>
 <div class="center trx-success">TRANSAKSI BERHASIL</div>
 <div class="row"><div class="label">Produk</div><div class="value">${d.product_name}</div></div>
 <div class="row"><div class="label">ID / No.</div><div class="value">${d.customer_no}</div></div>
@@ -702,17 +705,17 @@ ${hasSN ? '<div class="sn-box"><div class="sn-title">' + snTitle + '</div><div c
                 <div style="font-size: 16px; font-weight: 800; margin-bottom: 2px; color: #000;">ALFAREZMART</div>
                 <div style="font-size: 10px; color: #666;">Struk Pembayaran Produk Digital</div>
             </div>
-            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; color: #111;">
+            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 10.5px; color: #111;">
                 <span style="color:#555;">No. Ref</span>
-                <span style="font-weight: 600; text-align: right;">${d.ref_id}</span>
+                <span style="font-weight: 500; text-align: right;">${d.ref_id}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; color: #111;">
+            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 10.5px; color: #111;">
                 <span style="color:#555;">Trx ID</span>
-                <span style="font-weight: 600; text-align: right;">${d.digiflazz_trx_id || d.ref_id}</span>
+                <span style="font-weight: 500; text-align: right;">${d.digiflazz_trx_id || d.ref_id}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; color: #111;">
+            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 10.5px; color: #111;">
                 <span style="color:#555;">Tanggal</span>
-                <span style="font-weight: 600; text-align: right;">${d.created_at}</span>
+                <span style="font-weight: 500; text-align: right;">${d.created_at}</span>
             </div>
             <div style="text-align: center; margin: 10px 0; border: 1px solid #111; padding: 4px; border-radius: 4px; font-size: 12px; font-weight: 800; color: #000;">
                 TRANSAKSI BERHASIL
@@ -729,8 +732,8 @@ ${hasSN ? '<div class="sn-box"><div class="sn-title">' + snTitle + '</div><div c
             ${plnDetailsHtml}
             ${otherSnHtml}
             <div style="border-top: 1px dashed #ccc; margin: 8px 0;"></div>
-            ${hasSN ? '<div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 10px 8px; margin: 8px 0; text-align: center;"><div style="font-size: 10px; color: #666; margin-bottom: 4px; font-weight: 800;">' + snTitle + '</div><div id="preview-sn-value" style="font-size: ' + (snValue.length > 25 ? '13px' : '16px') + '; font-weight: 900; color: #000; letter-spacing: 0.5px; word-break: break-all; font-family: monospace;">' + snValue + '</div></div>' : ''}
-            <div style="display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #000; font-size: 14px; font-weight: 800; color: #000;">
+            ${hasSN ? '<div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 10px 8px; margin: 8px 0; text-align: center;"><div style="font-size: 9px; color: #111; margin-bottom: 4px; font-weight: 900; text-transform: uppercase;">' + snTitle + '</div><div id="preview-sn-value" style="font-size: ' + (snValue.length > 25 ? '13px' : '17px') + '; font-weight: 900; color: #000; letter-spacing: 0.5px; word-break: break-all; font-family: monospace;">' + snValue + '</div></div>' : ''}
+            <div style="display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #000; font-size: 14.5px; font-weight: 900; color: #000;">
                 <span>TOTAL BAYAR</span>
                 <span id="preview-total-val">Rp ${priceText}</span>
             </div>
