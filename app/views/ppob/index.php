@@ -58,8 +58,8 @@
 }
 
 .hero-logo-pure {
-    width: 56px;
-    height: 56px;
+    width: 62px;
+    height: 62px;
     object-fit: contain;
     flex-shrink: 0;
     filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
@@ -69,6 +69,7 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+    text-align: right;
     min-width: 0;
 }
 
@@ -85,6 +86,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    justify-content: flex-end;
 }
 
 .hero-balance-amount {
@@ -440,9 +442,13 @@
     <!-- Hero / Balance Section -->
     <div class="ppob-hero">
         <div class="hero-top-row">
-            <!-- Left: Pure Logo + Balance Info -->
+            <!-- Left: Pure Logo only -->
             <div class="hero-left">
                 <img src="<?= BASE_URL ?>public/images/Icon.png" alt="AlfarezMart" class="hero-logo-pure">
+            </div>
+
+            <!-- Right: Balance Info + Wallet Icon -->
+            <div class="hero-right">
                 <div class="hero-balance-info">
                     <span class="hero-label-title">Saldo Digiflazz</span>
                     <div class="hero-balance-row">
@@ -456,10 +462,6 @@
                         <?php endif; ?>
                     </div>
                 </div>
-            </div>
-
-            <!-- Right: Wallet Icon -->
-            <div class="hero-right">
                 <div class="hero-icon-container">
                     <i class="bi bi-wallet2"></i>
                 </div>
