@@ -74,15 +74,15 @@
             <table style="width:100%;background:var(--surface-1);border-collapse:collapse;font-size:var(--font-size-sm);font-family:var(--font-family);color:var(--text-primary);">
                 <thead>
                     <tr style="background:var(--surface-3);">
+                        <th style="padding:12px 16px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:140px;white-space:nowrap;">Aksi</th>
                         <th style="padding:12px 16px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);white-space:nowrap;min-width:120px;">Tanggal</th>
                         <th style="padding:12px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:180px;">Produk / Pelanggan</th>
                         <th style="padding:12px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:90px;">Agen</th>
                         <th style="padding:12px 8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:95px;">Modal</th>
                         <th style="padding:12px 8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:105px;">Jual</th>
-                        <th style="padding:12px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:150px;">SN / Token</th>
+                        <th style="padding:12px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:140px;">SN / Token</th>
                         <th style="padding:12px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:100px;">Seller</th>
                         <th style="padding:12px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:90px;">Status</th>
-                        <th style="padding:12px 16px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:140px;white-space:nowrap;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody id="history-tbody">
@@ -264,8 +264,20 @@
                         `;
                     }
 
+                    let copyBtn = '';
+                    if (trx.sn && trx.sn !== '-') {
+                        copyBtn = `
+                            <button type="button" onclick="copyToken('${trx.sn.replace(/'/g, "\\'")}')" class="btn btn-sm" style="background:var(--surface-3);color:var(--text-secondary);border:none;padding:2px 4px;border-radius:4px;cursor:pointer;margin-left:4px;display:inline-flex;align-items:center;justify-content:center;" title="Salin Token">
+                                <i class="bi bi-clipboard" style="font-size:10px;"></i>
+                            </button>
+                        `;
+                    }
+
                     tbody.innerHTML += `
                         <tr style="border-bottom:1px solid var(--border-color);transition:background var(--transition-fast);${rowAccent}" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${rowAccent ? rowAccent.replace('background:','') : 'var(--surface-1)'}'">
+                            <td style="padding:12px 16px;text-align:center;min-width:140px;white-space:nowrap;">
+                                ${actionBtns}
+                            </td>
                             <td style="padding:12px 16px;white-space:nowrap;min-width:120px;">
                                 <div style="font-weight:600;font-size:var(--font-size-xs);">${dateStr}</div>
                                 <div style="font-size:10px;color:var(--text-muted);">${timeStr}</div>
@@ -279,9 +291,12 @@
                             </td>
                             <td style="padding:12px 8px;text-align:right;font-weight:700;font-size:var(--font-size-xs);white-space:nowrap;min-width:95px;">Rp ${parseInt(trx.modal_price||0).toLocaleString('id-ID')}</td>
                             <td style="padding:12px 8px;text-align:right;font-weight:700;font-size:var(--font-size-xs);white-space:nowrap;min-width:105px;">Rp ${parseInt(trx.sell_price||0).toLocaleString('id-ID')}<br><span style="font-size:9px;${profitColor}font-weight:700;">+${profit.toLocaleString('id-ID')}</span></td>
-                            <td style="padding:12px 8px;text-align:left;min-width:150px;">
-                                <div style="font-family:monospace;font-size:10px;color:var(--text-primary);white-space:nowrap;" title="SN">${trx.sn || '-'}</div>
-                                <div style="font-family:monospace;font-size:9px;color:var(--text-muted);white-space:nowrap;margin-top:2px;" title="Trx ID">Trx: ${trx.digiflazz_trx_id || '-'}</div>
+                            <td style="padding:12px 8px;text-align:left;min-width:140px;max-width:150px;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;">
+                                    <div style="font-family:monospace;font-size:10px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;" title="${trx.sn || '-'}">${trx.sn || '-'}</div>
+                                    ${copyBtn}
+                                </div>
+                                <div style="font-family:monospace;font-size:9px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;margin-top:2px;" title="Trx ID">Trx: ${trx.digiflazz_trx_id || '-'}</div>
                             </td>
                             <td style="padding:12px 8px;text-align:center;min-width:100px;">
                                 <span style="font-size:10px;font-weight:600;color:var(--text-secondary);">${sellerName}</span>
@@ -289,9 +304,6 @@
                             <td style="padding:12px 8px;text-align:center;min-width:90px;">
                                 ${badge}
                                 ${complaintBtns}
-                            </td>
-                            <td style="padding:12px 16px;text-align:center;min-width:140px;white-space:nowrap;">
-                                ${actionBtns}
                             </td>
                         </tr>`;
                 });
@@ -316,6 +328,36 @@
             showToast(msg, type);
         } else {
             alert(msg);
+        }
+    }
+
+    function copyToken(sn) {
+        if (!sn || sn === '-') return;
+        let token = sn.includes('/') ? sn.split('/')[0] : sn;
+        token = token.trim();
+        
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(token).then(() => {
+                triggerToast('📋 Token disalin: ' + token, 'success');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                triggerToast('❌ Gagal menyalin token', 'danger');
+            });
+        } else {
+            const textArea = document.createElement("textarea");
+            textArea.value = token;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                triggerToast('📋 Token disalin: ' + token, 'success');
+            } catch (err) {
+                console.error('Fallback copy failed:', err);
+                triggerToast('❌ Gagal menyalin token', 'danger');
+            }
+            document.body.removeChild(textArea);
         }
     }
 
@@ -656,7 +698,8 @@ ${hasSN ? '<div class="sn-box"><div class="sn-title">' + snTitle + '</div><div c
 
         return `
             <div style="text-align:center; margin-bottom: 12px; border-bottom: 1px dashed #ccc; padding-bottom: 10px; color: #000;">
-                <div style="font-size: 16px; font-weight: 800; margin-bottom: 2px;">ALFAREZMART</div>
+                <img src="<?= BASE_URL ?>public/images/mobile_icon.png" alt="Logo" style="width: 50px; height: 50px; object-fit: contain; margin-bottom: 6px; border-radius: 8px;">
+                <div style="font-size: 16px; font-weight: 800; margin-bottom: 2px; color: #000;">ALFAREZMART</div>
                 <div style="font-size: 10px; color: #666;">Struk Pembayaran Produk Digital</div>
             </div>
             <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; color: #111;">
