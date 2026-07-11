@@ -588,10 +588,24 @@
                 const snStr = d.sn;
                 const namaMatch = snStr.match(/NAMA:\s*([^,]+)/i);
                 const reffMatch = snStr.match(/REFF:\s*([^,]+)/i);
-                if (namaMatch && namaMatch[1]) otherSnHtml += `<div class="row"><div class="label">Nama Akun</div><div class="value">${namaMatch[1].trim()}</div></div>`;
-                if (reffMatch && reffMatch[1]) otherSnHtml += `<div class="row"><div class="label">SN/Ref</div><div class="value">${reffMatch[1].trim()}</div></div>`;
+                if (namaMatch && namaMatch[1]) {
+                    otherSnHtml += `<div class="row"><div class="label">Nama Akun</div><div class="value">${namaMatch[1].trim()}</div></div>`;
+                }
+                const reffValue = reffMatch && reffMatch[1] ? reffMatch[1].trim() : d.sn;
+                otherSnHtml += `
+                    <div style="margin-top: 10px;"></div>
+                    <div class="center" style="margin: 12px 0;">
+                        <div style="font-size: 9px; color: #111; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">SN / REF</div>
+                        <div style="font-size: 15px; font-weight: 900; color: #000; letter-spacing: 0.5px; font-family: monospace; word-break: break-all;">${reffValue}</div>
+                    </div>
+                `;
             } else {
-                otherSnHtml = `<div class="row"><div class="label">SN / Ref</div><div class="value">${d.sn}</div></div>`;
+                otherSnHtml = `
+                    <div class="center" style="margin: 12px 0;">
+                        <div style="font-size: 9px; color: #111; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">SN / REF</div>
+                        <div style="font-size: 15px; font-weight: 900; color: #000; letter-spacing: 0.5px; font-family: monospace; word-break: break-all;">${d.sn}</div>
+                    </div>
+                `;
             }
             hasSN = false; // Hide big bold sn-box for non-PLN
         }
@@ -689,10 +703,24 @@ ${hasSN ? '<div class="sn-box"><div class="sn-title">' + snTitle + '</div><div c
                 const snStr = d.sn;
                 const namaMatch = snStr.match(/NAMA:\s*([^,]+)/i);
                 const reffMatch = snStr.match(/REFF:\s*([^,]+)/i);
-                if (namaMatch && namaMatch[1]) otherSnHtml += '<div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; color: #111;"><span style="color:#555;">Nama Akun</span><span style="font-weight: 600; text-align: right;">' + namaMatch[1].trim() + '</span></div>';
-                if (reffMatch && reffMatch[1]) otherSnHtml += '<div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; color: #111;"><span style="color:#555;">SN/Ref</span><span style="font-weight: 600; text-align: right;">' + reffMatch[1].trim() + '</span></div>';
+                if (namaMatch && namaMatch[1]) {
+                    otherSnHtml += '<div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; color: #111;"><span style="color:#555;">Nama Akun</span><span style="font-weight: 600; text-align: right;">' + namaMatch[1].trim() + '</span></div>';
+                }
+                const reffValue = reffMatch && reffMatch[1] ? reffMatch[1].trim() : d.sn;
+                otherSnHtml += `
+                    <div style="margin-top: 10px;"></div>
+                    <div style="text-align: center; margin: 12px 0;">
+                        <div style="font-size: 9px; color: #111; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">SN / REF</div>
+                        <div style="font-size: 15px; font-weight: 900; color: #000; letter-spacing: 0.5px; font-family: monospace; word-break: break-all;">${reffValue}</div>
+                    </div>
+                `;
             } else {
-                otherSnHtml = '<div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; color: #111;"><span style="color:#555;">SN / Ref</span><span style="font-weight: 600; text-align: right; word-break: break-all;">' + d.sn + '</span></div>';
+                otherSnHtml = `
+                    <div style="text-align: center; margin: 12px 0;">
+                        <div style="font-size: 9px; color: #111; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">SN / REF</div>
+                        <div style="font-size: 15px; font-weight: 900; color: #000; letter-spacing: 0.5px; font-family: monospace; word-break: break-all;">${d.sn}</div>
+                    </div>
+                `;
             }
             hasSN = false; // Hide big bold sn-box for non-PLN
         }
