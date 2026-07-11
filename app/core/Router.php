@@ -137,21 +137,45 @@ if (!class_exists('Router')) {
             
             if (!class_exists($controllerName)) {
                 http_response_code(500);
-                echo "Controller not found: {$controllerName}";
+                if (strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Internal error: controller not found']);
+                } else {
+                    echo "Controller not found: {$controllerName}";
+                }
                 return;
             }
 
-            $controller = new $controllerName();
-            
-            if (!method_exists($controller, $method)) {
-                http_response_code(500);
-                echo "Method not found: {$controllerName}@{$method}";
-                return;
-            }
+            try {
+                $controller = new $controllerName();
+                
+                if (!method_exists($controller, $method)) {
+                    http_response_code(500);
+                    if (strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false) {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => false, 'message' => 'Internal error: method not found']);
+                    } else {
+                        echo "Method not found: {$controllerName}@{$method}";
+                    }
+                    return;
+                }
 
-            // In PHP 8+, associative arrays passed to call_user_func_array are treated as named arguments.
-            // Using array_values ensures they are treated as positional arguments.
-            call_user_func_array([$controller, $method], array_values($params));
+                // In PHP 8+, associative arrays passed to call_user_func_array are treated as named arguments.
+                // Using array_values ensures they are treated as positional arguments.
+                call_user_func_array([$controller, $method], array_values($params));
+                
+            } catch (\Throwable $e) {
+                error_log("[Router] Uncaught error in {$controllerName}@{$method}: " . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+                if (!headers_sent()) {
+                    http_response_code(500);
+                    if (strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false) {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
+                    } else {
+                        echo '<b>Server Error:</b> ' . htmlspecialchars($e->getMessage());
+                    }
+                }
+            }
         } elseif (is_callable($handler)) {
             call_user_func_array($handler, array_values($params));
         }
