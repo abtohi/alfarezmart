@@ -634,9 +634,11 @@ class ThermalPrinter {
             return `${padRight(label, 10)}: ${value}\n`;
         };
 
+        data += '\x1B!\x01'; // Font B (smaller text size)
         data += row('NO. REF', transaction.ref_id);
         data += row('TRX ID', transaction.digiflazz_trx_id || transaction.trx_id || '-');
         data += row('TANGGAL', dateStr);
+        data += '\x1B!\x00'; // Reset to Font A
         data += '-'.repeat(width) + '\n';
         data += '\x1Ba\x01'; // Align Center
         data += '\x1BE\x01'; // Bold On
@@ -657,7 +659,6 @@ class ThermalPrinter {
                           (transaction.sn && transaction.sn.split('/').length >= 4);
             
             if (isPln) {
-                let snTitle = "TOKEN PLN:";
                 let snValue = transaction.sn;
                 if (transaction.sn.includes('/')) {
                     const parts = transaction.sn.split('/');
@@ -675,8 +676,9 @@ class ThermalPrinter {
                 data += '-'.repeat(width) + '\n';
                 data += '\x1Ba\x01'; // Align Center
                 data += '\x1BE\x01'; // Bold On
+                data += 'TOKEN PLN:\n';
                 data += '\x1B!\x30'; // Double height and width
-                data += `${snTitle}\n${snValue}\n`;
+                data += `${snValue}\n`;
                 data += '\x1B!\x00'; // Reset size
                 data += '\x1BE\x00'; // Bold Off
                 data += '\x1Ba\x00'; // Align Left
@@ -687,16 +689,34 @@ class ThermalPrinter {
                     const snStr = transaction.sn;
                     const namaMatch = snStr.match(/NAMA:\s*([^,]+)/i);
                     const reffMatch = snStr.match(/REFF:\s*([^,]+)/i);
-                    if (namaMatch && namaMatch[1]) data += row('NAMA AKUN', namaMatch[1].trim());
-                    if (reffMatch && reffMatch[1]) data += row('SN/REF', reffMatch[1].trim());
+                    if (namaMatch && namaMatch[1]) {
+                        data += row('NAMA AKUN', namaMatch[1].trim());
+                    }
+                    const reffValue = reffMatch && reffMatch[1] ? reffMatch[1].trim() : transaction.sn;
+                    data += '\n'; // Add spacing
+                    data += '\x1Ba\x01'; // Align Center
+                    data += '\x1BE\x01'; // Bold On
+                    data += 'SN / REF\n';
+                    data += `${reffValue}\n`;
+                    data += '\x1BE\x00'; // Bold Off
+                    data += '\x1Ba\x00'; // Align Left
+                    data += '-'.repeat(width) + '\n'; // separator line under SN/Ref
                 } else {
-                    data += row('SN/REF', transaction.sn);
+                    data += '\x1Ba\x01'; // Align Center
+                    data += '\x1BE\x01'; // Bold On
+                    data += 'SN / REF\n';
+                    data += `${transaction.sn}\n`;
+                    data += '\x1BE\x00'; // Bold Off
+                    data += '\x1Ba\x00'; // Align Left
+                    data += '-'.repeat(width) + '\n';
                 }
             }
         }
 
         const price = parseInt(transaction.sell_price).toLocaleString('id-ID');
+        data += '\x1BE\x01'; // Bold On
         data += `TOTAL BAYAR : Rp${price}\n`;
+        data += '\x1BE\x00'; // Bold Off
         data += '-'.repeat(width) + '\n';
         
         // Footer
