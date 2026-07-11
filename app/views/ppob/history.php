@@ -733,17 +733,17 @@ ${hasSN ? '<div class="sn-box"><div class="sn-title">' + snTitle + '</div><div c
                 <div style="font-size: 16px; font-weight: 800; margin-bottom: 2px; color: #000;">ALFAREZMART</div>
                 <div style="font-size: 10px; color: #666;">Struk Pembayaran Produk Digital</div>
             </div>
-            <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 7.2px; color: #111; align-items: center;">
-                <span style="color:#555; white-space: nowrap;">No. Ref</span>
-                <span style="font-weight: 500; text-align: right; white-space: nowrap; font-family: monospace;">${d.ref_id}</span>
+            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; color: #111;">
+                <span style="color:#555;">No. Ref</span>
+                <span style="font-weight: 600; text-align: right;">${d.ref_id}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 7.2px; color: #111; align-items: center;">
-                <span style="color:#555; white-space: nowrap;">Trx ID</span>
-                <span style="font-weight: 500; text-align: right; white-space: nowrap; font-family: monospace;">${d.digiflazz_trx_id || d.ref_id}</span>
+            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; color: #111;">
+                <span style="color:#555;">Trx ID</span>
+                <span style="font-weight: 600; text-align: right;">${d.digiflazz_trx_id || d.ref_id}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin: 3px 0; font-size: 7.2px; color: #111; align-items: center;">
-                <span style="color:#555; white-space: nowrap;">Tanggal</span>
-                <span style="font-weight: 500; text-align: right; white-space: nowrap; font-family: monospace;">${d.created_at}</span>
+            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 12px; color: #111;">
+                <span style="color:#555;">Tanggal</span>
+                <span style="font-weight: 600; text-align: right;">${d.created_at}</span>
             </div>
             <div style="text-align: center; margin: 10px 0; border: 1px solid #111; padding: 4px; border-radius: 4px; font-size: 12px; font-weight: 800; color: #000;">
                 TRANSAKSI BERHASIL
