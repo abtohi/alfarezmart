@@ -2038,9 +2038,13 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
                 document.getElementById('result-msg').innerText = data.data.message || '';
                 reCheckBtn.style.display = 'none';
 
-                // Update last trx data with new SN and show print button
+                // Update last trx data with new SN & Trx ID and show print button
                 if (lastTrxData) {
                     lastTrxData.sn = data.data.sn || '-';
+                    if (data.data.trx_id || data.data.digiflazz_trx_id) {
+                        lastTrxData.trx_id = data.data.trx_id || data.data.digiflazz_trx_id;
+                        document.getElementById('result-trxid').innerText = lastTrxData.trx_id;
+                    }
                     const configuredPrice = typeof getPpobSellPrice === 'function' ? getPpobSellPrice(lastTrxData.sku) : null;
                     document.getElementById('custom-print-price').value = parseInt(configuredPrice || lastTrxData.sell_price || 0);
                 }

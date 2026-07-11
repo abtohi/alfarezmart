@@ -94,6 +94,10 @@
                 </tbody>
             </table>
         </div>
+        <div id="pagination-container" class="d-flex flex-wrap justify-content-between align-items-center mt-3 px-3 pb-3 gap-2" style="font-size:12px;">
+            <div id="pagination-info" style="color:var(--text-muted); font-weight:500;">Menampilkan 0 dari 0 data</div>
+            <div id="pagination-controls" class="d-flex gap-1"></div>
+        </div>
     </div>
 </div>
 
@@ -149,6 +153,8 @@
 <script>
     let currentStatus = 'all';
     let transactionHistory = [];
+    let currentPage = 1;
+    const itemsPerPage = 10;
     const TABS = ['tab-all','tab-pending','tab-success','tab-failed'];
 
     document.addEventListener('DOMContentLoaded', () => loadHistory('all'));
@@ -171,149 +177,225 @@
         try {
             const res = await fetch(`<?= BASE_URL ?>api/ppob/transactions?limit=200&status=${status}`);
             const data = await res.json();
-            const tbody = document.getElementById('history-tbody');
-            tbody.innerHTML = '';
             
             if (data.success && data.data.length > 0) {
                 transactionHistory = data.data;
-                data.data.forEach(trx => {
-                    let badge, rowAccent = '';
-                    if (trx.status === 'success') {
-                        badge = `<span style="background:var(--success-bg);border:1px solid rgba(46,196,182,0.3);color:var(--success);font-size:10px;padding:3px 8px;border-radius:var(--radius-sm);font-weight:700;white-space:nowrap;">✓ SUKSES</span>`;
-                    } else if (trx.status === 'pending' || trx.status === 'processing') {
-                        badge = `<span style="background:var(--info-bg);border:1px solid rgba(76,201,240,0.3);color:var(--info);font-size:10px;padding:3px 8px;border-radius:var(--radius-sm);font-weight:700;white-space:nowrap;">⏳ PROSES</span>`;
-                        rowAccent = 'background:rgba(76,201,240,0.02);';
-                    } else {
-                        badge = `<span style="background:var(--danger-bg);border:1px solid rgba(230,57,70,0.3);color:var(--danger);font-size:10px;padding:3px 8px;border-radius:var(--radius-sm);font-weight:700;white-space:nowrap;">✗ GAGAL</span>`;
-                        rowAccent = 'opacity:0.75;';
-                    }
-                    const d = new Date(trx.created_at);
-                    const dateStr = d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
-                    const timeStr = d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
-                    const year = d.getFullYear();
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const day = String(d.getDate()).padStart(2, '0');
-                    const hours = String(d.getHours()).padStart(2, '0');
-                    const minutes = String(d.getMinutes()).padStart(2, '0');
-                    const seconds = String(d.getSeconds()).padStart(2, '0');
-                    const fullDateStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-                    const profit = parseInt(trx.profit || 0);
-                    const profitColor = profit > 0 ? 'color:var(--success);' : 'color:var(--text-muted);';
-
-                    let sellerName = '-';
-                    let complaintBtns = '';
-                    if (trx.raw_response) {
-                        try {
-                            const raw = JSON.parse(trx.raw_response);
-                            if (raw.tele) {
-                                sellerName = raw.tele;
-                            } else if (raw.wa) {
-                                sellerName = raw.wa;
-                            } else {
-                                sellerName = 'Digiflazz';
-                            }
-
-                            if (trx.status === 'failed' && (raw.wa || raw.tele)) {
-                                const trxIdText = trx.digiflazz_trx_id || trx.ref_id;
-                                const msg = `S2.${trx.customer_no}, ${fullDateStr} trx Id: ${trxIdText}, gagal, bisa dibantu infokan alasan gagalnya?`;
-                                const encodedMsg = encodeURIComponent(msg);
-                                complaintBtns += '<div style="margin-top:6px;display:flex;gap:4px;justify-content:center;">';
-                                if (raw.wa) {
-                                    let waNum = raw.wa.replace(/[^0-9]/g, '');
-                                    if (waNum.startsWith('0')) waNum = '62' + waNum.substring(1);
-                                    complaintBtns += `<a href="https://wa.me/${waNum}?text=${encodedMsg}" target="_blank" style="background:#25D366;color:#fff;font-size:9px;padding:3px 6px;border-radius:4px;text-decoration:none;font-weight:600;"><i class="bi bi-whatsapp"></i> WA</a>`;
-                                }
-                                if (raw.tele) {
-                                    let teleUsername = raw.tele.replace('@', '');
-                                    complaintBtns += `<a href="https://t.me/${teleUsername}?text=${encodedMsg}" target="_blank" style="background:#0088cc;color:#fff;font-size:9px;padding:3px 6px;border-radius:4px;text-decoration:none;font-weight:600;"><i class="bi bi-telegram"></i> Tele</a>`;
-                                }
-                                complaintBtns += '</div>';
-                            }
-                        } catch(e) {}
-                    }
-
-                    // Action buttons
-                    let actionBtns = '';
-                    if (trx.status === 'success') {
-                        actionBtns = `
-                            <div style="display:flex;gap:6px;justify-content:center;align-items:center;">
-                                <button type="button" class="btn btn-sm btn-icon" onclick="previewReceipt('${trx.ref_id}')" style="background:var(--primary-bg);color:var(--primary);border:none;padding:5px 8px;border-radius:6px;cursor:pointer;" title="Preview Struk">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-icon" onclick="printReceipt('${trx.ref_id}')" style="background:var(--success-bg);color:var(--success);border:none;padding:5px 8px;border-radius:6px;cursor:pointer;" title="Cetak Struk">
-                                    <i class="bi bi-printer"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-icon" onclick="shareReceipt('${trx.ref_id}')" style="background:var(--info-bg);color:var(--info);border:none;padding:5px 8px;border-radius:6px;cursor:pointer;" title="Bagikan Struk">
-                                    <i class="bi bi-share"></i>
-                                </button>
-                            </div>
-                        `;
-                    } else {
-                        actionBtns = `
-                            <div style="display:flex;gap:6px;justify-content:center;align-items:center;opacity:0.4;">
-                                <button type="button" class="btn btn-sm btn-icon" disabled style="background:var(--surface-3);color:var(--text-muted);border:none;padding:5px 8px;border-radius:6px;cursor:not-allowed;" title="Struk hanya tersedia untuk transaksi sukses">
-                                    <i class="bi bi-eye"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-icon" disabled style="background:var(--surface-3);color:var(--text-muted);border:none;padding:5px 8px;border-radius:6px;cursor:not-allowed;" title="Struk hanya tersedia untuk transaksi sukses">
-                                    <i class="bi bi-printer"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-icon" disabled style="background:var(--surface-3);color:var(--text-muted);border:none;padding:5px 8px;border-radius:6px;cursor:not-allowed;" title="Struk hanya tersedia untuk transaksi sukses">
-                                    <i class="bi bi-share"></i>
-                                </button>
-                            </div>
-                        `;
-                    }
-
-                    let copyBtn = '';
-                    if (trx.sn && trx.sn !== '-') {
-                        copyBtn = `
-                            <button type="button" onclick="copyToken('${trx.sn.replace(/'/g, "\\'")}')" class="btn btn-sm" style="background:var(--surface-3);color:var(--text-secondary);border:none;padding:2px 4px;border-radius:4px;cursor:pointer;margin-left:4px;display:inline-flex;align-items:center;justify-content:center;" title="Salin Token">
-                                <i class="bi bi-clipboard" style="font-size:10px;"></i>
-                            </button>
-                        `;
-                    }
-
-                    tbody.innerHTML += `
-                        <tr style="border-bottom:1px solid var(--border-color);transition:background var(--transition-fast);${rowAccent}" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${rowAccent ? rowAccent.replace('background:','') : 'var(--surface-1)'}'">
-                            <td style="padding:12px 16px;text-align:center;min-width:140px;white-space:nowrap;">
-                                ${actionBtns}
-                            </td>
-                            <td style="padding:12px 16px;white-space:nowrap;min-width:120px;">
-                                <div style="font-weight:600;font-size:var(--font-size-xs);">${dateStr}</div>
-                                <div style="font-size:10px;color:var(--text-muted);">${timeStr}</div>
-                            </td>
-                            <td style="padding:12px 8px;min-width:180px;">
-                                <div style="font-weight:700;font-size:var(--font-size-xs);white-space:nowrap;" title="${trx.product_name}">${trx.product_name}</div>
-                                <div style="font-size:10px;color:var(--text-muted);">${trx.customer_no || ''}</div>
-                            </td>
-                            <td style="padding:12px 8px;min-width:90px;">
-                                <div style="font-size:var(--font-size-xs);font-weight:600;">${trx.agent_name || 'Admin'}</div>
-                            </td>
-                            <td style="padding:12px 8px;text-align:right;font-weight:700;font-size:var(--font-size-xs);white-space:nowrap;min-width:95px;">Rp ${parseInt(trx.modal_price||0).toLocaleString('id-ID')}</td>
-                            <td style="padding:12px 8px;text-align:right;font-weight:700;font-size:var(--font-size-xs);white-space:nowrap;min-width:105px;">Rp ${parseInt(trx.sell_price||0).toLocaleString('id-ID')}<br><span style="font-size:9px;${profitColor}font-weight:700;">+${profit.toLocaleString('id-ID')}</span></td>
-                            <td style="padding:12px 8px;text-align:left;min-width:140px;max-width:150px;">
-                                <div style="display:flex;align-items:center;justify-content:space-between;">
-                                    <div style="font-family:monospace;font-size:10px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px;" title="${trx.sn || '-'}">${trx.sn || '-'}</div>
-                                    ${copyBtn}
-                                </div>
-                                <div style="font-family:monospace;font-size:9px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px;margin-top:2px;" title="Trx ID">Trx: ${trx.digiflazz_trx_id || '-'}</div>
-                            </td>
-                            <td style="padding:12px 8px;text-align:center;min-width:100px;">
-                                <span style="font-size:10px;font-weight:600;color:var(--text-secondary);">${sellerName}</span>
-                            </td>
-                            <td style="padding:12px 8px;text-align:center;min-width:90px;">
-                                ${badge}
-                                ${complaintBtns}
-                            </td>
-                        </tr>`;
-                });
+                currentPage = 1;
+                renderTable();
             } else {
-                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:48px;color:var(--text-muted);font-size:var(--font-size-sm);"><i class="bi bi-inbox" style="font-size:28px;display:block;margin-bottom:10px;opacity:0.4;"></i>Tidak ada transaksi</td></tr>`;
+                transactionHistory = [];
+                const tbody = document.getElementById('history-tbody');
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);">Tidak ada transaksi ${status === 'all' ? '' : status}.</td></tr>`;
+                document.getElementById('pagination-info').innerText = 'Menampilkan 0 dari 0 data';
+                document.getElementById('pagination-controls').innerHTML = '';
             }
         } catch (e) {
-            console.error(e);
-            document.getElementById('history-tbody').innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--danger);font-size:var(--font-size-sm);"><i class="bi bi-exclamation-triangle-fill me-2"></i>Gagal memuat data.</td></tr>`;
+            console.error('Failed to load history', e);
+            document.getElementById('history-tbody').innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--danger);">Gagal memuat data transaksi.</td></tr>`;
         }
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById('history-tbody');
+        tbody.innerHTML = '';
+        
+        const totalItems = transactionHistory.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        
+        if (currentPage < 1) currentPage = 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+        
+        const pageData = transactionHistory.slice(startIndex, endIndex);
+        
+        pageData.forEach(trx => {
+            let badge, rowAccent = '';
+            if (trx.status === 'success') {
+                badge = `<span style="background:var(--success-bg);border:1px solid rgba(46,196,182,0.3);color:var(--success);font-size:10px;padding:3px 8px;border-radius:var(--radius-sm);font-weight:700;white-space:nowrap;">✓ SUKSES</span>`;
+            } else if (trx.status === 'pending' || trx.status === 'processing') {
+                badge = `<span style="background:var(--info-bg);border:1px solid rgba(76,201,240,0.3);color:var(--info);font-size:10px;padding:3px 8px;border-radius:var(--radius-sm);font-weight:700;white-space:nowrap;">⏳ PROSES</span>`;
+                rowAccent = 'background:rgba(76,201,240,0.02);';
+            } else {
+                badge = `<span style="background:var(--danger-bg);border:1px solid rgba(230,57,70,0.3);color:var(--danger);font-size:10px;padding:3px 8px;border-radius:var(--radius-sm);font-weight:700;white-space:nowrap;">✗ GAGAL</span>`;
+                rowAccent = 'opacity:0.75;';
+            }
+            const d = new Date(trx.created_at);
+            const dateStr = d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+            const timeStr = d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            const hours = String(d.getHours()).padStart(2, '0');
+            const minutes = String(d.getMinutes()).padStart(2, '0');
+            const seconds = String(d.getSeconds()).padStart(2, '0');
+            const fullDateStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            const profit = parseInt(trx.profit || 0);
+            const profitColor = profit > 0 ? 'color:var(--success);' : 'color:var(--text-muted);';
+
+            let sellerName = '-';
+            let complaintBtns = '';
+            if (trx.raw_response) {
+                try {
+                    const raw = JSON.parse(trx.raw_response);
+                    if (raw.tele) {
+                        sellerName = raw.tele;
+                    } else if (raw.wa) {
+                        sellerName = raw.wa;
+                    } else {
+                        sellerName = 'Digiflazz';
+                    }
+
+                    if (trx.status === 'failed' && (raw.wa || raw.tele)) {
+                        const trxIdText = trx.digiflazz_trx_id || trx.ref_id;
+                        const msg = `S2.${trx.customer_no}, ${fullDateStr} trx Id: ${trxIdText}, gagal, bisa dibantu infokan alasan gagalnya?`;
+                        const encodedMsg = encodeURIComponent(msg);
+                        complaintBtns += '<div style="margin-top:6px;display:flex;gap:4px;justify-content:center;">';
+                        if (raw.wa) {
+                            let waNum = raw.wa.replace(/[^0-9]/g, '');
+                            if (waNum.startsWith('0')) waNum = '62' + waNum.substring(1);
+                            complaintBtns += `<a href="https://wa.me/${waNum}?text=${encodedMsg}" target="_blank" style="background:#25D366;color:#fff;font-size:9px;padding:3px 6px;border-radius:4px;text-decoration:none;font-weight:600;"><i class="bi bi-whatsapp"></i> WA</a>`;
+                        }
+                        if (raw.tele) {
+                            let teleUsername = raw.tele.replace('@', '');
+                            complaintBtns += `<a href="https://t.me/${teleUsername}?text=${encodedMsg}" target="_blank" style="background:#0088cc;color:#fff;font-size:9px;padding:3px 6px;border-radius:4px;text-decoration:none;font-weight:600;"><i class="bi bi-telegram"></i> Tele</a>`;
+                        }
+                        complaintBtns += '</div>';
+                    }
+                } catch(e) {}
+            }
+
+            // Action buttons
+            let actionBtns = '';
+            if (trx.status === 'success') {
+                actionBtns = `
+                    <div style="display:flex;gap:6px;justify-content:center;align-items:center;">
+                        <button type="button" class="btn btn-sm btn-icon" onclick="previewReceipt('${trx.ref_id}')" style="background:var(--primary-bg);color:var(--primary);border:none;padding:5px 8px;border-radius:6px;cursor:pointer;" title="Preview Struk">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-icon" onclick="printReceipt('${trx.ref_id}')" style="background:var(--success-bg);color:var(--success);border:none;padding:5px 8px;border-radius:6px;cursor:pointer;" title="Cetak Struk">
+                            <i class="bi bi-printer"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-icon" onclick="shareReceipt('${trx.ref_id}')" style="background:var(--info-bg);color:var(--info);border:none;padding:5px 8px;border-radius:6px;cursor:pointer;" title="Bagikan Struk">
+                            <i class="bi bi-share"></i>
+                        </button>
+                    </div>
+                `;
+            } else {
+                actionBtns = `
+                    <div style="display:flex;gap:6px;justify-content:center;align-items:center;opacity:0.4;">
+                        <button type="button" class="btn btn-sm btn-icon" disabled style="background:var(--surface-3);color:var(--text-muted);border:none;padding:5px 8px;border-radius:6px;cursor:not-allowed;" title="Struk hanya tersedia untuk transaksi sukses">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-icon" disabled style="background:var(--surface-3);color:var(--text-muted);border:none;padding:5px 8px;border-radius:6px;cursor:not-allowed;" title="Struk hanya tersedia untuk transaksi sukses">
+                            <i class="bi bi-printer"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-icon" disabled style="background:var(--surface-3);color:var(--text-muted);border:none;padding:5px 8px;border-radius:6px;cursor:not-allowed;" title="Struk hanya tersedia untuk transaksi sukses">
+                            <i class="bi bi-share"></i>
+                        </button>
+                    </div>
+                `;
+            }
+
+            let copyBtn = '';
+            if (trx.sn && trx.sn !== '-') {
+                copyBtn = `
+                    <button type="button" onclick="copyToken('${trx.sn.replace(/'/g, "\\'")}')" class="btn btn-sm" style="background:var(--surface-3);color:var(--text-secondary);border:none;padding:2px 4px;border-radius:4px;cursor:pointer;margin-left:4px;display:inline-flex;align-items:center;justify-content:center;" title="Salin Token">
+                        <i class="bi bi-clipboard" style="font-size:10px;"></i>
+                    </button>
+                `;
+            }
+
+            tbody.innerHTML += `
+                <tr style="border-bottom:1px solid var(--border-color);transition:background var(--transition-fast);${rowAccent}" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${rowAccent ? rowAccent.replace('background:','') : 'var(--surface-1)'}'">
+                    <td style="padding:12px 16px;text-align:center;min-width:140px;white-space:nowrap;">
+                        ${actionBtns}
+                    </td>
+                    <td style="padding:12px 16px;white-space:nowrap;">
+                        <div style="font-weight:700;color:var(--text-primary);margin-bottom:2px;">${dateStr}</div>
+                        <div style="font-size:10px;color:var(--text-muted);"><i class="bi bi-clock me-1"></i>${timeStr}</div>
+                    </td>
+                    <td style="padding:12px 8px;">
+                        <div style="font-weight:700;color:var(--primary);font-size:11px;margin-bottom:2px;display:flex;align-items:center;gap:6px;">
+                            ${trx.product_name}
+                            ${trx.is_postpaid === 1 ? '<span style="background:rgba(245,158,11,0.1);color:#f59e0b;padding:2px 4px;border-radius:4px;font-size:8px;">PASCABAYAR</span>' : ''}
+                        </div>
+                        <div style="font-family:monospace;font-size:11px;color:var(--text-secondary);background:var(--surface-2);padding:2px 6px;border-radius:4px;display:inline-block;">${trx.customer_no}</div>
+                    </td>
+                    <td style="padding:12px 8px;font-size:11px;font-weight:600;color:var(--text-secondary);">
+                        ${trx.created_by_name || 'Agen'}
+                    </td>
+                    <td style="padding:12px 8px;text-align:right;">
+                        <div style="font-weight:700;color:var(--text-primary);font-size:11px;">Rp ${parseInt(trx.modal_price).toLocaleString('id-ID')}</div>
+                    </td>
+                    <td style="padding:12px 8px;text-align:right;">
+                        <div style="font-weight:700;color:var(--text-primary);font-size:11px;">Rp ${parseInt(trx.sell_price).toLocaleString('id-ID')}</div>
+                        <div style="font-size:9px;margin-top:2px;${profitColor}font-weight:600;">+Rp ${profit.toLocaleString('id-ID')}</div>
+                    </td>
+                    <td style="padding:12px 8px;text-align:center;">
+                        <div style="font-family:monospace;font-size:10px;color:var(--text-primary);word-break:break-all;max-width:140px;margin:0 auto;">${trx.sn || '-'}</div>
+                        ${copyBtn}
+                    </td>
+                    <td style="padding:12px 8px;text-align:center;">
+                        <span style="font-size:10px;font-weight:600;color:var(--text-secondary);background:var(--surface-2);padding:2px 6px;border-radius:4px;">${sellerName}</span>
+                        ${complaintBtns}
+                    </td>
+                    <td style="padding:12px 8px;text-align:center;">
+                        ${badge}
+                        <div style="font-size:9px;color:var(--text-muted);margin-top:4px;">Ref: ${trx.ref_id}</div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        renderPagination();
+    }
+    
+    function renderPagination() {
+        const totalItems = transactionHistory.length;
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        
+        const info = document.getElementById('pagination-info');
+        const controls = document.getElementById('pagination-controls');
+        
+        if (totalItems === 0) {
+            info.innerText = 'Menampilkan 0 dari 0 data';
+            controls.innerHTML = '';
+            return;
+        }
+        
+        const startIndex = (currentPage - 1) * itemsPerPage + 1;
+        const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
+        info.innerText = `Menampilkan ${startIndex} - ${endIndex} dari ${totalItems} data`;
+        
+        let btns = '';
+        
+        // Prev
+        btns += `<button class="btn btn-sm ${currentPage === 1 ? 'btn-light disabled' : 'btn-outline-primary'}" onclick="changePage(${currentPage - 1})" style="border-radius:6px; padding:4px 10px;">&laquo; Prev</button>`;
+        
+        // Page numbers (simple, max 5 pages visible around current)
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            btns += `<button class="btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-outline-primary'}" onclick="changePage(${i})" style="border-radius:6px; padding:4px 10px;">${i}</button>`;
+        }
+        
+        // Next
+        btns += `<button class="btn btn-sm ${currentPage === totalPages ? 'btn-light disabled' : 'btn-outline-primary'}" onclick="changePage(${currentPage + 1})" style="border-radius:6px; padding:4px 10px;">Next &raquo;</button>`;
+        
+        controls.innerHTML = btns;
+    }
+    
+    function changePage(page) {
+        const totalPages = Math.ceil(transactionHistory.length / itemsPerPage);
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        renderTable();
     }
 
     // Receipt printing, preview, and sharing functions
