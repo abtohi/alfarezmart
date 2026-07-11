@@ -5,13 +5,14 @@
 
 <style>
     .summary-header {
-        background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.1) 0%, rgba(var(--primary-rgb), 0.05) 100%);
-        border: 1px solid rgba(var(--primary-rgb), 0.2);
+        background: var(--surface-1);
+        border: 1px solid var(--border-color);
         border-radius: var(--radius-lg);
         padding: 24px;
         margin-bottom: 24px;
         position: relative;
         overflow: hidden;
+        border-left: 4px solid var(--primary);
     }
     .summary-header::after {
         content: '';
@@ -20,7 +21,7 @@
         right: -50px;
         width: 150px;
         height: 150px;
-        background: radial-gradient(circle, rgba(var(--primary-rgb), 0.15) 0%, transparent 70%);
+        background: radial-gradient(circle, var(--surface-2) 0%, transparent 70%);
         border-radius: 50%;
     }
     .kpi-card {
