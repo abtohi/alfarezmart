@@ -46,91 +46,49 @@
     pointer-events: none;
 }
 
-.hero-top-row {
+/* Hero left section: logo + balance */
+.hero-left {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    width: 100%;
+    gap: 16px;
     position: relative;
     z-index: 2;
+    flex: 1;
+    min-width: 0;
 }
 
-.hero-brand-section {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-}
-
-.hero-logo-box {
-    width: 52px;
-    height: 52px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
-    box-shadow: 0 8px 20px -6px rgba(0,0,0,0.3);
-}
-
-.hero-logo-img {
-    width: 100%;
-    height: 100%;
+.hero-logo-pure {
+    width: 56px;
+    height: 56px;
     object-fit: contain;
-}
-
-.hero-brand-text {
-    display: flex;
-    flex-direction: column;
-}
-
-.hero-brand-name {
-    font-size: 17px;
-    font-weight: 800;
-    color: #ffffff;
-    line-height: 1.1;
-    letter-spacing: 0.5px;
-}
-
-.hero-brand-tagline {
-    font-size: 11px;
-    font-weight: 500;
-    color: #94a3b8;
-    letter-spacing: 0.5px;
-    margin-top: 2px;
-}
-
-.hero-balance-section {
-    display: flex;
-    align-items: center;
-    gap: 15px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
 }
 
 .hero-balance-info {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    text-align: right;
+    min-width: 0;
 }
 
 .hero-label-title {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 1.5px;
-    color: #94a3b8;
+    color: rgba(255,255,255,0.5);
+    white-space: nowrap;
 }
 
 .hero-balance-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    justify-content: flex-end;
+    gap: 8px;
 }
 
 .hero-balance-amount {
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 800;
     margin: 0;
     letter-spacing: -0.5px;
@@ -138,20 +96,42 @@
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
+    white-space: nowrap;
+}
+
+/* Hero right section: wallet icon */
+.hero-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    z-index: 2;
+    flex-shrink: 0;
 }
 
 .hero-icon-container {
-    width: 52px;
-    height: 52px;
+    width: 48px;
+    height: 48px;
     background: rgba(56, 189, 248, 0.1);
     border: 1px solid rgba(56, 189, 248, 0.25);
-    border-radius: 16px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
+    font-size: 22px;
     color: #38bdf8;
     box-shadow: 0 8px 20px -6px rgba(56, 189, 248, 0.3);
+}
+
+/* hero-top-row: left+right side by side */
+.hero-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    position: relative;
+    z-index: 2;
+    gap: 12px;
 }
 
 /* Elegant Price Sync Button */
@@ -224,29 +204,19 @@
     transform: translateY(0);
 }
 
-@media (max-width: 576px) {
+@media (max-width: 480px) {
     .ppob-hero {
-        padding: 20px;
-        gap: 16px;
-    }
-
-    .hero-top-row {
-        flex-direction: column;
-        align-items: flex-start;
+        padding: 18px 20px;
         gap: 14px;
     }
 
-    .hero-balance-section {
-        width: 100%;
-        justify-content: space-between;
+    .hero-logo-pure {
+        width: 44px;
+        height: 44px;
     }
 
-    .hero-balance-info {
-        text-align: left;
-    }
-
-    .hero-balance-row {
-        justify-content: flex-start;
+    .hero-balance-amount {
+        font-size: 16px;
     }
 }
 
@@ -428,35 +398,37 @@
 :root[data-theme="light"] .glass-input { background: var(--surface-2); }
 :root[data-theme="light"] .form-select.glass-input { background: var(--surface-2); }
 :root[data-theme="light"] .ppob-hero { 
-    background: linear-gradient(135deg, #1a2744 0%, #0f172a 100%) !important; 
+    background: rgba(255, 255, 255, 0.65) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06) !important;
 }
-:root[data-theme="light"] .hero-label-title { color: rgba(255,255,255,0.55) !important; }
+:root[data-theme="light"] .hero-label-title { color: #64748b !important; }
 :root[data-theme="light"] .hero-balance-amount { 
-    background: linear-gradient(to right, #ffffff, #cbd5e1) !important;
+    background: linear-gradient(to right, #0f172a, #334155) !important;
     -webkit-background-clip: text !important;
     background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
 }
-:root[data-theme="light"] .hero-brand-name { color: #ffffff !important; }
-:root[data-theme="light"] .hero-brand-tagline { color: rgba(255,255,255,0.5) !important; }
 :root[data-theme="light"] .btn-sync-prices {
-    background: rgba(255,255,255,0.08) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    color: rgba(255,255,255,0.7) !important;
+    background: rgba(15, 23, 42, 0.06) !important;
+    border: 1px solid rgba(15, 23, 42, 0.1) !important;
+    color: #475569 !important;
 }
 :root[data-theme="light"] .btn-sync-prices:hover {
-    background: rgba(56, 189, 248, 0.15) !important;
-    border-color: rgba(56, 189, 248, 0.4) !important;
-    color: #38bdf8 !important;
+    background: rgba(37, 99, 235, 0.1) !important;
+    border-color: rgba(37, 99, 235, 0.3) !important;
+    color: #2563eb !important;
 }
 :root[data-theme="light"] .hero-icon-container {
-    background: rgba(56, 189, 248, 0.12) !important;
-    border: 1px solid rgba(56, 189, 248, 0.3) !important;
-    color: #38bdf8 !important;
+    background: rgba(37, 99, 235, 0.08) !important;
+    border: 1px solid rgba(37, 99, 235, 0.2) !important;
+    color: #2563eb !important;
+    box-shadow: 0 8px 20px -6px rgba(37, 99, 235, 0.12) !important;
 }
-:root[data-theme="light"] .hero-logo-box {
-    background: rgba(255,255,255,0.12) !important;
-    border: 1px solid rgba(255,255,255,0.3) !important;
+:root[data-theme="light"] .hero-logo-pure {
+    filter: none !important;
 }
 :root[data-theme="light"] .alert-info { background: var(--info-bg); border-color: rgba(37,99,235,0.3); color: var(--info); }
 :root[data-theme="light"] .prod-card { background: var(--surface-2); }
@@ -464,28 +436,18 @@
 </style>
 
 <div class="container-fluid py-4 ppob-wrapper">
-    
+
     <!-- Hero / Balance Section -->
     <div class="ppob-hero">
         <div class="hero-top-row">
-            <!-- Left: Brand Logo & Text -->
-            <div class="hero-brand-section">
-                <div class="hero-logo-box">
-                    <img src="<?= BASE_URL ?>public/images/Icon.png" alt="AlfarezMart Logo" class="hero-logo-img">
-                </div>
-                <div class="hero-brand-text">
-                    <span class="hero-brand-name">AlfarezMart</span>
-                    <span class="hero-brand-tagline">PPOB & Digital</span>
-                </div>
-            </div>
-
-            <!-- Right: Wallet & Balance -->
-            <div class="hero-balance-section">
+            <!-- Left: Pure Logo + Balance Info -->
+            <div class="hero-left">
+                <img src="<?= BASE_URL ?>public/images/Icon.png" alt="AlfarezMart" class="hero-logo-pure">
                 <div class="hero-balance-info">
                     <span class="hero-label-title">Saldo Digiflazz</span>
                     <div class="hero-balance-row">
                         <h2 class="hero-balance-amount" id="live-balance">
-                            <span class="spinner-border spinner-border-sm"></span> Loading...
+                            <span class="spinner-border spinner-border-sm"></span>
                         </h2>
                         <?php if (in_array($_SESSION['user_level'] ?? '', ['superadmin', 'admin'])): ?>
                         <button class="btn-sync-prices" onclick="triggerPriceSync(this)" title="Sinkronisasi Harga Digiflazz" id="btn-sync-prices-icon">
@@ -494,12 +456,16 @@
                         <?php endif; ?>
                     </div>
                 </div>
+            </div>
+
+            <!-- Right: Wallet Icon -->
+            <div class="hero-right">
                 <div class="hero-icon-container">
                     <i class="bi bi-wallet2"></i>
                 </div>
             </div>
         </div>
-        
+
         <div class="hero-actions-container mt-3 w-100">
             <button class="btn-topup-premium w-100 justify-content-center" onclick="openDepositModal()">
                 <i class="bi bi-plus-circle-fill"></i> Top Up Saldo
