@@ -184,10 +184,12 @@ class DigiflazzService {
             'Content-Type: application/json',
             'Accept: application/json'
         ]);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        
-        // Disable SSL verification for local dev if needed, but better to keep it true in prod
-        // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); 
+        // Use a longer timeout for pricelist sync (thousands of products from Digiflazz)
+        $isSync = strpos($endpoint, 'price-list') !== false;
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $isSync ? 300 : 60);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

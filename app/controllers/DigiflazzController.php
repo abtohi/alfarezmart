@@ -287,7 +287,11 @@ class DigiflazzController extends Controller {
         
         // Prevent timeout during massive digiflazz catalog sync
         set_time_limit(0);
+        ignore_user_abort(false);
         ini_set('memory_limit', '512M');
+        
+        // Ensure clean JSON output — flush any prior output buffer
+        while (ob_get_level()) ob_end_clean();
         
         $body = json_decode(file_get_contents('php://input'), true);
         $requestedType = strtolower(trim($body['type'] ?? 'all'));
@@ -317,13 +321,16 @@ class DigiflazzController extends Controller {
         }
 
         header('Content-Type: application/json');
+        header('Cache-Control: no-cache');
         if ($successPrepaid || $successPostpaid) {
             echo json_encode(['success' => true, 'message' => 'Sinkronisasi berhasil']);
         } else {
+            http_response_code(200); // always 200 so JS doesn't throw network error
             echo json_encode(['success' => false, 'message' => 'Gagal sinkronisasi: ' . ($errMsg ?: 'Rate limit / Unknown Error')]);
         }
         exit;
     }
+
 
     /**
      * Check current status of a pending transaction by calling Digiflazz API

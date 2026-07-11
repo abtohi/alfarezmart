@@ -52,9 +52,11 @@ if ($cleanUri !== '/' && file_exists($staticFile) && is_file($staticFile)) {
     exit;
 }
 
-// Error reporting
+// Error reporting — for API routes, suppress display to keep JSON response clean
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+$isApiRequest = strpos($_SERVER['REQUEST_URI'] ?? '', '/api/') !== false;
+ini_set('display_errors', $isApiRequest ? 0 : 1);
+ini_set('log_errors', 1);
 
 // Define base path - handle cases where index.php might be in a subdirectory
 define('BASE_PATH', __DIR__);

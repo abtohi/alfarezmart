@@ -1021,9 +1021,9 @@ async function triggerPriceSync(btn) {
     btn.classList.add('spinning');
     btn.disabled = true;
     
-    // Use a 5-minute timeout to handle large catalog sync
+    // Use a 6-minute timeout to handle large catalog sync
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes
+    const timeoutId = setTimeout(() => controller.abort(), 6 * 60 * 1000); // 6 minutes
     
     try {
         const res = await fetch('<?= BASE_URL ?>api/ppob/sync-prices', {
@@ -1034,16 +1034,19 @@ async function triggerPriceSync(btn) {
         });
         clearTimeout(timeoutId);
         
+        // Get raw text first to debug any non-JSON responses
+        const rawText = await res.text();
+        
         let data;
         try {
-            data = await res.json();
+            data = JSON.parse(rawText);
         } catch(jsonErr) {
-            // Server responded but not valid JSON – still check HTTP status
+            console.error('Sync response bukan JSON:', rawText.substring(0, 500));
             if (res.ok) {
-                showAlert('✅ Sinkronisasi selesai (response tidak terbaca).', 'success');
+                showAlert('✅ Sinkronisasi selesai.', 'success');
                 fetchBalance();
             } else {
-                showAlert('❌ Server error: ' + res.status, 'danger');
+                showAlert('❌ Server error ' + res.status + ': Cek log PHP.', 'danger');
             }
             return;
         }
@@ -1052,21 +1055,22 @@ async function triggerPriceSync(btn) {
             showAlert('✅ Sinkronisasi harga berhasil!', 'success');
             fetchBalance();
         } else {
-            showAlert('❌ Gagal sinkronisasi: ' + (data.message || 'Unknown error'), 'danger');
+            showAlert('⚠️ ' + (data.message || 'Gagal sinkronisasi.'), 'warning');
         }
     } catch(e) {
         clearTimeout(timeoutId);
         if (e.name === 'AbortError') {
-            showAlert('⏳ Sinkronisasi melebihi batas waktu. Coba lagi nanti.', 'warning');
+            showAlert('⏳ Sinkronisasi melebihi batas waktu 6 menit. Coba lagi nanti.', 'warning');
         } else {
             console.error('Sync error:', e);
-            showAlert('❌ Terjadi kesalahan jaringan: ' + e.message, 'danger');
+            showAlert('❌ Koneksi ke server gagal. Pastikan server menyala dan coba lagi.', 'danger');
         }
     } finally {
         btn.classList.remove('spinning');
         btn.disabled = false;
     }
 }
+
 
 // 2. Open Deposit
 function openDepositModal() {
