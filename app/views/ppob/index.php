@@ -454,7 +454,7 @@
                 <div id="product-list-container" style="display: none;">
                     
                     <!-- Brand Filter Tabs (For E-Wallet, Game, etc) -->
-                    <div id="brand-filter-container" class="mb-3 d-flex gap-2 overflow-auto pb-2" style="display:none; white-space:nowrap; scrollbar-width: none;"></div>
+                    <div id="brand-filter-container" class="mb-3 gap-2 overflow-auto pb-2" style="display:none; white-space:nowrap; scrollbar-width: none;"></div>
 
                     <!-- Search Product Input (Useful for huge lists) -->
                     <div class="mb-3 position-relative" id="product-search-container" style="display:none;">
@@ -926,6 +926,7 @@ function openTrxModal(title, category, type) {
     document.getElementById('inquiry-box').style.display = 'none';
     document.getElementById('btn-inquiry').style.display = 'none';
     document.getElementById('provider-badge').style.display = 'none';
+    document.getElementById('brand-filter-container').innerHTML = '';
     document.getElementById('brand-filter-container').style.display = 'none';
     document.getElementById('product-search-container').style.display = 'none';
     document.getElementById('search-product').value = '';
