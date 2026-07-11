@@ -11,88 +11,184 @@
     font-family: var(--font-family);
 }
 
-/* Hero Section */
+/* Redesigned Premium Hero Section */
 .ppob-hero {
-    background: var(--gradient-header);
-    border-radius: 20px;
-    padding: 20px 25px;
+    background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 24px 30px;
     position: relative;
     overflow: hidden;
     color: white;
-    box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+    box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.5);
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 25px;
-    gap: 15px;
+    gap: 20px;
+    transition: all 0.3s ease;
 }
+
 .ppob-hero::before {
     content: '';
     position: absolute;
     top: -50%; left: -10%;
-    width: 300px; height: 300px;
-    background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+    width: 320px; height: 320px;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
+    pointer-events: none;
 }
+
 .ppob-hero::after {
     content: '';
     position: absolute;
     bottom: -30%; right: -5%;
-    width: 250px; height: 250px;
-    background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.12) 0%, transparent 70%);
+    pointer-events: none;
 }
-.hero-content {
+
+.hero-content-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 18px;
     position: relative;
     z-index: 2;
     flex: 1;
 }
-.hero-title {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: rgba(255,255,255,0.7);
-    margin-bottom: 4px;
-}
-.hero-balance {
+
+.hero-icon-container {
+    width: 52px;
+    height: 52px;
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 24px;
+    color: #38bdf8;
+    box-shadow: 0 8px 20px -6px rgba(56, 189, 248, 0.3);
+}
+
+.hero-balance-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.hero-label-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #94a3b8;
+}
+
+.hero-balance-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.hero-balance-amount {
+    font-size: 28px;
     font-weight: 800;
     margin: 0;
     letter-spacing: -0.5px;
+    background: linear-gradient(to right, #ffffff, #e2e8f0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Elegant Price Sync Button */
+.btn-sync-prices {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.hero-actions {
+
+.btn-sync-prices:hover {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: rgba(56, 189, 248, 0.4);
+    color: #38bdf8;
+    transform: scale(1.08);
+}
+
+.btn-sync-prices i {
+    font-size: 16px;
+    line-height: 1;
+    display: inline-block;
+}
+
+.btn-sync-prices.spinning i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Premium Top Up Button */
+.hero-actions-container {
     position: relative;
     z-index: 2;
 }
-.btn-deposit {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.2);
+
+.btn-topup-premium {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: white;
-    padding: 8px 16px;
-    border-radius: 30px;
-    font-weight: 600;
-    font-size: 13px;
-    backdrop-filter: blur(10px);
-    transition: all 0.3s ease;
+    padding: 11px 22px;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 13.5px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 10px 20px -8px rgba(37, 99, 235, 0.4);
+    transition: all 0.25s ease;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-}
-.btn-deposit:hover {
-    background: rgba(255,255,255,0.2);
-    transform: translateY(-2px);
-    color: white;
+    gap: 8px;
+    cursor: pointer;
 }
 
-@media (max-width: 480px) {
+.btn-topup-premium:hover {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -6px rgba(37, 99, 235, 0.5);
+}
+
+.btn-topup-premium:active {
+    transform: translateY(0);
+}
+
+@media (max-width: 576px) {
     .ppob-hero {
         flex-direction: column;
         align-items: flex-start;
         padding: 20px;
+        gap: 16px;
     }
-    .hero-balance {
-        font-size: 22px;
+    
+    .hero-content-wrapper {
+        width: 100%;
+    }
+    
+    .hero-actions-container {
+        width: 100%;
+    }
+    
+    .btn-topup-premium {
+        width: 100%;
+        justify-content: center;
     }
 }
 
@@ -273,10 +369,7 @@
 :root[data-theme="light"] .btn-close { filter: none; }
 :root[data-theme="light"] .glass-input { background: var(--surface-2); }
 :root[data-theme="light"] .form-select.glass-input { background: var(--surface-2); }
-:root[data-theme="light"] .ppob-hero { color: white; }
-:root[data-theme="light"] .ppob-hero .hero-title { color: rgba(255,255,255,0.8); }
-:root[data-theme="light"] .ppob-hero .hero-balance { color: #fff; }
-:root[data-theme="light"] .ppob-hero .btn-deposit { color: #fff; }
+:root[data-theme="light"] .ppob-hero { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
 :root[data-theme="light"] .alert-info { background: var(--info-bg); border-color: rgba(37,99,235,0.3); color: var(--info); }
 :root[data-theme="light"] .prod-card { background: var(--surface-2); }
 :root[data-theme="light"] .prod-card:hover { background: var(--surface-3); }
@@ -286,14 +379,28 @@
     
     <!-- Hero / Balance Section -->
     <div class="ppob-hero">
-        <div class="hero-content">
-            <div class="hero-title"><i class="bi bi-wallet2 me-2"></i>Saldo Digiflazz</div>
-            <div class="hero-balance" id="live-balance">
-                <span class="spinner-border spinner-border-sm"></span> Loading...
+        <div class="hero-content-wrapper">
+            <div class="hero-icon-container">
+                <i class="bi bi-wallet2"></i>
+            </div>
+            <div class="hero-balance-info">
+                <span class="hero-label-title">Saldo Digiflazz</span>
+                <div class="hero-balance-row">
+                    <h2 class="hero-balance-amount" id="live-balance">
+                        <span class="spinner-border spinner-border-sm"></span> Loading...
+                    </h2>
+                    <?php if (in_array($_SESSION['user_level'] ?? '', ['superadmin', 'admin'])): ?>
+                    <button class="btn-sync-prices" onclick="triggerPriceSync(this)" title="Sinkronisasi Harga Digiflazz" id="btn-sync-prices-icon">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </button>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
-        <div class="hero-actions">
-            <button class="btn btn-deposit" onclick="openDepositModal()"><i class="bi bi-plus-lg me-2"></i>Topup Saldo</button>
+        <div class="hero-actions-container">
+            <button class="btn-topup-premium" onclick="openDepositModal()">
+                <i class="bi bi-plus-circle-fill"></i> Top Up Saldo
+            </button>
         </div>
     </div>
 
@@ -835,6 +942,36 @@ async function fetchBalance() {
     }
 }
 fetchBalance();
+
+// 1b. Trigger Price Sync (Admin only)
+async function triggerPriceSync(btn) {
+    if (btn.classList.contains('spinning')) return;
+    
+    btn.classList.add('spinning');
+    btn.disabled = true;
+    
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/ppob/sync-prices', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({type: 'all'})
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            showAlert('✅ Sinkronisasi harga berhasil!', 'success');
+            fetchBalance();
+        } else {
+            showAlert('❌ Gagal sinkronisasi: ' + data.message, 'danger');
+        }
+    } catch(e) {
+        console.error(e);
+        showAlert('❌ Terjadi kesalahan jaringan.', 'danger');
+    } finally {
+        btn.classList.remove('spinning');
+        btn.disabled = false;
+    }
+}
 
 // 2. Open Deposit
 function openDepositModal() {
