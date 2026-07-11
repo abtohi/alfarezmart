@@ -22,8 +22,7 @@
     color: white;
     box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.5);
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
     margin-bottom: 25px;
     gap: 20px;
     transition: all 0.3s ease;
@@ -47,13 +46,97 @@
     pointer-events: none;
 }
 
-.hero-content-wrapper {
+.hero-top-row {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 18px;
+    width: 100%;
     position: relative;
     z-index: 2;
-    flex: 1;
+}
+
+.hero-brand-section {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.hero-logo-box {
+    width: 52px;
+    height: 52px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    box-shadow: 0 8px 20px -6px rgba(0,0,0,0.3);
+}
+
+.hero-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.hero-brand-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.hero-brand-name {
+    font-size: 17px;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.1;
+    letter-spacing: 0.5px;
+}
+
+.hero-brand-tagline {
+    font-size: 11px;
+    font-weight: 500;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+.hero-balance-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.hero-balance-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: right;
+}
+
+.hero-label-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #94a3b8;
+}
+
+.hero-balance-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.hero-balance-amount {
+    font-size: 22px;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.5px;
+    background: linear-gradient(to right, #ffffff, #e2e8f0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .hero-icon-container {
@@ -68,78 +151,6 @@
     font-size: 24px;
     color: #38bdf8;
     box-shadow: 0 8px 20px -6px rgba(56, 189, 248, 0.3);
-}
-
-.hero-balance-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.hero-label-title {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    color: #94a3b8;
-}
-
-.hero-balance-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.hero-balance-amount {
-    font-size: 22px;
-    font-weight: 800;
-    margin: 0;
-    letter-spacing: -0.5px;
-    background: linear-gradient(to right, #ffffff, #e2e8f0);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-/* PPOB Brand Header */
-.ppob-page-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 22px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.ppob-header-brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.ppob-logo-img {
-    width: 38px;
-    height: 38px;
-    object-fit: contain;
-    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.12));
-}
-
-.ppob-brand-text {
-    display: flex;
-    flex-direction: column;
-}
-
-.ppob-brand-name {
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--text-primary);
-    line-height: 1.1;
-}
-
-.ppob-brand-tagline {
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--text-muted);
-    letter-spacing: 0.5px;
 }
 
 /* Elegant Price Sync Button */
@@ -214,23 +225,27 @@
 
 @media (max-width: 576px) {
     .ppob-hero {
-        flex-direction: column;
-        align-items: flex-start;
         padding: 20px;
         gap: 16px;
     }
-    
-    .hero-content-wrapper {
-        width: 100%;
+
+    .hero-top-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
     }
-    
-    .hero-actions-container {
+
+    .hero-balance-section {
         width: 100%;
+        justify-content: space-between;
     }
-    
-    .btn-topup-premium {
-        width: 100%;
-        justify-content: center;
+
+    .hero-balance-info {
+        text-align: left;
+    }
+
+    .hero-balance-row {
+        justify-content: flex-start;
     }
 }
 
@@ -412,32 +427,34 @@
 :root[data-theme="light"] .glass-input { background: var(--surface-2); }
 :root[data-theme="light"] .form-select.glass-input { background: var(--surface-2); }
 :root[data-theme="light"] .ppob-hero { 
-    background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%) !important; 
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    color: #0f172a !important;
-    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.06) !important;
+    background: linear-gradient(135deg, #1a2744 0%, #0f172a 100%) !important; 
 }
-:root[data-theme="light"] .hero-label-title { color: #475569 !important; }
+:root[data-theme="light"] .hero-label-title { color: rgba(255,255,255,0.55) !important; }
 :root[data-theme="light"] .hero-balance-amount { 
-    background: linear-gradient(to right, #0f172a, #334155) !important;
+    background: linear-gradient(to right, #ffffff, #cbd5e1) !important;
     -webkit-background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
 }
+:root[data-theme="light"] .hero-brand-name { color: #ffffff !important; }
+:root[data-theme="light"] .hero-brand-tagline { color: rgba(255,255,255,0.5) !important; }
 :root[data-theme="light"] .btn-sync-prices {
-    background: rgba(0, 0, 0, 0.05) !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    color: #475569 !important;
+    background: rgba(255,255,255,0.08) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    color: rgba(255,255,255,0.7) !important;
 }
 :root[data-theme="light"] .btn-sync-prices:hover {
-    background: rgba(37, 99, 235, 0.1) !important;
-    border-color: rgba(37, 99, 235, 0.3) !important;
-    color: #2563eb !important;
+    background: rgba(56, 189, 248, 0.15) !important;
+    border-color: rgba(56, 189, 248, 0.4) !important;
+    color: #38bdf8 !important;
 }
 :root[data-theme="light"] .hero-icon-container {
-    background: rgba(37, 99, 235, 0.08) !important;
-    border: 1px solid rgba(37, 99, 235, 0.2) !important;
-    color: #2563eb !important;
-    box-shadow: 0 8px 20px -6px rgba(37, 99, 235, 0.15) !important;
+    background: rgba(56, 189, 248, 0.12) !important;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+    color: #38bdf8 !important;
+}
+:root[data-theme="light"] .hero-logo-box {
+    background: rgba(255,255,255,0.12) !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
 }
 :root[data-theme="light"] .alert-info { background: var(--info-bg); border-color: rgba(37,99,235,0.3); color: var(--info); }
 :root[data-theme="light"] .prod-card { background: var(--surface-2); }
@@ -446,39 +463,43 @@
 
 <div class="container-fluid py-4 ppob-wrapper">
     
-    <!-- PPOB Brand Header -->
-    <div class="ppob-page-header">
-        <div class="ppob-header-brand">
-            <img src="<?= BASE_URL ?>public/images/Icon.png" alt="AlfarezMart Logo" class="ppob-logo-img">
-            <div class="ppob-brand-text">
-                <span class="ppob-brand-name">AlfarezMart</span>
-                <span class="ppob-brand-tagline">Produk Digital & PPOB</span>
-            </div>
-        </div>
-    </div>
-
     <!-- Hero / Balance Section -->
     <div class="ppob-hero">
-        <div class="hero-content-wrapper">
-            <div class="hero-icon-container">
-                <i class="bi bi-wallet2"></i>
+        <div class="hero-top-row">
+            <!-- Left: Brand Logo & Text -->
+            <div class="hero-brand-section">
+                <div class="hero-logo-box">
+                    <img src="<?= BASE_URL ?>public/images/Icon.png" alt="AlfarezMart Logo" class="hero-logo-img">
+                </div>
+                <div class="hero-brand-text">
+                    <span class="hero-brand-name">AlfarezMart</span>
+                    <span class="hero-brand-tagline">PPOB & Digital</span>
+                </div>
             </div>
-            <div class="hero-balance-info">
-                <span class="hero-label-title">Saldo Digiflazz</span>
-                <div class="hero-balance-row">
-                    <h2 class="hero-balance-amount" id="live-balance">
-                        <span class="spinner-border spinner-border-sm"></span> Loading...
-                    </h2>
-                    <?php if (in_array($_SESSION['user_level'] ?? '', ['superadmin', 'admin'])): ?>
-                    <button class="btn-sync-prices" onclick="triggerPriceSync(this)" title="Sinkronisasi Harga Digiflazz" id="btn-sync-prices-icon">
-                        <i class="bi bi-arrow-repeat"></i>
-                    </button>
-                    <?php endif; ?>
+
+            <!-- Right: Wallet & Balance -->
+            <div class="hero-balance-section">
+                <div class="hero-balance-info">
+                    <span class="hero-label-title">Saldo Digiflazz</span>
+                    <div class="hero-balance-row">
+                        <h2 class="hero-balance-amount" id="live-balance">
+                            <span class="spinner-border spinner-border-sm"></span> Loading...
+                        </h2>
+                        <?php if (in_array($_SESSION['user_level'] ?? '', ['superadmin', 'admin'])): ?>
+                        <button class="btn-sync-prices" onclick="triggerPriceSync(this)" title="Sinkronisasi Harga Digiflazz" id="btn-sync-prices-icon">
+                            <i class="bi bi-arrow-repeat"></i>
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="hero-icon-container">
+                    <i class="bi bi-wallet2"></i>
                 </div>
             </div>
         </div>
-        <div class="hero-actions-container">
-            <button class="btn-topup-premium" onclick="openDepositModal()">
+        
+        <div class="hero-actions-container mt-3 w-100">
+            <button class="btn-topup-premium w-100 justify-content-center" onclick="openDepositModal()">
                 <i class="bi bi-plus-circle-fill"></i> Top Up Saldo
             </button>
         </div>
@@ -1030,23 +1051,47 @@ async function triggerPriceSync(btn) {
     btn.classList.add('spinning');
     btn.disabled = true;
     
+    // Use a 5-minute timeout to handle large catalog sync
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes
+    
     try {
         const res = await fetch('<?= BASE_URL ?>api/ppob/sync-prices', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({type: 'all'})
+            body: JSON.stringify({type: 'all'}),
+            signal: controller.signal
         });
-        const data = await res.json();
+        clearTimeout(timeoutId);
+        
+        let data;
+        try {
+            data = await res.json();
+        } catch(jsonErr) {
+            // Server responded but not valid JSON – still check HTTP status
+            if (res.ok) {
+                showAlert('✅ Sinkronisasi selesai (response tidak terbaca).', 'success');
+                fetchBalance();
+            } else {
+                showAlert('❌ Server error: ' + res.status, 'danger');
+            }
+            return;
+        }
         
         if (data.success) {
             showAlert('✅ Sinkronisasi harga berhasil!', 'success');
             fetchBalance();
         } else {
-            showAlert('❌ Gagal sinkronisasi: ' + data.message, 'danger');
+            showAlert('❌ Gagal sinkronisasi: ' + (data.message || 'Unknown error'), 'danger');
         }
     } catch(e) {
-        console.error(e);
-        showAlert('❌ Terjadi kesalahan jaringan.', 'danger');
+        clearTimeout(timeoutId);
+        if (e.name === 'AbortError') {
+            showAlert('⏳ Sinkronisasi melebihi batas waktu. Coba lagi nanti.', 'warning');
+        } else {
+            console.error('Sync error:', e);
+            showAlert('❌ Terjadi kesalahan jaringan: ' + e.message, 'danger');
+        }
     } finally {
         btn.classList.remove('spinning');
         btn.disabled = false;
