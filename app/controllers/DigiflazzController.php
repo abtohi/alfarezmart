@@ -470,6 +470,17 @@ class DigiflazzController extends Controller {
         exit;
     }
 
+    public function apiGetDepositHistory() {
+        AuthController::requireAuth();
+        AuthController::requireLevel(['superadmin', 'admin']);
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+        $deposits = $this->digiModel->getDeposits($limit);
+        
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'data' => $deposits]);
+        exit;
+    }
+
     public function apiGetTransaction(string $refId) {
         AuthController::requireAuth();
         $trx = $this->digiModel->getTransactionByRefId($refId);

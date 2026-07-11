@@ -133,6 +133,7 @@ $router->post('/api/ppob/sync-prices', 'DigiflazzController@apiSyncPrices');
 $router->post('/api/ppob/settings', 'DigiflazzController@apiSaveSettings');
 $router->post('/api/ppob/check-transaction', 'DigiflazzController@apiCheckTransaction');
 $router->post('/api/ppob/deposit', 'DigiflazzController@apiCreateDeposit');
+$router->get('/api/ppob/deposit-history', 'DigiflazzController@apiGetDepositHistory');
 
 $router->post('/api/ppob/markup-rules', 'DigiflazzController@apiSaveMarkupRules');
 $router->post('/api/ppob/custom-price', 'DigiflazzController@apiSaveCustomPrice');

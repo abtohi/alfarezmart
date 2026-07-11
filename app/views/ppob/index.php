@@ -693,7 +693,8 @@
         <div class="modal-content" style="border-radius: 20px; border: none;">
             <div class="modal-header border-0" style="background: var(--surface-2);">
                 <h5 class="modal-title fw-bold"><i class="bi bi-wallet2 me-2"></i>Topup Saldo Digiflazz</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
+                <button type="button" class="btn btn-sm btn-outline-primary ms-auto me-2 rounded-pill" onclick="openDepositHistoryModal()"><i class="bi bi-clock-history me-1"></i>Riwayat</button>
+                <button type="button" class="btn-close m-0" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
             </div>
             <div class="modal-body p-4">
                 <div class="alert alert-info rounded-3" style="font-size: 13px;">
@@ -723,6 +724,36 @@
                 <button class="btn btn-primary w-100 py-3 rounded-pill fw-bold" onclick="requestDeposit()" id="btn-depo">
                     Minta Tiket Deposit
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Deposit History Modal -->
+<div class="modal fade" id="depositHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header border-0" style="background: var(--surface-2);">
+                <h5 class="modal-title fw-bold"><i class="bi bi-clock-history me-2"></i>Riwayat Deposit</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="table-responsive">
+                    <table class="table table-borderless table-hover text-nowrap" id="table-deposit-history">
+                        <thead style="background: var(--surface-2);">
+                            <tr>
+                                <th class="rounded-start">Tanggal</th>
+                                <th>Bank</th>
+                                <th>Nominal</th>
+                                <th>Status</th>
+                                <th class="rounded-end">Instruksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deposit-history-body">
+                            <tr><td colspan="5" class="text-center py-4"><span class="spinner-border spinner-border-sm me-2"></span>Memuat data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -1147,7 +1178,74 @@ async function requestDeposit() {
     btn.disabled = false; btn.innerText = 'Minta Tiket Deposit';
 }
 
-// 4. Open Transaction Modal
+// 4. Deposit History Modal
+function getDepositHistoryModal() { return bootstrap.Modal.getOrCreateInstance(document.getElementById('depositHistoryModal')); }
+
+async function openDepositHistoryModal() {
+    getDepositModal().hide();
+    getDepositHistoryModal().show();
+    await fetchDepositHistory();
+}
+
+async function fetchDepositHistory() {
+    const tbody = document.getElementById('deposit-history-body');
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><span class="spinner-border spinner-border-sm me-2"></span>Memuat data...</td></tr>';
+    
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/ppob/deposit-history');
+        const data = await res.json();
+        
+        if(data.success && data.data && data.data.length > 0) {
+            tbody.innerHTML = '';
+            data.data.forEach(item => {
+                let badgeClass = 'bg-warning text-dark';
+                let statusText = 'Pending';
+                
+                // Assuming status are pending, success, failed, cancelled, etc.
+                if(item.status === 'success' || item.status === 'sukses') {
+                    badgeClass = 'bg-success';
+                    statusText = 'Sukses';
+                } else if(item.status === 'failed' || item.status === 'gagal' || item.status === 'cancelled' || item.status === 'batal') {
+                    badgeClass = 'bg-danger';
+                    statusText = 'Batal/Gagal';
+                }
+
+                // parse notes
+                let notesHtml = '<span class="text-muted small">-</span>';
+                if(item.notes) {
+                    const match = item.notes.match(/ke\s+(?:rekening\s+)?([a-zA-Z\s]+?)\s+(\d{8,})\s*a\.?\/?n\.?\s+(.*)/i) 
+                                || item.notes.match(/(BCA|MANDIRI|BRI|BNI|FLIP|SHOPEEPAY|GOPAY)\s+(\d{8,})\s*a\.?\/?n\.?\s+(.*)/i);
+                    if(item.bank === 'SHOPEEPAY' || item.bank === 'FLIP') {
+                        notesHtml = `<div class="small fw-bold">BCA: 6042888890</div><div class="text-muted" style="font-size:11px;">PT DIGIFLAZZ...</div>`;
+                    } else if(match) {
+                        notesHtml = `<div class="small fw-bold">${match[1].trim()}: ${match[2]}</div><div class="text-muted" style="font-size:11px;">a.n ${match[3].replace(/[.]$/, '').trim()}</div>`;
+                    } else {
+                        notesHtml = `<div class="small text-truncate" style="max-width:200px;" title="${item.notes}">${item.notes}</div>`;
+                    }
+                }
+                
+                const d = new Date(item.created_at);
+                const dateStr = d.toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'}) + ' ' + d.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="text-muted align-middle" style="font-size: 13px;">${dateStr}</td>
+                        <td class="align-middle fw-bold">${item.bank}</td>
+                        <td class="align-middle fw-bold text-primary">${formatRp(item.amount)}</td>
+                        <td class="align-middle"><span class="badge ${badgeClass} rounded-pill">${statusText}</span></td>
+                        <td class="align-middle">${notesHtml}</td>
+                    </tr>
+                `;
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Belum ada riwayat deposit.</td></tr>';
+        }
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Gagal memuat riwayat.</td></tr>';
+    }
+}
+
+// 5. Open Transaction Modal
 function openTrxModal(title, category, type) {
     document.getElementById('trxModalTitle').innerText = title;
     document.getElementById('trx-type').value = type;
