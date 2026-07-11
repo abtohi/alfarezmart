@@ -79,7 +79,7 @@
                         <th style="padding:12px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:90px;">Agen</th>
                         <th style="padding:12px 8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:95px;">Modal</th>
                         <th style="padding:12px 8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:105px;">Jual</th>
-                        <th style="padding:12px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:220px;">SN / Token</th>
+                        <th style="padding:12px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:150px;">SN / Token</th>
                         <th style="padding:12px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:100px;">Seller</th>
                         <th style="padding:12px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:90px;">Status</th>
                         <th style="padding:12px 16px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:140px;white-space:nowrap;">Aksi</th>
@@ -279,7 +279,7 @@
                             </td>
                             <td style="padding:12px 8px;text-align:right;font-weight:700;font-size:var(--font-size-xs);white-space:nowrap;min-width:95px;">Rp ${parseInt(trx.modal_price||0).toLocaleString('id-ID')}</td>
                             <td style="padding:12px 8px;text-align:right;font-weight:700;font-size:var(--font-size-xs);white-space:nowrap;min-width:105px;">Rp ${parseInt(trx.sell_price||0).toLocaleString('id-ID')}<br><span style="font-size:9px;${profitColor}font-weight:700;">+${profit.toLocaleString('id-ID')}</span></td>
-                            <td style="padding:12px 8px;text-align:left;min-width:220px;">
+                            <td style="padding:12px 8px;text-align:left;min-width:150px;">
                                 <div style="font-family:monospace;font-size:10px;color:var(--text-primary);white-space:nowrap;" title="SN">${trx.sn || '-'}</div>
                                 <div style="font-family:monospace;font-size:9px;color:var(--text-muted);white-space:nowrap;margin-top:2px;" title="Trx ID">Trx: ${trx.digiflazz_trx_id || '-'}</div>
                             </td>

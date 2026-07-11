@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS -->
-    <?php $v = '?v=13.40'; ?>
+    <?php $v = '?v=13.41'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -109,6 +109,9 @@ if ($userLevel === 'staff') {
             <div class="header-right">
                 <button class="header-btn" id="btnTheme" aria-label="Ubah tema" onclick="toggleTheme()" title="Ubah tema Dark/Light">
                     <i class="bi bi-sun" id="themeIcon" data-icon="sun"></i>
+                </button>
+                <button class="header-btn" id="btnReload" aria-label="Muat Ulang" onclick="window.location.reload(true)" title="Muat Ulang Halaman (Hard Refresh)">
+                    <i class="bi bi-arrow-clockwise"></i>
                 </button>
                 <button class="header-btn" id="btnSync" aria-label="Sinkronisasi" onclick="triggerSync()" oncontextmenu="openSyncSettings(event)" ontouchstart="startSyncSettingsTimer(event)" ontouchend="clearSyncSettingsTimer(event)" title="Tahan untuk Pengaturan Sync">
                     <i class="bi bi-arrow-repeat" id="syncIcon"></i>

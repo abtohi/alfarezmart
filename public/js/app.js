@@ -53,7 +53,7 @@ window.addEventListener('appinstalled', () => {
 document.addEventListener('DOMContentLoaded', async () => {
     initSearch();
     initHeaderScroll();
-    initPullToRefresh();
+    // initPullToRefresh(); // Disabled pull-to-refresh as requested
     
     // Initialize Offline DB
     try {
