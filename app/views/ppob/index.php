@@ -58,8 +58,8 @@
 }
 
 .hero-logo-pure {
-    width: 62px;
-    height: 62px;
+    width: 76px;
+    height: 76px;
     object-fit: contain;
     flex-shrink: 0;
     filter: drop-shadow(0 4px 12px rgba(0,0,0,0.25));
@@ -403,8 +403,8 @@
     background: rgba(255, 255, 255, 0.65) !important;
     backdrop-filter: blur(20px) !important;
     -webkit-backdrop-filter: blur(20px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.5) !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06) !important;
+    border: 1px solid rgba(200, 210, 230, 0.6) !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07), 0 1px 6px rgba(0, 0, 0, 0.04) !important;
 }
 :root[data-theme="light"] .hero-label-title { color: #64748b !important; }
 :root[data-theme="light"] .hero-balance-amount { 
