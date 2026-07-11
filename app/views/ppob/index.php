@@ -136,6 +136,7 @@
     letter-spacing: -0.5px;
     background: linear-gradient(to right, #ffffff, #e2e8f0);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -433,6 +434,7 @@
 :root[data-theme="light"] .hero-balance-amount { 
     background: linear-gradient(to right, #ffffff, #cbd5e1) !important;
     -webkit-background-clip: text !important;
+    background-clip: text !important;
     -webkit-text-fill-color: transparent !important;
 }
 :root[data-theme="light"] .hero-brand-name { color: #ffffff !important; }
