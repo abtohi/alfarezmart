@@ -626,9 +626,9 @@
     .trx-success { font-size: 14px; font-weight: 800; color: #000; margin: 15px 0 10px; border: 1px solid #000; padding: 6px; border-radius: 6px; }
     .line { border-top: 1px dashed #ddd; margin: 12px 0; }
     .row { display: flex; justify-content: space-between; margin: 8px 0; align-items: flex-start; line-height: 1.4; }
-    .row.small-info { margin: 4px 0; font-size: 10.5px; }
-    .row.small-info .label { color: #555; width: 35%; font-size: 10.5px; }
-    .row.small-info .value { font-weight: 500; width: 65%; text-align: right; word-break: break-word; color: #000; font-size: 10.5px; }
+    .row.small-info { margin: 4px 0; font-size: 8.5px; }
+    .row.small-info .label { color: #555; width: 30%; font-size: 8.5px; }
+    .row.small-info .value { font-weight: 500; width: 70%; text-align: right; word-break: break-all; color: #000; font-size: 8.5px; }
     .label { color: #555; width: 35%; font-size: 12px; }
     .value { font-weight: 600; width: 65%; text-align: right; word-break: break-word; color: #000; }
     .sn-box { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 15px 12px; margin: 15px 0; text-align: center; }
@@ -733,17 +733,17 @@ ${hasSN ? '<div class="sn-box"><div class="sn-title">' + snTitle + '</div><div c
                 <div style="font-size: 16px; font-weight: 800; margin-bottom: 2px; color: #000;">ALFAREZMART</div>
                 <div style="font-size: 10px; color: #666;">Struk Pembayaran Produk Digital</div>
             </div>
-            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 10.5px; color: #111;">
-                <span style="color:#555;">No. Ref</span>
-                <span style="font-weight: 500; text-align: right;">${d.ref_id}</span>
+            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 9px; color: #111;">
+                <span style="color:#555; width: 30%; text-align: left;">No. Ref</span>
+                <span style="font-weight: 500; width: 70%; text-align: right; word-break: break-all;">${d.ref_id}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 10.5px; color: #111;">
-                <span style="color:#555;">Trx ID</span>
-                <span style="font-weight: 500; text-align: right;">${d.digiflazz_trx_id || d.ref_id}</span>
+            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 9px; color: #111;">
+                <span style="color:#555; width: 30%; text-align: left;">Trx ID</span>
+                <span style="font-weight: 500; width: 70%; text-align: right; word-break: break-all;">${d.digiflazz_trx_id || d.ref_id}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 10.5px; color: #111;">
-                <span style="color:#555;">Tanggal</span>
-                <span style="font-weight: 500; text-align: right;">${d.created_at}</span>
+            <div style="display: flex; justify-content: space-between; margin: 4px 0; font-size: 9px; color: #111;">
+                <span style="color:#555; width: 30%; text-align: left;">Tanggal</span>
+                <span style="font-weight: 500; width: 70%; text-align: right; word-break: break-all;">${d.created_at}</span>
             </div>
             <div style="text-align: center; margin: 10px 0; border: 1px solid #111; padding: 4px; border-radius: 4px; font-size: 12px; font-weight: 800; color: #000;">
                 TRANSAKSI BERHASIL

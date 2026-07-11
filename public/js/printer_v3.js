@@ -634,10 +634,15 @@ class ThermalPrinter {
             return `${padRight(label, 10)}: ${value}\n`;
         };
 
+        const rowSmall = (label, value) => {
+            if (!value) return '';
+            return `${padRight(label, 7)}: ${value}\n`;
+        };
+
         data += '\x1B!\x01'; // Font B (smaller text size)
-        data += row('NO. REF', transaction.ref_id);
-        data += row('TRX ID', transaction.digiflazz_trx_id || transaction.trx_id || '-');
-        data += row('TANGGAL', dateStr);
+        data += rowSmall('NO. REF', transaction.ref_id);
+        data += rowSmall('TRX ID', transaction.digiflazz_trx_id || transaction.trx_id || '-');
+        data += rowSmall('TANGGAL', dateStr);
         data += '\x1B!\x00'; // Reset to Font A
         data += '-'.repeat(width) + '\n';
         data += '\x1Ba\x01'; // Align Center
