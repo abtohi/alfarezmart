@@ -2517,10 +2517,45 @@ function showAlert(msg, type='info') {
     const container = document.getElementById('toast-container-ppob');
     const id = 'toast-' + Date.now();
     const colors = {info:'#0dcaf0',success:'#22c55e',danger:'#ef4444',warning:'#f59e0b'};
-    container.innerHTML += `
-        <div id="${id}" style="background:${colors[type] || '#0dcaf0'};color:white;padding:14px 20px;border-radius:12px;font-weight:600;box-shadow:0 5px 15px rgba(0,0,0,0.3);animation:slideInRight 0.3s ease;">${msg}</div>
-    `;
-    setTimeout(() => document.getElementById(id)?.remove(), 4000);
+    
+    const toast = document.createElement('div');
+    toast.id = id;
+    toast.style.cssText = `background:${colors[type] || '#0dcaf0'};color:white;padding:14px 20px;border-radius:12px;font-weight:600;box-shadow:0 5px 15px rgba(0,0,0,0.3);animation:slideInRight 0.3s ease;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;`;
+    
+    const msgSpan = document.createElement('span');
+    msgSpan.innerHTML = msg;
+    toast.appendChild(msgSpan);
+    
+    const copyBtn = document.createElement('button');
+    copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>';
+    copyBtn.style.cssText = 'background:none;border:none;color:white;cursor:pointer;padding:4px;opacity:0.8;transition:opacity 0.2s;display:flex;align-items:center;justify-content:center;';
+    copyBtn.title = "Copy pesan";
+    copyBtn.onclick = (e) => {
+        e.stopPropagation();
+        const temp = document.createElement('div');
+        temp.innerHTML = msg;
+        const text = temp.textContent || temp.innerText || "";
+        navigator.clipboard.writeText(text).then(() => {
+            copyBtn.innerHTML = '<i class="bi bi-check2"></i>';
+            copyBtn.style.opacity = '1';
+            setTimeout(() => {
+                copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>';
+                copyBtn.style.opacity = '0.8';
+            }, 2000);
+        }).catch(err => console.error('Failed to copy:', err));
+    };
+    copyBtn.onmouseover = () => copyBtn.style.opacity = '1';
+    copyBtn.onmouseout = () => copyBtn.style.opacity = '0.8';
+    
+    toast.appendChild(copyBtn);
+    container.appendChild(toast);
+    
+    // Increased timeout to give time to copy
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 6000);
 }
 
 // Helper: Custom Confirm Modal
