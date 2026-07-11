@@ -636,7 +636,11 @@ class ThermalPrinter {
 
         const rowSmall = (label, value) => {
             if (!value) return '';
-            return `${padRight(label, 7)}: ${value}\n`;
+            let cleanLabel = label;
+            if (label === 'NO. REF') cleanLabel = 'REF';
+            else if (label === 'TRX ID') cleanLabel = 'TRX';
+            else if (label === 'TANGGAL') cleanLabel = 'TGL';
+            return `${padRight(cleanLabel, 3)}: ${value}\n`;
         };
 
         data += '\x1B!\x01'; // Font B (smaller text size)
