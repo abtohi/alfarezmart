@@ -8,9 +8,9 @@ $csrfToken = $csrfToken ?? '';
 .page-header {
     background: var(--surface-1);
     border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 20px;
-    margin: 20px auto;
+    border-radius: 14px;
+    padding: 14px 20px;
+    margin: 15px auto;
     max-width: 800px;
     display: flex;
     align-items: center;
@@ -19,39 +19,39 @@ $csrfToken = $csrfToken ?? '';
 .page-title {
     color: var(--text-primary);
     font-weight: 800;
-    margin-bottom: 4px;
-    font-size: 1.25rem;
+    margin-bottom: 2px;
+    font-size: 1.15rem;
 }
 .page-subtitle {
     color: var(--text-muted);
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     margin: 0;
 }
 .customer-card {
     background: var(--surface-1);
     border: 1px solid var(--border-color);
-    border-radius: 14px;
-    padding: 16px;
-    margin-bottom: 12px;
-    transition: all 0.3s ease;
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin-bottom: 10px;
+    transition: all 0.2s ease-in-out;
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
 .customer-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     border-color: var(--primary);
 }
 .customer-icon {
-    width: 45px;
-    height: 45px;
-    border-radius: 12px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
-    margin-right: 15px;
+    font-size: 18px;
+    margin-right: 12px;
     flex-shrink: 0;
 }
 .icon-pln { background: rgba(249, 115, 22, 0.1); color: #f97316; }
@@ -64,39 +64,40 @@ $csrfToken = $csrfToken ?? '';
 }
 .customer-name {
     font-weight: 700;
-    font-size: 15px;
+    font-size: 14.5px;
     color: var(--text-primary);
-    margin-bottom: 3px;
+    margin-bottom: 2px;
 }
 .customer-no {
-    font-size: 13px;
+    font-size: 12.5px;
     color: var(--text-muted);
     font-family: monospace;
     letter-spacing: 0.5px;
 }
 .customer-detail {
-    font-size: 11px;
+    font-size: 10.5px;
     color: var(--primary);
     background: rgba(var(--primary-rgb), 0.1);
-    padding: 2px 8px;
+    padding: 1px 8px;
     border-radius: 20px;
     display: inline-block;
-    margin-top: 4px;
+    margin-top: 2px;
 }
 .action-buttons .btn {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     padding: 0;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
-    margin-left: 5px;
+    border-radius: 8px;
+    margin-left: 4px;
+    font-size: 13px;
 }
 .nav-pills .nav-link {
     color: var(--text-muted);
-    border-radius: 10px;
-    padding: 8px 16px;
+    border-radius: 8px;
+    padding: 6px 14px;
     font-weight: 600;
     font-size: 13px;
 }
@@ -112,6 +113,13 @@ $csrfToken = $csrfToken ?? '';
 .btn-whatsapp:hover {
     background-color: #128C7E;
     color: white;
+}
+
+/* Search input focus styling */
+.search-input:focus {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.15) !important;
+    outline: none;
 }
 
 /* Modal styles */
@@ -157,7 +165,7 @@ $csrfToken = $csrfToken ?? '';
 <div class="container-fluid py-4 pb-5 mb-5" style="max-width: 800px; margin: 0 auto;">
     
     <!-- Filter Tabs -->
-    <ul class="nav nav-pills mb-4 overflow-auto flex-nowrap" id="customerTabs" role="tablist" style="scrollbar-width: none;">
+    <ul class="nav nav-pills mb-3 overflow-auto flex-nowrap" id="customerTabs" role="tablist" style="scrollbar-width: none;">
         <li class="nav-item" role="presentation">
             <button class="nav-link active whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-all" type="button" role="tab" onclick="filterCustomers('all')">Semua</button>
         </li>
@@ -175,6 +183,12 @@ $csrfToken = $csrfToken ?? '';
         </li>
     </ul>
 
+    <!-- Search Box -->
+    <div class="search-wrapper" style="position: relative; margin-bottom: 20px;">
+        <i class="bi bi-search search-icon" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 14px;"></i>
+        <input type="text" id="customerSearchInput" class="search-input" placeholder="Cari nama, nomor HP, nomor meter PLN, nama asli PLN..." onkeyup="searchCustomers()" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 16px 10px 42px; font-size: 14px; color: var(--text-primary); width: 100%; transition: all 0.2s ease;">
+    </div>
+
     <!-- Customer List -->
     <div id="customer-list">
         <?php if(empty($customers)): ?>
@@ -190,7 +204,11 @@ $csrfToken = $csrfToken ?? '';
                 else if($c['type'] == 'game') { $iconClass = 'icon-game'; $iconBi = 'bi-controller'; }
                 else if($c['type'] == 'tv') { $iconClass = 'icon-tv'; $iconBi = 'bi-tv'; }
             ?>
-            <div class="customer-card customer-item" data-type="<?= $c['type'] ?>">
+            <div class="customer-card customer-item" 
+                 data-type="<?= $c['type'] ?>"
+                 data-no="<?= htmlspecialchars(strtolower($c['customer_no'] ?: '')) ?>"
+                 data-name="<?= htmlspecialchars(strtolower($c['customer_name'] ?: '')) ?>"
+                 data-pln-name="<?= htmlspecialchars(strtolower($c['pln_name'] ?? '')) ?>">
                 <div class="customer-icon <?= $iconClass ?>">
                     <i class="bi <?= $iconBi ?>"></i>
                 </div>
@@ -422,10 +440,46 @@ async function cekNamaPln() {
     btn.innerText = originalText;
 }
 
+let activeFilterType = 'all';
+
 function filterCustomers(type) {
+    activeFilterType = type;
+    applyFilterAndSearch();
+}
+
+function searchCustomers() {
+    applyFilterAndSearch();
+}
+
+function applyFilterAndSearch() {
+    const query = document.getElementById('customerSearchInput').value.toLowerCase().trim();
+    const keywords = query ? query.split(/\s+/) : [];
     const items = document.querySelectorAll('.customer-item');
+
     items.forEach(item => {
-        if(type === 'all' || item.dataset.type === type) {
+        // 1. Check tab filter type
+        const matchesType = (activeFilterType === 'all' || item.dataset.type === activeFilterType);
+        if (!matchesType) {
+            item.style.display = 'none';
+            return;
+        }
+
+        // 2. Check search query keywords
+        if (keywords.length === 0) {
+            item.style.display = 'flex';
+            return;
+        }
+
+        const no = item.dataset.no || '';
+        const name = item.dataset.name || '';
+        const plnName = item.dataset.plnName || '';
+
+        // All keywords must be found (AND relationship) in at least one of the fields
+        const matchesSearch = keywords.every(keyword => {
+            return no.includes(keyword) || name.includes(keyword) || plnName.includes(keyword);
+        });
+
+        if (matchesSearch) {
             item.style.display = 'flex';
         } else {
             item.style.display = 'none';
