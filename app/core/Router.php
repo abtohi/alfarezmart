@@ -12,7 +12,7 @@ if (!class_exists('Router')) {
     /**
      * Register a GET route
      */
-    public function get($path, $handler)
+    public function get(string $path, mixed $handler)
     {
         $this->routes['GET'][$path] = $handler;
     }
@@ -20,7 +20,7 @@ if (!class_exists('Router')) {
     /**
      * Register a POST route
      */
-    public function post($path, $handler)
+    public function post(string $path, mixed $handler)
     {
         $this->routes['POST'][$path] = $handler;
     }
@@ -28,7 +28,7 @@ if (!class_exists('Router')) {
     /**
      * Register a PUT route (via POST with _method)
      */
-    public function put($path, $handler)
+    public function put(string $path, mixed $handler)
     {
         $this->routes['PUT'][$path] = $handler;
     }
@@ -36,7 +36,7 @@ if (!class_exists('Router')) {
     /**
      * Register a DELETE route (via POST with _method)
      */
-    public function delete($path, $handler)
+    public function delete(string $path, mixed $handler)
     {
         $this->routes['DELETE'][$path] = $handler;
     }
@@ -130,7 +130,7 @@ if (!class_exists('Router')) {
     /**
      * Call controller method
      */
-    private function callHandler($handler, $params = [])
+    private function callHandler(mixed $handler, array $params = [])
     {
         if (is_string($handler)) {
             list($controllerName, $method) = explode('@', $handler);

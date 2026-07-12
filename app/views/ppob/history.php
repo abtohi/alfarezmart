@@ -249,7 +249,7 @@
 
                     if (trx.status === 'failed' && (raw.wa || raw.tele)) {
                         const trxIdText = trx.digiflazz_trx_id || trx.ref_id;
-                        const msg = `S2.${trx.customer_no}, ${fullDateStr} trx Id: ${trxIdText}, gagal, bisa dibantu infokan alasan gagalnya?`;
+                        const msg = `${trx.buyer_sku_code}.${trx.customer_no}, ${fullDateStr} trx Id: ${trxIdText}, gagal, bisa dibantu infokan alasan gagalnya?`;
                         const encodedMsg = encodeURIComponent(msg);
                         complaintBtns += '<div style="margin-top:6px;display:flex;gap:4px;justify-content:center;">';
                         if (raw.wa) {
