@@ -957,6 +957,7 @@
                     <input type="text" class="form-control glass-input" id="savePlnContactAlias" placeholder="Contoh: Rumah Budi">
                     <input type="hidden" id="savePlnContactNo">
                     <input type="hidden" id="savePlnContactDefaultName">
+                    <input type="hidden" id="savePlnContactPower">
                 </div>
                 
                 <div class="d-flex gap-2">
@@ -2748,12 +2749,18 @@ async function promptSavePlnContact(customerNo, defaultName) {
             if (exists) return; // Don't show if already saved
         }
         
+        // Grab parsed PLN details from the UI if available
+        let plnNameStr = document.getElementById('result-pln-name')?.innerText || defaultName;
+        if(plnNameStr === '-') plnNameStr = defaultName;
+        const plnPowerStr = document.getElementById('result-pln-power')?.innerText || '';
+        
         // Populate modal data and show it
         setTimeout(() => {
             document.getElementById('savePlnContactMessage').innerHTML = `Nomor PLN <b>${customerNo}</b> belum ada di daftar pelanggan. Apakah Anda ingin menyimpannya?`;
-            document.getElementById('savePlnContactAlias').value = defaultName || '';
+            document.getElementById('savePlnContactAlias').value = plnNameStr || '';
             document.getElementById('savePlnContactNo').value = customerNo;
-            document.getElementById('savePlnContactDefaultName').value = defaultName || '';
+            document.getElementById('savePlnContactDefaultName').value = plnNameStr || '';
+            document.getElementById('savePlnContactPower').value = plnPowerStr !== '-' ? plnPowerStr : '';
             
             const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('savePlnContactModal'));
             modal.show();
@@ -2767,6 +2774,7 @@ async function executeSavePlnContact() {
     const alias = document.getElementById('savePlnContactAlias').value;
     const customerNo = document.getElementById('savePlnContactNo').value;
     const defaultName = document.getElementById('savePlnContactDefaultName').value;
+    const power = document.getElementById('savePlnContactPower').value;
     const btn = document.getElementById('btnExecuteSavePln');
     
     if (alias === null || alias.trim() === '') {
@@ -2784,6 +2792,7 @@ async function executeSavePlnContact() {
         formData.append('customer_no', customerNo);
         formData.append('customer_name', alias.trim());
         formData.append('pln_name', defaultName || '');
+        formData.append('pln_power', power || '');
         formData.append('csrf_token', csrfToken);
         
         const saveRes = await fetch('<?= BASE_URL ?>api/ppob/customers', {

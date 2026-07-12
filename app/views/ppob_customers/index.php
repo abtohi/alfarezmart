@@ -135,6 +135,40 @@ $csrfToken = $csrfToken ?? '';
     color: var(--text-secondary) !important;
     opacity: 0.7 !important;
 }
+.type-radio {
+    display: none;
+}
+.type-label {
+    padding: 10px 8px;
+    border: 1.5px solid var(--border-color);
+    border-radius: 12px;
+    cursor: pointer;
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+.type-label i {
+    font-size: 16px;
+}
+.type-label:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+}
+.type-radio:checked + .type-label {
+    background: rgba(37, 99, 235, 0.08);
+    color: var(--primary);
+    border-color: var(--primary);
+    box-shadow: inset 0 0 0 1px var(--primary);
+}
 .glass-input:focus {
     outline: none;
     border-color: var(--primary);
@@ -255,14 +289,21 @@ $csrfToken = $csrfToken ?? '';
                     <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
                     <input type="hidden" name="id" id="customerId">
                     
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase">Klasifikasi</label>
-                        <select class="form-select glass-input" name="type" id="customerType" onchange="toggleFields()">
-                            <option value="hp">Nomor HP</option>
-                            <option value="pln">PLN</option>
-                            <option value="game">Game (ID User)</option>
-                            <option value="tv">TV Voucher</option>
-                        </select>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-2">Klasifikasi</label>
+                        <div class="d-flex gap-2">
+                            <input type="radio" class="type-radio" name="type" id="type-hp" value="hp" checked onchange="toggleFields()">
+                            <label class="type-label" for="type-hp"><i class="bi bi-phone"></i><span>NO. HP</span></label>
+
+                            <input type="radio" class="type-radio" name="type" id="type-pln" value="pln" onchange="toggleFields()">
+                            <label class="type-label" for="type-pln"><i class="bi bi-lightning-charge"></i><span>PLN</span></label>
+
+                            <input type="radio" class="type-radio" name="type" id="type-game" value="game" onchange="toggleFields()">
+                            <label class="type-label" for="type-game"><i class="bi bi-controller"></i><span>GAME</span></label>
+
+                            <input type="radio" class="type-radio" name="type" id="type-tv" value="tv" onchange="toggleFields()">
+                            <label class="type-label" for="type-tv"><i class="bi bi-tv"></i><span>TV</span></label>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -349,7 +390,8 @@ function openAddModal() {
 function editCustomer(c) {
     document.getElementById('customerForm').reset();
     document.getElementById('customerId').value = c.id;
-    document.getElementById('customerType').value = c.type;
+    const typeRadio = document.querySelector(`input[name="type"][value="${c.type}"]`);
+    if(typeRadio) typeRadio.checked = true;
     document.getElementById('customerNo').value = c.customer_no;
     document.getElementById('customerName').value = c.customer_name;
     document.getElementById('modalTitle').innerText = 'Edit Pelanggan';
@@ -364,7 +406,8 @@ function editCustomer(c) {
 }
 
 function toggleFields() {
-    const type = document.getElementById('customerType').value;
+    const typeRadio = document.querySelector('input[name="type"]:checked');
+    const type = typeRadio ? typeRadio.value : 'hp';
     const lblNo = document.getElementById('lblCustomerNo');
     const lblName = document.getElementById('lblCustomerName');
     const btnCek = document.getElementById('btnCekPln');
