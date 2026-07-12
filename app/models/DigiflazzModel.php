@@ -474,22 +474,33 @@ class DigiflazzModel {
      * Get recent transactions for a specific seller
      */
     public function getSellerHistory(string $sellerName, int $page = 1, int $limit = 10) {
-        // Analytics
         $stmtStat = $this->db->prepare("
-            SELECT 
-                COUNT(*) as total_trx,
-                SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as total_success,
-                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as total_failed,
-                SUM(CASE WHEN category = 'pln' THEN 1 ELSE 0 END) as cat_pln,
-                SUM(CASE WHEN category = 'data' THEN 1 ELSE 0 END) as cat_data,
-                SUM(CASE WHEN category = 'pulsa' THEN 1 ELSE 0 END) as cat_pulsa,
-                SUM(CASE WHEN category = 'game' THEN 1 ELSE 0 END) as cat_game,
-                SUM(CASE WHEN category NOT IN ('pln','data','pulsa','game') THEN 1 ELSE 0 END) as cat_other
+            SELECT category, status, COUNT(*) as count
             FROM digi_transactions
             WHERE seller_name = :seller AND status IN ('success', 'failed')
+            GROUP BY category, status
         ");
         $stmtStat->execute(['seller' => $sellerName]);
-        $analytics = $stmtStat->fetch(PDO::FETCH_ASSOC);
+        $rows = $stmtStat->fetchAll(PDO::FETCH_ASSOC);
+
+        $totalTrx = 0;
+        $totalSuccess = 0;
+        $totalFailed = 0;
+        $categories = [];
+
+        foreach ($rows as $row) {
+            $cat = strtoupper(str_replace('_', ' ', $row['category']));
+            $count = (int)$row['count'];
+            $totalTrx += $count;
+            if ($row['status'] === 'success') $totalSuccess += $count;
+            if ($row['status'] === 'failed') $totalFailed += $count;
+            
+            if (!isset($categories[$cat])) $categories[$cat] = 0;
+            $categories[$cat] += $count;
+        }
+
+        // Sort categories by highest count
+        arsort($categories);
 
         // Pagination
         $offset = ($page - 1) * $limit;
@@ -515,16 +526,10 @@ class DigiflazzModel {
 
         return [
             'analytics' => [
-                'total' => (int)$analytics['total_trx'],
-                'success' => (int)$analytics['total_success'],
-                'failed' => (int)$analytics['total_failed'],
-                'categories' => [
-                    'PLN' => (int)$analytics['cat_pln'],
-                    'Data' => (int)$analytics['cat_data'],
-                    'Pulsa' => (int)$analytics['cat_pulsa'],
-                    'Game' => (int)$analytics['cat_game'],
-                    'Lainnya' => (int)$analytics['cat_other'],
-                ]
+                'total' => $totalTrx,
+                'success' => $totalSuccess,
+                'failed' => $totalFailed,
+                'categories' => $categories
             ],
             'pagination' => [
                 'total_records' => $totalRecords,

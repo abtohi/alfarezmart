@@ -1149,7 +1149,7 @@
                     <!-- Table -->
                     <div class="fw-bold mb-2 small text-uppercase text-muted">Detail Transaksi</div>
                     <div class="table-responsive" style="border:1px solid var(--border-color); border-radius:12px;">
-                        <table class="table table-borderless table-hover mb-0" style="font-size:12px; color:var(--text-primary);">
+                        <table class="table table-borderless table-hover mb-0" style="font-size:12px; color:var(--text-primary); --bs-table-bg: transparent; --bs-table-color: var(--text-primary);">
                             <thead style="background:var(--surface-3); border-bottom:1px solid var(--border-color);">
                                 <tr>
                                     <th class="py-2 text-muted">Waktu</th>
@@ -2033,7 +2033,9 @@ async function fetchSellerHistory(page) {
                         <td class="py-2 align-middle">${dateStr}</td>
                         <td class="py-2 align-middle">
                             <div class="fw-bold" style="color:var(--text-primary);">${trx.product_name}</div>
-                            <div class="text-muted" style="font-size:11px;">${trx.customer_no}</div>
+                            <div class="text-muted" style="font-size:11px;">
+                                <span class="badge bg-secondary" style="font-size:9px; padding:3px 5px;">${(trx.category || '').toUpperCase()}</span> ${trx.customer_no}
+                            </div>
                             ${failMsg}
                         </td>
                         <td class="py-2 text-end fw-bold align-middle">${formatRp(modal)}</td>
