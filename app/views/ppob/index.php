@@ -206,6 +206,58 @@
     transform: translateY(0);
 }
 
+/* Bank Selection Cards */
+.bank-option {
+    display: none;
+}
+.bank-card {
+    border: 1.5px solid var(--border-color, #e2e8f0);
+    border-radius: 12px;
+    padding: 14px 8px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--surface-1);
+    text-align: center;
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+.bank-card:hover {
+    border-color: var(--primary);
+    background: var(--surface-2);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.05);
+}
+.bank-option:checked + .bank-card {
+    border-color: var(--primary);
+    background: rgba(37, 99, 235, 0.08);
+    box-shadow: inset 0 0 0 1px var(--primary);
+}
+.bank-option:checked + .bank-card::before {
+    content: '\F26A'; /* bi-check-circle-fill */
+    font-family: bootstrap-icons;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    color: var(--primary);
+    font-size: 13px;
+}
+.bank-logo {
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+}
+.bank-desc {
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-weight: 500;
+}
+
 @media (max-width: 480px) {
     .ppob-hero {
         padding: 18px 20px;
@@ -704,17 +756,69 @@
                     <label class="form-label fw-bold small">Nominal Deposit (Min Rp 50.000)</label>
                     <input type="number" class="form-control glass-input" id="depo-amount" placeholder="50000">
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold small">Pilih Bank Tujuan</label>
-                    <select class="form-select glass-input" id="depo-bank">
-                        <option value="BCA">BCA</option>
-                        <option value="MANDIRI">MANDIRI</option>
-                        <option value="BRI">BRI</option>
-                        <option value="BNI">BNI</option>
-                        <option value="FLIP">FLIP (Gratis Biaya Admin)</option>
-                        <option value="SHOPEEPAY">SHOPEEPAY (Gratis Biaya Admin)</option>
-                        <option value="GOPAY">GOPAY (Gratis Biaya Admin)</option>
-                    </select>
+                <div class="mb-4">
+                    <label class="form-label fw-bold small mb-2">Pilih Metode Pembayaran</label>
+                    <div class="row g-2" id="depo-bank-options">
+                        <div class="col-4">
+                            <label class="w-100 mb-0 h-100">
+                                <input type="radio" name="depo_bank" value="BCA" class="bank-option" checked>
+                                <div class="bank-card">
+                                    <div class="bank-logo" style="color:#005E6A;">BCA</div>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="col-4">
+                            <label class="w-100 mb-0 h-100">
+                                <input type="radio" name="depo_bank" value="MANDIRI" class="bank-option">
+                                <div class="bank-card">
+                                    <div class="bank-logo" style="color:#F2A124;">MANDIRI</div>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="col-4">
+                            <label class="w-100 mb-0 h-100">
+                                <input type="radio" name="depo_bank" value="BRI" class="bank-option">
+                                <div class="bank-card">
+                                    <div class="bank-logo" style="color:#00529C;">BRI</div>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="col-4">
+                            <label class="w-100 mb-0 h-100">
+                                <input type="radio" name="depo_bank" value="BNI" class="bank-option">
+                                <div class="bank-card">
+                                    <div class="bank-logo" style="color:#F04A23;">BNI</div>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="col-4">
+                            <label class="w-100 mb-0 h-100">
+                                <input type="radio" name="depo_bank" value="FLIP" class="bank-option">
+                                <div class="bank-card">
+                                    <div class="bank-logo" style="color:#FD6542;">FLIP</div>
+                                    <div class="bank-desc">Bebas Admin</div>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="col-4">
+                            <label class="w-100 mb-0 h-100">
+                                <input type="radio" name="depo_bank" value="SHOPEEPAY" class="bank-option">
+                                <div class="bank-card">
+                                    <div class="bank-logo" style="color:#EE4D2D;">SHOPEE</div>
+                                    <div class="bank-desc">Bebas Admin</div>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <label class="w-100 mb-0">
+                                <input type="radio" name="depo_bank" value="GOPAY" class="bank-option">
+                                <div class="bank-card flex-row justify-content-center align-items-center py-3">
+                                    <div class="bank-logo me-2" style="color:#00A5CF;">GOPAY</div>
+                                    <div class="bank-desc mt-0">Bebas Admin</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 <div class="mb-4">
                     <label class="form-label fw-bold small">Nama Pemilik Rekening Anda <span class="text-danger">*</span></label>
@@ -1132,7 +1236,8 @@ function openDepositModal() {
 // 3. Request Deposit
 async function requestDeposit() {
     const amount = document.getElementById('depo-amount').value;
-    const bank = document.getElementById('depo-bank').value;
+    const bankRadio = document.querySelector('input[name="depo_bank"]:checked');
+    const bank = bankRadio ? bankRadio.value : '';
     const owner = document.getElementById('depo-owner').value;
     const btn = document.getElementById('btn-depo');
 
