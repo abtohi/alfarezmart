@@ -72,13 +72,14 @@ code {
                             <th>Kode SKU</th>
                             <th>Nama Produk</th>
                             <th>Tipe</th>
+                            <th>Seller</th>
                             <th>Harga Modal</th>
                             <th>Harga Jual</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td colspan="7" class="text-center py-5">
+                            <td colspan="8" class="text-center py-5">
                                 <span class="spinner-border text-primary mb-3"></span>
                                 <p class="text-muted">Memuat daftar harga...</p>
                             </td>
@@ -131,6 +132,25 @@ async function loadPrices() {
                     ? '<span class="badge bg-warning text-dark">Pasca</span>' 
                     : '<span class="badge bg-info text-dark">Pra</span>';
                 
+                let sellerCell = '<td class="text-muted" style="font-size:12px;">-</td>';
+                if (p.seller_name) {
+                    let srHtml = '';
+                    if (p.success_rate !== null && p.success_rate !== undefined) {
+                        let srColor = p.success_rate >= 80 ? '#10b981' : (p.success_rate >= 50 ? '#f59e0b' : '#ef4444');
+                        srHtml = `<div style="font-size:10px; color:${srColor}; font-weight:700;"><i class="bi bi-lightning-charge-fill"></i> ${p.success_rate}%</div>`;
+                    } else {
+                        srHtml = `<div style="font-size:10px; color: var(--text-muted); font-weight:600;"><i class="bi bi-lightning-charge-fill"></i> -</div>`;
+                    }
+                    sellerCell = `<td>
+                        <div style="display:flex; flex-direction:column; gap:2px;">
+                            <div style="font-size:11px; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:110px;" title="${p.seller_name}">
+                                <i class="bi bi-shop text-primary" style="font-size:0.65rem;"></i> ${p.seller_name}
+                            </div>
+                            ${srHtml}
+                        </div>
+                    </td>`;
+                }
+
                 tbody.append(`
                     <tr>
                         <td><span class="fw-bold">${p.category}</span></td>
@@ -138,6 +158,7 @@ async function loadPrices() {
                         <td><code>${p.buyer_sku_code}</code></td>
                         <td>${p.product_name}</td>
                         <td>${typeBadge}</td>
+                        ${sellerCell}
                         <td class="text-danger fw-bold">Rp${parseInt(p.seller_price).toLocaleString('id-ID')}</td>
                         <td class="text-success fw-bold">Rp${parseInt(p.sell_price).toLocaleString('id-ID')}</td>
                     </tr>
@@ -151,7 +172,7 @@ async function loadPrices() {
             });
         }
     } catch(e) {
-        $('#priceTable tbody').html('<tr><td colspan="7" class="text-center text-danger">Gagal memuat data</td></tr>');
+        $('#priceTable tbody').html('<tr><td colspan="8" class="text-center text-danger">Gagal memuat data</td></tr>');
     }
 }
 

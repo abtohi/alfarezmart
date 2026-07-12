@@ -1710,6 +1710,25 @@ function renderProducts(products) {
 
         const encodedProduct = encodeURIComponent(JSON.stringify(p));
         
+        let sellerHtml = '';
+        if (p.seller_name) {
+            let successBadge = '';
+            if (p.success_rate !== null && p.success_rate !== undefined) {
+                let badgeColor = p.success_rate >= 80 ? '#10b981' : (p.success_rate >= 50 ? '#f59e0b' : '#ef4444');
+                successBadge = `<span style="color: ${badgeColor}; font-weight: 700; margin-left: 4px;" title="Success Rate: ${p.success_rate}%"><i class="bi bi-lightning-charge-fill" style="font-size: 0.6rem;"></i> ${p.success_rate}%</span>`;
+            } else {
+                successBadge = `<span class="text-muted" style="margin-left: 4px; font-weight: 700;" title="Success Rate: Belum Ada Transaksi"><i class="bi bi-lightning-charge-fill" style="font-size: 0.6rem;"></i> -</span>`;
+            }
+            
+            sellerHtml = `
+            <div class="mt-2" style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 6px; width: fit-content;">
+                <i class="bi bi-shop text-primary" style="font-size: 0.7rem;"></i>
+                <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary); max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.seller_name}">${p.seller_name}</span>
+                <div style="width: 1px; height: 10px; background: var(--border-color); margin: 0 2px;"></div>
+                ${successBadge}
+            </div>`;
+        }
+        
         card.innerHTML = `
             <button class="btn btn-sm position-absolute top-0 end-0 m-2" style="z-index: 2; padding: 4px 8px; border-radius: 8px; background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border-color);" onclick="openSetPriceModal(event, '${encodedProduct}')">
                 <i class="bi bi-gear-fill" style="font-size: 1rem;"></i>
@@ -1717,8 +1736,9 @@ function renderProducts(products) {
             <div class="pe-4">
                 <div class="prod-name">${p.product_name}</div>
                 <div class="prod-desc">${p.description || ''}</div>
+                ${sellerHtml}
             </div>
-            <div class="mt-2">
+            <div class="mt-2 pt-2 border-top border-secondary border-opacity-10">
                 ${priceHtml}
             </div>
         `;

@@ -16,17 +16,27 @@ class DigiflazzModel {
      * Sync Price List from Digiflazz API response
      */
     public function syncPriceList(array $productsData, string $type = 'prepaid') {
+        // Auto-migrate: ensure seller_name column exists
+        try {
+            $check = $this->db->query("SHOW COLUMNS FROM digi_products LIKE 'seller_name'");
+            if ($check->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE digi_products ADD COLUMN seller_name VARCHAR(100) NULL AFTER brand");
+            }
+        } catch (\Exception $e) {
+            error_log("[DigiflazzModel] seller_name migration error: " . $e->getMessage());
+        }
+
         $this->db->beginTransaction();
         try {
             $stmt = $this->db->prepare("
                 INSERT INTO digi_products (
                     buyer_sku_code, product_name, category, sub_category, brand, type, 
                     seller_price, buyer_product_status, seller_product_status, 
-                    description, start_cut_off, end_cut_off, last_synced_at
+                    description, start_cut_off, end_cut_off, last_synced_at, seller_name
                 ) VALUES (
                     :sku, :name, :category, :sub_cat, :brand, :type, 
                     :price, :buyer_status, :seller_status, 
-                    :desc, :start_cut, :end_cut, NOW()
+                    :desc, :start_cut, :end_cut, NOW(), :seller_name
                 ) ON DUPLICATE KEY UPDATE 
                     product_name = VALUES(product_name),
                     category = VALUES(category),
@@ -38,7 +48,8 @@ class DigiflazzModel {
                     description = VALUES(description),
                     start_cut_off = VALUES(start_cut_off),
                     end_cut_off = VALUES(end_cut_off),
-                    last_synced_at = NOW()
+                    last_synced_at = NOW(),
+                    seller_name = VALUES(seller_name)
             ");
 
             foreach ($productsData as $item) {
@@ -59,7 +70,8 @@ class DigiflazzModel {
                     'seller_status' => $item['seller_product_status'] ? 1 : 0,
                     'desc' => $item['desc'] ?? '',
                     'start_cut' => $item['start_cut_off'] ?? '',
-                    'end_cut' => $item['end_cut_off'] ?? ''
+                    'end_cut' => $item['end_cut_off'] ?? '',
+                    'seller_name' => $item['seller_name'] ?? null
                 ]);
             }
 
@@ -398,5 +410,34 @@ class DigiflazzModel {
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get success rates for all sellers
+     */
+    public function getSellerSuccessRates() {
+        try {
+            $stmt = $this->db->query("
+                SELECT p.seller_name,
+                       COUNT(t.id) as total,
+                       SUM(CASE WHEN t.status = 'success' THEN 1 ELSE 0 END) as success
+                FROM digi_transactions t
+                JOIN digi_products p ON t.buyer_sku_code = p.buyer_sku_code
+                WHERE p.seller_name IS NOT NULL AND p.seller_name != '' 
+                  AND t.status IN ('success', 'failed')
+                GROUP BY p.seller_name
+            ");
+            $rates = [];
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $rates[$row['seller_name']] = [
+                    'total' => (int)$row['total'],
+                    'success' => (int)$row['success']
+                ];
+            }
+            return $rates;
+        } catch (\Exception $e) {
+            error_log("[DigiflazzModel] getSellerSuccessRates error: " . $e->getMessage());
+            return [];
+        }
     }
 }

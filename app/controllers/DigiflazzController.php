@@ -88,6 +88,16 @@ class DigiflazzController extends Controller {
         $type = $_GET['type'] ?? 'prepaid';
         
         $products = $this->digiModel->getProducts($category, $brand, $type);
+        $rates = $this->digiModel->getSellerSuccessRates();
+        
+        foreach ($products as &$p) {
+            $seller = $p['seller_name'] ?? null;
+            if ($seller && isset($rates[$seller]) && $rates[$seller]['total'] > 0) {
+                $p['success_rate'] = round(($rates[$seller]['success'] / $rates[$seller]['total']) * 100, 1);
+            } else {
+                $p['success_rate'] = null;
+            }
+        }
         
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'data' => $products]);
@@ -100,6 +110,16 @@ class DigiflazzController extends Controller {
         // Return all products for datatable
         $stmt = $this->digiModel->db->query("SELECT * FROM digi_products WHERE is_active = 1 AND buyer_product_status = 1 ORDER BY category ASC, brand ASC");
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $rates = $this->digiModel->getSellerSuccessRates();
+        foreach ($products as &$p) {
+            $seller = $p['seller_name'] ?? null;
+            if ($seller && isset($rates[$seller]) && $rates[$seller]['total'] > 0) {
+                $p['success_rate'] = round(($rates[$seller]['success'] / $rates[$seller]['total']) * 100, 1);
+            } else {
+                $p['success_rate'] = null;
+            }
+        }
         
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'data' => $products]);
