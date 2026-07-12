@@ -233,11 +233,16 @@ class DigiflazzModel {
         $stmt->execute($params);
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Deduplicate products by product_name and seller_name
+        // Deduplicate products by product_name and seller_price, and ignore empty sellers
         $unique = [];
         $result = [];
         foreach ($products as $p) {
-            $key = trim($p['product_name']) . '|' . trim($p['seller_name']);
+            // Filter out products with no seller name
+            if (empty(trim($p['seller_name'] ?? ''))) {
+                continue;
+            }
+            
+            $key = trim($p['product_name']) . '|' . $p['seller_price'];
             if (!isset($unique[$key])) {
                 $unique[$key] = true;
                 $result[] = $p;
