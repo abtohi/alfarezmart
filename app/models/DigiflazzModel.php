@@ -55,7 +55,7 @@ class DigiflazzModel {
             foreach ($productsData as $item) {
                 // Determine normalized category
                 $category = $this->normalizeCategory($item['category'] ?? '');
-                $subCat = $this->determineSubCategory($category, $item['product_name']);
+                $subCat = $this->determineSubCategory($category, $item['product_name'] ?? '');
                 $price = $item['price'] ?? $item['admin'] ?? 0;
                 
                 $stmt->execute([
