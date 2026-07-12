@@ -129,6 +129,8 @@ class DigiflazzController extends Controller {
     public function apiSellerHistory() {
         AuthController::requireAuth();
         $seller = $_GET['seller'] ?? '';
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        if ($page < 1) $page = 1;
         
         if (empty($seller)) {
             header('Content-Type: application/json');
@@ -136,7 +138,7 @@ class DigiflazzController extends Controller {
             exit;
         }
 
-        $history = $this->digiModel->getSellerHistory($seller);
+        $history = $this->digiModel->getSellerHistory($seller, $page);
         
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'data' => $history]);

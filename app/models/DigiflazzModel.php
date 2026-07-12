@@ -473,17 +473,66 @@ class DigiflazzModel {
     /**
      * Get recent transactions for a specific seller
      */
-    public function getSellerHistory(string $sellerName, int $limit = 10) {
+    public function getSellerHistory(string $sellerName, int $page = 1, int $limit = 10) {
+        // Analytics
+        $stmtStat = $this->db->prepare("
+            SELECT 
+                COUNT(*) as total_trx,
+                SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as total_success,
+                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as total_failed,
+                SUM(CASE WHEN category = 'pln' THEN 1 ELSE 0 END) as cat_pln,
+                SUM(CASE WHEN category = 'data' THEN 1 ELSE 0 END) as cat_data,
+                SUM(CASE WHEN category = 'pulsa' THEN 1 ELSE 0 END) as cat_pulsa,
+                SUM(CASE WHEN category = 'game' THEN 1 ELSE 0 END) as cat_game,
+                SUM(CASE WHEN category NOT IN ('pln','data','pulsa','game') THEN 1 ELSE 0 END) as cat_other
+            FROM digi_transactions
+            WHERE seller_name = :seller AND status IN ('success', 'failed')
+        ");
+        $stmtStat->execute(['seller' => $sellerName]);
+        $analytics = $stmtStat->fetch(PDO::FETCH_ASSOC);
+
+        // Pagination
+        $offset = ($page - 1) * $limit;
+        
         $stmt = $this->db->prepare("
-            SELECT customer_no, status, created_at, product_name, seller_name, message
+            SELECT customer_no, status, created_at, product_name, seller_name, message, modal_price, sell_price, profit, category
             FROM digi_transactions
             WHERE seller_name = :seller
             ORDER BY created_at DESC
-            LIMIT :limit
+            LIMIT :limit OFFSET :offset
         ");
         $stmt->bindValue(':seller', $sellerName);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Count total for pagination
+        $stmtTotal = $this->db->prepare("SELECT COUNT(*) FROM digi_transactions WHERE seller_name = :seller");
+        $stmtTotal->execute(['seller' => $sellerName]);
+        $totalRecords = $stmtTotal->fetchColumn();
+        $totalPages = ceil($totalRecords / $limit);
+
+        return [
+            'analytics' => [
+                'total' => (int)$analytics['total_trx'],
+                'success' => (int)$analytics['total_success'],
+                'failed' => (int)$analytics['total_failed'],
+                'categories' => [
+                    'PLN' => (int)$analytics['cat_pln'],
+                    'Data' => (int)$analytics['cat_data'],
+                    'Pulsa' => (int)$analytics['cat_pulsa'],
+                    'Game' => (int)$analytics['cat_game'],
+                    'Lainnya' => (int)$analytics['cat_other'],
+                ]
+            ],
+            'pagination' => [
+                'total_records' => $totalRecords,
+                'total_pages' => $totalPages,
+                'current_page' => $page,
+                'limit' => $limit
+            ],
+            'data' => $data
+        ];
     }
 }

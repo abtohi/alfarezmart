@@ -1104,19 +1104,77 @@
 
 <!-- Seller History Modal -->
 <div class="modal fade" id="sellerHistoryModal" tabindex="-1" style="z-index: 1060;">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content" style="border-radius: 20px; border: none; background: var(--surface-1);">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Riwayat Seller: <span id="sh-seller-name" class="text-primary"></span></h5>
+                <h5 class="modal-title fw-bold">Riwayat & Analisis Seller: <span id="sh-seller-name" class="text-primary"></span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
             </div>
             <div class="modal-body p-4 pt-3">
-                <div id="sh-loading" class="text-center py-4" style="display:none;">
+                <div id="sh-loading" class="text-center py-5">
                     <span class="spinner-border text-primary"></span>
-                    <div class="text-muted small mt-2">Memuat riwayat transaksi...</div>
+                    <div class="text-muted small mt-2">Memuat riwayat & analitik...</div>
                 </div>
-                <div id="sh-list" class="d-flex flex-column gap-2">
-                    <!-- History will be injected here -->
+                
+                <div id="sh-content" style="display:none;">
+                    <!-- Analytics -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3 h-100" style="background:var(--surface-2); border:1px solid var(--border-color);">
+                                <div class="fw-bold mb-3 small text-uppercase text-muted">Success Rate</div>
+                                <div class="d-flex align-items-center mb-2">
+                                    <h3 class="m-0 me-2" id="sh-stat-total" style="color:var(--text-primary);">0</h3> 
+                                    <span class="text-muted small">Total Transaksi</span>
+                                </div>
+                                <div class="progress mb-2" style="height: 12px; background:var(--danger-bg); border-radius: 6px; overflow: hidden;">
+                                    <div class="progress-bar bg-success" id="sh-bar-success" role="progressbar" style="width: 0%"></div>
+                                    <div class="progress-bar bg-danger" id="sh-bar-failed" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <div class="d-flex justify-content-between small fw-bold">
+                                    <span class="text-success" id="sh-txt-success">Sukses: 0 (0%)</span>
+                                    <span class="text-danger" id="sh-txt-failed">Gagal: 0 (0%)</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 rounded-3 h-100" style="background:var(--surface-2); border:1px solid var(--border-color);">
+                                <div class="fw-bold mb-3 small text-uppercase text-muted">Kategori Transaksi</div>
+                                <div id="sh-cat-bars" class="d-flex flex-column gap-2">
+                                    <!-- Rendered via JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Table -->
+                    <div class="fw-bold mb-2 small text-uppercase text-muted">Detail Transaksi</div>
+                    <div class="table-responsive" style="border:1px solid var(--border-color); border-radius:12px;">
+                        <table class="table table-borderless table-hover mb-0" style="font-size:12px; color:var(--text-primary);">
+                            <thead style="background:var(--surface-3); border-bottom:1px solid var(--border-color);">
+                                <tr>
+                                    <th class="py-2 text-muted">Waktu</th>
+                                    <th class="py-2 text-muted">Produk / Tujuan</th>
+                                    <th class="py-2 text-end text-muted">Modal</th>
+                                    <th class="py-2 text-end text-muted">Jual</th>
+                                    <th class="py-2 text-end text-muted">Selisih</th>
+                                    <th class="py-2 text-end text-muted">Markup(%)</th>
+                                    <th class="py-2 text-center text-muted">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sh-list">
+                                <!-- JS injected -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div class="small text-muted" id="sh-page-info">Halaman 1 dari 1</div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold" id="sh-btn-prev" onclick="changeSellerHistoryPage(-1)">Sebelumnya</button>
+                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" id="sh-btn-next" onclick="changeSellerHistoryPage(1)">Berikutnya</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1877,51 +1935,131 @@ function renderProducts(products) {
 }
 
 // Open Seller History Modal
+let currentSellerPage = 1;
+let currentSellerName = '';
+
 async function openSellerHistory(e, sellerName) {
-    e.stopPropagation(); // prevent confirming purchase
+    if(e) e.stopPropagation(); // prevent confirming purchase
     if (!sellerName) return;
 
+    currentSellerName = sellerName;
+    currentSellerPage = 1;
     document.getElementById('sh-seller-name').innerText = sellerName;
-    const list = document.getElementById('sh-list');
-    const loading = document.getElementById('sh-loading');
-    
-    list.innerHTML = '';
-    loading.style.display = 'block';
     
     bootstrap.Modal.getOrCreateInstance(document.getElementById('sellerHistoryModal')).show();
+    
+    await fetchSellerHistory(currentSellerPage);
+}
+
+async function changeSellerHistoryPage(dir) {
+    currentSellerPage += dir;
+    if (currentSellerPage < 1) currentSellerPage = 1;
+    await fetchSellerHistory(currentSellerPage);
+}
+
+async function fetchSellerHistory(page) {
+    const list = document.getElementById('sh-list');
+    const loading = document.getElementById('sh-loading');
+    const content = document.getElementById('sh-content');
+    const btnPrev = document.getElementById('sh-btn-prev');
+    const btnNext = document.getElementById('sh-btn-next');
+    
+    loading.style.display = 'block';
+    content.style.display = 'none';
 
     try {
-        const res = await fetch(`<?= BASE_URL ?>api/ppob/seller-history?seller=${encodeURIComponent(sellerName)}`);
+        const res = await fetch(`<?= BASE_URL ?>api/ppob/seller-history?seller=${encodeURIComponent(currentSellerName)}&page=${page}`);
         const data = await res.json();
         
         loading.style.display = 'none';
+        content.style.display = 'block';
         
-        if (data.success && data.data && data.data.length > 0) {
-            data.data.forEach(trx => {
-                let badgeClass = trx.status === 'success' || trx.status === 'sukses' ? 'bg-success' : (trx.status === 'pending' || trx.status === 'processing' ? 'bg-warning text-dark' : 'bg-danger');
-                let d = new Date(trx.created_at);
-                let dateStr = d.toLocaleDateString('id-ID', {day: '2-digit', month: 'short'}) + ' ' + d.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
-                let failMsg = '';
-                if ((trx.status === 'gagal' || trx.status === 'failed') && trx.message) {
-                    failMsg = `<div class="text-danger mt-1" style="font-size:10px; font-style:italic;"><i class="bi bi-exclamation-circle"></i> ${trx.message}</div>`;
+        if (data.success && data.data) {
+            // Render Analytics
+            const analytics = data.data.analytics;
+            document.getElementById('sh-stat-total').innerText = formatRp(analytics.total).replace('Rp', '');
+            
+            const total = analytics.total || 1; // prevent div zero
+            const pSuccess = Math.round((analytics.success / total) * 100);
+            const pFailed = Math.round((analytics.failed / total) * 100);
+            
+            document.getElementById('sh-bar-success').style.width = pSuccess + '%';
+            document.getElementById('sh-bar-failed').style.width = pFailed + '%';
+            
+            document.getElementById('sh-txt-success').innerText = `Sukses: ${analytics.success} (${pSuccess}%)`;
+            document.getElementById('sh-txt-failed').innerText = `Gagal: ${analytics.failed} (${pFailed}%)`;
+            
+            // Category breakdown
+            let catHtml = '';
+            for (const [catName, count] of Object.entries(analytics.categories)) {
+                if(count > 0) {
+                    const pCat = Math.round((count / total) * 100);
+                    catHtml += `
+                    <div class="d-flex align-items-center mb-1" style="font-size:11px;">
+                        <div style="width:60px;" class="fw-bold">${catName}</div>
+                        <div class="flex-grow-1 mx-2">
+                            <div class="progress" style="height:6px; background:var(--surface-3); border-radius:3px;">
+                                <div class="progress-bar bg-primary" style="width:${pCat}%; border-radius:3px;"></div>
+                            </div>
+                        </div>
+                        <div style="width:30px; text-align:right;" class="text-muted">${count}</div>
+                    </div>`;
                 }
+            }
+            if(!catHtml) catHtml = '<div class="text-muted small">Belum ada kategori.</div>';
+            document.getElementById('sh-cat-bars').innerHTML = catHtml;
+            
+            // Render Table
+            list.innerHTML = '';
+            if (data.data.data && data.data.data.length > 0) {
+                data.data.data.forEach(trx => {
+                    let badgeClass = trx.status === 'success' || trx.status === 'sukses' ? 'bg-success' : (trx.status === 'pending' || trx.status === 'processing' ? 'bg-warning text-dark' : 'bg-danger');
+                    let d = new Date(trx.created_at);
+                    let dateStr = d.toLocaleDateString('id-ID', {day: '2-digit', month: 'short'}) + '<br><small class="text-muted">' + d.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) + '</small>';
+                    
+                    let failMsg = '';
+                    if ((trx.status === 'gagal' || trx.status === 'failed') && trx.message) {
+                        failMsg = `<div class="text-danger mt-1" style="font-size:10px; font-style:italic;"><i class="bi bi-exclamation-circle"></i> ${trx.message}</div>`;
+                    }
+                    
+                    let modal = parseInt(trx.modal_price || 0);
+                    let jual = parseInt(trx.sell_price || 0);
+                    let profit = parseInt(trx.profit || 0);
+                    let markupPct = modal > 0 ? ((profit / modal) * 100).toFixed(1) : 0;
+                    let markupColor = profit > 0 ? 'var(--success)' : (profit < 0 ? 'var(--danger)' : 'var(--text-muted)');
 
-                list.innerHTML += `
-                <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center mb-1" style="background:var(--surface-2);">
-                    <div>
-                        <div class="fw-bold mb-1" style="font-size:12px; color:var(--text-primary);">${trx.product_name}</div>
-                        <div class="text-muted" style="font-size:11px;">${trx.customer_no} • ${dateStr}</div>
-                        ${failMsg}
-                    </div>
-                    <span class="badge ${badgeClass}" style="font-size:10px;">${trx.status.toUpperCase()}</span>
-                </div>`;
-            });
-        } else {
-            list.innerHTML = '<div class="text-center text-muted small py-4">Belum ada riwayat transaksi.</div>';
+                    list.innerHTML += `
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td class="py-2 align-middle">${dateStr}</td>
+                        <td class="py-2 align-middle">
+                            <div class="fw-bold" style="color:var(--text-primary);">${trx.product_name}</div>
+                            <div class="text-muted" style="font-size:11px;">${trx.customer_no}</div>
+                            ${failMsg}
+                        </td>
+                        <td class="py-2 text-end fw-bold align-middle">${formatRp(modal)}</td>
+                        <td class="py-2 text-end fw-bold align-middle" style="color:var(--primary);">${formatRp(jual)}</td>
+                        <td class="py-2 text-end fw-bold align-middle" style="color:${markupColor};">${formatRp(profit)}</td>
+                        <td class="py-2 text-end fw-bold align-middle" style="color:${markupColor};">${markupPct}%</td>
+                        <td class="py-2 text-center align-middle">
+                            <span class="badge ${badgeClass}" style="font-size:10px; padding:4px 8px;">${trx.status.toUpperCase()}</span>
+                        </td>
+                    </tr>`;
+                });
+            } else {
+                list.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted small">Belum ada riwayat transaksi.</td></tr>';
+            }
+            
+            // Pagination config
+            const p = data.data.pagination;
+            document.getElementById('sh-page-info').innerText = `Halaman ${p.current_page} dari ${p.total_pages} (${p.total_records} trx)`;
+            btnPrev.disabled = p.current_page <= 1;
+            btnNext.disabled = p.current_page >= p.total_pages;
         }
     } catch (err) {
+        console.error(err);
         loading.style.display = 'none';
-        list.innerHTML = '<div class="text-center text-danger small py-4">Gagal memuat riwayat.</div>';
+        content.style.display = 'block';
+        list.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger small">Gagal memuat riwayat.</td></tr>';
     }
 }
 
