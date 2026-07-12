@@ -1795,12 +1795,17 @@ async function openSellerHistory(e, sellerName) {
                 let badgeClass = trx.status === 'success' || trx.status === 'sukses' ? 'bg-success' : (trx.status === 'pending' || trx.status === 'processing' ? 'bg-warning text-dark' : 'bg-danger');
                 let d = new Date(trx.created_at);
                 let dateStr = d.toLocaleDateString('id-ID', {day: '2-digit', month: 'short'}) + ' ' + d.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
-                
+                let failMsg = '';
+                if ((trx.status === 'gagal' || trx.status === 'failed') && trx.message) {
+                    failMsg = `<div class="text-danger mt-1" style="font-size:10px; font-style:italic;"><i class="bi bi-exclamation-circle"></i> ${trx.message}</div>`;
+                }
+
                 list.innerHTML += `
                 <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center mb-1" style="background:var(--surface-2);">
                     <div>
                         <div class="fw-bold mb-1" style="font-size:12px; color:var(--text-primary);">${trx.product_name}</div>
                         <div class="text-muted" style="font-size:11px;">${trx.customer_no} • ${dateStr}</div>
+                        ${failMsg}
                     </div>
                     <span class="badge ${badgeClass}" style="font-size:10px;">${trx.status.toUpperCase()}</span>
                 </div>`;

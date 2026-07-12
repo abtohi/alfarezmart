@@ -36,13 +36,15 @@ try {
         PDO::ATTR_TIMEOUT            => 10,
     ]);
 
-    // Check transaction schema
-    $stmt = $pdo->query("DESCRIBE digi_transactions");
-    echo "COLUMNS:\n";
-    print_r($stmt->fetchAll(PDO::FETCH_COLUMN));
+    $seller = 'BCA PULSA CV BALI CAKRA AMERTA';
+    $stmt = $pdo->prepare("SELECT * FROM digi_transactions WHERE seller_name = :s");
+    $stmt->execute(['s' => $seller]);
+    $res = $stmt->fetchAll();
     
-    echo "\nTRANSACTIONS:\n";
-    $stmt = $pdo->query("SELECT * FROM digi_transactions LIMIT 5");
+    echo "Found exactly matching: " . count($res) . "\n";
+    
+    $stmt = $pdo->prepare("SELECT seller_name, COUNT(*) FROM digi_transactions WHERE seller_name LIKE :s GROUP BY seller_name");
+    $stmt->execute(['s' => "%BCA PULSA%"]);
     print_r($stmt->fetchAll());
     
 } catch (PDOException $e) {

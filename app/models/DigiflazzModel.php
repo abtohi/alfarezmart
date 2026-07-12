@@ -458,7 +458,7 @@ class DigiflazzModel {
      */
     public function getSellerHistory(string $sellerName, int $limit = 10) {
         $stmt = $this->db->prepare("
-            SELECT customer_no, status, created_at, product_name, seller_name
+            SELECT customer_no, status, created_at, product_name, seller_name, message
             FROM digi_transactions
             WHERE seller_name = :seller
             ORDER BY created_at DESC
