@@ -997,6 +997,27 @@
     </div>
 </div>
 
+<!-- Seller History Modal -->
+<div class="modal fade" id="sellerHistoryModal" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 20px; border: none; background: var(--surface-1);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Riwayat Seller: <span id="sh-seller-name" class="text-primary"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
+            </div>
+            <div class="modal-body p-4 pt-3">
+                <div id="sh-loading" class="text-center py-4" style="display:none;">
+                    <span class="spinner-border text-primary"></span>
+                    <div class="text-muted small mt-2">Memuat riwayat transaksi...</div>
+                </div>
+                <div id="sh-list" class="d-flex flex-column gap-2">
+                    <!-- History will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Toast Container -->
 <div id="toast-container-ppob" style="position: fixed; top: 80px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 300px;">
 </div>
@@ -1713,19 +1734,22 @@ function renderProducts(products) {
         let sellerHtml = '';
         if (p.seller_name) {
             let successBadge = '';
-            if (p.success_rate !== null && p.success_rate !== undefined) {
-                let badgeColor = p.success_rate >= 80 ? '#10b981' : (p.success_rate >= 50 ? '#f59e0b' : '#ef4444');
-                successBadge = `<span style="color: ${badgeColor}; font-weight: 700; margin-left: 4px;" title="Success Rate: ${p.success_rate}%"><i class="bi bi-lightning-charge-fill" style="font-size: 0.6rem;"></i> ${p.success_rate}%</span>`;
+            let rawRate = (p.success_rate !== null && p.success_rate !== undefined) ? p.success_rate : null;
+            if (rawRate !== null) {
+                let badgeColor = rawRate >= 80 ? '#10b981' : (rawRate >= 50 ? '#f59e0b' : '#ef4444');
+                successBadge = `<span style="color: ${badgeColor}; font-weight: 700; margin-left: 3px;"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> ${rawRate}%</span>`;
             } else {
-                successBadge = `<span class="text-muted" style="margin-left: 4px; font-weight: 700;" title="Success Rate: Belum Ada Transaksi"><i class="bi bi-lightning-charge-fill" style="font-size: 0.6rem;"></i> -</span>`;
+                successBadge = `<span class="text-muted" style="margin-left: 3px; font-weight: 700;"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> -</span>`;
             }
             
             sellerHtml = `
-            <div class="mt-2" style="display: flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 6px; width: fit-content;">
-                <i class="bi bi-shop text-primary" style="font-size: 0.7rem;"></i>
-                <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-secondary); max-width: 90px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${p.seller_name}">${p.seller_name}</span>
-                <div style="width: 1px; height: 10px; background: var(--border-color); margin: 0 2px;"></div>
-                ${successBadge}
+            <div class="mt-2" style="font-size: 0.6rem; opacity: 0.85;">
+                <div onclick="openSellerHistory(event, '${p.seller_name}')" style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; background: var(--surface-1); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    <i class="bi bi-shop text-primary" style="font-size: 0.6rem;"></i>
+                    <span style="font-weight: 600; color: var(--text-secondary); max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.seller_name}</span>
+                    <div style="width: 1px; height: 8px; background: var(--border-color); margin: 0 1px;"></div>
+                    ${successBadge}
+                </div>
             </div>`;
         }
         
@@ -1736,14 +1760,58 @@ function renderProducts(products) {
             <div class="pe-4">
                 <div class="prod-name">${p.product_name}</div>
                 <div class="prod-desc">${p.description || ''}</div>
-                ${sellerHtml}
             </div>
             <div class="mt-2 pt-2 border-top border-secondary border-opacity-10">
                 ${priceHtml}
+                ${sellerHtml}
             </div>
         `;
         grid.appendChild(card);
     });
+}
+
+// Open Seller History Modal
+async function openSellerHistory(e, sellerName) {
+    e.stopPropagation(); // prevent confirming purchase
+    if (!sellerName) return;
+
+    document.getElementById('sh-seller-name').innerText = sellerName;
+    const list = document.getElementById('sh-list');
+    const loading = document.getElementById('sh-loading');
+    
+    list.innerHTML = '';
+    loading.style.display = 'block';
+    
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('sellerHistoryModal')).show();
+
+    try {
+        const res = await fetch(`<?= BASE_URL ?>api/ppob/seller-history?seller=${encodeURIComponent(sellerName)}`);
+        const data = await res.json();
+        
+        loading.style.display = 'none';
+        
+        if (data.success && data.data && data.data.length > 0) {
+            data.data.forEach(trx => {
+                let badgeClass = trx.status === 'success' || trx.status === 'sukses' ? 'bg-success' : (trx.status === 'pending' || trx.status === 'processing' ? 'bg-warning text-dark' : 'bg-danger');
+                let d = new Date(trx.created_at);
+                let dateStr = d.toLocaleDateString('id-ID', {day: '2-digit', month: 'short'}) + ' ' + d.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+                
+                list.innerHTML += `
+                <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center mb-1" style="background:var(--surface-2);">
+                    <div>
+                        <div class="fw-bold mb-1" style="font-size:12px; color:var(--text-primary);">${trx.product_name}</div>
+                        <div class="text-muted" style="font-size:11px;">${trx.customer_no} • ${dateStr}</div>
+                    </div>
+                    <span class="badge ${badgeClass}" style="font-size:10px;">${trx.status.toUpperCase()}</span>
+                </div>`;
+            });
+        } else {
+            list.innerHTML = '<div class="text-center text-muted small py-4">Belum ada riwayat transaksi.</div>';
+        }
+    } catch (err) {
+        loading.style.display = 'none';
+        list.innerHTML = '<div class="text-center text-danger small py-4">Gagal memuat riwayat.</div>';
+    }
 }
 
 // 6. Inquiry (Cek Tagihan / Cek Nama PLN)

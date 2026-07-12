@@ -440,4 +440,22 @@ class DigiflazzModel {
             return [];
         }
     }
+
+    /**
+     * Get recent transactions for a specific seller
+     */
+    public function getSellerHistory(string $sellerName, int $limit = 10) {
+        $stmt = $this->db->prepare("
+            SELECT t.customer_no, t.status, t.created_at, p.product_name, p.seller_name
+            FROM digi_transactions t
+            JOIN digi_products p ON t.buyer_sku_code = p.buyer_sku_code
+            WHERE p.seller_name = :seller
+            ORDER BY t.created_at DESC
+            LIMIT :limit
+        ");
+        $stmt->bindValue(':seller', $sellerName);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

@@ -126,6 +126,25 @@ class DigiflazzController extends Controller {
         exit;
     }
 
+    public function apiSellerHistory() {
+        AuthController::requireAuth();
+        $seller = $_GET['seller'] ?? '';
+        
+        if (empty($seller)) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Seller name is required']);
+            exit;
+        }
+
+        $history = $this->digiModel->getSellerHistory($seller);
+        
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'data' => $history]);
+        exit;
+    }
+
+
+
     public function apiSearchProducts() {
         AuthController::requireAuth();
         AuthController::requireLevel(['superadmin', 'admin']);
