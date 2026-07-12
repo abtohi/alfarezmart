@@ -873,7 +873,10 @@
             
             <div class="rounded-3 p-3 mb-3 text-start" style="background: var(--surface-2);">
                 <div class="small text-muted mb-1">Transfer Tepat Sesuai Nominal (Termasuk 3 Digit Terakhir):</div>
-                <h2 class="text-primary fw-bold mb-3" id="dr-amount" style="letter-spacing: 1px;">Rp 0</h2>
+                <div class="d-flex align-items-center justify-content-between p-3 rounded mb-3" style="background: rgba(255, 255, 255, 0.05); border: 1px dashed var(--border-active);">
+                    <h2 class="text-primary fw-bold mb-0" id="dr-amount" style="letter-spacing: 1px;">Rp 0</h2>
+                    <button class="btn btn-sm btn-outline-primary rounded-pill fw-bold" onclick="navigator.clipboard.writeText(document.getElementById('dr-amount').dataset.amount); this.innerText='Disalin!'; setTimeout(()=>this.innerHTML='<i class=\'bi bi-clipboard me-1\'></i>Salin', 2000);"><i class="bi bi-clipboard me-1"></i>Salin</button>
+                </div>
                 
                 <div id="dr-parsed-dest" style="display: none;">
                     <div class="small text-muted mb-2">Tujuan Transfer:</div>
@@ -1324,6 +1327,7 @@ async function requestDeposit() {
             }
             
             document.getElementById('dr-amount').innerHTML = formattedAmountHTML;
+            document.getElementById('dr-amount').dataset.amount = finalAmount;
             document.getElementById('dr-notes').innerText = notes;
             
             // Try to parse the notes to get Bank, Acc No, and Name
