@@ -256,15 +256,27 @@ class DigiflazzModel {
      * Create a new transaction log
      */
     public function createTransaction(array $data) {
+        // Find seller_name from digi_products
+        $sellerName = null;
+        $sku = $data['buyer_sku_code'] ?? null;
+        if ($sku) {
+            $stmtProd = $this->db->prepare("SELECT seller_name FROM digi_products WHERE buyer_sku_code = ? LIMIT 1");
+            $stmtProd->execute([$sku]);
+            $prod = $stmtProd->fetch(PDO::FETCH_ASSOC);
+            if ($prod && !empty($prod['seller_name'])) {
+                $sellerName = $prod['seller_name'];
+            }
+        }
+
         $stmt = $this->db->prepare("
             INSERT INTO digi_transactions (
                 ref_id, buyer_sku_code, customer_no, customer_name, product_name, 
                 category, brand, type, sell_price, modal_price, profit, 
-                status, user_id, message, raw_response
+                status, user_id, message, raw_response, seller_name
             ) VALUES (
                 :ref_id, :sku, :customer_no, :customer_name, :product_name,
                 :category, :brand, :type, :sell_price, :modal_price, :profit,
-                :status, :user_id, :message, :raw_response
+                :status, :user_id, :message, :raw_response, :seller_name
             )
         ");
         
@@ -283,7 +295,8 @@ class DigiflazzModel {
             'status' => $data['status'] ?? 'pending',
             'user_id' => $data['user_id'] ?? null,
             'message' => $data['message'] ?? '',
-            'raw_response' => isset($data['raw_response']) ? json_encode($data['raw_response']) : null
+            'raw_response' => isset($data['raw_response']) ? json_encode($data['raw_response']) : null,
+            'seller_name' => $sellerName
         ]);
     }
 
@@ -418,14 +431,13 @@ class DigiflazzModel {
     public function getSellerSuccessRates() {
         try {
             $stmt = $this->db->query("
-                SELECT p.seller_name,
-                       COUNT(t.id) as total,
-                       SUM(CASE WHEN t.status = 'success' THEN 1 ELSE 0 END) as success
-                FROM digi_transactions t
-                JOIN digi_products p ON t.buyer_sku_code = p.buyer_sku_code
-                WHERE p.seller_name IS NOT NULL AND p.seller_name != '' 
-                  AND t.status IN ('success', 'failed')
-                GROUP BY p.seller_name
+                SELECT seller_name,
+                       COUNT(id) as total,
+                       SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success
+                FROM digi_transactions
+                WHERE seller_name IS NOT NULL AND seller_name != '' 
+                  AND status IN ('success', 'failed')
+                GROUP BY seller_name
             ");
             $rates = [];
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -446,11 +458,10 @@ class DigiflazzModel {
      */
     public function getSellerHistory(string $sellerName, int $limit = 10) {
         $stmt = $this->db->prepare("
-            SELECT t.customer_no, t.status, t.created_at, p.product_name, p.seller_name
-            FROM digi_transactions t
-            JOIN digi_products p ON t.buyer_sku_code = p.buyer_sku_code
-            WHERE p.seller_name = :seller
-            ORDER BY t.created_at DESC
+            SELECT customer_no, status, created_at, product_name, seller_name
+            FROM digi_transactions
+            WHERE seller_name = :seller
+            ORDER BY created_at DESC
             LIMIT :limit
         ");
         $stmt->bindValue(':seller', $sellerName);

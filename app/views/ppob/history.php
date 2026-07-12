@@ -234,17 +234,19 @@
             const profit = parseInt(trx.profit || 0);
             const profitColor = profit > 0 ? 'color:var(--success);' : 'color:var(--text-muted);';
 
-            let sellerName = '-';
+            let sellerName = trx.seller_name && trx.seller_name !== '' ? trx.seller_name : '-';
             let complaintBtns = '';
             if (trx.raw_response) {
                 try {
                     const raw = JSON.parse(trx.raw_response);
-                    if (raw.tele) {
-                        sellerName = raw.tele;
-                    } else if (raw.wa) {
-                        sellerName = raw.wa;
-                    } else {
-                        sellerName = 'Digiflazz';
+                    if (sellerName === '-') {
+                        if (raw.tele) {
+                            sellerName = raw.tele;
+                        } else if (raw.wa) {
+                            sellerName = raw.wa;
+                        } else {
+                            sellerName = 'Digiflazz';
+                        }
                     }
 
                     if (trx.status === 'failed' && (raw.wa || raw.tele)) {
