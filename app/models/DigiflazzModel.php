@@ -231,7 +231,19 @@ class DigiflazzModel {
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Deduplicate products by product_name and seller_name
+        $unique = [];
+        $result = [];
+        foreach ($products as $p) {
+            $key = trim($p['product_name']) . '|' . trim($p['seller_name']);
+            if (!isset($unique[$key])) {
+                $unique[$key] = true;
+                $result[] = $p;
+            }
+        }
+        return $result;
     }
 
     /**
