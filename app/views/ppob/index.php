@@ -3121,8 +3121,27 @@ async function promptSaveEwalletContact(customerNo, defaultName, brand) {
         const res = await fetch('<?= BASE_URL ?>api/ppob/customers?type=ewallet');
         const data = await res.json();
         if (data.success && data.data) {
-            const exists = data.data.some(c => c.customer_no === customerNo);
-            if (exists) return; // Don't show if already saved
+            const exists = data.data.find(c => c.customer_no === customerNo);
+            if (exists) {
+                // Jika sudah ada tapi pln_name (Nama DANA) masih kosong, update otomatis di background
+                if ((!exists.pln_name || exists.pln_name.trim() === '') && defaultName) {
+                    const formData = new URLSearchParams();
+                    formData.append('id', exists.id);
+                    formData.append('type', exists.type);
+                    formData.append('customer_no', exists.customer_no);
+                    formData.append('customer_name', exists.customer_name || '');
+                    formData.append('pln_name', defaultName);
+                    formData.append('pln_power', exists.pln_power || '');
+                    formData.append('csrf_token', csrfToken);
+                    
+                    fetch('<?= BASE_URL ?>api/ppob/customers/update', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: formData.toString()
+                    }).catch(err => console.error('Gagal update nama ewallet otomatis', err));
+                }
+                return; // Don't show modal if already saved
+            }
         }
         
         // Populate modal data and show it
