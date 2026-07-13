@@ -2184,7 +2184,12 @@ async function confirmPurchase(product) {
     
     const customSellPrice = typeof getPpobSellPrice === 'function' ? getPpobSellPrice(product.buyer_sku_code) : null;
     const finalPrice = customSellPrice && customSellPrice > 0 ? customSellPrice : (product.sell_price || product.seller_price);
-    const modalPrice = product.seller_price || product.price;
+    const modalPrice = product.seller_price || product.price || 0;
+    const profit = finalPrice - modalPrice;
+    const markupPct = modalPrice > 0 ? ((profit / modalPrice) * 100).toFixed(1) : 0;
+    
+    const sellerName = product.seller_name || '-';
+    const successRate = product.success_rate ? `${product.success_rate}%` : '-';
     
     let extraInfo = '';
     
@@ -2224,7 +2229,8 @@ async function confirmPurchase(product) {
         extraInfo = `<br>Nama Meter: <b>${plnName}</b><br>Daya: <b>${plnPower}</b><br>Estimasi kWh: <b>${estimasiKwh}</b>`;
     }
     
-    showConfirm('Konfirmasi Transaksi', `Produk: <b>${product.product_name}</b><br>Nomor: <b>${no}</b>${extraInfo}<br><br>Harga Modal: <b>${formatRp(modalPrice)}</b><br>Harga Jual: <b style="color:var(--primary);">${formatRp(finalPrice)}</b>`, () => {
+    const profitColor = profit >= 0 ? '#198754' : '#dc3545';
+    showConfirm('Konfirmasi Transaksi', `Produk: <b>${product.product_name}</b><br>Nomor: <b>${no}</b>${extraInfo}<br><br>Harga Modal: <b>${formatRp(modalPrice)}</b><br>Harga Jual: <b style="color:var(--primary);">${formatRp(finalPrice)}</b><br>Profit/Margin: <b style="color:${profitColor};">${formatRp(profit)} (${markupPct}%)</b><br>Seller: <b>${sellerName}</b> (Success Rate: <b>${successRate}</b>)`, () => {
         processTransaction({
             sku: product.buyer_sku_code,
             customer_no: no,
