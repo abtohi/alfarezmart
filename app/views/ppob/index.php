@@ -2262,7 +2262,9 @@ async function confirmPurchase(product) {
             sku: product.buyer_sku_code,
             customer_no: no,
             sell_price: finalPrice,
-            product_name: product.product_name
+            product_name: product.product_name,
+            brand: product.brand,
+            customer_name: (currentCategory === 'ewallet' || currentCategory === 'pln') ? (document.getElementById('inq-name').innerText || '') : ''
         });
     });
 }
@@ -2409,6 +2411,7 @@ async function executeTransactionAPI(payload) {
                 product_name: payload.product_name || '-',
                 customer_no: payload.customer_no || '-',
                 customer_name: payload.customer_name || '',
+                brand: payload.brand || '',
                 sn: sn,
                 sell_price: payload.sell_price || 0,
                 created_at: new Date().toLocaleString('id-ID')
@@ -2502,11 +2505,11 @@ async function executeTransactionAPI(payload) {
                 document.getElementById('result-pln-details').style.display = 'none';
             }
             
-            // Auto prompt save contact if PLN or E-Wallet (DANA)
+            // Auto prompt save contact if PLN or E-Wallet
             if (isSuccess && currentCategory === 'pln') {
                 promptSavePlnContact(payload.customer_no, payload.customer_name || '');
-            } else if (isSuccess && currentCategory === 'ewallet' && payload.product_name && payload.product_name.toUpperCase().includes('DANA')) {
-                promptSaveEwalletContact(payload.customer_no, payload.customer_name || '', 'DANA');
+            } else if (isSuccess && currentCategory === 'ewallet' && payload.brand) {
+                promptSaveEwalletContact(payload.customer_no, payload.customer_name || '', payload.brand);
             }
 
             // Listen to modal close to stop polling
@@ -2617,8 +2620,8 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
                 
                 if (isSuccess && currentCategory === 'pln') {
                     promptSavePlnContact(customerNo, lastTrxData ? lastTrxData.customer_name : '');
-                } else if (isSuccess && currentCategory === 'ewallet' && lastTrxData && lastTrxData.product_name && lastTrxData.product_name.toUpperCase().includes('DANA')) {
-                    promptSaveEwalletContact(customerNo, lastTrxData.customer_name || '', 'DANA');
+                } else if (isSuccess && currentCategory === 'ewallet' && lastTrxData && lastTrxData.brand) {
+                    promptSaveEwalletContact(customerNo, lastTrxData.customer_name || '', lastTrxData.brand);
                 }
 
                 return true; // Polling finished
