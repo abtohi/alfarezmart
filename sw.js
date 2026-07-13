@@ -2,8 +2,8 @@
  * AlfarezMart PWA - Service Worker
  * Cache Strategy: Cache First for assets, Network First for API
  */
-const CACHE_NAME = 'alfarezmart-cache-v13.70';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v13.70';
+const CACHE_NAME = 'alfarezmart-cache-v13.71';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v13.71';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,

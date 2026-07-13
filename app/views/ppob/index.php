@@ -972,6 +972,32 @@
     </div>
 </div>
 
+<!-- Save E-Wallet Contact Modal -->
+<div class="modal fade" id="saveEwalletContactModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content" style="border-radius:20px;border:none;background:var(--surface-1);">
+            <div class="modal-body p-4 text-center">
+                <div class="mb-3"><i class="bi bi-wallet2 text-primary" style="font-size:50px;"></i></div>
+                <h5 class="fw-bold mb-3" style="color:var(--text-primary);">Simpan Pelanggan Baru</h5>
+                <p class="small mb-3" id="saveEwalletContactMessage" style="color:var(--text-secondary);"></p>
+                
+                <div class="mb-4 text-start">
+                    <label class="form-label fw-bold small" style="color:var(--text-primary);">Nama Alias <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control glass-input" id="saveEwalletContactAlias" placeholder="Contoh: DANA Budi">
+                    <input type="hidden" id="saveEwalletContactNo">
+                    <input type="hidden" id="saveEwalletContactName">
+                    <input type="hidden" id="saveEwalletContactBrand">
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button class="btn btn-secondary flex-grow-1 rounded-pill" data-bs-dismiss="modal">Lain Kali</button>
+                    <button class="btn btn-primary flex-grow-1 rounded-pill fw-bold" id="btnExecuteSaveEwallet" onclick="executeSaveEwalletContact()">Simpan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- PIN Verification Modal -->
 <div class="modal fade" id="pinModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -1496,7 +1522,7 @@ function openContactBook() {
         'pulsa': 'hp',
         'data': 'hp',
         'sms_nelpon': 'hp',
-        'ewallet': 'hp',
+        'ewallet': 'ewallet',
         'pln': 'pln',
         'game': 'game',
         'tv': 'tv'
@@ -1531,6 +1557,7 @@ function renderContacts(data) {
         let title = c.customer_name || 'Tanpa Nama';
         let detail = c.customer_no;
         if(c.type === 'pln' && c.pln_name) detail += ` • ${c.pln_name}`;
+        if(c.type === 'ewallet' && c.pln_name) detail += ` • ${c.pln_name}`;
         
         let html = `
         <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center mb-2" style="background:var(--surface-2); cursor:pointer;" onclick="selectContact('${c.customer_no}')">
@@ -2475,9 +2502,11 @@ async function executeTransactionAPI(payload) {
                 document.getElementById('result-pln-details').style.display = 'none';
             }
             
-            // Auto prompt save contact if PLN
+            // Auto prompt save contact if PLN or E-Wallet (DANA)
             if (isSuccess && currentCategory === 'pln') {
                 promptSavePlnContact(payload.customer_no, payload.customer_name || '');
+            } else if (isSuccess && currentCategory === 'ewallet' && payload.product_name && payload.product_name.toUpperCase().includes('DANA')) {
+                promptSaveEwalletContact(payload.customer_no, payload.customer_name || '', 'DANA');
             }
 
             // Listen to modal close to stop polling
@@ -2588,6 +2617,8 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
                 
                 if (isSuccess && currentCategory === 'pln') {
                     promptSavePlnContact(customerNo, lastTrxData ? lastTrxData.customer_name : '');
+                } else if (isSuccess && currentCategory === 'ewallet' && lastTrxData && lastTrxData.product_name && lastTrxData.product_name.toUpperCase().includes('DANA')) {
+                    promptSaveEwalletContact(customerNo, lastTrxData.customer_name || '', 'DANA');
                 }
 
                 return true; // Polling finished
@@ -3083,5 +3114,75 @@ function useTestNo(no) {
     getTestCaseModal().hide();
     // Jika modal trx belum terbuka, biarkan user buka sendiri,
     // Jika sedang terbuka, input terisi otomatis.
+}
+
+async function promptSaveEwalletContact(customerNo, defaultName, brand) {
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/ppob/customers?type=ewallet');
+        const data = await res.json();
+        if (data.success && data.data) {
+            const exists = data.data.some(c => c.customer_no === customerNo);
+            if (exists) return; // Don't show if already saved
+        }
+        
+        // Populate modal data and show it
+        setTimeout(() => {
+            document.getElementById('saveEwalletContactMessage').innerHTML = `Nomor ${brand} <b>${customerNo}</b> belum ada di daftar pelanggan. Apakah Anda ingin menyimpannya?`;
+            document.getElementById('saveEwalletContactAlias').value = defaultName || '';
+            document.getElementById('saveEwalletContactNo').value = customerNo;
+            document.getElementById('saveEwalletContactName').value = defaultName || ''; // Use pln_name for storing ewallet name
+            document.getElementById('saveEwalletContactBrand').value = brand;
+            
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('saveEwalletContactModal'));
+            modal.show();
+        }, 500);
+    } catch (e) {
+        console.error('Error checking ewallet contact:', e);
+    }
+}
+
+async function executeSaveEwalletContact() {
+    const alias = document.getElementById('saveEwalletContactAlias').value;
+    const customerNo = document.getElementById('saveEwalletContactNo').value;
+    const ewalletName = document.getElementById('saveEwalletContactName').value;
+    const btn = document.getElementById('btnExecuteSaveEwallet');
+    
+    if (alias === null || alias.trim() === '') {
+        showToast('⚠️ Nama Alias tidak boleh kosong', 'warning');
+        return;
+    }
+    
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
+    btn.disabled = true;
+
+    try {
+        const formData = new URLSearchParams();
+        formData.append('type', 'ewallet');
+        formData.append('customer_no', customerNo);
+        formData.append('customer_name', alias.trim());
+        formData.append('pln_name', ewalletName); // Storing Ewallet Name in pln_name field
+        formData.append('csrf_token', csrfToken);
+        
+        const saveRes = await fetch('<?= BASE_URL ?>api/ppob/customers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
+        });
+        const saveData = await saveRes.json();
+        
+        if (saveData.success) {
+            showToast('✅ Pelanggan E-Wallet berhasil disimpan', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('saveEwalletContactModal')).hide();
+        } else {
+            showToast('❌ Gagal menyimpan: ' + saveData.message, 'danger');
+        }
+    } catch (e) {
+        console.error('Error saving ewallet contact:', e);
+        showToast('❌ Gagal menyimpan karena gangguan jaringan', 'danger');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
 }
 </script>
