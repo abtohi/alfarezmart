@@ -2089,6 +2089,8 @@ async function performInquiry() {
             });
             const data = await res.json();
             if(data.success && data.data && data.data.name) {
+                window.currentPlnName = data.data.name;
+                window.currentPlnPower = data.data.segment_power;
                 inqBox.style.display = 'block';
                 document.getElementById('inq-name').innerText = data.data.name;
                 document.getElementById('inq-price').innerText = data.data.segment_power || '-';
@@ -2182,8 +2184,47 @@ async function confirmPurchase(product) {
     
     const customSellPrice = typeof getPpobSellPrice === 'function' ? getPpobSellPrice(product.buyer_sku_code) : null;
     const finalPrice = customSellPrice && customSellPrice > 0 ? customSellPrice : (product.sell_price || product.seller_price);
+    const modalPrice = product.seller_price || product.price;
     
-    showConfirm('Konfirmasi Transaksi', `Produk: <b>${product.product_name}</b><br>Nomor: <b>${no}</b><br>Harga: <b>${formatRp(finalPrice)}</b>`, () => {
+    let extraInfo = '';
+    
+    if (currentCategory === 'pln' && currentType === 'prepaid') {
+        const plnName = window.currentPlnName || document.getElementById('inq-name').innerText || '-';
+        const plnPower = window.currentPlnPower || document.getElementById('inq-price').innerText || '-';
+        
+        let nominal = 0;
+        const match = product.product_name.match(/(?:PLN|TOKEN)\s*(\d+)(?:\.000|RB|RIBU)?/i);
+        if (match) {
+            nominal = parseInt(match[1]);
+            if (product.product_name.toLowerCase().includes('000') || product.product_name.toLowerCase().includes('ribu') || product.product_name.toLowerCase().includes('rb')) {
+                nominal *= 1000;
+            } else if (nominal < 1000) {
+                nominal *= 1000;
+            }
+        } else {
+             const matchDigits = product.product_name.match(/\d+/g);
+             if (matchDigits) {
+                 const num = parseInt(matchDigits.join(''));
+                 nominal = num < 1000 ? num * 1000 : num;
+             }
+        }
+        
+        let estimasiKwh = '-';
+        if (nominal > 0) {
+            let tarif = 1444.70; 
+            if (plnPower.includes('450')) tarif = 415;
+            else if (plnPower.includes('900')) tarif = 1352;
+            
+            const dpp = nominal - 2000;
+            const netto = dpp - (dpp * 0.05);
+            const kwh = netto / tarif;
+            if (kwh > 0) estimasiKwh = `~${kwh.toFixed(1)} kWh`;
+        }
+        
+        extraInfo = `<br>Nama Meter: <b>${plnName}</b><br>Daya: <b>${plnPower}</b><br>Estimasi kWh: <b>${estimasiKwh}</b>`;
+    }
+    
+    showConfirm('Konfirmasi Transaksi', `Produk: <b>${product.product_name}</b><br>Nomor: <b>${no}</b>${extraInfo}<br><br>Harga Modal: <b>${formatRp(modalPrice)}</b><br>Harga Jual: <b style="color:var(--primary);">${formatRp(finalPrice)}</b>`, () => {
         processTransaction({
             sku: product.buyer_sku_code,
             customer_no: no,
