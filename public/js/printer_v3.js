@@ -598,138 +598,213 @@ class ThermalPrinter {
         const storeAddr = this.storeSettings?.store_address || 'Toko Kami';
         const width = this.getLineWidth();
 
-        // Build string manually
-        let data = '';
-        
-        // Helper to center text
-        const center = (text) => {
-            const lines = text.split('\n');
-            return lines.map(line => {
-                if (line.length >= width) return line;
-                const pad = Math.floor((width - line.length) / 2);
-                return ' '.repeat(pad) + line;
-            }).join('\n');
-        };
-
-        // Header
-        data += '\x1B@'; // Init
-        data += '\x1Ba\x01'; // Align Center
-        data += '\x1BE\x01'; // Bold On
-        data += storeName + '\n';
-        data += '\x1BE\x00'; // Bold Off
-        data += storeAddr + '\n';
-        data += '-'.repeat(width) + '\n';
-
-        // Details
-        // Details
-        data += '\x1Ba\x00'; // Align Left
-        
+        // Helper functions
         const padRight = (str, len) => {
             if (!str) return ' '.repeat(len);
             const s = String(str);
             return s.length >= len ? s.substring(0, len) : s + ' '.repeat(len - s.length);
         };
-        const row = (label, value) => {
-            if (!value) return '';
-            return `${padRight(label, 10)}: ${value}\n`;
+        
+        const padLeft = (str, len) => {
+            if (!str) return ' '.repeat(len);
+            const s = String(str);
+            return s.length >= len ? s.substring(0, len) : ' '.repeat(len - s.length) + s;
         };
 
-        const rowSmall = (label, value) => {
-            if (!value) return '';
-            let cleanLabel = label;
-            if (label === 'NO. REF') cleanLabel = 'REF';
-            else if (label === 'TRX ID') cleanLabel = 'TRX';
-            else if (label === 'TANGGAL') cleanLabel = 'TGL';
-            return `${padRight(cleanLabel, 3)}: ${value}\n`;
+        const detectProductTypeStr = (d) => {
+            const name  = (d.product_name  || '').toLowerCase();
+            const sku   = (d.buyer_sku_code || '').toLowerCase();
+            const sn    = (d.sn            || '');
+            const hasSN = sn && sn !== '-';
+
+            if (name.includes('pln') || sku.includes('pln') || (hasSN && sn.split('/').length >= 4)) return 'pln';
+            if (name.includes('dana') || sku.includes('dana') || name.includes('dnid')) return 'dana';
+            if (name.includes('shopeepay') || name.includes('shopee') || sku.includes('shopee') || sku.includes('spay')) return 'shopee';
+            if (name.includes('gopay') || sku.includes('gopay') || sku.includes('gpay')) return 'gopay';
+            if (name.includes('ovo') || sku.includes('ovo')) return 'ovo';
+            if (name.includes('link aja') || name.includes('linkaja') || sku.includes('linkaja')) return 'linkaja';
+            if (name.includes('bpjs') || sku.includes('bpjs')) return 'bpjs';
+            if (name.includes('pdam') || sku.includes('pdam')) return 'pdam';
+            if (name.includes('telkom') || name.includes('indihome') || sku.includes('telkom')) return 'telkom';
+            if (name.includes('paket data') || name.includes('paket internet') || sku.includes('data')) return 'paket';
+            if (name.includes('pulsa') || name.includes('prabayar') || /^(xl|tsel|isat|axis|tri|hnet|smartfren)/i.test(sku)) return 'pulsa';
+            if (name.includes('voucher') || name.includes('game')) return 'voucher';
+            return 'other';
         };
 
-        data += '\x1B!\x01'; // Font B (smaller text size)
-        data += rowSmall('NO. REF', transaction.ref_id);
-        data += rowSmall('TRX ID', transaction.digiflazz_trx_id || transaction.trx_id || '-');
-        data += rowSmall('TANGGAL', dateStr);
-        data += '\x1B!\x00'; // Reset to Font A
-        data += '-'.repeat(width) + '\n';
+        const getProductLabelInfo = (type) => {
+            const themes = {
+                pln:     'PLN PREPAID',
+                dana:    'DANA',
+                shopee:  'SHOPEEPAY',
+                gopay:   'GOPAY',
+                ovo:     'OVO',
+                linkaja: 'LINKAJA',
+                bpjs:    'BPJS KESEHATAN',
+                pdam:    'PDAM AIR',
+                telkom:  'TELKOM / INDIHOME',
+                paket:   'PAKET DATA',
+                pulsa:   'PULSA',
+                voucher: 'VOUCHER GAME',
+                other:   'PRODUK DIGITAL',
+            };
+            return themes[type] || themes.other;
+        };
+
+        const typeStr = detectProductTypeStr(transaction);
+        const labelInfo = getProductLabelInfo(typeStr);
+        const isPln = typeStr === 'pln';
+
+        // Build string manually
+        let data = '';
+
+        // Header
+        data += '\x1B@'; // Init
         data += '\x1Ba\x01'; // Align Center
         data += '\x1BE\x01'; // Bold On
+        data += storeName.toUpperCase() + '\n';
+        data += '\x1BE\x00'; // Bold Off
+        data += 'Pusat Pembayaran\nProduk Digital\n';
+        data += '-'.repeat(width) + '\n';
+
+        // Details
+        data += '\x1Ba\x00'; // Align Left
+        data += '\x1B!\x01'; // Font B
+        let d = new Date(dateStr);
+        let formattedDate = dateStr;
+        if (!isNaN(d.getTime())) {
+            formattedDate = ('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+d.getFullYear()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+        }
+        
+        data += padRight('TGL', 4) + ': ' + formattedDate + '\n';
+        data += padRight('REF', 4) + ': ' + (transaction.ref_id || '-') + '\n';
+        data += padRight('TRX', 4) + ': ' + (transaction.digiflazz_trx_id || transaction.trx_id || '-') + '\n';
+        data += '\x1B!\x00'; // Font A
+        data += '-'.repeat(width) + '\n';
+
+        // Product Category Badge
+        data += '\x1Ba\x01'; // Align Center
+        data += '\x1BE\x01'; // Bold On
+        data += `=== ${labelInfo} ===\n`;
         data += 'TRANSAKSI BERHASIL\n';
         data += '\x1BE\x00'; // Bold Off
-        data += '\x1Ba\x00'; // Align Left
         data += '-'.repeat(width) + '\n';
-        data += row('PRODUK', transaction.product_name);
-        data += row('ID/NO', transaction.customer_no);
 
-        const isPln = (transaction.product_name && transaction.product_name.toLowerCase().includes('pln')) || 
-                      (transaction.buyer_sku_code && transaction.buyer_sku_code.toLowerCase().includes('pln')) || 
-                      (transaction.sn && transaction.sn !== '-' && transaction.sn.split('/').length >= 4);
+        // Info Body
+        data += '\x1Ba\x00'; // Align Left
+        data += '\x1BE\x01'; // Bold On
+        data += 'PRODUK :\n';
+        data += '\x1BE\x00'; // Bold Off
+        data += transaction.product_name + '\n\n';
 
-        if (transaction.customer_name && !isPln) {
-            data += row('NAMA', transaction.customer_name);
+        data += '\x1BE\x01'; // Bold On
+        if (isPln) {
+            data += 'ID PELANGGAN :\n';
+        } else {
+            data += 'TUJUAN :\n';
         }
+        data += '\x1BE\x00'; // Bold Off
+        data += transaction.customer_no + '\n';
+
+        // Additional Customer / Account Info
+        const ewallets = ['dana','gopay','shopee','ovo','linkaja'];
+        let hasNamePrinted = false;
 
         if (transaction.sn && transaction.sn !== '-') {
             if (isPln) {
-                let snValue = transaction.sn;
                 if (transaction.sn.includes('/')) {
                     const parts = transaction.sn.split('/');
                     if (parts.length >= 4) {
-                        snValue = parts[0];
                         const plnName = parts[1] || '';
                         const plnTarifPower = parts.length > 4 ? `${parts[2]}/${parts[3]}` : parts[2];
                         const plnKwh = parts.length > 4 ? parts[4] : parts[3];
                         
-                        data += row('NAMA MTR', plnName);
-                        data += row('TARIF/DAYA', plnTarifPower);
-                        data += row('JML KWH', plnKwh);
+                        if (plnName) data += plnName + '\n';
+                        data += `${plnTarifPower} - ${plnKwh} kWh\n`;
+                        hasNamePrinted = true;
                     }
                 }
-                data += '-'.repeat(width) + '\n';
-                data += '\x1Ba\x01'; // Align Center
-                data += '\x1BE\x01'; // Bold On
-                data += 'TOKEN PLN:\n';
-                data += '\x1B!\x30'; // Double height and width
-                data += `${snValue}\n`;
-                data += '\x1B!\x00'; // Reset size
-                data += '\x1BE\x00'; // Bold Off
-                data += '\x1Ba\x00'; // Align Left
-                data += '-'.repeat(width) + '\n';
-            } else {
-                // Parse format for DANA / E-Wallet (NAMA: ..., NOMINAL: ..., REFF: ...)
+            } else if (ewallets.includes(typeStr)) {
                 if (transaction.sn.toUpperCase().includes('NAMA:') && transaction.sn.toUpperCase().includes('REFF:')) {
-                    const snStr = transaction.sn;
-                    const namaMatch = snStr.match(/NAMA:\s*([^,]+)/i);
-                    const reffMatch = snStr.match(/REFF:\s*([^,]+)/i);
+                    const namaMatch = transaction.sn.match(/NAMA:\s*([^,]+)/i);
                     if (namaMatch && namaMatch[1]) {
-                        data += row('NAMA AKUN', namaMatch[1].trim());
+                        data += namaMatch[1].trim() + '\n';
+                        hasNamePrinted = true;
                     }
-                    const reffValue = reffMatch && reffMatch[1] ? reffMatch[1].trim() : transaction.sn;
-                    data += '\n'; // Add spacing
-                    data += '\x1Ba\x01'; // Align Center
-                    data += '\x1BE\x01'; // Bold On
-                    data += 'SN / REF\n';
-                    data += `${reffValue}\n`;
-                    data += '\x1BE\x00'; // Bold Off
-                    data += '\x1Ba\x00'; // Align Left
-                    data += '-'.repeat(width) + '\n'; // separator line under SN/Ref
-                } else {
-                    data += '\x1Ba\x01'; // Align Center
-                    data += '\x1BE\x01'; // Bold On
-                    data += 'SN / REF\n';
-                    data += `${transaction.sn}\n`;
-                    data += '\x1BE\x00'; // Bold Off
-                    data += '\x1Ba\x00'; // Align Left
-                    data += '-'.repeat(width) + '\n';
                 }
             }
         }
+        
+        if (!hasNamePrinted && transaction.customer_name && !ewallets.includes(typeStr) && !isPln) {
+            data += transaction.customer_name + '\n';
+        }
 
+        data += '\n'; // spacing
+
+        // SN / REF / TOKEN
+        if (transaction.sn && transaction.sn !== '-') {
+            if (isPln) {
+                data += '\x1Ba\x01'; // Align Center
+                data += '\x1BE\x01'; // Bold On
+                data += 'TOKEN PLN :\n';
+                
+                const parts = transaction.sn.split('/');
+                const snValue = parts[0];
+                let cleanToken = snValue.replace(/[^0-9]/g, '');
+                let tokenOutput = snValue;
+                if (cleanToken.length === 20) {
+                    let t1 = cleanToken.substring(0, 4) + ' ' + cleanToken.substring(4, 8) + ' ' + cleanToken.substring(8, 12);
+                    let t2 = cleanToken.substring(12, 16) + ' ' + cleanToken.substring(16, 20);
+                    tokenOutput = t1 + '\n' + t2;
+                }
+                
+                data += '\x1B!\x30'; // Double height and width
+                data += tokenOutput + '\n';
+                data += '\x1B!\x00'; // Reset size
+                data += '\x1BE\x00'; // Bold Off
+                data += '\x1Ba\x00'; // Align Left
+            } else {
+                let reffValue = transaction.sn;
+                if (transaction.sn.toUpperCase().includes('NAMA:') && transaction.sn.toUpperCase().includes('REFF:')) {
+                    const reffMatch = transaction.sn.match(/REFF:\s*([^,]+)/i);
+                    if (reffMatch && reffMatch[1]) {
+                        reffValue = reffMatch[1].trim();
+                    }
+                }
+                
+                data += '\x1BE\x01'; // Bold On
+                data += 'SN / REF :\n';
+                data += '\x1BE\x00'; // Bold Off
+                data += reffValue + '\n';
+            }
+        }
+        
+        data += '-'.repeat(width) + '\n';
+        
+        // Total row
         const price = parseInt(transaction.sell_price).toLocaleString('id-ID');
+        const totalText = `Rp ${price}`;
+        const totalLabel = 'TOTAL BAYAR';
+        
         data += '\x1BE\x01'; // Bold On
-        data += `TOTAL BAYAR : Rp${price}\n`;
+        data += '\x1B!\x10'; // Double height
+        
+        const spaceCount = width - totalLabel.length - totalText.length;
+        if (spaceCount > 0) {
+            data += totalLabel + ' '.repeat(spaceCount) + totalText + '\n';
+        } else {
+            data += totalLabel + '\n' + padLeft(totalText, width) + '\n';
+        }
+        data += '\x1B!\x00'; // Reset size
         data += '\x1BE\x00'; // Bold Off
         data += '-'.repeat(width) + '\n';
         
         // Footer
         data += '\x1Ba\x01'; // Align Center
+        data += 'Struk ini merupakan bukti\n';
+        data += 'transaksi yang sah dan resmi\n';
+        data += `dari ${storeName}.\n\n`;
+        
         data += 'Terima kasih telah berbelanja\n';
         data += '= Semoga Berkah =\n\n\n\n';
 
