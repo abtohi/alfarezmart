@@ -65,58 +65,59 @@
         </div>
     </div>
 
-    <!-- Customer Selector & Search Product Row -->
-    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; align-items:stretch;">
-        
-        <!-- Customer Selector -->
-        <div style="position:relative; flex:1; min-width:140px;">
-            <div id="customerSelectorBox"
-                 onclick="toggleCustomerDropdown()"
-                 style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:6px 10px; height:100%; display:flex; align-items:center; gap:8px; cursor:pointer; transition:all 0.2s; user-select:none;"
-                 onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor=document.getElementById('customerDropdown').style.display==='none'?'var(--border-color)':'var(--primary)'">
-                <div style="width:24px;height:24px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="bi bi-person" id="customerSelectorIcon" style="color:var(--primary);font-size:0.85rem;"></i>
-                </div>
-                <div style="flex:1;min-width:0;line-height:1.2;">
-                    <div style="font-size:9px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.3px;">Pelanggan</div>
-                    <div id="customerSelectorLabel" style="font-size:11px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Umum</div>
-                </div>
-                <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
-                    <button type="button" id="btnClearCustomer" onclick="event.stopPropagation();clearCustomer()" title="Hapus pilihan" style="display:none;background:var(--surface-2);border:1px solid var(--border-color);border-radius:50%;width:18px;height:18px;padding:0;cursor:pointer;color:var(--text-muted);font-size:0.6rem;line-height:1;display:flex;align-items:center;justify-content:center;">
-                        <i class="bi bi-x"></i>
-                    </button>
-                </div>
+    <!-- Customer Selector -->
+    <div style="margin-bottom:12px; position:relative;">
+        <div id="customerSelectorBox"
+             onclick="toggleCustomerDropdown()"
+             style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:all 0.2s; user-select:none;"
+             onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor=document.getElementById('customerDropdown').style.display==='none'?'var(--border-color)':'var(--primary)'">
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-person" id="customerSelectorIcon" style="color:var(--primary);font-size:1rem;"></i>
             </div>
-            <!-- Customer Dropdown Panel -->
-            <div id="customerDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;width:260px;max-width:100vw;z-index:200;background:var(--surface-1);border:1px solid var(--primary);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;">
-                <div style="padding:8px;border-bottom:1px solid var(--border-color);">
-                    <div style="display:flex;align-items:center;gap:6px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:0 8px;">
-                        <i class="bi bi-search" style="color:var(--text-muted);font-size:0.8rem;"></i>
-                        <input type="text" id="customerSearchInput"
-                               placeholder="Cari pelanggan..."
-                               autocomplete="off" autocorrect="off" spellcheck="false"
-                               style="flex:1;border:none;background:transparent;padding:6px 2px;color:var(--text-primary);font-size:12px;outline:none;font-family:var(--font-family);"
-                               oninput="onCustomerSearch(this.value)">
-                        <i class="bi bi-x-circle" style="color:var(--text-muted);font-size:0.8rem;cursor:pointer;" onclick="document.getElementById('customerSearchInput').value='';onCustomerSearch('');"></i>
-                    </div>
-                </div>
-                <div id="customerResults" style="max-height:200px;overflow-y:auto;padding:4px 0;">
-                    <!-- populated by JS -->
-                </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:1px;">Pelanggan</div>
+                <div id="customerSelectorLabel" style="font-size:var(--font-size-sm);font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Umum</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                <button type="button" id="btnClearCustomer" onclick="event.stopPropagation();clearCustomer()" title="Hapus pilihan" style="display:none;background:var(--surface-2);border:1px solid var(--border-color);border-radius:50%;width:24px;height:24px;padding:0;cursor:pointer;color:var(--text-muted);font-size:0.75rem;line-height:1;display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-x"></i>
+                </button>
             </div>
         </div>
+        <!-- Customer Dropdown Panel -->
+        <div id="customerDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:200;background:var(--surface-1);border:1px solid var(--primary);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;">
+            <div style="padding:10px 12px;border-bottom:1px solid var(--border-color);">
+                <div style="display:flex;align-items:center;gap:8px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:0 10px;">
+                    <i class="bi bi-search" style="color:var(--text-muted);font-size:0.9rem;"></i>
+                    <input type="text" id="customerSearchInput"
+                           placeholder="Ketik nama atau nomor HP..."
+                           autocomplete="off" autocorrect="off" spellcheck="false"
+                           style="flex:1;border:none;background:transparent;padding:10px 4px;color:var(--text-primary);font-size:16px;outline:none;font-family:var(--font-family);"
+                           oninput="onCustomerSearch(this.value)">
+                    <i class="bi bi-x-circle" style="color:var(--text-muted);font-size:0.9rem;cursor:pointer;" onclick="document.getElementById('customerSearchInput').value='';onCustomerSearch('');"></i>
+                </div>
+            </div>
+            <div id="customerResults" style="max-height:220px;overflow-y:auto;padding:6px 0;">
+                <!-- populated by JS -->
+            </div>
+        </div>
+    </div>
 
-        <!-- Search Product -->
-        <div style="flex:2; min-width:200px; position:relative;">
-            <div class="search-input-wrapper" style="background:var(--surface-1); border:1px solid var(--primary); border-radius:var(--radius-sm); padding:0 8px; display:flex; align-items:center; gap:6px; height:100%; box-shadow:0 0 0 2px var(--primary-bg);">
-                <i class="bi bi-upc-scan" style="color:var(--primary); font-size:1.1rem; cursor:pointer; padding:4px;" onclick="openPosScanner()" title="Scan Barcode"></i>
-                <input type="text" id="posSearch" placeholder="Scan atau ketik produk..." 
-                       style="flex:1;border:none;background:transparent;padding:8px 4px;color:var(--text-primary);font-size:12px;font-weight:500;outline:none;font-family:var(--font-family);" autocomplete="off" autofocus>
-                <button type="button" onclick="openCustomProductModal()" style="border:none;background:var(--surface-2);color:var(--text-secondary);font-size:11px;padding:4px 8px;border-radius:4px;cursor:pointer;font-weight:600;white-space:nowrap;"><i class="bi bi-plus"></i> Manual</button>
-            </div>
-            <div id="posSuggestions" style="margin-top:4px; width:100%;"></div>
+    <!-- Search Product -->
+    <div style="background:var(--surface-1); border-radius:var(--radius-md); padding:12px; margin-bottom:16px; border:1px solid var(--border-color);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <label style="font-size:var(--font-size-xs); font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin:0;">Scan/Cari Produk</label>
+            <button type="button" class="btn-outline-custom" onclick="openCustomProductModal()" style="padding:4px 10px; border-radius:6px; font-size:11px; display:inline-flex; align-items:center; gap:4px; border:1px solid var(--border-color); background:var(--surface-2);">
+                <i class="bi bi-plus-circle"></i> + Barang Custom
+            </button>
         </div>
-        
+        <div class="search-input-wrapper" style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0 12px; display:flex; align-items:center; gap:8px;">
+            <i class="bi bi-upc-scan" style="color:var(--primary); font-size:1.2rem; cursor:pointer;" onclick="openPosScanner()" title="Scan Barcode Kamera"></i>
+            <input type="text" id="posSearch" placeholder="Scan barcode atau ketik nama produk..." 
+                   style="flex:1;border:none;background:transparent;padding:12px 8px;color:var(--text-primary);font-size:16px;outline:none;font-family:var(--font-family);" autocomplete="off" autofocus>
+            <i class="bi bi-search" style="color:var(--text-muted); font-size:1rem;"></i>
+        </div>
+        <div id="posSuggestions" style="margin-top:8px;"></div>
     </div>
 
     <!-- Cart -->
