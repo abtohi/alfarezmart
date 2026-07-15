@@ -444,6 +444,12 @@ class DigiflazzModel {
 
     /**
      * Update deposit status
+     *
+     * @param float|int $amount
+     * @param string $status
+     * @param string $notes
+     * @param array|string $rawResponse
+     * @return bool
      */
     public function updateDepositStatus($amount, $status, $notes, $rawResponse) {
         // Digiflazz webhook only sends exact amount (unique amount) for deposits
