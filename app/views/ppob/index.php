@@ -2798,7 +2798,7 @@ async function sharePpobReceipt() {
                 <span style="color:#555;">ID / No.</span>
                 <span style="font-weight: 600; text-align: right;">${d.customer_no}</span>
             </div>
-            ${d.customer_name ? `
+            ${d.customer_name && !isPln ? `
             <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
                 <span style="color:#555;">Nama</span>
                 <span style="font-weight: 600; text-align: right;">${d.customer_name}</span>
@@ -2953,7 +2953,7 @@ function printPpobReceiptBrowser() {
 <div class="center trx-success">TRANSAKSI BERHASIL</div>
 <div class="row"><div class="label">Produk</div><div class="value">${d.product_name}</div></div>
 <div class="row"><div class="label">ID / No.</div><div class="value">${d.customer_no}</div></div>
-${d.customer_name ? `<div class="row"><div class="label">Nama</div><div class="value">${d.customer_name}</div></div>` : ''}
+${d.customer_name && !isPln ? `<div class="row"><div class="label">Nama</div><div class="value">${d.customer_name}</div></div>` : ''}
 ${plnDetailsHtml}
 ${otherSnHtml}
 <div class="line"></div>

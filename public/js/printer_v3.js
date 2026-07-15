@@ -658,15 +658,15 @@ class ThermalPrinter {
         data += row('PRODUK', transaction.product_name);
         data += row('ID/NO', transaction.customer_no);
 
-        if (transaction.customer_name) {
+        const isPln = (transaction.product_name && transaction.product_name.toLowerCase().includes('pln')) || 
+                      (transaction.buyer_sku_code && transaction.buyer_sku_code.toLowerCase().includes('pln')) || 
+                      (transaction.sn && transaction.sn !== '-' && transaction.sn.split('/').length >= 4);
+
+        if (transaction.customer_name && !isPln) {
             data += row('NAMA', transaction.customer_name);
         }
 
         if (transaction.sn && transaction.sn !== '-') {
-            const isPln = (transaction.product_name && transaction.product_name.toLowerCase().includes('pln')) || 
-                          (transaction.buyer_sku_code && transaction.buyer_sku_code.toLowerCase().includes('pln')) || 
-                          (transaction.sn && transaction.sn.split('/').length >= 4);
-            
             if (isPln) {
                 let snValue = transaction.sn;
                 if (transaction.sn.includes('/')) {
