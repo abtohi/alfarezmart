@@ -730,6 +730,18 @@ async function addSalesRepModal() {
             </div>
         `,
         submitText: 'Simpan',
+        onShown: () => {
+            new SearchBox(document.getElementById('modalSalesSupplierContainer'), {
+                options: suppliersData,
+                placeholder: 'Cari atau pilih supplier...',
+                icon: 'bi-truck',
+                name: 'modalSalesSupplierDummy',
+                required: true,
+                clearable: true,
+                onChange: (val) => { document.getElementById('modalSalesSupplier').value = val; },
+                onClear: () => { document.getElementById('modalSalesSupplier').value = ''; }
+            });
+        },
         onSubmit: async () => {
             const name = document.getElementById('modalSalesName').value.trim();
             const supplierId = document.getElementById('modalSalesSupplier').value;
@@ -767,19 +779,6 @@ async function addSalesRepModal() {
             return false;
         }
     });
-
-    setTimeout(() => {
-        const container = document.getElementById('modalSalesSupplierContainer');
-        if (container) {
-            new SearchBox(container, {
-                options: suppliersData,
-                placeholder: 'Pilih supplier...',
-                name: 'modal_sales_supplier_id',
-                required: true,
-                onChange: (val) => { document.getElementById('modalSalesSupplier').value = val; }
-            });
-        }
-    }, 50);
 }
 
 // ===== Product Search with Supplier Filter =====
