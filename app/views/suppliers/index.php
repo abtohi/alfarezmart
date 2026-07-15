@@ -648,42 +648,12 @@ async function showSupplierProducts(supplierId, supplierName) {
         }
     });
 
-    // Load all products initially
-    try {
-        const allData = await api(`${BASE_URL}api/products/search?q=`);
-        if (allData && allData.length > 0) {
-            resultsDiv.innerHTML = allData.map(p => `
-                <div class="sp-search-item" style="padding:10px;border-bottom:1px solid var(--border-color);cursor:pointer;font-size:12px;" 
-                     onclick="addSupplierProduct(${supplierId}, ${p.id}, '${supplierName.replace(/'/g, "\\'")}')">
-                    <div style="font-weight:600;">${p.full_name || p.short_label}</div>
-                    <div style="font-size:10px;color:var(--text-muted);">${p.brand_name || ''}</div>
-                </div>
-            `).join('');
-            resultsDiv.style.display = 'block';
-        }
-    } catch(e) {}
-
     let searchTimeout;
     searchInput.addEventListener('input', () => {
         clearTimeout(searchTimeout);
         const q = searchInput.value.trim();
         if (q.length < 1) {
-            // Reload all products when empty
-            searchTimeout = setTimeout(async () => {
-                try {
-                    const allData = await api(`${BASE_URL}api/products/search?q=`);
-                    if (allData && allData.length > 0) {
-                        resultsDiv.innerHTML = allData.map(p => `
-                            <div class="sp-search-item" style="padding:10px;border-bottom:1px solid var(--border-color);cursor:pointer;font-size:12px;" 
-                                 onclick="addSupplierProduct(${supplierId}, ${p.id}, '${supplierName.replace(/'/g, "\\'")}')">
-                                <div style="font-weight:600;">${p.full_name || p.short_label}</div>
-                                <div style="font-size:10px;color:var(--text-muted);">${p.brand_name || ''}</div>
-                            </div>
-                        `).join('');
-                    }
-                    resultsDiv.style.display = 'block';
-                } catch(e) {}
-            }, 200);
+            resultsDiv.style.display = 'none';
             return;
         }
         searchTimeout = setTimeout(async () => {
