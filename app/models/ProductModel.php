@@ -82,7 +82,8 @@ class ProductModel extends Model
                 $p_bar   = ":kw_{$idx}_bar";
                 $p_inv   = ":kw_{$idx}_inv";
                 $p_sinv  = ":kw_{$idx}_sinv";
-                $whereClauses[] = "(p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR b.name LIKE $p_brand OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
+                $p_price = ":kw_{$idx}_price";
+                $whereClauses[] = "(p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR b.name LIKE $p_brand OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND (pp.barcode LIKE $p_bar OR pp.sell_price_retail LIKE $p_price)))";
                 $like = "%{$word}%";
                 $params[$p_name]  = $like;
                 $params[$p_label] = $like;
@@ -92,6 +93,7 @@ class ProductModel extends Model
                 $params[$p_bar]   = $like;
                 $params[$p_inv]   = $like;
                 $params[$p_sinv]  = $like;
+                $params[$p_price] = $like;
             }
             $whereSql .= ' AND ' . implode(' AND ', $whereClauses);
         }
