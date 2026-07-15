@@ -14,6 +14,7 @@
             <div style="display:flex; background:var(--surface-1); border-radius:var(--radius-md); padding:3px; border:1px solid var(--border-color); flex-shrink:0;">
                 <button id="btnRetail" class="btn-primary-custom" style="padding:4px 12px; border-radius:var(--radius-sm); font-size:var(--font-size-xs);" onclick="setSaleMode('retail')">Ecer</button>
                 <button id="btnWholesale" class="btn-outline-custom" style="padding:4px 12px; border-radius:var(--radius-sm); font-size:var(--font-size-xs); border:none;" onclick="setSaleMode('wholesale')">Grosir</button>
+                <button id="btnMix" class="btn-outline-custom" style="padding:4px 12px; border-radius:var(--radius-sm); font-size:var(--font-size-xs); border:none;" onclick="setSaleMode('mix')">Mix</button>
             </div>
         </div>
     </div>
@@ -56,6 +57,21 @@
             <div id="customerResults" style="max-height:220px;overflow-y:auto;padding:6px 0;">
                 <!-- populated by JS -->
             </div>
+        </div>
+    </div>
+
+    <!-- Mix Default Price Selector (hanya tampil saat mode Mix) -->
+    <div id="mixDefaultPriceBox" style="display:none; margin-bottom:10px; background:var(--surface-1); border:1px solid var(--primary); border-radius:var(--radius-md); padding:10px 14px;">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                <i class="bi bi-shuffle" style="color:var(--primary); font-size:1rem;"></i>
+                <span style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.4px;">Mode Mix — Harga Default:</span>
+            </div>
+            <div style="display:flex; background:var(--surface-2); border-radius:var(--radius-sm); padding:2px; border:1px solid var(--border-color);">
+                <button id="btnMixDefaultRetail" class="btn-primary-custom" style="padding:4px 14px; border-radius:var(--radius-sm); font-size:12px; font-weight:600;" onclick="setMixDefault('retail')">Ecer</button>
+                <button id="btnMixDefaultWholesale" class="btn-outline-custom" style="padding:4px 14px; border-radius:var(--radius-sm); font-size:12px; font-weight:600; border:none;" onclick="setMixDefault('wholesale')">Grosir</button>
+            </div>
+            <span style="font-size:11px; color:var(--text-muted); flex:1;">Toggle per item di keranjang untuk campurkan harga.</span>
         </div>
     </div>
 
@@ -115,6 +131,7 @@ const STORE_SETTINGS = <?= json_encode($storeSettings ?? [], JSON_UNESCAPED_UNIC
 
 let cart = [];
 let saleMode = 'retail';
+let mixDefaultPrice = 'retail'; // Used when saleMode === 'mix'
 let currentDraftId = null;
 let editSaleId = null;
 let searchInput, suggestionsDiv, cartContainer, emptyState, cartTotalEl, cartCountEl, btnCheckout, btnSaveDraft;
@@ -149,17 +166,39 @@ function recalcItemPrice(item) {
 
     const qty = parseFloat(item.quantity) || 1;
 
-    // Robust check: verify QtyPricing AND its methods exist
+    // --- MIX MODE: resolve effective price mode per-item ---
+    // For 'mix' mode, each item can override its price mode independently.
+    // The 'retail' and 'wholesale' code paths below are completely unchanged.
+    let effectiveMode = saleMode;
+    if (saleMode === 'mix') {
+        effectiveMode = item.mix_override_mode ?? mixDefaultPrice;
+        // Store retail price for discount computation (default=Ecer, override=Grosir)
+        if (mixDefaultPrice === 'retail' && effectiveMode === 'wholesale') {
+            const retailTotal = typeof QtyPricing !== 'undefined' && typeof QtyPricing.calculateTotalPrice === 'function'
+                ? QtyPricing.calculateTotalPrice(pkg, 'retail', qty, false, null, item.packagings)
+                : (parseFloat(pkg.sell_price_retail) || 0) * qty;
+            item._retail_total = Math.round(retailTotal);
+            item._retail_unit_price = qty > 0 ? item._retail_total / qty : 0;
+        } else {
+            item._retail_total = null;
+            item._retail_unit_price = null;
+        }
+    } else {
+        item._retail_total = null;
+        item._retail_unit_price = null;
+    }
+
+
     let basePricePerUnit = 0;
     let rawTotal = 0;
     if (typeof QtyPricing !== 'undefined' && typeof QtyPricing.calculateTotalPrice === 'function') {
-        rawTotal = QtyPricing.calculateTotalPrice(pkg, saleMode, qty, false, null, item.packagings);
+        rawTotal = QtyPricing.calculateTotalPrice(pkg, effectiveMode, qty, false, null, item.packagings);
         basePricePerUnit = qty > 0 ? rawTotal / qty : 0;
         item.price_note = typeof QtyPricing.getPriceNote === 'function'
-            ? QtyPricing.getPriceNote(pkg, saleMode, qty, false, item.packagings) : '';
+            ? QtyPricing.getPriceNote(pkg, effectiveMode, qty, false, item.packagings) : '';
     } else {
         // Fallback: direct unit price (no tier pricing)
-        basePricePerUnit = saleMode === 'wholesale'
+        basePricePerUnit = effectiveMode === 'wholesale'
             ? (parseFloat(pkg.sell_price_wholesale) || parseFloat(pkg.sell_price_retail) || 0)
             : (parseFloat(pkg.sell_price_retail) || 0);
         rawTotal = basePricePerUnit * qty;
@@ -253,6 +292,14 @@ function updateCartItemDom(item) {
     }
 }
 
+window.toggleItemMixMode = function(itemId, mode) {
+    const item = cart.find(i => i.id == itemId);
+    if (!item) return;
+    item.mix_override_mode = mode;
+    recalcItemPrice(item);
+    renderCart();
+};
+
 window.togglePosCustomPrice = async function(itemId, checked, checkboxEl) {
     const item = cart.find(i => i.id == itemId);
     if (!item) return;
@@ -315,19 +362,42 @@ window.onPosCustomPriceInput = function(itemId, inputEl) {
 
 function setSaleMode(mode) {
     saleMode = mode;
+    const btnRetail = document.getElementById('btnRetail');
+    const btnWholesale = document.getElementById('btnWholesale');
+    const btnMix = document.getElementById('btnMix');
+    const mixBox = document.getElementById('mixDefaultPriceBox');
+
+    // Reset all tabs
+    [btnRetail, btnWholesale, btnMix].forEach(btn => {
+        if (btn) { btn.className = 'btn-outline-custom'; btn.style.border = 'none'; }
+    });
+
     if (mode === 'retail') {
-        document.getElementById('btnRetail').className = 'btn-primary-custom';
-        document.getElementById('btnRetail').style.border = '';
-        document.getElementById('btnWholesale').className = 'btn-outline-custom';
-        document.getElementById('btnWholesale').style.border = 'none';
-    } else {
-        document.getElementById('btnWholesale').className = 'btn-primary-custom';
-        document.getElementById('btnWholesale').style.border = '';
-        document.getElementById('btnRetail').className = 'btn-outline-custom';
-        document.getElementById('btnRetail').style.border = 'none';
+        if (btnRetail) { btnRetail.className = 'btn-primary-custom'; btnRetail.style.border = ''; }
+        if (mixBox) mixBox.style.display = 'none';
+    } else if (mode === 'wholesale') {
+        if (btnWholesale) { btnWholesale.className = 'btn-primary-custom'; btnWholesale.style.border = ''; }
+        if (mixBox) mixBox.style.display = 'none';
+    } else if (mode === 'mix') {
+        if (btnMix) { btnMix.className = 'btn-primary-custom'; btnMix.style.border = ''; }
+        if (mixBox) mixBox.style.display = '';
+        // Reset all items to follow mixDefaultPrice
+        cart.forEach(item => { item.mix_override_mode = mixDefaultPrice; });
     }
 
+    cart.forEach(item => { recalcItemPrice(item); });
+    renderCart();
+}
+
+function setMixDefault(mode) {
+    mixDefaultPrice = mode;
+    const btnR = document.getElementById('btnMixDefaultRetail');
+    const btnW = document.getElementById('btnMixDefaultWholesale');
+    if (btnR) { btnR.className = mode === 'retail' ? 'btn-primary-custom' : 'btn-outline-custom'; btnR.style.border = mode === 'retail' ? '' : 'none'; }
+    if (btnW) { btnW.className = mode === 'wholesale' ? 'btn-primary-custom' : 'btn-outline-custom'; btnW.style.border = mode === 'wholesale' ? '' : 'none'; }
+    // Reset all items to new default
     cart.forEach(item => {
+        item.mix_override_mode = mode;
         recalcItemPrice(item);
     });
     renderCart();
@@ -655,6 +725,7 @@ function changeLevel(id, newLevel) {
 function calculateTotal() {
     let sum = 0;
     let profit = 0;
+    let mixTotalDiscount = 0;
     cart.forEach(i => {
         sum += i.total;
         const curPkg = i.packagings?.find(p => p.level == i.level);
@@ -662,16 +733,37 @@ function calculateTotal() {
         if (buyPrice > 0) {
             profit += i.total - (buyPrice * i.quantity);
         }
+        // Sum up mix discounts (retail_total - actual_total when defaultEcer & override=Grosir)
+        if (saleMode === 'mix' && i._retail_total != null && i._retail_total > i.total) {
+            mixTotalDiscount += i._retail_total - i.total;
+        }
     });
     cartTotalEl.textContent = formatRupiah(sum);
     const cartProfitEl = document.getElementById('cartProfit');
     if (cartProfitEl) {
-        cartProfitEl.textContent = profit > 0 ? `Estimasi Profit: ${formatRupiah(profit)}` : '';
+        if (saleMode === 'mix' && mixTotalDiscount > 0) {
+            cartProfitEl.innerHTML = `<span style="color:var(--success); font-size:0.7rem;">✂ Hemat <b>${formatRupiah(mixTotalDiscount)}</b></span>`;
+        } else {
+            cartProfitEl.textContent = profit > 0 ? `Estimasi Profit: ${formatRupiah(profit)}` : '';
+        }
     }
     cartCountEl.textContent = cart.length;
     btnCheckout.disabled = cart.length === 0;
     if (btnSaveDraft) btnSaveDraft.disabled = cart.length === 0;
     return sum;
+}
+
+function getMixDiscountInfo() {
+    let totalDiscount = 0;
+    const items = [];
+    cart.forEach(i => {
+        if (saleMode === 'mix' && i._retail_total != null && i._retail_total > i.total) {
+            const discAmt = i._retail_total - i.total;
+            totalDiscount += discAmt;
+            items.push({ name: i.name, discount: discAmt, retailTotal: i._retail_total, actualTotal: i.total });
+        }
+    });
+    return { totalDiscount, items };
 }
 
 function renderCart() {
@@ -761,7 +853,26 @@ function renderCart() {
                         oninput="onPosCustomPriceInput(${item.id}, this)"
                         class="form-control-dark cart-custom-price-input" style="width:100%;font-size:0.85rem;padding:8px 10px;border:1px solid var(--border-color);border-radius:var(--radius-sm);background:var(--bg-input);">
                     <div class="cart-custom-markup" style="font-size:0.75rem; margin-top:6px; font-weight:600; background:var(--surface-2); padding:6px 8px; border-radius:4px; border:1px solid var(--border-color); display:none;"></div>
+                </div>`;
+        
+        if (saleMode === 'mix') {
+            const currentOverride = item.mix_override_mode ?? mixDefaultPrice;
+            const isRetail = currentOverride === 'retail';
+            const isWholesale = currentOverride === 'wholesale';
+            html += `
+                <!-- Baris 4: Mix Mode Toggle -->
+                <div style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:11px; padding:8px 12px; background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <i class="bi bi-shuffle" style="color:var(--primary); font-size:1rem;"></i>
+                    <span style="font-weight:600; color:var(--text-primary); margin-right:auto;">Harga:</span>
+                    <div style="display:flex; background:var(--surface-1); border-radius:4px; overflow:hidden; border:1px solid var(--border-color);">
+                        <button type="button" onclick="toggleItemMixMode(${item.id}, 'retail')" style="padding:4px 12px; font-size:11px; font-weight:600; border:none; transition:0.2s; ${isRetail ? 'background:var(--primary);color:#fff;' : 'background:transparent;color:var(--text-muted);'}">Ecer</button>
+                        <button type="button" onclick="toggleItemMixMode(${item.id}, 'wholesale')" style="padding:4px 12px; font-size:11px; font-weight:600; border:none; border-left:1px solid var(--border-color); transition:0.2s; ${isWholesale ? 'background:var(--primary);color:#fff;' : 'background:transparent;color:var(--text-muted);'}">Grosir</button>
+                    </div>
                 </div>
+            `;
+        }
+        
+        html += `
             </div>
         `;
     });
@@ -784,7 +895,7 @@ function renderCart() {
 // Auto-save cart to prevent data loss
 function autoSaveCart() {
     try {
-        localStorage.setItem('pos_autosave', JSON.stringify({ cart, saleMode, ts: Date.now() }));
+        localStorage.setItem('pos_autosave', JSON.stringify({ cart, saleMode, mixDefaultPrice, ts: Date.now() }));
     } catch(e) {}
 }
 function autoRestoreCart() {
@@ -794,6 +905,7 @@ function autoRestoreCart() {
             // Only restore if saved within last 12 hours
             if (Date.now() - saved.ts < 12 * 60 * 60 * 1000) {
                 cart = saved.cart;
+                if (saved.mixDefaultPrice) mixDefaultPrice = saved.mixDefaultPrice;
                 if (saved.saleMode) setSaleMode(saved.saleMode);
                 cart.forEach(it => recalcItemPrice(it));
                 showToast(`${cart.length} item direstorasi dari sesi sebelumnya`, 'info');
@@ -1076,6 +1188,8 @@ async function proceedCheckout() {
             const printCart = cart.map(i => ({ ...i }));
             const printTotal = calculateTotal();
             const invoiceNo = result.invoice || result.id || ('OFF-' + Date.now());
+            const currentSaleMode = saleMode;
+            const mixInfo = getMixDiscountInfo();
 
             cart = [];
             currentDraftId = null;
@@ -1117,8 +1231,9 @@ async function proceedCheckout() {
                         </div>
                         <h2 style="font-size:1.75rem;font-weight:800;color:var(--text-primary);margin:0 0 4px;">${formatRupiah(printTotal)}</h2>
                         <div style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);padding:4px 12px;border-radius:20px;font-size:var(--font-size-xs);color:var(--text-muted);">
-                            <i class="bi bi-credit-card"></i> Tunai · ${saleMode === 'retail' ? 'Ecer' : 'Grosir'}
+                            <i class="bi bi-credit-card"></i> Tunai · ${currentSaleMode === 'retail' ? 'Ecer' : (currentSaleMode === 'wholesale' ? 'Grosir' : 'Mix')}
                         </div>
+                        ${mixInfo.totalDiscount > 0 ? `<div style="margin-top:8px; display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:var(--success); background:var(--success-bg); padding:4px 10px; border-radius:12px;">🎉 Hemat ${formatRupiah(mixInfo.totalDiscount)}</div>` : ''}
                     </div>
 
                     <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:14px;margin-bottom:16px;max-height:220px;overflow-y:auto;">
@@ -1170,7 +1285,7 @@ async function proceedCheckout() {
                 },
             });
 
-            setTimeout(() => setupPrinterButtons(printCart, printTotal, invoiceNo), 250);
+            setTimeout(() => setupPrinterButtons(printCart, printTotal, invoiceNo, currentSaleMode, mixInfo), 250);
             await modalPromise;
             } catch (modalErr) {
                 console.error('Checkout success UI error:', modalErr);
@@ -1188,7 +1303,7 @@ async function proceedCheckout() {
     }
 }
 
-function setupPrinterButtons(printCart, printTotal, invoiceNo) {
+function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mixInfo) {
     const tp = getThermalPrinterSafe();
     const btnConnect = document.getElementById('btnConnectPrinter');
     const btnPrint = document.getElementById('btnPrintReceipt');
@@ -1215,6 +1330,8 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo) {
             await tp.printBrowser(printCart, printTotal, invoiceNo, {
                 storeSettings: STORE_SETTINGS,
                 paymentMethod: 'Tunai',
+                saleMode: printSaleMode,
+                mixInfo: mixInfo,
             });
             btnBrowser.innerHTML = '<i class="bi bi-window"></i> Cetak Web / AirPrint';
             btnBrowser.disabled = false;
@@ -1315,6 +1432,8 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo) {
                 await tp.print(printCart, printTotal, invoiceNo, {
                     storeSettings: STORE_SETTINGS,
                     paymentMethod: 'Tunai',
+                    saleMode: printSaleMode,
+                    mixInfo: mixInfo,
                 });
                 btnPrint.innerHTML = '<i class="bi bi-printer"></i> Cetak Ulang';
                 btnPrint.disabled = false;

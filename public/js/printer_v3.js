@@ -397,7 +397,7 @@ class ThermalPrinter {
         return char.repeat(width);
     }
 
-    buildReceipt(cart, total, invoiceNumber, paymentMethod = 'Tunai') {
+    buildReceipt(cart, total, invoiceNumber, paymentMethod = 'Tunai', options = {}) {
         const store = this.storeSettings || {};
         const width = this.getLineWidth();
         const ESC = '\x1B';
@@ -451,14 +451,25 @@ class ThermalPrinter {
             const name = String(item.print_name || item.name || 'Item').trim();
             this.wrapText(name, width).forEach(line => { cmds += line + LF; });
 
-            const unitPrice = parseFloat(item.unit_price) || 0;
+            let unitPrice = parseFloat(item.unit_price) || 0;
             const qty = item.quantity || 0;
             const unitAbbr = item.unit_abbr || this.abbreviateUnit(item.unit_name || 'pcs');
-            const itemTotal = parseFloat(item.total) || (qty * unitPrice);
+            let itemTotal = parseFloat(item.total) || (qty * unitPrice);
+            let discountLine = '';
+
+            if (options.saleMode === 'mix' && options.mixInfo && options.mixInfo.items) {
+                const mixItemInfo = options.mixInfo.items.find(x => x.name === name);
+                if (mixItemInfo && mixItemInfo.discount > 0) {
+                    itemTotal = mixItemInfo.retailTotal;
+                    unitPrice = mixItemInfo.retailTotal / qty;
+                    discountLine = this.padLine('', `Diskon: -${this._formatPrice(mixItemInfo.discount)}`, width) + LF;
+                }
+            }
 
             // Format: "  1bks x Rp17.000"  (space after x)
             const left = `  ${qty}${unitAbbr} x ${this._formatPrice(unitPrice)}`;
             cmds += this.padLine(left, this._formatPrice(itemTotal), width) + LF;
+            if (discountLine) cmds += discountLine;
             
             // Add a slight gap between products (print and feed 12 dots ≈ 1.5mm)
             cmds += ESC + 'J' + String.fromCharCode(12);
@@ -467,15 +478,29 @@ class ThermalPrinter {
         // TOTAL
         cmds += this.separator(width) + LF;
         cmds += ESC + 'E\x01';
-        cmds += this.padLine('TOTAL', this._formatPrice(total), width) + LF;
+        if (options.saleMode === 'mix' && options.mixInfo && options.mixInfo.totalDiscount > 0) {
+            const subtotal = total + options.mixInfo.totalDiscount;
+            cmds += ESC + 'E\x00'; // Normal weight for subtotal
+            cmds += this.padLine('Subtotal', this._formatPrice(subtotal), width) + LF;
+            cmds += this.padLine('Total Diskon', `-${this._formatPrice(options.mixInfo.totalDiscount)}`, width) + LF;
+            cmds += ESC + 'E\x01'; // Bold for grand total
+            cmds += this.padLine('TOTAL BAYAR', this._formatPrice(total), width) + LF;
+        } else {
+            cmds += this.padLine('TOTAL', this._formatPrice(total), width) + LF;
+        }
         cmds += ESC + 'E\x00';
 
         // Footer from settings — use ESC/POS center align command (\x01)
         // Do NOT use centerLine() padding here as ESC a\x01 handles centering natively
-        if (store.receipt_footer) {
+        let footerText = store.receipt_footer || '';
+        if (options.saleMode === 'mix' && options.mixInfo && options.mixInfo.totalDiscount > 0) {
+            footerText += `\n\nTerima kasih telah berbelanja,\nAnda menghemat ${this._formatPrice(options.mixInfo.totalDiscount)} hari ini! 🎉`;
+        }
+
+        if (footerText) {
             cmds += LF;
             cmds += ESC + 'a\x01'; // center align via ESC/POS command
-            this.wrapMultiline(store.receipt_footer, width).forEach(line => {
+            this.wrapMultiline(footerText, width).forEach(line => {
                 cmds += line.trimEnd() + LF; // Raw line, let printer center it
             });
             cmds += ESC + 'a\x00'; // back to left align
@@ -877,7 +902,8 @@ class ThermalPrinter {
             enrichedCart,
             total,
             invoiceNumber,
-            options.paymentMethod || 'Tunai'
+            options.paymentMethod || 'Tunai',
+            options
         );
 
         console.log('[ThermalPrinter] Receipt output length:', data.length, 'bytes');
@@ -973,16 +999,48 @@ class ThermalPrinter {
         let itemsHtml = '';
         cart.forEach(item => {
             const name = item.print_name || item.name || 'Item';
-            const unitPrice = parseFloat(item.unit_price) || 0;
-            const itemTotal = parseFloat(item.total) || 0;
             const unitAbbr = item.unit_abbr || this.abbreviateUnit(item.unit_name || 'pcs');
+            
+            let displayUnitPrice = parseFloat(item.unit_price) || 0;
+            let displayItemTotal = parseFloat(item.total) || 0;
+            let discountRowHtml = '';
+
+            if (options.saleMode === 'mix' && options.mixInfo && options.mixInfo.items) {
+                const mixItemInfo = options.mixInfo.items.find(x => x.name === name);
+                if (mixItemInfo && mixItemInfo.discount > 0) {
+                    displayItemTotal = mixItemInfo.retailTotal;
+                    displayUnitPrice = mixItemInfo.retailTotal / item.quantity;
+                    discountRowHtml = `<tr class="item-detail"><td colspan="3" class="right" style="padding-bottom:6px; font-size:10px; color:#333;">Diskon: -${this._formatPrice(mixItemInfo.discount)}</td></tr>`;
+                }
+            }
+
             itemsHtml += `<tr><td colspan="3" class="item-name">${this._escapeHtml(name)}</td></tr>`;
-            itemsHtml += `<tr class="item-detail">
-                <td style="padding-bottom: 6px;">${item.quantity} ${this._escapeHtml(unitAbbr)}</td>
-                <td style="padding-bottom: 6px;">x ${this._formatPrice(unitPrice)}</td>
-                <td class="right" style="padding-bottom: 6px;">${this._formatPrice(itemTotal)}</td>
+            itemsHtml += `<tr class="item-detail" style="${discountRowHtml ? '' : 'padding-bottom: 6px;'}">
+                <td>${item.quantity} ${this._escapeHtml(unitAbbr)}</td>
+                <td>x ${this._formatPrice(displayUnitPrice)}</td>
+                <td class="right">${this._formatPrice(displayItemTotal)}</td>
             </tr>`;
+            itemsHtml += discountRowHtml;
         });
+
+        let totalsHtml = '';
+        if (options.saleMode === 'mix' && options.mixInfo && options.mixInfo.totalDiscount > 0) {
+            const subtotal = total + options.mixInfo.totalDiscount;
+            totalsHtml = `
+                <table class="total-row">
+                    <tr style="font-size:11px;font-weight:normal;"><td>Subtotal</td><td class="right">${this._formatPrice(subtotal)}</td></tr>
+                    <tr style="font-size:11px;font-weight:normal;"><td>Total Diskon</td><td class="right">-${this._formatPrice(options.mixInfo.totalDiscount)}</td></tr>
+                    <tr><td style="padding-top:4px;">TOTAL BAYAR</td><td class="right" style="padding-top:4px;">${this._formatPrice(total)}</td></tr>
+                </table>
+            `;
+        } else {
+            totalsHtml = `<table class="total-row"><tr><td>TOTAL</td><td class="right">${this._formatPrice(total)}</td></tr></table>`;
+        }
+
+        let footerHtml = store.receipt_footer ? `<hr class="divider"><div class="center" style="font-size:10px;white-space:pre-line;">${this._escapeHtml(store.receipt_footer)}</div>` : '';
+        if (options.saleMode === 'mix' && options.mixInfo && options.mixInfo.totalDiscount > 0) {
+            footerHtml += `<div class="center" style="font-size:11px;font-weight:bold;margin-top:8px;">Terima kasih telah berbelanja di Alfarez Mart, Anda telah menghemat belanjaan sebesar ${this._formatPrice(options.mixInfo.totalDiscount)} 🎉</div>`;
+        }
 
         let html = `
             <html>
@@ -1023,8 +1081,8 @@ class ThermalPrinter {
                 <hr class="divider">
                 <table style="text-align:left;">${itemsHtml}</table>
                 <hr class="divider">
-                <table class="total-row"><tr><td>TOTAL</td><td class="right">${this._formatPrice(total)}</td></tr></table>
-                ${store.receipt_footer ? `<hr class="divider"><div class="center" style="font-size:10px;white-space:pre-line;">${this._escapeHtml(store.receipt_footer)}</div>` : ''}
+                ${totalsHtml}
+                ${footerHtml}
                 <div class="no-print" style="margin-top:16px;text-align:center;padding:16px;">
                     <button onclick="window.print()" style="padding:10px 24px;font-size:14px;cursor:pointer;margin:0 4px;background:#007bff;color:white;border:none;border-radius:4px;">Cetak</button>
                     <button onclick="window.close()" style="padding:10px 24px;font-size:14px;cursor:pointer;margin:0 4px;background:#6c757d;color:white;border:none;border-radius:4px;">Tutup</button>
