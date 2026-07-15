@@ -121,13 +121,13 @@ function openUnifiedContactModal(customer = null, defaultType = 'hp', defaultNo 
             }
 
             try {
-                const endpoint = data.id ? 'ppob-customers/update' : 'ppob-customers/create';
-                const res = await api(`${BASE_URL}${endpoint}`, 'POST', data);
+                const endpoint = data.id ? 'ppob/customers/update' : 'ppob/customers';
+                const res = await api(`${BASE_URL}api/${endpoint}`, 'POST', data);
                 if (res.success) {
                     showToast(res.message, 'success');
                     if (typeof loadContacts === 'function') loadContacts();
                     if (typeof filterCustomers === 'function') filterCustomers('all');
-                    if (window.location.href.includes('ppob') && !window.location.href.includes('ppob-customers')) {
+                    if (window.location.href.includes('ppob') && !window.location.href.includes('ppob_customers')) {
                         if (typeof initContacts === 'function') initContacts();
                     }
                     return true;
