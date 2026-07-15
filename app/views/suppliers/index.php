@@ -4,63 +4,219 @@
  * @var array $suppliers
  * @var string $csrfToken
  */
+$avatarColors = [
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', 
+    '#F06292', '#BA68C8', '#4DB6AC', '#7986CB', '#81C784',
+    '#A1887F', '#E06666', '#93C47D', '#8E7CC3', '#F6B26B'
+];
+function getAvatarColor($name, $colors) {
+    $hash = abs(crc32($name));
+    return $colors[$hash % count($colors)];
+}
+function getInitial($name) {
+    $clean = preg_replace('/[^a-zA-Z0-9]/', '', $name);
+    return strtoupper(substr($clean, 0, 1) ?: '?');
+}
 ?>
+<style>
+/* Modern Supplier Card */
+.supplier-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+.supplier-card-modern {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    position: relative;
+    overflow: hidden;
+}
+.supplier-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    border-color: var(--primary);
+}
+.supplier-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.supplier-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.supplier-info {
+    flex: 1;
+    min-width: 0;
+    padding-right: 40px; /* Space for absolute actions */
+}
+.supplier-name {
+    font-weight: 800;
+    font-size: var(--font-size-md);
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+    letter-spacing: 0.3px;
+}
+.supplier-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.supplier-actions-top {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    gap: 4px;
+    opacity: 0.2;
+    transition: opacity 0.2s;
+}
+.supplier-card-modern:hover .supplier-actions-top {
+    opacity: 1;
+}
+.supplier-actions-top button {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.supplier-actions-top button:hover {
+    background: var(--surface-2);
+    transform: scale(1.1);
+}
+.supplier-actions-bottom {
+    display: flex;
+    gap: 8px;
+    margin-top: auto;
+}
+.btn-modern-action {
+    flex: 1;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 10px 0;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+.btn-modern-action.sales {
+    color: var(--info);
+    border-color: rgba(0, 200, 255, 0.2);
+    background: rgba(0, 200, 255, 0.05);
+}
+.btn-modern-action.sales:hover {
+    background: var(--info-bg);
+}
+.btn-modern-action.products {
+    color: var(--success);
+    border-color: rgba(40, 167, 69, 0.2);
+    background: rgba(40, 167, 69, 0.05);
+}
+.btn-modern-action.products:hover {
+    background: var(--success-bg);
+}
+#searchBoxWrapper:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-bg);
+}
+</style>
+
 <div class="page-section">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <h2 style="font-size:var(--font-size-lg);font-weight:700;">Supplier & Sales</h2>
-        <button class="btn-primary-custom" style="padding:8px 16px;font-size:var(--font-size-xs);cursor:pointer;" onclick="showAddSupplier()">
-            <i class="bi bi-plus"></i> Tambah Supplier
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <h2 style="font-size:var(--font-size-lg);font-weight:800;letter-spacing:-0.5px;">Supplier & Sales</h2>
+        <button class="btn-primary-custom" style="padding:10px 18px;font-size:var(--font-size-sm);border-radius:30px;box-shadow:0 4px 15px var(--primary-bg);" onclick="showAddSupplier()">
+            <i class="bi bi-plus-lg" style="margin-right:4px;"></i> Tambah
         </button>
     </div>
 
     <!-- PENCARIAN KHUSUS SUPPLIER & SALES -->
-    <div style="margin-bottom: 16px; position: relative;" id="supplierSearchContainer">
-        <div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0 12px; display:flex; align-items:center;">
-            <i class="bi bi-search" style="color:var(--text-muted);font-size:14px;"></i>
-            <input type="text" id="localSupplierSearch" placeholder="Cari Nama Supplier atau Sales di sini..." style="flex:1;border:none;background:transparent;padding:12px 10px;color:var(--text-primary);font-size:14px;outline:none;" autocomplete="off">
-            <button type="button" id="btnClearLocalSearch" style="display:none;background:none;border:none;color:var(--text-muted);padding:4px;cursor:pointer;"><i class="bi bi-x-lg"></i></button>
+    <div style="margin-bottom: 24px; position: relative;" id="supplierSearchContainer">
+        <div style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:4px 16px; display:flex; align-items:center; transition:all 0.3s;" id="searchBoxWrapper">
+            <i class="bi bi-search" style="color:var(--text-muted);font-size:16px;"></i>
+            <input type="text" id="localSupplierSearch" placeholder="Cari Nama Supplier atau Sales..." style="flex:1;border:none;background:transparent;padding:12px 12px;color:var(--text-primary);font-size:14px;outline:none;" autocomplete="off">
+            <button type="button" id="btnClearLocalSearch" style="display:none;background:var(--surface-2);border:none;color:var(--text-secondary);padding:6px;border-radius:50%;cursor:pointer;width:28px;height:28px;align-items:center;justify-content:center;transition:all 0.2s;"><i class="bi bi-x-lg" style="font-size:12px;"></i></button>
         </div>
-        <div id="localSearchResults" style="position:absolute;top:100%;left:0;right:0;background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);max-height:300px;overflow-y:auto;z-index:100;display:none;margin-top:4px;box-shadow:var(--shadow-md);"></div>
+        <!-- Dropdown not needed for new UI, kept for fallback -->
+        <div id="localSearchResults" style="display:none;"></div>
     </div>
     
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
     <!-- Supplier List -->
-    <div id="supplierList">
+    <div id="supplierList" class="supplier-grid">
     <?php if (empty($suppliers)): ?>
-        <div class="empty-state" id="emptyState">
+        <div class="empty-state" id="emptyState" style="grid-column: 1 / -1;">
             <i class="bi bi-building"></i>
             <h3>Belum Ada Supplier</h3>
             <p>Tambahkan supplier pertama Anda</p>
         </div>
     <?php else: ?>
-        <?php foreach ($suppliers as $s): ?>
-            <div class="product-card" style="margin-bottom:12px; cursor:default; border:1px solid var(--border-color); background:var(--bg-primary); transition:all 0.3s ease; box-shadow:0 4px 15px rgba(0,0,0,0.1);" id="supplier-card-<?= $s['id'] ?>">
-                <div class="product-icon" style="background:linear-gradient(135deg, var(--info-bg), rgba(0,200,255,0.15)); color:var(--info); border-radius:12px; width:48px; height:48px; font-size:1.4rem; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                    <i class="bi bi-building"></i>
+        <?php foreach ($suppliers as $s): 
+            $initial = getInitial($s['name']);
+            $bgColor = getAvatarColor($s['name'], $avatarColors);
+        ?>
+            <div class="supplier-card-modern" id="supplier-card-<?= $s['id'] ?>">
+                <div class="supplier-actions-top">
+                    <button onclick="showEditSupplier(<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>)" style="color:var(--text-secondary);" title="Edit"><i class="bi bi-pencil-square"></i></button>
+                    <button onclick="deleteSupplier(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['name']), ENT_QUOTES, 'UTF-8') ?>')" style="color:var(--danger);" title="Hapus"><i class="bi bi-trash"></i></button>
                 </div>
-                <div class="product-info" style="flex:1; min-width:0; margin-left:12px;">
-                    <div class="product-name" style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <div style="flex:1; min-width:0; padding-right:8px;">
-                            <div style="font-weight:800; font-size:var(--font-size-md); letter-spacing:0.3px; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
-                                <?= htmlspecialchars($s['name']) ?>
-                            </div>
-                            <div style="font-size:var(--font-size-xs); color:var(--text-muted); margin-top:4px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                                <span class="badge-custom badge-info" style="font-size:9px; padding:3px 6px; text-transform:uppercase; letter-spacing:0.5px;">
-                                    <?= htmlspecialchars($s['type_name'] ?? 'Supplier') ?>
-                                </span>
-                                <?= $s['is_consignment'] ? '<span class="badge-custom badge-warning" style="font-size:9px; padding:3px 6px; background:rgba(255,193,7,0.15); color:#ffc107;">🏷️ Konsinyasi</span>' : '' ?>
-                            </div>
+                
+                <div class="supplier-card-header">
+                    <div class="supplier-avatar" style="background:<?= $bgColor ?>;">
+                        <?= $initial ?>
+                    </div>
+                    <div class="supplier-info">
+                        <div class="supplier-name" title="<?= htmlspecialchars($s['name']) ?>">
+                            <?= htmlspecialchars($s['name']) ?>
                         </div>
-                        <div style="display:flex; gap:2px; background:var(--surface-2); border-radius:30px; padding:2px; flex-shrink:0;">
-                            <button onclick="showEditSupplier(<?= htmlspecialchars(json_encode($s), ENT_QUOTES, 'UTF-8') ?>)" class="btn-icon" style="color:var(--text-primary); padding:6px; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><i class="bi bi-pencil-square" style="font-size:13px;"></i></button>
-                            <button onclick="deleteSupplier(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['name']), ENT_QUOTES, 'UTF-8') ?>')" class="btn-icon" style="color:var(--danger); padding:6px; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center;"><i class="bi bi-trash" style="font-size:13px;"></i></button>
+                        <div class="supplier-meta">
+                            <span class="badge-custom badge-info" style="font-size:9px; padding:3px 6px; text-transform:uppercase; letter-spacing:0.5px; background:var(--surface-2); color:var(--text-secondary); border:1px solid var(--border-color);">
+                                <?= htmlspecialchars($s['type_name'] ?? 'Supplier') ?>
+                            </span>
+                            <?= $s['is_consignment'] ? '<span class="badge-custom badge-warning" style="font-size:9px; padding:3px 6px; background:rgba(255,193,7,0.15); color:#ffc107; border:1px solid rgba(255,193,7,0.3);">🏷️ Konsinyasi</span>' : '' ?>
                         </div>
                     </div>
-                    <div style="margin-top:12px; display:flex; gap:8px;">
-                        <button onclick="showSalesReps(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['name'])) ?>')" style="flex:1; border:none; background:var(--primary-bg); color:var(--primary); padding:8px 0; border-radius:var(--radius-sm); font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:transform 0.1s;"><i class="bi bi-people-fill"></i> Kelola Sales</button>
-                        <button onclick="showSupplierProducts(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['name'])) ?>')" style="flex:1; border:none; background:var(--success-bg); color:var(--success); padding:8px 0; border-radius:var(--radius-sm); font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:transform 0.1s;"><i class="bi bi-box-seam-fill"></i> Kelola Produk</button>
-                    </div>
+                </div>
+
+                <div class="supplier-actions-bottom">
+                    <button class="btn-modern-action sales" onclick="showSalesReps(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['name'])) ?>')">
+                        <i class="bi bi-people-fill"></i> Kelola Sales
+                    </button>
+                    <button class="btn-modern-action products" onclick="showSupplierProducts(<?= $s['id'] ?>, '<?= htmlspecialchars(addslashes($s['name'])) ?>')">
+                        <i class="bi bi-box-seam-fill"></i> Kelola Produk
+                    </button>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -587,84 +743,54 @@ async function removeSupplierProduct(supplierId, productId, supplierName) {
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     const locSearchInput = document.getElementById('localSupplierSearch');
-    const locSearchResults = document.getElementById('localSearchResults');
     const btnClearLocalSearch = document.getElementById('btnClearLocalSearch');
+    const supplierCards = document.querySelectorAll('.supplier-card-modern');
     
     if (!locSearchInput) return;
     
     let locSearchTimeout;
+
+    function resetSearch() {
+        btnClearLocalSearch.style.display = 'none';
+        supplierCards.forEach(card => {
+            card.style.display = 'flex';
+        });
+    }
     
     locSearchInput.addEventListener('input', () => {
         clearTimeout(locSearchTimeout);
         const q = locSearchInput.value.trim();
         
         if (q.length > 0) {
-            btnClearLocalSearch.style.display = 'block';
+            btnClearLocalSearch.style.display = 'flex';
         } else {
-            btnClearLocalSearch.style.display = 'none';
-            locSearchResults.style.display = 'none';
+            resetSearch();
             return;
         }
         
         locSearchTimeout = setTimeout(async () => {
             try {
                 const data = await api(`${BASE_URL}api/suppliers/search?q=${encodeURIComponent(q)}`);
-                if (data && data.length > 0) {
-                    locSearchResults.innerHTML = data.map(s => `
-                        <div style="padding:12px;border-bottom:1px solid var(--border-color);cursor:pointer;" 
-                             onclick="scrollToSupplier(${s.id})">
-                            <div style="display:flex;align-items:center;gap:12px;">
-                                <div style="width:36px;height:36px;background:var(--info-bg);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--info);">
-                                    <i class="bi bi-building"></i>
-                                </div>
-                                <div style="flex:1;min-width:0;">
-                                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.name}</div>
-                                    <div style="font-size:11px;color:var(--text-muted);">
-                                        ${s.match_type === 'sales' ? 'Sales: ' + s.match_name : (s.type_name || 'Supplier')}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-                    locSearchResults.style.display = 'block';
-                } else {
-                    locSearchResults.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:13px;">Supplier/Sales tidak ditemukan</div>';
-                    locSearchResults.style.display = 'block';
-                }
+                const matchedIds = data ? data.map(s => String(s.id)) : [];
+                
+                supplierCards.forEach(card => {
+                    const id = card.id.replace('supplier-card-', '');
+                    if (matchedIds.includes(id)) {
+                        card.style.display = 'flex';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
             } catch (e) {
-                locSearchResults.style.display = 'none';
+                supplierCards.forEach(card => card.style.display = 'none');
             }
         }, 300);
     });
     
     btnClearLocalSearch.addEventListener('click', () => {
         locSearchInput.value = '';
-        btnClearLocalSearch.style.display = 'none';
-        locSearchResults.style.display = 'none';
+        resetSearch();
         locSearchInput.focus();
     });
-    
-    // Hide results when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!document.getElementById('supplierSearchContainer').contains(e.target)) {
-            locSearchResults.style.display = 'none';
-        }
-    });
 });
-
-function scrollToSupplier(id) {
-    const locSearchResults = document.getElementById('localSearchResults');
-    if (locSearchResults) locSearchResults.style.display = 'none';
-    
-    const card = document.getElementById(`supplier-card-${id}`);
-    if (card) {
-        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        const oldBg = card.style.background;
-        card.style.background = 'var(--warning-bg)';
-        card.style.transition = 'background 0.5s';
-        setTimeout(() => { card.style.background = oldBg; }, 2000);
-    } else {
-        showToast('Supplier tidak ada di halaman ini', 'warning');
-    }
-}
 </script>
