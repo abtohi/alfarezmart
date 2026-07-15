@@ -520,9 +520,12 @@
             </div>
         </div>
 
-        <div class="hero-actions-container mt-3 w-100">
-            <button class="btn-topup-premium w-100 justify-content-center" onclick="openDepositModal()">
+        <div class="hero-actions-container mt-3 w-100 d-flex gap-2">
+            <button class="btn-topup-premium flex-grow-1 justify-content-center" onclick="openDepositModal()">
                 <i class="bi bi-plus-circle-fill"></i> Top Up Saldo
+            </button>
+            <button class="btn-riwayat-premium" onclick="openDepositHistoryModal()">
+                <i class="bi bi-clock-history"></i> Riwayat
             </button>
         </div>
     </div>
@@ -835,28 +838,26 @@
 
 <!-- Deposit History Modal -->
 <div class="modal fade" id="depositHistoryModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content" style="border-radius: 20px; border: none;">
-            <div class="modal-header border-0" style="background: var(--surface-2);">
-                <h5 class="modal-title fw-bold"><i class="bi bi-clock-history me-2"></i>Riwayat Deposit</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 20px; border: none; background: var(--surface-1); box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+            <div class="modal-header border-0 pb-0" style="padding: 24px 24px 16px;">
+                <div class="d-flex w-100 justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold" style="font-size: 1.25rem;"><i class="bi bi-clock-history me-2 text-primary"></i>Riwayat Deposit</h5>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold" onclick="fetchDepositHistory()" id="btnRefreshDeposit" style="transition: all 0.2s;">
+                            <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                        </button>
+                        <button type="button" class="btn-close m-0" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
+                    </div>
+                </div>
             </div>
-            <div class="modal-body p-4">
-                <div class="table-responsive">
-                    <table class="table table-borderless table-hover text-nowrap" id="table-deposit-history">
-                        <thead style="background: var(--surface-2);">
-                            <tr>
-                                <th class="rounded-start">Tanggal</th>
-                                <th>Bank</th>
-                                <th>Nominal</th>
-                                <th>Status</th>
-                                <th class="rounded-end">Instruksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="deposit-history-body">
-                            <tr><td colspan="5" class="text-center py-4"><span class="spinner-border spinner-border-sm me-2"></span>Memuat data...</td></tr>
-                        </tbody>
-                    </table>
+            <div class="modal-body p-4 pt-3">
+                <div id="deposit-history-body" class="d-flex flex-column gap-3">
+                    <!-- Data will be loaded here via JS -->
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary mb-3" role="status"></div>
+                        <p class="text-muted fw-bold">Memuat riwayat deposit...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1404,7 +1405,19 @@ async function openDepositHistoryModal() {
 
 async function fetchDepositHistory() {
     const tbody = document.getElementById('deposit-history-body');
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4"><span class="spinner-border spinner-border-sm me-2"></span>Memuat data...</td></tr>';
+    const btnRefresh = document.getElementById('btnRefreshDeposit');
+    
+    tbody.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <p class="text-muted fw-bold">Memuat riwayat deposit...</p>
+        </div>
+    `;
+    
+    if(btnRefresh) {
+        btnRefresh.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Refreshing...';
+        btnRefresh.disabled = true;
+    }
     
     try {
         const res = await fetch('<?= BASE_URL ?>api/ppob/deposit-history');
@@ -1415,48 +1428,120 @@ async function fetchDepositHistory() {
             data.data.forEach(item => {
                 let badgeClass = 'bg-warning text-dark';
                 let statusText = 'Pending';
+                let iconClass = 'bi-hourglass-split';
                 
-                // Assuming status are pending, success, failed, cancelled, etc.
-                if(item.status === 'success' || item.status === 'sukses') {
+                const statusStr = (item.status || '').toLowerCase();
+                if(statusStr === 'success' || statusStr === 'sukses') {
                     badgeClass = 'bg-success';
                     statusText = 'Sukses';
-                } else if(item.status === 'failed' || item.status === 'gagal' || item.status === 'cancelled' || item.status === 'batal') {
+                    iconClass = 'bi-check-circle-fill';
+                } else if(statusStr === 'failed' || statusStr === 'gagal' || statusStr === 'cancelled' || statusStr === 'batal') {
                     badgeClass = 'bg-danger';
-                    statusText = 'Batal/Gagal';
+                    statusText = 'Gagal';
+                    iconClass = 'bi-x-circle-fill';
                 }
 
                 // parse notes
-                let notesHtml = '<span class="text-muted small">-</span>';
+                let targetRek = '-';
+                let targetName = '-';
+                let uniqueTransfer = item.amount;
+                
+                if (item.raw) {
+                    try {
+                        const rawObj = JSON.parse(item.raw);
+                        if (rawObj.amount) uniqueTransfer = rawObj.amount;
+                    } catch(e) {}
+                }
+                
                 if(item.notes) {
                     const match = item.notes.match(/ke\s+(?:rekening\s+)?([a-zA-Z\s]+?)\s+(\d{8,})\s*a\.?\/?n\.?\s+(.*)/i) 
-                                || item.notes.match(/(BCA|MANDIRI|BRI|BNI|FLIP|SHOPEEPAY|GOPAY)\s+(\d{8,})\s*a\.?\/?n\.?\s+(.*)/i);
+                                || item.notes.match(/(BCA|MANDIRI|BRI|BNI|BSI|FLIP|SHOPEEPAY|GOPAY)\s+(\d{8,})\s*a\.?\/?n\.?\s+(.*)/i);
                     if(item.bank === 'SHOPEEPAY' || item.bank === 'FLIP') {
-                        notesHtml = `<div class="small fw-bold">BCA: 6042888890</div><div class="text-muted" style="font-size:11px;">PT DIGIFLAZZ...</div>`;
+                        targetRek = 'BCA - 6042888890';
+                        targetName = 'PT DIGIFLAZZ INTERKONEKSI';
                     } else if(match) {
-                        notesHtml = `<div class="small fw-bold">${match[1].trim()}: ${match[2]}</div><div class="text-muted" style="font-size:11px;">a.n ${match[3].replace(/[.]$/, '').trim()}</div>`;
+                        targetRek = `${match[1].trim()} - ${match[2]}`;
+                        targetName = match[3].replace(/[.]$/, '').trim();
                     } else {
-                        notesHtml = `<div class="small text-truncate" style="max-width:200px;" title="${item.notes}">${item.notes}</div>`;
+                        let extractNo = item.notes.match(/\b\d{8,}\b/);
+                        if(extractNo) targetRek = item.bank + ' - ' + extractNo[0];
                     }
                 }
                 
+                if (targetName === '-' && item.owner_name) {
+                    targetName = item.owner_name;
+                }
+                
                 const d = new Date(item.created_at);
-                const dateStr = d.toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'}) + ' ' + d.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
+                const dateStr = d.toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'});
+                const timeStr = d.toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'});
 
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="text-muted align-middle" style="font-size: 13px;">${dateStr}</td>
-                        <td class="align-middle fw-bold">${item.bank}</td>
-                        <td class="align-middle fw-bold text-primary">${formatRp(item.amount)}</td>
-                        <td class="align-middle"><span class="badge ${badgeClass} rounded-pill">${statusText}</span></td>
-                        <td class="align-middle">${notesHtml}</td>
-                    </tr>
+                const cardHtml = `
+                    <div class="card border-0 mb-1" style="background: var(--surface-2); border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; background: rgba(56, 189, 248, 0.1); color: #38bdf8;">
+                                        <i class="bi bi-wallet2 fs-5"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0 fw-bold" style="font-size: 15px;">Deposit ${item.bank}</h6>
+                                        <small class="text-muted" style="font-size: 12px;">${dateStr} • ${timeStr}</small>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge ${badgeClass} rounded-pill px-3 py-2 fw-bold" style="font-size: 12px;"><i class="bi ${iconClass} me-1"></i>${statusText}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="p-3 rounded-4 h-100" style="background: var(--surface-3);">
+                                        <div class="text-muted mb-2" style="font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Tujuan Transfer</div>
+                                        <div class="fw-bold text-truncate" style="font-size: 14px;"><i class="bi bi-bank me-2 text-muted"></i>${targetRek}</div>
+                                        <div class="text-muted mt-2" style="font-size: 13px;"><i class="bi bi-person me-2"></i>a/n ${targetName}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 rounded-4 h-100 d-flex flex-column justify-content-center" style="background: rgba(56, 189, 248, 0.04); border: 1px dashed rgba(56, 189, 248, 0.3);">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span class="text-muted" style="font-size: 12px;">Nominal Deposit</span>
+                                            <span class="fw-bold" style="font-size: 13px;">${formatRp(item.amount)}</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="text-primary fw-bold" style="font-size: 12px;">Nominal Transfer <i class="bi bi-info-circle ms-1" title="Sertakan 3 angka unik terakhir agar otomatis masuk"></i></span>
+                                            <span class="fw-black text-primary fs-5" style="font-weight: 900;">${formatRp(uniqueTransfer)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 `;
+                tbody.innerHTML += cardHtml;
             });
         } else {
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Belum ada riwayat deposit.</td></tr>';
+            tbody.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="text-muted mb-3"><i class="bi bi-journal-x" style="font-size: 3rem; opacity: 0.3;"></i></div>
+                    <h5 class="fw-bold text-muted">Belum ada riwayat deposit</h5>
+                    <p class="text-muted small">Riwayat permintaan pengisian saldo akan tampil di sini.</p>
+                </div>
+            `;
         }
     } catch(e) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Gagal memuat riwayat.</td></tr>';
+        tbody.innerHTML = `
+            <div class="text-center py-5">
+                <div class="text-danger mb-3"><i class="bi bi-exclamation-triangle" style="font-size: 3rem; opacity: 0.5;"></i></div>
+                <h5 class="fw-bold text-danger">Gagal memuat data</h5>
+                <p class="text-muted small">Terjadi kesalahan koneksi saat mengambil riwayat deposit.</p>
+            </div>
+        `;
+    } finally {
+        if(btnRefresh) {
+            btnRefresh.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Refresh';
+            btnRefresh.disabled = false;
+        }
     }
 }
 
