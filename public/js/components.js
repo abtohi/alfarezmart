@@ -133,6 +133,10 @@ const AppModal = {
         overlay.classList.add('active');
         document.body.style.overflow = 'hidden';
 
+        if (typeof config.onShown === 'function') {
+            setTimeout(config.onShown, 50);
+        }
+
         return new Promise(resolve => { this._resolve = resolve; });
     },
 
