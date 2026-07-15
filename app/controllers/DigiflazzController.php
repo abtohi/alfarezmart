@@ -860,6 +860,29 @@ class DigiflazzController extends Controller {
         }
 
         $trx = $data['data'];
+        
+        // Handle Deposit Webhook
+        if (isset($data['action']) && $data['action'] === 'deposit') {
+            $rawStatus = strtolower(trim($trx['status'] ?? ''));
+            $status = 'pending';
+            if ($rawStatus === 'sukses' || $rawStatus === 'success') $status = 'success';
+            elseif ($rawStatus === 'gagal' || $rawStatus === 'failed') $status = 'failed';
+            
+            $amount = $trx['amount'] ?? 0;
+            $notes = $trx['notes'] ?? '';
+            
+            error_log("[Digiflazz Webhook] Deposit update received: amount=$amount status=$status");
+            
+            if ($amount > 0) {
+                $this->digiModel->updateDepositStatus($amount, $status, $notes, $trx);
+                @file_put_contents(STORAGE_PATH . '/logs/webhook.log', "SUCCESS: Updated Deposit $amount to $status\n\n", FILE_APPEND);
+            }
+            
+            http_response_code(200);
+            echo json_encode(['status' => 'ok']);
+            exit;
+        }
+
         $refId    = $trx['ref_id']    ?? '';
         $trxId    = $trx['trx_id']    ?? null;
         $rawStatus = strtolower(trim($trx['status'] ?? ''));

@@ -443,6 +443,32 @@ class DigiflazzModel {
     }
 
     /**
+     * Update deposit status
+     */
+    public function updateDepositStatus($amount, $status, $notes, $rawResponse) {
+        // Digiflazz webhook only sends exact amount (unique amount) for deposits
+        // The DB might only have the raw_response JSON which contains the exact unique amount.
+        // We will try to find the matching pending deposit.
+        $stmt = $this->db->prepare("
+            UPDATE digi_deposits 
+            SET status = :status, notes = :notes, raw_response = :raw 
+            WHERE status = 'pending' AND (
+                amount = :amount OR 
+                raw_response LIKE :amount_like
+            )
+            ORDER BY created_at ASC LIMIT 1
+        ");
+        return $stmt->execute([
+            'status' => $status,
+            'notes' => $notes,
+            'raw' => is_array($rawResponse) ? json_encode($rawResponse) : $rawResponse,
+            'amount' => $amount,
+            'amount_like' => '%"amount":' . $amount . '%'
+        ]);
+    }
+
+
+    /**
      * Get success rates for all sellers
      */
     public function getSellerSuccessRates() {

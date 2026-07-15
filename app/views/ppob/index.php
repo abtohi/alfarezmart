@@ -125,6 +125,45 @@
     box-shadow: 0 8px 20px -6px rgba(56, 189, 248, 0.3);
 }
 
+.btn-riwayat-premium {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: var(--text-color, #fff);
+    font-weight: 600;
+    font-size: 14px;
+    padding: 12px 20px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    height: 48px; /* Match Top Up button height */
+}
+
+html[data-bs-theme="light"] .btn-riwayat-premium {
+    color: #1e293b;
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+
+.btn-riwayat-premium:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+html[data-bs-theme="light"] .btn-riwayat-premium:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.btn-riwayat-premium i {
+    font-size: 16px;
+}
+
 /* hero-top-row: left+right side by side */
 .hero-top-row {
     display: flex;
@@ -1449,8 +1488,23 @@ async function fetchDepositHistory() {
                 if (item.raw) {
                     try {
                         const rawObj = JSON.parse(item.raw);
-                        if (rawObj.amount) uniqueTransfer = rawObj.amount;
+                        if (rawObj.deposit && rawObj.deposit.amount) {
+                            uniqueTransfer = rawObj.deposit.amount;
+                        } else if (rawObj.amount) {
+                            uniqueTransfer = rawObj.amount;
+                        }
                     } catch(e) {}
+                }
+                
+                // Ultimate fallback: Parse unique amount from notes text
+                if (item.notes) {
+                    const rpMatch = item.notes.match(/Rp\s*([0-9.,]+)/i);
+                    if (rpMatch && rpMatch[1]) {
+                        const parsedRp = parseInt(rpMatch[1].replace(/[.,]/g, ''), 10);
+                        if (!isNaN(parsedRp) && parsedRp > 0) {
+                            uniqueTransfer = parsedRp;
+                        }
+                    }
                 }
                 
                 if(item.notes) {
@@ -1469,7 +1523,15 @@ async function fetchDepositHistory() {
                 }
                 
                 if (targetName === '-' && item.owner_name) {
-                    targetName = item.owner_name;
+                    targetName = 'PT. Digiflazz Interkoneksi Indonesia';
+                } else if (targetName === '-') {
+                    targetName = 'PT. Digiflazz Interkoneksi Indonesia';
+                }
+                
+                // Force PT Digiflazz Interkoneksi Indonesia if it looks like a person's name just in case, but usually Digiflazz notes has the PT name.
+                if (item.bank && targetName !== '-' && !targetName.toLowerCase().includes('digiflazz')) {
+                     // For e-wallets or banks where Digiflazz notes don't specify PT Digiflazz, enforce it
+                     targetName = 'PT. Digiflazz Interkoneksi Indonesia';
                 }
                 
                 const d = new Date(item.created_at);
@@ -1485,7 +1547,7 @@ async function fetchDepositHistory() {
                                         <i class="bi bi-wallet2 fs-5"></i>
                                     </div>
                                     <div>
-                                        <h6 class="mb-0 fw-bold" style="font-size: 15px;">Deposit ${item.bank}</h6>
+                                        <h6 class="mb-0 fw-bold" style="font-size: 15px; color: var(--text-color);">Deposit ${item.bank}</h6>
                                         <small class="text-muted" style="font-size: 12px;">${dateStr} • ${timeStr}</small>
                                     </div>
                                 </div>
@@ -1498,19 +1560,19 @@ async function fetchDepositHistory() {
                                 <div class="col-md-6">
                                     <div class="p-3 rounded-4 h-100" style="background: var(--surface-3);">
                                         <div class="text-muted mb-2" style="font-size: 11px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Tujuan Transfer</div>
-                                        <div class="fw-bold text-truncate" style="font-size: 14px;"><i class="bi bi-bank me-2 text-muted"></i>${targetRek}</div>
-                                        <div class="text-muted mt-2" style="font-size: 13px;"><i class="bi bi-person me-2"></i>a/n ${targetName}</div>
+                                        <div class="fw-bold text-truncate" style="font-size: 14px; color: var(--text-color);"><i class="bi bi-bank me-2 text-muted"></i>${targetRek}</div>
+                                        <div class="text-muted mt-2 text-truncate" style="font-size: 13px;"><i class="bi bi-person me-2"></i>a/n ${targetName}</div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="p-3 rounded-4 h-100 d-flex flex-column justify-content-center" style="background: rgba(56, 189, 248, 0.04); border: 1px dashed rgba(56, 189, 248, 0.3);">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span class="text-muted" style="font-size: 12px;">Nominal Deposit</span>
-                                            <span class="fw-bold" style="font-size: 13px;">${formatRp(item.amount)}</span>
+                                        <div class="mb-2">
+                                            <div class="text-muted" style="font-size: 12px; margin-bottom: 2px;">Nominal Deposit</div>
+                                            <div class="fw-bold" style="font-size: 14px; color: var(--text-color);">${formatRp(item.amount)}</div>
                                         </div>
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <span class="text-primary fw-bold" style="font-size: 12px;">Nominal Transfer <i class="bi bi-info-circle ms-1" title="Sertakan 3 angka unik terakhir agar otomatis masuk"></i></span>
-                                            <span class="fw-black text-primary fs-5" style="font-weight: 900;">${formatRp(uniqueTransfer)}</span>
+                                        <div>
+                                            <div class="text-primary fw-bold" style="font-size: 12px; margin-bottom: 2px;">Nominal Transfer <i class="bi bi-info-circle ms-1 text-muted" title="Sertakan 3 angka unik terakhir agar otomatis masuk"></i></div>
+                                            <div class="fw-black text-primary" style="font-size: 1.15rem; letter-spacing: -0.5px;">${formatRp(uniqueTransfer)}</div>
                                         </div>
                                     </div>
                                 </div>
