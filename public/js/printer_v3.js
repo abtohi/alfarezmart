@@ -485,17 +485,22 @@ class ThermalPrinter {
             cmds += this.padLine('Total Diskon', `-${this._formatPrice(options.mixInfo.totalDiscount)}`, width) + LF;
             cmds += ESC + 'E\x01'; // Bold for grand total
             cmds += this.padLine('TOTAL BAYAR', this._formatPrice(total), width) + LF;
+            cmds += ESC + 'E\x00';
+            
+            // Add 'hemat' message immediately below TOTAL BAYAR
+            cmds += LF;
+            cmds += ESC + 'a\x01'; // Center align
+            cmds += 'Terima kasih telah berbelanja,' + LF;
+            cmds += `Anda menghemat Rp${this._formatPrice(options.mixInfo.totalDiscount)} hari ini!` + LF;
+            cmds += ESC + 'a\x00'; // Reset to left align
         } else {
             cmds += this.padLine('TOTAL', this._formatPrice(total), width) + LF;
+            cmds += ESC + 'E\x00';
         }
-        cmds += ESC + 'E\x00';
 
         // Footer from settings — use ESC/POS center align command (\x01)
         // Do NOT use centerLine() padding here as ESC a\x01 handles centering natively
         let footerText = store.receipt_footer || '';
-        if (options.saleMode === 'mix' && options.mixInfo && options.mixInfo.totalDiscount > 0) {
-            footerText += `\n\nTerima kasih telah berbelanja,\nAnda menghemat ${this._formatPrice(options.mixInfo.totalDiscount)} hari ini! 🎉`;
-        }
 
         if (footerText) {
             cmds += LF;
