@@ -2,6 +2,21 @@ function openUnifiedContactModal(customer = null, defaultType = 'hp', defaultNo 
     const isEdit = !!customer;
     const services = ['Dana', 'GoPay', 'OVO', 'ShopeePay', 'LinkAja'];
     
+    // Inject dynamic CSS to fix disabled select background
+    if (!document.getElementById('ppob-contacts-css')) {
+        const style = document.createElement('style');
+        style.id = 'ppob-contacts-css';
+        style.innerHTML = `
+            select.glass-input:disabled {
+                background-color: var(--surface-2) !important;
+                color: var(--text-muted) !important;
+                opacity: 0.7 !important;
+                cursor: not-allowed !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
     // Parse ewallet accounts if available
     let ewallets = {};
     if (customer && customer.ewallet_accounts) {
@@ -29,7 +44,7 @@ function openUnifiedContactModal(customer = null, defaultType = 'hp', defaultNo 
             <input type="hidden" id="uc_id" value="${customer ? customer.id : ''}">
             <div class="mb-3">
                 <label class="form-label fw-bold small" style="color:var(--text-secondary);">Tipe Pelanggan</label>
-                <select class="form-select glass-input fw-bold" id="uc_type" onchange="toggleUnifiedContactType()" ${isEdit ? 'disabled style="background-color:var(--surface-2) !important; color:var(--text-muted) !important; opacity:0.8; cursor:not-allowed;"' : ''}>
+                <select class="form-select glass-input fw-bold" id="uc_type" onchange="toggleUnifiedContactType()" ${isEdit ? 'disabled' : ''}>
                     <option value="hp" ${(customer ? customer.type : defaultType) === 'hp' ? 'selected' : ''}>Nomor HP (Pulsa/Data/E-Wallet)</option>
                     <option value="pln" ${(customer ? customer.type : defaultType) === 'pln' ? 'selected' : ''}>PLN (Token/Tagihan)</option>
                     <option value="game" ${(customer ? customer.type : defaultType) === 'game' ? 'selected' : ''}>Voucher Game</option>
