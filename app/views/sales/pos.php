@@ -5,91 +5,89 @@
  */
 ?>
 <div class="page-section" style="padding-bottom:200px;">
-    <div class="pos-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
-        <h2 style="font-size:var(--font-size-lg); font-weight:700; margin:0;">Kasir (POS)</h2>
-        <div style="display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; padding-bottom:2px;">
-            <button type="button" class="btn-outline-custom" onclick="clearCartConfirm()" style="padding:6px 10px; border-radius:var(--radius-md); font-size:var(--font-size-xs); background:var(--danger-bg); border:1px solid rgba(230,57,70,0.3); color:var(--danger); display:flex; align-items:center; gap:6px; flex-shrink:0;" title="Kosongkan Keranjang"><i class="bi bi-trash3"></i> <span class="d-none d-sm-inline">Kosongkan</span></button>
-            <button class="btn-outline-custom" onclick="window.location.href=`${BASE_URL}sales`" style="padding:6px 10px; border-radius:var(--radius-md); font-size:var(--font-size-xs); background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:6px; flex-shrink:0;" title="Lihat Riwayat Penjualan"><i class="bi bi-clock-history"></i> <span class="d-none d-sm-inline">Riwayat</span></button>
-            <button class="btn-outline-custom" onclick="openDrafts()" style="padding:6px 10px; border-radius:var(--radius-md); font-size:var(--font-size-xs); background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:6px; flex-shrink:0;"><i class="bi bi-journal-bookmark"></i> <span class="d-none d-sm-inline">Draft</span></button>
-            <div style="display:flex; background:var(--surface-1); border-radius:var(--radius-md); padding:3px; border:1px solid var(--border-color); flex-shrink:0;">
-                <button id="btnRetail" class="btn-primary-custom" style="padding:4px 12px; border-radius:var(--radius-sm); font-size:var(--font-size-xs);" onclick="setSaleMode('retail')">Ecer</button>
-                <button id="btnWholesale" class="btn-outline-custom" style="padding:4px 12px; border-radius:var(--radius-sm); font-size:var(--font-size-xs); border:none;" onclick="setSaleMode('wholesale')">Grosir</button>
-                <button id="btnMix" class="btn-outline-custom" style="padding:4px 12px; border-radius:var(--radius-sm); font-size:var(--font-size-xs); border:none;" onclick="setSaleMode('mix')">Mix</button>
-            </div>
+    <!-- POS Header: Action Buttons & Sale Mode -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:nowrap; gap:8px;">
+        <!-- Left: Actions -->
+        <div style="display:flex; gap:6px; flex-shrink:0;">
+            <button type="button" class="btn-outline-custom" onclick="clearCartConfirm()" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--danger-bg); border:1px solid rgba(230,57,70,0.3); color:var(--danger); display:flex; align-items:center; gap:4px;" title="Kosongkan Keranjang"><i class="bi bi-trash3"></i> <span class="d-none d-sm-inline">Batal</span></button>
+            <button class="btn-outline-custom" onclick="window.location.href=`${BASE_URL}sales`" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:4px;" title="Lihat Riwayat Penjualan"><i class="bi bi-clock-history"></i> <span class="d-none d-sm-inline">Riwayat</span></button>
+            <button class="btn-outline-custom" onclick="openDrafts()" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:4px;"><i class="bi bi-journal-bookmark"></i> <span class="d-none d-sm-inline">Draft</span></button>
+        </div>
+        
+        <!-- Right: Sale Mode Tabs -->
+        <div style="display:flex; background:var(--surface-1); border-radius:var(--radius-md); padding:2px; border:1px solid var(--border-color); flex-shrink:0;">
+            <button id="btnRetail" class="btn-primary-custom" style="padding:3px 10px; border-radius:var(--radius-sm); font-size:11px;" onclick="setSaleMode('retail')">Ecer</button>
+            <button id="btnWholesale" class="btn-outline-custom" style="padding:3px 10px; border-radius:var(--radius-sm); font-size:11px; border:none;" onclick="setSaleMode('wholesale')">Grosir</button>
+            <button id="btnMix" class="btn-outline-custom" style="padding:3px 10px; border-radius:var(--radius-sm); font-size:11px; border:none;" onclick="setSaleMode('mix')">Mix</button>
         </div>
     </div>
     
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
-    <!-- Customer Selector -->
-    <div style="margin-bottom:12px; position:relative;">
-        <div id="customerSelectorBox"
-             onclick="toggleCustomerDropdown()"
-             style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:all 0.2s; user-select:none;"
-             onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor=document.getElementById('customerDropdown').style.display==='none'?'var(--border-color)':'var(--primary)'">
-            <div style="width:32px;height:32px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="bi bi-person" id="customerSelectorIcon" style="color:var(--primary);font-size:1rem;"></i>
-            </div>
-            <div style="flex:1;min-width:0;">
-                <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:1px;">Pelanggan</div>
-                <div id="customerSelectorLabel" style="font-size:var(--font-size-sm);font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Pelanggan Umum</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-                <button type="button" id="btnClearCustomer" onclick="event.stopPropagation();clearCustomer()" title="Hapus pilihan" style="display:none;background:var(--surface-2);border:1px solid var(--border-color);border-radius:50%;width:24px;height:24px;padding:0;cursor:pointer;color:var(--text-muted);font-size:0.75rem;line-height:1;">
-                    <i class="bi bi-x"></i>
-                </button>
-                <i class="bi bi-chevron-down" id="customerChevron" style="color:var(--text-muted);font-size:0.75rem;transition:transform 0.2s;"></i>
-            </div>
+    <!-- Mix Default Price Selector (Slim Bar) -->
+    <div id="mixDefaultPriceBox" style="display:none; margin-bottom:8px; background:var(--primary-bg); border-radius:var(--radius-sm); padding:6px 10px; align-items:center; justify-content:space-between; border:1px solid rgba(230,57,70,0.2);">
+        <div style="display:flex; align-items:center; gap:6px;">
+            <i class="bi bi-shuffle" style="color:var(--primary); font-size:0.9rem;"></i>
+            <span style="font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase;">Default Mix:</span>
         </div>
-        <!-- Customer Dropdown Panel -->
-        <div id="customerDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:200;background:var(--surface-1);border:1px solid var(--primary);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;">
-            <div style="padding:10px 12px;border-bottom:1px solid var(--border-color);">
-                <div style="display:flex;align-items:center;gap:8px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:0 10px;">
-                    <i class="bi bi-search" style="color:var(--text-muted);font-size:0.9rem;"></i>
-                    <input type="text" id="customerSearchInput"
-                           placeholder="Ketik nama atau nomor HP..."
-                           autocomplete="off" autocorrect="off" spellcheck="false"
-                           style="flex:1;border:none;background:transparent;padding:10px 4px;color:var(--text-primary);font-size:var(--font-size-sm);outline:none;font-family:var(--font-family);"
-                           oninput="onCustomerSearch(this.value)">
-                    <i class="bi bi-x-circle" style="color:var(--text-muted);font-size:0.9rem;cursor:pointer;" onclick="document.getElementById('customerSearchInput').value='';onCustomerSearch('');"></i>
+        <div style="display:flex; background:var(--surface-1); border-radius:4px; overflow:hidden; border:1px solid var(--border-color);">
+            <button id="btnMixDefaultRetail" style="padding:2px 10px; font-size:10px; font-weight:600; border:none; transition:0.2s;" onclick="setMixDefault('retail')">Ecer</button>
+            <button id="btnMixDefaultWholesale" style="padding:2px 10px; font-size:10px; font-weight:600; border:none; border-left:1px solid var(--border-color); transition:0.2s;" onclick="setMixDefault('wholesale')">Grosir</button>
+        </div>
+    </div>
+
+    <!-- Customer Selector & Search Product Row -->
+    <div style="display:flex; gap:8px; margin-bottom:12px; align-items:stretch;">
+        
+        <!-- Customer Selector -->
+        <div style="position:relative; width:35%;">
+            <div id="customerSelectorBox"
+                 onclick="toggleCustomerDropdown()"
+                 style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:6px 10px; height:100%; display:flex; align-items:center; gap:8px; cursor:pointer; transition:all 0.2s; user-select:none;"
+                 onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor=document.getElementById('customerDropdown').style.display==='none'?'var(--border-color)':'var(--primary)'">
+                <div style="width:24px;height:24px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="bi bi-person" id="customerSelectorIcon" style="color:var(--primary);font-size:0.85rem;"></i>
+                </div>
+                <div style="flex:1;min-width:0;line-height:1.2;">
+                    <div style="font-size:9px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.3px;">Pelanggan</div>
+                    <div id="customerSelectorLabel" style="font-size:11px;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Umum</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+                    <button type="button" id="btnClearCustomer" onclick="event.stopPropagation();clearCustomer()" title="Hapus pilihan" style="display:none;background:var(--surface-2);border:1px solid var(--border-color);border-radius:50%;width:18px;height:18px;padding:0;cursor:pointer;color:var(--text-muted);font-size:0.6rem;line-height:1;display:flex;align-items:center;justify-content:center;">
+                        <i class="bi bi-x"></i>
+                    </button>
                 </div>
             </div>
-            <div id="customerResults" style="max-height:220px;overflow-y:auto;padding:6px 0;">
-                <!-- populated by JS -->
+            <!-- Customer Dropdown Panel -->
+            <div id="customerDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;width:260px;z-index:200;background:var(--surface-1);border:1px solid var(--primary);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;">
+                <div style="padding:8px;border-bottom:1px solid var(--border-color);">
+                    <div style="display:flex;align-items:center;gap:6px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:0 8px;">
+                        <i class="bi bi-search" style="color:var(--text-muted);font-size:0.8rem;"></i>
+                        <input type="text" id="customerSearchInput"
+                               placeholder="Cari pelanggan..."
+                               autocomplete="off" autocorrect="off" spellcheck="false"
+                               style="flex:1;border:none;background:transparent;padding:6px 2px;color:var(--text-primary);font-size:12px;outline:none;font-family:var(--font-family);"
+                               oninput="onCustomerSearch(this.value)">
+                        <i class="bi bi-x-circle" style="color:var(--text-muted);font-size:0.8rem;cursor:pointer;" onclick="document.getElementById('customerSearchInput').value='';onCustomerSearch('');"></i>
+                    </div>
+                </div>
+                <div id="customerResults" style="max-height:200px;overflow-y:auto;padding:4px 0;">
+                    <!-- populated by JS -->
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Mix Default Price Selector (hanya tampil saat mode Mix) -->
-    <div id="mixDefaultPriceBox" style="display:none; margin-bottom:10px; background:var(--surface-1); border:1px solid var(--primary); border-radius:var(--radius-md); padding:10px 14px;">
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
-                <i class="bi bi-shuffle" style="color:var(--primary); font-size:1rem;"></i>
-                <span style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.4px;">Mode Mix — Harga Default:</span>
+        <!-- Search Product -->
+        <div style="flex:1; position:relative;">
+            <div class="search-input-wrapper" style="background:var(--surface-1); border:1px solid var(--primary); border-radius:var(--radius-sm); padding:0 8px; display:flex; align-items:center; gap:6px; height:100%; box-shadow:0 0 0 2px var(--primary-bg);">
+                <i class="bi bi-upc-scan" style="color:var(--primary); font-size:1.1rem; cursor:pointer; padding:4px;" onclick="openPosScanner()" title="Scan Barcode"></i>
+                <input type="text" id="posSearch" placeholder="Scan atau ketik produk..." 
+                       style="flex:1;border:none;background:transparent;padding:8px 4px;color:var(--text-primary);font-size:12px;font-weight:500;outline:none;font-family:var(--font-family);" autocomplete="off" autofocus>
+                <button type="button" onclick="openCustomProductModal()" style="border:none;background:var(--surface-2);color:var(--text-secondary);font-size:11px;padding:4px 8px;border-radius:4px;cursor:pointer;font-weight:600;"><i class="bi bi-plus"></i> Manual</button>
             </div>
-            <div style="display:flex; background:var(--surface-2); border-radius:var(--radius-sm); padding:2px; border:1px solid var(--border-color);">
-                <button id="btnMixDefaultRetail" class="btn-primary-custom" style="padding:4px 14px; border-radius:var(--radius-sm); font-size:12px; font-weight:600;" onclick="setMixDefault('retail')">Ecer</button>
-                <button id="btnMixDefaultWholesale" class="btn-outline-custom" style="padding:4px 14px; border-radius:var(--radius-sm); font-size:12px; font-weight:600; border:none;" onclick="setMixDefault('wholesale')">Grosir</button>
-            </div>
-            <span style="font-size:11px; color:var(--text-muted); flex:1;">Toggle per item di keranjang untuk campurkan harga.</span>
+            <div id="posSuggestions" style="margin-top:4px; width:100%;"></div>
         </div>
-    </div>
-
-    <!-- Search: barcode atau nama -->
-    <div style="background:var(--surface-1); border-radius:var(--radius-md); padding:12px; margin-bottom:16px; border:1px solid var(--border-color);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <label style="font-size:var(--font-size-xs); font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin:0;">Scan/Cari Produk</label>
-            <button type="button" class="btn-outline-custom" onclick="openCustomProductModal()" style="padding:4px 10px; border-radius:6px; font-size:11px; display:inline-flex; align-items:center; gap:4px; border:1px solid var(--border-color); background:var(--surface-2);">
-                <i class="bi bi-plus-circle"></i> + Barang Custom
-            </button>
-        </div>
-        <div class="search-input-wrapper" style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0 12px; display:flex; align-items:center; gap:8px;">
-            <i class="bi bi-upc-scan" style="color:var(--primary); font-size:1.2rem; cursor:pointer;" onclick="openPosScanner()" title="Scan Barcode Kamera"></i>
-            <input type="text" id="posSearch" placeholder="Scan barcode atau ketik nama produk..." 
-                   style="flex:1;border:none;background:transparent;padding:12px 8px;color:var(--text-primary);font-size:var(--font-size-base);outline:none;font-family:var(--font-family);" autocomplete="off" autofocus>
-            <i class="bi bi-search" style="color:var(--text-muted); font-size:1rem;"></i>
-        </div>
-        <div id="posSuggestions" style="margin-top:8px;"></div>
+        
     </div>
 
     <!-- Cart -->
