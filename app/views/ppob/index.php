@@ -143,7 +143,7 @@
     height: 48px; /* Match Top Up button height */
 }
 
-html[data-bs-theme="light"] .btn-riwayat-premium {
+html[data-theme="light"] .btn-riwayat-premium {
     color: #1e293b;
     border-color: #cbd5e1;
     background: #f8fafc;
@@ -155,7 +155,7 @@ html[data-bs-theme="light"] .btn-riwayat-premium {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-html[data-bs-theme="light"] .btn-riwayat-premium:hover {
+html[data-theme="light"] .btn-riwayat-premium:hover {
     background: #f1f5f9;
     border-color: #94a3b8;
 }
