@@ -5,6 +5,35 @@
  */
 ?>
 <div class="page-section" style="padding-bottom:200px;">
+    <style>
+        .pos-segmented {
+            display: inline-flex;
+            background: var(--surface-1);
+            border-radius: 6px;
+            padding: 3px;
+            border: 1px solid var(--border-color);
+            align-items: stretch;
+        }
+        .pos-segmented button {
+            flex: 1;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 4px 14px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .pos-segmented button.active {
+            background: var(--primary-bg);
+            color: var(--primary);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+    </style>
+
     <!-- POS Header: Action Buttons & Sale Mode -->
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
         <!-- Left: Actions -->
@@ -15,10 +44,10 @@
         </div>
         
         <!-- Right: Sale Mode Tabs -->
-        <div style="display:flex; background:var(--surface-1); border-radius:var(--radius-md); padding:2px; border:1px solid var(--border-color); flex-shrink:0;">
-            <button id="btnRetail" class="btn-primary-custom" style="padding:4px 12px; border-radius:var(--radius-sm); font-size:11px;" onclick="setSaleMode('retail')">Ecer</button>
-            <button id="btnWholesale" class="btn-outline-custom" style="padding:4px 12px; border-radius:var(--radius-sm); font-size:11px; border:none;" onclick="setSaleMode('wholesale')">Grosir</button>
-            <button id="btnMix" class="btn-outline-custom" style="padding:4px 12px; border-radius:var(--radius-sm); font-size:11px; border:none;" onclick="setSaleMode('mix')">Mix</button>
+        <div class="pos-segmented" style="flex-shrink:0;">
+            <button id="btnRetail" class="active" onclick="setSaleMode('retail')">Ecer</button>
+            <button id="btnWholesale" onclick="setSaleMode('wholesale')">Grosir</button>
+            <button id="btnMix" onclick="setSaleMode('mix')">Mix</button>
         </div>
     </div>
     
@@ -30,9 +59,9 @@
             <i class="bi bi-shuffle" style="color:var(--primary); font-size:0.9rem;"></i>
             <span style="font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase;">Default Mix:</span>
         </div>
-        <div style="display:flex; background:var(--surface-1); border-radius:4px; overflow:hidden; border:1px solid var(--border-color);">
-            <button id="btnMixDefaultRetail" style="padding:4px 12px; font-size:11px; font-weight:600; border:none; transition:0.2s;" onclick="setMixDefault('retail')">Ecer</button>
-            <button id="btnMixDefaultWholesale" style="padding:4px 12px; font-size:11px; font-weight:600; border:none; border-left:1px solid var(--border-color); transition:0.2s;" onclick="setMixDefault('wholesale')">Grosir</button>
+        <div class="pos-segmented">
+            <button id="btnMixDefaultRetail" class="active" onclick="setMixDefault('retail')">Ecer</button>
+            <button id="btnMixDefaultWholesale" onclick="setMixDefault('wholesale')">Grosir</button>
         </div>
     </div>
 
@@ -367,17 +396,17 @@ function setSaleMode(mode) {
 
     // Reset all tabs
     [btnRetail, btnWholesale, btnMix].forEach(btn => {
-        if (btn) { btn.className = 'btn-outline-custom'; btn.style.border = 'none'; }
+        if (btn) { btn.className = ''; }
     });
 
     if (mode === 'retail') {
-        if (btnRetail) { btnRetail.className = 'btn-primary-custom'; btnRetail.style.border = ''; }
+        if (btnRetail) { btnRetail.className = 'active'; }
         if (mixBox) mixBox.style.display = 'none';
     } else if (mode === 'wholesale') {
-        if (btnWholesale) { btnWholesale.className = 'btn-primary-custom'; btnWholesale.style.border = ''; }
+        if (btnWholesale) { btnWholesale.className = 'active'; }
         if (mixBox) mixBox.style.display = 'none';
     } else if (mode === 'mix') {
-        if (btnMix) { btnMix.className = 'btn-primary-custom'; btnMix.style.border = ''; }
+        if (btnMix) { btnMix.className = 'active'; }
         if (mixBox) mixBox.style.display = '';
         // Reset all items to follow mixDefaultPrice
         cart.forEach(item => { item.mix_override_mode = mixDefaultPrice; });
@@ -391,8 +420,8 @@ function setMixDefault(mode) {
     mixDefaultPrice = mode;
     const btnR = document.getElementById('btnMixDefaultRetail');
     const btnW = document.getElementById('btnMixDefaultWholesale');
-    if (btnR) { btnR.className = mode === 'retail' ? 'btn-primary-custom' : 'btn-outline-custom'; btnR.style.border = mode === 'retail' ? '' : 'none'; }
-    if (btnW) { btnW.className = mode === 'wholesale' ? 'btn-primary-custom' : 'btn-outline-custom'; btnW.style.border = mode === 'wholesale' ? '' : 'none'; }
+    if (btnR) { btnR.className = mode === 'retail' ? 'active' : ''; }
+    if (btnW) { btnW.className = mode === 'wholesale' ? 'active' : ''; }
     // Reset all items to new default
     cart.forEach(item => {
         item.mix_override_mode = mode;
@@ -862,9 +891,9 @@ function renderCart() {
                 <div style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:11px; padding:8px 12px; background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--border-color);">
                     <i class="bi bi-shuffle" style="color:var(--primary); font-size:1rem;"></i>
                     <span style="font-weight:600; color:var(--text-primary); margin-right:auto;">Harga:</span>
-                    <div style="display:flex; background:var(--surface-1); border-radius:4px; overflow:hidden; border:1px solid var(--border-color);">
-                        <button type="button" onclick="toggleItemMixMode(${item.id}, 'retail')" style="padding:4px 12px; font-size:11px; font-weight:600; border:none; transition:0.2s; ${isRetail ? 'background:var(--primary);color:#fff;' : 'background:transparent;color:var(--text-muted);'}">Ecer</button>
-                        <button type="button" onclick="toggleItemMixMode(${item.id}, 'wholesale')" style="padding:4px 12px; font-size:11px; font-weight:600; border:none; border-left:1px solid var(--border-color); transition:0.2s; ${isWholesale ? 'background:var(--primary);color:#fff;' : 'background:transparent;color:var(--text-muted);'}">Grosir</button>
+                    <div class="pos-segmented">
+                        <button type="button" onclick="toggleItemMixMode(${item.id}, 'retail')" class="${isRetail ? 'active' : ''}">Ecer</button>
+                        <button type="button" onclick="toggleItemMixMode(${item.id}, 'wholesale')" class="${isWholesale ? 'active' : ''}">Grosir</button>
                     </div>
                 </div>
             `;
