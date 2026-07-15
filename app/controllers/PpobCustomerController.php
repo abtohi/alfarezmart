@@ -36,7 +36,8 @@ class PpobCustomerController extends Controller {
                 'customer_name' => $_POST['customer_name'] ?? null,
                 'customer_no' => $_POST['customer_no'] ?? '',
                 'pln_name' => $_POST['pln_name'] ?? null,
-                'pln_power' => $_POST['pln_power'] ?? null
+                'pln_power' => $_POST['pln_power'] ?? null,
+                'ewallet_accounts' => $_POST['ewallet_accounts'] ?? null
             ];
 
             if (empty($data['type']) || empty($data['customer_no'])) {
@@ -71,7 +72,8 @@ class PpobCustomerController extends Controller {
                 'customer_name' => $_POST['customer_name'] ?? null,
                 'customer_no' => $_POST['customer_no'] ?? '',
                 'pln_name' => $_POST['pln_name'] ?? null,
-                'pln_power' => $_POST['pln_power'] ?? null
+                'pln_power' => $_POST['pln_power'] ?? null,
+                'ewallet_accounts' => $_POST['ewallet_accounts'] ?? null
             ];
 
             if ($this->model->update($id, $data)) {

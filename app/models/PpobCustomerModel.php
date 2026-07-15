@@ -31,8 +31,8 @@ class PpobCustomerModel {
 
     public function create(array $data) {
         $stmt = $this->db->prepare("
-            INSERT INTO ppob_customers (type, customer_name, customer_no, pln_name, pln_power)
-            VALUES (:type, :customer_name, :customer_no, :pln_name, :pln_power)
+            INSERT INTO ppob_customers (type, customer_name, customer_no, pln_name, pln_power, ewallet_accounts)
+            VALUES (:type, :customer_name, :customer_no, :pln_name, :pln_power, :ewallet_accounts)
         ");
         
         return $stmt->execute([
@@ -40,7 +40,8 @@ class PpobCustomerModel {
             'customer_name' => $data['customer_name'] ?? null,
             'customer_no' => $data['customer_no'],
             'pln_name' => $data['pln_name'] ?? null,
-            'pln_power' => $data['pln_power'] ?? null
+            'pln_power' => $data['pln_power'] ?? null,
+            'ewallet_accounts' => $data['ewallet_accounts'] ?? null
         ]);
     }
 
@@ -51,7 +52,8 @@ class PpobCustomerModel {
                 customer_name = :customer_name, 
                 customer_no = :customer_no, 
                 pln_name = :pln_name, 
-                pln_power = :pln_power
+                pln_power = :pln_power,
+                ewallet_accounts = :ewallet_accounts
             WHERE id = :id
         ");
         
@@ -61,7 +63,8 @@ class PpobCustomerModel {
             'customer_name' => $data['customer_name'] ?? null,
             'customer_no' => $data['customer_no'],
             'pln_name' => $data['pln_name'] ?? null,
-            'pln_power' => $data['pln_power'] ?? null
+            'pln_power' => $data['pln_power'] ?? null,
+            'ewallet_accounts' => $data['ewallet_accounts'] ?? null
         ]);
     }
 

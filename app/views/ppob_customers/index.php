@@ -253,9 +253,30 @@ $csrfToken = $csrfToken ?? '';
                     <?php if($c['type'] == 'pln' && !empty($c['pln_name'])): ?>
                         <div class="customer-detail">
                             <i class="bi bi-person-badge me-1"></i> <?= htmlspecialchars($c['pln_name']) ?> 
-                            <?php if(!empty($c['pln_power'])) echo " • " . htmlspecialchars($c['pln_power']); ?>
+                            <?php if(!empty($c['pln_power'])) echo " &bull; " . htmlspecialchars($c['pln_power']); ?>
                         </div>
                     <?php endif; ?>
+                    
+                    <?php 
+                    if($c['type'] == 'hp' && !empty($c['ewallet_accounts'])): 
+                        $ewallets = json_decode($c['ewallet_accounts'], true);
+                        if(is_array($ewallets) && count($ewallets) > 0):
+                    ?>
+                        <div class="mt-1">
+                            <?php foreach($ewallets as $brand => $accName): if(!empty($accName)): ?>
+                                <span class="badge bg-primary me-1" style="font-size:10px;"><?= htmlspecialchars($brand) ?></span>
+                            <?php endif; endforeach; ?>
+                        </div>
+                        <div class="mt-1" style="font-size:11px; color:var(--text-muted);">
+                            <?php 
+                            $names = [];
+                            foreach($ewallets as $brand => $accName) {
+                                if(!empty($accName)) $names[] = htmlspecialchars("$brand: $accName");
+                            }
+                            echo implode(', ', $names);
+                            ?>
+                        </div>
+                    <?php endif; endif; ?>
                 </div>
                 <div class="action-buttons">
                     <?php if($c['type'] == 'hp'): ?>
@@ -276,211 +297,14 @@ $csrfToken = $csrfToken ?? '';
     </div>
 </div>
 
-<!-- Modal Form Pelanggan -->
-<div class="modal fade" id="customerModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 20px; border: none; background: var(--surface-1);">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold" id="modalTitle">Tambah Pelanggan</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter);"></button>
-            </div>
-            <div class="modal-body p-4">
-                <form id="customerForm">
-                    <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
-                    <input type="hidden" name="id" id="customerId">
-                    
-                    <div class="mb-4">
-                        <label class="form-label small fw-bold text-muted text-uppercase mb-2">Klasifikasi</label>
-                        <div class="d-flex gap-2">
-                            <input type="radio" class="type-radio" name="type" id="type-hp" value="hp" checked onchange="toggleFields()">
-                            <label class="type-label" for="type-hp"><i class="bi bi-phone"></i><span>NO. HP</span></label>
-
-                            <input type="radio" class="type-radio" name="type" id="type-pln" value="pln" onchange="toggleFields()">
-                            <label class="type-label" for="type-pln"><i class="bi bi-lightning-charge"></i><span>PLN</span></label>
-
-                            <input type="radio" class="type-radio" name="type" id="type-game" value="game" onchange="toggleFields()">
-                            <label class="type-label" for="type-game"><i class="bi bi-controller"></i><span>GAME</span></label>
-
-                            <input type="radio" class="type-radio" name="type" id="type-tv" value="tv" onchange="toggleFields()">
-                            <label class="type-label" for="type-tv"><i class="bi bi-tv"></i><span>TV</span></label>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase" id="lblCustomerNo">Nomor HP</label>
-                        <div class="input-group glass-input p-0 d-flex align-items-center" style="overflow: hidden;">
-                            <input type="text" class="form-control border-0 bg-transparent text-white shadow-none" name="customer_no" id="customerNo" required style="font-size: 14px; padding: 12px 16px;">
-                            <button type="button" class="btn btn-primary-custom h-100 px-4 fw-bold m-0" id="btnCekPln" onclick="cekNamaPln()" style="display:none; border-radius: 0; font-size:13px; align-self: stretch;">Cek Nama</button>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase" id="lblCustomerName">Nama Pelanggan (Alias)</label>
-                        <input type="text" class="form-control glass-input" name="customer_name" id="customerName" placeholder="Contoh: Budi Rumah / HP Istri" required>
-                    </div>
-
-                    <!-- Extra fields for PLN -->
-                    <div id="plnFields" style="display:none;" class="p-3 mb-3 rounded-3 border">
-                        <div class="mb-2">
-                            <label class="form-label small fw-bold text-muted">Nama Asli PLN</label>
-                            <input type="text" class="form-control glass-input" name="pln_name" id="plnName" readonly style="background: var(--surface-2); opacity: 0.8;">
-                        </div>
-                        <div>
-                            <label class="form-label small fw-bold text-muted">Besaran Daya</label>
-                            <input type="text" class="form-control glass-input" name="pln_power" id="plnPower" readonly style="background: var(--surface-2); opacity: 0.8;">
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary-custom w-100 py-3 rounded-pill fw-bold mt-2" id="btnSave">Simpan Pelanggan</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
-let customerModal;
-function getCustomerModal() {
-    if (!customerModal) {
-        customerModal = new bootstrap.Modal(document.getElementById('customerModal'));
-    }
-    return customerModal;
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('customerForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const id = document.getElementById('customerId').value;
-        const url = id ? '<?= BASE_URL ?>api/ppob/customers/update' : '<?= BASE_URL ?>api/ppob/customers';
-        const formData = new FormData(this);
-        
-        const btnSave = document.getElementById('btnSave');
-        const originalText = btnSave.innerText;
-        btnSave.disabled = true;
-        btnSave.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Menyimpan...';
-
-        try {
-            const res = await fetch(url, { method: 'POST', body: formData });
-            const data = await res.json();
-            
-            if(data.success) {
-                showToast('✅ ' + data.message, 'success');
-                getCustomerModal().hide();
-                setTimeout(() => window.location.reload(), 1000);
-            } else {
-                showToast('❌ ' + data.message, 'danger');
-            }
-        } catch(err) {
-            showToast('❌ Terjadi kesalahan', 'danger');
-        }
-        btnSave.disabled = false;
-        btnSave.innerText = originalText;
-    });
-});
-
 function openAddModal() {
-    document.getElementById('customerForm').reset();
-    document.getElementById('customerId').value = '';
-    document.getElementById('modalTitle').innerText = 'Tambah Pelanggan';
-    document.getElementById('plnFields').style.display = 'none';
-    toggleFields();
-    getCustomerModal().show();
+    openUnifiedContactModal();
 }
 
 function editCustomer(c) {
-    document.getElementById('customerForm').reset();
-    document.getElementById('customerId').value = c.id;
-    const typeRadio = document.querySelector(`input[name="type"][value="${c.type}"]`);
-    if(typeRadio) typeRadio.checked = true;
-    document.getElementById('customerNo').value = c.customer_no;
-    document.getElementById('customerName').value = c.customer_name;
-    document.getElementById('modalTitle').innerText = 'Edit Pelanggan';
-    
-    if(c.type === 'pln') {
-        document.getElementById('plnName').value = c.pln_name || '';
-        document.getElementById('plnPower').value = c.pln_power || '';
-    }
-    
-    toggleFields();
-    getCustomerModal().show();
-}
-
-function toggleFields() {
-    const typeRadio = document.querySelector('input[name="type"]:checked');
-    const type = typeRadio ? typeRadio.value : 'hp';
-    const lblNo = document.getElementById('lblCustomerNo');
-    const lblName = document.getElementById('lblCustomerName');
-    const btnCek = document.getElementById('btnCekPln');
-    const plnFields = document.getElementById('plnFields');
-    const customerNo = document.getElementById('customerNo');
-
-    btnCek.style.display = 'none';
-    plnFields.style.display = 'none';
-    customerNo.style.paddingRight = '16px';
-
-    if(type === 'hp') {
-        lblNo.innerText = 'Nomor HP';
-        lblName.innerText = 'Nama Pelanggan';
-        customerNo.placeholder = '081234567890';
-    } else if(type === 'pln') {
-        lblNo.innerText = 'Nomor Meter / ID Pelanggan';
-        lblName.innerText = 'Nama Alias (Opsional)';
-        btnCek.style.display = 'block';
-        plnFields.style.display = 'block';
-        customerNo.placeholder = 'Contoh: 14356145996';
-        customerNo.style.paddingRight = '100px';
-    } else if(type === 'game') {
-        lblNo.innerText = 'ID User Game';
-        lblName.innerText = 'Nama / Nickname';
-        customerNo.placeholder = '12345678 (1234)';
-    } else if(type === 'tv') {
-        lblNo.innerText = 'Nomor Pelanggan TV';
-        lblName.innerText = 'Nama Pelanggan';
-        customerNo.placeholder = 'Masukkan no pelanggan';
-    }
-}
-
-async function cekNamaPln() {
-    const no = document.getElementById('customerNo').value;
-    if(!no) { showToast('⚠️ Masukkan nomor meter terlebih dahulu', 'warning'); return; }
-
-    const btn = document.getElementById('btnCekPln');
-    const originalText = btn.innerText;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
-
-    try {
-        const formData = new FormData();
-        formData.append('customer_no', no);
-        formData.append('csrf_token', '<?= $csrfToken ?>');
-
-        const res = await fetch('<?= BASE_URL ?>api/ppob/customers/check-pln', {
-            method: 'POST',
-            body: formData
-        });
-        const data = await res.json();
-        
-        if(data.success && data.data) {
-            document.getElementById('plnName').value = data.data.name;
-            document.getElementById('plnPower').value = data.data.power;
-            
-            // Auto fill alias if empty
-            const alias = document.getElementById('customerName');
-            if(alias.value === '') {
-                alias.value = data.data.name;
-            }
-            showToast('✅ Berhasil cek nama PLN', 'success');
-        } else {
-            showToast('❌ ' + (data.message || 'Gagal cek nomor'), 'danger');
-            document.getElementById('plnName').value = '';
-            document.getElementById('plnPower').value = '';
-        }
-    } catch(err) {
-        showToast('❌ Terjadi kesalahan jaringan', 'danger');
-    }
-
-    btn.disabled = false;
-    btn.innerText = originalText;
+    // If it's hp and has ewallet_accounts, we ensure it's passed properly
+    openUnifiedContactModal(c, c.type, c.customer_no);
 }
 
 let activeFilterType = 'all';

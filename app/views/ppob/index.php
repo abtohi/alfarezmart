@@ -986,57 +986,6 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     </div>
 </div>
 
-<!-- Save PLN Contact Modal -->
-<div class="modal fade" id="savePlnContactModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content" style="border-radius:20px;border:none;background:var(--surface-1);">
-            <div class="modal-body p-4 text-center">
-                <div class="mb-3"><i class="bi bi-person-plus-fill text-primary" style="font-size:50px;"></i></div>
-                <h5 class="fw-bold mb-3" style="color:var(--text-primary);">Simpan Pelanggan Baru</h5>
-                <p class="small mb-3" id="savePlnContactMessage" style="color:var(--text-secondary);"></p>
-                
-                <div class="mb-4 text-start">
-                    <label class="form-label fw-bold small" style="color:var(--text-primary);">Nama Alias <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control glass-input" id="savePlnContactAlias" placeholder="Contoh: Rumah Budi">
-                    <input type="hidden" id="savePlnContactNo">
-                    <input type="hidden" id="savePlnContactDefaultName">
-                    <input type="hidden" id="savePlnContactPower">
-                </div>
-                
-                <div class="d-flex gap-2">
-                    <button class="btn btn-secondary flex-grow-1 rounded-pill" data-bs-dismiss="modal">Lain Kali</button>
-                    <button class="btn btn-primary flex-grow-1 rounded-pill fw-bold" id="btnExecuteSavePln" onclick="executeSavePlnContact()">Simpan</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Save E-Wallet Contact Modal -->
-<div class="modal fade" id="saveEwalletContactModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content" style="border-radius:20px;border:none;background:var(--surface-1);">
-            <div class="modal-body p-4 text-center">
-                <div class="mb-3"><i class="bi bi-wallet2 text-primary" style="font-size:50px;"></i></div>
-                <h5 class="fw-bold mb-3" style="color:var(--text-primary);">Simpan Pelanggan Baru</h5>
-                <p class="small mb-3" id="saveEwalletContactMessage" style="color:var(--text-secondary);"></p>
-                
-                <div class="mb-4 text-start">
-                    <label class="form-label fw-bold small" style="color:var(--text-primary);">Nama Alias <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control glass-input" id="saveEwalletContactAlias" placeholder="Contoh: DANA Budi">
-                    <input type="hidden" id="saveEwalletContactNo">
-                    <input type="hidden" id="saveEwalletContactName">
-                    <input type="hidden" id="saveEwalletContactBrand">
-                </div>
-                
-                <div class="d-flex gap-2">
-                    <button class="btn btn-secondary flex-grow-1 rounded-pill" data-bs-dismiss="modal">Lain Kali</button>
-                    <button class="btn btn-primary flex-grow-1 rounded-pill fw-bold" id="btnExecuteSaveEwallet" onclick="executeSaveEwalletContact()">Simpan</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- PIN Verification Modal -->
 <div class="modal fade" id="pinModal" tabindex="-1">
@@ -1703,14 +1652,37 @@ function renderContacts(data) {
     data.forEach(c => {
         let title = c.customer_name || 'Tanpa Nama';
         let detail = c.customer_no;
-        if(c.type === 'pln' && c.pln_name) detail += ` • ${c.pln_name}`;
-        if(c.type === 'ewallet' && c.pln_name) detail += ` • ${c.pln_name}`;
+        let badges = '';
+        
+        if(c.type === 'pln' && c.pln_name) {
+            detail += ` &bull; ${c.pln_name}`;
+            if(c.pln_power) detail += ` (${c.pln_power})`;
+        }
+        
+        if(c.type === 'hp' && c.ewallet_accounts) {
+            try {
+                let ew = JSON.parse(c.ewallet_accounts);
+                let ewNames = [];
+                for(let k in ew) {
+                    if(ew[k]) {
+                        badges += `<span class="badge bg-primary me-1" style="font-size:10px;">${k}</span>`;
+                        ewNames.push(`${k}: ${ew[k]}`);
+                    }
+                }
+                if(ewNames.length > 0) {
+                    detail += `<div class="mt-1" style="font-size:11px; color:var(--text-muted);">${ewNames.join(', ')}</div>`;
+                }
+            } catch(e) {}
+        }
         
         let html = `
         <div class="p-3 border rounded-3 d-flex justify-content-between align-items-center mb-2" style="background:var(--surface-2); cursor:pointer;" onclick="selectContact('${c.customer_no}')">
             <div>
-                <div class="fw-bold mb-1" style="font-size:14px; color:var(--text-primary);">${title}</div>
-                <div class="text-muted small">${detail}</div>
+                <div class="fw-bold mb-1" style="font-size:14px; color:var(--text-primary);">
+                    ${title}
+                </div>
+                <div class="text-muted" style="font-size:12px;">${detail}</div>
+                <div class="mt-1">${badges}</div>
             </div>
             <i class="bi bi-chevron-right text-muted"></i>
         </div>`;
@@ -1735,11 +1707,6 @@ function selectContact(no) {
     // Trigger input event to re-evaluate provider badge / search products
     const event = new Event('input', { bubbles: true });
     document.getElementById('customer-no').dispatchEvent(event);
-    
-    // Auto trigger provider check or validation
-    if(currentCategory !== 'pln' && currentCategory !== 'game' && currentCategory !== 'tv') {
-        checkProvider();
-    }
 }
 
 // 5. Load Product Categories based on Tab (Prepaid/Postpaid)
@@ -3114,84 +3081,30 @@ ${hasSN ? `<div class="sn-box"><div class="sn-title">${snTitle}</div><div class=
 
 async function promptSavePlnContact(customerNo, defaultName) {
     try {
-        const res = await fetch('<?= BASE_URL ?>api/ppob/customers?type=pln');
+        const res = await fetch('<?= BASE_URL ?>api/ppob-customers');
         const data = await res.json();
         if (data.success && data.data) {
             const exists = data.data.some(c => c.customer_no === customerNo);
             if (exists) return; // Don't show if already saved
         }
         
-        // Grab parsed PLN details from the UI if available
         let plnNameStr = document.getElementById('result-pln-name')?.innerText || defaultName;
         if(plnNameStr === '-') plnNameStr = defaultName;
         const plnPowerStr = document.getElementById('result-pln-power')?.innerText || '';
         
-        // Populate modal data and show it
         setTimeout(() => {
-            document.getElementById('savePlnContactMessage').innerHTML = `Nomor PLN <b>${customerNo}</b> belum ada di daftar pelanggan. Apakah Anda ingin menyimpannya?`;
-            document.getElementById('savePlnContactAlias').value = plnNameStr || '';
-            document.getElementById('savePlnContactNo').value = customerNo;
-            document.getElementById('savePlnContactDefaultName').value = plnNameStr || '';
-            document.getElementById('savePlnContactPower').value = plnPowerStr !== '-' ? plnPowerStr : '';
-            
-            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('savePlnContactModal'));
-            modal.show();
+            const tempCustomer = { type: 'pln', customer_name: plnNameStr, customer_no: customerNo, pln_name: plnNameStr, pln_power: plnPowerStr !== '-' ? plnPowerStr : '' };
+            openUnifiedContactModal(tempCustomer, 'pln', customerNo);
         }, 500);
     } catch (e) {
         console.error('Error checking pln contact:', e);
     }
 }
 
-async function executeSavePlnContact() {
-    const alias = document.getElementById('savePlnContactAlias').value;
-    const customerNo = document.getElementById('savePlnContactNo').value;
-    const defaultName = document.getElementById('savePlnContactDefaultName').value;
-    const power = document.getElementById('savePlnContactPower').value;
-    const btn = document.getElementById('btnExecuteSavePln');
-    
-    if (alias === null || alias.trim() === '') {
-        showToast('⚠️ Nama Alias tidak boleh kosong', 'warning');
-        return;
-    }
-    
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
-    btn.disabled = true;
-
-    try {
-        const formData = new URLSearchParams();
-        formData.append('type', 'pln');
-        formData.append('customer_no', customerNo);
-        formData.append('customer_name', alias.trim());
-        formData.append('pln_name', defaultName || '');
-        formData.append('pln_power', power || '');
-        formData.append('csrf_token', csrfToken);
-        
-        const saveRes = await fetch('<?= BASE_URL ?>api/ppob/customers', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: formData.toString()
-        });
-        const saveData = await saveRes.json();
-        
-        if (saveData.success) {
-            showToast('✅ Pelanggan PLN berhasil disimpan', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('savePlnContactModal')).hide();
-        } else {
-            showToast('❌ Gagal menyimpan: ' + saveData.message, 'danger');
-        }
-    } catch (e) {
-        console.error('Error saving pln contact:', e);
-        showToast('❌ Gagal menyimpan karena gangguan jaringan', 'danger');
-    } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    }
-}
-
 // Helper: show non-blocking alert
 function showAlert(msg, type='info') {
     const container = document.getElementById('toast-container-ppob');
+    if(!container) return showToast(msg, type); // fallback
     const id = 'toast-' + Date.now();
     const colors = {info:'#0dcaf0',success:'#22c55e',danger:'#ef4444',warning:'#f59e0b'};
     
@@ -3201,38 +3114,68 @@ function showAlert(msg, type='info') {
     
     const msgSpan = document.createElement('span');
     msgSpan.innerHTML = msg;
-    toast.appendChild(msgSpan);
     
-    const copyBtn = document.createElement('button');
-    copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>';
-    copyBtn.style.cssText = 'background:none;border:none;color:white;cursor:pointer;padding:4px;opacity:0.8;transition:opacity 0.2s;display:flex;align-items:center;justify-content:center;';
-    copyBtn.title = "Copy pesan";
-    copyBtn.onclick = (e) => {
-        e.stopPropagation();
-        const temp = document.createElement('div');
-        temp.innerHTML = msg;
-        const text = temp.textContent || temp.innerText || "";
-        navigator.clipboard.writeText(text).then(() => {
-            copyBtn.innerHTML = '<i class="bi bi-check2"></i>';
-            copyBtn.style.opacity = '1';
-            setTimeout(() => {
-                copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>';
-                copyBtn.style.opacity = '0.8';
-            }, 2000);
-        }).catch(err => console.error('Failed to copy:', err));
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '<i class="bi bi-x"></i>';
+    closeBtn.style.cssText = 'background:none;border:none;color:white;font-size:20px;cursor:pointer;padding:0;line-height:1;opacity:0.8;transition:0.2s;';
+    closeBtn.onmouseover = () => closeBtn.style.opacity = '1';
+    closeBtn.onmouseout = () => closeBtn.style.opacity = '0.8';
+    closeBtn.onclick = () => {
+        toast.style.animation = 'slideOutRight 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
     };
-    copyBtn.onmouseover = () => copyBtn.style.opacity = '1';
-    copyBtn.onmouseout = () => copyBtn.style.opacity = '0.8';
     
-    toast.appendChild(copyBtn);
+    toast.appendChild(msgSpan);
+    toast.appendChild(closeBtn);
     container.appendChild(toast);
     
-    // Increased timeout to give time to copy
     setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 6000);
+        if(document.getElementById(id)) {
+            toast.style.animation = 'slideOutRight 0.3s ease forwards';
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, 4000);
+}
+
+// Add animation keyframes if not exists
+if(!document.getElementById('toast-animations-ppob')) {
+    const style = document.createElement('style');
+    style.id = 'toast-animations-ppob';
+    style.innerHTML = `
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    `;
+    document.head.appendChild(style);
+}
+
+async function promptSaveEwalletContact(customerNo, defaultName, brand) {
+    if(!customerNo) return;
+    
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/ppob-customers');
+        const data = await res.json();
+        
+        if (data.success && data.data) {
+            const exists = data.data.find(c => c.customer_no === customerNo);
+            if (exists) {
+                return; // Don't show modal if already saved
+            }
+        }
+        
+        setTimeout(() => {
+            let ew = {};
+            // find the right case
+            let validBrand = brand;
+            ['Dana', 'GoPay', 'OVO', 'ShopeePay', 'LinkAja'].forEach(b => {
+                if(b.toLowerCase() === brand.toLowerCase()) validBrand = b;
+            });
+            ew[validBrand] = defaultName || '';
+            const tempCustomer = { type: 'hp', customer_name: defaultName, customer_no: customerNo, ewallet_accounts: JSON.stringify(ew) };
+            openUnifiedContactModal(tempCustomer, 'hp', customerNo);
+        }, 500);
+    } catch (e) {
+        console.error('Error checking ewallet contact:', e);
+    }
 }
 
 // Helper: Custom Confirm Modal
@@ -3264,94 +3207,5 @@ function useTestNo(no) {
     getTestCaseModal().hide();
     // Jika modal trx belum terbuka, biarkan user buka sendiri,
     // Jika sedang terbuka, input terisi otomatis.
-}
-
-async function promptSaveEwalletContact(customerNo, defaultName, brand) {
-    try {
-        const res = await fetch('<?= BASE_URL ?>api/ppob/customers?type=ewallet');
-        const data = await res.json();
-        if (data.success && data.data) {
-            const exists = data.data.find(c => c.customer_no === customerNo);
-            if (exists) {
-                // Jika sudah ada tapi pln_name (Nama DANA) masih kosong, update otomatis di background
-                if ((!exists.pln_name || exists.pln_name.trim() === '') && defaultName) {
-                    const formData = new URLSearchParams();
-                    formData.append('id', exists.id);
-                    formData.append('type', exists.type);
-                    formData.append('customer_no', exists.customer_no);
-                    formData.append('customer_name', exists.customer_name || '');
-                    formData.append('pln_name', defaultName);
-                    formData.append('pln_power', exists.pln_power || '');
-                    formData.append('csrf_token', csrfToken);
-                    
-                    fetch('<?= BASE_URL ?>api/ppob/customers/update', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: formData.toString()
-                    }).catch(err => console.error('Gagal update nama ewallet otomatis', err));
-                }
-                return; // Don't show modal if already saved
-            }
-        }
-        
-        // Populate modal data and show it
-        setTimeout(() => {
-            document.getElementById('saveEwalletContactMessage').innerHTML = `Nomor ${brand} <b>${customerNo}</b> belum ada di daftar pelanggan. Apakah Anda ingin menyimpannya?`;
-            document.getElementById('saveEwalletContactAlias').value = defaultName || '';
-            document.getElementById('saveEwalletContactNo').value = customerNo;
-            document.getElementById('saveEwalletContactName').value = defaultName || ''; // Use pln_name for storing ewallet name
-            document.getElementById('saveEwalletContactBrand').value = brand;
-            
-            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('saveEwalletContactModal'));
-            modal.show();
-        }, 500);
-    } catch (e) {
-        console.error('Error checking ewallet contact:', e);
-    }
-}
-
-async function executeSaveEwalletContact() {
-    const alias = document.getElementById('saveEwalletContactAlias').value;
-    const customerNo = document.getElementById('saveEwalletContactNo').value;
-    const ewalletName = document.getElementById('saveEwalletContactName').value;
-    const btn = document.getElementById('btnExecuteSaveEwallet');
-    
-    if (alias === null || alias.trim() === '') {
-        showToast('⚠️ Nama Alias tidak boleh kosong', 'warning');
-        return;
-    }
-    
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
-    btn.disabled = true;
-
-    try {
-        const formData = new URLSearchParams();
-        formData.append('type', 'ewallet');
-        formData.append('customer_no', customerNo);
-        formData.append('customer_name', alias.trim());
-        formData.append('pln_name', ewalletName); // Storing Ewallet Name in pln_name field
-        formData.append('csrf_token', csrfToken);
-        
-        const saveRes = await fetch('<?= BASE_URL ?>api/ppob/customers', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: formData.toString()
-        });
-        const saveData = await saveRes.json();
-        
-        if (saveData.success) {
-            showToast('✅ Pelanggan E-Wallet berhasil disimpan', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('saveEwalletContactModal')).hide();
-        } else {
-            showToast('❌ Gagal menyimpan: ' + saveData.message, 'danger');
-        }
-    } catch (e) {
-        console.error('Error saving ewallet contact:', e);
-        showToast('❌ Gagal menyimpan karena gangguan jaringan', 'danger');
-    } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    }
 }
 </script>

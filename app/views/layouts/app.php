@@ -311,6 +311,7 @@ if ($userLevel === 'staff') {
     </script>
 
     <script src="<?= BASE_URL ?>public/js/geofencing.js<?= $v ?>"></script>
+    <script src="<?= BASE_URL ?>public/js/ppob_contacts.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/app.js<?= $v ?>"></script>
 
     
