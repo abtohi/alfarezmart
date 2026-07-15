@@ -6,9 +6,9 @@
 ?>
 <div class="page-section" style="padding-bottom:200px;">
     <!-- POS Header: Action Buttons & Sale Mode -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:nowrap; gap:8px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
         <!-- Left: Actions -->
-        <div style="display:flex; gap:6px; flex-shrink:0;">
+        <div style="display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap;">
             <button type="button" class="btn-outline-custom" onclick="clearCartConfirm()" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--danger-bg); border:1px solid rgba(230,57,70,0.3); color:var(--danger); display:flex; align-items:center; gap:4px;" title="Kosongkan Keranjang"><i class="bi bi-trash3"></i> <span class="d-none d-sm-inline">Batal</span></button>
             <button class="btn-outline-custom" onclick="window.location.href=`${BASE_URL}sales`" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:4px;" title="Lihat Riwayat Penjualan"><i class="bi bi-clock-history"></i> <span class="d-none d-sm-inline">Riwayat</span></button>
             <button class="btn-outline-custom" onclick="openDrafts()" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:4px;"><i class="bi bi-journal-bookmark"></i> <span class="d-none d-sm-inline">Draft</span></button>
@@ -16,31 +16,31 @@
         
         <!-- Right: Sale Mode Tabs -->
         <div style="display:flex; background:var(--surface-1); border-radius:var(--radius-md); padding:2px; border:1px solid var(--border-color); flex-shrink:0;">
-            <button id="btnRetail" class="btn-primary-custom" style="padding:3px 10px; border-radius:var(--radius-sm); font-size:11px;" onclick="setSaleMode('retail')">Ecer</button>
-            <button id="btnWholesale" class="btn-outline-custom" style="padding:3px 10px; border-radius:var(--radius-sm); font-size:11px; border:none;" onclick="setSaleMode('wholesale')">Grosir</button>
-            <button id="btnMix" class="btn-outline-custom" style="padding:3px 10px; border-radius:var(--radius-sm); font-size:11px; border:none;" onclick="setSaleMode('mix')">Mix</button>
+            <button id="btnRetail" class="btn-primary-custom" style="padding:4px 12px; border-radius:var(--radius-sm); font-size:11px;" onclick="setSaleMode('retail')">Ecer</button>
+            <button id="btnWholesale" class="btn-outline-custom" style="padding:4px 12px; border-radius:var(--radius-sm); font-size:11px; border:none;" onclick="setSaleMode('wholesale')">Grosir</button>
+            <button id="btnMix" class="btn-outline-custom" style="padding:4px 12px; border-radius:var(--radius-sm); font-size:11px; border:none;" onclick="setSaleMode('mix')">Mix</button>
         </div>
     </div>
     
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
     <!-- Mix Default Price Selector (Slim Bar) -->
-    <div id="mixDefaultPriceBox" style="display:none; margin-bottom:8px; background:var(--primary-bg); border-radius:var(--radius-sm); padding:6px 10px; align-items:center; justify-content:space-between; border:1px solid rgba(230,57,70,0.2);">
+    <div id="mixDefaultPriceBox" style="display:none; margin-bottom:8px; background:var(--primary-bg); border-radius:var(--radius-sm); padding:6px 10px; align-items:center; justify-content:flex-start; flex-wrap:wrap; gap:10px; border:1px solid rgba(230,57,70,0.2);">
         <div style="display:flex; align-items:center; gap:6px;">
             <i class="bi bi-shuffle" style="color:var(--primary); font-size:0.9rem;"></i>
             <span style="font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase;">Default Mix:</span>
         </div>
         <div style="display:flex; background:var(--surface-1); border-radius:4px; overflow:hidden; border:1px solid var(--border-color);">
-            <button id="btnMixDefaultRetail" style="padding:2px 10px; font-size:10px; font-weight:600; border:none; transition:0.2s;" onclick="setMixDefault('retail')">Ecer</button>
-            <button id="btnMixDefaultWholesale" style="padding:2px 10px; font-size:10px; font-weight:600; border:none; border-left:1px solid var(--border-color); transition:0.2s;" onclick="setMixDefault('wholesale')">Grosir</button>
+            <button id="btnMixDefaultRetail" style="padding:4px 12px; font-size:11px; font-weight:600; border:none; transition:0.2s;" onclick="setMixDefault('retail')">Ecer</button>
+            <button id="btnMixDefaultWholesale" style="padding:4px 12px; font-size:11px; font-weight:600; border:none; border-left:1px solid var(--border-color); transition:0.2s;" onclick="setMixDefault('wholesale')">Grosir</button>
         </div>
     </div>
 
     <!-- Customer Selector & Search Product Row -->
-    <div style="display:flex; gap:8px; margin-bottom:12px; align-items:stretch;">
+    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; align-items:stretch;">
         
         <!-- Customer Selector -->
-        <div style="position:relative; width:35%;">
+        <div style="position:relative; flex:1; min-width:140px;">
             <div id="customerSelectorBox"
                  onclick="toggleCustomerDropdown()"
                  style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:6px 10px; height:100%; display:flex; align-items:center; gap:8px; cursor:pointer; transition:all 0.2s; user-select:none;"
@@ -59,7 +59,7 @@
                 </div>
             </div>
             <!-- Customer Dropdown Panel -->
-            <div id="customerDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;width:260px;z-index:200;background:var(--surface-1);border:1px solid var(--primary);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;">
+            <div id="customerDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;width:260px;max-width:100vw;z-index:200;background:var(--surface-1);border:1px solid var(--primary);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;">
                 <div style="padding:8px;border-bottom:1px solid var(--border-color);">
                     <div style="display:flex;align-items:center;gap:6px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:0 8px;">
                         <i class="bi bi-search" style="color:var(--text-muted);font-size:0.8rem;"></i>
@@ -78,12 +78,12 @@
         </div>
 
         <!-- Search Product -->
-        <div style="flex:1; position:relative;">
+        <div style="flex:2; min-width:200px; position:relative;">
             <div class="search-input-wrapper" style="background:var(--surface-1); border:1px solid var(--primary); border-radius:var(--radius-sm); padding:0 8px; display:flex; align-items:center; gap:6px; height:100%; box-shadow:0 0 0 2px var(--primary-bg);">
                 <i class="bi bi-upc-scan" style="color:var(--primary); font-size:1.1rem; cursor:pointer; padding:4px;" onclick="openPosScanner()" title="Scan Barcode"></i>
                 <input type="text" id="posSearch" placeholder="Scan atau ketik produk..." 
                        style="flex:1;border:none;background:transparent;padding:8px 4px;color:var(--text-primary);font-size:12px;font-weight:500;outline:none;font-family:var(--font-family);" autocomplete="off" autofocus>
-                <button type="button" onclick="openCustomProductModal()" style="border:none;background:var(--surface-2);color:var(--text-secondary);font-size:11px;padding:4px 8px;border-radius:4px;cursor:pointer;font-weight:600;"><i class="bi bi-plus"></i> Manual</button>
+                <button type="button" onclick="openCustomProductModal()" style="border:none;background:var(--surface-2);color:var(--text-secondary);font-size:11px;padding:4px 8px;border-radius:4px;cursor:pointer;font-weight:600;white-space:nowrap;"><i class="bi bi-plus"></i> Manual</button>
             </div>
             <div id="posSuggestions" style="margin-top:4px; width:100%;"></div>
         </div>
