@@ -555,8 +555,8 @@ class ThermalPrinter {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                // Max width for 58mm printer is typically 384 dots. We use 200 for a decent sized logo.
-                const maxWidth = 200;
+                // Max width for 58mm printer is typically 384 dots. We use 300 for a larger logo.
+                const maxWidth = 300;
                 let width = img.width;
                 let height = img.height;
                 if (width > maxWidth) {
@@ -754,9 +754,7 @@ class ThermalPrinter {
             
             // Token Block
             data += '\n'; // Padding Top
-            data += '\x1BE\x01'; // Bold On
-            data += '\x1BG\x01'; // Double Strike On (Extra Thick)
-            data += '\x1B!\x10'; // Double height
+            data += '\x1B!\x38'; // Double height + Double width + Bold
             data += 'TOKEN :\n';
             data += '\x1B!\x00'; // Reset size
             
@@ -768,11 +766,9 @@ class ThermalPrinter {
                 tokenOutput = t1 + '\n' + t2;
             }
             
-            data += '\x1B!\x30'; // Double height and width
+            data += '\x1B!\x38'; // Double height + Double width + Bold
             data += tokenOutput + '\n';
             data += '\x1B!\x00'; // Reset size
-            data += '\x1BG\x00'; // Double Strike Off
-            data += '\x1BE\x00'; // Bold Off
             data += '\n'; // Padding Bottom
             
             data += '-'.repeat(width) + '\n';
@@ -789,13 +785,9 @@ class ThermalPrinter {
             const totalText = `Rp ${price}`;
             const totalLabel = 'Total Bayar :';
             
-            data += '\x1BE\x01'; // Bold On
-            data += '\x1BG\x01'; // Double Strike On (Extra Thick)
-            data += '\x1B!\x10'; // Double height
+            data += '\x1B!\x18'; // Double height + Bold
             data += padRight(totalLabel, 15) + totalText + '\n';
             data += '\x1B!\x00'; // Reset size
-            data += '\x1BG\x00'; // Double Strike Off
-            data += '\x1BE\x00'; // Bold Off
             data += '\n';
             
             // Footer
