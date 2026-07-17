@@ -1906,7 +1906,15 @@ async function loadSaleForEdit(id) {
                     <a href="${BASE_URL}sales" class="btn-outline-custom" style="padding:4px 10px; font-size:11px; text-decoration:none;">Batal Edit</a>
                 </div>
             `;
-            document.querySelector('.page-section').insertBefore(banner, document.querySelector('.pos-header').nextSibling);
+            const pageSection = document.querySelector('.page-section');
+            const posHeader = pageSection?.children[0]; // First child element (the header div)
+            if (pageSection) {
+                if (posHeader && posHeader.nextSibling) {
+                    pageSection.insertBefore(banner, posHeader.nextSibling);
+                } else {
+                    pageSection.prepend(banner);
+                }
+            }
 
             // Change checkout button text
             const btnCheckout = document.getElementById('btnCheckout');
