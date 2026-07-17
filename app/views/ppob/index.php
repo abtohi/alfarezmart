@@ -1434,9 +1434,9 @@ async function fetchDepositHistory() {
                 let targetName = '-';
                 let uniqueTransfer = item.amount;
                 
-                if (item.raw) {
+                if (item.raw_response) {
                     try {
-                        const rawObj = JSON.parse(item.raw);
+                        const rawObj = JSON.parse(item.raw_response);
                         if (rawObj.deposit && rawObj.deposit.amount) {
                             uniqueTransfer = rawObj.deposit.amount;
                         } else if (rawObj.amount) {
@@ -3081,7 +3081,7 @@ ${hasSN ? `<div class="sn-box"><div class="sn-title">${snTitle}</div><div class=
 
 async function promptSavePlnContact(customerNo, defaultName) {
     try {
-        const res = await fetch('<?= BASE_URL ?>api/ppob-customers');
+        const res = await fetch('<?= BASE_URL ?>api/ppob/customers?type=pln');
         const data = await res.json();
         if (data.success && data.data) {
             const exists = data.data.some(c => c.customer_no === customerNo);
@@ -3152,7 +3152,7 @@ async function promptSaveEwalletContact(customerNo, defaultName, brand) {
     if(!customerNo) return;
     
     try {
-        const res = await fetch('<?= BASE_URL ?>api/ppob-customers');
+        const res = await fetch('<?= BASE_URL ?>api/ppob/customers?type=hp');
         const data = await res.json();
         
         if (data.success && data.data) {

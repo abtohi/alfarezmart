@@ -1837,16 +1837,46 @@ async function loadSaleForEdit(id) {
                 }
 
                 // Periksa apakah item ini menggunakan harga custom (selain produk custom)
-                // item.level comes from SQL: pp.level aliased as "level" in getTransactionDetails()
-                // item.packaging_level does NOT exist — using it always falls back to 1
                 const savedLevel = parseInt(item.level) || 1;
-                const curPkg = packagings.find(p => parseInt(p.level) === savedLevel) || packagings[0];
-                const catalogPrice = curPkg ? (sale.sale_mode === 'wholesale'
-                    ? (parseFloat(curPkg.sell_price_wholesale) || parseFloat(curPkg.sell_price_retail))
-                    : parseFloat(curPkg.sell_price_retail)) : 0;
-                
+                const savedQuantity = parseFloat(item.quantity);
                 const savedUnitPrice = parseFloat(item.unit_price);
-                const isCustomPrice = isCustom || (savedUnitPrice !== catalogPrice);
+                
+                let isCustomPrice = isCustom;
+                let detectedOverrideMode = sale.sale_mode === 'mix' ? mixDefaultPrice : undefined;
+
+                if (!isCustom) {
+                    let testItem = {
+                        quantity: savedQuantity,
+                        use_custom_price: false,
+                        packagings: packagings,
+                        level: savedLevel,
+                        is_custom: false
+                    };
+                    
+                    let originalSaleMode = saleMode;
+                    saleMode = 'mix'; // Force mix so it respects override mode
+
+                    testItem.mix_override_mode = 'retail';
+                    recalcItemPrice(testItem);
+                    const expectedRetail = testItem.unit_price;
+
+                    testItem.mix_override_mode = 'wholesale';
+                    recalcItemPrice(testItem);
+                    const expectedWholesale = testItem.unit_price;
+
+                    saleMode = originalSaleMode;
+                    
+                    const eps = 0.01;
+                    if (Math.abs(savedUnitPrice - expectedRetail) < eps) {
+                        isCustomPrice = false;
+                        detectedOverrideMode = 'retail';
+                    } else if (Math.abs(savedUnitPrice - expectedWholesale) < eps) {
+                        isCustomPrice = false;
+                        detectedOverrideMode = 'wholesale';
+                    } else {
+                        isCustomPrice = true;
+                    }
+                }
 
                 return {
                     id: Date.now() + Math.random(),
@@ -1859,13 +1889,14 @@ async function loadSaleForEdit(id) {
                     level: isCustom ? 1 : savedLevel,
                     unit_name: item.unit_name,
                     unit_abbr: item.unit_abbr || (item.unit_name ? item.unit_name.substring(0, 5) : ''),
-                    quantity: parseFloat(item.quantity),
+                    quantity: savedQuantity,
                     use_custom_price: isCustomPrice,
                     custom_line_total: isCustomPrice ? parseFloat(item.total_price) : null,
                     custom_price_draft: isCustomPrice ? String(item.total_price) : undefined,
                     unit_price: savedUnitPrice,
                     total: parseFloat(item.total_price),
-                    price_note: isCustom ? 'Barang Custom' : (isCustomPrice ? 'Harga Custom (Edit)' : '')
+                    price_note: isCustom ? 'Barang Custom' : (isCustomPrice ? 'Harga Custom (Edit)' : ''),
+                    mix_override_mode: detectedOverrideMode
                 };
             }));
 

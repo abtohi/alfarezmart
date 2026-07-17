@@ -862,7 +862,7 @@ class DigiflazzController extends Controller {
         $trx = $data['data'];
         
         // Handle Deposit Webhook
-        if (isset($data['action']) && $data['action'] === 'deposit') {
+        if ((isset($data['action']) && $data['action'] === 'deposit') || (empty($trx['ref_id']) && isset($trx['amount']))) {
             $rawStatus = strtolower(trim($trx['status'] ?? ''));
             $status = 'pending';
             if ($rawStatus === 'sukses' || $rawStatus === 'success') $status = 'success';

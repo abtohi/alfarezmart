@@ -104,7 +104,7 @@ function openUnifiedContactModal(customer = null, defaultType = 'hp', defaultNo 
                 type: type,
                 customer_name: name,
                 customer_no: no,
-                csrf_token: document.getElementById('csrfToken')?.value || (typeof csrfVal !== 'undefined' ? csrfVal : '')
+                csrf_token: document.getElementById('csrfToken')?.value || (typeof csrfToken !== 'undefined' ? csrfToken : (typeof csrfVal !== 'undefined' ? csrfVal : ''))
             };
 
             if (type === 'pln') {
