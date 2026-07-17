@@ -688,112 +688,191 @@ class ThermalPrinter {
         // Build string manually
         let data = '';
 
-        // Header
-        data += '\x1B@'; // Init
-        data += '\x1Ba\x01'; // Align Center
-        data += '\x1BE\x01'; // Bold On
-        data += storeName.toUpperCase() + '\n';
-        data += '\x1BE\x00'; // Bold Off
-        data += 'Pusat Pembayaran\nProduk Digital\n';
-        data += '-'.repeat(width) + '\n';
-
-        // Details
-        data += '\x1Ba\x00'; // Align Left
-        data += '\x1B!\x01'; // Font B
         let d = new Date(dateStr);
         let formattedDate = dateStr;
         if (!isNaN(d.getTime())) {
             formattedDate = ('0'+d.getDate()).slice(-2)+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+d.getFullYear()+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
         }
-        
-        data += padRight('TGL', 4) + ': ' + formattedDate + '\n';
-        data += padRight('REF', 4) + ': ' + (transaction.ref_id || '-') + '\n';
-        data += padRight('TRX', 4) + ': ' + (transaction.digiflazz_trx_id || transaction.trx_id || '-') + '\n';
-        data += '\x1B!\x00'; // Font A
-        data += '-'.repeat(width) + '\n';
 
-        // Product Category Badge
-        data += '\x1Ba\x01'; // Align Center
-        data += '\x1BE\x01'; // Bold On
-        data += `=== ${labelInfo} ===\n`;
-        data += 'TRANSAKSI BERHASIL\n';
-        data += '\x1BE\x00'; // Bold Off
-        data += '-'.repeat(width) + '\n';
-
-        // Info Body
-        data += '\x1Ba\x00'; // Align Left
-        data += '\x1BE\x01'; // Bold On
-        data += 'PRODUK :\n';
-        data += '\x1BE\x00'; // Bold Off
-        data += transaction.product_name + '\n\n';
-
-        data += '\x1BE\x01'; // Bold On
         if (isPln) {
-            data += 'ID PELANGGAN :\n';
-        } else {
-            data += 'TUJUAN :\n';
-        }
-        data += '\x1BE\x00'; // Bold Off
-        data += transaction.customer_no + '\n';
-
-        // Additional Customer / Account Info
-        const ewallets = ['dana','gopay','shopee','ovo','linkaja'];
-        let hasNamePrinted = false;
-
-        if (transaction.sn && transaction.sn !== '-') {
-            if (isPln) {
+            // ==========================================
+            // PLN TOKEN THERMAL RECEIPT (NEW DESIGN)
+            // ==========================================
+            
+            // Header
+            data += '\x1B@'; // Init
+            data += '\x1Ba\x01'; // Align Center
+            data += '\x1B!\x30'; // Double Height & Width
+            data += '\x1BE\x01'; // Bold On
+            data += 'Alfarez\n';
+            data += 'mart\n';
+            data += '\x1B!\x00'; // Reset size
+            data += '\x1BE\x00'; // Bold Off
+            
+            // Address & Phone (split long strings)
+            let addrLines = storeAddr.match(new RegExp(`.{1,${width}}`, 'g')) || [storeAddr];
+            for (let line of addrLines) data += line.trim() + '\n';
+            
+            data += '-'.repeat(width) + '\n';
+            
+            // Title
+            data += '\x1BE\x01'; // Bold On
+            data += '**STRUK NOTA TOKEN LISTRIK PLN**\n';
+            data += '\x1BE\x00'; // Bold Off
+            data += '\x1Ba\x00'; // Align Left
+            
+            // Parse PLN SN (Format: Token/Name/Tarif/Power/Kwh)
+            let plnName = '-';
+            let plnTarifPower = '-';
+            let plnKwh = '-';
+            let snValue = '-';
+            
+            if (transaction.sn && transaction.sn !== '-') {
                 if (transaction.sn.includes('/')) {
                     const parts = transaction.sn.split('/');
                     if (parts.length >= 4) {
-                        const plnName = parts[1] || '';
-                        const plnTarifPower = parts.length > 4 ? `${parts[2]}/${parts[3]}` : parts[2];
-                        const plnKwh = parts.length > 4 ? parts[4] : parts[3];
-                        
-                        if (plnName) data += plnName + '\n';
-                        data += `${plnTarifPower} - ${plnKwh} kWh\n`;
-                        hasNamePrinted = true;
+                        snValue = parts[0];
+                        plnName = parts[1] || '-';
+                        plnTarifPower = parts.length > 4 ? `${parts[2]}/${parts[3]}` : parts[2];
+                        plnKwh = parts.length > 4 ? parts[4] : parts[3];
+                    } else {
+                        snValue = parts[0];
                     }
+                } else {
+                    snValue = transaction.sn;
                 }
-            } else if (ewallets.includes(typeStr)) {
-                if (transaction.sn.toUpperCase().includes('NAMA:') && transaction.sn.toUpperCase().includes('REFF:')) {
-                    const namaMatch = transaction.sn.match(/NAMA:\s*([^,]+)/i);
-                    if (namaMatch && namaMatch[1]) {
-                        data += namaMatch[1].trim() + '\n';
-                        hasNamePrinted = true;
+            }
+            
+            // Detail Block (2 cols)
+            const lblW = 12;
+            const valW = width - lblW - 3;
+            
+            data += padRight('No. Meter', lblW) + ' : ' + padRight(transaction.customer_no, valW).substring(0, valW) + '\n';
+            data += padRight('Nama Meter', lblW) + ' : ' + padRight(plnName, valW).substring(0, valW) + '\n';
+            data += padRight('Tarif/Daya', lblW) + ' : ' + padRight(plnTarifPower, valW).substring(0, valW) + '\n';
+            data += padRight('Jml. KWH', lblW) + ' : ' + padRight(plnKwh, valW).substring(0, valW) + '\n';
+            data += padRight('Tanggal Trx', lblW) + ' : ' + padRight(formattedDate, valW).substring(0, valW) + '\n';
+            data += padRight('Produk', lblW) + ' : ' + padRight(transaction.product_name, valW).substring(0, valW) + '\n';
+            
+            data += '\x1Ba\x01'; // Align Center
+            data += '-'.repeat(width) + '\n';
+            
+            // Token Block
+            data += '\n'; // Padding Top
+            data += '\x1BE\x01'; // Bold On
+            data += '\x1B!\x10'; // Double height
+            data += 'TOKEN :\n';
+            data += '\x1B!\x00'; // Reset size
+            
+            let cleanToken = snValue.replace(/[^0-9]/g, '');
+            let tokenOutput = snValue;
+            if (cleanToken.length === 20) {
+                let t1 = cleanToken.substring(0, 4) + ' ' + cleanToken.substring(4, 8) + ' ' + cleanToken.substring(8, 12);
+                let t2 = cleanToken.substring(12, 16) + ' ' + cleanToken.substring(16, 20);
+                tokenOutput = t1 + '\n' + t2;
+            }
+            
+            data += '\x1B!\x30'; // Double height and width
+            data += tokenOutput + '\n';
+            data += '\x1B!\x00'; // Reset size
+            data += '\x1BE\x00'; // Bold Off
+            data += '\n'; // Padding Bottom
+            
+            data += '-'.repeat(width) + '\n';
+            
+            // Payment Details
+            data += '\x1Ba\x00'; // Align Left
+            data += padRight('Jml. KWH', lblW) + ' : ' + padRight(plnKwh, valW).substring(0, valW) + '\n';
+            data += padRight('Kode Trx', lblW) + ' : ' + padRight(transaction.ref_id || '-', valW).substring(0, valW) + '\n';
+            data += padRight('Status', lblW) + ' : ' + padRight('SUKSES', valW).substring(0, valW) + '\n';
+            
+            // Total Bayar
+            data += '\n';
+            const price = parseInt(transaction.sell_price || 0).toLocaleString('id-ID').replace(/,/g, '.');
+            const totalText = `Rp ${price}`;
+            const totalLabel = 'Total Bayar :';
+            
+            data += '\x1BE\x01'; // Bold On
+            data += '\x1B!\x10'; // Double height
+            data += padRight(totalLabel, 15) + totalText + '\n';
+            data += '\x1B!\x00'; // Reset size
+            data += '\x1BE\x00'; // Bold Off
+            data += '\n';
+            
+            // Footer
+            data += '\x1Ba\x01'; // Align Center
+            data += 'Terima kasih, mohon simpan struk\n';
+            data += 'ini sebagai bukti pembayaran\n';
+            data += 'yang sah.\n\n\n\n';
+            
+        } else {
+            // ==========================================
+            // DEFAULT THERMAL RECEIPT (EXISTING DESIGN)
+            // ==========================================
+            
+            // Header
+            data += '\x1B@'; // Init
+            data += '\x1Ba\x01'; // Align Center
+            data += '\x1BE\x01'; // Bold On
+            data += storeName.toUpperCase() + '\n';
+            data += '\x1BE\x00'; // Bold Off
+            data += 'Pusat Pembayaran\nProduk Digital\n';
+            data += '-'.repeat(width) + '\n';
+
+            // Details
+            data += '\x1Ba\x00'; // Align Left
+            data += '\x1B!\x01'; // Font B
+            
+            data += padRight('TGL', 4) + ': ' + formattedDate + '\n';
+            data += padRight('REF', 4) + ': ' + (transaction.ref_id || '-') + '\n';
+            data += padRight('TRX', 4) + ': ' + (transaction.digiflazz_trx_id || transaction.trx_id || '-') + '\n';
+            data += '\x1B!\x00'; // Font A
+            data += '-'.repeat(width) + '\n';
+
+            // Product Category Badge
+            data += '\x1Ba\x01'; // Align Center
+            data += '\x1BE\x01'; // Bold On
+            data += `=== ${labelInfo} ===\n`;
+            data += 'TRANSAKSI BERHASIL\n';
+            data += '\x1BE\x00'; // Bold Off
+            data += '-'.repeat(width) + '\n';
+
+            // Info Body
+            data += '\x1Ba\x00'; // Align Left
+            data += '\x1BE\x01'; // Bold On
+            data += 'PRODUK :\n';
+            data += '\x1BE\x00'; // Bold Off
+            data += transaction.product_name + '\n\n';
+
+            data += '\x1BE\x01'; // Bold On
+            data += 'TUJUAN :\n';
+            data += '\x1BE\x00'; // Bold Off
+            data += transaction.customer_no + '\n';
+
+            // Additional Customer / Account Info
+            const ewallets = ['dana','gopay','shopee','ovo','linkaja'];
+            let hasNamePrinted = false;
+
+            if (transaction.sn && transaction.sn !== '-') {
+                if (ewallets.includes(typeStr)) {
+                    if (transaction.sn.toUpperCase().includes('NAMA:') && transaction.sn.toUpperCase().includes('REFF:')) {
+                        const namaMatch = transaction.sn.match(/NAMA:\s*([^,]+)/i);
+                        if (namaMatch && namaMatch[1]) {
+                            data += namaMatch[1].trim() + '\n';
+                            hasNamePrinted = true;
+                        }
                     }
                 }
             }
-        }
-        
-        if (!hasNamePrinted && transaction.customer_name && !ewallets.includes(typeStr) && !isPln) {
-            data += transaction.customer_name + '\n';
-        }
+            
+            if (!hasNamePrinted && transaction.customer_name && !ewallets.includes(typeStr)) {
+                data += transaction.customer_name + '\n';
+            }
 
-        data += '\n'; // spacing
+            data += '\n'; // spacing
 
-        // SN / REF / TOKEN
-        if (transaction.sn && transaction.sn !== '-') {
-            if (isPln) {
-                data += '\x1Ba\x01'; // Align Center
-                data += '\x1BE\x01'; // Bold On
-                data += 'TOKEN PLN :\n';
-                
-                const parts = transaction.sn.split('/');
-                const snValue = parts[0];
-                let cleanToken = snValue.replace(/[^0-9]/g, '');
-                let tokenOutput = snValue;
-                if (cleanToken.length === 20) {
-                    let t1 = cleanToken.substring(0, 4) + ' ' + cleanToken.substring(4, 8) + ' ' + cleanToken.substring(8, 12);
-                    let t2 = cleanToken.substring(12, 16) + ' ' + cleanToken.substring(16, 20);
-                    tokenOutput = t1 + '\n' + t2;
-                }
-                
-                data += '\x1B!\x30'; // Double height and width
-                data += tokenOutput + '\n';
-                data += '\x1B!\x00'; // Reset size
-                data += '\x1BE\x00'; // Bold Off
-                data += '\x1Ba\x00'; // Align Left
-            } else {
+            // SN / REF / TOKEN
+            if (transaction.sn && transaction.sn !== '-') {
                 let reffValue = transaction.sn;
                 if (transaction.sn.toUpperCase().includes('NAMA:') && transaction.sn.toUpperCase().includes('REFF:')) {
                     const reffMatch = transaction.sn.match(/REFF:\s*([^,]+)/i);
@@ -807,36 +886,36 @@ class ThermalPrinter {
                 data += '\x1BE\x00'; // Bold Off
                 data += reffValue + '\n';
             }
+            
+            data += '-'.repeat(width) + '\n';
+            
+            // Total row
+            const price = parseInt(transaction.sell_price).toLocaleString('id-ID');
+            const totalText = `Rp ${price}`;
+            const totalLabel = 'TOTAL BAYAR';
+            
+            data += '\x1BE\x01'; // Bold On
+            data += '\x1B!\x10'; // Double height
+            
+            const spaceCount = width - totalLabel.length - totalText.length;
+            if (spaceCount > 0) {
+                data += totalLabel + ' '.repeat(spaceCount) + totalText + '\n';
+            } else {
+                data += totalLabel + '\n' + padLeft(totalText, width) + '\n';
+            }
+            data += '\x1B!\x00'; // Reset size
+            data += '\x1BE\x00'; // Bold Off
+            data += '-'.repeat(width) + '\n';
+            
+            // Footer
+            data += '\x1Ba\x01'; // Align Center
+            data += 'Struk ini merupakan bukti\n';
+            data += 'transaksi yang sah dan resmi\n';
+            data += `dari ${storeName}.\n\n`;
+            
+            data += 'Terima kasih telah berbelanja\n';
+            data += '= Semoga Berkah =\n\n\n\n';
         }
-        
-        data += '-'.repeat(width) + '\n';
-        
-        // Total row
-        const price = parseInt(transaction.sell_price).toLocaleString('id-ID');
-        const totalText = `Rp ${price}`;
-        const totalLabel = 'TOTAL BAYAR';
-        
-        data += '\x1BE\x01'; // Bold On
-        data += '\x1B!\x10'; // Double height
-        
-        const spaceCount = width - totalLabel.length - totalText.length;
-        if (spaceCount > 0) {
-            data += totalLabel + ' '.repeat(spaceCount) + totalText + '\n';
-        } else {
-            data += totalLabel + '\n' + padLeft(totalText, width) + '\n';
-        }
-        data += '\x1B!\x00'; // Reset size
-        data += '\x1BE\x00'; // Bold Off
-        data += '-'.repeat(width) + '\n';
-        
-        // Footer
-        data += '\x1Ba\x01'; // Align Center
-        data += 'Struk ini merupakan bukti\n';
-        data += 'transaksi yang sah dan resmi\n';
-        data += `dari ${storeName}.\n\n`;
-        
-        data += 'Terima kasih telah berbelanja\n';
-        data += '= Semoga Berkah =\n\n\n\n';
 
         const encoder = new TextEncoder();
         let payload = encoder.encode(data);
