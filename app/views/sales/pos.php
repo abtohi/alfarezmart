@@ -409,8 +409,8 @@ function setSaleMode(mode) {
     } else if (mode === 'mix') {
         if (btnMix) { btnMix.className = 'active'; }
         if (mixBox) mixBox.style.display = '';
-        // Reset all items to follow mixDefaultPrice
-        cart.forEach(item => { item.mix_override_mode = mixDefaultPrice; });
+        // Only set default for items that don't already have an override (preserves edit-loaded overrides)
+        cart.forEach(item => { if (item.mix_override_mode === undefined) item.mix_override_mode = mixDefaultPrice; });
     }
 
     cart.forEach(item => { recalcItemPrice(item); });
@@ -1794,9 +1794,9 @@ async function loadSaleForEdit(id) {
 
         if (data.success && data.transaction) {
             const sale = data.transaction;
-            setSaleMode(sale.sale_mode);
+            const targetMode = sale.sale_mode || 'retail'; // 'retail', 'wholesale', or 'mix'
             
-            // Map items with real packagings
+            // Build cart items first, BEFORE setting sale mode
             cart = await Promise.all(sale.items.map(async item => {
                 const isCustom = item.custom_name !== null;
                 const printName = item.invoice_name || item.full_name || item.custom_name;
@@ -1836,46 +1836,38 @@ async function loadSaleForEdit(id) {
                     }];
                 }
 
-                // Periksa apakah item ini menggunakan harga custom (selain produk custom)
+                // Detect if price is custom or matches catalog
                 const savedLevel = parseInt(item.level) || 1;
                 const savedQuantity = parseFloat(item.quantity);
                 const savedUnitPrice = parseFloat(item.unit_price);
                 
                 let isCustomPrice = isCustom;
-                let detectedOverrideMode = sale.sale_mode === 'mix' ? mixDefaultPrice : undefined;
+                let detectedOverrideMode = undefined;
 
-                if (!isCustom) {
-                    let testItem = {
-                        quantity: savedQuantity,
-                        use_custom_price: false,
-                        packagings: packagings,
-                        level: savedLevel,
-                        is_custom: false
-                    };
-                    
-                    let originalSaleMode = saleMode;
-                    saleMode = 'mix'; // Force mix so it respects override mode
-
-                    testItem.mix_override_mode = 'retail';
-                    recalcItemPrice(testItem);
-                    const expectedRetail = testItem.unit_price;
-
-                    testItem.mix_override_mode = 'wholesale';
-                    recalcItemPrice(testItem);
-                    const expectedWholesale = testItem.unit_price;
-
-                    saleMode = originalSaleMode;
-                    
-                    const eps = 0.01;
-                    if (Math.abs(savedUnitPrice - expectedRetail) < eps) {
-                        isCustomPrice = false;
-                        detectedOverrideMode = 'retail';
-                    } else if (Math.abs(savedUnitPrice - expectedWholesale) < eps) {
-                        isCustomPrice = false;
-                        detectedOverrideMode = 'wholesale';
-                    } else {
-                        isCustomPrice = true;
+                if (!isCustom && isItemValid) {
+                    // Find the matching packaging
+                    const curPkg = packagings.find(p => parseInt(p.level) === savedLevel) || packagings[0];
+                    if (curPkg) {
+                        // Calculate expected prices for retail and wholesale using the same logic as recalcItemPrice
+                        const expectedRetail = _calcExpectedUnitPrice(curPkg, 'retail', savedQuantity, packagings);
+                        const expectedWholesale = _calcExpectedUnitPrice(curPkg, 'wholesale', savedQuantity, packagings);
+                        
+                        const eps = 1; // Allow Rp 1 tolerance due to rounding
+                        if (Math.abs(savedUnitPrice - expectedRetail) < eps) {
+                            isCustomPrice = false;
+                            detectedOverrideMode = 'retail';
+                        } else if (Math.abs(savedUnitPrice - expectedWholesale) < eps) {
+                            isCustomPrice = false;
+                            detectedOverrideMode = 'wholesale';
+                        } else {
+                            isCustomPrice = true;
+                        }
                     }
+                }
+
+                // For non-mix modes, set the override to match the sale mode
+                if (targetMode !== 'mix') {
+                    detectedOverrideMode = undefined;
                 }
 
                 return {
@@ -1899,6 +1891,9 @@ async function loadSaleForEdit(id) {
                     mix_override_mode: detectedOverrideMode
                 };
             }));
+
+            // NOW set the sale mode (after cart is built so mix mode can process items)
+            setSaleMode(targetMode);
 
             // Insert edit banner
             const banner = document.createElement('div');
@@ -1931,6 +1926,46 @@ async function loadSaleForEdit(id) {
         showToast('Error memuat transaksi', 'error');
         editSaleId = null;
     }
+}
+
+// Helper: calculate expected unit price for a packaging at a given mode/qty
+// Mirrors recalcItemPrice logic but returns the final unit price without modifying any item
+function _calcExpectedUnitPrice(pkg, mode, qty, allPackagings) {
+    let basePricePerUnit = 0;
+    let rawTotal = 0;
+    
+    if (typeof QtyPricing !== 'undefined' && typeof QtyPricing.calculateTotalPrice === 'function') {
+        rawTotal = QtyPricing.calculateTotalPrice(pkg, mode, qty, false, null, allPackagings);
+        basePricePerUnit = qty > 0 ? rawTotal / qty : 0;
+    } else {
+        basePricePerUnit = mode === 'wholesale'
+            ? (parseFloat(pkg.sell_price_wholesale) || parseFloat(pkg.sell_price_retail) || 0)
+            : (parseFloat(pkg.sell_price_retail) || 0);
+        rawTotal = basePricePerUnit * qty;
+    }
+
+    // Apply PPN
+    const ppnPct = parseFloat(pkg.ppn_pct) || 0;
+    let ppnAmount = 0;
+    if (ppnPct > 0) {
+        ppnAmount = basePricePerUnit * (ppnPct / 100);
+    }
+
+    // Apply Discount
+    const dMode = pkg.discount_mode || 'rp';
+    const dVal = parseFloat(pkg.discount_value) || 0;
+    let discountAmount = 0;
+    if (dVal > 0) {
+        if (dMode === 'pct') {
+            discountAmount = (basePricePerUnit + ppnAmount) * (dVal / 100);
+        } else {
+            discountAmount = dVal;
+        }
+    }
+
+    const finalUnitPrice = basePricePerUnit + ppnAmount - discountAmount;
+    const finalTotal = Math.round(finalUnitPrice * qty);
+    return qty > 0 ? finalTotal / qty : 0;
 }
 </script>
 
