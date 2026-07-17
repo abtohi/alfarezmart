@@ -702,12 +702,7 @@ class ThermalPrinter {
             // Header
             data += '\x1B@'; // Init
             data += '\x1Ba\x01'; // Align Center
-            data += '\x1B!\x30'; // Double Height & Width
-            data += '\x1BE\x01'; // Bold On
-            data += 'Alfarez\n';
-            data += 'mart\n';
-            data += '\x1B!\x00'; // Reset size
-            data += '\x1BE\x00'; // Bold Off
+            // Text "Alfarez mart" removed, relying only on injected logo
             
             // Address & Phone (split long strings)
             let addrLines = storeAddr.match(new RegExp(`.{1,${width}}`, 'g')) || [storeAddr];
@@ -760,6 +755,7 @@ class ThermalPrinter {
             // Token Block
             data += '\n'; // Padding Top
             data += '\x1BE\x01'; // Bold On
+            data += '\x1BG\x01'; // Double Strike On (Extra Thick)
             data += '\x1B!\x10'; // Double height
             data += 'TOKEN :\n';
             data += '\x1B!\x00'; // Reset size
@@ -775,6 +771,7 @@ class ThermalPrinter {
             data += '\x1B!\x30'; // Double height and width
             data += tokenOutput + '\n';
             data += '\x1B!\x00'; // Reset size
+            data += '\x1BG\x00'; // Double Strike Off
             data += '\x1BE\x00'; // Bold Off
             data += '\n'; // Padding Bottom
             
@@ -793,9 +790,11 @@ class ThermalPrinter {
             const totalLabel = 'Total Bayar :';
             
             data += '\x1BE\x01'; // Bold On
+            data += '\x1BG\x01'; // Double Strike On (Extra Thick)
             data += '\x1B!\x10'; // Double height
             data += padRight(totalLabel, 15) + totalText + '\n';
             data += '\x1B!\x00'; // Reset size
+            data += '\x1BG\x00'; // Double Strike Off
             data += '\x1BE\x00'; // Bold Off
             data += '\n';
             
