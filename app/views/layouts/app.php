@@ -57,6 +57,8 @@ if ($userLevel === 'staff') {
     <link rel="manifest" href="<?= BASE_URL ?>manifest.json<?= $v ?>">
 </head>
 <body>
+<?php $__globalCsrf = (new Security())->getCSRFToken(); ?>
+<input type="hidden" id="csrfToken" value="<?= $__globalCsrf ?>">
 
     <!-- Elegant App Loader -->
     <style>
@@ -317,7 +319,7 @@ if ($userLevel === 'staff') {
     
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '13.95'; // Update this to force client reloads
+    const APP_VERSION = '13.96'; // Update this to force client reloads
     
     // Self-healing cache buster
     if (localStorage.getItem('app_version') !== APP_VERSION) {

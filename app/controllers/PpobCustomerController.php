@@ -25,19 +25,15 @@ class PpobCustomerController extends Controller {
 
     public function create() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $security = new Security();
-            if (!$security->validateCSRFToken($_POST['csrf_token'] ?? '')) {
-                $this->jsonResponse(['success' => false, 'message' => 'Invalid CSRF Token']);
-                return;
-            }
+            $this->validateCSRF();
 
             $data = [
-                'type' => $_POST['type'] ?? '',
-                'customer_name' => $_POST['customer_name'] ?? null,
-                'customer_no' => $_POST['customer_no'] ?? '',
-                'pln_name' => $_POST['pln_name'] ?? null,
-                'pln_power' => $_POST['pln_power'] ?? null,
-                'ewallet_accounts' => $_POST['ewallet_accounts'] ?? null
+                'type' => $this->input('type', ''),
+                'customer_name' => $this->input('customer_name'),
+                'customer_no' => $this->input('customer_no', ''),
+                'pln_name' => $this->input('pln_name'),
+                'pln_power' => $this->input('pln_power'),
+                'ewallet_accounts' => $this->input('ewallet_accounts')
             ];
 
             if (empty($data['type']) || empty($data['customer_no'])) {
@@ -55,25 +51,21 @@ class PpobCustomerController extends Controller {
 
     public function update() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $security = new Security();
-            if (!$security->validateCSRFToken($_POST['csrf_token'] ?? '')) {
-                $this->jsonResponse(['success' => false, 'message' => 'Invalid CSRF Token']);
-                return;
-            }
+            $this->validateCSRF();
 
-            $id = $_POST['id'] ?? '';
+            $id = $this->input('id', '');
             if (empty($id)) {
                 $this->jsonResponse(['success' => false, 'message' => 'ID Pelanggan tidak valid']);
                 return;
             }
 
             $data = [
-                'type' => $_POST['type'] ?? '',
-                'customer_name' => $_POST['customer_name'] ?? null,
-                'customer_no' => $_POST['customer_no'] ?? '',
-                'pln_name' => $_POST['pln_name'] ?? null,
-                'pln_power' => $_POST['pln_power'] ?? null,
-                'ewallet_accounts' => $_POST['ewallet_accounts'] ?? null
+                'type' => $this->input('type', ''),
+                'customer_name' => $this->input('customer_name'),
+                'customer_no' => $this->input('customer_no', ''),
+                'pln_name' => $this->input('pln_name'),
+                'pln_power' => $this->input('pln_power'),
+                'ewallet_accounts' => $this->input('ewallet_accounts')
             ];
 
             if ($this->model->update($id, $data)) {
@@ -86,13 +78,9 @@ class PpobCustomerController extends Controller {
 
     public function delete() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $security = new Security();
-            if (!$security->validateCSRFToken($_POST['csrf_token'] ?? '')) {
-                $this->jsonResponse(['success' => false, 'message' => 'Invalid CSRF Token']);
-                return;
-            }
+            $this->validateCSRF();
 
-            $id = $_POST['id'] ?? '';
+            $id = $this->input('id', '');
             if (empty($id)) {
                 $this->jsonResponse(['success' => false, 'message' => 'ID tidak valid']);
                 return;
@@ -108,7 +96,7 @@ class PpobCustomerController extends Controller {
 
     public function checkPln() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $customerNo = $_POST['customer_no'] ?? '';
+            $customerNo = $this->input('customer_no', '');
             if (empty($customerNo)) {
                 $this->jsonResponse(['success' => false, 'message' => 'Nomor Meter wajib diisi']);
                 return;
