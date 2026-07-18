@@ -546,7 +546,7 @@ class ThermalPrinter {
     }
 
     /** Build ESC/POS raster image bytes for Bluetooth Thermal Print */
-    async _buildLogoRaster(imgSrc) {
+    async _buildLogoRaster(imgSrc, customMaxWidth = 300) {
         if (!imgSrc) return null;
         return new Promise((resolve) => {
             const img = new Image();
@@ -555,8 +555,8 @@ class ThermalPrinter {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                // Max width for 58mm printer is typically 384 dots. We use 300 for a larger logo.
-                const maxWidth = 300;
+                // Max width for 58mm printer is typically 384 dots.
+                const maxWidth = customMaxWidth;
                 let width = img.width;
                 let height = img.height;
                 if (width > maxWidth) {
@@ -775,7 +775,6 @@ class ThermalPrinter {
             
             // Payment Details
             data += '\x1Ba\x00'; // Align Left
-            data += padRight('Jml. KWH', lblW) + ' : ' + padRight(plnKwh, valW).substring(0, valW) + '\n';
             data += padRight('Kode Trx', lblW) + ' : ' + padRight(transaction.ref_id || '-', valW).substring(0, valW) + '\n';
             data += padRight('Status', lblW) + ' : ' + padRight('SUKSES', valW).substring(0, valW) + '\n';
             
@@ -914,7 +913,8 @@ class ThermalPrinter {
         // Inject logo if available
         if (this.storeSettings?.store_logo) {
             try {
-                const logoBytes = await this._buildLogoRaster(this.storeSettings.store_logo);
+                const logoSize = isPln ? 384 : 300;
+                const logoBytes = await this._buildLogoRaster(this.storeSettings.store_logo, logoSize);
                 if (logoBytes && logoBytes.length > 0) {
                     const prefix = encoder.encode('\x1B@\x1Ba\x01');
                     const restPayload = payload.slice(2); // Skip the first \x1B@
