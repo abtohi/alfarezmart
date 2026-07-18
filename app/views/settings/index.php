@@ -123,7 +123,7 @@
     </ul>
 
     <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:var(--font-size-xs);">
-        AlfarezMart v1.1.0 · PWA Inventory System<br>
+        AlfarezMart v1.1.1 &middot; PWA Inventory System<br>
         &copy; 2026 AlfarezMart
     </div>
 </div>

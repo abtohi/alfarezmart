@@ -1977,10 +1977,15 @@ document.getElementById('btn-save-price')?.addEventListener('click', async () =>
     bootstrap.Modal.getOrCreateInstance(document.getElementById('setPriceModal')).hide();
     
     if (typeof currentProducts !== 'undefined') {
-        if(currentCategory === 'pulsa' || currentCategory === 'data') {
+        if(currentCategory === 'pulsa' || currentCategory === 'data' || currentCategory === 'sms_nelpon') {
            filterProductsByPrefix(document.getElementById('customer-no').value);
         } else {
-           renderProducts(currentProducts);
+           const activeFilterBtn = document.querySelector('#brand-filter-container button.btn-primary');
+           if (activeFilterBtn) {
+               activeFilterBtn.click();
+           } else {
+               renderProducts(currentProducts);
+           }
         }
     }
 });
