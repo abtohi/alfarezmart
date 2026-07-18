@@ -452,25 +452,44 @@ class DigiflazzModel {
      * @return bool
      */
     public function updateDepositStatus($amount, $status, $notes, $rawResponse) {
-        // Digiflazz webhook only sends exact amount (unique amount) for deposits
-        // The DB might only have the raw_response JSON which contains the exact unique amount.
-        // We will try to find the matching pending deposit.
-        $stmt = $this->db->prepare("
-            UPDATE digi_deposits 
-            SET status = :status, notes = :notes, raw_response = :raw 
-            WHERE status = 'pending' AND (
-                amount = :amount OR 
-                raw_response LIKE :amount_like
-            )
-            ORDER BY created_at ASC LIMIT 1
-        ");
-        return $stmt->execute([
-            'status' => $status,
-            'notes' => $notes,
-            'raw' => is_array($rawResponse) ? json_encode($rawResponse) : $rawResponse,
-            'amount' => $amount,
-            'amount_like' => '%"amount":' . $amount . '%'
-        ]);
+        // Fetch all pending deposits
+        $stmt = $this->db->query("SELECT id, amount, raw_response FROM digi_deposits WHERE status = 'pending' ORDER BY created_at ASC");
+        $pending = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $targetId = null;
+        foreach ($pending as $row) {
+            $uniqueAmount = (float)$row['amount'];
+            if (!empty($row['raw_response'])) {
+                $raw = json_decode($row['raw_response'], true);
+                if (isset($raw['amount'])) {
+                    $uniqueAmount = (float)$raw['amount'];
+                } elseif (isset($raw['deposit']['amount'])) {
+                    $uniqueAmount = (float)$raw['deposit']['amount'];
+                }
+            }
+            
+            // If the Nominal Transfer exact match with the webhook amount
+            if (abs($uniqueAmount - (float)$amount) < 0.01) {
+                $targetId = $row['id'];
+                break;
+            }
+        }
+        
+        if ($targetId) {
+            $updateStmt = $this->db->prepare("
+                UPDATE digi_deposits 
+                SET status = :status, notes = :notes, raw_response = :raw 
+                WHERE id = :id
+            ");
+            return $updateStmt->execute([
+                'status' => $status,
+                'notes' => $notes,
+                'raw' => is_array($rawResponse) ? json_encode($rawResponse) : $rawResponse,
+                'id' => $targetId
+            ]);
+        }
+        
+        return false;
     }
 
 

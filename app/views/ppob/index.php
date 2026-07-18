@@ -2051,9 +2051,9 @@ function renderProducts(products) {
             let rawRate = (p.success_rate !== null && p.success_rate !== undefined) ? p.success_rate : null;
             if (rawRate !== null) {
                 let badgeColor = rawRate >= 80 ? '#10b981' : (rawRate >= 50 ? '#f59e0b' : '#ef4444');
-                successBadge = `<span style="color: ${badgeColor}; font-weight: 700; margin-left: 3px;" title="Success Rate Global Seller"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> ${rawRate}%</span>`;
+                successBadge = `<span style="color: ${badgeColor}; font-weight: 700; margin-left: 3px;" title="Success Rate Global Seller"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> Success Rate: ${rawRate}%</span>`;
             } else {
-                successBadge = `<span class="text-muted" style="margin-left: 3px; font-weight: 700;" title="Success Rate Global Seller"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> -</span>`;
+                successBadge = `<span class="text-muted" style="margin-left: 3px; font-weight: 700;" title="Success Rate Global Seller"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> Success Rate: -</span>`;
             }
             
             let prodSuccessBadge = '';
@@ -2063,15 +2063,17 @@ function renderProducts(products) {
                 prodSuccessBadge = `
                 <div style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; background: var(--surface-1); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);" title="Success Rate Produk Ini">
                     <i class="bi bi-box-seam text-secondary" style="font-size: 0.6rem;"></i>
+                    <span style="font-weight: 600; color: var(--text-secondary);">Produk</span>
                     <div style="width: 1px; height: 8px; background: var(--border-color); margin: 0 1px;"></div>
-                    <span style="color: ${pBadgeColor}; font-weight: 700; margin-left: 3px;"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> ${rawProdRate}%</span>
+                    <span style="color: ${pBadgeColor}; font-weight: 700; margin-left: 3px;"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> Success Rate: ${rawProdRate}%</span>
                 </div>`;
             } else {
                 prodSuccessBadge = `
                 <div style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; background: var(--surface-1); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);" title="Success Rate Produk Ini">
                     <i class="bi bi-box-seam text-secondary" style="font-size: 0.6rem;"></i>
+                    <span style="font-weight: 600; color: var(--text-secondary);">Produk</span>
                     <div style="width: 1px; height: 8px; background: var(--border-color); margin: 0 1px;"></div>
-                    <span class="text-muted" style="margin-left: 3px; font-weight: 700;"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> -</span>
+                    <span class="text-muted" style="margin-left: 3px; font-weight: 700;"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> Success Rate: -</span>
                 </div>`;
             }
 
