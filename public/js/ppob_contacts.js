@@ -1,5 +1,5 @@
 function openUnifiedContactModal(customer = null, defaultType = 'hp', defaultNo = '') {
-    const isEdit = !!customer;
+    const isEdit = !!(customer && customer.id);
     const services = ['Dana', 'GoPay', 'OVO', 'ShopeePay', 'LinkAja'];
     
     // Inject dynamic CSS to fix disabled select background
@@ -41,7 +41,7 @@ function openUnifiedContactModal(customer = null, defaultType = 'hp', defaultNo 
         iconColor: 'var(--primary-bg)',
         iconAccent: 'var(--primary)',
         bodyHTML: `
-            <input type="hidden" id="uc_id" value="${customer ? customer.id : ''}">
+            <input type="hidden" id="uc_id" value="${(customer && customer.id) ? customer.id : ''}">
             <div class="mb-3">
                 <label class="form-label fw-bold small" style="color:var(--text-secondary);">Tipe Pelanggan</label>
                 <select class="form-select glass-input fw-bold" id="uc_type" onchange="toggleUnifiedContactType()" ${isEdit ? 'disabled' : ''}>
