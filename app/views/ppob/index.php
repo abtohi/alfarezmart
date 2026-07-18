@@ -2051,19 +2051,39 @@ function renderProducts(products) {
             let rawRate = (p.success_rate !== null && p.success_rate !== undefined) ? p.success_rate : null;
             if (rawRate !== null) {
                 let badgeColor = rawRate >= 80 ? '#10b981' : (rawRate >= 50 ? '#f59e0b' : '#ef4444');
-                successBadge = `<span style="color: ${badgeColor}; font-weight: 700; margin-left: 3px;"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> ${rawRate}%</span>`;
+                successBadge = `<span style="color: ${badgeColor}; font-weight: 700; margin-left: 3px;" title="Success Rate Global Seller"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> ${rawRate}%</span>`;
             } else {
-                successBadge = `<span class="text-muted" style="margin-left: 3px; font-weight: 700;"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> -</span>`;
+                successBadge = `<span class="text-muted" style="margin-left: 3px; font-weight: 700;" title="Success Rate Global Seller"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> -</span>`;
             }
             
+            let prodSuccessBadge = '';
+            let rawProdRate = (p.product_success_rate !== null && p.product_success_rate !== undefined) ? p.product_success_rate : null;
+            if (rawProdRate !== null) {
+                let pBadgeColor = rawProdRate >= 80 ? '#10b981' : (rawProdRate >= 50 ? '#f59e0b' : '#ef4444');
+                prodSuccessBadge = `
+                <div style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; background: var(--surface-1); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);" title="Success Rate Produk Ini">
+                    <i class="bi bi-box-seam text-secondary" style="font-size: 0.6rem;"></i>
+                    <div style="width: 1px; height: 8px; background: var(--border-color); margin: 0 1px;"></div>
+                    <span style="color: ${pBadgeColor}; font-weight: 700; margin-left: 3px;"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> ${rawProdRate}%</span>
+                </div>`;
+            } else {
+                prodSuccessBadge = `
+                <div style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; background: var(--surface-1); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);" title="Success Rate Produk Ini">
+                    <i class="bi bi-box-seam text-secondary" style="font-size: 0.6rem;"></i>
+                    <div style="width: 1px; height: 8px; background: var(--border-color); margin: 0 1px;"></div>
+                    <span class="text-muted" style="margin-left: 3px; font-weight: 700;"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> -</span>
+                </div>`;
+            }
+
             sellerHtml = `
-            <div class="mt-2" style="font-size: 0.6rem; opacity: 0.85;">
-                <div onclick="openSellerHistory(event, '${p.seller_name}')" style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; background: var(--surface-1); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <div class="mt-2 d-flex flex-wrap gap-1" style="font-size: 0.6rem; opacity: 0.85;">
+                <div onclick="openSellerHistory(event, '${p.seller_name}')" style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; background: var(--surface-1); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Lihat Analisis Seller">
                     <i class="bi bi-shop text-primary" style="font-size: 0.6rem;"></i>
                     <span style="font-weight: 600; color: var(--text-secondary); max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.seller_name}</span>
                     <div style="width: 1px; height: 8px; background: var(--border-color); margin: 0 1px;"></div>
                     ${successBadge}
                 </div>
+                ${prodSuccessBadge}
             </div>`;
         }
         
@@ -2376,7 +2396,8 @@ async function confirmPurchase(product) {
     }
     
     const profitColor = profit >= 0 ? '#198754' : '#dc3545';
-    showConfirm('Konfirmasi Transaksi', `Produk: <b>${product.product_name}</b><br>Nomor: <b>${no}</b>${extraInfo}<br><br>Harga Modal: <b>${formatRp(modalPrice)}</b><br>Harga Jual: <b style="color:var(--primary);">${formatRp(finalPrice)}</b><br>Profit/Margin: <b style="color:${profitColor};">${formatRp(profit)} (${markupPct}%)</b><br>Seller: <b>${sellerName}</b> (Success Rate: <b>${successRate}</b>)`, () => {
+    const prodSuccessRate = product.product_success_rate ? `${product.product_success_rate}%` : '-';
+    showConfirm('Konfirmasi Transaksi', `Produk: <b>${product.product_name}</b><br>Nomor: <b>${no}</b>${extraInfo}<br><br>Harga Modal: <b>${formatRp(modalPrice)}</b><br>Harga Jual: <b style="color:var(--primary);">${formatRp(finalPrice)}</b><br>Profit/Margin: <b style="color:${profitColor};">${formatRp(profit)} (${markupPct}%)</b><br>Seller: <b>${sellerName}</b> (SR Seller: <b>${successRate}</b> | SR Produk: <b>${prodSuccessRate}</b>)`, () => {
         processTransaction({
             sku: product.buyer_sku_code,
             customer_no: no,

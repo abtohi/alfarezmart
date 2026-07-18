@@ -89,6 +89,7 @@ class DigiflazzController extends Controller {
         
         $products = $this->digiModel->getProducts($category, $brand, $type);
         $rates = $this->digiModel->getSellerSuccessRates();
+        $prodRates = $this->digiModel->getProductSuccessRates();
         
         foreach ($products as &$p) {
             $seller = $p['seller_name'] ?? null;
@@ -96,6 +97,13 @@ class DigiflazzController extends Controller {
                 $p['success_rate'] = round(($rates[$seller]['success'] / $rates[$seller]['total']) * 100, 1);
             } else {
                 $p['success_rate'] = null;
+            }
+
+            $sku = $p['buyer_sku_code'] ?? null;
+            if ($sku && isset($prodRates[$sku]) && $prodRates[$sku]['total'] > 0) {
+                $p['product_success_rate'] = round(($prodRates[$sku]['success'] / $prodRates[$sku]['total']) * 100, 1);
+            } else {
+                $p['product_success_rate'] = null;
             }
         }
         
@@ -112,12 +120,21 @@ class DigiflazzController extends Controller {
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         $rates = $this->digiModel->getSellerSuccessRates();
+        $prodRates = $this->digiModel->getProductSuccessRates();
+        
         foreach ($products as &$p) {
             $seller = $p['seller_name'] ?? null;
             if ($seller && isset($rates[$seller]) && $rates[$seller]['total'] > 0) {
                 $p['success_rate'] = round(($rates[$seller]['success'] / $rates[$seller]['total']) * 100, 1);
             } else {
                 $p['success_rate'] = null;
+            }
+
+            $sku = $p['buyer_sku_code'] ?? null;
+            if ($sku && isset($prodRates[$sku]) && $prodRates[$sku]['total'] > 0) {
+                $p['product_success_rate'] = round(($prodRates[$sku]['success'] / $prodRates[$sku]['total']) * 100, 1);
+            } else {
+                $p['product_success_rate'] = null;
             }
         }
         

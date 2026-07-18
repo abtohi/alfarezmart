@@ -503,6 +503,34 @@ class DigiflazzModel {
     }
 
     /**
+     * Get success rates for specific products (by buyer_sku_code)
+     */
+    public function getProductSuccessRates() {
+        try {
+            $stmt = $this->db->query("
+                SELECT buyer_sku_code,
+                       COUNT(id) as total,
+                       SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success
+                FROM digi_transactions
+                WHERE buyer_sku_code IS NOT NULL AND buyer_sku_code != '' 
+                  AND status IN ('success', 'failed')
+                GROUP BY buyer_sku_code
+            ");
+            $rates = [];
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $rates[$row['buyer_sku_code']] = [
+                    'total' => (int)$row['total'],
+                    'success' => (int)$row['success']
+                ];
+            }
+            return $rates;
+        } catch (\Exception $e) {
+            error_log("[DigiflazzModel] getProductSuccessRates error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Get recent transactions for a specific seller
      */
     public function getSellerHistory(string $sellerName, int $page = 1, int $limit = 10) {
