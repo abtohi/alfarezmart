@@ -501,15 +501,15 @@ class DigiflazzModel {
             $stmt = $this->db->query("
                 SELECT seller_name,
                        COUNT(id) as total,
-                       SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success
+                       SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN 1 ELSE 0 END) as success
                 FROM digi_transactions
                 WHERE seller_name IS NOT NULL AND seller_name != '' 
-                  AND status IN ('success', 'failed')
+                  AND LOWER(status) IN ('success', 'failed', 'sukses', 'gagal')
                 GROUP BY seller_name
             ");
             $rates = [];
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $rates[$row['seller_name']] = [
+                $rates[trim($row['seller_name'])] = [
                     'total' => (int)$row['total'],
                     'success' => (int)$row['success']
                 ];
@@ -529,15 +529,15 @@ class DigiflazzModel {
             $stmt = $this->db->query("
                 SELECT buyer_sku_code,
                        COUNT(id) as total,
-                       SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success
+                       SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN 1 ELSE 0 END) as success
                 FROM digi_transactions
                 WHERE buyer_sku_code IS NOT NULL AND buyer_sku_code != '' 
-                  AND status IN ('success', 'failed')
+                  AND LOWER(status) IN ('success', 'failed', 'sukses', 'gagal')
                 GROUP BY buyer_sku_code
             ");
             $rates = [];
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $rates[$row['buyer_sku_code']] = [
+                $rates[trim($row['buyer_sku_code'])] = [
                     'total' => (int)$row['total'],
                     'success' => (int)$row['success']
                 ];

@@ -1210,6 +1210,7 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 }
 </style>
 
+<script src="<?= BASE_URL ?>public/js/ppob_receipt.js"></script>
 <script>
 const REQUIRE_PIN = <?= isset($requirePin) && $requirePin ? 'true' : 'false' ?>;
 let pendingTrxPayload = null;
@@ -2009,6 +2010,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
+// Silent reload of product success rates & prices after a transaction
+async function reloadCurrentProductsSilent() {
+    if (!currentCategory || !currentType) return;
+    try {
+        const res = await fetch(`<?= BASE_URL ?>api/ppob/products/${currentCategory}?type=${currentType}`);
+        const data = await res.json();
+        if (data.success && data.data && data.data.length > 0) {
+            currentProducts = data.data;
+            if (currentCategory === 'pulsa' || currentCategory === 'data' || currentCategory === 'sms_nelpon') {
+                const phoneInput = document.getElementById('customer-no');
+                if (phoneInput && phoneInput.value) {
+                    filterProductsByPrefix(phoneInput.value);
+                }
+            } else {
+                const activeFilterBtn = document.querySelector('#brand-filter-container button.btn-primary');
+                const activeVal = activeFilterBtn ? activeFilterBtn.innerText : '';
+                if (activeVal && activeVal !== 'Semua') {
+                    const filtered = currentProducts.filter(p => p.brand === activeVal);
+                    renderProducts(filtered);
+                } else {
+                    renderProducts(currentProducts);
+                }
+            }
+        }
+    } catch(e) {
+        console.error('Silent product reload failed:', e);
+    }
+}
+
 function renderProducts(products) {
     const grid = document.getElementById('product-grid');
     grid.innerHTML = '';
@@ -2058,7 +2088,7 @@ function renderProducts(products) {
             
             let prodSuccessBadge = '';
             let rawProdRate = (p.product_success_rate !== null && p.product_success_rate !== undefined) ? p.product_success_rate : null;
-            if (rawProdRate > 0) {
+            if (rawProdRate !== null) {
                 let pBadgeColor = '#9E9E9E';
                 if (rawProdRate >= 90) pBadgeColor = '#4CAF50';
                 else if (rawProdRate >= 75) pBadgeColor = '#FF9800';
@@ -2359,7 +2389,7 @@ async function confirmPurchase(product) {
     const markupPct = modalPrice > 0 ? ((profit / modalPrice) * 100).toFixed(1) : 0;
     
     const sellerName = product.seller_name || '-';
-    const successRate = product.success_rate ? `${product.success_rate}%` : '-';
+    const successRate = (product.success_rate !== null && product.success_rate !== undefined) ? `${product.success_rate}%` : '-';
     
     let extraInfo = '';
     
@@ -2400,7 +2430,7 @@ async function confirmPurchase(product) {
     }
     
     const profitColor = profit >= 0 ? '#198754' : '#dc3545';
-    const prodSuccessRate = product.product_success_rate ? `${product.product_success_rate}%` : '-';
+    const prodSuccessRate = (product.product_success_rate !== null && product.product_success_rate !== undefined) ? `${product.product_success_rate}%` : '-';
     showConfirm('Konfirmasi Transaksi', `Produk: <b>${product.product_name}</b><br>Nomor: <b>${no}</b>${extraInfo}<br><br>Harga Modal: <b>${formatRp(modalPrice)}</b><br>Harga Jual: <b style="color:var(--primary);">${formatRp(finalPrice)}</b><br>Profit/Margin: <b style="color:${profitColor};">${formatRp(profit)} (${markupPct}%)</b><br>Seller: <b>${sellerName}</b> (SR Seller: <b>${successRate}</b> | SR Produk: <b>${prodSuccessRate}</b>)`, () => {
         processTransaction({
             sku: product.buyer_sku_code,
@@ -2656,12 +2686,16 @@ async function executeTransactionAPI(payload) {
                 promptSaveEwalletContact(payload.customer_no, payload.customer_name || '', payload.brand);
             }
 
-            // Listen to modal close to stop polling
+            // Listen to modal close to stop polling and trigger real-time rate refresh
             document.getElementById('resultModal').addEventListener('hidden.bs.modal', function () {
                 if (autoPollInterval) clearInterval(autoPollInterval);
+                reloadCurrentProductsSilent();
             }, { once: true });
 
             fetchBalance(); // Refresh balance
+            if (!isPending) {
+                reloadCurrentProductsSilent();
+            }
         } else {
             // Check if server is asking for PIN (could happen if page was cached and PIN was set later)
             const msg = data.message || '';
@@ -2768,6 +2802,7 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
                     promptSaveEwalletContact(customerNo, lastTrxData.customer_name || '', lastTrxData.brand);
                 }
 
+                reloadCurrentProductsSilent();
                 return true; // Polling finished
             } else {
                 if (!isAuto) {
@@ -2875,94 +2910,15 @@ async function sharePpobReceipt() {
         }
 
         const d = lastTrxData;
-        const hasSN = d.sn && d.sn !== '-';
-        const isPln = d.product_name && d.product_name.toLowerCase().includes('pln');
-        
-        let snTitle = "SN / TOKEN";
-        let snValue = d.sn;
-        let plnDetailsHtml = '';
-        
-        // Parse PLN SN (format: Token/Name/Tarif/Power/Kwh)
-        if (isPln && d.sn.includes('/')) {
-            const parts = d.sn.split('/');
-            if (parts.length >= 4) {
-                snTitle = "TOKEN PLN";
-                snValue = parts[0];
-                const plnName = parts[1] || '';
-                const plnTarifPower = parts.length > 4 ? `${parts[2]}/${parts[3]}` : parts[2];
-                const plnKwh = parts.length > 4 ? parts[4] : parts[3];
-                
-                plnDetailsHtml = `
-                <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
-                    <span style="color:#555;">Nama Mtr</span>
-                    <span style="font-weight: 600; text-align: right;">${plnName}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
-                    <span style="color:#555;">Tarif/Daya</span>
-                    <span style="font-weight: 600; text-align: right;">${plnTarifPower}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
-                    <span style="color:#555;">Jml kWh</span>
-                    <span style="font-weight: 600; text-align: right;">${plnKwh}</span>
-                </div>
-                `;
-            }
-        }
         
         // Create a temporary hidden container for the receipt
         const container = document.createElement('div');
         container.style.position = 'absolute';
         container.style.left = '-9999px';
         container.style.top = '0';
-        container.style.background = '#ffffff';
         container.style.width = '320px';
-        container.style.padding = '20px';
-        container.style.fontFamily = 'sans-serif';
-        container.style.color = '#111';
         
-        container.innerHTML = `
-            <div style="text-align:center; margin-bottom: 20px; border-bottom: 2px dashed #ddd; padding-bottom: 15px;">
-                <div style="font-size: 18px; font-weight: 800; color: #000; margin-bottom: 4px;">ALFAREZMART</div>
-                <div style="font-size: 11px; color: #666;">Struk Pembayaran Produk Digital</div>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
-                <span style="color:#555;">No. Ref</span>
-                <span style="font-weight: 600; text-align: right;">${d.ref_id}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
-                <span style="color:#555;">Tanggal</span>
-                <span style="font-weight: 600; text-align: right;">${d.created_at}</span>
-            </div>
-            <div style="border-top: 1px dashed #ddd; margin: 12px 0;"></div>
-            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
-                <span style="color:#555;">Produk</span>
-                <span style="font-weight: 600; text-align: right;">${d.product_name}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
-                <span style="color:#555;">ID / No.</span>
-                <span style="font-weight: 600; text-align: right;">${d.customer_no}</span>
-            </div>
-            ${d.customer_name && !isPln ? `
-            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 13px;">
-                <span style="color:#555;">Nama</span>
-                <span style="font-weight: 600; text-align: right;">${d.customer_name}</span>
-            </div>` : ''}
-            ${plnDetailsHtml}
-            <div style="border-top: 1px dashed #ddd; margin: 12px 0;"></div>
-            ${hasSN ? `
-            <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 10px; padding: 15px 12px; margin: 15px 0; text-align: center;">
-                <div style="font-size: 11px; color: #666; margin-bottom: 8px; font-weight: 800;">${snTitle}</div>
-                <div style="font-size: ${snValue.length > 25 ? '16px' : '20px'}; font-weight: 900; color: #000; letter-spacing: 1px; word-break: break-all; font-family: monospace;">${snValue}</div>
-            </div>` : ''}
-            <div style="display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px dashed #000; font-size: 16px; font-weight: 800; color: #000;">
-                <span>TOTAL BAYAR</span>
-                <span>Rp ${parseInt(d.sell_price).toLocaleString('id-ID')}</span>
-            </div>
-            <div style="text-align: center; margin-top: 30px; font-size: 12px; color: #666; line-height: 1.5;">
-                <div style="font-weight: 700; color:#000; margin-bottom:4px;">Terima kasih telah berbelanja</div>
-                <div>= Semoga Berkah =</div>
-            </div>
-        `;
+        container.innerHTML = getReceiptPreviewContent(d, d.sell_price);
         document.body.appendChild(container);
 
         // Render to canvas

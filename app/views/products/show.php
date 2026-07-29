@@ -401,18 +401,6 @@ function printBarcodeShow(code, title, unit) {
     BarcodeUtil.print({ code, title, subtitle: unit ? `1 ${unit}` : '' });
 }
 
-// ===== PHOTO UPLOAD & AI BG REMOVAL =====
-let imglyLoaded = false;
-async function loadImgly() {
-    if (imglyLoaded || window.imglyRemoveBackground) return;
-    return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = "https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.3/dist/imgly-background-removal.browser.min.js";
-        script.onload = () => { imglyLoaded = true; resolve(); };
-        script.onerror = reject;
-        document.head.appendChild(script);
-    });
-}
 
 function compressImage(file, maxSize) {
     return new Promise((resolve) => {
@@ -451,23 +439,12 @@ async function handleProductPhoto(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    showToast('Memproses foto... (Kompresi & AI)', 'info');
+    showToast('Memproses foto...', 'info');
 
     try {
         // 1. Compress Image
         const compressedDataUrl = await compressImage(file, 800);
         let finalBlob = dataURLtoBlob(compressedDataUrl);
-
-        // 2. Background Removal using AI
-        try {
-            await loadImgly();
-            showToast('AI: Sedang menghapus latar belakang... (Mungkin memakan waktu)', 'info', 5000);
-            const bgRemovedBlob = await imglyRemoveBackground(finalBlob);
-            finalBlob = bgRemovedBlob;
-        } catch (e) {
-            console.error("AI BG Removal failed:", e);
-            showToast('AI Gagal/Dilewati. Menyimpan foto asli...', 'warning');
-        }
 
         // 3. Upload to server
         const reader = new FileReader();
