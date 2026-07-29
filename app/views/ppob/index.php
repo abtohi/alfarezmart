@@ -409,41 +409,277 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     box-shadow: 0 0 0 4px rgba(var(--primary-rgb), 0.1);
 }
 
-/* Product Grid */
+/* Product Grid & Grouped Product Cards System */
 .product-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: 10px;
     margin-top: 15px;
 }
-@media (min-width: 768px) {
-    .product-grid {
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    }
-}
-.prod-card {
+
+.prod-group-card {
     background: var(--surface-1);
     border: 1px solid var(--border-color);
-    border-radius: 10px;
-    padding: 12px;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.prod-group-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+
+.prod-group-header {
+    padding: 12px 16px;
     cursor: pointer;
-    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    user-select: none;
+    background: var(--surface-1);
+    transition: background-color 0.2s ease;
+}
+
+.prod-group-header:hover {
+    background: var(--surface-2);
+}
+
+.prod-group-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    line-height: 1.35;
+}
+
+.badge-seller-count {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 20px;
+    background: rgba(var(--primary-rgb, 59, 130, 246), 0.12);
+    color: var(--primary);
+    border: 1px solid rgba(var(--primary-rgb, 59, 130, 246), 0.25);
+    display: inline-flex;
+    align-items: center;
+}
+
+.badge-seller-count.single {
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+}
+
+.badge-group-sr {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 20px;
+    border: 1px solid;
+    display: inline-flex;
+    align-items: center;
+}
+
+.prod-group-price {
+    font-weight: 800;
+    font-size: 0.92rem;
+    color: var(--primary);
+    white-space: nowrap;
+}
+
+.prod-group-chevron {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+
+.prod-group-card.expanded .prod-group-chevron {
+    transform: rotate(180deg);
+    background: var(--primary);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+}
+
+/* Expandable Body Panel */
+.prod-group-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--surface-2);
+    border-top: 0px solid var(--border-color);
+}
+
+.prod-group-card.expanded .prod-group-body {
+    max-height: 3000px;
+    border-top: 1px solid var(--border-color);
+}
+
+.seller-options-wrapper {
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    min-height: 90px;
+    gap: 10px;
+}
+
+.seller-option-item {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: all 0.2s ease;
     position: relative;
-    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
-.prod-card:hover {
+
+.seller-option-item:hover {
     border-color: var(--primary);
-    background: var(--surface-2);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
-.prod-name { font-size: 11.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; line-height: 1.35; letter-spacing: -0.2px; }
-.prod-desc { font-size: 9px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.35; white-space: pre-wrap; word-break: break-word; }
-.prod-price { font-size: 13px; font-weight: 800; color: var(--primary); margin-top: auto; }
+
+.seller-name-tag {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    transition: color 0.15s ease;
+}
+
+.seller-name-tag:hover {
+    color: var(--primary);
+}
+
+.sku-code-chip {
+    font-family: var(--font-mono, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+}
+
+.seller-sr-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 0.68rem;
+}
+
+.sr-label {
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-size: 0.62rem;
+    letter-spacing: 0.4px;
+}
+
+.btn-gear-setting {
+    background: var(--surface-2);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.btn-gear-setting:hover {
+    background: var(--primary);
+    color: #ffffff;
+    border-color: var(--primary);
+    transform: rotate(30deg);
+}
+
+.seller-desc {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+    background: var(--surface-2);
+    padding: 6px 10px;
+    border-radius: 8px;
+    border-left: 3px solid var(--primary);
+}
+
+.seller-price-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.price-label-sm {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-muted);
+}
+
+.modal-price-val {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #ef4444;
+}
+
+.sell-price-val {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #10b981;
+}
+
+.seller-profit-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.12);
+    padding: 2px 6px;
+    border-radius: 8px;
+}
+
+.btn-buy-now {
+    background: linear-gradient(135deg, var(--primary) 0%, #2563eb 100%);
+    color: #ffffff;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.22);
+    white-space: nowrap;
+}
+
+.btn-buy-now:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 12px rgba(37, 99, 235, 0.35);
+    color: #ffffff;
+}
 
 /* Inquriy Result Box */
 .inquiry-box {
@@ -2043,99 +2279,202 @@ function renderProducts(products) {
     const grid = document.getElementById('product-grid');
     grid.innerHTML = '';
     
-    if (currentCategory !== 'pulsa' && currentCategory !== 'data') {
-        document.getElementById('product-search-container').style.display = products.length > 5 ? 'block' : 'none';
+    if (!products || products.length === 0) {
+        grid.innerHTML = `<div class="text-center text-muted w-100 py-4"><i class="bi bi-inbox fs-1 mb-2 d-block opacity-50"></i>Produk tidak ditemukan.</div>`;
+        return;
     }
+
+    if (currentCategory !== 'pulsa' && currentCategory !== 'data') {
+        const searchCont = document.getElementById('product-search-container');
+        if (searchCont) searchCont.style.display = products.length > 5 ? 'block' : 'none';
+    }
+
+    // 1. Group products by product_name
+    const groups = {};
     products.forEach(p => {
-        const card = document.createElement('div');
-        card.className = 'prod-card position-relative';
-        card.onclick = () => confirmPurchase(p);
-        
-        const sellPrice = getPpobSellPrice(p.buyer_sku_code);
-        let priceHtml = `<div class="prod-price">${formatRp(p.seller_price)}</div>`;
-        
-        if (sellPrice && sellPrice > p.seller_price) {
-            const profit = sellPrice - p.seller_price;
-            const pct = ((profit / p.seller_price) * 100).toFixed(1);
-            priceHtml = `
-                <div class="prod-price">${formatRp(p.seller_price)}</div>
-                <div class="mt-1 d-flex flex-column" style="font-size: 0.75rem;">
-                    <span class="text-success fw-bold">Jual: ${formatRp(sellPrice)}</span>
-                    <span class="text-muted" style="font-size: 0.6rem; opacity: 0.7; margin-top: -2px;">(+${formatRp(profit)} / ${pct}%)</span>
-                </div>
-            `;
-        } else if (sellPrice) {
-            priceHtml = `
-                <div class="prod-price">${formatRp(p.seller_price)}</div>
-                <div class="mt-1" style="font-size: 0.75rem;">
-                    <span class="text-warning fw-bold">Jual: ${formatRp(sellPrice)}</span>
-                </div>
-            `;
+        const nameKey = (p.product_name || '').trim();
+        if (!groups[nameKey]) {
+            groups[nameKey] = {
+                name: nameKey,
+                category: p.category,
+                brand: p.brand,
+                type: p.type,
+                items: []
+            };
+        }
+        groups[nameKey].items.push(p);
+    });
+
+    // 2. Render each Group Card
+    Object.values(groups).forEach(group => {
+        const items = group.items;
+        const sellerCount = items.length;
+
+        let minSellPrice = Infinity;
+        let maxSellPrice = 0;
+        let maxSR = null;
+
+        items.forEach(item => {
+            const sp = parseFloat(item.seller_price || 0);
+            const customSell = getPpobSellPrice(item.buyer_sku_code);
+            const sellP = customSell && customSell > sp ? customSell : (parseFloat(item.sell_price) || sp);
+
+            if (sellP < minSellPrice) minSellPrice = sellP;
+            if (sellP > maxSellPrice) maxSellPrice = sellP;
+
+            const sr = (item.success_rate !== null && item.success_rate !== undefined) ? parseFloat(item.success_rate) : null;
+            if (sr !== null && (maxSR === null || sr > maxSR)) {
+                maxSR = sr;
+            }
+        });
+
+        // Price range or single price display
+        let groupPriceHtml = '';
+        if (minSellPrice === maxSellPrice) {
+            groupPriceHtml = `<div class="prod-group-price">${formatRp(minSellPrice)}</div>`;
+        } else {
+            groupPriceHtml = `<div class="prod-group-price">${formatRp(minSellPrice)} - ${formatRp(maxSellPrice)}</div>`;
         }
 
-        const encodedProduct = encodeURIComponent(JSON.stringify(p));
-        
-        let sellerHtml = '';
-        if (p.seller_name) {
+        // Seller count badge
+        const countBadge = sellerCount > 1 
+            ? `<span class="badge-seller-count"><i class="bi bi-people-fill me-1"></i>${sellerCount} Seller</span>`
+            : `<span class="badge-seller-count single"><i class="bi bi-shop me-1"></i>1 Seller</span>`;
+
+        // Success Rate badge
+        let srBadgeHtml = '';
+        if (maxSR !== null) {
+            let srColor = maxSR >= 80 ? '#10b981' : (maxSR >= 50 ? '#f59e0b' : '#ef4444');
+            srBadgeHtml = `<span class="badge-group-sr" style="color: ${srColor}; border-color: ${srColor}33; background: ${srColor}14;"><i class="bi bi-lightning-charge-fill me-1"></i>${maxSR}% SR</span>`;
+        }
+
+        // Create main container card
+        const card = document.createElement('div');
+        card.className = 'prod-group-card';
+        card.dataset.productGroup = group.name;
+
+        // Group Header HTML
+        const headerHtml = `
+            <div class="prod-group-header" onclick="toggleProductGroup(this.parentElement)">
+                <div class="d-flex flex-column flex-grow-1 min-w-0 pe-2">
+                    <div class="prod-group-title text-truncate">${group.name}</div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                        ${countBadge}
+                        ${srBadgeHtml}
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-3 ms-auto">
+                    ${groupPriceHtml}
+                    <div class="prod-group-chevron">
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Group Body (Expandable Sellers List) HTML
+        let sellerItemsHtml = '';
+        items.forEach(p => {
+            const sellPrice = getPpobSellPrice(p.buyer_sku_code);
+            const actualSellPrice = sellPrice && sellPrice > 0 ? sellPrice : (p.sell_price || p.seller_price);
+            
+            let profitHtml = '';
+            if (actualSellPrice > p.seller_price) {
+                const profit = actualSellPrice - p.seller_price;
+                const pct = ((profit / p.seller_price) * 100).toFixed(1);
+                profitHtml = `<span class="seller-profit-tag">+${formatRp(profit)} (${pct}%)</span>`;
+            }
+
+            // Success Rates for Seller & Product
             let successBadge = '';
             let rawRate = (p.success_rate !== null && p.success_rate !== undefined) ? p.success_rate : null;
             if (rawRate !== null) {
                 let badgeColor = rawRate >= 80 ? '#10b981' : (rawRate >= 50 ? '#f59e0b' : '#ef4444');
-                successBadge = `<span style="color: ${badgeColor}; font-weight: 700; margin-left: 3px;" title="Success Rate Global Seller"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> ${rawRate}%</span>`;
+                successBadge = `<span style="color: ${badgeColor}; font-weight: 700;" title="Success Rate Global Seller"><i class="bi bi-lightning-charge-fill" style="font-size: 0.65rem;"></i> ${rawRate}%</span>`;
             } else {
-                successBadge = `<span class="text-muted" style="margin-left: 3px; font-weight: 700;" title="Success Rate Global Seller"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> -</span>`;
+                successBadge = `<span class="text-muted" style="font-weight: 700;" title="Success Rate Global Seller"><i class="bi bi-lightning-charge-fill" style="font-size: 0.65rem;"></i> -</span>`;
             }
-            
+
             let prodSuccessBadge = '';
             let rawProdRate = (p.product_success_rate !== null && p.product_success_rate !== undefined) ? p.product_success_rate : null;
             if (rawProdRate !== null) {
-                let pBadgeColor = '#9E9E9E';
-                if (rawProdRate >= 90) pBadgeColor = '#4CAF50';
-                else if (rawProdRate >= 75) pBadgeColor = '#FF9800';
-                else pBadgeColor = '#F44336';
-                
+                let pBadgeColor = rawProdRate >= 90 ? '#4CAF50' : (rawProdRate >= 75 ? '#FF9800' : '#F44336');
                 prodSuccessBadge = `
-                <div style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; background: var(--surface-1); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);" title="Success Rate Produk Ini">
-                    <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Produk:</span>
-                    <div style="width: 1px; height: 10px; background-color: var(--border-color); margin: 0 2px;"></div>
-                    <span style="color: ${pBadgeColor}; font-weight: 700; margin-left: 3px;"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> ${rawProdRate}%</span>
+                <div class="seller-sr-chip" title="Success Rate Spesifik Produk Ini">
+                    <span class="sr-label">Produk:</span>
+                    <span style="color: ${pBadgeColor}; font-weight: 700;"><i class="bi bi-lightning-charge-fill" style="font-size: 0.65rem;"></i> ${rawProdRate}%</span>
                 </div>`;
             } else {
                 prodSuccessBadge = `
-                <div style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; background: var(--surface-1); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);" title="Success Rate Produk Ini">
-                    <span style="font-size: 0.65rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Produk:</span>
-                    <div style="width: 1px; height: 10px; background-color: var(--border-color); margin: 0 2px;"></div>
-                    <span class="text-muted" style="margin-left: 3px; font-weight: 700;"><i class="bi bi-lightning-charge-fill" style="font-size: 0.55rem;"></i> -</span>
+                <div class="seller-sr-chip" title="Success Rate Spesifik Produk Ini">
+                    <span class="sr-label">Produk:</span>
+                    <span class="text-muted" style="font-weight: 700;"><i class="bi bi-lightning-charge-fill" style="font-size: 0.65rem;"></i> -</span>
                 </div>`;
             }
 
-            sellerHtml = `
-            <div class="mt-2 d-flex flex-wrap gap-1" style="font-size: 0.6rem; opacity: 0.85;">
-                <div onclick="openSellerHistory(event, '${p.seller_name}')" style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; background: var(--surface-1); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; transition: all 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Lihat Analisis Seller">
-                    <i class="bi bi-shop text-primary" style="font-size: 0.6rem;"></i>
-                    <span style="font-weight: 600; color: var(--text-secondary); max-width: 80px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.seller_name}</span>
-                    <div style="width: 1px; height: 8px; background: var(--border-color); margin: 0 1px;"></div>
-                    ${successBadge}
+            const encodedProduct = encodeURIComponent(JSON.stringify(p));
+
+            sellerItemsHtml += `
+                <div class="seller-option-item">
+                    <div class="d-flex justify-content-between align-items-start gap-2">
+                        <div class="d-flex flex-column gap-1 min-w-0">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="seller-name-tag" onclick="openSellerHistory(event, '${p.seller_name}')" title="Lihat Analisis Seller">
+                                    <i class="bi bi-shop text-primary me-1"></i>${p.seller_name || 'Digiflazz'}
+                                </span>
+                                <span class="sku-code-chip">${p.buyer_sku_code}</span>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                                <div class="seller-sr-chip" onclick="openSellerHistory(event, '${p.seller_name}')" style="cursor:pointer;" title="SR Global Seller">
+                                    <span class="sr-label">Seller:</span>
+                                    ${successBadge}
+                                </div>
+                                ${prodSuccessBadge}
+                            </div>
+                        </div>
+                        <button class="btn-gear-setting" onclick="openSetPriceModal(event, '${encodedProduct}')" title="Atur Harga Jual SKU Ini">
+                            <i class="bi bi-gear-fill"></i>
+                        </button>
+                    </div>
+
+                    ${p.description ? `<div class="seller-desc">${p.description}</div>` : ''}
+
+                    <div class="seller-price-bar">
+                        <div class="d-flex flex-column">
+                            <span class="price-label-sm">Harga Modal</span>
+                            <span class="modal-price-val">${formatRp(p.seller_price)}</span>
+                        </div>
+                        <div class="d-flex flex-column text-end me-auto ms-3">
+                            <span class="price-label-sm">Harga Jual</span>
+                            <div class="d-flex align-items-center gap-1 justify-content-end">
+                                <span class="sell-price-val">${formatRp(actualSellPrice)}</span>
+                                ${profitHtml}
+                            </div>
+                        </div>
+                        <button class="btn-buy-now" onclick='confirmPurchase(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
+                            <i class="bi bi-cart-check-fill me-1"></i> Beli
+                        </button>
+                    </div>
                 </div>
-                ${prodSuccessBadge}
-            </div>`;
-        }
-        
+            `;
+        });
+
         card.innerHTML = `
-            <button class="btn btn-sm position-absolute top-0 end-0 m-2" style="z-index: 2; padding: 4px 8px; border-radius: 8px; background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border-color);" onclick="openSetPriceModal(event, '${encodedProduct}')">
-                <i class="bi bi-gear-fill" style="font-size: 1rem;"></i>
-            </button>
-            <div class="pe-4">
-                <div class="prod-name">${p.product_name}</div>
-                <div class="prod-desc">${p.description || ''}</div>
-            </div>
-            <div class="mt-2 pt-2 border-top border-secondary border-opacity-10">
-                ${priceHtml}
-                ${sellerHtml}
+            ${headerHtml}
+            <div class="prod-group-body">
+                <div class="seller-options-wrapper">
+                    ${sellerItemsHtml}
+                </div>
             </div>
         `;
+
         grid.appendChild(card);
     });
+}
+
+function toggleProductGroup(cardEl) {
+    if (!cardEl) return;
+    cardEl.classList.toggle('expanded');
 }
 
 // Open Seller History Modal
