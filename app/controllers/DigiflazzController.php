@@ -77,6 +77,9 @@ class DigiflazzController extends Controller {
     public function apiGetBalance() {
         AuthController::requireAuth();
         $res = $this->digiService->getBalance();
+        if ($res['success'] && isset($res['data']['deposit'])) {
+            $this->syncPendingDeposits((float)$res['data']['deposit']);
+        }
         header('Content-Type: application/json');
         echo json_encode($res);
         exit;
@@ -508,9 +511,17 @@ class DigiflazzController extends Controller {
         // Digiflazz returns rc="00" for success, and rc inside 'data'
         $rc = $res['data']['rc'] ?? '';
         if ($res['success'] && $rc === '00') {
+            // Fetch current balance right before/after ticket creation to store as start_balance
+            $balRes = $this->digiService->getBalance();
+            if ($balRes['success'] && isset($balRes['data']['deposit'])) {
+                $res['data']['start_balance'] = (float)$balRes['data']['deposit'];
+            }
+
+            $uniqueAmount = (float)($res['data']['amount'] ?? $amount);
+
             // Log to database
             $this->digiModel->createDepositLog([
-                'amount' => $amount,
+                'amount' => $uniqueAmount,
                 'bank' => $bank,
                 'owner_name' => $ownerName,
                 'status' => 'pending',
@@ -531,12 +542,112 @@ class DigiflazzController extends Controller {
     public function apiGetDepositHistory() {
         AuthController::requireAuth();
         AuthController::requireLevel(['superadmin', 'admin']);
+        
+        $this->syncPendingDeposits();
+
         $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
         $deposits = $this->digiModel->getDeposits($limit);
         
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'data' => $deposits]);
         exit;
+    }
+
+    /**
+     * Auto sync pending deposit status using balance increase and API checks
+     */
+    private function syncPendingDeposits(?float $currentBalance = null) {
+        try {
+            $pendingDeposits = $this->digiModel->getPendingDeposits();
+            if (empty($pendingDeposits)) {
+                return;
+            }
+
+            if ($currentBalance === null) {
+                $res = $this->digiService->getBalance();
+                if ($res['success'] && isset($res['data']['deposit'])) {
+                    $currentBalance = (float)$res['data']['deposit'];
+                }
+            }
+
+            $settingModel = new SettingModel();
+            $lastBalanceStr = $settingModel->get('digiflazz_last_known_balance', null);
+            $lastBalance = $lastBalanceStr !== null ? (float)$lastBalanceStr : null;
+
+            $now = time();
+
+            foreach ($pendingDeposits as $dep) {
+                $depId = $dep['id'];
+                $createdAt = strtotime($dep['created_at']);
+                $ageSeconds = $now - $createdAt;
+
+                $uniqueAmount = (float)$dep['amount'];
+                $startBalance = null;
+                $raw = [];
+
+                if (!empty($dep['raw_response'])) {
+                    $raw = json_decode($dep['raw_response'], true) ?: [];
+                    if (isset($raw['amount'])) {
+                        $uniqueAmount = (float)$raw['amount'];
+                    } elseif (isset($raw['deposit']['amount'])) {
+                        $uniqueAmount = (float)$raw['deposit']['amount'];
+                    }
+                    if (isset($raw['start_balance'])) {
+                        $startBalance = (float)$raw['start_balance'];
+                    }
+                }
+
+                if (!empty($dep['notes'])) {
+                    if (preg_match('/Rp\s*([0-9.,]+)/i', $dep['notes'], $m)) {
+                        $parsed = (float)str_replace(['.', ','], '', $m[1]);
+                        if ($parsed > 0) {
+                            $uniqueAmount = $parsed;
+                        }
+                    }
+                }
+
+                $isSuccess = false;
+
+                if ($currentBalance !== null) {
+                    // 1. Check against start_balance saved in raw response
+                    if ($startBalance !== null && $currentBalance >= ($startBalance + $uniqueAmount - 100)) {
+                        $isSuccess = true;
+                    }
+                    // 2. Check against last_known_balance setting
+                    elseif ($lastBalance !== null && $currentBalance > $lastBalance && ($currentBalance - $lastBalance) >= ($uniqueAmount - 100)) {
+                        $isSuccess = true;
+                    }
+                    // 3. Check if current balance increased significantly relative to start balance
+                    elseif ($startBalance !== null && $currentBalance > ($startBalance + 1000)) {
+                        $isSuccess = true;
+                    }
+                }
+
+                if ($isSuccess) {
+                    $statusNote = $dep['notes'];
+                    if (strpos($statusNote, 'Saldo terdeteksi') === false) {
+                        $statusNote .= ' (Saldo terdeteksi masuk)';
+                    }
+                    $this->digiModel->updateDepositStatusById($depId, 'success', $statusNote, $raw);
+                    continue;
+                }
+
+                // If ticket is older than 24 hours, mark as failed / expired
+                if ($ageSeconds > 86400) {
+                    $statusNote = $dep['notes'];
+                    if (strpos($statusNote, 'kadaluarsa') === false) {
+                        $statusNote .= ' (Tiket deposit kadaluarsa)';
+                    }
+                    $this->digiModel->updateDepositStatusById($depId, 'failed', $statusNote, $raw);
+                }
+            }
+
+            if ($currentBalance !== null) {
+                $settingModel->set('digiflazz_last_known_balance', (string)$currentBalance);
+            }
+        } catch (\Throwable $e) {
+            error_log("[DigiflazzController] syncPendingDeposits error: " . $e->getMessage());
+        }
     }
 
     public function apiGetTransaction(string $refId) {
