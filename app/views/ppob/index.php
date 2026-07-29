@@ -413,34 +413,33 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 .product-grid {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 15px;
+    gap: 8px;
+    margin-top: 12px;
 }
 
 .prod-group-card {
     background: var(--surface-1);
     border: 1px solid var(--border-color);
-    border-radius: 14px;
+    border-radius: 12px;
     overflow: hidden;
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
 }
 
 .prod-group-card:hover {
     border-color: var(--primary);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
 }
 
 .prod-group-header {
-    padding: 12px 16px;
+    padding: 10px 12px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 8px;
     user-select: none;
     background: var(--surface-1);
-    transition: background-color 0.2s ease;
+    transition: background-color 0.15s ease;
 }
 
 .prod-group-header:hover {
@@ -449,21 +448,27 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 
 .prod-group-title {
     font-weight: 700;
-    font-size: 0.92rem;
+    font-size: 0.8rem;
     color: var(--text-primary);
-    line-height: 1.35;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
 }
 
 .badge-seller-count {
-    font-size: 0.7rem;
+    font-size: 0.62rem;
     font-weight: 700;
-    padding: 2px 9px;
-    border-radius: 20px;
+    padding: 1px 7px;
+    border-radius: 12px;
     background: rgba(var(--primary-rgb, 59, 130, 246), 0.12);
     color: var(--primary);
     border: 1px solid rgba(var(--primary-rgb, 59, 130, 246), 0.25);
     display: inline-flex;
     align-items: center;
+    white-space: nowrap;
 }
 
 .badge-seller-count.single {
@@ -473,32 +478,34 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 }
 
 .badge-group-sr {
-    font-size: 0.7rem;
+    font-size: 0.62rem;
     font-weight: 700;
-    padding: 2px 9px;
-    border-radius: 20px;
+    padding: 1px 7px;
+    border-radius: 12px;
     border: 1px solid;
     display: inline-flex;
     align-items: center;
+    white-space: nowrap;
 }
 
 .prod-group-price {
     font-weight: 800;
-    font-size: 0.92rem;
+    font-size: 0.82rem;
     color: var(--primary);
     white-space: nowrap;
 }
 
 .prod-group-chevron {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: var(--surface-2);
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--text-muted);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.7rem;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     flex-shrink: 0;
 }
 
@@ -506,7 +513,6 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     transform: rotate(180deg);
     background: var(--primary);
     color: #ffffff;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
 /* Expandable Body Panel */
@@ -524,37 +530,37 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 }
 
 .seller-options-wrapper {
-    padding: 12px 14px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 .seller-option-item {
     background: var(--surface-1);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 12px 14px;
+    border-radius: 10px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    transition: all 0.2s ease;
+    gap: 6px;
+    transition: all 0.15s ease;
     position: relative;
     box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 
 .seller-option-item:hover {
     border-color: var(--primary);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
 .seller-name-tag {
-    font-size: 0.82rem;
+    font-size: 0.76rem;
     font-weight: 700;
     color: var(--text-primary);
     display: inline-flex;
     align-items: center;
     transition: color 0.15s ease;
+    word-break: break-word;
 }
 
 .seller-name-tag:hover {
@@ -563,45 +569,48 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 
 .sku-code-chip {
     font-family: var(--font-mono, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
-    font-size: 0.68rem;
+    font-size: 0.6rem;
     font-weight: 600;
-    padding: 2px 6px;
-    border-radius: 6px;
+    padding: 1px 5px;
+    border-radius: 4px;
     background: var(--surface-2);
     color: var(--text-muted);
     border: 1px solid var(--border-color);
+    white-space: nowrap;
 }
 
 .seller-sr-chip {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 2px 7px;
+    gap: 2px;
+    padding: 1px 5px;
     background: var(--surface-2);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    font-size: 0.68rem;
+    border-radius: 10px;
+    font-size: 0.58rem;
+    white-space: nowrap;
 }
 
 .sr-label {
     font-weight: 600;
     color: var(--text-muted);
     text-transform: uppercase;
-    font-size: 0.62rem;
-    letter-spacing: 0.4px;
+    font-size: 0.55rem;
+    letter-spacing: 0.3px;
 }
 
 .btn-gear-setting {
     background: var(--surface-2);
     color: var(--text-muted);
     border: 1px solid var(--border-color);
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    font-size: 0.75rem;
     transition: all 0.2s ease;
     flex-shrink: 0;
 }
@@ -614,71 +623,108 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 }
 
 .seller-desc {
-    font-size: 0.76rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
-    line-height: 1.4;
+    line-height: 1.3;
     background: var(--surface-2);
-    padding: 6px 10px;
-    border-radius: 8px;
-    border-left: 3px solid var(--primary);
+    padding: 5px 8px;
+    border-radius: 6px;
+    border-left: 2px solid var(--primary);
+    word-break: break-word;
 }
 
 .seller-price-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding-top: 8px;
+    gap: 8px;
+    padding-top: 6px;
     border-top: 1px dashed var(--border-color);
+    flex-wrap: wrap;
+}
+
+.price-info-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-width: 0;
+    flex: 1;
 }
 
 .price-label-sm {
-    font-size: 0.65rem;
+    font-size: 0.58rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.3px;
     color: var(--text-muted);
+    line-height: 1;
 }
 
 .modal-price-val {
-    font-size: 0.82rem;
+    font-size: 0.75rem;
     font-weight: 700;
     color: #ef4444;
+    line-height: 1.2;
+    white-space: nowrap;
 }
 
 .sell-price-val {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 800;
     color: #10b981;
+    line-height: 1.2;
+    white-space: nowrap;
 }
 
 .seller-profit-tag {
-    font-size: 0.65rem;
+    font-size: 0.58rem;
     font-weight: 700;
     color: #10b981;
     background: rgba(16, 185, 129, 0.12);
-    padding: 2px 6px;
-    border-radius: 8px;
+    padding: 1px 4px;
+    border-radius: 4px;
+    white-space: nowrap;
 }
 
 .btn-buy-now {
     background: linear-gradient(135deg, var(--primary) 0%, #2563eb 100%);
     color: #ffffff;
     border: none;
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 0.78rem;
+    padding: 5px 14px;
+    border-radius: 16px;
+    font-size: 0.72rem;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.22);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.22);
     white-space: nowrap;
+    margin-left: auto;
 }
 
 .btn-buy-now:hover {
     transform: translateY(-1px);
-    box-shadow: 0 5px 12px rgba(37, 99, 235, 0.35);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
     color: #ffffff;
+}
+
+@media (max-width: 480px) {
+    .prod-group-header {
+        padding: 9px 10px;
+    }
+    .seller-options-wrapper {
+        padding: 8px;
+    }
+    .seller-option-item {
+        padding: 8px;
+    }
+    .price-info-group {
+        gap: 8px;
+    }
+    .btn-buy-now {
+        padding: 4px 12px;
+        font-size: 0.7rem;
+    }
 }
 
 /* Inquriy Result Box */
@@ -2440,15 +2486,17 @@ function renderProducts(products) {
                     ${p.description ? `<div class="seller-desc">${p.description}</div>` : ''}
 
                     <div class="seller-price-bar">
-                        <div class="d-flex flex-column">
-                            <span class="price-label-sm">Harga Modal</span>
-                            <span class="modal-price-val">${formatRp(p.seller_price)}</span>
-                        </div>
-                        <div class="d-flex flex-column text-end me-auto ms-3">
-                            <span class="price-label-sm">Harga Jual</span>
-                            <div class="d-flex align-items-center gap-1 justify-content-end">
-                                <span class="sell-price-val">${formatRp(actualSellPrice)}</span>
-                                ${profitHtml}
+                        <div class="price-info-group">
+                            <div class="d-flex flex-column">
+                                <span class="price-label-sm">Modal</span>
+                                <span class="modal-price-val">${formatRp(p.seller_price)}</span>
+                            </div>
+                            <div class="d-flex flex-column">
+                                <span class="price-label-sm">Jual</span>
+                                <div class="d-flex align-items-center gap-1 flex-wrap">
+                                    <span class="sell-price-val">${formatRp(actualSellPrice)}</span>
+                                    ${profitHtml}
+                                </div>
                             </div>
                         </div>
                         <button class="btn-buy-now" onclick='confirmPurchase(${JSON.stringify(p).replace(/'/g, "&apos;")})'>
