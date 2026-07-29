@@ -533,27 +533,75 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 }
 
 .seller-options-wrapper {
-    padding: 10px;
+    padding: 12px 10px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
+    background: var(--surface-2);
 }
 
 .seller-option-item {
     background: var(--surface-1);
     border: 1px solid var(--border-color);
-    border-radius: 10px;
-    padding: 10px;
+    border-radius: 14px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    transition: all 0.15s ease;
+    gap: 8px;
+    transition: all 0.2s ease;
     position: relative;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .seller-option-item:hover {
     border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.seller-option-item.best-option {
+    border-top: 3px solid #10b981;
+}
+
+.seller-option-item.secondary-option {
+    border-top: 3px solid var(--primary);
+}
+
+.seller-option-item.standard-option {
+    border-top: 3px solid var(--border-color);
+}
+
+.seller-rank-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.seller-rank-badge {
+    font-size: 0.62rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    display: inline-flex;
+    align-items: center;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.seller-rank-badge.best {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.seller-rank-badge.secondary {
+    background: rgba(var(--primary-rgb, 59, 130, 246), 0.12);
+    color: var(--primary);
+    border-color: rgba(var(--primary-rgb, 59, 130, 246), 0.3);
 }
 
 .seller-name-tag {
@@ -2419,9 +2467,12 @@ function renderProducts(products) {
             </div>
         `;
 
+        // Sort items inside group by seller_price ascending (cheapest seller first)
+        items.sort((a, b) => parseFloat(a.seller_price || 0) - parseFloat(b.seller_price || 0));
+
         // Group Body (Expandable Sellers List) HTML
         let sellerItemsHtml = '';
-        items.forEach(p => {
+        items.forEach((p, idx) => {
             const sellPrice = getPpobSellPrice(p.buyer_sku_code);
             const actualSellPrice = sellPrice && sellPrice > 0 ? sellPrice : (p.sell_price || p.seller_price);
             
@@ -2430,6 +2481,20 @@ function renderProducts(products) {
                 const profit = actualSellPrice - p.seller_price;
                 const pct = ((profit / p.seller_price) * 100).toFixed(1);
                 profitHtml = `<span class="seller-profit-tag">+${formatRp(profit)} (${pct}%)</span>`;
+            }
+
+            // Rank Badge & Card Theme
+            let rankBadgeHtml = '';
+            let cardClass = 'standard-option';
+            if (idx === 0) {
+                cardClass = 'best-option';
+                rankBadgeHtml = `<span class="seller-rank-badge best"><i class="bi bi-star-fill me-1"></i>Opsi 1 • Termurah</span>`;
+            } else if (idx === 1) {
+                cardClass = 'secondary-option';
+                rankBadgeHtml = `<span class="seller-rank-badge secondary"><i class="bi bi-tag-fill me-1"></i>Opsi 2</span>`;
+            } else {
+                cardClass = 'standard-option';
+                rankBadgeHtml = `<span class="seller-rank-badge"><i class="bi bi-tag me-1"></i>Opsi ${idx + 1}</span>`;
             }
 
             // Success Rates for Seller & Product
@@ -2462,16 +2527,23 @@ function renderProducts(products) {
             const encodedProduct = encodeURIComponent(JSON.stringify(p));
 
             sellerItemsHtml += `
-                <div class="seller-option-item">
-                    <div class="d-flex justify-content-between align-items-start gap-2">
+                <div class="seller-option-item ${cardClass}">
+                    <div class="seller-rank-header">
+                        ${rankBadgeHtml}
+                        <button class="btn-gear-setting" onclick="openSetPriceModal(event, '${encodedProduct}')" title="Atur Harga Jual SKU Ini">
+                            <i class="bi bi-gear-fill"></i>
+                        </button>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center gap-2">
                         <div class="d-flex flex-column gap-1 min-w-0">
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
                                 <span class="seller-name-tag" onclick="openSellerHistory(event, '${p.seller_name}')" title="Lihat Analisis Seller">
                                     <i class="bi bi-shop text-primary me-1"></i>${p.seller_name || 'Digiflazz'}
                                 </span>
                                 <span class="sku-code-chip">${p.buyer_sku_code}</span>
                             </div>
-                            <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                            <div class="d-flex flex-wrap align-items-center gap-1.5 mt-1">
                                 <div class="seller-sr-chip" onclick="openSellerHistory(event, '${p.seller_name}')" style="cursor:pointer;" title="SR Global Seller">
                                     <span class="sr-label">Seller:</span>
                                     ${successBadge}
@@ -2479,9 +2551,6 @@ function renderProducts(products) {
                                 ${prodSuccessBadge}
                             </div>
                         </div>
-                        <button class="btn-gear-setting" onclick="openSetPriceModal(event, '${encodedProduct}')" title="Atur Harga Jual SKU Ini">
-                            <i class="bi bi-gear-fill"></i>
-                        </button>
                     </div>
 
                     ${p.description ? `<div class="seller-desc">${p.description}</div>` : ''}
