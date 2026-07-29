@@ -448,14 +448,11 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 
 .prod-group-title {
     font-weight: 700;
-    font-size: 0.8rem;
+    font-size: 0.84rem;
     color: var(--text-primary);
-    line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    line-height: 1.35;
     word-break: break-word;
+    margin-bottom: 3px;
 }
 
 .badge-seller-count {
@@ -488,11 +485,17 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     white-space: nowrap;
 }
 
-.prod-group-price {
+.prod-group-price-chip {
     font-weight: 800;
-    font-size: 0.82rem;
-    color: var(--primary);
+    font-size: 0.78rem;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    padding: 1px 7px;
+    border-radius: 12px;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
 }
 
 .prod-group-chevron {
@@ -2377,9 +2380,9 @@ function renderProducts(products) {
         // Price range or single price display
         let groupPriceHtml = '';
         if (minSellPrice === maxSellPrice) {
-            groupPriceHtml = `<div class="prod-group-price">${formatRp(minSellPrice)}</div>`;
+            groupPriceHtml = formatRp(minSellPrice);
         } else {
-            groupPriceHtml = `<div class="prod-group-price">${formatRp(minSellPrice)} - ${formatRp(maxSellPrice)}</div>`;
+            groupPriceHtml = `${formatRp(minSellPrice)} - ${formatRp(maxSellPrice)}`;
         }
 
         // Seller count badge
@@ -2399,21 +2402,19 @@ function renderProducts(products) {
         card.className = 'prod-group-card';
         card.dataset.productGroup = group.name;
 
-        // Group Header HTML
+        // Group Header HTML: Product Title on Line 1, Badges + Price Chip on Line 2
         const headerHtml = `
             <div class="prod-group-header" onclick="toggleProductGroup(this.parentElement)">
-                <div class="d-flex flex-column flex-grow-1 min-w-0 pe-2">
-                    <div class="prod-group-title text-truncate">${group.name}</div>
-                    <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                <div class="d-flex flex-column flex-grow-1 min-w-0">
+                    <div class="prod-group-title">${group.name}</div>
+                    <div class="d-flex flex-wrap align-items-center gap-1.5 mt-1">
                         ${countBadge}
                         ${srBadgeHtml}
+                        <span class="prod-group-price-chip ms-auto me-1">${groupPriceHtml}</span>
                     </div>
                 </div>
-                <div class="d-flex align-items-center gap-3 ms-auto">
-                    ${groupPriceHtml}
-                    <div class="prod-group-chevron">
-                        <i class="bi bi-chevron-down"></i>
-                    </div>
+                <div class="prod-group-chevron flex-shrink-0">
+                    <i class="bi bi-chevron-down"></i>
                 </div>
             </div>
         `;
