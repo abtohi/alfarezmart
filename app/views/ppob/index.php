@@ -1616,10 +1616,10 @@ function openContactBook() {
     
     // Determine which classification of contacts to load based on current category
     let typeMap = {
-        'pulsa': 'hp',
-        'data': 'hp',
-        'sms_nelpon': 'hp',
-        'ewallet': 'ewallet',
+        'pulsa': 'hp,ewallet',
+        'data': 'hp,ewallet',
+        'sms_nelpon': 'hp,ewallet',
+        'ewallet': 'ewallet,hp',
         'pln': 'pln',
         'game': 'game',
         'tv': 'tv'
@@ -1660,7 +1660,7 @@ function renderContacts(data) {
             if(c.pln_power) detail += ` (${c.pln_power})`;
         }
         
-        if(c.type === 'hp' && c.ewallet_accounts) {
+        if((c.type === 'hp' || c.type === 'ewallet') && c.ewallet_accounts) {
             try {
                 let ew = JSON.parse(c.ewallet_accounts);
                 let ewNames = [];

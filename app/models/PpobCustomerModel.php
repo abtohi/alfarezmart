@@ -18,9 +18,33 @@ class PpobCustomerModel {
     }
 
     public function getByType(string $type) {
-        $stmt = $this->db->prepare("SELECT * FROM ppob_customers WHERE type = :type ORDER BY created_at DESC");
-        $stmt->execute(['type' => $type]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($type) || $type === 'all') {
+            return $this->getAll();
+        }
+
+        $types = array_map('trim', explode(',', $type));
+        
+        // If requesting ewallet or hp, include both hp and ewallet since both use phone numbers
+        if (in_array('ewallet', $types) || in_array('hp', $types)) {
+            if (!in_array('hp', $types)) $types[] = 'hp';
+            if (!in_array('ewallet', $types)) $types[] = 'ewallet';
+        }
+
+        $in  = str_repeat('?,', count($types) - 1) . '?';
+        $stmt = $this->db->prepare("SELECT * FROM ppob_customers WHERE type IN ($in) ORDER BY created_at DESC");
+        $stmt->execute($types);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $unique = [];
+        $result = [];
+        foreach ($rows as $r) {
+            $no = trim($r['customer_no']);
+            if (!isset($unique[$no])) {
+                $unique[$no] = true;
+                $result[] = $r;
+            }
+        }
+        return $result;
     }
 
     public function getById(int|string $id) {
