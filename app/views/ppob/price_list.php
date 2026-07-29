@@ -1,3 +1,6 @@
+<!-- Load DataTables CSS before custom styles so theme overrides take priority -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+
 <style>
 /* Modern Price List Design System */
 .price-page-wrapper {
@@ -108,15 +111,33 @@
     box-shadow: var(--shadow-sm);
 }
 
-.price-table {
+/* Dynamic Theme Adaptation Overrides for Table & Cells */
+table.dataTable,
+table.dataTable > tbody > tr,
+table.dataTable > tbody > tr > td,
+table.dataTable > thead > tr > th,
+.price-table,
+.price-table > tbody > tr,
+.price-table > tbody > tr > td,
+.price-table > thead > tr > th,
+.table > :not(caption) > * > * {
+    background-color: var(--surface-1) !important;
+    color: var(--text-primary) !important;
+    border-bottom-color: var(--border-color) !important;
+    box-shadow: none !important;
+}
+
+.price-table,
+table.dataTable {
     width: 100% !important;
     margin-bottom: 0 !important;
     border-collapse: separate !important;
     border-spacing: 0 !important;
 }
 
-.price-table thead th {
-    background: var(--surface-2) !important;
+.price-table thead th,
+table.dataTable thead th {
+    background-color: var(--surface-2) !important;
     color: var(--text-muted) !important;
     font-size: 0.72rem !important;
     font-weight: 700 !important;
@@ -127,15 +148,21 @@
     white-space: nowrap;
 }
 
-.price-table tbody tr {
+.price-table tbody tr,
+table.dataTable tbody tr {
     transition: background-color 0.15s ease;
+    background-color: var(--surface-1) !important;
 }
 
-.price-table tbody tr:hover {
-    background-color: rgba(var(--primary-rgb, 59, 130, 246), 0.04) !important;
+.price-table tbody tr:hover,
+.price-table tbody tr:hover > td,
+table.dataTable tbody tr:hover,
+table.dataTable tbody tr:hover > td {
+    background-color: var(--surface-2) !important;
 }
 
-.price-table tbody td {
+.price-table tbody td,
+table.dataTable tbody td {
     padding: 12px 16px !important;
     border-bottom: 1px solid var(--border-color) !important;
     color: var(--text-primary) !important;
@@ -154,23 +181,27 @@
 }
 
 .badge-type-prepaid {
-    background: rgba(16, 185, 129, 0.12);
-    color: #10b981;
-    border: 1px solid rgba(16, 185, 129, 0.25);
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #10b981 !important;
+    border: 1px solid rgba(16, 185, 129, 0.3) !important;
     font-size: 0.7rem;
     font-weight: 700;
     padding: 4px 10px;
     border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
 }
 
 .badge-type-postpaid {
-    background: rgba(245, 158, 11, 0.12);
-    color: #f59e0b;
-    border: 1px solid rgba(245, 158, 11, 0.25);
+    background: rgba(245, 158, 11, 0.15) !important;
+    color: #f59e0b !important;
+    border: 1px solid rgba(245, 158, 11, 0.3) !important;
     font-size: 0.7rem;
     font-weight: 700;
     padding: 4px 10px;
     border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
 }
 
 .profit-badge {
@@ -180,12 +211,12 @@
     font-size: 0.68rem;
     font-weight: 700;
     color: #10b981;
-    background: rgba(16, 185, 129, 0.1);
+    background: rgba(16, 185, 129, 0.12);
     padding: 2px 8px;
     border-radius: 12px;
 }
 
-/* Custom DataTables Override */
+/* Custom DataTables Override for Dark & Light Themes */
 .dataTables_wrapper .dataTables_length,
 .dataTables_wrapper .dataTables_filter {
     display: none !important;
@@ -388,8 +419,7 @@
     </div>
 </div>
 
-<!-- DataTables Dependencies -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<!-- DataTables Dependencies (JS loaded after HTML) -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
@@ -478,7 +508,7 @@ async function loadPrices() {
                 if (profit > 0) {
                     profitHtml = `<span class="profit-badge">+Rp ${parseInt(profit).toLocaleString('id-ID')} (${profitPct}%)</span>`;
                 } else if (profit < 0) {
-                    profitHtml = `<span class="profit-badge" style="background: rgba(239,68,68,0.1); color: #ef4444;">-Rp ${parseInt(Math.abs(profit)).toLocaleString('id-ID')}</span>`;
+                    profitHtml = `<span class="profit-badge" style="background: rgba(239,68,68,0.12); color: #ef4444;">-Rp ${parseInt(Math.abs(profit)).toLocaleString('id-ID')}</span>`;
                 }
 
                 const catNormalized = (p.category || '').toUpperCase();
