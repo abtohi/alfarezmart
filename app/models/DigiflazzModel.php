@@ -452,8 +452,14 @@ class DigiflazzModel {
 
     /**
      * Update deposit status by record ID
+     *
+     * @param int|string $id
+     * @param string $status
+     * @param string $notes
+     * @param array|string|null $rawResponse
+     * @return bool
      */
-    public function updateDepositStatusById($id, $status, $notes, $rawResponse = null) {
+    public function updateDepositStatusById(int|string $id, string $status, string $notes, array|string|null $rawResponse = null): bool {
         $sql = "UPDATE digi_deposits SET status = :status, notes = :notes, updated_at = NOW()";
         $params = [
             'status' => $status,
@@ -466,7 +472,7 @@ class DigiflazzModel {
         }
         $sql .= " WHERE id = :id";
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute($params);
+        return (bool)$stmt->execute($params);
     }
 
     /**
@@ -475,10 +481,10 @@ class DigiflazzModel {
      * @param float|int $amount
      * @param string $status
      * @param string $notes
-     * @param array|string $rawResponse
+     * @param array|string|null $rawResponse
      * @return bool
      */
-    public function updateDepositStatus($amount, $status, $notes, $rawResponse = null) {
+    public function updateDepositStatus(float|int $amount, string $status, string $notes, array|string|null $rawResponse = null): bool {
         $pending = $this->getPendingDeposits();
         if (empty($pending)) return false;
 
