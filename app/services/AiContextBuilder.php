@@ -13,6 +13,8 @@
  * @version 5.0
  * @updated 2026-07-30
  */
+require_once __DIR__ . '/AiSkillEngine.php';
+
 class AiContextBuilder
 {
     const VERSION = '5.0';
@@ -47,7 +49,7 @@ class AiContextBuilder
 
         // --- 1. Core Identity & Strict Rules ---
         $prompt  = "Kamu adalah AI Asisten cerdas toko AlfarezMart. Nama kamu: AlfarezMart AI.\n";
-        $prompt .= "ATURAN BAHASA: WAJIB 100% BAHASA INDONESIA. DILARANG MENGGUNAKAN BAHASA INGGRIS. DILARANG MENAMPILKAN THOUGHT/REASONING PROCESS INTERNAL.\n\n";
+        $prompt .= "ATURAN BAHASA & FORMAT: WAJIB 100% BAHASA INDONESIA. DILARANG KERAS MENGGUNAAN BAHASA INGGRIS ATAU MENGELUARKAN INTERNAL THOUGHT / REASONING PROCESS SEPERTI 'We need to query...', 'The user is asking...'. JIKA MEMBUTUHKAN DATA DATABASE, LANGSUNG TULIS TAG [SQL_QUERY]SELECT ...[/SQL_QUERY] TANPA KATA-KATA LAIN SEBELUM/SESUDAHNYA.\n\n";
 
         if (!empty($currentUser)) {
             $prompt .= "PENGGUNA AKTIF SEKARANG: ID=" . ($currentUser['id'] ?? '?') . ", Nama=\"" . ($currentUser['name'] ?? 'User') . "\", Level=" . ($currentUser['level'] ?? 'user') . "\n\n";
@@ -60,10 +62,16 @@ class AiContextBuilder
         $prompt .= "   [SQL_QUERY]SELECT ... FROM ... LIMIT 50[/SQL_QUERY]\n";
         $prompt .= "   HANYA tag itu saja. TANPA kalimat apapun sebelum/sesudah tag.\n";
         $prompt .= "4. DILARANG bilang 'tidak tahu' / 'tidak memiliki akses' SEBELUM mencoba SQL query.\n";
-        $prompt .= "5. Jika [SQL_RESULT] kosong ([]), beritahu user data tidak ditemukan. JANGAN buat SQL lagi.\n";
-        $prompt .= "6. Output: Markdown rapi. Angka penting di-**bold**. Gunakan tabel jika data tabular.\n";
-        $prompt .= "7. SCOPE: Hanya menjawab seputar data & fitur toko AlfarezMart. Tolak pertanyaan di luar scope dengan sopan.\n";
-        $prompt .= "8. Untuk pertanyaan harga, SELALU tampilkan harga beli (modal), harga jual eceran, dan harga jual grosir jika tersedia.\n\n";
+        $skillEngine = AiSkillEngine::getInstance();
+        $prompt .= $skillEngine->getSkillInstructions() . "\n";
+
+        $prompt .= "ATURAN SKILL PENCARIAN PRODUK & TYPO TOLERANCE:\n";
+        $prompt .= "1. MULTI-COLUMN SEARCH: Nama produk di database tersimpan dalam beberapa kolom di tabel `products`: `full_name` (nama lengkap), `short_label` (label cetak), `invoice_name` (nama nota), `supplier_invoice_name` (nama di faktur supplier, misal 'R.SERGIO' untuk Sergio), `variant`, `code`.\n";
+        $prompt .= "2. FLEXIBLE & FUZZY MATCHING: Saat mencari data produk, penjualan, atau riwayat pembelian produk tertentu (misal: 'rokok sergio', 'saset', 'mie'):\n";
+        $prompt .= "   - SELALU gunakan klausa WHERE dengan OR/LIKE pada beberapa kolom sekaligus agar fleksibel terhadap typo dan variasi nama di faktur/nota.\n";
+        $prompt .= "   - Contoh query riwayat pembelian (Purchases) untuk produk 'rokok sergio':\n";
+        $prompt .= "     [SQL_QUERY]SELECT p.purchase_date, s.name AS supplier_name, pr.full_name, pr.supplier_invoice_name, pi.quantity, pi.buy_price, pi.total_price FROM purchases p JOIN purchase_items pi ON p.id = pi.purchase_id JOIN products pr ON pi.product_id = pr.id LEFT JOIN suppliers s ON p.supplier_id = s.id WHERE (pr.full_name LIKE '%sergio%' OR pr.short_label LIKE '%sergio%' OR pr.invoice_name LIKE '%sergio%' OR pr.supplier_invoice_name LIKE '%sergio%' OR pr.supplier_invoice_name LIKE '%R.SERGIO%' OR pr.full_name LIKE '%rokok%') ORDER BY p.purchase_date DESC LIMIT 50[/SQL_QUERY]\n";
+        $prompt .= "3. PENANGANAN TYPO: Wajib deteksi typo umum user! Misal: 'saset' -> cari 'sachet' & 'saset', 'poci' -> cari 'pouch' & 'poci', 'coklat' -> cari 'cokelat' & 'coklat', 'sergio' -> cari 'sergio' & 'R.SERGIO'. Buat query SQL yang mencakup variasi kata asli dan variasi kata yang sudah dinormalisasi.\n\n";
 
         $prompt .= "ATURAN SKILL OUTPUT TABEL & GAMBAR:\n";
         $prompt .= "1. SKILL TABEL MARKDOWN: Saat user meminta daftar/list produk dengan kolom-kolom tertentu, SELALU sajikan dalam format TABEL MARKDOWN (`| Header1 | Header2 | ... |`). Tabel ini akan dirender sangat rapi dan dapat di-scroll horizontal secara halus pada layar hp/mobile.\n";
@@ -256,8 +264,41 @@ class AiContextBuilder
     }
 
     // ================================================================
-    // PRODUCT SEARCH
+    // PRODUCT SEARCH (Multi-Column & Typo-Tolerant)
     // ================================================================
+
+    /**
+     * Dictionary for typo normalization and common retail terms
+     */
+    private const TYPO_DICTIONARY = [
+        'saset'    => 'sachet',
+        'sacset'   => 'sachet',
+        'sacet'    => 'sachet',
+        'sach'     => 'sachet',
+        'btg'      => 'batang',
+        'bt'       => 'botol',
+        'btl'      => 'botol',
+        'pck'      => 'pack',
+        'pckg'     => 'pack',
+        'pcs'      => 'pcs',
+        'coklat'   => 'cokelat',
+        'sampo'    => 'shampoo',
+        'sampoo'   => 'shampoo',
+        'shampo'   => 'shampoo',
+        'poci'     => 'pouch',
+        'puch'     => 'pouch',
+        'poucs'    => 'pouch',
+        'ekstra'   => 'extra',
+        'eksa'     => 'extra',
+        'dus'      => 'karton',
+        'ctn'      => 'karton',
+        'bal'      => 'bal',
+        'renteng'  => 'renceng',
+        'rcg'      => 'renceng',
+        'krupuk'   => 'kerupuk',
+        'indomie'  => 'indomie',
+        'mie'      => 'mi',
+    ];
 
     private function searchProducts(array $keywords): array
     {
@@ -266,26 +307,32 @@ class AiContextBuilder
             $conditions = [];
             $params     = [];
             foreach ($keywords as $i => $kw) {
-                $k             = ':pkw' . $i;
-                $conditions[]  = "(p.full_name LIKE {$k} OR b.name LIKE {$k} OR p.invoice_name LIKE {$k})";
-                $params[$k]    = '%' . $kw . '%';
+                $k            = ':pkw' . $i;
+                // Search multi-column: full_name, short_label, invoice_name, supplier_invoice_name, code, variant, brand, category
+                $conditions[] = "(p.full_name LIKE {$k} OR p.short_label LIKE {$k} OR p.invoice_name LIKE {$k} OR p.supplier_invoice_name LIKE {$k} OR p.code LIKE {$k} OR p.variant LIKE {$k} OR b.name LIKE {$k} OR c.name LIKE {$k})";
+                $params[$k]   = '%' . $kw . '%';
             }
             $where = implode(' OR ', $conditions);
 
             $stmt = $this->db->prepare("
                 SELECT
-                    p.full_name AS nama, b.name AS merk,
+                    p.full_name AS nama,
+                    p.short_label AS label,
+                    p.supplier_invoice_name AS nama_invoice_supplier,
+                    b.name AS merk,
+                    p.photo AS foto,
                     pp.buy_price AS harga_beli,
                     pp.sell_price_retail AS harga_jual_eceran,
                     pp.sell_price_wholesale AS harga_jual_grosir,
                     stk.current_qty_base AS stok
                 FROM products p
                 LEFT JOIN brands b ON p.brand_id = b.id
+                LEFT JOIN categories c ON p.category_id = c.id
                 LEFT JOIN product_packagings pp ON p.id = pp.product_id AND pp.level = 1
                 LEFT JOIN stock stk ON p.id = stk.product_id
                 WHERE p.is_active = 1 AND p.code != 'CUSTOM' AND ({$where})
                 ORDER BY p.full_name ASC
-                LIMIT 8
+                LIMIT 10
             ");
             foreach ($params as $key => $val) {
                 $stmt->bindValue($key, $val, PDO::PARAM_STR);
@@ -325,7 +372,7 @@ class AiContextBuilder
     // ================================================================
 
     /**
-     * Extract meaningful keywords from user message.
+     * Extract meaningful keywords and normalize typos/synonyms.
      */
     private function extractKeywords(string $message): array
     {
@@ -337,17 +384,22 @@ class AiContextBuilder
             'sedang','telah','sebuah','setiap','semua','mana','nya','lah','pun','kah',
             'kami','kita','mereka','dia','ia','info','informasi','data','tolong',
             'cek','lihat','tampilkan','kasih','tahu','tentang','mengenai','soal','hal',
-            'lebih','lagi','dong','deh','sih','kok','ya','kan','lho','mau',
+            'lebih','lagi','dong','deh','sih','kok','ya','kan','lho','mau','darimana',
+            'darimana saja','mana saja','riwayat','pembelian','penjualan','belanja'
         ];
         $clean    = preg_replace('/[^\w\s]/u', ' ', mb_strtolower($message));
         $words    = preg_split('/\s+/', trim($clean));
         $keywords = [];
+
         foreach ($words as $word) {
-            if (mb_strlen($word) >= 3 && !in_array($word, $stopWords)) {
+            if (mb_strlen($word) >= 2 && !in_array($word, $stopWords)) {
                 $keywords[] = $word;
+                if (isset(self::TYPO_DICTIONARY[$word])) {
+                    $keywords[] = self::TYPO_DICTIONARY[$word];
+                }
             }
         }
-        return array_unique(array_slice($keywords, 0, 7));
+        return array_unique(array_slice($keywords, 0, 10));
     }
 
     private function contains(string $haystack, array $needles): bool

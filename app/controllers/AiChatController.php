@@ -197,13 +197,15 @@ class AiChatController extends Controller
                         $rawContent = trim($rawContent);
                     }
 
-                    // If content is empty, check reasoning field as last resort
+                    // Only use reasoning if it contains an actual [SQL_QUERY] tag
                     if (empty($rawContent) && !empty($choiceMsg['reasoning'])) {
-                        $rawContent = trim($choiceMsg['reasoning']);
+                        if (stripos($choiceMsg['reasoning'], '[SQL_QUERY]') !== false) {
+                            $rawContent = trim($choiceMsg['reasoning']);
+                        }
                     }
 
-                    // Filter out raw English internal thinking logs (e.g. "I think it's a good idea...", "The user is asking...")
-                    if (preg_match('/^(?:I think|The user|Let\'s|First,|Looking at|To answer|The rule)/i', $rawContent)) {
+                    // Filter out raw English internal thinking logs (e.g. "We need to query...", "I think...", "The user is asking...")
+                    if (preg_match('/^(?:I think|The user|Let\'s|First,|Looking at|To answer|The rule|We need|We should|We must|Query the|Step \d|Here is|Based on)/i', $rawContent)) {
                         // If it doesn't contain [SQL_QUERY], ignore this raw English thinking log
                         if (stripos($rawContent, '[SQL_QUERY]') === false) {
                             $rawContent = '';
@@ -259,7 +261,7 @@ class AiChatController extends Controller
                     if (strpos($sqlResult, 'ERROR') !== false) {
                         $messages[] = ['role' => 'user', 'content' => "[SQL_ERROR]\n{$sqlResult}\n[/SQL_ERROR]\nPerbaiki query SQL-mu dan coba lagi."];
                     } elseif ($sqlResult === '[]') {
-                        $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n[]\n[/SQL_RESULT]\nData kosong. JANGAN buat SQL lagi. Beritahu user data tidak ditemukan."];
+                        $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n[]\n[/SQL_RESULT]\nData spesifik tidak ditemukan pada query ini. DILARANG memberikan jawaban mati seperti 'data tidak ditemukan' saja!\n- Jika ini pass 1 atau 2: Lakukan pencarian [SQL_QUERY] yang lebih luas (broad search) menggunakan nama brand/merek utama atau variasi kata kunci lain.\n- Jika ini pass terakhir: Tampilkan varian/produk serupa yang ada di database toko dan pandu pengguna dengan pertanyaan klarifikasi/rekomendasi selanjutnya."];
                     } else {
                         $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n{$sqlResult}\n[/SQL_RESULT]\nJawab pertanyaan berdasarkan data di atas. Jangan tampilkan query SQL ke user."];
 
