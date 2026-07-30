@@ -25,23 +25,20 @@
 
     <!-- Suggested Prompts -->
     <div class="chat-suggestions" id="chatSuggestions">
+        <div class="suggestion-chip" onclick="sendSuggested('Tampilkan list 10 produk pertama dalam tabel dengan kolom Kode, Nama, Harga Eceran, Harga Grosir, dan Stok')">
+            📋 List Produk (Tabel Mobile)
+        </div>
+        <div class="suggestion-chip" onclick="sendSuggested('Tampilkan produk di toko yang memiliki foto lengkap dengan gambar, harga eceran, dan stoknya')">
+            📷 Tampilkan Foto Produk
+        </div>
         <div class="suggestion-chip" onclick="sendSuggested('Berapa omzet dan profit hari ini?')">
             📊 Rekap Keuangan Hari Ini
         </div>
         <div class="suggestion-chip" onclick="sendSuggested('Tampilkan 5 produk yang stoknya hampir habis')">
             📦 Cek Stok Menipis
         </div>
-        <div class="suggestion-chip" onclick="sendSuggested('Apa saja 5 produk paling laku bulan ini?')">
-            🏆 Top Produk Laris
-        </div>
         <div class="suggestion-chip" onclick="sendSuggested('Berapa total hutang toko dan piutang pelanggan saat ini?')">
             💳 Rekap Hutang & Piutang
-        </div>
-        <div class="suggestion-chip" onclick="sendSuggested('Kapan jadwal kunjungan sales terdekat?')">
-            👤 Jadwal Sales
-        </div>
-        <div class="suggestion-chip" onclick="sendSuggested('Bandingkan omzet minggu ini vs minggu lalu')">
-            📈 Perbandingan Omzet
         </div>
     </div>
 
@@ -230,15 +227,97 @@ body { background: var(--bg-primary); }
     border-bottom-left-radius: 4px;
 }
 
-/* Markdown in AI bubbles */
+/* Markdown & Table Responsiveness in AI bubbles */
+.message.ai.has-table {
+    max-width: 100%;
+    width: 100%;
+}
+.message.ai.has-table .message-bubble {
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+.chat-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 10px 0;
+    border-radius: var(--radius-sm, 8px);
+    border: 1px solid var(--border-color);
+    background: var(--surface-1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.chat-table-wrapper table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin: 0;
+}
+
+.chat-table-wrapper th, .chat-table-wrapper td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.chat-table-wrapper th:last-child, .chat-table-wrapper td:last-child {
+    border-right: none;
+}
+
+.chat-table-wrapper tr:last-child td {
+    border-bottom: none;
+}
+
+.chat-table-wrapper th {
+    background: var(--surface-2);
+    color: var(--text-primary);
+    font-weight: 700;
+    text-align: left;
+}
+
+.chat-table-wrapper tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* Chat Product Images */
+.chat-product-img {
+    max-width: 160px;
+    max-height: 160px;
+    object-fit: contain;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--surface-2);
+    margin: 6px 0;
+    cursor: zoom-in;
+    display: inline-block;
+    vertical-align: middle;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.chat-product-img:hover {
+    transform: scale(1.04);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.chat-table-wrapper .chat-product-img {
+    width: 44px;
+    height: 44px;
+    max-width: 44px;
+    max-height: 44px;
+    margin: 0 auto;
+    border-radius: 6px;
+    display: block;
+}
+
 .message.ai .message-bubble p { margin-bottom: 8px; }
 .message.ai .message-bubble p:last-child { margin-bottom: 0; }
 .message.ai .message-bubble strong { color: var(--text-primary); font-weight: 700; }
 .message.ai .message-bubble ul, .message.ai .message-bubble ol { padding-left: 20px; margin-bottom: 8px; }
 .message.ai .message-bubble li { margin-bottom: 4px; }
-.message.ai .message-bubble table { width:100%;border-collapse:collapse;margin-bottom:8px;font-size:12px; }
-.message.ai .message-bubble th, .message.ai .message-bubble td { padding:6px 8px;border:1px solid var(--border-color); }
-.message.ai .message-bubble th { background:var(--surface-2);text-align:left;font-weight:600; }
 .message.ai .message-bubble code {
     background: var(--surface-2);
     padding: 2px 6px;

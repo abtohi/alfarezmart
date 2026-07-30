@@ -60,9 +60,22 @@ function generateBubbleHTML(role, content) {
         } else {
             htmlContent = content.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         }
+
+        // 1. Auto-wrap <table> elements in a responsive container for smooth horizontal scroll
+        htmlContent = htmlContent.replace(/(<table[\s\S]*?<\/table>)/gi, '<div class="chat-table-wrapper">$1</div>');
+
+        // 2. Fix relative image URLs & attach viewFullPhoto lightbox
+        const baseUrl = (typeof BASE_URL !== 'undefined') ? BASE_URL : '/';
+        htmlContent = htmlContent.replace(/<img\s+([^>]*?)src=["'](?!https?:\/\/|data:)(.*?)["']/gi, (match, p1, p2) => {
+            const cleanPath = p2.replace(/^\//, '');
+            const fullUrl = baseUrl + cleanPath;
+            return `<img ${p1}src="${fullUrl}" class="chat-product-img" onclick="if(typeof viewFullPhoto==='function'){viewFullPhoto('${fullUrl}')}" title="Klik untuk memperbesar foto" alt="Foto Produk"`;
+        });
     } else {
         htmlContent = escapeHtml(content).replace(/\n/g, '<br>');
     }
+
+    const hasTable = htmlContent.includes('chat-table-wrapper');
 
     const copyBtn = `
         <button class="btn-chat-action" onclick="copyMessageText(this)" data-content="${escapeAttr(content)}" title="Salin pesan">
@@ -75,7 +88,7 @@ function generateBubbleHTML(role, content) {
         </button>` : '';
 
     return `
-        <div class="message ${isUser ? 'user' : 'ai'}">
+        <div class="message ${isUser ? 'user' : 'ai'} ${hasTable ? 'has-table' : ''}">
             <div class="message-bubble">${htmlContent}</div>
             <div class="message-actions">
                 ${copyBtn}

@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS -->
-    <?php $v = '?v=15.24'; ?>
+    <?php $v = '?v=15.25'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -249,6 +249,10 @@ if ($userLevel === 'staff') {
                 <h1 class="header-title"><?= htmlspecialchars($title ?? 'AlfarezMart') ?></h1>
             </div>
             <div class="header-right">
+                <a href="<?= BASE_URL ?>chat" class="header-ai-btn" title="AlfarezMart AI Assistant">
+                    <i class="bi bi-stars"></i>
+                    <span class="header-ai-text">Tanya AI</span>
+                </a>
                 <button class="header-btn" id="btnTheme" aria-label="Ubah tema" onclick="toggleTheme()" title="Ubah tema Dark/Light">
                     <i class="bi bi-sun" id="themeIcon" data-icon="sun"></i>
                 </button>
@@ -305,13 +309,9 @@ if ($userLevel === 'staff') {
 
     <!-- Floating AI Chat Button -->
     <?php if (!isset($active_menu) || $active_menu !== 'chat'): ?>
-        <?php 
-            // Check if feature is enabled (avoid DB call if possible, maybe rely on session or just default true)
-            // It's a view, so we will just show it and handle the check in Controller
-        ?>
-        <a href="<?= BASE_URL ?>chat" class="floating-chat-btn" title="Tanya AI">
+        <a href="<?= BASE_URL ?>chat" class="floating-chat-btn" title="AlfarezMart AI Assistant">
             <div class="chat-icon-wrapper">
-                🤖
+                <i class="bi bi-stars"></i>
             </div>
         </a>
     <?php endif; ?>

@@ -65,6 +65,14 @@ class AiContextBuilder
         $prompt .= "7. SCOPE: Hanya menjawab seputar data & fitur toko AlfarezMart. Tolak pertanyaan di luar scope dengan sopan.\n";
         $prompt .= "8. Untuk pertanyaan harga, SELALU tampilkan harga beli (modal), harga jual eceran, dan harga jual grosir jika tersedia.\n\n";
 
+        $prompt .= "ATURAN SKILL OUTPUT TABEL & GAMBAR:\n";
+        $prompt .= "1. SKILL TABEL MARKDOWN: Saat user meminta daftar/list produk dengan kolom-kolom tertentu, SELALU sajikan dalam format TABEL MARKDOWN (`| Header1 | Header2 | ... |`). Tabel ini akan dirender sangat rapi dan dapat di-scroll horizontal secara halus pada layar hp/mobile.\n";
+        $prompt .= "2. SKILL GAMBAR PRODUK: Tabel `products` memiliki kolom `photo` yang menyimpan lokasi foto produk (misal: `storage/uploads/products/prod_170_1782085048.webp`).\n";
+        $prompt .= "   - Jika user meminta melihat gambar/foto produk atau daftar produk beserta fotonya, SELALU sertakan kolom `photo` dalam query SQL.\n";
+        $prompt .= "   - Tampilkan foto produk menggunakan sintaks Markdown Gambar: `![Nama Produk](path_photo)` (contoh: `![ABC Kecap](storage/uploads/products/prod_170_1782085048.webp)`).\n";
+        $prompt .= "   - Dalam tabel markdown, Anda dapat menaruh markdown gambar `![Nama](path_photo)` langsung di dalam sel tabel kolom Foto.\n";
+        $prompt .= "   - Jika kolom `photo` kosong/null, tampilkan `-` atau `(Tidak ada foto)`.\n\n";
+
         $prompt .= "PETUNJUK PERTANYAAN PENJUALAN & PEMBELIAN:\n";
         $prompt .= "- Jika user bertanya 'belanja apa aja' / 'pembelian toko' / 'barang masuk': Query tabel `purchases` JOIN `purchase_items` ON purchases.id = purchase_items.purchase_id JOIN `products` ON purchase_items.product_id = products.id WHERE DATE(purchases.purchase_date) = CURDATE() (atau tanggal sesuai pertanyaan).\n";
         $prompt .= "- Jika user bertanya 'penjualan' / 'omzet' / 'transaksi kasir': Query `sale_transactions` JOIN `sale_items` ON sale_transactions.id = sale_items.transaction_id JOIN `products` ON sale_items.product_id = products.id WHERE DATE(sale_transactions.created_at) = CURDATE().\n\n";
@@ -228,7 +236,7 @@ class AiContextBuilder
     {
         return "
 ## SKEMA DATABASE (static fallback)
-- `products`: *id, full_name, code, category_id, brand_id, min_stock, is_active
+- `products`: *id, full_name, code, photo, category_id, brand_id, min_stock, is_active
 - `product_packagings`: *id, product_id, level(1=Terkecil), unit_id, base_qty, buy_price, sell_price_retail, sell_price_wholesale, margin_retail, margin_wholesale
 - `stock`: product_id, current_qty_base, nearest_expiry, last_restock_date
 - `sale_transactions`: *id, created_at, total_amount, payment_method, customer_id, cashier_id

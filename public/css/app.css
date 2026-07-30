@@ -144,12 +144,72 @@ label.form-label.text-muted {
 /* Responsive — desktop/tablet overrides are in desktop.css */
 
 
-/* Floating AI Chat Button */
-.floating-chat-btn { position: fixed; bottom: calc(var(--bottom-nav-height) + 16px); right: 16px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(230, 57, 70, 0.4); z-index: 998; text-decoration: none; animation: pulse 2s infinite; transition: transform 0.3s; }
-.floating-chat-btn:hover { transform: scale(1.05); }
-.chat-icon-wrapper { font-size: 28px; }
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(230, 57, 70, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(230, 57, 70, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(230, 57, 70, 0); }
+/* Header AI Button */
+.header-ai-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(230, 57, 70, 0.15), rgba(76, 201, 240, 0.15));
+    border: 1px solid rgba(230, 57, 70, 0.35);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 700;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-right: 4px;
+}
+.header-ai-btn i {
+    color: var(--primary);
+    font-size: 14px;
+    transition: transform 0.3s ease;
+}
+.header-ai-btn:hover {
+    background: linear-gradient(135deg, rgba(230, 57, 70, 0.28), rgba(76, 201, 240, 0.28));
+    border-color: var(--primary);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(230, 57, 70, 0.25);
+}
+.header-ai-btn:hover i {
+    transform: rotate(15deg) scale(1.15);
+}
+@media (max-width: 480px) {
+    .header-ai-text { display: none; }
+    .header-ai-btn { padding: 6px 9px; border-radius: 50%; }
+}
+
+/* Floating AI Chat Button (Mobile Glassmorphism Badge) */
+.floating-chat-btn {
+    position: fixed;
+    bottom: calc(var(--bottom-nav-height) + 14px);
+    right: 14px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(30, 30, 50, 0.9), rgba(45, 45, 75, 0.9));
+    border: 1px solid rgba(230, 57, 70, 0.4);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    z-index: 998;
+    text-decoration: none;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.floating-chat-btn:hover {
+    transform: scale(1.08) translateY(-2px);
+    border-color: var(--primary);
+    box-shadow: 0 8px 20px rgba(230, 57, 70, 0.3);
+}
+.chat-icon-wrapper {
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary);
 }

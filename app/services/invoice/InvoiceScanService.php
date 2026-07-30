@@ -366,7 +366,7 @@ class InvoiceScanService
         // - Primary: the configured model (default: openrouter/auto)
         // - Fallbacks: free vision models, only tried if primary returns 429/5xx
         $FREE_VISION_FALLBACKS = [
-            'google/gemma-4-31b-it:free',
+            'openrouter/free',
             'google/gemma-4-26b-a4b-it:free',
             'nvidia/nemotron-nano-12b-v2-vl:free',
         ];
@@ -422,8 +422,9 @@ class InvoiceScanService
 
             $response = curl_exec($ch);
             $err      = curl_error($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+            if (PHP_VERSION_ID < 80000) {
+                @curl_close($ch);
+            }
 
             if ($err) {
                 $lastError = "Koneksi ke OpenRouter gagal: " . $err;

@@ -44,9 +44,9 @@
         max-width: 720px;
     }
 
-    /* Floating chat button */
+    /* Floating chat button (Hidden on desktop - accessible via Sidebar & Header) */
     .floating-chat-btn {
-        right: 24px;
+        display: none !important;
     }
 }
 
@@ -323,8 +323,7 @@
 
     /* --- 2.6 Floating chat button --- */
     .floating-chat-btn {
-        bottom: 24px;
-        right: 28px;
+        display: none !important;
     }
 
     /* --- 2.7 Search overlay --- */
@@ -732,8 +731,7 @@
 
     /* Adjust floating AI chat button position on POS desktop */
     .floating-chat-btn {
-        bottom: 96px !important;
-        right: 28px !important;
+        display: none !important;
     }
 
     /* POS segmented control */

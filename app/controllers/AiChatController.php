@@ -95,7 +95,10 @@ class AiChatController extends Controller
             exit;
         }
 
-        $model = $this->settingModel->get('ai_chat_model', 'openrouter/auto');
+        $model = $this->settingModel->get('ai_chat_model', 'openrouter/free');
+        if (empty($model) || in_array($model, ['openrouter/auto', 'deepseek/deepseek-chat:free', 'meta-llama/llama-3.3-70b-instruct:free'])) {
+            $model = 'openrouter/free';
+        }
 
         try {
             // Cleanup expired facts periodically (1 in 10 chance)
@@ -129,12 +132,14 @@ class AiChatController extends Controller
             $aiResponse  = '';
             $totalTokens = 0;
 
-            // List of reliable models to try if primary model fails or outputs internal thoughts
+            // List of reliable 100% FREE models to try sequentially if primary model fails
             $fallbackModels = [
                 $model,
-                'google/gemini-2.0-flash-001',
-                'deepseek/deepseek-chat:free',
-                'meta-llama/llama-3.3-70b-instruct:free',
+                'openrouter/free',
+                'google/gemma-4-26b-a4b-it:free',
+                'nvidia/nemotron-nano-12b-v2-vl:free',
+                'openai/gpt-oss-20b:free',
+                'cohere/north-mini-code:free',
             ];
             $fallbackModels = array_values(array_unique(array_filter($fallbackModels)));
 
