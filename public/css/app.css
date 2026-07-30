@@ -147,7 +147,7 @@ label.form-label.text-muted {
 .desktop-sidebar,
 .sidebar-collapse-btn,
 .desktop-scanner-hint {
-    display: none !important;
+    display: none;
 }
 
 /* Floating AI Chat Button */

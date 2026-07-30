@@ -111,7 +111,7 @@
         background: var(--bg-secondary);
         border-right: 1px solid var(--border-color);
         z-index: 101;
-        display: flex;
+        display: flex !important;
         flex-direction: column;
         overflow: hidden;
         transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -886,7 +886,7 @@
         background: var(--surface-1);
         border: 1px solid var(--border-color);
         color: var(--text-muted);
-        display: flex;
+        display: flex !important;
         align-items: center;
         justify-content: center;
         font-size: 0.75rem;
