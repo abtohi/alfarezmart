@@ -143,12 +143,14 @@ class AiChatController extends Controller
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_POST           => true,
                     CURLOPT_POSTFIELDS     => json_encode($postData),
-                    CURLOPT_CONNECTTIMEOUT => 10,
+                    CURLOPT_CONNECTTIMEOUT => 15,
                     CURLOPT_TIMEOUT        => 60,
+                    CURLOPT_SSL_VERIFYPEER => false,
+                    CURLOPT_SSL_VERIFYHOST => 0,
                     CURLOPT_HTTPHEADER     => [
                         'Authorization: Bearer ' . $apiKey,
                         'Content-Type: application/json',
-                        'HTTP-Referer: ' . BASE_URL,
+                        'HTTP-Referer: https://alfarezmart.com',
                         'X-Title: AlfarezMart AI',
                     ],
                 ]);
@@ -158,17 +160,49 @@ class AiChatController extends Controller
                 $curlError = curl_error($ch);
 
                 if ($response === false) {
-                    echo json_encode(['success' => false, 'error' => 'Koneksi ke AI gagal: ' . $curlError]);
+                    echo json_encode(['success' => false, 'error' => 'Koneksi ke OpenRouter gagal: ' . $curlError]);
                     exit;
                 }
 
                 $resData = json_decode($response, true);
                 if ($httpCode >= 400 || isset($resData['error'])) {
+                    // Try fallback model if openrouter/auto or chosen model failed
+                    if ($model !== 'deepseek/deepseek-chat:free') {
+                        $postData['model'] = 'deepseek/deepseek-chat:free';
+                        $chRetry = curl_init($url);
+                        curl_setopt_array($chRetry, [
+                            CURLOPT_RETURNTRANSFER => true,
+                            CURLOPT_POST           => true,
+                            CURLOPT_POSTFIELDS     => json_encode($postData),
+                            CURLOPT_CONNECTTIMEOUT => 15,
+                            CURLOPT_TIMEOUT        => 60,
+                            CURLOPT_SSL_VERIFYPEER => false,
+                            CURLOPT_SSL_VERIFYHOST => 0,
+                            CURLOPT_HTTPHEADER     => [
+                                'Authorization: Bearer ' . $apiKey,
+                                'Content-Type: application/json',
+                                'HTTP-Referer: https://alfarezmart.com',
+                                'X-Title: AlfarezMart AI',
+                            ],
+                        ]);
+                        $retryRes = curl_exec($chRetry);
+                        $retryCode = curl_getinfo($chRetry, CURLINFO_HTTP_CODE);
+                        if ($retryRes !== false && $retryCode < 400) {
+                            $resData = json_decode($retryRes, true);
+                            if (isset($resData['choices'][0]['message']['content'])) {
+                                $aiResponse   = $resData['choices'][0]['message']['content'];
+                                $totalTokens += $resData['usage']['total_tokens'] ?? 0;
+                                goto process_response;
+                            }
+                        }
+                    }
+
                     $errMsg = $resData['error']['message'] ?? ('AI request gagal (HTTP ' . $httpCode . ')');
-                    echo json_encode(['success' => false, 'error' => $errMsg]);
+                    echo json_encode(['success' => false, 'error' => 'AI Error: ' . $errMsg]);
                     exit;
                 }
 
+                process_response:
                 $aiResponse   = $resData['choices'][0]['message']['content'] ?? '';
                 $totalTokens += $resData['usage']['total_tokens'] ?? 0;
 
