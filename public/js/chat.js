@@ -1,6 +1,8 @@
 /**
- * Chat Logic for AlfarezMart AI
- * v2.0 - Knowledge Base + Feedback System
+ * Chat Logic for AlfarezMart AI v5.0
+ * - Smart session management
+ * - Auto-learn feedback loop
+ * - Token-efficient history
  */
 
 let chatSessionId = localStorage.getItem('alfarezmart_chat_session');
@@ -14,7 +16,7 @@ const chatInput    = document.getElementById('chatInput');
 const btnSend      = document.getElementById('btnSend');
 const chatCsrf     = document.getElementById('chatCsrf') ? document.getElementById('chatCsrf').value : '';
 
-// State untuk modal feedback
+// State for feedback modal
 let _feedbackContext = '';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -26,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnSend.disabled = this.value.trim().length === 0;
         });
 
-        // Enter kirim, Shift+Enter baris baru
+        // Enter to send, Shift+Enter for new line
         chatInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -100,7 +102,11 @@ function showTypingIndicator() {
 }
 
 function scrollToBottom() {
-    if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+    if (chatMessages) {
+        requestAnimationFrame(() => {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+    }
 }
 
 function escapeHtml(unsafe) {
@@ -140,7 +146,7 @@ async function handleChatSubmit(e) {
 
     appendMessage('user', message);
 
-    // Sembunyikan suggestions setelah pertama berinteraksi
+    // Hide suggestions after first interaction
     const suggestions = document.getElementById('chatSuggestions');
     if (suggestions) suggestions.style.display = 'none';
 
@@ -221,16 +227,26 @@ async function clearChatHistory() {
 }
 
 // ============================================================
+// START NEW CHAT SESSION
+// ============================================================
+
+function startNewChat() {
+    chatSessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+    localStorage.setItem('alfarezmart_chat_session', chatSessionId);
+    window.location.reload();
+}
+
+// ============================================================
 // FEEDBACK / KOREKSI
 // ============================================================
 
 function openFeedbackModal(btn) {
     const aiContent = btn.getAttribute('data-content') || '';
 
-    // Simpan konteks AI untuk dikirim bersama feedback
+    // Save AI context for feedback submission
     _feedbackContext = aiContent.substring(0, 200);
 
-    // Tampilkan konteks di modal
+    // Show context in modal
     const ctxEl = document.getElementById('feedbackContext');
     if (ctxEl && _feedbackContext) {
         ctxEl.style.display = 'block';
@@ -277,13 +293,13 @@ async function submitFeedback() {
         closeFeedbackModal();
 
         if (data.success) {
-            // Tambahkan notifikasi inline di chat
+            // Inline notification in chat
             const note = document.createElement('div');
-            note.style.cssText = 'text-align:center;font-size:11px;color:var(--success);padding:4px 0;';
+            note.style.cssText = 'text-align:center;font-size:11px;color:var(--success);padding:6px 0;';
             note.textContent   = '✅ Koreksi tersimpan! AI akan belajar dari masukan Anda.';
             chatMessages.appendChild(note);
             scrollToBottom();
-            setTimeout(() => note.remove(), 4000);
+            setTimeout(() => note.remove(), 5000);
         } else {
             alert('Gagal menyimpan koreksi: ' + (data.error || 'Error tidak diketahui'));
         }
@@ -295,7 +311,7 @@ async function submitFeedback() {
     }
 }
 
-// Tutup modal jika klik di luar
+// Close modal on backdrop click
 document.getElementById('feedbackModal')?.addEventListener('click', function (e) {
     if (e.target === this) closeFeedbackModal();
 });

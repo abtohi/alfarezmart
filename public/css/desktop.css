@@ -1524,6 +1524,116 @@
 
 
 /* ============================================
+   SECTION 15: AI CHAT — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Full-width chat container on desktop */
+    .chat-container {
+        max-width: 100% !important;
+        margin: 0 !important;
+        height: calc(100vh - 64px) !important;
+    }
+
+    /* Elegant chat header */
+    .chat-header {
+        padding: 20px 32px !important;
+        background: linear-gradient(135deg, var(--surface-1) 0%, var(--surface-2) 100%) !important;
+        border-bottom: 1px solid var(--border-color) !important;
+    }
+
+    .chat-avatar {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 14px !important;
+        font-size: 22px !important;
+    }
+
+    /* Wrapped suggestion chips on desktop */
+    .chat-suggestions {
+        flex-wrap: wrap !important;
+        padding: 16px 32px !important;
+        overflow-x: visible !important;
+        gap: 10px !important;
+    }
+
+    .suggestion-chip {
+        padding: 8px 18px !important;
+        font-size: 0.85rem !important;
+        border-radius: 22px !important;
+    }
+
+    /* Chat messages area */
+    .chat-messages {
+        padding: 28px 36px !important;
+        gap: 20px !important;
+    }
+
+    /* Message bubbles */
+    .message {
+        max-width: 70% !important;
+    }
+
+    .message.ai .message-bubble {
+        font-size: 0.95rem !important;
+        line-height: 1.65 !important;
+        padding: 16px 20px !important;
+        border-radius: 18px !important;
+        border-bottom-left-radius: 4px !important;
+    }
+
+    .message.user .message-bubble {
+        font-size: 0.95rem !important;
+        padding: 14px 20px !important;
+        border-radius: 18px !important;
+        border-bottom-right-radius: 4px !important;
+    }
+
+    /* AI bubble table */
+    .message.ai .message-bubble table {
+        font-size: 0.88rem !important;
+    }
+
+    .message.ai .message-bubble th,
+    .message.ai .message-bubble td {
+        padding: 8px 12px !important;
+    }
+
+    /* Feedback always visible on desktop */
+    .message-actions {
+        opacity: 0.5 !important;
+    }
+    .message.ai:hover .message-actions {
+        opacity: 1 !important;
+    }
+
+    /* Chat input area */
+    .chat-input-area {
+        padding: 16px 32px !important;
+        background: linear-gradient(135deg, var(--surface-1) 0%, var(--surface-2) 100%) !important;
+        border-top: 1px solid var(--border-color) !important;
+    }
+
+    #chatInput {
+        padding: 12px 20px !important;
+        font-size: 0.95rem !important;
+        border-radius: 24px !important;
+    }
+
+    .btn-send {
+        width: 48px !important;
+        height: 48px !important;
+        font-size: 20px !important;
+    }
+
+    /* Feedback modal wider on desktop */
+    #feedbackModal > div {
+        max-width: 560px !important;
+    }
+}
+
+
+/* ============================================
    HIDE SIDEBAR ON MOBILE (safety net)
    ============================================ */
 

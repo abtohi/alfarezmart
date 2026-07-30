@@ -1,6 +1,14 @@
 <?php
 /**
- * AiChatController - UI Chat + Endpoint OpenRouter RAG + Knowledge Base
+ * AiChatController v5.0 - Smart AI Chat with Auto-Learning
+ *
+ * Features:
+ * - SQL-First agentic loop (max 3 passes)
+ * - Auto-learning: saves successful SQL results as facts
+ * - Smart history trimming (max 6 messages)
+ * - Token-efficient (max_tokens: 800)
+ * - User correction auto-detection
+ * - .env fallback for API key
  */
 class AiChatController extends Controller
 {
@@ -80,101 +88,105 @@ class AiChatController extends Controller
             exit;
         }
 
-        // API Key
-        $apiKey = $this->settingModel->get('ai_chat_api_key') ?: $this->settingModel->get('ai_api_key');
+        // API Key: Settings UI > .env > fail
+        $apiKey = $this->getApiKey();
         if (empty($apiKey)) {
-            echo json_encode(['success' => false, 'error' => 'API Key OpenRouter belum dikonfigurasi. Hubungi Admin.']);
+            echo json_encode(['success' => false, 'error' => 'API Key OpenRouter belum dikonfigurasi. Masukkan di Pengaturan > Aplikasi > AI Chat.']);
             exit;
         }
 
         $model = $this->settingModel->get('ai_chat_model', 'openrouter/auto');
 
         try {
-            // Auto-detect koreksi dari user → simpan ke knowledge base
-            $this->autoSaveCorrection($message, (int)$user['id'], $sessionId);
-
-            // 1. Simpan pesan user
-            $this->aiChatModel->saveMessage((int)$user['id'], $sessionId, 'user', $message);
-
-            // 2. Riwayat chat (max 10 pesan)
-            $history = $this->aiChatModel->getHistory((int)$user['id'], $sessionId, 10);
-
-            // 3. Bangun context RAG (internal first)
-            $systemPrompt = 'Kamu adalah AI Asisten toko AlfarezMart. Jawab dalam Bahasa Indonesia.';
-            try {
-                $contextBuilder = new AiContextBuilder();
-                $systemPrompt   = $contextBuilder->buildSystemPrompt($message);
-            } catch (Throwable $ctxErr) {
-                // Fallback jika RAG gagal
+            // Cleanup expired facts periodically (1 in 10 chance)
+            if (mt_rand(1, 10) === 1) {
+                $this->aiChatModel->cleanupExpiredFacts();
             }
 
-            // 4. Susun messages untuk OpenRouter
+            // Auto-detect correction from user → save to knowledge base
+            $this->autoSaveCorrection($message, (int)$user['id'], $sessionId);
+
+            // 1. Save user message
+            $this->aiChatModel->saveMessage((int)$user['id'], $sessionId, 'user', $message);
+
+            // 2. Get chat history (max 6 messages for token efficiency)
+            $history = $this->aiChatModel->getHistory((int)$user['id'], $sessionId, 6);
+
+            // 3. Build smart context
+            $contextBuilder = new AiContextBuilder();
+            $systemPrompt   = $contextBuilder->buildSystemPrompt($message);
+
+            // 4. Build messages array for OpenRouter
             $messages = [['role' => 'system', 'content' => $systemPrompt]];
             foreach ($history as $h) {
                 $messages[] = ['role' => $h['role'], 'content' => $h['content']];
             }
 
-            // 5. Kirim ke OpenRouter (Agentic Loop max 3 pass)
-            $url      = 'https://openrouter.ai/api/v1/chat/completions';
-            $maxPasses = 3;
+            // 5. Agentic SQL Loop (max 3 passes)
+            $url         = 'https://openrouter.ai/api/v1/chat/completions';
+            $maxPasses   = 3;
             $currentPass = 1;
-            $aiResponse = '';
+            $aiResponse  = '';
             $totalTokens = 0;
+            $sqlUsed     = false;
 
             while ($currentPass <= $maxPasses) {
                 $postData = [
                     'model'       => $model,
                     'messages'    => $messages,
-                    'temperature' => 0.2,   // Lebih rendah = lebih faktual
-                    'max_tokens'  => 1024,
+                    'temperature' => 0.15,   // Low = more factual
+                    'max_tokens'  => 800,    // Token efficient
                 ];
 
                 $ch = curl_init($url);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER,  true);
-                curl_setopt($ch, CURLOPT_POST,            true);
-                curl_setopt($ch, CURLOPT_POSTFIELDS,      json_encode($postData));
-                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT,  10);
-                curl_setopt($ch, CURLOPT_TIMEOUT,         60);
-                curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                    'Authorization: Bearer ' . $apiKey,
-                    'Content-Type: application/json',
-                    'HTTP-Referer: ' . BASE_URL,
-                    'X-Title: AlfarezMart AI Chat',
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_POST           => true,
+                    CURLOPT_POSTFIELDS     => json_encode($postData),
+                    CURLOPT_CONNECTTIMEOUT => 10,
+                    CURLOPT_TIMEOUT        => 60,
+                    CURLOPT_HTTPHEADER     => [
+                        'Authorization: Bearer ' . $apiKey,
+                        'Content-Type: application/json',
+                        'HTTP-Referer: ' . BASE_URL,
+                        'X-Title: AlfarezMart AI',
+                    ],
                 ]);
 
                 $response  = curl_exec($ch);
                 $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 $curlError = curl_error($ch);
-                // curl_close is deprecated since PHP 8.0, resources are auto-closed
 
                 if ($response === false) {
-                    echo json_encode(['success' => false, 'error' => 'Koneksi ke OpenRouter gagal: ' . $curlError]);
+                    echo json_encode(['success' => false, 'error' => 'Koneksi ke AI gagal: ' . $curlError]);
                     exit;
                 }
 
                 $resData = json_decode($response, true);
                 if ($httpCode >= 400 || isset($resData['error'])) {
-                    $errMsg = $resData['error']['message'] ?? ('Gagal memproses request AI (HTTP ' . $httpCode . ')');
+                    $errMsg = $resData['error']['message'] ?? ('AI request gagal (HTTP ' . $httpCode . ')');
                     echo json_encode(['success' => false, 'error' => $errMsg]);
                     exit;
                 }
 
-                $aiResponse = $resData['choices'][0]['message']['content'] ?? '';
+                $aiResponse   = $resData['choices'][0]['message']['content'] ?? '';
                 $totalTokens += $resData['usage']['total_tokens'] ?? 0;
 
-                // Cek apakah ada SQL Query
+                // Check for SQL Query in response
                 if (preg_match('/\[SQL_QUERY\](.*?)\[\/SQL_QUERY\]/is', $aiResponse, $matches)) {
                     $sqlQuery = trim($matches[1]);
-                    
-                    // Keamanan: Validasi hanya boleh SELECT
-                    if (stripos($sqlQuery, 'SELECT') !== 0 || preg_match('/(?:INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|REPLACE|GRANT|REVOKE)\b/i', $sqlQuery)) {
-                        $sqlResult = "ERROR: Keamanan ditolak. Hanya query SELECT yang diizinkan.";
+                    $sqlUsed  = true;
+
+                    // Security: Only SELECT allowed
+                    if (stripos(ltrim($sqlQuery), 'SELECT') !== 0 ||
+                        preg_match('/\b(?:INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|REPLACE|GRANT|REVOKE|CREATE)\b/i', $sqlQuery)) {
+                        $sqlResult = "ERROR: Hanya query SELECT yang diizinkan.";
                     } else {
-                        // Tambahkan LIMIT jika belum ada
+                        // Add LIMIT if missing
                         if (stripos($sqlQuery, 'LIMIT') === false) {
                             $sqlQuery .= " LIMIT 50";
                         }
-                        
+
                         try {
                             if (!Database::getInstance()->ping()) {
                                 Database::getInstance()->reconnect();
@@ -188,38 +200,40 @@ class AiChatController extends Controller
                         }
                     }
 
-                    // Append the AI's partial response and the SQL result
+                    // Append results to conversation
                     $messages[] = ['role' => 'assistant', 'content' => $aiResponse];
-                    
+
                     if (strpos($sqlResult, 'ERROR') !== false) {
-                        $messages[] = ['role' => 'user', 'content' => "[SQL_ERROR]\n" . $sqlResult . "\n[/SQL_ERROR]\nTerjadi kesalahan sintaks SQL. Coba perbaiki query-mu."];
-                    } else if ($sqlResult === '[]') {
-                        $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n[]\n[/SQL_RESULT]\nData kosong. JANGAN KASIH SQL LAGI. Beritahu user datanya tidak ditemukan."];
+                        $messages[] = ['role' => 'user', 'content' => "[SQL_ERROR]\n{$sqlResult}\n[/SQL_ERROR]\nPerbaiki query SQL-mu dan coba lagi."];
+                    } elseif ($sqlResult === '[]') {
+                        $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n[]\n[/SQL_RESULT]\nData kosong. JANGAN buat SQL lagi. Beritahu user data tidak ditemukan."];
                     } else {
-                        $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n" . $sqlResult . "\n[/SQL_RESULT]\nSekarang jawab pertanyaan saya berdasarkan data di atas. Jangan tampilkan query-nya lagi ke user."];
+                        $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n{$sqlResult}\n[/SQL_RESULT]\nJawab pertanyaan berdasarkan data di atas. Jangan tampilkan query SQL ke user."];
+
+                        // AUTO-LEARN: Save successful SQL result as a learned fact
+                        $this->autoLearnFromResult($message, $sqlResult, $contextBuilder);
                     }
-                    
+
                     $currentPass++;
                 } else {
-                    // No SQL query, break the loop
+                    // No SQL query needed, break loop
                     break;
                 }
             }
 
-            // Jika exhausted (lebih dari maxPasses) dan response terakhir masih berupa query, bersihkan
+            // Clean up leftover SQL tags from response
             if (preg_match('/\[SQL_QUERY\]/is', $aiResponse)) {
                 $aiResponse = preg_replace('/\[SQL_QUERY\].*?\[\/SQL_QUERY\]/is', '', $aiResponse);
                 $aiResponse = trim($aiResponse);
                 if (empty($aiResponse)) {
-                    $aiResponse = "Maaf, data tidak ditemukan dalam database.";
+                    $aiResponse = "Maaf, saya tidak berhasil menemukan data yang diminta dalam database.";
                 }
             }
 
-            // 6. Simpan respons AI
+            // Save AI response
             if (!empty($aiResponse)) {
                 if (!Database::getInstance()->ping()) {
                     Database::getInstance()->reconnect();
-                    // Re-instantiate model so it gets the fresh DB connection
                     $this->aiChatModel = new AiChatModel();
                 }
                 $this->aiChatModel->saveMessage((int)$user['id'], $sessionId, 'assistant', $aiResponse, $totalTokens);
@@ -231,7 +245,7 @@ class AiChatController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo json_encode(['success' => false, 'error' => 'Terjadi kesalahan server: ' . $e->getMessage()]);
+            echo json_encode(['success' => false, 'error' => 'Terjadi kesalahan: ' . $e->getMessage()]);
         }
     }
 
@@ -293,12 +307,6 @@ class AiChatController extends Controller
     // API: SIMPAN FEEDBACK / KOREKSI MANUAL
     // ============================================================
 
-    /**
-     * Endpoint: POST /api/chat/feedback
-     * Body JSON: { topic, correction, session_id }
-     *
-     * Menyimpan koreksi eksplisit user sebagai knowledge baru.
-     */
     public function saveFeedback(): void
     {
         header('Content-Type: application/json; charset=utf-8');
@@ -319,12 +327,10 @@ class AiChatController extends Controller
             exit;
         }
 
-        // Buat topic otomatis jika tidak disediakan
         if (empty($topic)) {
             $topic = mb_substr($correction, 0, 80);
         }
 
-        // Susun konten yang akan disimpan
         $content = $correction;
         if (!empty($context)) {
             $content = "Konteks pertanyaan: \"{$context}\"\nFakta yang benar: {$correction}";
@@ -332,6 +338,15 @@ class AiChatController extends Controller
 
         try {
             $saved = $this->aiChatModel->saveKnowledge($topic, $content, 'user_feedback');
+
+            // Also save as a learned fact (permanent, no expiry)
+            $this->aiChatModel->saveFact(
+                mb_substr($topic, 0, 255),
+                $correction,
+                'tutorial',  // 'tutorial' category = never expires
+                'user_correction'
+            );
+
             if ($saved) {
                 echo json_encode(['success' => true, 'message' => 'Terima kasih! Koreksi Anda sudah disimpan dan akan digunakan untuk meningkatkan AI.']);
             } else {
@@ -346,10 +361,6 @@ class AiChatController extends Controller
     // INTERNAL: AUTO-DETECT KOREKSI
     // ============================================================
 
-    /**
-     * Mendeteksi apakah pesan user mengandung koreksi.
-     * Jika ya, simpan otomatis ke knowledge base.
-     */
     private function autoSaveCorrection(string $message, int $userId, string $sessionId): void
     {
         $isCorrection = false;
@@ -361,12 +372,10 @@ class AiChatController extends Controller
         }
         if (!$isCorrection) return;
 
-        // Cari pesan terakhir dari assistant di sesi ini sebagai konteks topik
         $history = $this->aiChatModel->getHistory($userId, $sessionId, 6);
         $lastAiMsg = '';
         foreach (array_reverse($history) as $h) {
             if ($h['role'] === 'assistant') {
-                // Ambil 120 karakter pertama sebagai ringkasan topik
                 $lastAiMsg = mb_substr(strip_tags($h['content']), 0, 120);
                 break;
             }
@@ -379,5 +388,54 @@ class AiChatController extends Controller
         }
 
         $this->aiChatModel->saveKnowledge($topic, $content, 'auto_correction');
+    }
+
+    // ============================================================
+    // INTERNAL: AUTO-LEARN FROM SQL RESULTS
+    // ============================================================
+
+    /**
+     * When AI successfully queries and gets data, save key info as a learned fact.
+     * Next time a similar question is asked, AI can answer from cached facts.
+     */
+    private function autoLearnFromResult(string $userMessage, string $sqlResult, AiContextBuilder $contextBuilder): void
+    {
+        try {
+            $category = $contextBuilder->categorizeQuestion($userMessage);
+            $factKey  = mb_substr($userMessage, 0, 200);
+
+            // Truncate large results to save space
+            $factValue = mb_substr($sqlResult, 0, 500);
+
+            $this->aiChatModel->saveFact($factKey, $factValue, $category, 'sql_result');
+        } catch (Throwable $e) {
+            // Silently fail — learning is non-critical
+        }
+    }
+
+    // ============================================================
+    // INTERNAL: GET API KEY (Settings UI > .env > fail)
+    // ============================================================
+
+    private function getApiKey(): string
+    {
+        // Priority 1: Settings UI (app_settings table)
+        $apiKey = $this->settingModel->get('ai_chat_api_key');
+        if (!empty($apiKey)) {
+            return $apiKey;
+        }
+
+        // Priority 2: Legacy key name
+        $apiKey = $this->settingModel->get('ai_api_key');
+        if (!empty($apiKey)) {
+            return $apiKey;
+        }
+
+        // Priority 3: .env file
+        if (defined('AI_CHAT_API_KEY') && !empty(AI_CHAT_API_KEY)) {
+            return AI_CHAT_API_KEY;
+        }
+
+        return '';
     }
 }
