@@ -1106,16 +1106,126 @@
 
 
 /* ============================================
-   SECTION 14: PPOB — Desktop Overrides
+   SECTION 14: PPOB — Desktop Overrides & Theme-Adaptive Redesign
    ============================================ */
 
 @media (min-width: 1024px) {
-    /* PPOB category grid — more columns */
-    .page-section > div[style*="grid-template-columns: repeat(3"] {
-        grid-template-columns: repeat(5, 1fr) !important;
+    /* Full width container for PPOB pages */
+    .page-section:has(.ppob-wrapper),
+    .ppob-wrapper {
+        max-width: 100% !important;
+        margin: 0 !important;
     }
-    .page-section > div[style*="grid-template-columns: repeat(4"] {
-        grid-template-columns: repeat(6, 1fr) !important;
+
+    /* PPOB Hero Header / Saldo Banner */
+    .ppob-hero {
+        padding: 28px 36px !important;
+        border-radius: 20px !important;
+        background: linear-gradient(135deg, var(--surface-1) 0%, var(--surface-2) 100%) !important;
+        border: 1px solid var(--border-color) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15) !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 24px !important;
+    }
+
+    .hero-top-row {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        width: 100% !important;
+    }
+
+    .hero-left {
+        gap: 24px !important;
+    }
+
+    /* Enlarged AlfarezMart logo in PPOB Header */
+    .hero-logo-pure {
+        width: 140px !important;
+        height: 54px !important;
+        object-fit: contain !important;
+        filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2)) !important;
+    }
+
+    .hero-balance-amount {
+        font-size: 1.8rem !important;
+        font-weight: 800 !important;
+        color: var(--text-primary) !important;
+        background: none !important;
+        -webkit-text-fill-color: initial !important;
+    }
+
+    /* PPOB Category Menu Grid (Rich Desktop Cards) */
+    .cat-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)) !important;
+        gap: 16px !important;
+        margin-bottom: 32px !important;
+    }
+
+    .cat-card {
+        flex-direction: row !important;
+        align-items: center !important;
+        text-align: left !important;
+        padding: 16px 18px !important;
+        background: var(--surface-1) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: var(--radius-lg) !important;
+        gap: 14px !important;
+        transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease !important;
+    }
+
+    .cat-card:hover {
+        transform: translateY(-4px) !important;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2) !important;
+        border-color: var(--primary) !important;
+    }
+
+    .cat-icon {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 14px !important;
+        font-size: 1.35rem !important;
+        flex-shrink: 0 !important;
+    }
+
+    .cat-name {
+        font-size: 0.92rem !important;
+        font-weight: 700 !important;
+        color: var(--text-primary) !important;
+        line-height: 1.25 !important;
+    }
+
+    /* Section Titles in PPOB */
+    .section-title {
+        font-size: 1rem !important;
+        letter-spacing: 0.8px !important;
+        margin-bottom: 16px !important;
+        color: var(--text-muted) !important;
+    }
+
+    /* Product / Nominal Cards in PPOB Forms */
+    .product-grid {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+        gap: 16px !important;
+    }
+
+    .prod-group-card {
+        background: var(--surface-1) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: var(--radius-lg) !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .prod-group-card:hover {
+        border-color: var(--primary) !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+        transform: translateY(-2px) !important;
     }
 }
 
