@@ -1219,7 +1219,7 @@
         box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4) !important;
     }
 
-    /* Product / Nominal Cards 3-Column Grid in PPOB Modal */
+    /* Product / Nominal Cards Strictly 3-Column Grid in PPOB Modal */
     #trxModal #product-grid,
     .product-grid {
         display: grid !important;
@@ -1244,13 +1244,27 @@
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
         transform: translateY(-2px) !important;
     }
-}
 
-/* Wide Monitor PPOB Modal Grid (4 Columns on 1350px+) */
-@media (min-width: 1350px) {
-    #trxModal #product-grid {
-        grid-template-columns: repeat(4, 1fr) !important;
-        gap: 18px !important;
+    /* Header Badges & Selling Price Inline Alignment (Single Horizontal Line, Zero Overlap) */
+    .prod-group-header .d-flex.flex-wrap {
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    .prod-group-price-chip {
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+        margin-left: auto !important;
+        font-weight: 800 !important;
+        font-size: 0.82rem !important;
+    }
+
+    .badge-seller-count,
+    .badge-group-sr {
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
     }
 }
 
