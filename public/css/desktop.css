@@ -504,18 +504,18 @@
    ============================================ */
 
 @media (min-width: 1024px) {
-    /* POS page section padding bottom so cart items are never hidden behind floating bar */
+    /* POS page section padding bottom so cart items are never hidden behind floating dock */
     .page-section[style*="padding-bottom:200px"] {
-        padding-bottom: 120px !important;
-        max-width: 100%;
+        padding-bottom: 140px !important;
+        max-width: 100% !important;
     }
 
-    /* POS Desktop Floating Checkout Bar (Always visible at bottom) */
+    /* Ultra-Modern Floating POS Checkout Dock */
     .pos-checkout-bar {
         position: fixed !important;
-        bottom: 0 !important;
-        left: var(--sidebar-width, 260px) !important;
-        right: 0 !important;
+        bottom: 20px !important;
+        left: calc(var(--sidebar-width, 260px) + 24px) !important;
+        right: 24px !important;
         width: auto !important;
         max-width: none !important;
         z-index: 990 !important;
@@ -531,14 +531,13 @@
         display: flex !important;
         align-items: center !important;
         justify-content: space-between !important;
-        background: rgba(22, 22, 38, 0.96) !important;
-        -webkit-backdrop-filter: blur(16px) !important;
-        backdrop-filter: blur(16px) !important;
-        border: 1px solid var(--border-color) !important;
-        border-bottom: none !important;
-        border-radius: var(--radius-xl) var(--radius-xl) 0 0 !important;
-        padding: 16px 36px !important;
-        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.45) !important;
+        background: rgba(20, 20, 35, 0.92) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        backdrop-filter: blur(20px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        border-radius: var(--radius-xl) !important;
+        padding: 16px 28px !important;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(230, 57, 70, 0.12) !important;
         margin: 0 !important;
         width: 100% !important;
         box-sizing: border-box !important;
@@ -547,37 +546,98 @@
     .pos-checkout-bar__summary {
         display: flex !important;
         align-items: center !important;
-        gap: 24px !important;
+        gap: 20px !important;
+        flex: 1 !important;
+        min-width: 0 !important;
+    }
+
+    .pos-checkout-bar__summary-label {
+        font-size: 0.75rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.8px !important;
+        color: var(--text-muted) !important;
+        font-weight: 700 !important;
     }
 
     .pos-checkout-bar__total {
-        font-size: 1.65rem !important;
+        font-size: 1.8rem !important;
         font-weight: 800 !important;
         color: var(--primary) !important;
         letter-spacing: -0.5px !important;
+        line-height: 1.1 !important;
     }
 
+    #cartProfit {
+        font-size: 0.8rem !important;
+        color: var(--success) !important;
+        font-weight: 600 !important;
+        background: rgba(46, 196, 182, 0.12) !important;
+        padding: 3px 10px !important;
+        border-radius: 20px !important;
+        display: inline-block !important;
+        margin-top: 2px !important;
+    }
+
+    .pos-checkout-bar__summary > div[style*="font-size:var(--font-size-xs)"] {
+        font-size: 0.85rem !important;
+        color: var(--text-secondary) !important;
+        background: var(--surface-2) !important;
+        padding: 6px 14px !important;
+        border-radius: 20px !important;
+        font-weight: 600 !important;
+        border: 1px solid var(--border-color) !important;
+    }
+
+    /* Actions pushed cleanly to the far right edge of the floating dock */
     .pos-checkout-bar__actions {
         display: flex !important;
         align-items: center !important;
-        gap: 14px !important;
+        gap: 12px !important;
+        margin-left: auto !important;
         flex-shrink: 0 !important;
     }
 
-    .pos-checkout-bar__actions button {
-        min-width: 140px !important;
-        padding: 12px 24px !important;
+    .pos-checkout-bar__btn-draft {
+        min-width: 120px !important;
+        padding: 12px 20px !important;
         font-size: 0.95rem !important;
         border-radius: var(--radius-md) !important;
-        display: inline-flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        gap: 8px !important;
+        background: rgba(255, 255, 255, 0.06) !important;
+        border: 1px solid var(--border-color) !important;
+        color: var(--text-primary) !important;
+        transition: all 0.2s ease !important;
+    }
+    .pos-checkout-bar__btn-draft:hover:not(:disabled) {
+        background: rgba(255, 255, 255, 0.12) !important;
+        border-color: var(--text-muted) !important;
     }
 
-    /* Sidebar collapsed state shift */
+    .pos-checkout-bar__btn-pay {
+        min-width: 170px !important;
+        padding: 12px 28px !important;
+        font-size: 1.05rem !important;
+        font-weight: 700 !important;
+        border-radius: var(--radius-md) !important;
+        background: linear-gradient(135deg, var(--primary) 0%, #d62828 100%) !important;
+        border: none !important;
+        box-shadow: 0 4px 20px rgba(230, 57, 70, 0.4) !important;
+        transition: all 0.2s ease !important;
+    }
+    .pos-checkout-bar__btn-pay:hover:not(:disabled) {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 24px rgba(230, 57, 70, 0.55) !important;
+        filter: brightness(1.08) !important;
+    }
+
+    /* Sidebar collapsed state positioning */
     body.sidebar-collapsed .pos-checkout-bar {
-        left: 64px !important;
+        left: calc(64px + 24px) !important;
+    }
+
+    /* Adjust floating AI chat button position on POS desktop */
+    .floating-chat-btn {
+        bottom: 96px !important;
+        right: 28px !important;
     }
 
     /* POS segmented control */
