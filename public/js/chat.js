@@ -161,19 +161,20 @@ async function handleChatSubmit(e) {
 
         const data = await response.json();
 
-        if (data.success && data.data && data.data.response) {
+        if (data.success && data.data && typeof data.data.response === 'string' && data.data.response.trim().length > 0) {
             appendMessage('assistant', data.data.response);
         } else {
             const ind = document.getElementById('typingIndicator');
             if (ind) ind.remove();
-            appendMessage('assistant', `⚠️ Maaf, terjadi kesalahan: ${data.error || 'Gagal terhubung ke AI'}`);
+            const errMsg = data.error || (data.data && data.data.response === '' ? 'Model AI tidak memberikan respon text. Silakan coba lagi.' : 'Terjadi kesalahan sistem.');
+            appendMessage('assistant', `⚠️ ${errMsg}`);
         }
     } catch (err) {
         console.error('Chat error:', err);
         const ind = document.getElementById('typingIndicator');
         if (ind) ind.remove();
         appendMessage('assistant', navigator.onLine
-            ? '⚠️ Gagal terhubung ke server. Silakan coba lagi.'
+            ? `⚠️ Gagal terhubung ke server (${err.message || 'Network Error'}). Silakan coba lagi.`
             : '📶 Anda sedang offline. Fitur AI Chat membutuhkan koneksi internet.');
     }
 }

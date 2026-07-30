@@ -128,95 +128,95 @@ class AiChatController extends Controller
             $currentPass = 1;
             $aiResponse  = '';
             $totalTokens = 0;
-            $sqlUsed     = false;
+
+            // List of models to try if primary model fails or returns empty content
+            $fallbackModels = [
+                $model,
+                'google/gemini-2.0-flash-001',
+                'deepseek/deepseek-chat:free',
+                'meta-llama/llama-3.3-70b-instruct:free',
+            ];
+            $fallbackModels = array_values(array_unique(array_filter($fallbackModels)));
 
             while ($currentPass <= $maxPasses) {
-                $postData = [
-                    'model'       => $model,
-                    'messages'    => $messages,
-                    'temperature' => 0.15,   // Low = more factual
-                    'max_tokens'  => 800,    // Token efficient
-                ];
+                $rawContent = '';
+                $requestSuccess = false;
+                $lastErrMsg = '';
 
-                $ch = curl_init($url);
-                curl_setopt_array($ch, [
-                    CURLOPT_RETURNTRANSFER => true,
-                    CURLOPT_POST           => true,
-                    CURLOPT_POSTFIELDS     => json_encode($postData),
-                    CURLOPT_CONNECTTIMEOUT => 15,
-                    CURLOPT_TIMEOUT        => 60,
-                    CURLOPT_SSL_VERIFYPEER => false,
-                    CURLOPT_SSL_VERIFYHOST => 0,
-                    CURLOPT_HTTPHEADER     => [
-                        'Authorization: Bearer ' . $apiKey,
-                        'Content-Type: application/json',
-                        'HTTP-Referer: https://alfarezmart.com',
-                        'X-Title: AlfarezMart AI',
-                    ],
-                ]);
+                foreach ($fallbackModels as $currentModel) {
+                    $postData = [
+                        'model'       => $currentModel,
+                        'messages'    => $messages,
+                        'temperature' => 0.15,
+                        'max_tokens'  => 1500, // Increased for reasoning models
+                    ];
 
-                $response  = curl_exec($ch);
-                $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                $curlError = curl_error($ch);
+                    $ch = curl_init($url);
+                    curl_setopt_array($ch, [
+                        CURLOPT_RETURNTRANSFER => true,
+                        CURLOPT_POST           => true,
+                        CURLOPT_POSTFIELDS     => json_encode($postData),
+                        CURLOPT_CONNECTTIMEOUT => 15,
+                        CURLOPT_TIMEOUT        => 60,
+                        CURLOPT_SSL_VERIFYPEER => false,
+                        CURLOPT_SSL_VERIFYHOST => 0,
+                        CURLOPT_HTTPHEADER     => [
+                            'Authorization: Bearer ' . $apiKey,
+                            'Content-Type: application/json',
+                            'HTTP-Referer: https://alfarezmart.com',
+                            'X-Title: AlfarezMart AI',
+                        ],
+                    ]);
 
-                if ($response === false) {
-                    echo json_encode(['success' => false, 'error' => 'Koneksi ke OpenRouter gagal: ' . $curlError]);
-                    exit;
-                }
+                    $response  = curl_exec($ch);
+                    $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    $curlError = curl_error($ch);
 
-                $resData = json_decode($response, true);
-                if ($httpCode >= 400 || isset($resData['error'])) {
-                    // Try fallback model if openrouter/auto or chosen model failed
-                    if ($model !== 'deepseek/deepseek-chat:free') {
-                        $postData['model'] = 'deepseek/deepseek-chat:free';
-                        $chRetry = curl_init($url);
-                        curl_setopt_array($chRetry, [
-                            CURLOPT_RETURNTRANSFER => true,
-                            CURLOPT_POST           => true,
-                            CURLOPT_POSTFIELDS     => json_encode($postData),
-                            CURLOPT_CONNECTTIMEOUT => 15,
-                            CURLOPT_TIMEOUT        => 60,
-                            CURLOPT_SSL_VERIFYPEER => false,
-                            CURLOPT_SSL_VERIFYHOST => 0,
-                            CURLOPT_HTTPHEADER     => [
-                                'Authorization: Bearer ' . $apiKey,
-                                'Content-Type: application/json',
-                                'HTTP-Referer: https://alfarezmart.com',
-                                'X-Title: AlfarezMart AI',
-                            ],
-                        ]);
-                        $retryRes = curl_exec($chRetry);
-                        $retryCode = curl_getinfo($chRetry, CURLINFO_HTTP_CODE);
-                        if ($retryRes !== false && $retryCode < 400) {
-                            $resData = json_decode($retryRes, true);
-                            if (isset($resData['choices'][0]['message']['content'])) {
-                                $aiResponse   = $resData['choices'][0]['message']['content'];
-                                $totalTokens += $resData['usage']['total_tokens'] ?? 0;
-                                goto process_response;
-                            }
-                        }
+                    if ($response === false) {
+                        $lastErrMsg = 'Koneksi cURL gagal: ' . $curlError;
+                        continue;
                     }
 
-                    $errMsg = $resData['error']['message'] ?? ('AI request gagal (HTTP ' . $httpCode . ')');
-                    echo json_encode(['success' => false, 'error' => 'AI Error: ' . $errMsg]);
+                    $resData = json_decode($response, true);
+                    if ($httpCode >= 400 || isset($resData['error'])) {
+                        $lastErrMsg = $resData['error']['message'] ?? ('HTTP ' . $httpCode);
+                        continue;
+                    }
+
+                    $choiceMsg  = $resData['choices'][0]['message'] ?? [];
+                    $rawContent = $choiceMsg['content'] ?? '';
+
+                    // Fallback to reasoning field if content is null/empty (for thinking models)
+                    if (empty($rawContent) && !empty($choiceMsg['reasoning'])) {
+                        $rawContent = $choiceMsg['reasoning'];
+                    }
+
+                    if (!empty($rawContent)) {
+                        $totalTokens += $resData['usage']['total_tokens'] ?? 0;
+                        $requestSuccess = true;
+                        break; // Success!
+                    }
+                }
+
+                if (!$requestSuccess) {
+                    echo json_encode([
+                        'success' => false,
+                        'error'   => 'AI Error: ' . ($lastErrMsg ?: 'Model AI tidak memberikan respon text. Coba ganti model di Pengaturan AI Chat.')
+                    ]);
                     exit;
                 }
 
-                process_response:
-                $aiResponse   = $resData['choices'][0]['message']['content'] ?? '';
-                $totalTokens += $resData['usage']['total_tokens'] ?? 0;
+                $aiResponse = $rawContent;
 
                 // Check for SQL Query in response
                 if (preg_match('/\[SQL_QUERY\](.*?)\[\/SQL_QUERY\]/is', $aiResponse, $matches)) {
                     $sqlQuery = trim($matches[1]);
-                    $sqlUsed  = true;
 
                     // Security: Only SELECT allowed
                     if (stripos(ltrim($sqlQuery), 'SELECT') !== 0 ||
                         preg_match('/\b(?:INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|REPLACE|GRANT|REVOKE|CREATE)\b/i', $sqlQuery)) {
                         $sqlResult = "ERROR: Hanya query SELECT yang diizinkan.";
                     } else {
-                        // Add LIMIT if missing
                         if (stripos($sqlQuery, 'LIMIT') === false) {
                             $sqlQuery .= " LIMIT 50";
                         }
@@ -266,11 +266,13 @@ class AiChatController extends Controller
 
             // Save AI response
             if (!empty($aiResponse)) {
-                if (!Database::getInstance()->ping()) {
-                    Database::getInstance()->reconnect();
-                    $this->aiChatModel = new AiChatModel();
-                }
-                $this->aiChatModel->saveMessage((int)$user['id'], $sessionId, 'assistant', $aiResponse, $totalTokens);
+                try {
+                    if (!Database::getInstance()->ping()) {
+                        Database::getInstance()->reconnect();
+                        $this->aiChatModel = new AiChatModel();
+                    }
+                    $this->aiChatModel->saveMessage((int)$user['id'], $sessionId, 'assistant', $aiResponse, $totalTokens);
+                } catch (Throwable $dbErr) {}
             }
 
             echo json_encode([
@@ -279,7 +281,7 @@ class AiChatController extends Controller
             ]);
 
         } catch (Throwable $e) {
-            echo json_encode(['success' => false, 'error' => 'Terjadi kesalahan: ' . $e->getMessage()]);
+            echo json_encode(['success' => false, 'error' => 'Terjadi kesalahan server: ' . $e->getMessage()]);
         }
     }
 
