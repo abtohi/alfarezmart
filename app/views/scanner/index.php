@@ -4,22 +4,19 @@ $scannerUserLevel = $_SESSION['user_level'] ?? '';
 $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
 ?>
 <div class="page-section">
-    <div style="text-align: center; margin-bottom: 20px;">
-        <div style="width: 80px; height: 80px; background: var(--primary-bg); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
-            <i class="bi bi-upc-scan" style="font-size: 2rem; color: var(--primary);"></i>
-        </div>
-        <h2 style="font-size: var(--font-size-xl); margin-bottom: 4px;">Cek Harga</h2>
-        <p style="color: var(--text-muted); font-size: var(--font-size-sm);">Scan barcode atau ketik manual untuk cek harga</p>
+    <div class="scanner-header" style="margin-bottom: 20px;">
+        <h2 style="font-size: var(--font-size-xl); font-weight: 800; margin-bottom: 4px; color: var(--text-primary); letter-spacing: -0.3px;">Cek Harga</h2>
+        <p style="color: var(--text-muted); font-size: var(--font-size-sm); margin: 0;">Scan barcode atau ketik manual untuk cek harga</p>
     </div>
 
-    <!-- Manual Input -->
-    <div style="margin-bottom: 20px;">
-        <div class="search-input-wrapper" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 0 16px;">
-            <i class="bi bi-upc" style="color: var(--text-muted);"></i>
+    <!-- Manual Input & Camera Trigger -->
+    <div style="margin-bottom: 16px;">
+        <div class="search-input-wrapper" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 0 16px; display: flex; align-items: center; gap: 10px;">
+            <i class="bi bi-upc-scan" onclick="openGlobalScanner()" style="color: var(--primary); font-size: 1.3rem; cursor: pointer;" title="Klik untuk Buka Kamera Scanner"></i>
             <input type="text" id="barcodeInput" placeholder="Ketik barcode atau nama produk..." 
                    style="flex:1; border:none; background:transparent; padding:14px 0; color:var(--text-primary); font-size:var(--font-size-base); outline:none; font-family: var(--font-family);" 
-                   autocomplete="off">
-            <button onclick="lookupBarcode()" style="border:none; background:var(--primary); color:white; padding:8px 16px; border-radius: 8px; font-weight:600; font-size: var(--font-size-sm); cursor:pointer;">
+                   autocomplete="off" autofocus>
+            <button onclick="lookupBarcode()" style="border:none; background:var(--primary); color:white; padding:8px 20px; border-radius: 8px; font-weight:600; font-size: var(--font-size-sm); cursor:pointer;">
                 Cari
             </button>
         </div>
@@ -30,11 +27,6 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
         <i class="bi bi-bluetooth"></i>
         Hubungkan scanner barcode USB/Bluetooth — barcode akan otomatis terdeteksi. Tekan <kbd style="background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:0.75rem;border:1px solid var(--border-color);">F2</kbd> untuk fokus ke input.
     </div>
-
-    <!-- Camera Scanner Button -->
-    <button id="btnStartScan" onclick="openGlobalScanner()" class="btn-outline-custom" style="width: 100%; margin-bottom: 24px;">
-        <i class="bi bi-camera"></i> Buka Kamera Scanner
-    </button>
 
     <!-- Result Area -->
     <div id="scanResult"></div>
