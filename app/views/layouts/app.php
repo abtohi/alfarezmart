@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS -->
-    <?php $v = '?v=15.04'; ?>
+    <?php $v = '?v=15.06'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -108,12 +108,14 @@ if ($userLevel === 'staff') {
 
     <!-- Desktop Sidebar Navigation (hidden on mobile via CSS) -->
     <aside class="desktop-sidebar" id="desktopSidebar">
-        <button class="sidebar-collapse-btn" onclick="toggleSidebar()" title="Toggle Sidebar">
-            <i class="bi bi-chevron-left"></i>
-        </button>
-        <div class="sidebar-brand">
-            <img src="<?= BASE_URL ?>public/images/Icon.png" alt="AlfarezMart" width="40" height="40">
-            <span>Alfarez<span style="color:var(--primary)">Mart</span></span>
+        <div class="sidebar-brand" onclick="if(document.getElementById('desktopSidebar').classList.contains('collapsed')) toggleSidebar();">
+            <div class="sidebar-brand-left">
+                <img src="<?= BASE_URL ?>public/images/Icon.png" alt="AlfarezMart" width="34" height="34">
+                <span>Alfarez<span style="color:var(--primary)">Mart</span></span>
+            </div>
+            <button class="sidebar-collapse-btn" onclick="event.stopPropagation();toggleSidebar();" title="Toggle Sidebar">
+                <i class="bi bi-chevron-left"></i>
+            </button>
         </div>
         <nav class="sidebar-nav">
             <a href="<?= BASE_URL ?>" class="sidebar-item <?= ($activeNav ?? '') === 'home' ? 'active' : '' ?>">
