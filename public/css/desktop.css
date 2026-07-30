@@ -1,5 +1,6 @@
+@charset "UTF-8";
 /* ============================================
-   AlfarezMart — Desktop & Landscape Override Layer
+   AlfarezMart - Desktop & Landscape Override Layer
    ============================================
    RULE: Every rule in this file MUST be inside a media query.
    This guarantees ZERO impact on mobile portrait layout.

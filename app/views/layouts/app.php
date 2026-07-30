@@ -49,11 +49,23 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS -->
-    <?php $v = '?v=15.03'; ?>
+    <?php $v = '?v=15.04'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/desktop.css<?= $v ?>">
+
+    <!-- Desktop/Mobile Sidebar Responsive Protection (Bypasses Stale CSS Caches) -->
+    <style>
+        @media (max-width: 1023px) {
+            .desktop-sidebar, .sidebar-collapse-btn, .desktop-scanner-hint { display: none !important; }
+        }
+        @media (min-width: 1024px) {
+            .desktop-sidebar { display: flex !important; }
+            .sidebar-collapse-btn { display: flex !important; }
+            .desktop-scanner-hint { display: flex !important; }
+        }
+    </style>
 
     <link rel="manifest" href="<?= BASE_URL ?>manifest.json<?= $v ?>">
 </head>
