@@ -510,7 +510,7 @@
         max-width: 100% !important;
     }
 
-    /* Ultra-Modern Floating POS Checkout Dock */
+    /* Ultra-Modern Floating POS Checkout Dock (Theme Adaptive) */
     .pos-checkout-bar {
         position: fixed !important;
         bottom: 20px !important;
@@ -531,16 +531,17 @@
         display: flex !important;
         align-items: center !important;
         justify-content: space-between !important;
-        background: rgba(20, 20, 35, 0.92) !important;
+        background: var(--surface-1) !important;
         -webkit-backdrop-filter: blur(20px) !important;
         backdrop-filter: blur(20px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        border: 1px solid var(--border-color) !important;
         border-radius: var(--radius-xl) !important;
         padding: 16px 28px !important;
-        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(230, 57, 70, 0.12) !important;
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18), 0 0 25px rgba(230, 57, 70, 0.12) !important;
         margin: 0 !important;
         width: 100% !important;
         box-sizing: border-box !important;
+        color: var(--text-primary) !important;
     }
 
     .pos-checkout-bar__summary {
@@ -602,13 +603,13 @@
         padding: 12px 20px !important;
         font-size: 0.95rem !important;
         border-radius: var(--radius-md) !important;
-        background: rgba(255, 255, 255, 0.06) !important;
+        background: var(--surface-2) !important;
         border: 1px solid var(--border-color) !important;
         color: var(--text-primary) !important;
         transition: all 0.2s ease !important;
     }
     .pos-checkout-bar__btn-draft:hover:not(:disabled) {
-        background: rgba(255, 255, 255, 0.12) !important;
+        background: var(--bg-default) !important;
         border-color: var(--text-muted) !important;
     }
 
@@ -620,6 +621,7 @@
         border-radius: var(--radius-md) !important;
         background: linear-gradient(135deg, var(--primary) 0%, #d62828 100%) !important;
         border: none !important;
+        color: #ffffff !important;
         box-shadow: 0 4px 20px rgba(230, 57, 70, 0.4) !important;
         transition: all 0.2s ease !important;
     }
