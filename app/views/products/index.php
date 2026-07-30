@@ -191,28 +191,31 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
                 <?php endif; ?>
             </div>
         <?php endforeach; ?>
+    <?php endif; ?>
+    </div>
 
-        <?php if (($products['total_pages'] ?? 1) > 1): ?>
-            <?php
-                $totalPages = $products['total_pages'];
-                $currentPage = $products['page'] ?? 1;
-                $qStr = urlencode($search ?? '');
-                $catStr = $selectedCategory ? '&category=' . (int)$selectedCategory : '';
-                $catStr .= ($minPrice !== null) ? '&min_price=' . urlencode($minPrice) : '';
-                $catStr .= ($maxPrice !== null) ? '&max_price=' . urlencode($maxPrice) : '';
-                $buildUrl = function($p) use ($qStr, $catStr) {
-                    return BASE_URL . "products?page={$p}&q={$qStr}{$catStr}";
-                };
-                // Show max 5 page buttons around current
-                $range = 2;
-                $start = max(1, $currentPage - $range);
-                $end = min($totalPages, $currentPage + $range);
-            ?>
-            <div style="display:flex;justify-content:center;align-items:center;gap:4px;margin-top:20px;flex-wrap:wrap;">
+    <?php if (!empty($products['data']) && ($products['total_pages'] ?? 1) > 1): ?>
+        <?php
+            $totalPages = $products['total_pages'];
+            $currentPage = $products['page'] ?? 1;
+            $qStr = urlencode($search ?? '');
+            $catStr = $selectedCategory ? '&category=' . (int)$selectedCategory : '';
+            $catStr .= ($minPrice !== null) ? '&min_price=' . urlencode($minPrice) : '';
+            $catStr .= ($maxPrice !== null) ? '&max_price=' . urlencode($maxPrice) : '';
+            $buildUrl = function($p) use ($qStr, $catStr) {
+                return BASE_URL . "products?page={$p}&q={$qStr}{$catStr}";
+            };
+            // Show max 5 page buttons around current
+            $range = 2;
+            $start = max(1, $currentPage - $range);
+            $end = min($totalPages, $currentPage + $range);
+        ?>
+        <div class="desktop-pagination-wrapper" style="margin-top:28px;padding-top:16px;border-top:1px solid var(--border-color);display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap;">
                 <?php if ($currentPage > 1): ?>
-                    <a href="<?= $buildUrl($currentPage - 1) ?>" class="chip" title="Sebelumnya" style="padding:6px 10px;"><i class="bi bi-chevron-left"></i></a>
+                    <a href="<?= $buildUrl($currentPage - 1) ?>" class="chip" title="Sebelumnya" style="padding:6px 12px;"><i class="bi bi-chevron-left"></i></a>
                 <?php else: ?>
-                    <span class="chip" style="padding:6px 10px;opacity:0.35;pointer-events:none;"><i class="bi bi-chevron-left"></i></span>
+                    <span class="chip" style="padding:6px 12px;opacity:0.35;pointer-events:none;"><i class="bi bi-chevron-left"></i></span>
                 <?php endif; ?>
 
                 <?php if ($start > 1): ?>
@@ -230,17 +233,16 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
                 <?php endif; ?>
 
                 <?php if ($currentPage < $totalPages): ?>
-                    <a href="<?= $buildUrl($currentPage + 1) ?>" class="chip" title="Selanjutnya" style="padding:6px 10px;"><i class="bi bi-chevron-right"></i></a>
+                    <a href="<?= $buildUrl($currentPage + 1) ?>" class="chip" title="Selanjutnya" style="padding:6px 12px;"><i class="bi bi-chevron-right"></i></a>
                 <?php else: ?>
                     <span class="chip" style="padding:6px 10px;opacity:0.35;pointer-events:none;"><i class="bi bi-chevron-right"></i></span>
                 <?php endif; ?>
             </div>
-            <div style="text-align:center;margin-top:6px;font-size:11px;color:var(--text-muted);">
+            <div style="text-align:center;margin-top:8px;font-size:0.82rem;color:var(--text-muted);">
                 Halaman <?= $currentPage ?> dari <?= $totalPages ?>
             </div>
-        <?php endif; ?>
+        </div>
     <?php endif; ?>
-    </div>
 </div>
 
 <style>

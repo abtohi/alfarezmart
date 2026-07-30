@@ -816,6 +816,36 @@
         padding: 8px 0 0 0 !important;
         border-radius: 0 !important;
     }
+
+    /* Desktop Pagination Bar Styling */
+    .desktop-pagination-wrapper {
+        margin-top: 32px !important;
+        padding-top: 20px !important;
+        border-top: 1px solid var(--border-color) !important;
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    .desktop-pagination-wrapper .chip {
+        min-width: 38px !important;
+        height: 38px !important;
+        border-radius: var(--radius-md) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        transition: all 0.2s ease !important;
+        border: 1px solid var(--border-color) !important;
+    }
+    .desktop-pagination-wrapper .chip.active {
+        background: var(--primary) !important;
+        color: white !important;
+        border-color: var(--primary) !important;
+        box-shadow: 0 4px 14px rgba(230, 57, 70, 0.4) !important;
+    }
 }
 
 /* Wide Monitor Desktop Grid (4 columns on 1350px+) */
