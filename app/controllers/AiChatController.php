@@ -114,7 +114,7 @@ class AiChatController extends Controller
 
             // 3. Build smart context
             $contextBuilder = new AiContextBuilder();
-            $systemPrompt   = $contextBuilder->buildSystemPrompt($message);
+            $systemPrompt   = $contextBuilder->buildSystemPrompt($message, $user);
 
             // 4. Build messages array for OpenRouter
             $messages = [['role' => 'system', 'content' => $systemPrompt]];
@@ -129,7 +129,7 @@ class AiChatController extends Controller
             $aiResponse  = '';
             $totalTokens = 0;
 
-            // List of models to try if primary model fails or returns empty content
+            // List of reliable models to try if primary model fails or outputs internal thoughts
             $fallbackModels = [
                 $model,
                 'google/gemini-2.0-flash-001',
@@ -148,7 +148,7 @@ class AiChatController extends Controller
                         'model'       => $currentModel,
                         'messages'    => $messages,
                         'temperature' => 0.15,
-                        'max_tokens'  => 1500, // Increased for reasoning models
+                        'max_tokens'  => 1500,
                     ];
 
                     $ch = curl_init($url);
@@ -186,9 +186,23 @@ class AiChatController extends Controller
                     $choiceMsg  = $resData['choices'][0]['message'] ?? [];
                     $rawContent = $choiceMsg['content'] ?? '';
 
-                    // Fallback to reasoning field if content is null/empty (for thinking models)
+                    // Strip any internal <think>...</think> tags if present
+                    if (!empty($rawContent)) {
+                        $rawContent = preg_replace('/<think>[\s\S]*?<\/think>/i', '', $rawContent);
+                        $rawContent = trim($rawContent);
+                    }
+
+                    // If content is empty, check reasoning field as last resort
                     if (empty($rawContent) && !empty($choiceMsg['reasoning'])) {
-                        $rawContent = $choiceMsg['reasoning'];
+                        $rawContent = trim($choiceMsg['reasoning']);
+                    }
+
+                    // Filter out raw English internal thinking logs (e.g. "I think it's a good idea...", "The user is asking...")
+                    if (preg_match('/^(?:I think|The user|Let\'s|First,|Looking at|To answer|The rule)/i', $rawContent)) {
+                        // If it doesn't contain [SQL_QUERY], ignore this raw English thinking log
+                        if (stripos($rawContent, '[SQL_QUERY]') === false) {
+                            $rawContent = '';
+                        }
                     }
 
                     if (!empty($rawContent)) {

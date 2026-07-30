@@ -246,29 +246,46 @@ body { background: var(--bg-primary); }
     font-size: 0.88em;
 }
 
-/* Feedback button below AI bubble */
+/* Actions below bubbles (Copy & Feedback) */
 .message-actions {
     display: flex;
-    gap: 4px;
+    gap: 6px;
     margin-top: 4px;
-    opacity: 0;
+    opacity: 0.6;
     transition: opacity 0.2s;
 }
-.message.ai:hover .message-actions { opacity: 1; }
-.btn-feedback {
-    background: none;
+.message.user .message-actions {
+    justify-content: flex-end;
+}
+.message:hover .message-actions {
+    opacity: 1;
+}
+
+.btn-chat-action {
+    background: var(--surface-1);
     border: 1px solid var(--border-color);
     border-radius: 6px;
-    padding: 2px 8px;
+    padding: 3px 10px;
     font-size: 11px;
     color: var(--text-muted);
     cursor: pointer;
     transition: all 0.2s;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 4px;
+    font-family: var(--font-family);
 }
-.btn-feedback:hover { background: var(--primary-bg); color: var(--primary); border-color: var(--primary); }
+.btn-chat-action:hover {
+    background: var(--primary-bg);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+.btn-chat-action.copied {
+    background: rgba(46, 196, 182, 0.15);
+    color: var(--success);
+    border-color: var(--success);
+    font-weight: 600;
+}
 
 .chat-input-area {
     padding: 12px 16px;

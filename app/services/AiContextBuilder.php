@@ -40,29 +40,38 @@ class AiContextBuilder
      * Build an ultra-lean system prompt (~800-1200 tokens).
      * AI uses SQL queries to fetch data it needs.
      */
-    public function buildSystemPrompt(string $userMessage = ''): string
+    public function buildSystemPrompt(string $userMessage = '', array $currentUser = []): string
     {
         $q        = mb_strtolower($userMessage);
         $keywords = $this->extractKeywords($userMessage);
 
-        // --- 1. Core Identity & Rules (~300 tokens) ---
+        // --- 1. Core Identity & Strict Rules ---
         $prompt  = "Kamu adalah AI Asisten cerdas toko AlfarezMart. Nama kamu: AlfarezMart AI.\n";
-        $prompt .= "Jawab dalam Bahasa Indonesia, akurat, ringkas, ramah.\n\n";
+        $prompt .= "ATURAN BAHASA: WAJIB 100% BAHASA INDONESIA. DILARANG MENGGUNAKAN BAHASA INGGRIS. DILARANG MENAMPILKAN THOUGHT/REASONING PROCESS INTERNAL.\n\n";
+
+        if (!empty($currentUser)) {
+            $prompt .= "PENGGUNA AKTIF SEKARANG: ID=" . ($currentUser['id'] ?? '?') . ", Nama=\"" . ($currentUser['name'] ?? 'User') . "\", Level=" . ($currentUser['level'] ?? 'user') . "\n\n";
+        }
 
         $prompt .= "ATURAN KETAT:\n";
-        $prompt .= "1. PRIORITAS UTAMA: Gunakan DATA INTERNAL di bawah jika tersedia. DILARANG menebak angka/harga.\n";
-        $prompt .= "2. Jika data TIDAK ADA di konteks, WAJIB query database dengan format:\n";
+        $prompt .= "1. Jawab dalam BAHASA INDONESIA yang ramah, akurat, dan profesional.\n";
+        $prompt .= "2. PRIORITAS UTAMA: Gunakan DATA INTERNAL di bawah jika tersedia. DILARANG menebak angka/harga.\n";
+        $prompt .= "3. Jika data TIDAK ADA di konteks, WAJIB query database dengan format:\n";
         $prompt .= "   [SQL_QUERY]SELECT ... FROM ... LIMIT 50[/SQL_QUERY]\n";
         $prompt .= "   HANYA tag itu saja. TANPA kalimat apapun sebelum/sesudah tag.\n";
-        $prompt .= "3. DILARANG bilang 'tidak tahu' / 'tidak memiliki akses' SEBELUM mencoba SQL query.\n";
-        $prompt .= "4. Jika [SQL_RESULT] kosong ([]), beritahu user data tidak ditemukan. JANGAN buat SQL lagi.\n";
-        $prompt .= "5. Output: Markdown rapi. Angka penting di-**bold**. Gunakan tabel jika data tabular.\n";
-        $prompt .= "6. SCOPE: Hanya menjawab seputar data & fitur toko AlfarezMart. Tolak pertanyaan di luar scope dengan sopan.\n";
-        $prompt .= "7. Untuk pertanyaan harga, SELALU tampilkan harga beli (modal), harga jual eceran, dan harga jual grosir jika tersedia.\n\n";
+        $prompt .= "4. DILARANG bilang 'tidak tahu' / 'tidak memiliki akses' SEBELUM mencoba SQL query.\n";
+        $prompt .= "5. Jika [SQL_RESULT] kosong ([]), beritahu user data tidak ditemukan. JANGAN buat SQL lagi.\n";
+        $prompt .= "6. Output: Markdown rapi. Angka penting di-**bold**. Gunakan tabel jika data tabular.\n";
+        $prompt .= "7. SCOPE: Hanya menjawab seputar data & fitur toko AlfarezMart. Tolak pertanyaan di luar scope dengan sopan.\n";
+        $prompt .= "8. Untuk pertanyaan harga, SELALU tampilkan harga beli (modal), harga jual eceran, dan harga jual grosir jika tersedia.\n\n";
+
+        $prompt .= "PETUNJUK PERTANYAAN PENJUALAN & PEMBELIAN:\n";
+        $prompt .= "- Jika user bertanya 'belanja apa aja' / 'pembelian toko' / 'barang masuk': Query tabel `purchases` JOIN `purchase_items` ON purchases.id = purchase_items.purchase_id JOIN `products` ON purchase_items.product_id = products.id WHERE DATE(purchases.purchase_date) = CURDATE() (atau tanggal sesuai pertanyaan).\n";
+        $prompt .= "- Jika user bertanya 'penjualan' / 'omzet' / 'transaksi kasir': Query `sale_transactions` JOIN `sale_items` ON sale_transactions.id = sale_items.transaction_id JOIN `products` ON sale_items.product_id = products.id WHERE DATE(sale_transactions.created_at) = CURDATE().\n\n";
 
         // --- 2. Current date/time ---
         $hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
-        $prompt .= "Tanggal: " . date('Y-m-d') . " (" . $hari[(int)date('w')] . "), " . date('H:i') . " WIB\n\n";
+        $prompt .= "Tanggal Hari Ini: " . date('Y-m-d') . " (" . $hari[(int)date('w')] . "), " . date('H:i') . " WIB\n\n";
 
         // --- 3. Learned Facts (cached answers from previous interactions) ---
         if (!empty($keywords)) {

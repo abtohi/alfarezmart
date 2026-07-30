@@ -48,11 +48,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // BUBBLE GENERATION
 // ============================================================
 
-function generateBubbleHTML(role, content, showFeedback = false) {
+function generateBubbleHTML(role, content) {
     const isUser = role === 'user';
     let htmlContent = content;
 
     if (!isUser) {
+        // Strip any residual internal thinking tags
+        content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
         if (typeof marked !== 'undefined') {
             htmlContent = marked.parse(content);
         } else {
@@ -62,18 +64,61 @@ function generateBubbleHTML(role, content, showFeedback = false) {
         htmlContent = escapeHtml(content).replace(/\n/g, '<br>');
     }
 
+    const copyBtn = `
+        <button class="btn-chat-action" onclick="copyMessageText(this)" data-content="${escapeAttr(content)}" title="Salin pesan">
+            📋 Salin
+        </button>`;
+
     const feedbackBtn = (!isUser) ? `
-        <div class="message-actions">
-            <button class="btn-feedback" onclick="openFeedbackModal(this)" data-content="${escapeAttr(content)}" title="Beri koreksi / feedback">
-                ✏️ Koreksi
-            </button>
-        </div>` : '';
+        <button class="btn-chat-action" onclick="openFeedbackModal(this)" data-content="${escapeAttr(content)}" title="Beri koreksi / feedback">
+            ✏️ Koreksi
+        </button>` : '';
 
     return `
         <div class="message ${isUser ? 'user' : 'ai'}">
             <div class="message-bubble">${htmlContent}</div>
-            ${feedbackBtn}
+            <div class="message-actions">
+                ${copyBtn}
+                ${feedbackBtn}
+            </div>
         </div>`;
+}
+
+function copyMessageText(btn) {
+    const text = btn.getAttribute('data-content') || '';
+    if (!text) return;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => showCopiedFeedback(btn)).catch(() => fallbackCopyText(text, btn));
+    } else {
+        fallbackCopyText(text, btn);
+    }
+}
+
+function fallbackCopyText(text, btn) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+        document.execCommand('copy');
+        showCopiedFeedback(btn);
+    } catch (e) {
+        alert('Gagal menyalin teks');
+    }
+    document.body.removeChild(textarea);
+}
+
+function showCopiedFeedback(btn) {
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '✓ Tersalin!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.classList.remove('copied');
+    }, 2000);
 }
 
 function appendMessage(role, content) {
