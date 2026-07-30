@@ -636,45 +636,147 @@
 
 
 /* ============================================
-   SECTION 7: SCANNER — Desktop Overrides
+   SECTION 7: SCANNER / CEK HARGA — Desktop Overrides
    ============================================ */
 
 @media (min-width: 1024px) {
-    /* Scanner page — centered layout */
+    /* Full width layout for scanner container */
     .page-section > div[style*="text-align: center"] {
-        max-width: 600px;
-        margin-left: auto;
-        margin-right: auto;
+        max-width: 100% !important;
+        margin: 0 0 20px 0 !important;
+        text-align: left !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 16px !important;
+    }
+    .page-section > div[style*="text-align: center"] > div[style*="width: 80px"] {
+        margin: 0 !important;
+        width: 54px !important;
+        height: 54px !important;
+        flex-shrink: 0 !important;
+    }
+    .page-section > div[style*="text-align: center"] h2 {
+        font-size: 1.4rem !important;
+        margin-bottom: 2px !important;
     }
 
-    /* Scanner input bigger */
-    .page-section #barcodeInput {
-        font-size: 1.1rem !important;
-        padding: 16px 0 !important;
-    }
-
-    /* Scan result centered */
-    #scanResult {
-        max-width: 700px;
-        margin: 0 auto;
-    }
-
-    /* Hardware scanner hint */
+    /* Hardware scanner hint banner */
     .desktop-scanner-hint {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 10px 16px;
-        margin-bottom: 16px;
-        background: var(--info-bg);
-        border: 1px solid rgba(76, 201, 240, 0.2);
-        border-radius: var(--radius-md);
-        font-size: 0.82rem;
-        color: var(--info);
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 10px !important;
+        padding: 12px 20px !important;
+        margin-bottom: 20px !important;
+        background: rgba(76, 201, 240, 0.08) !important;
+        border: 1px solid rgba(76, 201, 240, 0.25) !important;
+        border-radius: var(--radius-md) !important;
+        font-size: 0.88rem !important;
+        color: var(--info) !important;
     }
     .desktop-scanner-hint i {
-        font-size: 1rem;
+        font-size: 1.1rem !important;
+    }
+
+    /* Search input & toolbar full width */
+    .page-section > div[style*="margin-bottom: 20px"] {
+        max-width: 100% !important;
+    }
+    .page-section .search-input-wrapper {
+        padding: 4px 18px !important;
+        border-radius: var(--radius-lg) !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1) !important;
+    }
+    .page-section #barcodeInput {
+        font-size: 1.15rem !important;
+        padding: 14px 8px !important;
+    }
+    .page-section .search-input-wrapper button {
+        padding: 10px 24px !important;
+        font-size: 0.95rem !important;
+        border-radius: var(--radius-md) !important;
+    }
+
+    /* Camera Scanner Button on desktop */
+    #btnStartScan {
+        max-width: 280px !important;
+        margin-bottom: 24px !important;
+        padding: 10px 20px !important;
+    }
+
+    /* Scan Result area — wide desktop presentation */
+    #scanResult {
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+
+    /* Result cards grid when multiple products found */
+    #scanResult > .product-card {
+        border-radius: var(--radius-lg) !important;
+        padding: 18px !important;
+        transition: all 0.2s ease !important;
+    }
+    #scanResult > .product-card:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.2) !important;
+        border-color: var(--primary) !important;
+    }
+
+    /* Multi-product search results in 2 columns */
+    #scanResult:has(> .product-card:nth-child(2)) {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 16px !important;
+    }
+
+    /* Single Product Scan Result Card — Desktop Split Layout */
+    #scanResult > div[style*="background:var(--surface-1)"] {
+        padding: 24px !important;
+        border-radius: var(--radius-xl) !important;
+        border: 1px solid var(--border-color) !important;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.15) !important;
+    }
+
+    /* Product Header info wider */
+    #scanResult > div[style*="background:var(--surface-1)"] > div[style*="display:flex"][style*="gap:14px"] {
+        gap: 20px !important;
+        align-items: center !important;
+        padding-bottom: 16px !important;
+        border-bottom: 1px solid var(--border-color) !important;
+        margin-bottom: 20px !important;
+    }
+
+    /* Image thumbnail larger */
+    #scanResult img[onclick*="viewFullPhoto"] {
+        width: 80px !important;
+        height: 80px !important;
+        border-radius: var(--radius-md) !important;
+    }
+
+    /* Product Title & metadata larger */
+    #scanResult h3 {
+        font-size: 1.35rem !important;
+        font-weight: 800 !important;
+        margin-bottom: 6px !important;
+    }
+
+    /* Packaging Prices Grid on Desktop */
+    #scanResult div[style*="text-transform:uppercase"] + div,
+    #scanResult div[style*="Harga per Kemasan"] + div {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+        gap: 14px !important;
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+    }
+
+    #scanResult div[style*="border-bottom:1px solid var(--border-color)"] {
+        background: var(--surface-1) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: var(--radius-lg) !important;
+        padding: 16px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
     }
 }
 
