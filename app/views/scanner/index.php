@@ -25,6 +25,12 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
         </div>
     </div>
 
+    <!-- Desktop hardware scanner hint (hidden on mobile via CSS) -->
+    <div class="desktop-scanner-hint">
+        <i class="bi bi-bluetooth"></i>
+        Hubungkan scanner barcode USB/Bluetooth — barcode akan otomatis terdeteksi. Tekan <kbd style="background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:0.75rem;border:1px solid var(--border-color);">F2</kbd> untuk fokus ke input.
+    </div>
+
     <!-- Camera Scanner Button -->
     <button id="btnStartScan" onclick="openGlobalScanner()" class="btn-outline-custom" style="width: 100%; margin-bottom: 24px;">
         <i class="bi bi-camera"></i> Buka Kamera Scanner

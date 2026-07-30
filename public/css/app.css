@@ -141,11 +141,7 @@ label.form-label.text-muted {
 .skeleton { background: linear-gradient(90deg, var(--surface-1) 25%, var(--surface-2) 50%, var(--surface-1) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: var(--radius-sm); }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-/* Responsive */
-@media (min-width: 768px) {
-    .app-content { max-width: 480px; margin: 0 auto; }
-    .bottom-nav { max-width: 480px; left: 50%; transform: translateX(-50%); border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
-}
+/* Responsive — desktop/tablet overrides are in desktop.css */
 
 /* Floating AI Chat Button */
 .floating-chat-btn { position: fixed; bottom: calc(var(--bottom-nav-height) + 16px); right: 16px; width: 56px; height: 56px; border-radius: 28px; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(230, 57, 70, 0.4); z-index: 998; text-decoration: none; animation: pulse 2s infinite; transition: transform 0.3s; }

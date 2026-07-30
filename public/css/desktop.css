@@ -1,0 +1,915 @@
+/* ============================================
+   AlfarezMart — Desktop & Landscape Override Layer
+   ============================================
+   RULE: Every rule in this file MUST be inside a media query.
+   This guarantees ZERO impact on mobile portrait layout.
+   ============================================ */
+
+/* ============================================
+   SECTION 1: LANDSCAPE MOBILE (768px – 1023px)
+   HP yang di-rotate / tablet portrait+landscape
+   ============================================ */
+
+@media (min-width: 768px) {
+    /* Remove the mobile 480px cap — let content breathe */
+    .app-content {
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+    .bottom-nav {
+        max-width: 100% !important;
+        left: 0 !important;
+        transform: none !important;
+        border-radius: 0 !important;
+    }
+
+    /* Page section wider */
+    .page-section {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 20px 24px;
+    }
+
+    /* Toast container wider */
+    .toast-container {
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 500px;
+        right: auto;
+    }
+
+    /* POS checkout bar wider */
+    .pos-checkout-bar {
+        max-width: 720px;
+    }
+
+    /* Floating chat button */
+    .floating-chat-btn {
+        right: 24px;
+    }
+}
+
+/* Landscape-specific for phones */
+@media (orientation: landscape) and (min-width: 568px) and (max-width: 1023px) {
+    .app-content {
+        max-width: 100% !important;
+    }
+
+    .page-section {
+        max-width: 100%;
+        padding: 16px 24px;
+    }
+
+    /* Bottom nav more compact in landscape */
+    .bottom-nav {
+        height: 52px;
+        padding-bottom: 0;
+    }
+    .nav-item {
+        padding: 4px 16px;
+        font-size: 0.65rem;
+    }
+    .nav-item i {
+        font-size: 1.15rem;
+    }
+    .nav-scan .scan-btn-wrapper {
+        width: 44px;
+        height: 44px;
+        margin-top: -14px;
+    }
+    .nav-scan .scan-btn-wrapper i {
+        font-size: 1.2rem;
+    }
+
+    /* Content padding adjusted for shorter bottom nav */
+    .app-content {
+        padding-bottom: calc(52px + 16px) !important;
+    }
+
+    /* POS checkout bar adjusted */
+    .pos-checkout-bar {
+        bottom: calc(53px + env(safe-area-inset-bottom, 0px)) !important;
+        max-width: 100%;
+    }
+}
+
+
+/* ============================================
+   SECTION 2: DESKTOP LAYOUT (≥1024px)
+   Full sidebar + expanded content
+   ============================================ */
+
+@media (min-width: 1024px) {
+
+    /* --- 2.1 Desktop Sidebar --- */
+    .desktop-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: var(--sidebar-width, 260px);
+        background: var(--bg-secondary);
+        border-right: 1px solid var(--border-color);
+        z-index: 101;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sidebar-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 20px 20px 16px;
+        border-bottom: 1px solid var(--border-color);
+        flex-shrink: 0;
+    }
+    .sidebar-brand img {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        object-fit: contain;
+        flex-shrink: 0;
+    }
+    .sidebar-brand span {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        letter-spacing: -0.3px;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    .sidebar-nav {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 12px 10px;
+        scrollbar-width: thin;
+    }
+    .sidebar-nav::-webkit-scrollbar { width: 3px; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 10px; }
+
+    .sidebar-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 14px;
+        border-radius: var(--radius-md);
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.88rem;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+    .sidebar-item i {
+        font-size: 1.15rem;
+        width: 22px;
+        text-align: center;
+        flex-shrink: 0;
+        transition: color 0.2s ease;
+    }
+    .sidebar-item span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .sidebar-item:hover {
+        background: var(--surface-2);
+        color: var(--text-primary);
+    }
+    .sidebar-item.active {
+        background: var(--primary-bg);
+        color: var(--primary);
+        font-weight: 600;
+    }
+    .sidebar-item.active i {
+        color: var(--primary);
+    }
+
+    .sidebar-separator {
+        height: 1px;
+        background: var(--border-color);
+        margin: 10px 14px;
+    }
+
+    .sidebar-footer {
+        border-top: 1px solid var(--border-color);
+        padding: 12px 14px;
+        flex-shrink: 0;
+    }
+    .sidebar-user {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .sidebar-user-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--primary-bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--primary);
+        border: 1.5px solid var(--primary);
+        flex-shrink: 0;
+    }
+    .sidebar-user-info {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+    }
+    .sidebar-user-name {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .sidebar-user-role {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        text-transform: capitalize;
+    }
+    .sidebar-logout {
+        color: var(--danger);
+        font-size: 1.1rem;
+        padding: 6px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+    .sidebar-logout:hover {
+        background: var(--danger-bg);
+    }
+
+    /* --- 2.2 Hide bottom nav on desktop --- */
+    .bottom-nav {
+        display: none !important;
+    }
+
+    /* --- 2.3 Header adjustments for desktop --- */
+    .app-header {
+        left: var(--sidebar-width, 260px);
+        height: var(--header-height, 64px);
+    }
+    .header-content {
+        padding: 0 28px;
+    }
+    .header-title {
+        font-size: 1.1rem;
+    }
+    .header-btn {
+        width: 42px;
+        height: 42px;
+        font-size: 1.25rem;
+    }
+    .header-btn:hover {
+        background: rgba(255,255,255,0.1);
+    }
+
+    /* Status bar overlay shifted */
+    .status-bar-overlay {
+        left: var(--sidebar-width, 260px);
+    }
+
+    /* --- 2.4 Main content area --- */
+    .app-content {
+        margin-left: var(--sidebar-width, 260px) !important;
+        max-width: none !important;
+        padding-top: calc(var(--header-height, 64px) + var(--safe-area-top));
+        padding-bottom: 32px !important;
+        min-height: 100vh;
+    }
+
+    .page-section {
+        max-width: var(--content-max-width, 1200px);
+        margin: 0 auto;
+        padding: 24px 32px;
+    }
+
+    /* --- 2.5 Toast position --- */
+    .toast-container {
+        left: calc(var(--sidebar-width, 260px) + 24px);
+        right: 24px;
+        max-width: 500px;
+        transform: none;
+    }
+
+    /* --- 2.6 Floating chat button --- */
+    .floating-chat-btn {
+        bottom: 24px;
+        right: 28px;
+    }
+
+    /* --- 2.7 Search overlay --- */
+    .search-overlay .search-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding-top: calc(var(--header-height, 64px) + 16px);
+    }
+
+    /* --- 2.8 Modal dialog — centered, not bottom-sheet --- */
+    .modal-overlay {
+        align-items: center;
+    }
+    .modal-dialog {
+        border-radius: var(--radius-xl);
+        max-width: 560px;
+        max-height: 80vh;
+        transform: scale(0.95) translateY(10px);
+    }
+    .modal-overlay.active .modal-dialog {
+        transform: scale(1) translateY(0);
+    }
+    .modal-handle {
+        display: none;
+    }
+
+    /* Bootstrap modal also centered */
+    .modal .modal-dialog {
+        max-width: 560px;
+    }
+
+    /* --- 2.9 Form improvements --- */
+    .form-control-dark,
+    .form-select-dark {
+        padding: 14px 18px;
+        font-size: var(--font-size-base);
+    }
+
+    /* Searchbox dropdown wider */
+    .searchbox-dropdown {
+        max-width: 400px;
+    }
+
+    /* --- 2.10 Scrollbar on desktop --- */
+    ::-webkit-scrollbar {
+        width: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: var(--text-muted);
+        border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--text-secondary);
+    }
+
+    /* --- 2.11 Enable user-select on desktop --- */
+    body {
+        -webkit-user-select: auto !important;
+        -moz-user-select: auto !important;
+        -ms-user-select: auto !important;
+        user-select: auto !important;
+        cursor: default;
+    }
+    /* But keep disabled on nav items */
+    .sidebar-item, .header-btn, .bottom-nav, .nav-item {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        user-select: none !important;
+    }
+
+    /* --- 2.12 Button hover effects (desktop has mouse) --- */
+    .btn-primary-custom:hover {
+        filter: brightness(1.08);
+        box-shadow: 0 6px 20px rgba(230,57,70,0.35);
+        transform: translateY(-1px);
+    }
+    .btn-outline-custom:hover {
+        background: var(--surface-1);
+        border-color: var(--text-muted);
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--border-active);
+    }
+    .product-card:hover {
+        background: var(--surface-2);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+    }
+    .menu-item:hover {
+        background: var(--surface-2);
+    }
+    .quick-action:hover {
+        transform: translateY(-2px);
+    }
+    .quick-action:hover .action-icon {
+        transform: scale(1.08);
+    }
+
+    /* Remove mobile touch-specific behaviors */
+    .stat-card:active,
+    .product-card:active,
+    .quick-action:active {
+        transform: none;
+    }
+
+    /* --- 2.13 Photo lightbox --- */
+    #fullPhotoModal {
+        padding-left: var(--sidebar-width, 260px);
+    }
+}
+
+
+/* ============================================
+   SECTION 3: DASHBOARD — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Stat cards: 4 columns */
+    .page-section > div[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 16px !important;
+    }
+
+    /* Quick actions: more columns */
+    .page-section > div[style*="repeat(4, 1fr)"] {
+        grid-template-columns: repeat(6, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    /* Menu lists: 2-column grid */
+    .menu-list {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0;
+    }
+    .menu-list > .menu-item {
+        border-radius: 0;
+        border: 1px solid var(--border-color);
+        margin: -0.5px;
+    }
+    .menu-list > .menu-item:first-child {
+        border-radius: var(--radius-md) 0 0 0;
+    }
+    .menu-list > .menu-item:nth-child(2) {
+        border-radius: 0 var(--radius-md) 0 0;
+    }
+    .menu-list > .menu-item:last-child {
+        border-radius: 0 0 var(--radius-md) 0;
+    }
+    .menu-list > .menu-item:nth-last-child(2):nth-child(odd) {
+        border-radius: 0 0 0 var(--radius-md);
+    }
+    /* Single item last row */
+    .menu-list > .menu-item:last-child:nth-child(odd) {
+        grid-column: span 1;
+        border-radius: 0 0 0 var(--radius-md);
+    }
+
+    /* Welcome banner wider */
+    .page-section > div[style*="gradient-card"][style*="display:flex"] {
+        padding: 24px 28px !important;
+    }
+}
+
+/* Landscape phone: stat 2 col, quick actions 4+ col */
+@media (orientation: landscape) and (min-width: 568px) and (max-width: 1023px) {
+    .page-section > div[style*="repeat(4, 1fr)"] {
+        grid-template-columns: repeat(6, 1fr) !important;
+    }
+}
+
+
+/* ============================================
+   SECTION 4: POS — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* POS desktop wrapper — split layout */
+    .pos-desktop-wrapper {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 24px;
+        align-items: start;
+    }
+
+    .pos-main-area {
+        min-width: 0;
+    }
+
+    .pos-cart-sidebar {
+        position: sticky;
+        top: calc(var(--header-height, 64px) + var(--safe-area-top) + 16px);
+        max-height: calc(100vh - var(--header-height, 64px) - var(--safe-area-top) - 32px);
+        overflow-y: auto;
+        background: var(--surface-1);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: 16px;
+    }
+
+    /* POS checkout bar — inside cart sidebar on desktop */
+    .pos-checkout-bar {
+        position: static !important;
+        transform: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        pointer-events: auto !important;
+        left: auto !important;
+        bottom: auto !important;
+    }
+    .pos-checkout-bar__inner {
+        box-shadow: none;
+        border: none;
+        border-top: 1px solid var(--border-color);
+        border-radius: 0;
+        padding: 14px 0 0;
+        background: transparent;
+    }
+
+    /* POS page section: no max-width cap */
+    .page-section[style*="padding-bottom:200px"] {
+        padding-bottom: 32px !important;
+        max-width: 100%;
+    }
+
+    /* Cart items spacing */
+    .pos-cart-sidebar .pos-checkout-bar__actions {
+        flex-direction: row;
+    }
+    .pos-checkout-bar__actions .btn-outline-custom,
+    .pos-checkout-bar__actions .btn-primary-custom {
+        max-width: none;
+    }
+
+    /* POS segmented control */
+    .pos-segmented button {
+        padding: 6px 18px;
+        font-size: 12px;
+    }
+}
+
+
+/* ============================================
+   SECTION 5: PRODUCTS LIST — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Product cards in 2-column grid */
+    .product-card {
+        display: flex;
+    }
+
+    /* Desktop product grid — wrap in container */
+    .desktop-product-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    /* Search and filter row inline */
+    .page-section > div[style*="display:flex"][style*="gap:8px"][style*="margin-bottom:10px"] {
+        max-width: 600px;
+    }
+
+    /* Price filter inline */
+    .page-section > div[style*="margin-bottom:12px"] > div[style*="display:flex"][style*="gap:8px"] {
+        max-width: 500px;
+    }
+}
+
+
+/* ============================================
+   SECTION 6: PRODUCT CREATE/EDIT — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Two-column form layout */
+    .desktop-form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+        align-items: start;
+    }
+    .desktop-form-grid > * {
+        min-width: 0;
+    }
+}
+
+
+/* ============================================
+   SECTION 7: SCANNER — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Scanner page — centered layout */
+    .page-section > div[style*="text-align: center"] {
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* Scanner input bigger */
+    .page-section #barcodeInput {
+        font-size: 1.1rem !important;
+        padding: 16px 0 !important;
+    }
+
+    /* Scan result centered */
+    #scanResult {
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    /* Hardware scanner hint */
+    .desktop-scanner-hint {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 16px;
+        margin-bottom: 16px;
+        background: var(--info-bg);
+        border: 1px solid rgba(76, 201, 240, 0.2);
+        border-radius: var(--radius-md);
+        font-size: 0.82rem;
+        color: var(--info);
+    }
+    .desktop-scanner-hint i {
+        font-size: 1rem;
+    }
+}
+
+/* Hide scanner hint on mobile */
+@media (max-width: 1023px) {
+    .desktop-scanner-hint {
+        display: none !important;
+    }
+}
+
+
+/* ============================================
+   SECTION 8: PURCHASES — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Purchase groups wider */
+    .purchase-groups {
+        gap: 12px;
+    }
+
+    /* Purchase form — wider items */
+    .purchase-item-card {
+        padding: 12px 16px;
+    }
+
+    /* Purchase create/edit — wider layout */
+    .purchases-index__header {
+        max-width: none;
+    }
+}
+
+
+/* ============================================
+   SECTION 9: SALES LIST — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Sales list filters inline */
+    .page-section > .chip-scroll {
+        flex-wrap: wrap;
+        overflow-x: visible;
+        padding: 0 0 12px;
+    }
+}
+
+
+/* ============================================
+   SECTION 10: FINANCE — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Finance stats grid */
+    .page-section > div[style*="grid-template-columns: 1fr 1fr 1fr"] {
+        gap: 16px !important;
+    }
+}
+
+
+/* ============================================
+   SECTION 11: SETTINGS — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Settings menus — 2 col already handled by menu-list grid */
+}
+
+
+/* ============================================
+   SECTION 12: CUSTOMERS — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Customer cards wider layout */
+    .page-section > div[style*="display: flex"][style*="flex-direction: column"][style*="gap:"] {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+    }
+}
+
+
+/* ============================================
+   SECTION 13: SUPPLIERS — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Supplier cards 2-col */
+}
+
+
+/* ============================================
+   SECTION 14: PPOB — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* PPOB category grid — more columns */
+    .page-section > div[style*="grid-template-columns: repeat(3"] {
+        grid-template-columns: repeat(5, 1fr) !important;
+    }
+    .page-section > div[style*="grid-template-columns: repeat(4"] {
+        grid-template-columns: repeat(6, 1fr) !important;
+    }
+}
+
+
+/* ============================================
+   SECTION 15: DEBTS — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Debt cards 2-col */
+}
+
+
+/* ============================================
+   SECTION 16: CHAT — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Chat container centered and wider */
+    .page-section {
+        max-width: 800px;
+    }
+}
+
+
+/* ============================================
+   SECTION 17: HELP — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Help content wider */
+}
+
+
+/* ============================================
+   SECTION 18: REPORTS — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* Report charts / tables wider */
+}
+
+
+/* ============================================
+   SECTION 19: USERS — Desktop Overrides
+   ============================================ */
+
+@media (min-width: 1024px) {
+    /* User list 2-col */
+}
+
+
+/* ============================================
+   SECTION 20: LARGE DESKTOP (≥1440px)
+   ============================================ */
+
+@media (min-width: 1440px) {
+    .page-section {
+        max-width: 1400px;
+        padding: 28px 40px;
+    }
+
+    /* POS wider cart sidebar */
+    .pos-desktop-wrapper {
+        grid-template-columns: 1fr 420px;
+    }
+
+    /* Stat cards: still 4 col but wider */
+    /* Product grid: 3 columns */
+    .desktop-product-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    /* Quick actions: 8 columns */
+    .page-section > div[style*="repeat(4, 1fr)"] {
+        grid-template-columns: repeat(8, 1fr) !important;
+    }
+}
+
+
+/* ============================================
+   SIDEBAR COLLAPSED STATE (toggle via JS)
+   ============================================ */
+
+@media (min-width: 1024px) {
+    .desktop-sidebar.collapsed {
+        width: 64px;
+    }
+    .desktop-sidebar.collapsed .sidebar-brand span,
+    .desktop-sidebar.collapsed .sidebar-item span,
+    .desktop-sidebar.collapsed .sidebar-user-info,
+    .desktop-sidebar.collapsed .sidebar-logout {
+        display: none;
+    }
+    .desktop-sidebar.collapsed .sidebar-brand {
+        justify-content: center;
+        padding: 20px 12px 16px;
+    }
+    .desktop-sidebar.collapsed .sidebar-item {
+        justify-content: center;
+        padding: 12px;
+    }
+    .desktop-sidebar.collapsed .sidebar-user {
+        justify-content: center;
+    }
+    .desktop-sidebar.collapsed .sidebar-user-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+
+    body.sidebar-collapsed .app-header {
+        left: 64px;
+    }
+    body.sidebar-collapsed .app-content {
+        margin-left: 64px !important;
+    }
+    body.sidebar-collapsed .status-bar-overlay {
+        left: 64px;
+    }
+    body.sidebar-collapsed .toast-container {
+        left: calc(64px + 24px);
+    }
+    body.sidebar-collapsed #fullPhotoModal {
+        padding-left: 64px;
+    }
+
+    /* Sidebar collapse toggle button */
+    .sidebar-collapse-btn {
+        position: absolute;
+        top: 22px;
+        right: -14px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--surface-1);
+        border: 1px solid var(--border-color);
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        cursor: pointer;
+        z-index: 102;
+        transition: all 0.2s;
+        box-shadow: var(--shadow-sm);
+    }
+    .sidebar-collapse-btn:hover {
+        background: var(--primary-bg);
+        color: var(--primary);
+        border-color: var(--primary);
+    }
+    .desktop-sidebar.collapsed .sidebar-collapse-btn i {
+        transform: rotate(180deg);
+    }
+}
+
+
+/* ============================================
+   HIDE SIDEBAR ON MOBILE (safety net)
+   ============================================ */
+
+@media (max-width: 1023px) {
+    .desktop-sidebar {
+        display: none !important;
+    }
+    .sidebar-collapse-btn {
+        display: none !important;
+    }
+}

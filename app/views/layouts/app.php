@@ -25,7 +25,7 @@ if ($userLevel === 'staff') {
     <!-- ⚡ Apply theme IMMEDIATELY before CSS renders to prevent dark flash -->
     <script>!function(){var t=localStorage.getItem('alfarezmart_theme')||'dark';document.documentElement.setAttribute('data-theme',t);}();</script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="AlfarezMart - Sistem Manajemen Stok Toko">
     <meta name="theme-color" content="#1a1a2e">
     <meta name="mobile-web-app-capable" content="yes">
@@ -49,10 +49,12 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS -->
-    <?php $v = '?v=14.09'; ?>
+    <?php $v = '?v=15.00'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
+    <!-- Desktop & Landscape Overrides (lazy-loaded: won't block render on mobile) -->
+    <link rel="stylesheet" href="<?= BASE_URL ?>public/css/desktop.css<?= $v ?>" media="(min-width: 768px)">
 
     <link rel="manifest" href="<?= BASE_URL ?>manifest.json<?= $v ?>">
 </head>
@@ -92,6 +94,96 @@ if ($userLevel === 'staff') {
     document.addEventListener('DOMContentLoaded', hideAppLoader);
     setTimeout(hideAppLoader, 2500);
     </script>
+
+    <!-- Desktop Sidebar Navigation (hidden on mobile via CSS) -->
+    <aside class="desktop-sidebar" id="desktopSidebar">
+        <button class="sidebar-collapse-btn" onclick="toggleSidebar()" title="Toggle Sidebar">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+        <div class="sidebar-brand">
+            <img src="<?= BASE_URL ?>public/images/Icon.png" alt="AlfarezMart" width="40" height="40">
+            <span>Alfarez<span style="color:var(--primary)">Mart</span></span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="<?= BASE_URL ?>" class="sidebar-item <?= ($activeNav ?? '') === 'home' ? 'active' : '' ?>">
+                <i class="bi <?= ($activeNav ?? '') === 'home' ? 'bi-house-door-fill' : 'bi-house-door' ?>"></i>
+                <span>Beranda</span>
+            </a>
+            <a href="<?= BASE_URL ?>products" class="sidebar-item <?= ($activeNav ?? '') === 'products' ? 'active' : '' ?>">
+                <i class="bi <?= ($activeNav ?? '') === 'products' ? 'bi-box-seam-fill' : 'bi-box-seam' ?>"></i>
+                <span>Produk</span>
+            </a>
+            <a href="<?= BASE_URL ?>scanner" class="sidebar-item <?= ($activeNav ?? '') === 'scan' ? 'active' : '' ?>">
+                <i class="bi bi-upc-scan"></i>
+                <span>Cek Harga / Scan</span>
+            </a>
+            <a href="<?= BASE_URL ?>purchases/create" class="sidebar-item <?= ($activeNav ?? '') === 'purchase' ? 'active' : '' ?>">
+                <i class="bi <?= ($activeNav ?? '') === 'purchase' ? 'bi-cart-plus-fill' : 'bi-cart-plus' ?>"></i>
+                <span>Barang Masuk</span>
+            </a>
+            <a href="<?= BASE_URL ?>sales/pos" class="sidebar-item <?= ($activeNav ?? '') === 'pos' ? 'active' : '' ?>">
+                <i class="bi <?= ($activeNav ?? '') === 'pos' ? 'bi-receipt-cutoff' : 'bi-receipt' ?>"></i>
+                <span>Kasir POS</span>
+            </a>
+            <div class="sidebar-separator"></div>
+            <a href="<?= BASE_URL ?>ppob" class="sidebar-item">
+                <i class="bi bi-phone"></i>
+                <span>Produk Digital (PPOB)</span>
+            </a>
+            <a href="<?= BASE_URL ?>sales" class="sidebar-item">
+                <i class="bi bi-clock-history"></i>
+                <span>Riwayat Penjualan</span>
+            </a>
+            <a href="<?= BASE_URL ?>purchases" class="sidebar-item">
+                <i class="bi bi-cart-check"></i>
+                <span>Riwayat Pembelian</span>
+            </a>
+            <a href="<?= BASE_URL ?>customers" class="sidebar-item">
+                <i class="bi bi-people"></i>
+                <span>Pelanggan</span>
+            </a>
+            <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
+            <div class="sidebar-separator"></div>
+            <a href="<?= BASE_URL ?>debts" class="sidebar-item">
+                <i class="bi bi-journal-text"></i>
+                <span>Hutang &amp; Piutang</span>
+            </a>
+            <a href="<?= BASE_URL ?>finance" class="sidebar-item">
+                <i class="bi bi-wallet2"></i>
+                <span>Keuangan</span>
+            </a>
+            <a href="<?= BASE_URL ?>reports" class="sidebar-item">
+                <i class="bi bi-graph-up"></i>
+                <span>Laporan</span>
+            </a>
+            <?php endif; ?>
+            <div class="sidebar-separator"></div>
+            <a href="<?= BASE_URL ?>settings" class="sidebar-item">
+                <i class="bi bi-gear"></i>
+                <span>Pengaturan</span>
+            </a>
+            <a href="<?= BASE_URL ?>chat" class="sidebar-item">
+                <i class="bi bi-chat-dots"></i>
+                <span>Tanya AI</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <?php if (isset($currentUser)): ?>
+            <div class="sidebar-user">
+                <div class="sidebar-user-avatar">
+                    <?= strtoupper(substr($currentUser['name'] ?? 'U', 0, 1)) ?>
+                </div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name"><?= htmlspecialchars($currentUser['name'] ?? '') ?></div>
+                    <div class="sidebar-user-role"><?= ucfirst($currentUser['level'] ?? 'user') ?></div>
+                </div>
+                <a href="<?= BASE_URL ?>logout" onclick="localStorage.removeItem('alfarezmart_logged_in'); localStorage.removeItem('alfarezmart_user');" class="sidebar-logout" title="Logout">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+            </div>
+            <?php endif; ?>
+        </div>
+    </aside>
 
     <!-- Status Bar Overlay (Android-like) -->
     <div class="status-bar-overlay"></div>
@@ -250,7 +342,7 @@ if ($userLevel === 'staff') {
     <!-- App JS -->
     <script>
         const BASE_URL = '<?= BASE_URL ?>';
-        const version = '14.09';
+        const version = '15.00';
     </script>
     <script src="<?= BASE_URL ?>public/js/utils.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/dexie.min.js<?= $v ?>"></script>
@@ -314,12 +406,13 @@ if ($userLevel === 'staff') {
 
     <script src="<?= BASE_URL ?>public/js/geofencing.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/ppob_contacts.js<?= $v ?>"></script>
+    <script src="<?= BASE_URL ?>public/js/desktop.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/app.js<?= $v ?>"></script>
 
     
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '14.09'; // Update this to force client reloads
+    const APP_VERSION = '15.00'; // Update this to force client reloads
     
     // Self-healing cache buster
     if (localStorage.getItem('app_version') !== APP_VERSION) {

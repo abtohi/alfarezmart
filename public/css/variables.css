@@ -162,4 +162,14 @@
     --bg-default: var(--bg-primary);
 }
 
+/* ============================================
+   Desktop Variables (only active ≥1024px)
+   ============================================ */
+@media (min-width: 1024px) {
+    :root {
+        --sidebar-width: 260px;
+        --header-height: 64px;
+        --content-max-width: 1200px;
+    }
+}
 
