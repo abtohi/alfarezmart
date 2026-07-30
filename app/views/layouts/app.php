@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS -->
-    <?php $v = '?v=15.06'; ?>
+    <?php $v = '?v=15.07'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -62,7 +62,42 @@ if ($userLevel === 'staff') {
         }
         @media (min-width: 1024px) {
             .desktop-sidebar { display: flex !important; }
-            .sidebar-collapse-btn { display: flex !important; }
+            .sidebar-brand {
+                height: 64px !important;
+                min-height: 64px !important;
+                max-height: 64px !important;
+                padding: 0 16px !important;
+                margin: 0 !important;
+                box-sizing: border-box !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                border-bottom: 1px solid var(--border-color) !important;
+            }
+            .app-header {
+                height: 64px !important;
+                min-height: 64px !important;
+                max-height: 64px !important;
+                box-sizing: border-box !important;
+            }
+            .sidebar-collapse-btn {
+                display: flex !important;
+                position: relative !important;
+                top: auto !important;
+                right: auto !important;
+                width: 32px !important;
+                height: 32px !important;
+                border-radius: 6px !important;
+                background: var(--surface-1) !important;
+                border: 1px solid var(--border-color) !important;
+                color: var(--text-muted) !important;
+                align-items: center !important;
+                justify-content: center !important;
+                font-size: 0.85rem !important;
+                cursor: pointer !important;
+                flex-shrink: 0 !important;
+                margin: 0 !important;
+            }
             .desktop-scanner-hint { display: flex !important; }
         }
     </style>
@@ -425,7 +460,7 @@ if ($userLevel === 'staff') {
     
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '15.00'; // Update this to force client reloads
+    const APP_VERSION = '15.07'; // Update this to force client reloads
     
     // Self-healing cache buster
     if (localStorage.getItem('app_version') !== APP_VERSION) {
