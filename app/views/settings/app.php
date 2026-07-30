@@ -159,8 +159,8 @@
 
                 <div style="margin-bottom:12px;">
                     <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">API Key Chat (OpenRouter)</label>
-                    <input id="ai_chat_api_key" name="ai_chat_api_key" type="password" value="<?= htmlspecialchars($aiChatApiKey) ?>" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="sk-or-v1-..." />
-                    <small style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-top:4px;">Kosongkan jika ingin menggunakan API Key yang sama dengan Scanner.</small>
+                    <input id="ai_chat_api_key" name="ai_chat_api_key" type="password" value="" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="<?= !empty($aiChatApiKey) ? '(Tersimpan - Diubah untuk mengganti)' : 'sk-or-v1-...' ?>" />
+                    <small style="font-size:var(--font-size-xs); color:var(--text-muted); display:block; margin-top:4px;">Isi API Key OpenRouter Anda di sini. Kosongkan jika sudah tersimpan atau ingin memakai API Key Scanner.</small>
                 </div>
             </div>
             <button type="submit" class="btn-primary-custom" style="width:100%; padding:12px; font-weight:600; margin-bottom:8px;">💾 Simpan Pengaturan Chat</button>
