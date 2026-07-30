@@ -440,54 +440,148 @@
 
 
 /* ============================================
-   SECTION 3: DASHBOARD — Desktop Overrides
+   SECTION 3: DASHBOARD — Desktop Redesign (Enterprise POS & Retail Analytics)
    ============================================ */
 
 @media (min-width: 1024px) {
-    /* Stat cards: 4 columns */
-    .page-section > div[style*="grid-template-columns: 1fr 1fr"] {
+    /* Full width container for Dashboard */
+    .page-section {
+        max-width: 100% !important;
+        margin: 0 !important;
+    }
+
+    /* Welcome / User Profile Banner */
+    .page-section > div[style*="gradient-card"][style*="display:flex"],
+    .page-section > div[style*="gradient-primary"] {
+        padding: 28px 36px !important;
+        border-radius: var(--radius-xl) !important;
+        margin-bottom: 28px !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+        background: linear-gradient(135deg, var(--surface-1) 0%, var(--surface-2) 100%) !important;
+        border: 1px solid var(--border-color) !important;
+    }
+
+    /* Status Hari Ini KPI Cards Grid (3 Column Row) */
+    .page-section > div[style*="grid-template-columns: 1fr 1fr"][style*="align-items: stretch"] {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 18px !important;
+        margin-bottom: 32px !important;
+    }
+
+    /* Inner stat cards inside Status Hari Ini */
+    .page-section .stat-card {
+        background: var(--surface-1) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: var(--radius-lg) !important;
+        padding: 20px !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+        transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease !important;
+    }
+
+    .page-section .stat-card:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12) !important;
+        border-color: var(--primary) !important;
+    }
+
+    /* Ringkasan Data (Total Produk, Brand, Kategori, Supplier) 4 Columns */
+    .page-section > div[style*="grid-template-columns: 1fr 1fr"]:not([style*="align-items: stretch"]) {
+        display: grid !important;
         grid-template-columns: repeat(4, 1fr) !important;
         gap: 16px !important;
+        margin-bottom: 32px !important;
     }
 
-    /* Quick actions: more columns */
+    /* Quick Actions (6 Columns Grid) */
     .page-section > div[style*="repeat(4, 1fr)"] {
+        display: grid !important;
         grid-template-columns: repeat(6, 1fr) !important;
-        gap: 12px !important;
+        gap: 14px !important;
+        margin-bottom: 32px !important;
     }
 
-    /* Menu lists: 2-column grid */
+    .quick-action {
+        background: var(--surface-1) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: var(--radius-lg) !important;
+        padding: 16px 10px !important;
+        transition: all 0.22s ease !important;
+    }
+
+    .quick-action:hover {
+        transform: translateY(-4px) !important;
+        border-color: var(--primary) !important;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .quick-action .action-icon {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 14px !important;
+        font-size: 1.35rem !important;
+    }
+
+    .quick-action .action-label {
+        font-size: 0.85rem !important;
+        font-weight: 700 !important;
+        color: var(--text-primary) !important;
+        margin-top: 6px !important;
+    }
+
+    /* Section Titles in Dashboard */
+    .section-title {
+        font-size: 1.05rem !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.8px !important;
+        text-transform: uppercase !important;
+        margin-bottom: 16px !important;
+        color: var(--text-muted) !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+
+    /* Menu Lists (Manajemen Data, Laporan & Riwayat, Sistem, Segera Hadir) */
     .menu-list {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 0;
-    }
-    .menu-list > .menu-item {
-        border-radius: 0;
-        border: 1px solid var(--border-color);
-        margin: -0.5px;
-    }
-    .menu-list > .menu-item:first-child {
-        border-radius: var(--radius-md) 0 0 0;
-    }
-    .menu-list > .menu-item:nth-child(2) {
-        border-radius: 0 var(--radius-md) 0 0;
-    }
-    .menu-list > .menu-item:last-child {
-        border-radius: 0 0 var(--radius-md) 0;
-    }
-    .menu-list > .menu-item:nth-last-child(2):nth-child(odd) {
-        border-radius: 0 0 0 var(--radius-md);
-    }
-    /* Single item last row */
-    .menu-list > .menu-item:last-child:nth-child(odd) {
-        grid-column: span 1;
-        border-radius: 0 0 0 var(--radius-md);
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 14px !important;
+        margin-bottom: 32px !important;
     }
 
-    /* Welcome banner wider */
-    .page-section > div[style*="gradient-card"][style*="display:flex"] {
-        padding: 24px 28px !important;
+    .menu-list > .menu-item {
+        border-radius: var(--radius-lg) !important;
+        border: 1px solid var(--border-color) !important;
+        background: var(--surface-1) !important;
+        padding: 16px 20px !important;
+        margin: 0 !important;
+        transition: all 0.22s ease !important;
+    }
+
+    .menu-list > .menu-item:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1) !important;
+        border-color: var(--primary) !important;
+        background: var(--surface-2) !important;
+    }
+
+    .menu-list .menu-icon {
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 12px !important;
+        font-size: 1.25rem !important;
+    }
+
+    .menu-list .menu-text h6 {
+        font-size: 0.98rem !important;
+        font-weight: 700 !important;
+        color: var(--text-primary) !important;
+    }
+
+    .menu-list .menu-text small {
+        font-size: 0.82rem !important;
+        color: var(--text-muted) !important;
     }
 }
 
