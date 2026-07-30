@@ -269,6 +269,10 @@
     .header-title {
         font-size: 1.1rem;
     }
+    /* Hide top header logo on desktop to eliminate duplicate logos (logo is in sidebar) */
+    .header-left .header-logo {
+        display: none !important;
+    }
     .header-btn {
         width: 42px;
         height: 42px;
@@ -293,8 +297,8 @@
     }
 
     .page-section {
-        max-width: var(--content-max-width, 1200px);
-        margin: 0 auto;
+        max-width: 100% !important;
+        margin: 0 !important;
         padding: 24px 32px;
     }
 
@@ -572,14 +576,14 @@
         gap: 10px;
     }
 
-    /* Search and filter row inline */
+    /* Search and filter row full width on desktop */
     .page-section > div[style*="display:flex"][style*="gap:8px"][style*="margin-bottom:10px"] {
-        max-width: 600px;
+        max-width: 100%;
     }
 
-    /* Price filter inline */
+    /* Price filter full width on desktop */
     .page-section > div[style*="margin-bottom:12px"] > div[style*="display:flex"][style*="gap:8px"] {
-        max-width: 500px;
+        max-width: 100%;
     }
 }
 
@@ -801,7 +805,8 @@
 
 @media (min-width: 1440px) {
     .page-section {
-        max-width: 1400px;
+        max-width: 100% !important;
+        margin: 0 !important;
         padding: 28px 40px;
     }
 
