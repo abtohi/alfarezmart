@@ -151,26 +151,27 @@ label.form-label.text-muted {
     gap: 6px;
     padding: 6px 14px;
     border-radius: 20px;
-    background: linear-gradient(135deg, rgba(230, 57, 70, 0.15), rgba(76, 201, 240, 0.15));
-    border: 1px solid rgba(230, 57, 70, 0.35);
-    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #ffffff !important;
     text-decoration: none;
     font-size: 12px;
     font-weight: 700;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     margin-right: 4px;
+    backdrop-filter: blur(8px);
 }
 .header-ai-btn i {
-    color: var(--primary);
+    color: #ffd700 !important;
     font-size: 14px;
     transition: transform 0.3s ease;
 }
 .header-ai-btn:hover {
-    background: linear-gradient(135deg, rgba(230, 57, 70, 0.28), rgba(76, 201, 240, 0.28));
-    border-color: var(--primary);
-    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.28);
+    border-color: #ffffff;
+    color: #ffffff !important;
     transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(230, 57, 70, 0.25);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 .header-ai-btn:hover i {
     transform: rotate(15deg) scale(1.15);
@@ -180,7 +181,7 @@ label.form-label.text-muted {
     .header-ai-btn { padding: 6px 9px; border-radius: 50%; }
 }
 
-/* Floating AI Chat Button (Mobile Glassmorphism Badge) */
+/* Floating AI Chat Button (Theme-Adaptive Mobile Badge) */
 .floating-chat-btn {
     position: fixed;
     bottom: calc(var(--bottom-nav-height) + 14px);
@@ -188,13 +189,13 @@ label.form-label.text-muted {
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    background: linear-gradient(135deg, rgba(30, 30, 50, 0.9), rgba(45, 45, 75, 0.9));
-    border: 1px solid rgba(230, 57, 70, 0.4);
+    background: var(--surface-1);
+    border: 1px solid var(--border-active);
     color: var(--primary);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--shadow-md);
     z-index: 998;
     text-decoration: none;
     backdrop-filter: blur(8px);
@@ -204,7 +205,7 @@ label.form-label.text-muted {
 .floating-chat-btn:hover {
     transform: scale(1.08) translateY(-2px);
     border-color: var(--primary);
-    box-shadow: 0 8px 20px rgba(230, 57, 70, 0.3);
+    box-shadow: var(--shadow-lg);
 }
 .chat-icon-wrapper {
     font-size: 20px;
@@ -212,4 +213,23 @@ label.form-label.text-muted {
     align-items: center;
     justify-content: center;
     color: var(--primary);
+}
+
+/* Light Theme Overrides for AI Buttons */
+:root[data-theme="light"] .floating-chat-btn {
+    background: #ffffff !important;
+    border-color: rgba(230, 48, 49, 0.35) !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12) !important;
+}
+:root[data-theme="light"] .floating-chat-btn .chat-icon-wrapper,
+:root[data-theme="light"] .floating-chat-btn i {
+    color: #E63031 !important;
+}
+:root[data-theme="light"] .header-ai-btn {
+    background: rgba(255, 255, 255, 0.22) !important;
+    border: 1px solid rgba(255, 255, 255, 0.45) !important;
+    color: #ffffff !important;
+}
+:root[data-theme="light"] .header-ai-btn i {
+    color: #ffd700 !important;
 }

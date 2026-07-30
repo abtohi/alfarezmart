@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS -->
-    <?php $v = '?v=15.26'; ?>
+    <?php $v = '?v=15.27'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -211,7 +211,7 @@ if ($userLevel === 'staff') {
                 <span>Pengaturan</span>
             </a>
             <a href="<?= BASE_URL ?>chat" class="sidebar-item">
-                <i class="bi bi-chat-dots"></i>
+                <i class="bi bi-stars"></i>
                 <span>Tanya AI</span>
             </a>
         </nav>

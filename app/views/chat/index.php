@@ -3,7 +3,7 @@
     <div class="chat-header">
         <div style="display:flex;align-items:center;gap:14px;">
             <div class="chat-avatar">
-                <i class="bi bi-robot"></i>
+                <i class="bi bi-stars"></i>
             </div>
             <div>
                 <h2 style="font-size:var(--font-size-md);font-weight:700;margin:0;">AlfarezMart AI</h2>
