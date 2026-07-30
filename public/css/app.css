@@ -186,8 +186,8 @@ label.form-label.text-muted {
     position: fixed;
     bottom: calc(var(--bottom-nav-height) + 14px);
     right: 14px;
-    width: 44px;
-    height: 44px;
+    width: 46px;
+    height: 46px;
     border-radius: 50%;
     background: var(--surface-1);
     border: 1px solid var(--border-active);
@@ -208,28 +208,55 @@ label.form-label.text-muted {
     box-shadow: var(--shadow-lg);
 }
 .chat-icon-wrapper {
-    font-size: 20px;
+    font-size: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--primary);
+    color: inherit;
 }
 
-/* Light Theme Overrides for AI Buttons */
-:root[data-theme="light"] .floating-chat-btn {
+/* Light Theme Overrides for AI Buttons & Badges */
+[data-theme="light"] .floating-chat-btn,
+html[data-theme="light"] .floating-chat-btn,
+body[data-theme="light"] .floating-chat-btn {
     background: #ffffff !important;
-    border-color: rgba(230, 48, 49, 0.35) !important;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12) !important;
+    border: 1px solid rgba(230, 48, 49, 0.4) !important;
+    color: #E63031 !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
 }
-:root[data-theme="light"] .floating-chat-btn .chat-icon-wrapper,
-:root[data-theme="light"] .floating-chat-btn i {
+[data-theme="light"] .floating-chat-btn .chat-icon-wrapper,
+[data-theme="light"] .floating-chat-btn i,
+html[data-theme="light"] .floating-chat-btn .chat-icon-wrapper,
+html[data-theme="light"] .floating-chat-btn i {
     color: #E63031 !important;
 }
-:root[data-theme="light"] .header-ai-btn {
+
+/* Dark Theme Overrides for AI Buttons & Badges */
+[data-theme="dark"] .floating-chat-btn,
+html[data-theme="dark"] .floating-chat-btn,
+:root:not([data-theme="light"]) .floating-chat-btn {
+    background: #1a1a2e !important;
+    border: 1px solid rgba(230, 57, 70, 0.4) !important;
+    color: #ff6b7a !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+}
+[data-theme="dark"] .floating-chat-btn .chat-icon-wrapper,
+[data-theme="dark"] .floating-chat-btn i,
+html[data-theme="dark"] .floating-chat-btn .chat-icon-wrapper,
+html[data-theme="dark"] .floating-chat-btn i,
+:root:not([data-theme="light"]) .floating-chat-btn .chat-icon-wrapper,
+:root:not([data-theme="light"]) .floating-chat-btn i {
+    color: #ff6b7a !important;
+}
+
+/* Header AI Button Theme Styles */
+[data-theme="light"] .header-ai-btn,
+html[data-theme="light"] .header-ai-btn {
     background: rgba(255, 255, 255, 0.22) !important;
     border: 1px solid rgba(255, 255, 255, 0.45) !important;
     color: #ffffff !important;
 }
-:root[data-theme="light"] .header-ai-btn i {
+[data-theme="light"] .header-ai-btn i,
+html[data-theme="light"] .header-ai-btn i {
     color: #ffd700 !important;
 }
