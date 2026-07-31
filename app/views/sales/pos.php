@@ -1417,10 +1417,9 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
             try {
                 btnConnect.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menghubungkan...';
                 btnConnect.disabled = true;
-                let connected = false;
-                await tp.connect();
-                connected = tp.isConnected();
-                if (!connected) {
+                // Force new connection dialog ONLY on manual user click
+                const connected = await tp.connect(true, false);
+                if (!connected || !tp.isConnected()) {
                     showDisconnected(tp.hasSavedDevice());
                     setupConnectButton();
                     return;
@@ -1444,14 +1443,16 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
                 btnPrint.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Mencetak...';
                 btnPrint.disabled = true;
 
-                // If soft-disconnected, reconnect silently before printing
-                if (!tp.isConnected()) {
+                const driverMode = tp.getDriver();
+                if (driverMode === 'web_bluetooth' && !tp.isConnected()) {
                     btnPrint.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menghubungkan ulang...';
                     const ok = await tp.tryAutoReconnect();
                     if (!ok) {
                         showDisconnected(tp.hasSavedDevice());
                         setupConnectButton();
-                        showToast('Printer terputus. Silakan hubungkan ulang.', 'error');
+                        showToast('Printer Bluetooth terputus. Klik "Hubungkan ke Printer Tersimpan" atau gunakan Cetak Web.', 'warning');
+                        btnPrint.innerHTML = '<i class="bi bi-printer"></i> Cetak Struk';
+                        btnPrint.disabled = false;
                         return;
                     }
                     showConnected(tp.device?.name);

@@ -319,9 +319,9 @@ class ThermalPrinter {
         return false;
     }
 
-    async connect(forceNew = false) {
+    async connect(forceNew = false, silentOnly = false) {
         if (!navigator.bluetooth) {
-            throw new Error('Web Bluetooth tidak didukung. Gunakan Chrome/Edge di Android.');
+            throw new Error('Web Bluetooth tidak didukung. Gunakan Chrome/Edge di Android/Desktop.');
         }
 
         if (this.isIOS) {
@@ -334,27 +334,31 @@ class ThermalPrinter {
         // Try silent reconnect first if not forced to find new
         if (!forceNew && this.hasSavedDevice()) {
             try {
-                console.log('[ThermalPrinter] Attempting silent reconnect before picker...');
+                console.log('[ThermalPrinter] Attempting silent reconnect...');
                 const autoConnected = await this.tryAutoReconnect();
                 if (autoConnected) {
                     return true;
                 }
-                console.log('[ThermalPrinter] Silent reconnect failed, showing picker.');
+                console.log('[ThermalPrinter] Silent reconnect failed.');
             } catch (e) {
                 console.log('[ThermalPrinter] Auto-reconnect exception:', e);
             }
         }
 
+        // If silentOnly is requested, do NOT trigger the browser pairing dialog
+        if (silentOnly) {
+            return false;
+        }
+
         try {
-            // Show device picker - filter by common thermal printer services
+            // Show device picker dialog - acceptAllDevices allows finding RPP02N and all thermal printers
             this.device = await navigator.bluetooth.requestDevice({
-                filters: [
-                    { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
-                ],
+                acceptAllDevices: true,
                 optionalServices: [
                     '000018f0-0000-1000-8000-00805f9b34fb',
                     'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
                     '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+                    '00001101-0000-1000-8000-00805f9b34fb'
                 ],
             });
 
