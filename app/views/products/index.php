@@ -31,7 +31,7 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
             <input type="hidden" name="max_price" value="<?= htmlspecialchars($maxPrice ?? '') ?>">
             <div class="search-input-wrapper">
                 <i class="bi bi-search"></i>
-                <input type="text" name="q" id="productSearchInput" class="no-track" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Cari produk..." autocomplete="off">
+                <input type="text" name="q" id="productSearchInput" class="no-track" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Cari produk..." autocomplete="off" oninput="filterProductsClientSide(this.value)">
                 <?php if (!empty($search)): ?>
                     <a href="<?= $clearSearchUrl ?>" style="color:var(--text-muted);text-decoration:none;flex-shrink:0;"><i class="bi bi-x-lg"></i></a>
                 <?php endif; ?>
@@ -993,5 +993,19 @@ async function _confirmAvailToggle() {
         btn.setAttribute('onclick', `event.stopPropagation(); quickToggleAvailability(this, ${id}, ${revertVal})`);
         if (typeof showToast === 'function') showToast('Gagal mengubah status: ' + err.message, 'error');
     }
+}
+
+function filterProductsClientSide(query) {
+    const q = (query || '').toLowerCase().trim();
+    const words = q.split(/\s+/).filter(w => w.length > 0);
+    const items = document.querySelectorAll('#productListContainer .product-card, #productListContainer [data-id]');
+    items.forEach(el => {
+        const text = (el.textContent || '').toLowerCase();
+        if (words.length === 0 || words.every(w => text.includes(w))) {
+            el.style.display = '';
+        } else {
+            el.style.display = 'none';
+        }
+    });
 }
 </script>

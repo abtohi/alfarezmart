@@ -431,13 +431,56 @@ function setMixDefault(mode) {
     renderCart();
 }
 
+// Global In-Memory POS Products Catalog Cache for 0ms instant search
+window._posProductsCatalog = window._posProductsCatalog || [];
+
+async function preloadPosCatalog() {
+    // 1. Load from LocalStorage for 0ms immediate availability
+    try {
+        const cached = localStorage.getItem('pos_catalog_cache');
+        if (cached) {
+            window._posProductsCatalog = JSON.parse(cached);
+        }
+    } catch(e) {}
+
+    // 2. Load from Dexie IndexedDB if catalog is still empty
+    if (window._posProductsCatalog.length === 0 && typeof db !== 'undefined' && db.products) {
+        try {
+            const dbItems = await db.products.filter(p => p.is_available != 0 && p.is_available !== '0' && p.is_available !== false).toArray();
+            if (dbItems && dbItems.length > 0) {
+                window._posProductsCatalog = dbItems;
+            }
+        } catch(e) {}
+    }
+
+    // 3. Background sync from server (non-blocking 3s timeout)
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const res = await fetch(`${BASE_URL}api/products/sync?pos=1&_t=` + Date.now(), { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.products && Array.isArray(data.products)) {
+                window._posProductsCatalog = data.products;
+                try { localStorage.setItem('pos_catalog_cache', JSON.stringify(data.products)); } catch(e){}
+                if (typeof db !== 'undefined' && db.products) {
+                    db.products.clear().then(() => db.products.bulkPut(data.products)).catch(() => {});
+                }
+            }
+        }
+    } catch(e) {}
+}
+
+let _posSearchDebounceTimer = null;
+
 function initPosSearch() {
     const inp = document.getElementById('posSearch');
     const sug = document.getElementById('posSuggestions');
     
-    if (!inp || !sug) return; // Elements don't exist yet, exit gracefully
+    if (!inp || !sug) return;
 
-    // Input event for text search
+    // Fast 80ms debounced input listener
     inp.addEventListener('input', function() {
         const q = this.value.trim();
         if (q.length < 2) {
@@ -445,7 +488,10 @@ function initPosSearch() {
             if (window.posSearchAbortController) window.posSearchAbortController.abort();
             return;
         }
-        performSearch(q);
+        clearTimeout(_posSearchDebounceTimer);
+        _posSearchDebounceTimer = setTimeout(() => {
+            performSearch(q);
+        }, 80);
     });
 
     // Click outside to hide suggestions
@@ -455,7 +501,7 @@ function initPosSearch() {
         }
     });
 
-    // Enter key for barcode inside the input
+    // Enter key for barcode inside input
     inp.addEventListener('keypress', async function(e) {
         if (e.key !== 'Enter') return;
         e.preventDefault();
@@ -465,12 +511,11 @@ function initPosSearch() {
         await processBarcodeScan(q, this, sug);
     });
 
-    // Global document listener for barcode scanners
+    // Global barcode scanner listener
     let barcodeBuffer = '';
     let barcodeTimeout = null;
 
     document.addEventListener('keypress', function(e) {
-        // Ignore if user is already typing in an input/textarea/select
         if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
         
         if (e.key === 'Enter') {
@@ -482,13 +527,15 @@ function initPosSearch() {
             return;
         }
         
-        if (e.key.length === 1) { // Printable char
+        if (e.key.length === 1) {
             barcodeBuffer += e.key;
             if (barcodeTimeout) clearTimeout(barcodeTimeout);
-            // Barcode scanners type very fast (< 30ms between strokes). Reset if slower.
             barcodeTimeout = setTimeout(() => { barcodeBuffer = ''; }, 50);
         }
     });
+
+    // Preload catalog on search focus or init
+    preloadPosCatalog();
 }
 
 function openPosScanner() {
@@ -504,42 +551,59 @@ function openPosScanner() {
 }
 
 async function processBarcodeScan(q, inpEl, sugEl) {
-    try {
-        let result = null;
-        try {
-            if (typeof OfflineDB !== 'undefined') {
-                result = await OfflineDB.findByBarcode(q, true); // true for isPos
+    if (!q) return;
+    q = q.trim();
+    
+    // 1. Instant 0ms barcode lookup in memory
+    let result = null;
+    if (window._posProductsCatalog && window._posProductsCatalog.length > 0) {
+        const cleanB = q.replace(/\s+/g, '').toLowerCase();
+        result = window._posProductsCatalog.find(p => {
+            if (p.is_available == 0 || p.is_available === '0' || p.is_available === false) return false;
+            if (p.code && p.code.replace(/\s+/g, '').toLowerCase() === cleanB) return true;
+            if (p.packagings && Array.isArray(p.packagings)) {
+                return p.packagings.some(pkg => pkg.barcode && pkg.barcode.replace(/\s+/g, '').toLowerCase() === cleanB);
             }
-            if (!result && navigator.onLine) {
-                const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}?pos=1`);
-                if (!resp.ok && resp.status === 503) throw new Error("Offline");
-                result = await resp.json();
-            }
-        } catch (e) {
-            console.error('Barcode error', e);
-        }
+            return false;
+        });
+    }
 
-        if (result && result.id) {
-            if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-            addProductToCart(result);
-            if (inpEl) inpEl.value = '';
-            if (sugEl) sugEl.innerHTML = '';
-        } else {
-            // Fall back to text search if not found
-            if (q.length >= 2 && inpEl) {
-                inpEl.value = q;
-                performSearch(q);
-            } else {
-                showToast('Barcode tidak ditemukan', 'warning');
+    if (!result && typeof OfflineDB !== 'undefined') {
+        try { result = await OfflineDB.findByBarcode(q, true); } catch(e){}
+    }
+
+    if (result && result.id) {
+        if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+        addProductToCart(result);
+        if (inpEl) inpEl.value = '';
+        if (sugEl) sugEl.innerHTML = '';
+        return;
+    }
+
+    // 2. Fallback network search with 2s timeout
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}?pos=1`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (resp.ok) {
+            result = await resp.json();
+            if (result && result.id) {
+                if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+                addProductToCart(result);
+                if (inpEl) inpEl.value = '';
+                if (sugEl) sugEl.innerHTML = '';
+                return;
             }
         }
-    } catch (err) {
-        if (q.length >= 2 && inpEl) {
-            inpEl.value = q;
-            performSearch(q);
-        } else {
-            showToast('Gagal memproses barcode', 'error');
-        }
+    } catch(e) {}
+
+    // Fallback to text search if not found
+    if (q.length >= 2 && inpEl) {
+        inpEl.value = q;
+        performSearch(q);
+    } else {
+        showToast('Barcode tidak ditemukan', 'warning');
     }
 }
 
@@ -547,132 +611,163 @@ async function performSearch(q) {
     const sug = document.getElementById('posSuggestions');
     if (!sug) return;
     
-    sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Mencari...</div>';
-    
+    q = (q || '').trim().toLowerCase();
+    if (q.length < 2) {
+        sug.innerHTML = '';
+        return;
+    }
+
+    const words = q.split(/\s+/).filter(w => w.length > 0);
+
+    // ── STEP 1: Search In-Memory / IndexedDB Catalog INSTANTLY (0 Milidetik) ─────────
+    let items = [];
+    if (window._posProductsCatalog && window._posProductsCatalog.length > 0) {
+        items = window._posProductsCatalog.filter(p => {
+            if (p.is_available == 0 || p.is_available === '0' || p.is_available === false) return false;
+            return words.every(word => {
+                const nameMatch = (p.full_name && p.full_name.toLowerCase().includes(word)) ||
+                                  (p.short_label && p.short_label.toLowerCase().includes(word)) ||
+                                  (p.invoice_name && p.invoice_name.toLowerCase().includes(word)) ||
+                                  (p.supplier_invoice_name && p.supplier_invoice_name.toLowerCase().includes(word));
+                const brandMatch = p.brand_name && p.brand_name.toLowerCase().includes(word);
+                const codeMatch = p.code && p.code.toLowerCase().includes(word);
+                let barcodeMatch = false;
+                if (p.packagings && Array.isArray(p.packagings)) {
+                    barcodeMatch = p.packagings.some(pkg => pkg.barcode && pkg.barcode.toLowerCase().includes(word));
+                }
+                return nameMatch || brandMatch || codeMatch || barcodeMatch;
+            });
+        }).slice(0, 50);
+    }
+
+    // Render local results IMMEDIATELY (0ms delay!)
+    if (items.length > 0) {
+        renderPosSearchSuggestions(sug, items, q);
+    } else {
+        sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Mencari...</div>';
+    }
+
+    // ── STEP 2: Background Server Fetch (Non-blocking with 1.5s Abort Timeout) ──
     if (window.posSearchAbortController) {
         window.posSearchAbortController.abort();
     }
     window.posSearchAbortController = new AbortController();
     
     try {
-        let items = [];
-        try {
-            if (typeof OfflineDB !== 'undefined') {
-                items = await OfflineDB.searchProducts(q, true); // true for isPos
-            }
-            
-            if ((!items || items.length === 0) && navigator.onLine) {
-                const resp = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}&pos=1`, { 
-                    credentials: 'same-origin',
-                    signal: window.posSearchAbortController.signal
-                });
-                if (!resp.ok) {
-                    if (resp.status !== 503) {
-                        sug.innerHTML = '<div style="padding:12px;text-align:center;color:#f59e0b;">Gagal memuat. Refresh halaman atau login ulang.</div>';
-                        return;
-                    }
-                } else {
-                    items = await resp.json();
-                }
-            }
-        } catch (e) {
-            if (e.name === 'AbortError') return;
-            console.error('POS search fetch error', e);
-        }
-        
-        const currentInput = document.getElementById('posSearch');
-        if (!currentInput || currentInput.value.trim().length < 2) {
-            sug.innerHTML = '';
-            return;
-        }
-
-        if (!Array.isArray(items) || items.length === 0) {
-            sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Tidak ada</div>';
-            return;
-        }
-        
-        // Sort by display label (short_label if not empty, else full_name) ascending
-        items.sort((a, b) => {
-            const getLabel = (p) => (p.short_label && p.short_label.trim() !== '') ? p.short_label : (p.full_name || '');
-            return getLabel(a).localeCompare(getLabel(b), 'id', { sensitivity: 'base' });
+        const resp = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}&pos=1`, { 
+            credentials: 'same-origin',
+            signal: window.posSearchAbortController.signal
         });
-        
-        sug.innerHTML = items.map(p => {
-            const name = escapeHtml(p.short_label || p.full_name);
-            const brand = escapeHtml(p.brand_name || '');
-            
-            // Photo or icon
-            const thumbHtml = p.photo 
-                ? `<div style="width:44px;height:44px;border-radius:var(--radius-sm);overflow:hidden;display:flex;align-items:center;justify-content:center;background:transparent;flex-shrink:0;">
-                       <img src="${BASE_URL}${escapeHtml(p.photo)}" style="width:100%;height:100%;object-fit:contain;" loading="lazy">
-                   </div>`
-                : `<div style="width:44px;height:44px;background:var(--primary-bg);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--primary);flex-shrink:0;">
-                       <i class="bi bi-box-seam" style="font-size:1.2rem;"></i>
-                   </div>`;
-            
-            let priceText = '';
-            if (p.packagings && p.packagings.length > 0) {
-                const pkgsHtml = p.packagings.map(pkg => {
-                    const price = saleMode === 'wholesale' 
-                        ? (parseFloat(pkg.sell_price_wholesale) || parseFloat(pkg.sell_price_retail) || 0)
-                        : (parseFloat(pkg.sell_price_retail) || 0);
-                    return price > 0 ? `<div style="font-size:0.75rem; margin-top:2px;">${formatRupiah(price)} <span style="font-size:0.65rem; color:var(--text-muted);">/ ${escapeHtml(pkg.unit_name)}</span></div>` : '';
-                }).join('');
-                if (pkgsHtml) {
-                    priceText = `<div style="font-weight:600; color:var(--primary); text-align:right;">${pkgsHtml}</div>`;
-                }
+        if (resp.ok) {
+            const serverItems = await resp.json();
+            if (Array.isArray(serverItems) && serverItems.length > 0) {
+                renderPosSearchSuggestions(sug, serverItems, q);
+            } else if (items.length === 0) {
+                sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Tidak ada produk ditemukan</div>';
             }
-
-            return `
-            <div data-id="${p.id}" style="padding:10px 12px; background:var(--surface-1); margin-bottom:6px; cursor:pointer; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; align-items:flex-start; gap:10px; transition:all 0.2s; box-shadow:var(--shadow-sm);" onclick="selectProduct(${p.id})" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
-                ${thumbHtml}
-                <div style="flex:1; min-width:0;">
-                    <div style="font-weight:600; font-size:0.8rem; color:var(--text-primary); line-height:1.3; word-break:break-word; white-space:normal;">${name}</div>
-                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${brand ? brand : 'Tanpa Merek'}</div>
-                </div>
-                <div style="text-align:right;">
-                    ${priceText}
-                </div>
-            </div>`;
-        }).join('');
+        }
     } catch (e) {
-        console.error('POS search error:', e);
-        sug.innerHTML = '<div style="padding:12px;color:var(--danger);">Error pencarian. Coba lagi.</div>';
+        if (e.name === 'AbortError') return;
+        if (items.length === 0) {
+            sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Tidak ada produk ditemukan (Offline)</div>';
+        }
     }
+}
+
+function renderPosSearchSuggestions(sug, items, q) {
+    const currentInput = document.getElementById('posSearch');
+    if (!currentInput || currentInput.value.trim().length < 2) {
+        sug.innerHTML = '';
+        return;
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+        sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Tidak ada</div>';
+        return;
+    }
+    
+    // Sort by display label (short_label if not empty, else full_name) ascending
+    items.sort((a, b) => {
+        const getLabel = (p) => (p.short_label && p.short_label.trim() !== '') ? p.short_label : (p.full_name || '');
+        return getLabel(a).localeCompare(getLabel(b), 'id', { sensitivity: 'base' });
+    });
+    
+    sug.innerHTML = items.map(p => {
+        const name = escapeHtml(p.short_label || p.full_name);
+        const brand = escapeHtml(p.brand_name || '');
+        
+        const thumbHtml = p.photo 
+            ? `<div style="width:44px;height:44px;border-radius:var(--radius-sm);overflow:hidden;display:flex;align-items:center;justify-content:center;background:transparent;flex-shrink:0;">
+                   <img src="${BASE_URL}${escapeHtml(p.photo)}" style="width:100%;height:100%;object-fit:contain;" loading="lazy">
+               </div>`
+            : `<div style="width:44px;height:44px;background:var(--primary-bg);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--primary);flex-shrink:0;">
+                   <i class="bi bi-box-seam" style="font-size:1.2rem;"></i>
+               </div>`;
+        
+        let priceText = '';
+        if (p.packagings && p.packagings.length > 0) {
+            const pkgsHtml = p.packagings.map(pkg => {
+                const price = saleMode === 'wholesale' 
+                    ? (parseFloat(pkg.sell_price_wholesale) || parseFloat(pkg.sell_price_retail) || 0)
+                    : (parseFloat(pkg.sell_price_retail) || 0);
+                return price > 0 ? `<div style="font-size:0.75rem; margin-top:2px;">${formatRupiah(price)} <span style="font-size:0.65rem; color:var(--text-muted);">/ ${escapeHtml(pkg.unit_name)}</span></div>` : '';
+            }).join('');
+            if (pkgsHtml) {
+                priceText = `<div style="font-weight:600; color:var(--primary); text-align:right;">${pkgsHtml}</div>`;
+            }
+        }
+
+        return `
+        <div data-id="${p.id}" style="padding:10px 12px; background:var(--surface-1); margin-bottom:6px; cursor:pointer; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; align-items:flex-start; gap:10px; transition:all 0.2s; box-shadow:var(--shadow-sm);" onclick="selectProduct(${p.id})" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
+            ${thumbHtml}
+            <div style="flex:1; min-width:0;">
+                <div style="font-weight:600; font-size:0.8rem; color:var(--text-primary); line-height:1.3; word-break:break-word; white-space:normal;">${name}</div>
+                <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">${brand ? brand : 'Tanpa Merek'}</div>
+            </div>
+            <div style="text-align:right;">
+                ${priceText}
+            </div>
+        </div>`;
+    }).join('');
 }
 
 async function selectProduct(id) {
     try {
         let data = null;
-        try {
-            if (typeof OfflineDB !== 'undefined') {
-                data = await OfflineDB.getProductById(id);
-            }
-            if (!data && navigator.onLine) {
-                const resp = await fetch(`${BASE_URL}api/products/${id}`, { credentials: 'same-origin' });
-                if (!resp.ok) {
-                    if (resp.status === 503) throw new Error("Offline");
-                    let errMsg = 'Gagal memuat produk';
-                    try { const errData = await resp.json(); errMsg = errData.error || errMsg; } catch(_){}
-                    showToast(errMsg, 'error');
-                    return;
-                }
-                data = await resp.json();
-            }
-        } catch (e) {
-            console.error(e);
+
+        // 1. Instant 0ms lookup in memory catalog
+        if (window._posProductsCatalog && window._posProductsCatalog.length > 0) {
+            data = window._posProductsCatalog.find(p => p.id == id);
+        }
+
+        // 2. Dexie IndexedDB lookup fallback
+        if (!data && typeof OfflineDB !== 'undefined') {
+            try { data = await OfflineDB.getProductById(id); } catch(e){}
+        }
+
+        // 3. Network fetch fallback if still not found
+        if (!data && navigator.onLine) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2000);
+                const resp = await fetch(`${BASE_URL}api/products/${id}`, { credentials: 'same-origin', signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (resp.ok) data = await resp.json();
+            } catch(e){}
         }
         
         if (!data || !data.id) {
-            showToast('Data produk tidak valid', 'error');
+            showToast('Data produk tidak ditemukan', 'error');
             return;
         }
         addProductToCart(data);
-        document.getElementById('posSearch').value = '';
-        document.getElementById('posSuggestions').innerHTML = '';
-    } catch (e) {
-        console.error('POS select product error:', e);
-        showToast('Gagal memuat detail produk', 'error');
+        const inp = document.getElementById('posSearch');
+        const sug = document.getElementById('posSuggestions');
+        if (inp) inp.value = '';
+        if (sug) sug.innerHTML = '';
+        if (inp) inp.focus();
+    } catch(e) {
+        console.error('selectProduct error', e);
     }
 }
 
