@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=15.40'; ?>
+    <?php $v = '?v=15.41'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -108,24 +108,65 @@ if ($userLevel === 'staff') {
 <?php $__globalCsrf = (new Security())->getCSRFToken(); ?>
 <input type="hidden" id="csrfToken" value="<?= $__globalCsrf ?>">
 
-    <!-- Elegant App Loader -->
+    <!-- Ultra-Sleek Animated Typography Splash Loader -->
     <style>
-        @keyframes pulse-glow {
-            0% { opacity: 0.8; transform: scale(0.98); text-shadow: 0 0 10px rgba(var(--primary-rgb), 0.2); }
-            50% { opacity: 1; transform: scale(1.02); text-shadow: 0 0 25px rgba(var(--primary-rgb), 0.6); }
-            100% { opacity: 0.8; transform: scale(0.98); text-shadow: 0 0 10px rgba(var(--primary-rgb), 0.2); }
+        @keyframes pulseGlowText {
+            0%, 100% { opacity: 0.85; transform: scale(0.98); }
+            50% { opacity: 1; transform: scale(1.03); filter: drop-shadow(0 0 16px rgba(239, 68, 68, 0.5)); }
         }
-        .splash-text {
-            animation: pulse-glow 2s infinite ease-in-out;
+        @keyframes lineProgressAnim {
+            0% { left: -40%; width: 35%; }
+            50% { left: 35%; width: 45%; }
+            100% { left: 100%; width: 35%; }
+        }
+        .splash-brand-text {
+            font-size: 2.4rem;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            font-family: 'Inter', -apple-system, sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            animation: pulseGlowText 2.2s infinite ease-in-out;
+            user-select: none;
+        }
+        .splash-brand-alfarez {
+            background: linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #38bdf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .splash-brand-mart {
+            background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-style: italic;
+        }
+        .splash-progress-track {
+            width: 150px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            margin-top: 18px;
+        }
+        .splash-progress-bar {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #ef4444);
+            border-radius: 4px;
+            animation: lineProgressAnim 1.4s infinite ease-in-out;
         }
     </style>
-    <div id="appInitLoader" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg-default);z-index:99999;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 0.5s ease;">
-        <div class="elegant-loader">
-            <div class="dot"></div>
-            <div class="dot"></div>
-            <div class="dot"></div>
+    <div id="appInitLoader" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#0d0e15;z-index:99999;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 0.4s ease;">
+        <div class="splash-brand-text">
+            <span class="splash-brand-alfarez">Alfarez</span><span class="splash-brand-mart">Mart</span>
         </div>
-        <div class="splash-text" style="margin-top:20px;font-weight:800;font-size:1.8rem;letter-spacing:1px;color:var(--text-primary);">Alfarez<span style="color:var(--primary);">Mart</span></div>
+        <div class="splash-progress-track">
+            <div class="splash-progress-bar"></div>
+        </div>
+        <div style="font-size:11px; color:#64748b; margin-top:10px; font-weight:500; letter-spacing:0.5px;">Memuat Aplikasi...</div>
     </div>
     <script>
     function hideAppLoader() {

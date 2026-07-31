@@ -4,18 +4,24 @@
     "description": "Sistem manajemen stok dan harga toko AlfarezMart",
     "start_url": "./",
     "display": "standalone",
-    "background_color": "#0f0f1a",
-    "theme_color": "#1a1a2e",
+    "background_color": "#0d0e15",
+    "theme_color": "#0d0e15",
     "orientation": "portrait-primary",
     "scope": "./",
     "lang": "id",
     "categories": ["business", "productivity"],
     "icons": [
         {
+            "src": "public/images/splash_icon.svg",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
             "src": "public/images/Icon.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any"
+            "purpose": "maskable"
         }
     ]
 }

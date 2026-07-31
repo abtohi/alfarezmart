@@ -309,6 +309,79 @@
     </style>
 </head>
 <body>
+    <!-- Animated Typography Splash Loader -->
+    <style>
+        @keyframes pulseGlowText {
+            0%, 100% { opacity: 0.85; transform: scale(0.98); }
+            50% { opacity: 1; transform: scale(1.03); filter: drop-shadow(0 0 16px rgba(239, 68, 68, 0.5)); }
+        }
+        @keyframes lineProgressAnim {
+            0% { left: -40%; width: 35%; }
+            50% { left: 35%; width: 45%; }
+            100% { left: 100%; width: 35%; }
+        }
+        .splash-brand-text {
+            font-size: 2.4rem;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            font-family: 'Inter', -apple-system, sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            animation: pulseGlowText 2.2s infinite ease-in-out;
+            user-select: none;
+        }
+        .splash-brand-alfarez {
+            background: linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #38bdf8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .splash-brand-mart {
+            background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-style: italic;
+        }
+        .splash-progress-track {
+            width: 150px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            margin-top: 18px;
+        }
+        .splash-progress-bar {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #6366f1, #ef4444);
+            border-radius: 4px;
+            animation: lineProgressAnim 1.4s infinite ease-in-out;
+        }
+    </style>
+    <div id="appInitLoader" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#0d0e15;z-index:99999;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 0.4s ease;">
+        <div class="splash-brand-text">
+            <span class="splash-brand-alfarez">Alfarez</span><span class="splash-brand-mart">Mart</span>
+        </div>
+        <div class="splash-progress-track">
+            <div class="splash-progress-bar"></div>
+        </div>
+        <div style="font-size:11px; color:#64748b; margin-top:10px; font-weight:500; letter-spacing:0.5px;">Memuat Aplikasi...</div>
+    </div>
+    <script>
+    function hideAppLoader() {
+        const loader = document.getElementById('appInitLoader');
+        if (!loader || loader.dataset.hidden === '1') return;
+        loader.dataset.hidden = '1';
+        loader.style.pointerEvents = 'none';
+        loader.style.opacity = '0';
+        setTimeout(() => { loader.style.display = 'none'; }, 400);
+    }
+    window.addEventListener('load', hideAppLoader);
+    document.addEventListener('DOMContentLoaded', hideAppLoader);
+    setTimeout(hideAppLoader, 2000);
+    </script>
     <div class="bg-particles"></div>
 
     <div class="login-container">
