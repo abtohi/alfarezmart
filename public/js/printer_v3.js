@@ -360,14 +360,9 @@ class ThermalPrinter {
         }
 
         try {
-            // Show device picker dialog - filter by printer services & name prefixes to hide non-printer devices
+            // Show device picker dialog - filter strictly by printer name prefixes to hide Unknown/Unsupported devices
             this.device = await navigator.bluetooth.requestDevice({
                 filters: [
-                    { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
-                    { services: ['e7810a71-73ae-499d-8c15-faa9aef0c3f2'] },
-                    { services: ['49535343-fe7d-4ae5-8fa9-9fafd205e455'] },
-                    { services: ['0000ff00-0000-1000-8000-00805f9b34fb'] },
-                    { services: ['00001101-0000-1000-8000-00805f9b34fb'] },
                     { namePrefix: 'RPP' },
                     { namePrefix: 'POS' },
                     { namePrefix: 'PT' },
@@ -1167,6 +1162,29 @@ class ThermalPrinter {
         // This prevents OS Bluetooth stack from hanging on subsequent prints
         this.softDisconnect();
         console.log('[ThermalPrinter] Soft-disconnected after print. Ready for next print.');
+    }
+
+    /**
+     * Android Native RawBT / Bluetooth Driver Service Dispatch.
+     * Encodes binary ESC/POS payload to Base64 and dispatches directly to RawBT app via Android Intent.
+     * RawBT connects via native Android Bluetooth SPP socket to paired printer (e.g. RPP02N)
+     * and prints INSTANTLY without popups, dialogs, or manual reconnects.
+     */
+    printRawBT(payload) {
+        try {
+            let binary = '';
+            const len = payload.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(payload[i]);
+            }
+            const b64 = btoa(binary);
+            const rawbtUrl = 'intent:#Intent;scheme=rawbt;package=ru.a404m.rawbt;S.base64=' + encodeURIComponent(b64) + ';end;';
+            window.location.href = rawbtUrl;
+            return true;
+        } catch (e) {
+            console.error('[ThermalPrinter] RawBT dispatch error:', e);
+            throw new Error('Gagal mengirim ke RawBT Printer: ' + e.message);
+        }
     }
 
     /**

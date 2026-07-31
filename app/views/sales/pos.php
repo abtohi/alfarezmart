@@ -1454,6 +1454,7 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
     function showConnected(deviceName) {
         btnConnect.style.display = 'none';
         btnPrint.style.display = 'flex';
+        btnPrint.innerHTML = '<i class="bi bi-printer"></i> Cetak Struk (Bluetooth)';
         
         const btnNew = document.getElementById('btnConnectNewPrinter');
         if (btnNew) btnNew.style.display = 'none';
@@ -1482,10 +1483,16 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
     };
 
     function showDisconnected(hasSaved = false) {
-        btnConnect.style.display = 'flex';
-        btnConnect.innerHTML = hasSaved ? '<i class="bi bi-arrow-clockwise"></i> Hubungkan ke Printer Tersimpan' : '<i class="bi bi-bluetooth"></i> Hubungkan Printer Bluetooth';
-        btnConnect.disabled = false;
-        btnPrint.style.display = 'flex'; // Always keep print button available
+        if (hasSaved) {
+            btnConnect.style.display = 'none';
+            btnPrint.style.display = 'flex';
+            btnPrint.innerHTML = '<i class="bi bi-printer"></i> Cetak Struk (Bluetooth)';
+        } else {
+            btnConnect.style.display = 'flex';
+            btnConnect.innerHTML = '<i class="bi bi-bluetooth"></i> Hubungkan Printer Bluetooth';
+            btnConnect.disabled = false;
+            btnPrint.style.display = 'none';
+        }
         if (statusBar) statusBar.style.display = 'none';
 
         const btnNew = document.getElementById('btnConnectNewPrinter');
