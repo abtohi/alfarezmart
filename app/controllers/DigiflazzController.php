@@ -795,12 +795,18 @@ class DigiflazzController extends Controller {
 
         $transactions = $this->digiModel->getAnalyticsData($startDate, $endDate);
 
-        // Process data in PHP
+        // Process analytics data in PHP
         $categories = [];
         $sellers = [];
+        $dailyTrend = [];
         $totalTrx = 0;
-        $totalProfit = 0;
         $totalSuccess = 0;
+        $totalFailed = 0;
+        $totalPending = 0;
+        $totalRevenue = 0;
+        $totalProfit = 0;
+        $totalSpeedSum = 0;
+        $totalSpeedCount = 0;
 
         foreach ($transactions as $trx) {
             if ($category !== 'all' && strtolower($trx['category']) !== strtolower($category)) {
@@ -808,9 +814,22 @@ class DigiflazzController extends Controller {
             }
 
             $totalTrx++;
-            
+            $trxDate = date('Y-m-d', strtotime($trx['created_at']));
+            if (!isset($dailyTrend[$trxDate])) {
+                $dailyTrend[$trxDate] = [
+                    'date' => $trxDate,
+                    'label' => date('d M', strtotime($trxDate)),
+                    'total' => 0,
+                    'success' => 0,
+                    'failed' => 0,
+                    'revenue' => 0,
+                    'profit' => 0
+                ];
+            }
+            $dailyTrend[$trxDate]['total']++;
+
             // Category count
-            $catName = $trx['category'] ?: 'Lainnya';
+            $catName = !empty($trx['category']) ? ucfirst($trx['category']) : 'Lainnya';
             if (!isset($categories[$catName])) {
                 $categories[$catName] = 0;
             }
@@ -818,66 +837,134 @@ class DigiflazzController extends Controller {
 
             // Status check
             $isSuccess = ($trx['status'] === 'success');
+            $isFailed = ($trx['status'] === 'failed');
+            $isPending = ($trx['status'] === 'pending');
+
             if ($isSuccess) {
                 $totalSuccess++;
-                $totalProfit += ($trx['sell_price'] - $trx['modal_price']);
+                $dailyTrend[$trxDate]['success']++;
+                $profit = (float)$trx['sell_price'] - (float)$trx['modal_price'];
+                $totalProfit += $profit;
+                $totalRevenue += (float)$trx['sell_price'];
+                $dailyTrend[$trxDate]['revenue'] += (float)$trx['sell_price'];
+                $dailyTrend[$trxDate]['profit'] += $profit;
+            } else if ($isFailed) {
+                $totalFailed++;
+                $dailyTrend[$trxDate]['failed']++;
+            } else {
+                $totalPending++;
             }
-            $isFailed = ($trx['status'] === 'failed');
 
-            // Processing Time (only if success or failed, not pending)
+            // Processing Speed in Seconds
             $processTime = null;
             if ($isSuccess || $isFailed) {
                 $created = strtotime($trx['created_at']);
                 $updated = strtotime($trx['updated_at']);
-                $processTime = max(0, $updated - $created);
-            }
-
-            // Extract seller
-            $sellerName = 'Digiflazz';
-            if (!empty($trx['raw_response'])) {
-                $raw = json_decode($trx['raw_response'], true);
-                if (isset($raw['tele']) && !empty($raw['tele'])) {
-                    $sellerName = $raw['tele'];
-                } else if (isset($raw['wa']) && !empty($raw['wa'])) {
-                    $sellerName = $raw['wa'];
+                $diff = $updated - $created;
+                if ($diff >= 0 && $diff <= 86400) {
+                    $processTime = $diff;
+                    $totalSpeedSum += $diff;
+                    $totalSpeedCount++;
                 }
             }
 
-            if (!isset($sellers[$sellerName])) {
-                $sellers[$sellerName] = [
-                    'name' => $sellerName,
+            // Extract Real Seller Name & Handle
+            $handle = '';
+            if (!empty($trx['raw_response'])) {
+                $raw = json_decode($trx['raw_response'], true);
+                if (!empty($raw['tele'])) {
+                    $handle = (strpos($raw['tele'], '@') === 0 ? '' : '@') . $raw['tele'];
+                } else if (!empty($raw['wa'])) {
+                    $handle = $raw['wa'];
+                }
+            }
+
+            $realSeller = trim($trx['trx_seller_name'] ?: ($trx['prod_seller_name'] ?: ''));
+            if (empty($realSeller)) {
+                if (!empty($handle)) {
+                    $realSeller = $handle;
+                } else {
+                    $realSeller = 'Digiflazz Supplier';
+                }
+            }
+
+            if (!isset($sellers[$realSeller])) {
+                $sellers[$realSeller] = [
+                    'name' => $realSeller,
+                    'handle' => $handle,
                     'total' => 0,
                     'success' => 0,
                     'failed' => 0,
+                    'pending' => 0,
+                    'revenue' => 0,
+                    'profit' => 0,
+                    'modal_sum' => 0,
                     'process_time_sum' => 0,
                     'process_time_count' => 0
                 ];
             }
 
-            $sellers[$sellerName]['total']++;
-            if ($isSuccess) $sellers[$sellerName]['success']++;
-            if ($isFailed) $sellers[$sellerName]['failed']++;
-            
+            $sellers[$realSeller]['total']++;
+            if (!empty($handle) && empty($sellers[$realSeller]['handle'])) {
+                $sellers[$realSeller]['handle'] = $handle;
+            }
+
+            if ($isSuccess) {
+                $sellers[$realSeller]['success']++;
+                $sellers[$realSeller]['revenue'] += (float)$trx['sell_price'];
+                $sellers[$realSeller]['profit'] += ((float)$trx['sell_price'] - (float)$trx['modal_price']);
+                $sellers[$realSeller]['modal_sum'] += (float)$trx['modal_price'];
+            } else if ($isFailed) {
+                $sellers[$realSeller]['failed']++;
+            } else {
+                $sellers[$realSeller]['pending']++;
+            }
+
             if ($processTime !== null) {
-                $sellers[$sellerName]['process_time_sum'] += $processTime;
-                $sellers[$sellerName]['process_time_count']++;
+                $sellers[$realSeller]['process_time_sum'] += $processTime;
+                $sellers[$realSeller]['process_time_count']++;
             }
         }
 
+        // Finalize Sellers Data
         $sellerResults = [];
         foreach ($sellers as $s) {
             $s['success_rate'] = $s['total'] > 0 ? round(($s['success'] / $s['total']) * 100, 1) : 0;
             $s['failed_rate'] = $s['total'] > 0 ? round(($s['failed'] / $s['total']) * 100, 1) : 0;
             $s['avg_process_time'] = $s['process_time_count'] > 0 ? round($s['process_time_sum'] / $s['process_time_count'], 1) : 0;
+            $s['avg_profit_per_trx'] = $s['success'] > 0 ? round($s['profit'] / $s['success'], 0) : 0;
+
+            // Calculate Performance Score (0 - 100 pts) for Leaderboard
+            // SR Weight: 50%, Speed Weight: 35%, Price/Margin Weight: 15%
+            $srScore = $s['success_rate'];
+            $speedScore = max(0, 100 - ($s['avg_process_time'] / 2));
+            $marginPct = ($s['modal_sum'] > 0) ? ($s['profit'] / $s['modal_sum']) * 100 : 0;
+            $marginScore = min(100, max(0, $marginPct * 10));
+
+            $s['score'] = round(($srScore * 0.50) + ($speedScore * 0.35) + ($marginScore * 0.15), 1);
             $sellerResults[] = $s;
         }
 
-        // Sort sellers by total descending
+        // Sort Top Sellers Leaderboard (by Score DESC, then Success Rate DESC, then Avg Speed ASC)
+        $topSellers = $sellerResults;
+        usort($topSellers, function($a, $b) {
+            if ($b['score'] != $a['score']) return $b['score'] <=> $a['score'];
+            if ($b['success_rate'] != $a['success_rate']) return $b['success_rate'] <=> $a['success_rate'];
+            return $a['avg_process_time'] <=> $b['avg_process_time'];
+        });
+        $top5Sellers = array_slice($topSellers, 0, 5);
+
+        // Sort default seller table by Total Trx DESC
         usort($sellerResults, function($a, $b) {
             return $b['total'] <=> $a['total'];
         });
 
+        // Format Daily Trend sorted by date ASC
+        ksort($dailyTrend);
+        $dailyTrendArray = array_values($dailyTrend);
+
         $globalSuccessRate = $totalTrx > 0 ? round(($totalSuccess / $totalTrx) * 100, 1) : 0;
+        $globalAvgSpeed = $totalSpeedCount > 0 ? round($totalSpeedSum / $totalSpeedCount, 1) : 0;
 
         header('Content-Type: application/json');
         echo json_encode([
@@ -885,11 +972,18 @@ class DigiflazzController extends Controller {
             'data' => [
                 'metrics' => [
                     'total' => $totalTrx,
+                    'success_count' => $totalSuccess,
+                    'failed_count' => $totalFailed,
+                    'pending_count' => $totalPending,
                     'success_rate' => $globalSuccessRate,
-                    'profit' => $totalProfit
+                    'revenue' => $totalRevenue,
+                    'profit' => $totalProfit,
+                    'avg_speed' => $globalAvgSpeed
                 ],
                 'categories' => $categories,
-                'sellers' => $sellerResults
+                'sellers' => $sellerResults,
+                'top_sellers' => $top5Sellers,
+                'daily_trend' => $dailyTrendArray
             ]
         ]);
         exit;

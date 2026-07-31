@@ -403,10 +403,16 @@ class DigiflazzModel {
      * Get transaction data for Analytics Dashboard
      */
     public function getAnalyticsData(string $startDate, string $endDate) {
-        $sql = "SELECT id, ref_id, buyer_sku_code, category, product_name, type, sell_price, modal_price, status, raw_response, created_at, updated_at 
-                FROM digi_transactions 
-                WHERE created_at >= :start_date AND created_at <= :end_date
-                ORDER BY created_at DESC";
+        $sql = "SELECT 
+                    t.id, t.ref_id, t.buyer_sku_code, t.category, t.product_name, t.type, 
+                    t.sell_price, t.modal_price, t.status, t.raw_response, t.created_at, t.updated_at,
+                    t.seller_name AS trx_seller_name,
+                    p.seller_name AS prod_seller_name,
+                    p.brand
+                FROM digi_transactions t
+                LEFT JOIN digi_products p ON t.buyer_sku_code = p.buyer_sku_code
+                WHERE t.created_at >= :start_date AND t.created_at <= :end_date
+                ORDER BY t.created_at DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->bindValue(':start_date', $startDate . ' 00:00:00');
         $stmt->bindValue(':end_date', $endDate . ' 23:59:59');
