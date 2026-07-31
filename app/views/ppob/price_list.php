@@ -485,14 +485,21 @@ async function loadPrices() {
                         prodSrHtml = `<span style="color: ${pColor}; font-weight: 700; font-size: 0.65rem;" title="SR Produk"><i class="bi bi-shield-check"></i> ${p.product_success_rate}%</span>`;
                     }
 
+                    let speedSrHtml = '';
+                    if (p.seller_avg_speed !== null && p.seller_avg_speed !== undefined) {
+                        let sColor = p.seller_avg_speed <= 5 ? '#10b981' : (p.seller_avg_speed <= 20 ? '#3b82f6' : '#f59e0b');
+                        speedSrHtml = `<span style="color: ${sColor}; font-weight: 700; font-size: 0.65rem;" title="Kecepatan Seller"><i class="bi bi-stopwatch"></i> ${p.seller_avg_speed}s</span>`;
+                    }
+
                     sellerHtml = `
                         <div class="d-flex flex-column gap-1">
                             <span class="fw-bold text-truncate" style="font-size: 0.78rem; max-width: 120px; color: var(--text-primary);" title="${p.seller_name}">
                                 <i class="bi bi-shop text-primary me-1"></i>${p.seller_name}
                             </span>
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
                                 ${sellerSrHtml}
                                 ${prodSrHtml}
+                                ${speedSrHtml}
                             </div>
                         </div>
                     `;

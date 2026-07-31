@@ -2524,6 +2524,24 @@ function renderProducts(products) {
                 </div>`;
             }
 
+            let speedBadge = '';
+            let rawSpeed = (p.seller_avg_speed !== null && p.seller_avg_speed !== undefined) ? p.seller_avg_speed : null;
+            if (rawSpeed !== null) {
+                let speedColor = rawSpeed <= 5 ? '#10b981' : (rawSpeed <= 20 ? '#3b82f6' : (rawSpeed <= 60 ? '#f59e0b' : '#ef4444'));
+                let speedIcon = rawSpeed <= 5 ? 'bi-lightning-charge-fill' : (rawSpeed <= 20 ? 'bi-stopwatch' : 'bi-clock');
+                speedBadge = `
+                <div class="seller-sr-chip" onclick="openSellerHistory(event, '${p.seller_name}')" style="cursor:pointer;" title="Rata-rata Kecepatan Transaksi Seller">
+                    <span class="sr-label">Kecepatan:</span>
+                    <span style="color: ${speedColor}; font-weight: 700;"><i class="bi ${speedIcon}" style="font-size: 0.65rem;"></i> ${rawSpeed} dtk</span>
+                </div>`;
+            } else {
+                speedBadge = `
+                <div class="seller-sr-chip" title="Rata-rata Kecepatan Transaksi Seller">
+                    <span class="sr-label">Kecepatan:</span>
+                    <span class="text-muted" style="font-weight: 700;"><i class="bi bi-clock" style="font-size: 0.65rem;"></i> -</span>
+                </div>`;
+            }
+
             const encodedProduct = encodeURIComponent(JSON.stringify(p));
 
             sellerItemsHtml += `
@@ -2549,6 +2567,7 @@ function renderProducts(products) {
                                     ${successBadge}
                                 </div>
                                 ${prodSuccessBadge}
+                                ${speedBadge}
                             </div>
                         </div>
                     </div>

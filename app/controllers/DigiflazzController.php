@@ -98,8 +98,10 @@ class DigiflazzController extends Controller {
             $seller = isset($p['seller_name']) ? trim($p['seller_name']) : null;
             if ($seller && isset($rates[$seller]) && $rates[$seller]['total'] > 0) {
                 $p['success_rate'] = round(($rates[$seller]['success'] / $rates[$seller]['total']) * 100, 1);
+                $p['seller_avg_speed'] = $rates[$seller]['avg_speed'];
             } else {
                 $p['success_rate'] = null;
+                $p['seller_avg_speed'] = null;
             }
 
             $sku = isset($p['buyer_sku_code']) ? trim($p['buyer_sku_code']) : null;
@@ -129,8 +131,10 @@ class DigiflazzController extends Controller {
             $seller = isset($p['seller_name']) ? trim($p['seller_name']) : null;
             if ($seller && isset($rates[$seller]) && $rates[$seller]['total'] > 0) {
                 $p['success_rate'] = round(($rates[$seller]['success'] / $rates[$seller]['total']) * 100, 1);
+                $p['seller_avg_speed'] = $rates[$seller]['avg_speed'];
             } else {
                 $p['success_rate'] = null;
+                $p['seller_avg_speed'] = null;
             }
 
             $sku = isset($p['buyer_sku_code']) ? trim($p['buyer_sku_code']) : null;
