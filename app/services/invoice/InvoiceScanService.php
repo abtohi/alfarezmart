@@ -422,9 +422,7 @@ class InvoiceScanService
 
             $response = curl_exec($ch);
             $err      = curl_error($ch);
-            if (PHP_VERSION_ID < 80000) {
-                @curl_close($ch);
-            }
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
             if ($err) {
                 $lastError = "Koneksi ke OpenRouter gagal: " . $err;
