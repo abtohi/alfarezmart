@@ -482,7 +482,7 @@ function detectProductType(d) {
                 </div>
                 <div class="meta-row">
                     <span class="meta-key">ID Transaksi</span>
-                    <span class="meta-val">${d.digiflazz_trx_id || d.ref_id || '-'}</span>
+                    <span class="meta-val">${digiTrxVal}</span>
                 </div>
                 <div class="meta-row">
                     <span class="meta-key">Tanggal & Waktu</span>
@@ -563,6 +563,16 @@ function detectProductType(d) {
         const BASE   = (typeof BASE_URL !== 'undefined' && BASE_URL) ? BASE_URL : '/';
         const logoSrc = (BASE.endsWith('/') ? BASE : BASE + '/') + 'public/images/mobile_icon.png';
 
+        let digiTrxVal = (d.digiflazz_trx_id && d.digiflazz_trx_id !== d.ref_id) ? d.digiflazz_trx_id : ((d.trx_id && d.trx_id !== d.ref_id) ? d.trx_id : '');
+        if (!digiTrxVal && d.raw_response) {
+            try {
+                const raw = typeof d.raw_response === 'string' ? JSON.parse(d.raw_response) : d.raw_response;
+                if (raw.tr_id) digiTrxVal = String(raw.tr_id);
+                else if (raw.trx_id && raw.trx_id !== d.ref_id) digiTrxVal = String(raw.trx_id);
+            } catch(e) {}
+        }
+        if (!digiTrxVal) digiTrxVal = '-';
+
         // Watermark: 9 tiles
         let wmHtml = '';
         for (let i = 0; i < 9; i++) {
@@ -642,7 +652,7 @@ function detectProductType(d) {
                         </div>
                         <div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;padding:2px 0;border-top:1px solid #eee;">
                             <span style="color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;">ID Transaksi</span>
-                            <span style="color:#222;font-weight:700;font-family:monospace;font-size:8.5px;text-align:right;">${d.digiflazz_trx_id || d.ref_id || '-'}</span>
+                            <span style="color:#222;font-weight:700;font-family:monospace;font-size:8.5px;text-align:right;">${digiTrxVal}</span>
                         </div>
                         <div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;padding:2px 0;border-top:1px solid #eee;">
                             <span style="color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;">Tanggal</span>

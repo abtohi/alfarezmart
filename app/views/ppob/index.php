@@ -3525,7 +3525,7 @@ function printPpobReceiptBrowser() {
     <div class="store-desc">Struk Pembayaran Produk Digital</div>
 </div>
 <div class="row"><div class="label">No. Ref</div><div class="value">${d.ref_id}</div></div>
-<div class="row"><div class="label">Trx ID</div><div class="value">${d.digiflazz_trx_id || d.trx_id || '-'}</div></div>
+<div class="row"><div class="label">Trx ID</div><div class="value">${(d.digiflazz_trx_id && d.digiflazz_trx_id !== d.ref_id) ? d.digiflazz_trx_id : ((d.trx_id && d.trx_id !== d.ref_id) ? d.trx_id : '-')}</div></div>
 <div class="row"><div class="label">Tanggal</div><div class="value">${d.created_at}</div></div>
 <div class="center trx-success">TRANSAKSI BERHASIL</div>
 <div class="row"><div class="label">Produk</div><div class="value">${d.product_name}</div></div>

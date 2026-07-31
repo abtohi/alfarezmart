@@ -941,7 +941,15 @@ class ThermalPrinter {
             
             data += padRight('TGL', 4) + ': ' + formattedDate + '\n';
             data += padRight('REF', 4) + ': ' + (transaction.ref_id || '-') + '\n';
-            data += padRight('TRX', 4) + ': ' + (transaction.digiflazz_trx_id || transaction.trx_id || '-') + '\n';
+            let digiId = (transaction.digiflazz_trx_id && transaction.digiflazz_trx_id !== transaction.ref_id) ? transaction.digiflazz_trx_id : ((transaction.trx_id && transaction.trx_id !== transaction.ref_id) ? transaction.trx_id : '');
+            if (!digiId && transaction.raw_response) {
+                try {
+                    const raw = typeof transaction.raw_response === 'string' ? JSON.parse(transaction.raw_response) : transaction.raw_response;
+                    if (raw.tr_id) digiId = String(raw.tr_id);
+                    else if (raw.trx_id && raw.trx_id !== transaction.ref_id) digiId = String(raw.trx_id);
+                } catch(e) {}
+            }
+            data += padRight('TRX', 4) + ': ' + (digiId || '-') + '\n';
             data += '\x1B!\x00'; // Font A
             data += '-'.repeat(width) + '\n';
 

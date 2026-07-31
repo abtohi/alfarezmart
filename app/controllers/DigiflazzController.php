@@ -757,7 +757,7 @@ class DigiflazzController extends Controller {
         
         $transactions = $this->digiModel->getTransactions($limit, $offset);
 
-        // Calculate and attach balance_before & balance_after
+        // Calculate and attach balance_before, balance_after, and clean digiflazz_trx_id
         foreach ($transactions as &$t) {
             $balAfter = null;
             $balBefore = null;
@@ -770,7 +770,21 @@ class DigiflazzController extends Controller {
                     } else if (isset($raw['balance'])) {
                         $balAfter = (float)$raw['balance'];
                     }
+
+                    if (empty($t['digiflazz_trx_id']) || $t['digiflazz_trx_id'] === $t['ref_id']) {
+                        if (!empty($raw['tr_id'])) {
+                            $t['digiflazz_trx_id'] = (string)$raw['tr_id'];
+                        } else if (!empty($raw['trx_id']) && $raw['trx_id'] !== $t['ref_id']) {
+                            $t['digiflazz_trx_id'] = (string)$raw['trx_id'];
+                        } else {
+                            $t['digiflazz_trx_id'] = null;
+                        }
+                    }
                 }
+            }
+
+            if (!empty($t['digiflazz_trx_id']) && $t['digiflazz_trx_id'] === $t['ref_id']) {
+                $t['digiflazz_trx_id'] = null;
             }
 
             if ($balAfter !== null) {
