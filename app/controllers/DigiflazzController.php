@@ -756,6 +756,35 @@ class DigiflazzController extends Controller {
         $status_filter = $_GET['status'] ?? 'all';
         
         $transactions = $this->digiModel->getTransactions($limit, $offset);
+
+        // Calculate and attach balance_before & balance_after
+        foreach ($transactions as &$t) {
+            $balAfter = null;
+            $balBefore = null;
+
+            if (!empty($t['raw_response'])) {
+                $raw = is_string($t['raw_response']) ? json_decode($t['raw_response'], true) : $t['raw_response'];
+                if (is_array($raw)) {
+                    if (isset($raw['buyer_last_saldo'])) {
+                        $balAfter = (float)$raw['buyer_last_saldo'];
+                    } else if (isset($raw['balance'])) {
+                        $balAfter = (float)$raw['balance'];
+                    }
+                }
+            }
+
+            if ($balAfter !== null) {
+                $modal = (float)($t['modal_price'] ?? 0);
+                if (in_array(strtolower($t['status']), ['success', 'sukses'])) {
+                    $balBefore = $balAfter + $modal;
+                } else {
+                    $balBefore = $balAfter;
+                }
+            }
+
+            $t['balance_after'] = $balAfter;
+            $t['balance_before'] = $balBefore;
+        }
         
         if ($status_filter !== 'all') {
             $transactions = array_filter($transactions, function($t) use ($status_filter) {

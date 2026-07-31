@@ -80,6 +80,8 @@
                         <th style="padding:12px 8px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:90px;">Agen</th>
                         <th style="padding:12px 8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:95px;">Modal</th>
                         <th style="padding:12px 8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:105px;">Jual</th>
+                        <th style="padding:12px 8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:110px;">Saldo Sebelum</th>
+                        <th style="padding:12px 8px;text-align:right;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:110px;">Saldo Sesudah</th>
                         <th style="padding:12px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:140px;">SN / Token</th>
                         <th style="padding:12px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:100px;">Seller</th>
                         <th style="padding:12px 8px;text-align:center;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border-color);min-width:90px;">Status</th>
@@ -87,7 +89,7 @@
                 </thead>
                 <tbody id="history-tbody">
                     <tr>
-                        <td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);">
+                        <td colspan="11" style="text-align:center;padding:40px;color:var(--text-muted);">
                             <span class="spinner-border spinner-border-sm me-2" style="color:var(--primary);"></span>Memuat data...
                         </td>
                     </tr>
@@ -169,7 +171,7 @@
             el.style.color = isActive ? 'var(--text-primary)' : 'var(--text-muted)';
             el.style.fontWeight = isActive ? '700' : '600';
         });
-        document.getElementById('history-tbody').innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);"><span class="spinner-border spinner-border-sm me-2" style="color:var(--primary);"></span>Memuat...</td></tr>`;
+        document.getElementById('history-tbody').innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--text-muted);"><span class="spinner-border spinner-border-sm me-2" style="color:var(--primary);"></span>Memuat...</td></tr>`;
         loadHistory(status);
     }
 
@@ -185,13 +187,13 @@
             } else {
                 transactionHistory = [];
                 const tbody = document.getElementById('history-tbody');
-                tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);">Tidak ada transaksi ${status === 'all' ? '' : status}.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--text-muted);">Tidak ada transaksi ${status === 'all' ? '' : status}.</td></tr>`;
                 document.getElementById('pagination-info').innerText = 'Menampilkan 0 dari 0 data';
                 document.getElementById('pagination-controls').innerHTML = '';
             }
         } catch (e) {
             console.error('Failed to load history', e);
-            document.getElementById('history-tbody').innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--danger);">Gagal memuat data transaksi.</td></tr>`;
+            document.getElementById('history-tbody').innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--danger);">Gagal memuat data transaksi.</td></tr>`;
         }
     }
 
@@ -309,6 +311,15 @@
                 `;
             }
 
+            let balBeforeStr = '-';
+            if (trx.balance_before !== null && trx.balance_before !== undefined) {
+                balBeforeStr = `Rp ${parseInt(trx.balance_before).toLocaleString('id-ID')}`;
+            }
+            let balAfterStr = '-';
+            if (trx.balance_after !== null && trx.balance_after !== undefined) {
+                balAfterStr = `Rp ${parseInt(trx.balance_after).toLocaleString('id-ID')}`;
+            }
+
             tbody.innerHTML += `
                 <tr style="border-bottom:1px solid var(--border-color);transition:background var(--transition-fast);${rowAccent}" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${rowAccent ? rowAccent.replace('background:','') : 'var(--surface-1)'}'">
                     <td style="padding:12px 16px;text-align:center;min-width:140px;white-space:nowrap;">
@@ -334,6 +345,12 @@
                     <td style="padding:12px 8px;text-align:right;">
                         <div style="font-weight:700;color:var(--text-primary);font-size:11px;">Rp ${parseInt(trx.sell_price).toLocaleString('id-ID')}</div>
                         <div style="font-size:9px;margin-top:2px;${profitColor}font-weight:600;">+Rp ${profit.toLocaleString('id-ID')}</div>
+                    </td>
+                    <td style="padding:12px 8px;text-align:right;">
+                        <div style="font-weight:600;color:var(--text-secondary);font-size:11px;">${balBeforeStr}</div>
+                    </td>
+                    <td style="padding:12px 8px;text-align:right;">
+                        <div style="font-weight:700;color:var(--info);font-size:11px;">${balAfterStr}</div>
                     </td>
                     <td style="padding:12px 8px;text-align:center;">
                         <div style="font-family:monospace;font-size:10px;color:var(--text-primary);word-break:break-all;max-width:140px;margin:0 auto;">${trx.sn || '-'}</div>
