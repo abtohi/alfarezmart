@@ -855,13 +855,14 @@ class DigiflazzController extends Controller {
                 $totalPending++;
             }
 
-            // Processing Speed in Seconds
+            // Processing Speed in Seconds (Valid API callback window: 0 to 300 seconds / 5 mins max)
+            // Diffs > 300s indicate batch migration updates or late manual status checks, not real-time API speed
             $processTime = null;
             if ($isSuccess || $isFailed) {
                 $created = strtotime($trx['created_at']);
                 $updated = strtotime($trx['updated_at']);
                 $diff = $updated - $created;
-                if ($diff >= 0 && $diff <= 86400) {
+                if ($diff >= 0 && $diff <= 300) {
                     $processTime = $diff;
                     $totalSpeedSum += $diff;
                     $totalSpeedCount++;
