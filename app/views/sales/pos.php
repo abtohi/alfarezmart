@@ -1337,8 +1337,6 @@ async function proceedCheckout() {
                 </div>
             `).join('');
 
-            const printerConnected = tp?.isConnected?.() ?? false;
-
             let modalPromise;
             try {
             modalPromise = AppModal.show({
@@ -1386,10 +1384,10 @@ async function proceedCheckout() {
                             <i class="bi bi-check-circle-fill"></i> <span id="printerStatusText">Printer terhubung</span>
                         </div>
 
-                        <button type="button" id="btnConnectPrinter" class="btn-outline-custom" style="width:100%;padding:14px;font-weight:600;display:${printerConnected ? 'none' : 'flex'};align-items:center;justify-content:center;gap:8px;font-size:var(--font-size-sm);border-radius:var(--radius-md);border:1px solid var(--border-color);cursor:pointer;transition:all 0.2s;">
+                        <button type="button" id="btnConnectPrinter" class="btn-outline-custom" style="width:100%;padding:14px;font-weight:600;display:${shouldShowPrintBtn ? 'none' : 'flex'};align-items:center;justify-content:center;gap:8px;font-size:var(--font-size-sm);border-radius:var(--radius-md);border:1px solid var(--border-color);cursor:pointer;transition:all 0.2s;">
                             <i class="bi bi-bluetooth"></i> Hubungkan Printer Bluetooth
                         </button>
-                        <button type="button" id="btnPrintReceipt" class="btn-primary-custom" style="width:100%;padding:14px;font-weight:600;display:${printerConnected ? 'flex' : 'none'};align-items:center;justify-content:center;gap:8px;font-size:var(--font-size-sm);border-radius:var(--radius-md);border:none;cursor:pointer;transition:all 0.2s;">
+                        <button type="button" id="btnPrintReceipt" class="btn-primary-custom" style="width:100%;padding:14px;font-weight:600;display:${shouldShowPrintBtn ? 'flex' : 'none'};align-items:center;justify-content:center;gap:8px;font-size:var(--font-size-sm);border-radius:var(--radius-md);border:none;cursor:pointer;transition:all 0.2s;">
                             <i class="bi bi-printer"></i> Cetak Struk (Bluetooth)
                         </button>
                         <button type="button" id="btnPrintBrowser" class="btn-outline-custom" style="width:100%;padding:14px;margin-top:8px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;font-size:var(--font-size-sm);border-radius:var(--radius-md);border:1px dashed var(--border-color);cursor:pointer;transition:all 0.2s;">
@@ -1408,7 +1406,7 @@ async function proceedCheckout() {
                 },
             });
 
-            setTimeout(() => setupPrinterButtons(printCart, printTotal, invoiceNo, currentSaleMode, mixInfo), 250);
+            setTimeout(() => setupPrinterButtons(printCart, printTotal, invoiceNo, currentSaleMode, mixInfo), 150);
             await modalPromise;
             } catch (modalErr) {
                 console.error('Checkout success UI error:', modalErr);
@@ -1420,51 +1418,34 @@ async function proceedCheckout() {
             btnCheckout.disabled = false;
         }
     } catch (err) {
-        showToast('Error: ' + err.message, 'error');
+        console.error('Checkout error:', err);
+        showToast('Gagal memproses transaksi: ' + err.message, 'error');
         btnCheckout.innerHTML = 'BAYAR SEKARANG';
         btnCheckout.disabled = false;
     }
 }
 
 function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mixInfo) {
-    const tp = getThermalPrinterSafe();
     const btnConnect = document.getElementById('btnConnectPrinter');
     const btnPrint = document.getElementById('btnPrintReceipt');
     const btnBrowser = document.getElementById('btnPrintBrowser');
     const statusBar = document.getElementById('printerStatusBar');
 
-    if (!btnConnect || !btnPrint || !btnBrowser) {
-        console.error('[POS] Printer buttons not found in DOM');
-        return;
-    }
+    if (!btnConnect || !btnPrint) return;
 
-    if (!tp) {
-        console.error('[POS] ThermalPrinter instance not found');
-        btnConnect.onclick = () => showToast('Komponen printer gagal dimuat. Muat ulang halaman.', 'warning');
-        btnPrint.onclick = () => showToast('Komponen printer gagal dimuat. Muat ulang halaman.', 'warning');
-        btnBrowser.onclick = () => showToast('Komponen printer gagal dimuat. Muat ulang halaman.', 'warning');
-        return;
-    }
-    
-    btnBrowser.onclick = async () => {
-        try {
-            btnBrowser.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyiapkan...';
-            btnBrowser.disabled = true;
-            await tp.printBrowser(printCart, printTotal, invoiceNo, {
+    const tp = getThermalPrinterSafe();
+    if (!tp) return;
+
+    if (btnBrowser) {
+        btnBrowser.onclick = () => {
+            tp.printBrowserFallback(printCart, printTotal, invoiceNo, {
                 storeSettings: STORE_SETTINGS,
                 paymentMethod: 'Tunai',
                 saleMode: printSaleMode,
                 mixInfo: mixInfo,
             });
-            btnBrowser.innerHTML = '<i class="bi bi-window"></i> Cetak Web / AirPrint';
-            btnBrowser.disabled = false;
-        } catch (e) {
-            btnBrowser.innerHTML = '<i class="bi bi-window"></i> Cetak Web / AirPrint';
-            btnBrowser.disabled = false;
-            console.error('[POS] Print Browser error:', e);
-            showToast(e.message || 'Gagal mencetak struk via web', 'error');
-        }
-    };
+        };
+    }
 
     function showConnected(deviceName) {
         btnConnect.style.display = 'none';
@@ -1500,7 +1481,7 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
         btnConnect.style.display = 'flex';
         btnConnect.innerHTML = hasSaved ? '<i class="bi bi-arrow-clockwise"></i> Hubungkan ke Printer Tersimpan' : '<i class="bi bi-bluetooth"></i> Hubungkan Printer Bluetooth';
         btnConnect.disabled = false;
-        btnPrint.style.display = 'none';
+        btnPrint.style.display = 'flex'; // Always keep print button available
         if (statusBar) statusBar.style.display = 'none';
 
         const btnNew = document.getElementById('btnConnectNewPrinter');
@@ -1512,7 +1493,6 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
             try {
                 btnConnect.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menghubungkan...';
                 btnConnect.disabled = true;
-                // Force new connection dialog ONLY on manual user click
                 const connected = await tp.connect(true, false);
                 if (!connected || !tp.isConnected()) {
                     showDisconnected(tp.hasSavedDevice());
@@ -1522,11 +1502,13 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
                 showConnected(tp.device?.name);
                 showToast('Printer Bluetooth terhubung dengan baik', 'success');
                 setupPrintButton();
+                if (!STORE_SETTINGS || STORE_SETTINGS.auto_print_checkout !== '0') {
+                    btnPrint.click();
+                }
             } catch (e) {
                 showDisconnected(tp.hasSavedDevice());
                 console.error('[POS] Printer connection error:', e);
-                const errMsg = e.message || 'Gagal menghubungkan printer';
-                showToast(errMsg, 'error');
+                showToast(e.message || 'Gagal menghubungkan printer', 'error');
                 setupConnectButton();
             }
         };
@@ -1535,7 +1517,7 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
     function setupPrintButton() {
         btnPrint.onclick = async () => {
             try {
-                btnPrint.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Mencetak...';
+                btnPrint.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Mencetak Struk...';
                 btnPrint.disabled = true;
 
                 const driverMode = tp.getDriver();
@@ -1545,9 +1527,16 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
                     if (!ok) {
                         showDisconnected(tp.hasSavedDevice());
                         setupConnectButton();
-                        showToast('Printer Bluetooth terputus. Klik "Hubungkan ke Printer Tersimpan" atau gunakan Cetak Web.', 'warning');
-                        btnPrint.innerHTML = '<i class="bi bi-printer"></i> Cetak Struk';
+                        showToast('Printer Bluetooth terputus. Klik "Hubungkan Printer Bluetooth".', 'warning');
+                        btnPrint.innerHTML = '<i class="bi bi-printer"></i> Hubungkan & Cetak Struk';
                         btnPrint.disabled = false;
+                        btnPrint.onclick = async () => {
+                            const conn = await tp.connect(true, false);
+                            if (conn) {
+                                setupPrintButton();
+                                btnPrint.click();
+                            }
+                        };
                         return;
                     }
                     showConnected(tp.device?.name);
@@ -1559,7 +1548,7 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
                     saleMode: printSaleMode,
                     mixInfo: mixInfo,
                 });
-                btnPrint.innerHTML = '<i class="bi bi-printer"></i> Cetak Ulang';
+                btnPrint.innerHTML = '<i class="bi bi-printer"></i> Cetak Ulang Struk';
                 btnPrint.disabled = false;
                 showToast('Struk berhasil dicetak ke printer thermal', 'success');
                 showHistorySaveConfirmation(invoiceNo, printTotal, printCart);
@@ -1568,64 +1557,26 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
                 btnPrint.disabled = false;
                 console.error('[POS] Print error:', e);
                 showToast(e.message || 'Gagal mencetak struk', 'error');
-                if (!tp.isConnected()) {
-                    showDisconnected(tp.hasSavedDevice());
-                    setupConnectButton();
-                }
             }
         };
     }
 
-    const driver = tp.getDriver();
     setupPrintButton();
-
-    if (driver === 'rawbt') {
-        showConnected('Android RawBT (Otomatis)');
-        if (!STORE_SETTINGS || STORE_SETTINGS.auto_print_checkout !== '0') {
-            setTimeout(() => {
-                if (btnPrint && typeof btnPrint.click === 'function') btnPrint.click();
-            }, 300);
-        }
-        return;
-    }
+    setupConnectButton();
 
     if (tp.isConnected()) {
         showConnected(tp.device?.name);
-        if (!STORE_SETTINGS || STORE_SETTINGS.auto_print_checkout !== '0') {
-            setTimeout(() => {
-                if (btnPrint && typeof btnPrint.click === 'function') btnPrint.click();
-            }, 300);
-        }
-        return;
+    } else if (tp.hasSavedDevice()) {
+        showConnected(tp.device?.name || 'Printer Tersimpan');
     }
 
-    if (tp.device || tp.hasSavedDevice()) {
-        btnConnect.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menghubungkan kembali...';
-        btnConnect.disabled = true;
-        
-        tp.tryAutoReconnect()
-            .then(success => {
-                if (success) {
-                    showConnected(tp.device?.name);
-                    showToast('Printer terhubung kembali', 'success');
-                    if (!STORE_SETTINGS || STORE_SETTINGS.auto_print_checkout !== '0') {
-                        setTimeout(() => {
-                            if (btnPrint && typeof btnPrint.click === 'function') btnPrint.click();
-                        }, 300);
-                    }
-                } else {
-                    showDisconnected(tp.hasSavedDevice());
-                    setupConnectButton();
-                }
-            })
-            .catch((err) => {
-                console.error('[POS] Auto-reconnect error:', err);
-                showDisconnected(tp.hasSavedDevice());
-                setupConnectButton();
-            });
-    } else {
-        showDisconnected(false);
-        setupConnectButton();
+    // Auto-trigger print on checkout
+    if (!STORE_SETTINGS || STORE_SETTINGS.auto_print_checkout !== '0') {
+        setTimeout(() => {
+            if (btnPrint && typeof btnPrint.click === 'function') {
+                btnPrint.click();
+            }
+        }, 200);
     }
 }
 

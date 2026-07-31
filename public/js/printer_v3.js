@@ -360,13 +360,30 @@ class ThermalPrinter {
         }
 
         try {
-            // Show device picker dialog - acceptAllDevices allows finding RPP02N and all thermal printers
+            // Show device picker dialog - filter by printer services & name prefixes to hide non-printer devices
             this.device = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
+                filters: [
+                    { services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
+                    { services: ['e7810a71-73ae-499d-8c15-faa9aef0c3f2'] },
+                    { services: ['49535343-fe7d-4ae5-8fa9-9fafd205e455'] },
+                    { services: ['0000ff00-0000-1000-8000-00805f9b34fb'] },
+                    { services: ['00001101-0000-1000-8000-00805f9b34fb'] },
+                    { namePrefix: 'RPP' },
+                    { namePrefix: 'POS' },
+                    { namePrefix: 'PT' },
+                    { namePrefix: 'MPT' },
+                    { namePrefix: 'Printer' },
+                    { namePrefix: 'Thermal' },
+                    { namePrefix: 'Inner' },
+                    { namePrefix: 'BT' },
+                    { namePrefix: '58' },
+                    { namePrefix: '80' }
+                ],
                 optionalServices: [
                     '000018f0-0000-1000-8000-00805f9b34fb',
                     'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
                     '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+                    '0000ff00-0000-1000-8000-00805f9b34fb',
                     '00001101-0000-1000-8000-00805f9b34fb'
                 ],
             });
