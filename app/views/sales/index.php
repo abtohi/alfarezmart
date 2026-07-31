@@ -1,5 +1,56 @@
 <!-- Sales Index View — with Filter, Date Grouping & Customer Analytics -->
-<div class="page-section" style="padding-bottom:100px;">
+<style>
+/* ===== DESKTOP ELEGANT LAYOUT (min-width: 992px) ===== */
+@media (min-width: 992px) {
+    .sales-page-wrapper {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    .sales-desktop-card {
+        background: var(--surface-1);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+    .sales-desktop-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 13px;
+    }
+    .sales-desktop-table th {
+        background: var(--surface-2);
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-color);
+        white-space: nowrap;
+    }
+    .sales-desktop-table td {
+        padding: 11px 16px;
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-primary);
+        vertical-align: middle;
+    }
+    .sales-desktop-table tr.sale-row-desktop {
+        transition: background 0.15s ease;
+        cursor: pointer;
+    }
+    .sales-desktop-table tr.sale-row-desktop:hover {
+        background: rgba(99, 102, 241, 0.08) !important;
+    }
+    .sales-desktop-date-hdr {
+        background: var(--surface-2) !important;
+        border-top: 2px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
+    }
+}
+</style>
+<div class="page-section sales-page-wrapper" style="padding-bottom:100px;">
 
     <!-- ===== PAGE HEADER ===== -->
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
@@ -525,9 +576,10 @@ function renderGroupedSales(transactions) {
         groups[dateKey].push(t);
     });
 
-    let html = '';
     const todayISO = isoDate(new Date());
 
+    // 1. MOBILE VIEW (max-width: 991px) - 100% UNTOUCHED
+    let mobileHtml = '<div class="sales-mobile-view d-lg-none">';
     Object.keys(groups).sort().reverse().forEach(dateKey => {
         const dayTx = groups[dateKey];
         const dayOmzet  = dayTx.reduce((s, t) => s + parseFloat(t.total_amount || 0), 0);
@@ -537,9 +589,8 @@ function renderGroupedSales(transactions) {
         const displayStyle = isToday ? 'block' : 'none';
         const chevronStyle = isToday ? 'transform:rotate(180deg);' : '';
 
-        html += `
+        mobileHtml += `
         <div style="margin-bottom:12px;">
-            <!-- Date Group Header -->
             <div onclick="toggleDateGroup('${dateKey}')" style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);cursor:pointer;transition:background 0.2s;position:sticky;top:60px;z-index:5;backdrop-filter:blur(8px);">
                 <div style="display:flex;align-items:center;gap:10px;">
                     <i class="bi bi-chevron-down date-chevron-${dateKey}" style="color:var(--text-muted);transition:transform 0.3s;${chevronStyle}"></i>
@@ -553,14 +604,117 @@ function renderGroupedSales(transactions) {
                     <div style="font-size:10px;color:var(--success);font-weight:600;">Profit: ${rupiah(dayProfit)}</div>
                 </div>
             </div>
-            <!-- Day Transactions -->
             <div id="date-group-${dateKey}" style="display:${displayStyle};padding-top:8px;">
                 ${dayTx.map(t => renderSaleCard(t)).join('')}
             </div>
         </div>`;
     });
+    mobileHtml += '</div>';
 
-    container.innerHTML = html;
+    // 2. DESKTOP VIEW (min-width: 992px) - Modern, High-Density Data Table!
+    let desktopHtml = `
+    <div class="sales-desktop-view d-none d-lg-block">
+        <div class="sales-desktop-card">
+            <table class="sales-desktop-table">
+                <thead>
+                    <tr>
+                        <th style="width:40px;text-align:center;">#</th>
+                        <th style="width:170px;">No. Invoice</th>
+                        <th style="width:100px;">Waktu</th>
+                        <th>Pelanggan</th>
+                        <th style="width:90px;text-align:center;">Mode</th>
+                        <th style="width:100px;text-align:right;">Total Item</th>
+                        <th style="width:120px;text-align:right;">Modal</th>
+                        <th style="width:130px;text-align:right;">Total Omzet</th>
+                        <th style="width:160px;text-align:right;">Profit & Margin</th>
+                        <th style="width:130px;text-align:center;">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+    Object.keys(groups).sort().reverse().forEach(dateKey => {
+        const dayTx = groups[dateKey];
+        const dayOmzet  = dayTx.reduce((s, t) => s + parseFloat(t.total_amount || 0), 0);
+        const dayProfit = dayTx.reduce((s, t) => s + parseFloat(t.total_profit || 0), 0);
+        const isToday = dateKey === todayISO;
+
+        // Desktop Date Header Row
+        desktopHtml += `
+        <tr class="sales-desktop-date-hdr">
+            <td colspan="10" style="padding:10px 16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <i class="bi bi-calendar-check" style="color:var(--primary);font-size:1.1rem;"></i>
+                        <span style="font-weight:800;font-size:13px;color:var(--text-primary);">${fmtDate(dateKey)}</span>
+                        ${isToday ? '<span class="badge-custom badge-primary" style="font-size:10px;padding:2px 8px;">Hari Ini</span>' : ''}
+                        <span style="font-size:11px;color:var(--text-muted);font-weight:500;">(${dayTx.length} transaksi)</span>
+                    </div>
+                    <div style="display:flex;gap:20px;align-items:center;font-size:12px;">
+                        <div>Total Omzet: <strong style="color:var(--primary);font-size:13px;">${rupiah(dayOmzet)}</strong></div>
+                        <div>Total Profit: <strong style="color:var(--success);font-size:13px;">${rupiah(dayProfit)}</strong></div>
+                    </div>
+                </div>
+            </td>
+        </tr>`;
+
+        // Desktop Transaction Rows
+        dayTx.forEach((t, idx) => {
+            const profit = parseFloat(t.total_profit || 0);
+            const amount = parseFloat(t.total_amount || 0);
+            const modal  = amount - profit;
+            const markup = modal > 0 ? (profit / modal * 100) : (profit > 0 ? 100 : 0);
+            const custName = t.customer_name || 'Pelanggan Umum';
+            const timeStr = t.created_at ? t.created_at.split(' ')[1] || '' : '';
+
+            desktopHtml += `
+            <tr class="sale-row-desktop" data-sale-id="${t.id}" onclick="window.location.href='${BASE_URL}sales/${t.id}'">
+                <td style="text-align:center;color:var(--text-muted);font-size:11px;">${idx + 1}</td>
+                <td>
+                    <span style="font-weight:700;color:var(--text-primary);font-family:monospace;font-size:12px;">${t.invoice_number}</span>
+                </td>
+                <td style="color:var(--text-muted);font-size:12px;">
+                    <i class="bi bi-clock" style="font-size:10px;margin-right:2px;"></i> ${fmtDateTime(t.created_at).split(', ')[1] || timeStr}
+                </td>
+                <td>
+                    <div style="font-weight:600;color:var(--text-primary);">${custName}</div>
+                </td>
+                <td style="text-align:center;">
+                    <span class="badge-custom badge-${t.sale_mode === 'retail' ? 'info' : 'warning'}" style="font-size:10px;padding:2px 6px;">${t.sale_mode === 'retail' ? 'Retail' : 'Grosir'}</span>
+                </td>
+                <td style="text-align:right;color:var(--text-secondary);font-size:12px;">
+                    ${parseFloat(t.total_items || 0)} item
+                </td>
+                <td style="text-align:right;color:var(--text-muted);font-size:12px;">
+                    ${rupiah(modal)}
+                </td>
+                <td style="text-align:right;font-weight:800;color:var(--primary);font-size:13px;">
+                    ${rupiah(amount)}
+                </td>
+                <td style="text-align:right;font-size:12px;">
+                    <span style="font-weight:700;color:var(--success);">${rupiah(profit)}</span>
+                    <span style="background:var(--success-bg);color:var(--success);padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700;margin-left:4px;">+${markup.toFixed(1).replace('.',',')}%</span>
+                </td>
+                <td style="text-align:center;" onclick="event.stopPropagation();">
+                    <div style="display:flex;gap:6px;justify-content:center;align-items:center;">
+                        <a href="${BASE_URL}sales/${t.id}" class="btn-outline-custom" title="Lihat Detail" style="padding:4px 10px;font-size:11px;border-radius:6px;text-decoration:none;color:var(--text-primary);">
+                            <i class="bi bi-eye"></i> Detail
+                        </a>
+                        <button type="button" onclick="shareInvoice(${t.id}, '${t.invoice_number}')" data-share-btn="${t.id}" title="Bagikan / Unduh Struk" class="btn-outline-custom" style="padding:4px 8px;font-size:11px;border-radius:6px;color:var(--primary);border-color:var(--primary-bg);">
+                            <i class="bi bi-share"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+    });
+
+    desktopHtml += `
+                </tbody>
+            </table>
+        </div>
+    </div>`;
+
+    container.innerHTML = mobileHtml + desktopHtml;
     initSelectionMode();
 }
 
