@@ -873,19 +873,37 @@ async function shareInvoice(saleId, invoiceNumber) {
         canvasEl.innerHTML = '';
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         const fileName = `struk-${invoiceNumber.replace(/[^a-zA-Z0-9\-]/g,'_')}.png`;
-        if (navigator.canShare && navigator.canShare({ files: [new File([blob], fileName, { type: 'image/png' })] })) {
-            await navigator.share({ title: `Struk ${invoiceNumber}`, text: `Struk pembelian ${invoiceNumber}`, files: [new File([blob], fileName, { type: 'image/png' })] });
+        const file = new File([blob], fileName, { type: 'image/png' });
+        let sharedSuccess = false;
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({ title: `Struk ${invoiceNumber}`, text: `Struk Pembelian ${invoiceNumber}`, files: [file] });
+                showToast('Struk berhasil dibagikan', 'success');
+                sharedSuccess = true;
+            } catch (shareErr) {
+                console.log('[Share] Native file share cancelled or failed:', shareErr);
+            }
         } else if (navigator.share) {
-            await navigator.share({ title: `Struk ${invoiceNumber}`, text: `Struk pembelian ${invoiceNumber}`, url: `${BASE_URL}sales/${saleId}` });
-        } else {
+            try {
+                await navigator.share({ title: `Struk ${invoiceNumber}`, text: `Struk Pembelian ${invoiceNumber}`, url: `${BASE_URL}sales/${saleId}` });
+                showToast('Struk berhasil dibagikan', 'success');
+                sharedSuccess = true;
+            } catch (shareErr) {
+                console.log('[Share] Native URL share cancelled or failed:', shareErr);
+            }
+        }
+
+        // If native share was not supported, failed, or user gesture expired (e.g. Desktop Chrome), download PNG fallback automatically
+        if (!sharedSuccess) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url; a.download = fileName;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-            showToast('Struk diunduh sebagai PNG', 'success');
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+            showToast('Struk berhasil diunduh sebagai gambar PNG', 'success');
         }
     } catch(err) {
-        if (err.name !== 'AbortError') showToast('Gagal membagikan struk: ' + (err.message || 'Error tidak diketahui'), 'error');
+        if (err.name !== 'AbortError') showToast('Gagal memproses struk: ' + (err.message || 'Error tidak diketahui'), 'error');
     } finally {
         if (btn) { btn.innerHTML = '<i class="bi bi-share"></i>'; btn.disabled = false; }
     }
