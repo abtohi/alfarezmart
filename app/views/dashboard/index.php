@@ -437,18 +437,6 @@
                 <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Harga &amp; riwayat beli</div>
             </div>
         </a>
-
-        <?php if ($userLevel !== 'staff'): ?>
-        <a href="<?= BASE_URL ?>debts" class="dash-report-card">
-            <div class="dash-report-icon" style="background:var(--info-bg);color:var(--info);">
-                <i class="bi bi-journal-text"></i>
-            </div>
-            <div style="flex:1;min-width:0;">
-                <div style="font-size:12px;font-weight:700;">Hutang &amp; Piutang</div>
-                <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Piutang &amp; hutang toko</div>
-            </div>
-        </a>
-        <?php endif; ?>
     </div>
 
     <!-- 4. ANALITIK & TREN PENJUALAN (Charts Section) -->
