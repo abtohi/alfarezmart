@@ -227,7 +227,7 @@ class DigiflazzModel {
             $params['brand'] = $brand;
         }
         
-        $sql .= " ORDER BY seller_price ASC";
+        $sql .= " ORDER BY sell_price ASC, seller_price ASC";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);

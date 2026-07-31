@@ -491,6 +491,9 @@ async function loadPrices() {
                         speedSrHtml = `<span style="color: ${sColor}; font-weight: 700; font-size: 0.65rem;" title="Kecepatan Seller"><i class="bi bi-stopwatch"></i> ${p.seller_avg_speed}s</span>`;
                     }
 
+                    let prodTrxHtml = `<span style="color: #3b82f6; font-weight: 700; font-size: 0.65rem;" title="Total Transaksi Sukses Produk Ini"><i class="bi bi-bag-check-fill"></i> ${(p.product_trx_count || 0).toLocaleString('id-ID')} Trx</span>`;
+                    let sellerTrxHtml = `<span style="color: #8b5cf6; font-weight: 700; font-size: 0.65rem;" title="Total Transaksi Sukses Seller Ini"><i class="bi bi-box-seam-fill"></i> ${(p.seller_trx_count || 0).toLocaleString('id-ID')} Trx</span>`;
+
                     sellerHtml = `
                         <div class="d-flex flex-column gap-1">
                             <span class="fw-bold text-truncate" style="font-size: 0.78rem; max-width: 120px; color: var(--text-primary);" title="${p.seller_name}">
@@ -500,6 +503,8 @@ async function loadPrices() {
                                 ${sellerSrHtml}
                                 ${prodSrHtml}
                                 ${speedSrHtml}
+                                ${prodTrxHtml}
+                                ${sellerTrxHtml}
                             </div>
                         </div>
                     `;
@@ -549,7 +554,7 @@ async function loadPrices() {
             dataTable = $('#priceTable').DataTable({
                 pageLength: 25,
                 ordering: true,
-                order: [[0, 'asc']],
+                order: [[5, 'asc']],
                 dom: 'rtip',
                 language: {
                     info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ produk",

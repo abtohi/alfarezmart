@@ -2467,8 +2467,13 @@ function renderProducts(products) {
             </div>
         `;
 
-        // Sort items inside group by seller_price ascending (cheapest seller first)
-        items.sort((a, b) => parseFloat(a.seller_price || 0) - parseFloat(b.seller_price || 0));
+        // Sort items inside group by actual sell_price ascending (cheapest selling price option first)
+        items.sort((a, b) => {
+            const sellA = getPpobSellPrice(a.buyer_sku_code) || (parseFloat(a.sell_price) || parseFloat(a.seller_price || 0));
+            const sellB = getPpobSellPrice(b.buyer_sku_code) || (parseFloat(b.sell_price) || parseFloat(b.seller_price || 0));
+            if (sellA !== sellB) return sellA - sellB;
+            return parseFloat(a.seller_price || 0) - parseFloat(b.seller_price || 0);
+        });
 
         // Group Body (Expandable Sellers List) HTML
         let sellerItemsHtml = '';
@@ -2542,6 +2547,21 @@ function renderProducts(products) {
                 </div>`;
             }
 
+            // Transaction Count Badges for Product & Seller
+            let prodTrxCount = parseInt(p.product_trx_count || 0);
+            let prodTrxBadge = `
+            <div class="seller-sr-chip" title="Total Transaksi Sukses Produk Ini">
+                <span class="sr-label">Trx Produk:</span>
+                <span style="color: #3b82f6; font-weight: 700;"><i class="bi bi-bag-check-fill" style="font-size: 0.65rem;"></i> ${prodTrxCount.toLocaleString('id-ID')} Trx</span>
+            </div>`;
+
+            let sellerTrxCount = parseInt(p.seller_trx_count || 0);
+            let sellerTrxBadge = `
+            <div class="seller-sr-chip" onclick="openSellerHistory(event, '${p.seller_name}')" style="cursor:pointer;" title="Total Transaksi Sukses Seller Ini">
+                <span class="sr-label">Trx Seller:</span>
+                <span style="color: #8b5cf6; font-weight: 700;"><i class="bi bi-box-seam-fill" style="font-size: 0.65rem;"></i> ${sellerTrxCount.toLocaleString('id-ID')} Trx</span>
+            </div>`;
+
             const encodedProduct = encodeURIComponent(JSON.stringify(p));
 
             sellerItemsHtml += `
@@ -2568,6 +2588,8 @@ function renderProducts(products) {
                                 </div>
                                 ${prodSuccessBadge}
                                 ${speedBadge}
+                                ${prodTrxBadge}
+                                ${sellerTrxBadge}
                             </div>
                         </div>
                     </div>

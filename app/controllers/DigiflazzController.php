@@ -99,16 +99,20 @@ class DigiflazzController extends Controller {
             if ($seller && isset($rates[$seller]) && $rates[$seller]['total'] > 0) {
                 $p['success_rate'] = round(($rates[$seller]['success'] / $rates[$seller]['total']) * 100, 1);
                 $p['seller_avg_speed'] = $rates[$seller]['avg_speed'];
+                $p['seller_trx_count'] = (int)$rates[$seller]['success'];
             } else {
                 $p['success_rate'] = null;
                 $p['seller_avg_speed'] = null;
+                $p['seller_trx_count'] = 0;
             }
 
             $sku = isset($p['buyer_sku_code']) ? trim($p['buyer_sku_code']) : null;
             if ($sku && isset($prodRates[$sku]) && $prodRates[$sku]['total'] > 0) {
                 $p['product_success_rate'] = round(($prodRates[$sku]['success'] / $prodRates[$sku]['total']) * 100, 1);
+                $p['product_trx_count'] = (int)$prodRates[$sku]['success'];
             } else {
                 $p['product_success_rate'] = null;
+                $p['product_trx_count'] = 0;
             }
         }
         
@@ -132,16 +136,20 @@ class DigiflazzController extends Controller {
             if ($seller && isset($rates[$seller]) && $rates[$seller]['total'] > 0) {
                 $p['success_rate'] = round(($rates[$seller]['success'] / $rates[$seller]['total']) * 100, 1);
                 $p['seller_avg_speed'] = $rates[$seller]['avg_speed'];
+                $p['seller_trx_count'] = (int)$rates[$seller]['success'];
             } else {
                 $p['success_rate'] = null;
                 $p['seller_avg_speed'] = null;
+                $p['seller_trx_count'] = 0;
             }
 
             $sku = isset($p['buyer_sku_code']) ? trim($p['buyer_sku_code']) : null;
             if ($sku && isset($prodRates[$sku]) && $prodRates[$sku]['total'] > 0) {
                 $p['product_success_rate'] = round(($prodRates[$sku]['success'] / $prodRates[$sku]['total']) * 100, 1);
+                $p['product_trx_count'] = (int)$prodRates[$sku]['success'];
             } else {
                 $p['product_success_rate'] = null;
+                $p['product_trx_count'] = 0;
             }
         }
         
