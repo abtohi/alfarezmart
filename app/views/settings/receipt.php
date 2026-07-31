@@ -46,12 +46,36 @@ $logo = $settingModel->get('store_logo', '');
             </div>
         </div>
 
+<?php
+$printerDriver = $settingModel->get('printer_driver', 'rawbt');
+$autoPrintCheckout = $settingModel->get('auto_print_checkout', '1');
+?>
         <!-- Printer Settings Section -->
         <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:16px; margin-bottom:16px;">
-            <div style="font-weight:600; margin-bottom:12px; color:var(--text-primary);"><i class="bi bi-printer" style="color:var(--success); margin-right:8px;"></i> Pengaturan Printer</div>
+            <div style="font-weight:600; margin-bottom:12px; color:var(--text-primary);"><i class="bi bi-printer" style="color:var(--success); margin-right:8px;"></i> Pengaturan Printer & Mode Koneksi Otomatis</div>
             
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Mode Driver Printer (Garansi Konek Otomatis)</label>
+                <select id="printer_driver" name="printer_driver" class="form-select" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);">
+                    <option value="rawbt" <?= $printerDriver == 'rawbt' ? 'selected' : '' ?>>📱 Android RawBT Service (100% DIJAMIN Otomatis Tanpa Dialog Bluetooth)</option>
+                    <option value="web_bluetooth" <?= $printerDriver == 'web_bluetooth' ? 'selected' : '' ?>>⚡ Web Bluetooth Direct Chrome (Auto-Reconnect & Keep-Alive)</option>
+                    <option value="browser" <?= $printerDriver == 'browser' ? 'selected' : '' ?>>🌐 Cetak Web / AirPrint (iOS & Browser Standard)</option>
+                </select>
+                <small style="font-size:11px; color:var(--text-muted); display:block; margin-top:4px;">
+                    💡 <strong>Rekomendasi Terbaik Kasir Android:</strong> Gunakan <strong>RawBT</strong> (install app RawBT gratis dari Play Store 1x). Bebas dialog pairing bluetooth selamanya, sekali klik Bayar/Cetak struk langsung keluar 0.3 detik!
+                </small>
+            </div>
+
+            <div style="margin-bottom:14px;">
+                <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Cetak Struk Otomatis saat Klik "BAYAR"</label>
+                <select id="auto_print_checkout" name="auto_print_checkout" class="form-select" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);">
+                    <option value="1" <?= $autoPrintCheckout == '1' ? 'selected' : '' ?>>⚡ Ya, Cetak Otomatis Begitu Transaksi Selesai</option>
+                    <option value="0" <?= $autoPrintCheckout == '0' ? 'selected' : '' ?>>✋ Tidak, Harus Klik Tombol Cetak Manual</option>
+                </select>
+            </div>
+
             <div>
-                <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Lebar Printer (mm)</label>
+                <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Lebar Paper Printer (mm)</label>
                 <div class="dropdown" style="width:100%;">
                     <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:10px; font-size:var(--font-size-sm); background:var(--bg-primary); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-sm);">
                         <span><?= $printerWidth == '80' ? '80mm (48 karakter)' : '58mm (32 karakter)' ?></span>
@@ -130,6 +154,8 @@ $logo = $settingModel->get('store_logo', '');
                 receipt_header: document.getElementById('receipt_header').value,
                 receipt_footer: document.getElementById('receipt_footer').value,
                 store_logo: document.getElementById('store_logo_base64').value,
+                printer_driver: document.getElementById('printer_driver').value,
+                auto_print_checkout: document.getElementById('auto_print_checkout').value,
             };
 
             const result = await api('<?= BASE_URL ?>api/settings/receipt', 'POST', data);

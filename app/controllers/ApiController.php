@@ -1177,6 +1177,8 @@ class ApiController extends Controller
             'receipt_header' => $settings->get('receipt_header', ''),
             'receipt_footer' => $settings->get('receipt_footer', ''),
             'store_logo' => $settings->get('store_logo', ''),
+            'printer_driver' => $settings->get('printer_driver', 'rawbt'),
+            'auto_print_checkout' => $settings->get('auto_print_checkout', '1'),
         ]);
     }
 
@@ -1188,7 +1190,7 @@ class ApiController extends Controller
             // Read all from JSON body
             $data = json_decode(file_get_contents('php://input'), true) ?? [];
             
-            $fields = ['store_name','store_address','store_phone','thermal_printer_width','receipt_header','receipt_footer'];
+            $fields = ['store_name','store_address','store_phone','thermal_printer_width','receipt_header','receipt_footer','printer_driver','auto_print_checkout'];
             foreach ($fields as $f) {
                 $val = $data[$f] ?? $this->input($f, '');
                 $settings->set($f, $val);

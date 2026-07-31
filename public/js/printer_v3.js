@@ -43,9 +43,84 @@ class ThermalPrinter {
 
     handleDisconnect() {
         console.log('[ThermalPrinter] Device disconnected via event');
+        this.stopHeartbeat();
         this.characteristic = null;
         this.server = null;
         // Note: keep this.device so we can reconnect without dialog
+    }
+
+    getDriver() {
+        if (this.storeSettings && this.storeSettings.printer_driver) {
+            return this.storeSettings.printer_driver;
+        }
+        if (this.isIOS) return 'browser';
+        if (/Android/i.test(navigator.userAgent)) {
+            return 'rawbt'; // Default to RawBT for Android for 100% dialog-free auto-connect
+        }
+        return this.hasBluetoothAPI ? 'web_bluetooth' : 'browser';
+    }
+
+    startHeartbeat() {
+        this.stopHeartbeat();
+        // Ping every 12s with null byte to prevent thermal printer Bluetooth sleep
+        this._heartbeatInterval = setInterval(async () => {
+            if (this.isConnected() && this.characteristic) {
+                try {
+                    const ping = new Uint8Array([0x00]);
+                    if (this.characteristic.properties.writeWithoutResponse) {
+                        await this.characteristic.writeValueWithoutResponse(ping);
+                    } else if (this.characteristic.properties.write) {
+                        await this.characteristic.writeValue(ping);
+                    }
+                } catch (e) {
+                    console.warn('[ThermalPrinter] Heartbeat ping failed:', e);
+                }
+            }
+        }, 12000);
+    }
+
+    stopHeartbeat() {
+        if (this._heartbeatInterval) {
+            clearInterval(this._heartbeatInterval);
+            this._heartbeatInterval = null;
+        }
+    }
+
+    printRawBT(payloadUint8Array) {
+        try {
+            let binary = '';
+            const len = payloadUint8Array.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(payloadUint8Array[i]);
+            }
+            const base64Data = window.btoa(binary);
+
+            const intentUrl = "intent:base64," + base64Data + "#Intent;scheme=rawbt;package=ru.a4144.rawbtprinter;end;";
+            
+            let iframe = document.getElementById('rawbt_print_iframe');
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.id = 'rawbt_print_iframe';
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+            }
+            iframe.src = intentUrl;
+
+            // Fallback link click trigger
+            setTimeout(() => {
+                const a = document.createElement('a');
+                a.href = intentUrl;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => { try { document.body.removeChild(a); } catch(e){} }, 500);
+            }, 250);
+            console.log('[ThermalPrinter] Sent payload to RawBT Intent (length:', base64Data.length, ')');
+            return true;
+        } catch(e) {
+            console.error('[ThermalPrinter] RawBT print error:', e);
+            throw new Error('Gagal mengirim struk ke RawBT: ' + e.message);
+        }
     }
 
     loadLastDevice() {
@@ -228,6 +303,7 @@ class ThermalPrinter {
                         this.characteristic = result.characteristic;
                         this._autoReconnected = true;
                         found.addEventListener('gattserverdisconnected', this._disconnectHandler);
+                        this.startHeartbeat();
                         console.log('[ThermalPrinter] Auto-reconnected to:', found.name);
                         return true;
                     } catch (err) {
@@ -287,6 +363,7 @@ class ThermalPrinter {
             this.characteristic = result.characteristic;
             this.saveLastDevice(this.device);
             this.device.addEventListener('gattserverdisconnected', this._disconnectHandler);
+            this.startHeartbeat();
             console.log('[ThermalPrinter] Printer terhubung:', this.device.name);
             return true;
         } catch (e) {
@@ -613,14 +690,15 @@ class ThermalPrinter {
     }
 
     async printDigitalReceipt(transaction, options = {}, storeSettings = null) {
-        if (!this.characteristic) {
-            throw new Error('Printer belum terhubung. Hubungkan printer terlebih dahulu.');
-        }
-
         if (storeSettings) {
             this.storeSettings = storeSettings;
         } else {
             await this.loadStoreSettings();
+        }
+
+        const driver = this.getDriver();
+        if (driver !== 'rawbt' && !this.characteristic) {
+            throw new Error('Printer belum terhubung. Hubungkan printer terlebih dahulu.');
         }
 
         const dateStr = transaction.created_at || new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -929,7 +1007,11 @@ class ThermalPrinter {
             }
         }
 
-        // Send payload in chunks
+        // Send payload via RawBT or Web Bluetooth chunks
+        if (driver === 'rawbt') {
+            return this.printRawBT(payload);
+        }
+
         const CHUNK_SIZE = 64;
         for (let i = 0; i < payload.length; i += CHUNK_SIZE) {
             const chunk = payload.slice(i, i + CHUNK_SIZE);
@@ -953,13 +1035,14 @@ class ThermalPrinter {
     }
 
     async print(cart, total, invoiceNumber, options = {}) {
-        if (!this.characteristic) {
-            throw new Error('Printer belum terhubung. Hubungkan printer terlebih dahulu.');
-        }
-
         await this.loadStoreSettings();
         if (options.storeSettings) {
             this.setStoreSettings(options.storeSettings);
+        }
+
+        const driver = this.getDriver();
+        if (driver !== 'rawbt' && !this.characteristic) {
+            throw new Error('Printer belum terhubung. Hubungkan printer terlebih dahulu.');
         }
 
         // Debug: Log cart data
@@ -1009,6 +1092,10 @@ class ThermalPrinter {
         }
 
         console.log('[ThermalPrinter] Encoded payload length:', payload.length, 'bytes');
+
+        if (driver === 'rawbt') {
+            return this.printRawBT(payload);
+        }
 
         // Optimal chunk size for Bluetooth thermal printers (20-128 bytes)
         const CHUNK_SIZE = 64;

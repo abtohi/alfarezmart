@@ -1480,9 +1480,26 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
         };
     }
 
+    const driver = tp.getDriver();
+    setupPrintButton();
+
+    if (driver === 'rawbt') {
+        showConnected('Android RawBT (Otomatis)');
+        if (!STORE_SETTINGS || STORE_SETTINGS.auto_print_checkout !== '0') {
+            setTimeout(() => {
+                if (btnPrint && typeof btnPrint.click === 'function') btnPrint.click();
+            }, 300);
+        }
+        return;
+    }
+
     if (tp.isConnected()) {
         showConnected(tp.device?.name);
-        setupPrintButton();
+        if (!STORE_SETTINGS || STORE_SETTINGS.auto_print_checkout !== '0') {
+            setTimeout(() => {
+                if (btnPrint && typeof btnPrint.click === 'function') btnPrint.click();
+            }, 300);
+        }
         return;
     }
 
@@ -1495,7 +1512,11 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
                 if (success) {
                     showConnected(tp.device?.name);
                     showToast('Printer terhubung kembali', 'success');
-                    setupPrintButton();
+                    if (!STORE_SETTINGS || STORE_SETTINGS.auto_print_checkout !== '0') {
+                        setTimeout(() => {
+                            if (btnPrint && typeof btnPrint.click === 'function') btnPrint.click();
+                        }, 300);
+                    }
                 } else {
                     showDisconnected(tp.hasSavedDevice());
                     setupConnectButton();

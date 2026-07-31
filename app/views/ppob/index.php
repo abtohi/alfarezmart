@@ -3299,8 +3299,9 @@ async function printPpobReceipt() {
         // Check if ThermalPrinter is available (from printer.js)
         if (typeof ThermalPrinter !== 'undefined') {
             const printer = window._ppobPrinter || (window._ppobPrinter = new ThermalPrinter());
+            const driver = printer.getDriver();
             
-            if (navigator.bluetooth && !printer.isConnected()) {
+            if (driver === 'web_bluetooth' && navigator.bluetooth && !printer.isConnected()) {
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menghubungkan...';
                 const reconnected = await printer.tryAutoReconnect();
                 if (!reconnected) {
