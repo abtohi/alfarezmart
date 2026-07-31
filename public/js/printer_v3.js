@@ -1178,8 +1178,15 @@ class ThermalPrinter {
                 binary += String.fromCharCode(payload[i]);
             }
             const b64 = btoa(binary);
-            const rawbtUrl = 'intent:#Intent;scheme=rawbt;package=ru.a404m.rawbt;S.base64=' + encodeURIComponent(b64) + ';end;';
-            window.location.href = rawbtUrl;
+            const rawbtUri = 'rawbt:base64,' + b64;
+            const intentUri = 'intent:#Intent;scheme=rawbt;package=ru.a404m.rawbt;S.base64=' + encodeURIComponent(b64) + ';end;';
+
+            // Try rawbt: scheme first, fallback to intent URI
+            try {
+                window.location.href = rawbtUri;
+            } catch(e) {
+                window.location.href = intentUri;
+            }
             return true;
         } catch (e) {
             console.error('[ThermalPrinter] RawBT dispatch error:', e);
