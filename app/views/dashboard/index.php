@@ -8,39 +8,83 @@
     margin: 0 auto;
     padding-bottom: 90px;
 }
+
+/* KPI Cards Responsive Grid */
 .dash-kpi-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    gap: 10px;
     margin-bottom: 20px;
 }
 .dash-kpi-card {
     background: var(--surface-1);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    padding: 14px 16px;
+    padding: 12px 14px;
     display: flex;
-    align-items: center;
-    gap: 12px;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 94px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
     transition: transform 0.2s, border-color 0.2s;
     text-decoration: none;
     color: inherit;
+    min-width: 0;
+    overflow: hidden;
 }
 .dash-kpi-card:hover {
     border-color: var(--primary);
     transform: translateY(-2px);
 }
+.dash-kpi-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+}
+.dash-kpi-title {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
 .dash-kpi-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
+    font-size: 1rem;
     flex-shrink: 0;
 }
+.dash-kpi-value {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 4px;
+}
+.dash-kpi-sub {
+    font-size: 9px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+/* Charts Grid */
 .dash-charts-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -69,12 +113,16 @@
     align-items: center;
     gap: 6px;
 }
+
+/* Quick Actions Grid */
 .dash-quick-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 10px;
     margin-bottom: 24px;
 }
+
+/* Reports Grid */
 .dash-reports-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -110,11 +158,25 @@
     flex-shrink: 0;
 }
 
-/* Desktop Responsive Layout */
+/* Desktop Layout Adjustments */
 @media (min-width: 992px) {
     .dash-kpi-grid {
         grid-template-columns: repeat(4, 1fr);
         gap: 16px;
+    }
+    .dash-kpi-card {
+        padding: 16px 18px;
+        min-height: 106px;
+    }
+    .dash-kpi-icon {
+        width: 38px;
+        height: 38px;
+        font-size: 1.15rem;
+        border-radius: 10px;
+    }
+    .dash-kpi-value {
+        font-size: 1.15rem;
+        margin-top: 6px;
     }
     .dash-charts-grid {
         grid-template-columns: 1.6fr 1fr;
@@ -165,169 +227,169 @@
         <?php if ($userLevel === 'superadmin'): ?>
             <!-- Superadmin: Financial & Operational Overview -->
             <div class="dash-kpi-card">
-                <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
-                    <i class="bi bi-cash-stack"></i>
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Omzet Hari Ini</span>
+                    <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
                 </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Omzet Hari Ini</div>
-                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--success);margin-top:2px;">
-                        Rp <?= number_format($stats['today_revenue'] ?? 0, 0, ',', '.') ?>
-                    </div>
-                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">
-                        Profit: <strong style="color:var(--success);">Rp <?= number_format($stats['today_profit'] ?? 0, 0, ',', '.') ?></strong>
-                    </div>
+                <div class="dash-kpi-value" style="color:var(--success);">
+                    Rp <?= number_format($stats['today_revenue'] ?? 0, 0, ',', '.') ?>
+                </div>
+                <div class="dash-kpi-sub">
+                    Profit: <strong style="color:var(--success);">Rp <?= number_format($stats['today_profit'] ?? 0, 0, ',', '.') ?></strong>
                 </div>
             </div>
 
             <a href="<?= BASE_URL ?>finance" class="dash-kpi-card">
-                <div class="dash-kpi-icon" style="background:rgba(99,102,241,0.12);color:#818cf8;">
-                    <i class="bi bi-wallet2"></i>
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Keuangan Harian</span>
+                    <div class="dash-kpi-icon" style="background:rgba(99,102,241,0.12);color:#818cf8;">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
                 </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Keuangan Harian</div>
-                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                        Rp <?= number_format($stats['finance_today']['accumulative_net'] ?? 0, 0, ',', '.') ?>
-                    </div>
-                    <div style="font-size:10px;color:var(--primary);font-weight:600;margin-top:2px;display:flex;align-items:center;gap:2px;">
-                        Detail Dompet <i class="bi bi-chevron-right" style="font-size:9px;"></i>
-                    </div>
+                <div class="dash-kpi-value">
+                    Rp <?= number_format($stats['finance_today']['accumulative_net'] ?? 0, 0, ',', '.') ?>
+                </div>
+                <div class="dash-kpi-sub" style="color:var(--primary);font-weight:600;display:flex;align-items:center;gap:2px;">
+                    Detail Dompet <i class="bi bi-chevron-right" style="font-size:8px;"></i>
                 </div>
             </a>
 
             <a href="<?= BASE_URL ?>sales" class="dash-kpi-card">
-                <div class="dash-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">
-                    <i class="bi bi-receipt"></i>
-                </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Transaksi POS</div>
-                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
-                        <?= number_format($stats['today_transactions'] ?? 0) ?> Struk
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Transaksi POS</span>
+                    <div class="dash-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">
+                        <i class="bi bi-receipt"></i>
                     </div>
-                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Penjualan Hari Ini</div>
                 </div>
+                <div class="dash-kpi-value">
+                    <?= number_format($stats['today_transactions'] ?? 0) ?> Struk
+                </div>
+                <div class="dash-kpi-sub">Penjualan Hari Ini</div>
             </a>
 
             <a href="<?= BASE_URL ?>products?filter=low_stock" class="dash-kpi-card">
-                <div class="dash-kpi-icon" style="background:var(--danger-bg);color:var(--danger);">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Stok Terendah</div>
-                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--danger);margin-top:2px;">
-                        <?= number_format($stats['low_stock_count'] ?? 0) ?> Produk
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Stok Terendah</span>
+                    <div class="dash-kpi-icon" style="background:var(--danger-bg);color:var(--danger);">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
                     </div>
-                    <div style="font-size:10px;color:var(--danger);font-weight:600;margin-top:2px;">Perlu Restok!</div>
                 </div>
+                <div class="dash-kpi-value" style="color:var(--danger);">
+                    <?= number_format($stats['low_stock_count'] ?? 0) ?> Produk
+                </div>
+                <div class="dash-kpi-sub" style="color:var(--danger);font-weight:600;">Perlu Restok!</div>
             </a>
 
         <?php elseif ($userLevel === 'admin'): ?>
             <!-- Admin: Operational Overview (NO MONEY INFO) -->
             <a href="<?= BASE_URL ?>sales" class="dash-kpi-card">
-                <div class="dash-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">
-                    <i class="bi bi-receipt"></i>
-                </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Transaksi Hari Ini</div>
-                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
-                        <?= number_format($stats['today_transactions'] ?? 0) ?> Struk
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Transaksi Hari Ini</span>
+                    <div class="dash-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">
+                        <i class="bi bi-receipt"></i>
                     </div>
-                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Penjualan Kasir POS</div>
                 </div>
+                <div class="dash-kpi-value">
+                    <?= number_format($stats['today_transactions'] ?? 0) ?> Struk
+                </div>
+                <div class="dash-kpi-sub">Penjualan Kasir POS</div>
             </a>
 
             <a href="<?= BASE_URL ?>products?filter=low_stock" class="dash-kpi-card">
-                <div class="dash-kpi-icon" style="background:var(--danger-bg);color:var(--danger);">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Stok Terendah</div>
-                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--danger);margin-top:2px;">
-                        <?= number_format($stats['low_stock_count'] ?? 0) ?> Produk
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Stok Terendah</span>
+                    <div class="dash-kpi-icon" style="background:var(--danger-bg);color:var(--danger);">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
                     </div>
-                    <div style="font-size:10px;color:var(--danger);font-weight:600;margin-top:2px;">Perlu Restok!</div>
                 </div>
+                <div class="dash-kpi-value" style="color:var(--danger);">
+                    <?= number_format($stats['low_stock_count'] ?? 0) ?> Produk
+                </div>
+                <div class="dash-kpi-sub" style="color:var(--danger);font-weight:600;">Perlu Restok!</div>
             </a>
 
             <a href="<?= BASE_URL ?>products" class="dash-kpi-card">
-                <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
-                    <i class="bi bi-box-seam-fill"></i>
-                </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Total Produk</div>
-                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
-                        <?= number_format($stats['total_products'] ?? 0) ?> Item
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Total Produk</span>
+                    <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
+                        <i class="bi bi-box-seam-fill"></i>
                     </div>
-                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Database Produk</div>
                 </div>
+                <div class="dash-kpi-value">
+                    <?= number_format($stats['total_products'] ?? 0) ?> Item
+                </div>
+                <div class="dash-kpi-sub">Database Produk</div>
             </a>
 
             <a href="<?= BASE_URL ?>suppliers" class="dash-kpi-card">
-                <div class="dash-kpi-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">
-                    <i class="bi bi-truck"></i>
-                </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Total Supplier</div>
-                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
-                        <?= number_format($stats['total_suppliers'] ?? 0) ?> Mitra
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Total Supplier</span>
+                    <div class="dash-kpi-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">
+                        <i class="bi bi-truck"></i>
                     </div>
-                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Database Supplier</div>
                 </div>
+                <div class="dash-kpi-value">
+                    <?= number_format($stats['total_suppliers'] ?? 0) ?> Mitra
+                </div>
+                <div class="dash-kpi-sub">Database Supplier</div>
             </a>
 
         <?php else: ?>
             <!-- Staff: Pure Operational Inventory (NO MONEY INFO) -->
             <a href="<?= BASE_URL ?>products" class="dash-kpi-card">
-                <div class="dash-kpi-icon" style="background:var(--primary-bg);color:var(--primary);">
-                    <i class="bi bi-box-seam-fill"></i>
-                </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Total Produk</div>
-                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
-                        <?= number_format($stats['total_products'] ?? 0) ?> Item
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Total Produk</span>
+                    <div class="dash-kpi-icon" style="background:var(--primary-bg);color:var(--primary);">
+                        <i class="bi bi-box-seam-fill"></i>
                     </div>
+                </div>
+                <div class="dash-kpi-value">
+                    <?= number_format($stats['total_products'] ?? 0) ?> Item
                 </div>
             </a>
 
             <div class="dash-kpi-card">
-                <div class="dash-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">
-                    <i class="bi bi-tags-fill"></i>
-                </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Total Brand</div>
-                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
-                        <?= number_format($stats['total_brands'] ?? 0) ?> Merk
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Total Brand</span>
+                    <div class="dash-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">
+                        <i class="bi bi-tags-fill"></i>
                     </div>
+                </div>
+                <div class="dash-kpi-value">
+                    <?= number_format($stats['total_brands'] ?? 0) ?> Merk
                 </div>
             </div>
 
             <div class="dash-kpi-card">
-                <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
-                    <i class="bi bi-grid-fill"></i>
-                </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Kategori</div>
-                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
-                        <?= number_format($stats['total_categories'] ?? 0) ?> Kategori
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Kategori</span>
+                    <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
+                        <i class="bi bi-grid-fill"></i>
                     </div>
+                </div>
+                <div class="dash-kpi-value">
+                    <?= number_format($stats['total_categories'] ?? 0) ?> Kategori
                 </div>
             </div>
 
             <a href="<?= BASE_URL ?>suppliers" class="dash-kpi-card">
-                <div class="dash-kpi-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">
-                    <i class="bi bi-truck"></i>
-                </div>
-                <div style="flex:1;min-width:0;">
-                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Supplier</div>
-                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
-                        <?= number_format($stats['total_suppliers'] ?? 0) ?> Mitra
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Supplier</span>
+                    <div class="dash-kpi-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">
+                        <i class="bi bi-truck"></i>
                     </div>
+                </div>
+                <div class="dash-kpi-value">
+                    <?= number_format($stats['total_suppliers'] ?? 0) ?> Mitra
                 </div>
             </a>
         <?php endif; ?>
 
     </div>
 
-    <!-- 2. AKSI CEPAT MENU (Right below Status Hari Ini!) -->
+    <!-- 2. AKSI CEPAT MENU -->
     <div class="section-title">Aksi Cepat Menu</div>
     <div class="dash-quick-grid">
         <a href="<?= BASE_URL ?>ppob" class="quick-action">
@@ -393,7 +455,7 @@
         <?php endif; ?>
     </div>
 
-    <!-- 3. LAPORAN & RIWAYAT (Modern Grid Format like Aksi Cepat!) -->
+    <!-- 3. LAPORAN & RIWAYAT -->
     <div class="section-title">Laporan &amp; Riwayat</div>
     <div class="dash-reports-grid">
         <?php if ($userLevel !== 'staff'): ?>
@@ -439,7 +501,7 @@
         </a>
     </div>
 
-    <!-- 4. ANALITIK & TREN PENJUALAN (Charts Section) -->
+    <!-- 4. ANALITIK & TREN PENJUALAN -->
     <?php if ($userLevel !== 'staff'): ?>
     <div class="section-title">Analitik &amp; Tren Penjualan</div>
     <div class="dash-charts-grid">
