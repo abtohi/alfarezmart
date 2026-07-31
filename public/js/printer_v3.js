@@ -192,7 +192,9 @@ class ThermalPrinter {
                 const uuidsToTry = [
                     '000018f0-0000-1000-8000-00805f9b34fb',
                     'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
-                    '49535343-fe7d-4ae5-8fa9-9fafd205e455'
+                    '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+                    '0000ff00-0000-1000-8000-00805f9b34fb',
+                    '00001101-0000-1000-8000-00805f9b34fb'
                 ];
                 
                 for (const uuid of uuidsToTry) {
@@ -233,7 +235,7 @@ class ThermalPrinter {
                 console.warn(`[ThermalPrinter] GATT connect attempt failed, retries left: ${retries - 1}`, err);
                 retries--;
                 if (retries === 0) throw err;
-                await new Promise(r => setTimeout(r, 200));
+                await new Promise(r => setTimeout(r, 250));
             }
         }
         throw new Error('Gagal menghubungkan ke GATT Server setelah retries.');
@@ -247,16 +249,17 @@ class ThermalPrinter {
         if (this.isConnected()) return true;
         if (!navigator.bluetooth) return false;
 
-        // If we still have a device object from a previous session, try reconnecting directly
+        // 1. Reconnect via existing device object if available
         if (this.device) {
             try {
-                console.log('[ThermalPrinter] Reconnecting to existing device:', this.device.name);
+                console.log('[ThermalPrinter] Reconnecting to existing device object:', this.device.name);
                 const result = await this._connectAndFindCharacteristic(this.device);
                 this.server = result.server;
                 this.characteristic = result.characteristic;
                 this._autoReconnected = true;
                 this.device.addEventListener('gattserverdisconnected', this._disconnectHandler);
-                console.log('[ThermalPrinter] Reconnected to:', this.device.name);
+                this.startHeartbeat();
+                console.log('[ThermalPrinter] Reconnected to existing device:', this.device.name);
                 return true;
             } catch (e) {
                 console.warn(`[ThermalPrinter] Direct reconnect attempt failed:`, e);
@@ -267,33 +270,21 @@ class ThermalPrinter {
 
         if (!this.lastConnectedDevice) return false;
 
+        // 2. Query Chrome's granted devices list via getDevices()
         try {
-            // Use getDevices() for silent reconnection (no dialog)
             if (typeof navigator.bluetooth.getDevices === 'function') {
                 const devices = await navigator.bluetooth.getDevices();
                 const saved = this.lastConnectedDevice;
-                const found = devices.find(d => d.id === saved.id || d.name === saved.name);
+                const found = devices.find(d => 
+                    (saved.id && d.id === saved.id) || 
+                    (saved.name && d.name === saved.name)
+                );
 
                 if (found) {
                     console.log('[ThermalPrinter] Found saved device via getDevices():', found.name);
                     this.device = found;
 
-                    // Listen for advertisement to reconnect
-                    if (found.watchAdvertisements) {
-                        const abortCtrl = new AbortController();
-                        const timeout = setTimeout(() => abortCtrl.abort(), 5000);
-
-                        try {
-                            await found.watchAdvertisements({ signal: abortCtrl.signal });
-                            // Wait briefly for advertisement
-                            await new Promise(r => setTimeout(r, 1500));
-                        } catch (e) {
-                            // watchAdvertisements may not be supported
-                        }
-                        clearTimeout(timeout);
-                    }
-
-                    // Try GATT connect with retries
+                    // Direct GATT connect without waiting for watchAdvertisements
                     try {
                         const result = await this._connectAndFindCharacteristic(found);
                         this.server = result.server;
