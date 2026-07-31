@@ -31,10 +31,83 @@ class DashboardController extends Controller
             'accumulative_net' => $todayFinanceSummary['accumulative_net'] ?? 0,
         ];
 
+        // Fetch chart analytics data
+        $db = Database::getInstance()->getConnection();
+        $today = date('Y-m-d');
+        $sevenDaysAgo = date('Y-m-d', strtotime('-6 days'));
+
+        // 1. 7-day revenue & transaction series
+        $stmt7Days = $db->prepare("
+            SELECT DATE(created_at) AS date_str, COUNT(id) AS tx_count, COALESCE(SUM(total_amount), 0) AS revenue
+            FROM sale_transactions
+            WHERE DATE(created_at) BETWEEN :s AND :e
+            GROUP BY DATE(created_at)
+            ORDER BY date_str ASC
+        ");
+        $stmt7Days->execute([':s' => $sevenDaysAgo, ':e' => $today]);
+        $raw7Days = $stmt7Days->fetchAll() ?: [];
+        $mapped7Days = [];
+        foreach ($raw7Days as $r) {
+            $mapped7Days[$r['date_str']] = $r;
+        }
+
+        $weeklySeries = [];
+        $dayNamesIndo = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+        for ($i = 6; $i >= 0; $i--) {
+            $d = date('Y-m-d', strtotime("-$i days"));
+            $ts = strtotime($d);
+            $lbl = $dayNamesIndo[date('w', $ts)] . ' ' . date('d/m', $ts);
+            $weeklySeries[] = [
+                'date' => $d,
+                'label' => $lbl,
+                'revenue' => (float)($mapped7Days[$d]['revenue'] ?? 0),
+                'transactions' => (int)($mapped7Days[$d]['tx_count'] ?? 0),
+            ];
+        }
+
+        // 2. Top 5 category sales (last 30 days)
+        $thirtyDaysAgo = date('Y-m-d', strtotime('-29 days'));
+        $stmtCat = $db->prepare("
+            SELECT 
+                COALESCE(c.name, 'Umum / Lainnya') AS category_name,
+                SUM(si.quantity) AS total_qty,
+                SUM(si.total_price) AS total_revenue
+            FROM sale_items si
+            JOIN sale_transactions st ON st.id = si.transaction_id
+            LEFT JOIN products p ON p.id = si.product_id
+            LEFT JOIN categories c ON c.id = p.category_id
+            WHERE DATE(st.created_at) BETWEEN :s AND :e
+            GROUP BY category_name
+            ORDER BY total_revenue DESC
+            LIMIT 5
+        ");
+        $stmtCat->execute([':s' => $thirtyDaysAgo, ':e' => $today]);
+        $topCategories = $stmtCat->fetchAll() ?: [];
+
+        // 3. Top 5 products sold today
+        $stmtTopToday = $db->prepare("
+            SELECT 
+                COALESCE(NULLIF(si.custom_name, ''), p.full_name, 'Produk') AS name,
+                SUM(si.quantity) AS qty,
+                SUM(si.total_price) AS revenue
+            FROM sale_items si
+            JOIN sale_transactions st ON st.id = si.transaction_id
+            LEFT JOIN products p ON p.id = si.product_id
+            WHERE DATE(st.created_at) = :today
+            GROUP BY si.product_id, name
+            ORDER BY qty DESC
+            LIMIT 5
+        ");
+        $stmtTopToday->execute([':today' => $today]);
+        $topProductsToday = $stmtTopToday->fetchAll() ?: [];
+
         $this->view('dashboard.index', [
             'title' => 'Dashboard',
             'activeNav' => 'home',
             'stats' => $stats,
+            'weeklySeries' => $weeklySeries,
+            'topCategories' => $topCategories,
+            'topProductsToday' => $topProductsToday,
         ]);
     }
 

@@ -1,169 +1,433 @@
-<!-- Dashboard View -->
-<div class="page-section">
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+/* ===== DASHBOARD REDESIGN STYLES ===== */
+.dash-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding-bottom: 90px;
+}
+.dash-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+.dash-kpi-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s, border-color 0.2s;
+    text-decoration: none;
+    color: inherit;
+}
+.dash-kpi-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+}
+.dash-kpi-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+.dash-charts-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+.dash-chart-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+.dash-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+.dash-chart-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.dash-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+/* Desktop Responsive Layout */
+@media (min-width: 992px) {
+    .dash-kpi-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+    }
+    .dash-charts-grid {
+        grid-template-columns: 1.6fr 1fr;
+        gap: 20px;
+    }
+    .dash-bottom-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+    .dash-quick-grid {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 12px;
+    }
+}
+</style>
+
+<div class="page-section dash-container">
     <!-- User Profile & Welcome Banner -->
     <?php if (isset($currentUser)): ?>
-    <div style="background:var(--gradient-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;">
-        <div style="width:56px;height:56px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;color:var(--primary);border:2px solid var(--primary);flex-shrink:0;">
+    <div style="background:var(--gradient-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;box-shadow:0 4px 20px rgba(0,0,0,0.12);">
+        <div style="width:52px;height:52px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:var(--primary);border:2px solid var(--primary);flex-shrink:0;">
             <?= strtoupper(substr($currentUser['name'] ?? 'U', 0, 1)) ?>
         </div>
         <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:var(--font-size-md);"><?= htmlspecialchars($currentUser['name'] ?? '') ?></div>
+            <div style="font-weight:800;font-size:var(--font-size-md);color:var(--text-primary);"><?= htmlspecialchars($currentUser['name'] ?? '') ?></div>
             <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:2px;"><?= htmlspecialchars($currentUser['email'] ?? '') ?></div>
-            <span class="badge-custom <?= $currentUser['level'] === 'superadmin' ? 'badge-danger' : ($currentUser['level'] === 'admin' ? 'badge-success' : 'badge-info') ?>" style="margin-top:6px;display:inline-block;">
+            <span class="badge-custom <?= $currentUser['level'] === 'superadmin' ? 'badge-danger' : ($currentUser['level'] === 'admin' ? 'badge-success' : 'badge-info') ?>" style="margin-top:4px;display:inline-block;font-size:10px;">
                 <?= ucfirst($currentUser['level'] ?? 'user') ?>
             </span>
         </div>
-        <a href="<?= BASE_URL ?>logout" onclick="localStorage.removeItem('alfarezmart_logged_in'); localStorage.removeItem('alfarezmart_user');" style="color:var(--danger);font-size:1.2rem;padding:8px;" title="Logout">
+        <a href="<?= BASE_URL ?>logout" onclick="localStorage.removeItem('alfarezmart_logged_in'); localStorage.removeItem('alfarezmart_user');" style="color:var(--danger);font-size:1.2rem;padding:8px;background:var(--danger-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;" title="Logout">
             <i class="bi bi-box-arrow-right"></i>
         </a>
     </div>
-    <?php else: ?>
-    <div style="background: var(--gradient-primary); border-radius: var(--radius-lg); padding: 20px; margin-bottom: 20px; position: relative; overflow: hidden;">
-        <div style="position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
-        <div style="position: absolute; bottom: -30px; right: 30px; width: 80px; height: 80px; background: rgba(255,255,255,0.05); border-radius: 50%;"></div>
-        <h2 style="font-size: var(--font-size-lg); font-weight: 700; margin-bottom: 4px; position: relative;">Selamat Datang! 👋</h2>
-        <p style="font-size: var(--font-size-sm); opacity: 0.85; margin: 0; position: relative;">AlfarezMart Inventory System</p>
-    </div>
     <?php endif; ?>
 
-    <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
-    <!-- Status Hari Ini -->
-    <div class="section-title">Status Hari Ini</div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; align-items: stretch;">
-        <!-- Left Column -->
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-            <!-- Stok Terendah Card -->
-            <div class="stat-card" style="margin-bottom: 0; flex: 1; display: flex; align-items: center; gap: 12px; padding: 12px 16px;">
-                <div class="stat-icon red" style="margin-bottom: 0; width: 36px; height: 36px; font-size: 1.1rem; flex-shrink: 0;"><i class="bi bi-exclamation-triangle-fill"></i></div>
-                <div style="flex: 1; min-width: 0;">
-                    <div class="stat-value" style="font-size: var(--font-size-md); font-weight: 800; line-height: 1.2;"><?= number_format($stats['low_stock_count'] ?? 0) ?></div>
-                    <div class="stat-label" style="font-size: 9px; margin-top: 0; text-transform: uppercase; letter-spacing: 0.5px;">Stok Terendah</div>
+    <?php $userLevel = $currentUser['level'] ?? 'staff'; ?>
+
+    <!-- Status & Ringkasan KPI Cards -->
+    <div class="section-title">Status &amp; Ringkasan Hari Ini</div>
+    <div class="dash-kpi-grid">
+
+        <?php if ($userLevel === 'superadmin'): ?>
+            <!-- Superadmin: Financial & Operational Overview -->
+            <div class="dash-kpi-card">
+                <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Omzet Hari Ini</div>
+                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--success);margin-top:2px;">
+                        Rp <?= number_format($stats['today_revenue'] ?? 0, 0, ',', '.') ?>
+                    </div>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">
+                        Profit: <strong style="color:var(--success);">Rp <?= number_format($stats['today_profit'] ?? 0, 0, ',', '.') ?></strong>
+                    </div>
                 </div>
             </div>
-            <!-- Keuangan/Dompet Card -->
-            <a href="<?= BASE_URL ?>finance" class="stat-card" style="margin-bottom: 0; flex: 1; display: flex; align-items: center; gap: 12px; padding: 12px 16px; text-decoration: none; color: inherit; cursor: pointer; transition: background 0.2s;">
-                <div class="stat-icon blue" style="margin-bottom: 0; width: 36px; height: 36px; font-size: 1.1rem; flex-shrink: 0;"><i class="bi bi-wallet2"></i></div>
-                <div style="flex: 1; min-width: 0;">
-                    <div class="stat-value" style="font-size: 11px; font-weight: 800; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Total: Rp <?= number_format($stats['finance_today']['accumulative_net'] ?? 0, 0, ',', '.') ?>">
+
+            <a href="<?= BASE_URL ?>finance" class="dash-kpi-card">
+                <div class="dash-kpi-icon" style="background:rgba(99,102,241,0.12);color:#818cf8;">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Keuangan Harian</div>
+                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                         Rp <?= number_format($stats['finance_today']['accumulative_net'] ?? 0, 0, ',', '.') ?>
                     </div>
-                    <div class="stat-label" style="font-size: 9px; margin-top: 0; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;">
-                        Keuangan Harian <i class="bi bi-chevron-right" style="font-size: 8px;"></i>
+                    <div style="font-size:10px;color:var(--primary);font-weight:600;margin-top:2px;display:flex;align-items:center;gap:2px;">
+                        Detail Dompet <i class="bi bi-chevron-right" style="font-size:9px;"></i>
                     </div>
                 </div>
             </a>
+
+            <a href="<?= BASE_URL ?>sales" class="dash-kpi-card">
+                <div class="dash-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">
+                    <i class="bi bi-receipt"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Transaksi POS</div>
+                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
+                        <?= number_format($stats['today_transactions'] ?? 0) ?> Struk
+                    </div>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Penjualan Hari Ini</div>
+                </div>
+            </a>
+
+            <a href="<?= BASE_URL ?>products?filter=low_stock" class="dash-kpi-card">
+                <div class="dash-kpi-icon" style="background:var(--danger-bg);color:var(--danger);">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Stok Terendah</div>
+                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--danger);margin-top:2px;">
+                        <?= number_format($stats['low_stock_count'] ?? 0) ?> Produk
+                    </div>
+                    <div style="font-size:10px;color:var(--danger);font-weight:600;margin-top:2px;">Perlu Restok!</div>
+                </div>
+            </a>
+
+        <?php elseif ($userLevel === 'admin'): ?>
+            <!-- Admin: Operational Overview (NO MONEY INFO) -->
+            <a href="<?= BASE_URL ?>sales" class="dash-kpi-card">
+                <div class="dash-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">
+                    <i class="bi bi-receipt"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Transaksi Hari Ini</div>
+                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
+                        <?= number_format($stats['today_transactions'] ?? 0) ?> Struk
+                    </div>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Penjualan Kasir POS</div>
+                </div>
+            </a>
+
+            <a href="<?= BASE_URL ?>products?filter=low_stock" class="dash-kpi-card">
+                <div class="dash-kpi-icon" style="background:var(--danger-bg);color:var(--danger);">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Stok Terendah</div>
+                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--danger);margin-top:2px;">
+                        <?= number_format($stats['low_stock_count'] ?? 0) ?> Produk
+                    </div>
+                    <div style="font-size:10px;color:var(--danger);font-weight:600;margin-top:2px;">Perlu Restok!</div>
+                </div>
+            </a>
+
+            <a href="<?= BASE_URL ?>products" class="dash-kpi-card">
+                <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
+                    <i class="bi bi-box-seam-fill"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Total Produk</div>
+                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
+                        <?= number_format($stats['total_products'] ?? 0) ?> Item
+                    </div>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Database Produk</div>
+                </div>
+            </a>
+
+            <a href="<?= BASE_URL ?>suppliers" class="dash-kpi-card">
+                <div class="dash-kpi-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">
+                    <i class="bi bi-truck"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Total Supplier</div>
+                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
+                        <?= number_format($stats['total_suppliers'] ?? 0) ?> Mitra
+                    </div>
+                    <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">Database Supplier</div>
+                </div>
+            </a>
+
+        <?php else: ?>
+            <!-- Staff: Pure Operational Inventory (NO MONEY INFO) -->
+            <a href="<?= BASE_URL ?>products" class="dash-kpi-card">
+                <div class="dash-kpi-icon" style="background:var(--primary-bg);color:var(--primary);">
+                    <i class="bi bi-box-seam-fill"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Total Produk</div>
+                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
+                        <?= number_format($stats['total_products'] ?? 0) ?> Item
+                    </div>
+                </div>
+            </a>
+
+            <div class="dash-kpi-card">
+                <div class="dash-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">
+                    <i class="bi bi-tags-fill"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Total Brand</div>
+                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
+                        <?= number_format($stats['total_brands'] ?? 0) ?> Merk
+                    </div>
+                </div>
+            </div>
+
+            <div class="dash-kpi-card">
+                <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
+                    <i class="bi bi-grid-fill"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Kategori</div>
+                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
+                        <?= number_format($stats['total_categories'] ?? 0) ?> Kategori
+                    </div>
+                </div>
+            </div>
+
+            <a href="<?= BASE_URL ?>suppliers" class="dash-kpi-card">
+                <div class="dash-kpi-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">
+                    <i class="bi bi-truck"></i>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Supplier</div>
+                    <div style="font-size:var(--font-size-md);font-weight:800;color:var(--text-primary);margin-top:2px;">
+                        <?= number_format($stats['total_suppliers'] ?? 0) ?> Mitra
+                    </div>
+                </div>
+            </a>
+        <?php endif; ?>
+
+    </div>
+
+    <!-- Analytics Charts Section (Superadmin & Admin) -->
+    <?php if ($userLevel !== 'staff'): ?>
+    <div class="section-title">Analitik &amp; Tren Penjualan</div>
+    <div class="dash-charts-grid">
+        <!-- 1. Bar Chart: 7-Day Performance -->
+        <div class="dash-chart-card">
+            <div class="dash-chart-header">
+                <div class="dash-chart-title">
+                    <i class="bi bi-bar-chart-line-fill" style="color:var(--primary);"></i>
+                    <span><?= $userLevel === 'superadmin' ? 'Omzet & Transaksi (7 Hari)' : 'Volume Transaksi (7 Hari)' ?></span>
+                </div>
+                <span class="badge-custom badge-primary" style="font-size:10px;">Minggu Ini</span>
+            </div>
+            <div style="position:relative;height:220px;width:100%;">
+                <canvas id="chartWeeklySales"></canvas>
+            </div>
         </div>
-        <!-- Right Column -->
-        <div style="display: flex;">
-            <!-- Omset Hari Ini Card -->
-            <div class="stat-card" style="margin-bottom: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 16px;">
-                <div class="stat-icon green" style="width: 44px; height: 44px; font-size: 1.3rem; margin-bottom: 8px; flex-shrink: 0;"><i class="bi bi-cash-stack"></i></div>
-                <div class="stat-value" style="font-size: var(--font-size-md); font-weight: 800;">Rp <?= number_format($stats['today_revenue'] ?? 0, 0, ',', '.') ?></div>
-                <div class="stat-label" style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px;">Omset Hari Ini</div>
-                <div style="font-size: 9px; color: var(--text-muted); margin-top: 4px;">
-                    <?= number_format($stats['today_transactions'] ?? 0) ?> transaksi POS
+
+        <!-- 2. Pie/Doughnut Chart: Top Categories -->
+        <div class="dash-chart-card">
+            <div class="dash-chart-header">
+                <div class="dash-chart-title">
+                    <i class="bi bi-pie-chart-fill" style="color:#818cf8;"></i>
+                    <span>Kategori Terlaris (30 Hari)</span>
                 </div>
-                <div style="font-size: 9px; color: var(--success); margin-top: 2px; font-weight: 700;">
-                    Profit: Rp <?= number_format($stats['today_profit'] ?? 0, 0, ',', '.') ?>
-                    <?php if (($stats['today_profit'] ?? 0) > 0): ?>
-                        <span style="color: var(--text-muted); font-weight: 600; margin-left: 4px;">(Markup <?= number_format($stats['today_avg_markup'] ?? 0, 1) ?>%)</span>
-                    <?php endif; ?>
-                </div>
+            </div>
+            <div style="position:relative;height:220px;width:100%;display:flex;align-items:center;justify-content:center;">
+                <canvas id="chartTopCategories"></canvas>
             </div>
         </div>
     </div>
     <?php endif; ?>
 
-
-    <!-- Stats Grid -->
-    <div class="section-title">Ringkasan Data</div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px;">
-        <div class="stat-card">
-            <div class="stat-icon red"><i class="bi bi-box-seam-fill"></i></div>
-            <div class="stat-value"><?= number_format($stats['total_products'] ?? 0) ?></div>
-            <div class="stat-label">Total Produk</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon blue"><i class="bi bi-tags-fill"></i></div>
-            <div class="stat-value"><?= number_format($stats['total_brands'] ?? 0) ?></div>
-            <div class="stat-label">Brand</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon green"><i class="bi bi-grid-fill"></i></div>
-            <div class="stat-value"><?= $stats['total_categories'] ?? 0 ?></div>
-            <div class="stat-label">Kategori</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon yellow"><i class="bi bi-truck"></i></div>
-            <div class="stat-value"><?= $stats['total_suppliers'] ?? 0 ?></div>
-            <div class="stat-label">Supplier</div>
-        </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="section-title">Aksi Cepat</div>
-    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 24px; text-align: center;">
-        <a href="<?= BASE_URL ?>ppob" class="quick-action">
-            <div class="action-icon" style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15)); color: #818cf8;">
-                <i class="bi bi-phone-fill"></i>
+    <!-- Top Produk Today & Quick Action Grid -->
+    <div class="dash-bottom-grid">
+        <!-- Top 5 Produk Hari Ini Widget -->
+        <div class="dash-chart-card" style="margin-bottom:20px;">
+            <div class="dash-chart-header">
+                <div class="dash-chart-title">
+                    <i class="bi bi-trophy-fill" style="color:#f59e0b;"></i>
+                    <span>Top 5 Produk Terlaris Hari Ini</span>
+                </div>
+                <span class="badge-custom badge-warning" style="font-size:10px;">Hari Ini</span>
             </div>
-            <span class="action-label">Produk Digital</span>
-        </a>
-        <a href="<?= BASE_URL ?>customers" class="quick-action">
-            <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-people-fill"></i></div>
-            <span class="action-label">Pelanggan</span>
-        </a>
-        <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
-        <a href="<?= BASE_URL ?>debts" class="quick-action">
-            <div class="action-icon" style="background: var(--danger-bg); color: var(--primary);"><i class="bi bi-journal-text"></i></div>
-            <span class="action-label">Catatan Hutang</span>
-        </a>
-        <?php endif; ?>
-        <a href="<?= BASE_URL ?>suppliers" class="quick-action">
-            <div class="action-icon" style="background: var(--success-bg); color: var(--success);"><i class="bi bi-building"></i></div>
-            <span class="action-label">Supplier &amp; Sales</span>
-        </a>
-        <a href="<?= BASE_URL ?>reports/product-history" class="quick-action">
-            <div class="action-icon" style="background: var(--warning-bg); color: var(--warning);"><i class="bi bi-tags"></i></div>
-            <span class="action-label">Histori Produk</span>
-        </a>
-        <a href="javascript:void(0)" onclick="openSupplierPriceAnalysis()" class="quick-action">
-            <div class="action-icon" style="background: rgba(99,102,241,0.12); color: #818cf8;"><i class="bi bi-bar-chart-line-fill"></i></div>
-            <span class="action-label">Analisis Harga</span>
-        </a>
-        <a href="<?= BASE_URL ?>sales" class="quick-action">
-            <div class="action-icon" style="background: var(--primary-bg); color: var(--primary);"><i class="bi bi-clock-history"></i></div>
-            <span class="action-label">Riwayat</span>
-        </a>
-        <a href="javascript:void(0)" onclick="openExportModal()" class="quick-action">
-            <div class="action-icon" style="background: rgba(46, 196, 182, 0.1); color: var(--success);"><i class="bi bi-file-earmark-excel"></i></div>
-            <span class="action-label">Export Data</span>
-        </a>
-        <a href="<?= BASE_URL ?>hitung-orderan" class="quick-action">
-            <div class="action-icon" style="background: var(--success-bg); color: var(--success);"><i class="bi bi-clipboard-check"></i></div>
-            <span class="action-label">Hitung Orderan</span>
-        </a>
-        <a href="<?= BASE_URL ?>catalog" class="quick-action">
-            <div class="action-icon" style="background: rgba(233, 30, 99, 0.1); color: #e91e63;"><i class="bi bi-journal-richtext"></i></div>
-            <span class="action-label">Buat Katalog</span>
-        </a>
-        <a href="<?= BASE_URL ?>products/multivariant" class="quick-action">
-            <div class="action-icon" style="background: rgba(156, 39, 176, 0.1); color: #9c27b0;"><i class="bi bi-diagram-3-fill"></i></div>
-            <span class="action-label">Harga Multivarian</span>
-        </a>
-        <?php if (($currentUser['level'] ?? '') === 'superadmin'): ?>
-        <a href="<?= BASE_URL ?>dashboard/summary" class="quick-action">
-            <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-graph-up-arrow"></i></div>
-            <span class="action-label">Summary</span>
-        </a>
-        <a href="javascript:void(0)" onclick="openOfflineDownloadModal()" class="quick-action" id="quickActionOffline">
-            <div class="action-icon" style="background: rgba(99,102,241,0.12); color: #818cf8; position:relative;" id="offlineIconWrapper">
-                <i class="bi bi-cloud-arrow-down-fill" id="offlineQuickIcon"></i>
-                <span id="offlineQuickBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;display:none;align-items:center;justify-content:center;">!</span>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <?php if (!empty($topProductsToday)): ?>
+                    <?php foreach ($topProductsToday as $idx => $prod): ?>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius-md);">
+                        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+                            <div style="width:24px;height:24px;border-radius:50%;background:<?= $idx === 0 ? '#f59e0b' : ($idx === 1 ? '#94a3b8' : ($idx === 2 ? '#b45309' : 'var(--surface-3)')) ?>;color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">
+                                <?= $idx + 1 ?>
+                            </div>
+                            <div style="font-size:12px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                <?= htmlspecialchars($prod['name']) ?>
+                            </div>
+                        </div>
+                        <div style="text-align:right;flex-shrink:0;">
+                            <span style="font-size:12px;font-weight:800;color:var(--primary);"><?= number_format($prod['qty']) ?> pcs</span>
+                            <?php if ($userLevel === 'superadmin'): ?>
+                                <div style="font-size:10px;color:var(--text-muted);">Rp <?= number_format($prod['revenue'], 0, ',', '.') ?></div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:12px;">
+                        <i class="bi bi-inbox" style="font-size:1.5rem;display:block;margin-bottom:4px;"></i>
+                        Belum ada transaksi penjualan hari ini
+                    </div>
+                <?php endif; ?>
             </div>
-            <span class="action-label">Unduh Offline</span>
-        </a>
-        <?php endif; ?>
+        </div>
+
+        <!-- Quick Actions -->
+        <div>
+            <div class="section-title">Aksi Cepat Menu</div>
+            <div class="dash-quick-grid">
+                <a href="<?= BASE_URL ?>ppob" class="quick-action">
+                    <div class="action-icon" style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15)); color: #818cf8;">
+                        <i class="bi bi-phone-fill"></i>
+                    </div>
+                    <span class="action-label">Produk Digital</span>
+                </a>
+                <a href="<?= BASE_URL ?>customers" class="quick-action">
+                    <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-people-fill"></i></div>
+                    <span class="action-label">Pelanggan</span>
+                </a>
+                <?php if ($userLevel !== 'staff'): ?>
+                <a href="<?= BASE_URL ?>debts" class="quick-action">
+                    <div class="action-icon" style="background: var(--danger-bg); color: var(--primary);"><i class="bi bi-journal-text"></i></div>
+                    <span class="action-label">Catatan Hutang</span>
+                </a>
+                <?php endif; ?>
+                <a href="<?= BASE_URL ?>suppliers" class="quick-action">
+                    <div class="action-icon" style="background: var(--success-bg); color: var(--success);"><i class="bi bi-building"></i></div>
+                    <span class="action-label">Supplier &amp; Sales</span>
+                </a>
+                <a href="<?= BASE_URL ?>reports/product-history" class="quick-action">
+                    <div class="action-icon" style="background: var(--warning-bg); color: var(--warning);"><i class="bi bi-tags"></i></div>
+                    <span class="action-label">Histori Produk</span>
+                </a>
+                <a href="javascript:void(0)" onclick="openSupplierPriceAnalysis()" class="quick-action">
+                    <div class="action-icon" style="background: rgba(99,102,241,0.12); color: #818cf8;"><i class="bi bi-bar-chart-line-fill"></i></div>
+                    <span class="action-label">Analisis Harga</span>
+                </a>
+                <a href="<?= BASE_URL ?>sales" class="quick-action">
+                    <div class="action-icon" style="background: var(--primary-bg); color: var(--primary);"><i class="bi bi-clock-history"></i></div>
+                    <span class="action-label">Riwayat</span>
+                </a>
+                <a href="javascript:void(0)" onclick="openExportModal()" class="quick-action">
+                    <div class="action-icon" style="background: rgba(46, 196, 182, 0.1); color: var(--success);"><i class="bi bi-file-earmark-excel"></i></div>
+                    <span class="action-label">Export Data</span>
+                </a>
+                <a href="<?= BASE_URL ?>hitung-orderan" class="quick-action">
+                    <div class="action-icon" style="background: var(--success-bg); color: var(--success);"><i class="bi bi-clipboard-check"></i></div>
+                    <span class="action-label">Hitung Orderan</span>
+                </a>
+                <a href="<?= BASE_URL ?>catalog" class="quick-action">
+                    <div class="action-icon" style="background: rgba(233, 30, 99, 0.1); color: #e91e63;"><i class="bi bi-journal-richtext"></i></div>
+                    <span class="action-label">Buat Katalog</span>
+                </a>
+                <a href="<?= BASE_URL ?>products/multivariant" class="quick-action">
+                    <div class="action-icon" style="background: rgba(156, 39, 176, 0.1); color: #9c27b0;"><i class="bi bi-diagram-3-fill"></i></div>
+                    <span class="action-label">Harga Multivarian</span>
+                </a>
+                <?php if ($userLevel === 'superadmin'): ?>
+                <a href="<?= BASE_URL ?>dashboard/summary" class="quick-action">
+                    <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-graph-up-arrow"></i></div>
+                    <span class="action-label">Summary</span>
+                </a>
+                <a href="javascript:void(0)" onclick="openOfflineDownloadModal()" class="quick-action" id="quickActionOffline">
+                    <div class="action-icon" style="background: rgba(99,102,241,0.12); color: #818cf8; position:relative;" id="offlineIconWrapper">
+                        <i class="bi bi-cloud-arrow-down-fill" id="offlineQuickIcon"></i>
+                        <span id="offlineQuickBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;display:none;align-items:center;justify-content:center;">!</span>
+                    </div>
+                    <span class="action-label">Unduh Offline</span>
+                </a>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 
     <!-- Manajemen Data -->
@@ -194,7 +458,7 @@
     <!-- Laporan & Riwayat -->
     <div class="section-title">Laporan &amp; Riwayat</div>
     <ul class="menu-list" style="margin-bottom:24px;">
-        <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
+        <?php if ($userLevel !== 'staff'): ?>
         <a href="<?= BASE_URL ?>reports" class="menu-item">
             <div class="menu-icon" style="background: var(--warning-bg); color: var(--warning);"><i class="bi bi-graph-up-arrow"></i></div>
             <div class="menu-text"><h6>Laporan Keuangan</h6><small>Ringkasan profit, aset, dan performa omzet</small></div>
@@ -216,7 +480,7 @@
             <div class="menu-text"><h6>Analitik &amp; Histori Produk</h6><small>Rekomendasi harga termurah &amp; riwayat belanja</small></div>
             <i class="bi bi-chevron-right menu-arrow"></i>
         </a>
-        <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
+        <?php if ($userLevel !== 'staff'): ?>
         <a href="<?= BASE_URL ?>debts" class="menu-item">
             <div class="menu-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-journal-text"></i></div>
             <div class="menu-text"><h6>Catatan Hutang &amp; Piutang</h6><small>Kelola piutang pelanggan &amp; hutang toko</small></div>
@@ -228,7 +492,7 @@
     <!-- Sistem & Dukungan -->
     <div class="section-title">Sistem &amp; Dukungan</div>
     <ul class="menu-list" style="margin-bottom:24px;">
-        <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
+        <?php if ($userLevel !== 'staff'): ?>
         <a href="<?= BASE_URL ?>settings/app" class="menu-item">
             <div class="menu-icon" style="background: rgba(var(--bs-primary-rgb, 13,110,253), 0.1); color: #0d6efd;"><i class="bi bi-gear"></i></div>
             <div class="menu-text"><h6>Pengaturan Sistem &amp; AI</h6><small>Ganti password dan konfigurasi AI Agent</small></div>
@@ -246,7 +510,7 @@
             <div class="menu-text"><h6>Pengaturan Struk</h6><small>Logo toko, header, footer, dan format thermal</small></div>
             <i class="bi bi-chevron-right menu-arrow"></i>
         </a>
-        <?php if (($currentUser['level'] ?? '') === 'superadmin'): ?>
+        <?php if ($userLevel === 'superadmin'): ?>
         <a href="<?= BASE_URL ?>users" class="menu-item">
             <div class="menu-icon" style="background:var(--danger-bg);color:var(--primary);"><i class="bi bi-people"></i></div>
             <div class="menu-text"><h6>Manajemen User</h6><small>Tambah & kelola akun pengguna</small></div>
@@ -265,36 +529,126 @@
         </a>
     </ul>
 
-    <!-- Fitur Segera Hadir -->
-    <div class="section-title">Segera Hadir</div>
-    <ul class="menu-list" style="margin-bottom:24px;">
-        <div class="menu-item" onclick="showComingSoon('Laporan Keuangan','Analisa omzet, profit, dan pengeluaran','bi-graph-up')" style="cursor:pointer;">
-            <div class="menu-icon" style="background:var(--success-bg);color:var(--success);"><i class="bi bi-graph-up"></i></div>
-            <div class="menu-text"><h6>Laporan Keuangan</h6><small>Analisa omzet dan profit</small></div>
-            <span class="badge-custom badge-warning">Soon</span>
-        </div>
-        <div class="menu-item" onclick="showComingSoon('Barang Titipan','Manajemen barang konsinyasi dari supplier','bi-box2-heart')" style="cursor:pointer;">
-            <div class="menu-icon" style="background:var(--warning-bg);color:var(--warning);"><i class="bi bi-box2-heart"></i></div>
-            <div class="menu-text"><h6>Barang Titipan</h6><small>Konsinyasi dari supplier</small></div>
-            <span class="badge-custom badge-warning">Soon</span>
-        </div>
-        <div class="menu-item" onclick="showComingSoon('AI Invoice Scanner','Foto invoice, data otomatis masuk ke sistem','bi-camera')" style="cursor:pointer;">
-            <div class="menu-icon" style="background:var(--primary-bg);color:var(--primary);"><i class="bi bi-camera"></i></div>
-            <div class="menu-text"><h6>AI Invoice Scanner</h6><small>Foto invoice, data otomatis masuk</small></div>
-            <span class="badge-custom badge-warning">Soon</span>
-        </div>
-        <div class="menu-item" onclick="showComingSoon('Akun Customer','Login & riwayat belanja untuk pelanggan','bi-person-badge')" style="cursor:pointer;">
-            <div class="menu-icon" style="background:var(--danger-bg);color:var(--danger);"><i class="bi bi-person-badge"></i></div>
-            <div class="menu-text"><h6>Portal Customer</h6><small>Riwayat belanja pelanggan</small></div>
-            <span class="badge-custom badge-warning">Soon</span>
-        </div>
-    </ul>
-
     <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:var(--font-size-xs);">
         AlfarezMart v1.1.4 &middot; PWA Inventory System<br>
         &copy; 2026 AlfarezMart
     </div>
 </div>
+
+<!-- Chart Initialization Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    <?php if ($userLevel !== 'staff'): ?>
+    const weeklyData = <?= json_encode($weeklySeries ?? []) ?>;
+    const topCatData = <?= json_encode($topCategories ?? []) ?>;
+    const isSuperadmin = <?= json_encode($userLevel === 'superadmin') ?>;
+
+    // 1. Weekly Sales Bar Chart
+    const ctxWeekly = document.getElementById('chartWeeklySales');
+    if (ctxWeekly && typeof Chart !== 'undefined') {
+        const labels = weeklyData.map(d => d.label);
+        const dataValues = weeklyData.map(d => isSuperadmin ? d.revenue : d.transactions);
+        
+        new Chart(ctxWeekly.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: isSuperadmin ? 'Omzet (Rp)' : 'Transaksi',
+                    data: dataValues,
+                    backgroundColor: isSuperadmin ? 'rgba(230, 57, 70, 0.75)' : 'rgba(59, 130, 246, 0.75)',
+                    borderColor: isSuperadmin ? '#e63946' : '#3b82f6',
+                    borderWidth: 1.5,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let val = context.raw || 0;
+                                return isSuperadmin ? ' Omzet: Rp ' + val.toLocaleString('id-ID') : ' Transaksi: ' + val;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#6b7394', font: { size: 10 } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: {
+                            color: '#6b7394',
+                            font: { size: 10 },
+                            callback: function(value) {
+                                if (!isSuperadmin) return value;
+                                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                                if (value >= 1000) return (value / 1000).toFixed(0) + 'k';
+                                return value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Top Categories Doughnut Chart
+    const ctxCat = document.getElementById('chartTopCategories');
+    if (ctxCat && typeof Chart !== 'undefined') {
+        const catLabels = topCatData.map(c => c.category_name);
+        const catValues = topCatData.map(c => isSuperadmin ? parseFloat(c.total_revenue) : parseInt(c.total_qty));
+        
+        const colors = [
+            '#e63946', '#3b82f6', '#10b981', '#f59e0b', '#818cf8', '#ec4899'
+        ];
+
+        new Chart(ctxCat.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: catLabels.length > 0 ? catLabels : ['Belum Ada Data'],
+                datasets: [{
+                    data: catValues.length > 0 ? catValues : [1],
+                    backgroundColor: catLabels.length > 0 ? colors.slice(0, catLabels.length) : ['#334155'],
+                    borderWidth: 2,
+                    borderColor: 'var(--surface-1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#a0a8c0',
+                            font: { size: 10 },
+                            padding: 10,
+                            boxWidth: 12
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let val = context.raw || 0;
+                                return isSuperadmin ? ' ' + context.label + ': Rp ' + val.toLocaleString('id-ID') : ' ' + context.label + ': ' + val + ' pcs';
+                            }
+                        }
+                    }
+                },
+                cutout: '65%'
+            }
+        });
+    }
+    <?php endif; ?>
+});
+</script>
 
 <script>
 // Utility helpers
