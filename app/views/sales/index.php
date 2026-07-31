@@ -261,7 +261,13 @@ let _custSearchTimeout = null;
 
 async function loadCustomerOptions() {
     try {
-        const res = await api(`${BASE_URL}api/customers`);
+        let res;
+        if (typeof api === 'function') {
+            res = await api(`${BASE_URL}api/customers`);
+        } else {
+            const fetchRes = await fetch(`${BASE_URL}api/customers`);
+            res = await fetchRes.json();
+        }
         if (res.success && res.data) {
             _allCustOptions = res.data.map(c => ({ id: c.id, name: c.name, phone: c.phone || '' }));
             renderCustFilterList('');
@@ -473,7 +479,15 @@ async function applyFilter() {
         if (dateTo)      params.set('date_to', dateTo);
         if (customerId)  params.set('customer_id', customerId);
 
-        const res = await api(`${BASE_URL}api/sales/analytics?${params.toString()}`);
+        let res;
+        if (typeof api === 'function') {
+            res = await api(`${BASE_URL}api/sales/analytics?${params.toString()}`);
+        } else {
+            const fetchRes = await fetch(`${BASE_URL}api/sales/analytics?${params.toString()}`);
+            if (!fetchRes.ok) throw new Error('Gagal mengambil data dari server');
+            res = await fetchRes.json();
+        }
+
         if (!res.success) throw new Error(res.error || 'Gagal memuat data');
 
         _currentData = res.data;
@@ -693,14 +707,16 @@ function renderGroupedSales(transactions) {
                 <td style="text-align:right;font-size:12px;">
                     <span style="font-weight:700;color:var(--success);">${rupiah(profit)}</span>
                     <span style="background:var(--success-bg);color:var(--success);padding:1px 5px;border-radius:4px;font-size:10px;font-weight:700;margin-left:4px;">+${markup.toFixed(1).replace('.',',')}%</span>
-                </td>
                 <td style="text-align:center;" onclick="event.stopPropagation();">
                     <div style="display:flex;gap:6px;justify-content:center;align-items:center;">
-                        <a href="${BASE_URL}sales/${t.id}" class="btn-outline-custom" title="Lihat Detail" style="padding:4px 10px;font-size:11px;border-radius:6px;text-decoration:none;color:var(--text-primary);">
+                        <a href="${BASE_URL}sales/${t.id}" class="btn-outline-custom" title="Lihat Detail" style="padding:4px 8px;font-size:11px;border-radius:6px;text-decoration:none;color:var(--text-primary);">
                             <i class="bi bi-eye"></i> Detail
                         </a>
                         <button type="button" onclick="shareInvoice(${t.id}, '${t.invoice_number}')" data-share-btn="${t.id}" title="Bagikan / Unduh Struk" class="btn-outline-custom" style="padding:4px 8px;font-size:11px;border-radius:6px;color:var(--primary);border-color:var(--primary-bg);">
                             <i class="bi bi-share"></i>
+                        </button>
+                        <button type="button" onclick="deleteSingleSale(${t.id}, '${t.invoice_number}')" title="Hapus Transaksi" class="btn-outline-custom" style="padding:4px 8px;font-size:11px;border-radius:6px;color:var(--danger);border-color:rgba(239,68,68,0.3);">
+                            <i class="bi bi-trash"></i>
                         </button>
                     </div>
                 </td>
@@ -748,6 +764,14 @@ function renderSaleCard(t) {
                         data-share-btn="${t.id}">
                         <i class="bi bi-share"></i>
                     </button>
+                    <button type="button"
+                        onclick="event.stopPropagation(); deleteSingleSale(${t.id}, '${t.invoice_number}')"
+                        title="Hapus transaksi"
+                        style="background:none;border:none;padding:2px 4px;cursor:pointer;color:var(--text-muted);font-size:1rem;border-radius:var(--radius-sm);transition:color 0.2s,background 0.2s;line-height:1;display:flex;align-items:center;"
+                        onmouseover="this.style.color='var(--danger)';this.style.background='var(--danger-bg)'"
+                        onmouseout="this.style.color='var(--text-muted)';this.style.background='none'">
+                        <i class="bi bi-trash" style="color:var(--danger);"></i>
+                    </button>
                 </div>
             </div>
             <div style="font-size:var(--font-size-xs);color:var(--text-secondary);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
@@ -772,18 +796,20 @@ function renderSaleCard(t) {
 }
 
 // ===== Selection Mode =====
+let suppressNextClick = false;
+
 function initSelectionMode() {
-    document.querySelectorAll('.sale-card').forEach(card => {
+    document.querySelectorAll('.sale-card, .sale-row-desktop').forEach(card => {
         const saleId = card.dataset.saleId;
 
         card.addEventListener('touchstart', (e) => {
             longPressTimer = setTimeout(() => {
-                e.preventDefault();
+                suppressNextClick = true;
                 if (!selectionMode) enterSelectionMode();
                 toggleSelect(saleId);
                 if (navigator.vibrate) navigator.vibrate(30);
             }, LONG_PRESS_MS);
-        }, { passive: false });
+        }, { passive: true });
 
         card.addEventListener('touchend',  () => clearTimeout(longPressTimer));
         card.addEventListener('touchmove', () => clearTimeout(longPressTimer));
@@ -795,14 +821,60 @@ function initSelectionMode() {
         });
 
         card.addEventListener('click', (e) => {
+            if (suppressNextClick) {
+                suppressNextClick = false;
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
             if (selectionMode) {
                 e.preventDefault();
                 e.stopPropagation();
                 toggleSelect(saleId);
             } else {
-                window.location.href = `${BASE_URL}sales/${saleId}`;
+                if (!e.target.closest('button') && !e.target.closest('a') && !e.target.closest('input')) {
+                    window.location.href = `${BASE_URL}sales/${saleId}`;
+                }
             }
         });
+    });
+}
+
+function deleteSingleSale(id, invoiceNumber) {
+    AppModal.show({
+        title: 'Hapus Transaksi Penjualan',
+        subtitle: `Invoice #${invoiceNumber}`,
+        icon: 'bi-trash',
+        iconColor: 'var(--danger-bg)',
+        iconAccent: 'var(--danger)',
+        bodyHTML: `
+            <div style="text-align:center;padding:10px 0;">
+                <p style="font-size:14px;font-weight:700;color:var(--text-primary);margin-bottom:8px;">Yakin ingin menghapus transaksi ${invoiceNumber}?</p>
+                <p style="font-size:12px;color:var(--text-muted);">Stok barang yang terjual akan dikembalikan secara otomatis ke stok toko. Tindakan ini tidak bisa dibatalkan.</p>
+            </div>`,
+        submitText: 'Ya, Hapus Transaksi',
+        cancelText: 'Batal',
+        onSubmit: async () => {
+            try {
+                const csrf = document.getElementById('csrfToken')?.value || '';
+                const res = await fetch(`${BASE_URL}api/sales/bulk-delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+                    body: JSON.stringify({ csrf_token: csrf, ids: [Number(id)] })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    showToast(`Transaksi ${invoiceNumber} berhasil dihapus`, 'success');
+                    applyFilter();
+                    return true;
+                } else {
+                    throw new Error(result.error || 'Gagal menghapus transaksi');
+                }
+            } catch(err) {
+                showToast('Error: ' + err.message, 'error');
+                return false;
+            }
+        }
     });
 }
 
