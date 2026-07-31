@@ -1177,7 +1177,7 @@ class ApiController extends Controller
             'receipt_header' => $settings->get('receipt_header', ''),
             'receipt_footer' => $settings->get('receipt_footer', ''),
             'store_logo' => $settings->get('store_logo', ''),
-            'printer_driver' => $settings->get('printer_driver', 'rawbt'),
+            'printer_driver' => $settings->get('printer_driver', 'web_bluetooth'),
             'auto_print_checkout' => $settings->get('auto_print_checkout', '1'),
         ]);
     }

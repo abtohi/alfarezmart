@@ -47,7 +47,7 @@ $logo = $settingModel->get('store_logo', '');
         </div>
 
 <?php
-$printerDriver = $settingModel->get('printer_driver', 'rawbt');
+$printerDriver = $settingModel->get('printer_driver', 'web_bluetooth');
 $autoPrintCheckout = $settingModel->get('auto_print_checkout', '1');
 ?>
         <!-- Printer Settings Section -->

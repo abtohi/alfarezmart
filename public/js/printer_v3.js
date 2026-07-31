@@ -54,9 +54,6 @@ class ThermalPrinter {
             return this.storeSettings.printer_driver;
         }
         if (this.isIOS) return 'browser';
-        if (/Android/i.test(navigator.userAgent)) {
-            return 'rawbt'; // Default to RawBT for Android for 100% dialog-free auto-connect
-        }
         return this.hasBluetoothAPI ? 'web_bluetooth' : 'browser';
     }
 
