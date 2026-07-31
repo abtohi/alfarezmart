@@ -334,11 +334,13 @@
         .splash-brand-alfarez {
             background: linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #38bdf8 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
         }
         .splash-brand-mart {
             background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             font-style: italic;
         }
