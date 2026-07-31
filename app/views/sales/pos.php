@@ -1337,6 +1337,10 @@ async function proceedCheckout() {
                 </div>
             `).join('');
 
+            const hasSavedPrinter = tp?.hasSavedDevice?.() ?? false;
+            const printerConnected = tp?.isConnected?.() ?? false;
+            const shouldShowPrintBtn = printerConnected || hasSavedPrinter || (tp?.getDriver?.() === 'rawbt');
+
             let modalPromise;
             try {
             modalPromise = AppModal.show({
