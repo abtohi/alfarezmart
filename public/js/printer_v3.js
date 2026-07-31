@@ -202,14 +202,32 @@ class ThermalPrinter {
         let server = null;
         let characteristic = null;
         
+        const cachedServiceUuid = localStorage.getItem('pos_printer_service_uuid');
+        const cachedCharUuid = localStorage.getItem('pos_printer_char_uuid');
+
         let retries = 3;
         while (retries > 0) {
             try {
                 server = await device.gatt.connect();
-                // Tunggu 1000ms agar GATT Server benar-benar stabil sebelum meminta services
-                await new Promise(r => setTimeout(r, 1000));
                 
-                // Coba ambil spesifik service UUID alih-alih mengambil semua service (yang sering membuat RPP02N crash)
+                // Direct fast lookup using cached UUIDs (50ms execution!)
+                if (cachedServiceUuid && cachedCharUuid) {
+                    try {
+                        const service = await server.getPrimaryService(cachedServiceUuid);
+                        if (service) {
+                            const char = await service.getCharacteristic(cachedCharUuid);
+                            if (char && (char.properties.write || char.properties.writeWithoutResponse)) {
+                                return { server, characteristic: char };
+                            }
+                        }
+                    } catch(fastErr) {
+                        console.warn('[ThermalPrinter] Fast cached GATT lookup skipped, trying scan...');
+                    }
+                }
+
+                // Short 150ms stabilization delay
+                await new Promise(r => setTimeout(r, 150));
+                
                 const uuidsToTry = [
                     '000018f0-0000-1000-8000-00805f9b34fb',
                     'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
@@ -225,25 +243,30 @@ class ThermalPrinter {
                         for (const char of characteristics) {
                             if (char.properties.write || char.properties.writeWithoutResponse) {
                                 characteristic = char;
+                                try {
+                                    localStorage.setItem('pos_printer_service_uuid', uuid);
+                                    localStorage.setItem('pos_printer_char_uuid', char.uuid);
+                                } catch(e){}
                                 break;
                             }
                         }
-                    } catch (e) {
-                        // ignore error if this specific service doesn't exist
-                    }
+                    } catch (e) {}
                     if (characteristic) break;
                 }
                 
                 if (characteristic) {
                     return { server, characteristic };
                 } else {
-                    // Fallback to old method just in case
                     const services = await server.getPrimaryServices();
                     for (const service of services) {
                         const characteristics = await service.getCharacteristics();
                         for (const char of characteristics) {
                             if (char.properties.write || char.properties.writeWithoutResponse) {
                                 characteristic = char;
+                                try {
+                                    localStorage.setItem('pos_printer_service_uuid', service.uuid);
+                                    localStorage.setItem('pos_printer_char_uuid', char.uuid);
+                                } catch(e){}
                                 break;
                             }
                         }
@@ -256,7 +279,7 @@ class ThermalPrinter {
                 console.warn(`[ThermalPrinter] GATT connect attempt failed, retries left: ${retries - 1}`, err);
                 retries--;
                 if (retries === 0) throw err;
-                await new Promise(r => setTimeout(r, 250));
+                await new Promise(r => setTimeout(r, 150));
             }
         }
         throw new Error('Gagal menghubungkan ke GATT Server setelah retries.');
