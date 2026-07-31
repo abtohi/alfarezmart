@@ -111,8 +111,8 @@ function detectProductType(d) {
      * Build the elegant print-window HTML for a specific product type.
      */
     function buildPrintHTML(d, type, theme, snData) {
-        const BASE = '';
-        const logoSrc = BASE + 'public/images/mobile_icon.png';
+        const BASE = (typeof BASE_URL !== 'undefined' && BASE_URL) ? BASE_URL : '/';
+        const logoSrc = (BASE.endsWith('/') ? BASE : BASE + '/') + 'public/images/mobile_icon.png';
         const price = parseInt(d.sell_price || 0).toLocaleString('id-ID');
         const dateStr = d.created_at || '';
 
@@ -457,7 +457,7 @@ function detectProductType(d) {
         <!-- Header -->
         <div class="receipt-header">
             <div class="header-logo-wrap">
-                <img src="${logoSrc}" class="header-logo" alt="AlfarezMart" crossorigin="anonymous">
+                <img src="${logoSrc}" class="header-logo" alt="AlfarezMart">
             </div>
             <div class="header-store">AlfarezMart</div>
             <div class="header-tagline">Pusat Pembayaran Produk Digital</div>
@@ -560,8 +560,8 @@ function detectProductType(d) {
         const theme  = getProductTheme(type);
         const snData = parseSN(d, type);
         const price  = parseInt(sellPrice || d.sell_price || 0).toLocaleString('id-ID');
-        const BASE   = '';
-        const logoSrc = BASE + 'public/images/mobile_icon.png';
+        const BASE   = (typeof BASE_URL !== 'undefined' && BASE_URL) ? BASE_URL : '/';
+        const logoSrc = (BASE.endsWith('/') ? BASE : BASE + '/') + 'public/images/mobile_icon.png';
 
         // Watermark: 9 tiles
         let wmHtml = '';
@@ -613,7 +613,7 @@ function detectProductType(d) {
                 <!-- Header -->
                 <div style="background:${theme.gradient};padding:18px 16px 22px;text-align:center;position:relative;z-index:2;">
                     <div style="width:54px;height:54px;background:rgba(255,255,255,0.95);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;box-shadow:0 4px 10px rgba(0,0,0,0.18);overflow:hidden;">
-                        <img src="${logoSrc}" style="width:44px;height:44px;object-fit:contain;" alt="Logo" crossorigin="anonymous">
+                        <img src="${logoSrc}" style="width:44px;height:44px;object-fit:contain;" alt="Logo">
                     </div>
                     <div style="font-size:15px;font-weight:900;color:#fff;letter-spacing:0.8px;text-transform:uppercase;">AlfarezMart</div>
                     <div style="font-size:9.5px;color:rgba(255,255,255,0.8);margin-top:2px;font-weight:500;">Pusat Pembayaran Produk Digital</div>
