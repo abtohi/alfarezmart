@@ -53,6 +53,7 @@
     border-radius: var(--radius-lg);
     padding: 16px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
 }
 .dash-chart-header {
     display: flex;
@@ -74,6 +75,40 @@
     gap: 10px;
     margin-bottom: 24px;
 }
+.dash-reports-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 24px;
+}
+.dash-report-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: transform 0.2s, border-color 0.2s, background 0.2s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.dash-report-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    background: var(--surface-2);
+}
+.dash-report-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
 
 /* Desktop Responsive Layout */
 @media (min-width: 992px) {
@@ -92,6 +127,10 @@
     }
     .dash-quick-grid {
         grid-template-columns: repeat(6, 1fr);
+        gap: 12px;
+    }
+    .dash-reports-grid {
+        grid-template-columns: repeat(4, 1fr);
         gap: 12px;
     }
 }
@@ -119,7 +158,7 @@
 
     <?php $userLevel = $currentUser['level'] ?? 'staff'; ?>
 
-    <!-- Status & Ringkasan KPI Cards -->
+    <!-- 1. STATUS & RINGKASAN HARI INI -->
     <div class="section-title">Status &amp; Ringkasan Hari Ini</div>
     <div class="dash-kpi-grid">
 
@@ -288,7 +327,131 @@
 
     </div>
 
-    <!-- Analytics Charts Section (Superadmin & Admin) -->
+    <!-- 2. AKSI CEPAT MENU (Right below Status Hari Ini!) -->
+    <div class="section-title">Aksi Cepat Menu</div>
+    <div class="dash-quick-grid">
+        <a href="<?= BASE_URL ?>ppob" class="quick-action">
+            <div class="action-icon" style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15)); color: #818cf8;">
+                <i class="bi bi-phone-fill"></i>
+            </div>
+            <span class="action-label">Produk Digital</span>
+        </a>
+        <a href="<?= BASE_URL ?>customers" class="quick-action">
+            <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-people-fill"></i></div>
+            <span class="action-label">Pelanggan</span>
+        </a>
+        <?php if ($userLevel !== 'staff'): ?>
+        <a href="<?= BASE_URL ?>debts" class="quick-action">
+            <div class="action-icon" style="background: var(--danger-bg); color: var(--primary);"><i class="bi bi-journal-text"></i></div>
+            <span class="action-label">Catatan Hutang</span>
+        </a>
+        <?php endif; ?>
+        <a href="<?= BASE_URL ?>suppliers" class="quick-action">
+            <div class="action-icon" style="background: var(--success-bg); color: var(--success);"><i class="bi bi-building"></i></div>
+            <span class="action-label">Supplier &amp; Sales</span>
+        </a>
+        <a href="<?= BASE_URL ?>reports/product-history" class="quick-action">
+            <div class="action-icon" style="background: var(--warning-bg); color: var(--warning);"><i class="bi bi-tags"></i></div>
+            <span class="action-label">Histori Produk</span>
+        </a>
+        <a href="javascript:void(0)" onclick="openSupplierPriceAnalysis()" class="quick-action">
+            <div class="action-icon" style="background: rgba(99,102,241,0.12); color: #818cf8;"><i class="bi bi-bar-chart-line-fill"></i></div>
+            <span class="action-label">Analisis Harga</span>
+        </a>
+        <a href="<?= BASE_URL ?>sales" class="quick-action">
+            <div class="action-icon" style="background: var(--primary-bg); color: var(--primary);"><i class="bi bi-clock-history"></i></div>
+            <span class="action-label">Riwayat</span>
+        </a>
+        <a href="javascript:void(0)" onclick="openExportModal()" class="quick-action">
+            <div class="action-icon" style="background: rgba(46, 196, 182, 0.1); color: var(--success);"><i class="bi bi-file-earmark-excel"></i></div>
+            <span class="action-label">Export Data</span>
+        </a>
+        <a href="<?= BASE_URL ?>hitung-orderan" class="quick-action">
+            <div class="action-icon" style="background: var(--success-bg); color: var(--success);"><i class="bi bi-clipboard-check"></i></div>
+            <span class="action-label">Hitung Orderan</span>
+        </a>
+        <a href="<?= BASE_URL ?>catalog" class="quick-action">
+            <div class="action-icon" style="background: rgba(233, 30, 99, 0.1); color: #e91e63;"><i class="bi bi-journal-richtext"></i></div>
+            <span class="action-label">Buat Katalog</span>
+        </a>
+        <a href="<?= BASE_URL ?>products/multivariant" class="quick-action">
+            <div class="action-icon" style="background: rgba(156, 39, 176, 0.1); color: #9c27b0;"><i class="bi bi-diagram-3-fill"></i></div>
+            <span class="action-label">Harga Multivarian</span>
+        </a>
+        <?php if ($userLevel === 'superadmin'): ?>
+        <a href="<?= BASE_URL ?>dashboard/summary" class="quick-action">
+            <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-graph-up-arrow"></i></div>
+            <span class="action-label">Summary</span>
+        </a>
+        <a href="javascript:void(0)" onclick="openOfflineDownloadModal()" class="quick-action" id="quickActionOffline">
+            <div class="action-icon" style="background: rgba(99,102,241,0.12); color: #818cf8; position:relative;" id="offlineIconWrapper">
+                <i class="bi bi-cloud-arrow-down-fill" id="offlineQuickIcon"></i>
+                <span id="offlineQuickBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;display:none;align-items:center;justify-content:center;">!</span>
+            </div>
+            <span class="action-label">Unduh Offline</span>
+        </a>
+        <?php endif; ?>
+    </div>
+
+    <!-- 3. LAPORAN & RIWAYAT (Modern Grid Format like Aksi Cepat!) -->
+    <div class="section-title">Laporan &amp; Riwayat</div>
+    <div class="dash-reports-grid">
+        <?php if ($userLevel !== 'staff'): ?>
+        <a href="<?= BASE_URL ?>reports" class="dash-report-card">
+            <div class="dash-report-icon" style="background:var(--warning-bg);color:var(--warning);">
+                <i class="bi bi-graph-up-arrow"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:700;">Laporan Keuangan</div>
+                <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Omzet, profit &amp; aset</div>
+            </div>
+        </a>
+        <?php endif; ?>
+
+        <a href="<?= BASE_URL ?>sales" class="dash-report-card">
+            <div class="dash-report-icon" style="background:rgba(13,110,253,0.12);color:#0d6efd;">
+                <i class="bi bi-receipt"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:700;">Riwayat Penjualan</div>
+                <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Transaksi Kasir POS</div>
+            </div>
+        </a>
+
+        <a href="<?= BASE_URL ?>purchases" class="dash-report-card">
+            <div class="dash-report-icon" style="background:rgba(25,135,84,0.12);color:#198754;">
+                <i class="bi bi-cart-check"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:700;">Riwayat Pembelian</div>
+                <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Faktur barang masuk</div>
+            </div>
+        </a>
+
+        <a href="<?= BASE_URL ?>reports/product-history" class="dash-report-card">
+            <div class="dash-report-icon" style="background:rgba(220,53,69,0.12);color:#dc3545;">
+                <i class="bi bi-tags"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:700;">Histori Produk</div>
+                <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Harga &amp; riwayat beli</div>
+            </div>
+        </a>
+
+        <?php if ($userLevel !== 'staff'): ?>
+        <a href="<?= BASE_URL ?>debts" class="dash-report-card">
+            <div class="dash-report-icon" style="background:var(--info-bg);color:var(--info);">
+                <i class="bi bi-journal-text"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:12px;font-weight:700;">Hutang &amp; Piutang</div>
+                <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Piutang &amp; hutang toko</div>
+            </div>
+        </a>
+        <?php endif; ?>
+    </div>
+
+    <!-- 4. ANALITIK & TREN PENJUALAN (Charts Section) -->
     <?php if ($userLevel !== 'staff'): ?>
     <div class="section-title">Analitik &amp; Tren Penjualan</div>
     <div class="dash-charts-grid">
@@ -301,7 +464,7 @@
                 </div>
                 <span class="badge-custom badge-primary" style="font-size:10px;">Minggu Ini</span>
             </div>
-            <div style="position:relative;height:220px;width:100%;">
+            <div style="position:relative;height:220px;width:100%;max-width:100%;overflow:hidden;">
                 <canvas id="chartWeeklySales"></canvas>
             </div>
         </div>
@@ -314,121 +477,239 @@
                     <span>Kategori Terlaris (30 Hari)</span>
                 </div>
             </div>
-            <div style="position:relative;height:220px;width:100%;display:flex;align-items:center;justify-content:center;">
+            <div style="position:relative;height:220px;width:100%;max-width:100%;overflow:hidden;display:flex;align-items:center;justify-content:center;">
                 <canvas id="chartTopCategories"></canvas>
             </div>
         </div>
     </div>
     <?php endif; ?>
 
-    <!-- Top Produk Today & Quick Action Grid -->
-    <div class="dash-bottom-grid">
-        <!-- Top 5 Produk Hari Ini Widget -->
-        <div class="dash-chart-card" style="margin-bottom:20px;">
-            <div class="dash-chart-header">
-                <div class="dash-chart-title">
-                    <i class="bi bi-trophy-fill" style="color:#f59e0b;"></i>
-                    <span>Top 5 Produk Terlaris Hari Ini</span>
-                </div>
-                <span class="badge-custom badge-warning" style="font-size:10px;">Hari Ini</span>
+    <!-- Top Produk Today Widget -->
+    <div class="dash-chart-card" style="margin-bottom:24px;">
+        <div class="dash-chart-header">
+            <div class="dash-chart-title">
+                <i class="bi bi-trophy-fill" style="color:#f59e0b;"></i>
+                <span>Top 5 Produk Terlaris Hari Ini</span>
             </div>
-            <div style="display:flex;flex-direction:column;gap:8px;">
-                <?php if (!empty($topProductsToday)): ?>
-                    <?php foreach ($topProductsToday as $idx => $prod): ?>
-                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius-md);">
-                        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
-                            <div style="width:24px;height:24px;border-radius:50%;background:<?= $idx === 0 ? '#f59e0b' : ($idx === 1 ? '#94a3b8' : ($idx === 2 ? '#b45309' : 'var(--surface-3)')) ?>;color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">
-                                <?= $idx + 1 ?>
-                            </div>
-                            <div style="font-size:12px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                <?= htmlspecialchars($prod['name']) ?>
-                            </div>
-                        </div>
-                        <div style="text-align:right;flex-shrink:0;">
-                            <span style="font-size:12px;font-weight:800;color:var(--primary);"><?= number_format($prod['qty']) ?> pcs</span>
-                            <?php if ($userLevel === 'superadmin'): ?>
-                                <div style="font-size:10px;color:var(--text-muted);">Rp <?= number_format($prod['revenue'], 0, ',', '.') ?></div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <div style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:12px;">
-                        <i class="bi bi-inbox" style="font-size:1.5rem;display:block;margin-bottom:4px;"></i>
-                        Belum ada transaksi penjualan hari ini
-                    </div>
-                <?php endif; ?>
-            </div>
+            <span class="badge-custom badge-warning" style="font-size:10px;">Hari Ini</span>
         </div>
-
-        <!-- Quick Actions -->
-        <div>
-            <div class="section-title">Aksi Cepat Menu</div>
-            <div class="dash-quick-grid">
-                <a href="<?= BASE_URL ?>ppob" class="quick-action">
-                    <div class="action-icon" style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15)); color: #818cf8;">
-                        <i class="bi bi-phone-fill"></i>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            <?php if (!empty($topProductsToday)): ?>
+                <?php foreach ($topProductsToday as $idx => $prod): ?>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-2);border-radius:var(--radius-md);">
+                    <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+                        <div style="width:24px;height:24px;border-radius:50%;background:<?= $idx === 0 ? '#f59e0b' : ($idx === 1 ? '#94a3b8' : ($idx === 2 ? '#b45309' : 'var(--surface-3)')) ?>;color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">
+                            <?= $idx + 1 ?>
+                        </div>
+                        <div style="font-size:12px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            <?= htmlspecialchars($prod['name']) ?>
+                        </div>
                     </div>
-                    <span class="action-label">Produk Digital</span>
-                </a>
-                <a href="<?= BASE_URL ?>customers" class="quick-action">
-                    <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-people-fill"></i></div>
-                    <span class="action-label">Pelanggan</span>
-                </a>
-                <?php if ($userLevel !== 'staff'): ?>
-                <a href="<?= BASE_URL ?>debts" class="quick-action">
-                    <div class="action-icon" style="background: var(--danger-bg); color: var(--primary);"><i class="bi bi-journal-text"></i></div>
-                    <span class="action-label">Catatan Hutang</span>
-                </a>
-                <?php endif; ?>
-                <a href="<?= BASE_URL ?>suppliers" class="quick-action">
-                    <div class="action-icon" style="background: var(--success-bg); color: var(--success);"><i class="bi bi-building"></i></div>
-                    <span class="action-label">Supplier &amp; Sales</span>
-                </a>
-                <a href="<?= BASE_URL ?>reports/product-history" class="quick-action">
-                    <div class="action-icon" style="background: var(--warning-bg); color: var(--warning);"><i class="bi bi-tags"></i></div>
-                    <span class="action-label">Histori Produk</span>
-                </a>
-                <a href="javascript:void(0)" onclick="openSupplierPriceAnalysis()" class="quick-action">
-                    <div class="action-icon" style="background: rgba(99,102,241,0.12); color: #818cf8;"><i class="bi bi-bar-chart-line-fill"></i></div>
-                    <span class="action-label">Analisis Harga</span>
-                </a>
-                <a href="<?= BASE_URL ?>sales" class="quick-action">
-                    <div class="action-icon" style="background: var(--primary-bg); color: var(--primary);"><i class="bi bi-clock-history"></i></div>
-                    <span class="action-label">Riwayat</span>
-                </a>
-                <a href="javascript:void(0)" onclick="openExportModal()" class="quick-action">
-                    <div class="action-icon" style="background: rgba(46, 196, 182, 0.1); color: var(--success);"><i class="bi bi-file-earmark-excel"></i></div>
-                    <span class="action-label">Export Data</span>
-                </a>
-                <a href="<?= BASE_URL ?>hitung-orderan" class="quick-action">
-                    <div class="action-icon" style="background: var(--success-bg); color: var(--success);"><i class="bi bi-clipboard-check"></i></div>
-                    <span class="action-label">Hitung Orderan</span>
-                </a>
-                <a href="<?= BASE_URL ?>catalog" class="quick-action">
-                    <div class="action-icon" style="background: rgba(233, 30, 99, 0.1); color: #e91e63;"><i class="bi bi-journal-richtext"></i></div>
-                    <span class="action-label">Buat Katalog</span>
-                </a>
-                <a href="<?= BASE_URL ?>products/multivariant" class="quick-action">
-                    <div class="action-icon" style="background: rgba(156, 39, 176, 0.1); color: #9c27b0;"><i class="bi bi-diagram-3-fill"></i></div>
-                    <span class="action-label">Harga Multivarian</span>
-                </a>
-                <?php if ($userLevel === 'superadmin'): ?>
-                <a href="<?= BASE_URL ?>dashboard/summary" class="quick-action">
-                    <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-graph-up-arrow"></i></div>
-                    <span class="action-label">Summary</span>
-                </a>
-                <a href="javascript:void(0)" onclick="openOfflineDownloadModal()" class="quick-action" id="quickActionOffline">
-                    <div class="action-icon" style="background: rgba(99,102,241,0.12); color: #818cf8; position:relative;" id="offlineIconWrapper">
-                        <i class="bi bi-cloud-arrow-down-fill" id="offlineQuickIcon"></i>
-                        <span id="offlineQuickBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--danger);color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;font-weight:700;display:none;align-items:center;justify-content:center;">!</span>
+                    <div style="text-align:right;flex-shrink:0;">
+                        <span style="font-size:12px;font-weight:800;color:var(--primary);"><?= number_format($prod['qty']) ?> pcs</span>
+                        <?php if ($userLevel === 'superadmin'): ?>
+                            <div style="font-size:10px;color:var(--text-muted);">Rp <?= number_format($prod['revenue'], 0, ',', '.') ?></div>
+                        <?php endif; ?>
                     </div>
-                    <span class="action-label">Unduh Offline</span>
-                </a>
-                <?php endif; ?>
-            </div>
+                </div>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <div style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:12px;">
+                    <i class="bi bi-inbox" style="font-size:1.5rem;display:block;margin-bottom:4px;"></i>
+                    Belum ada transaksi penjualan hari ini
+                </div>
+            <?php endif; ?>
         </div>
     </div>
+
+    <!-- 5. MANAJEMEN DATA -->
+    <div class="section-title">Manajemen Data</div>
+    <ul class="menu-list" style="margin-bottom:24px;">
+        <a href="<?= BASE_URL ?>products" class="menu-item">
+            <div class="menu-icon" style="background: var(--success-bg); color: var(--success);"><i class="bi bi-box-seam"></i></div>
+            <div class="menu-text"><h6>Daftar Produk</h6><small>Kelola data, kemasan, harga, dan stok</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
+        <a href="<?= BASE_URL ?>suppliers" class="menu-item">
+            <div class="menu-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-building"></i></div>
+            <div class="menu-text"><h6>Supplier &amp; Sales</h6><small>Database pemasok barang dan kontak agen</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
+        <a href="<?= BASE_URL ?>customers" class="menu-item">
+            <div class="menu-icon" style="background: var(--primary-bg); color: var(--primary);"><i class="bi bi-people-fill"></i></div>
+            <div class="menu-text"><h6>Database Pelanggan</h6><small>Kelola data pelanggan dan kategori tier harga</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
+        <a href="<?= BASE_URL ?>settings/master-data" class="menu-item">
+            <div class="menu-icon" style="background: var(--primary-bg); color: var(--primary);"><i class="bi bi-database"></i></div>
+            <div class="menu-text"><h6>Master Data Utama</h6><small>Atur kategori, merk, dan satuan kemasan</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
+    </ul>
+
+    <!-- 6. SISTEM & DUKUNGAN -->
+    <div class="section-title">Sistem &amp; Dukungan</div>
+    <ul class="menu-list" style="margin-bottom:24px;">
+        <?php if ($userLevel !== 'staff'): ?>
+        <a href="<?= BASE_URL ?>settings/app" class="menu-item">
+            <div class="menu-icon" style="background: rgba(var(--bs-primary-rgb, 13,110,253), 0.1); color: #0d6efd;"><i class="bi bi-gear"></i></div>
+            <div class="menu-text"><h6>Pengaturan Sistem &amp; AI</h6><small>Ganti password dan konfigurasi AI Agent</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
+        <?php else: ?>
+        <a href="<?= BASE_URL ?>settings/app" class="menu-item">
+            <div class="menu-icon" style="background: rgba(var(--bs-primary-rgb, 13,110,253), 0.1); color: #0d6efd;"><i class="bi bi-key"></i></div>
+            <div class="menu-text"><h6>Ganti Password</h6><small>Ubah kata sandi akun Anda</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
+        <?php endif; ?>
+        <a href="<?= BASE_URL ?>settings/receipt" class="menu-item">
+            <div class="menu-icon" style="background: rgba(var(--bs-secondary-rgb, 108,117,125), 0.1); color: #6c757d;"><i class="bi bi-printer"></i></div>
+            <div class="menu-text"><h6>Pengaturan Struk</h6><small>Logo toko, header, footer, dan format thermal</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
+        <?php if ($userLevel === 'superadmin'): ?>
+        <a href="<?= BASE_URL ?>users" class="menu-item">
+            <div class="menu-icon" style="background:var(--danger-bg);color:var(--primary);"><i class="bi bi-people"></i></div>
+            <div class="menu-text"><h6>Manajemen User</h6><small>Tambah & kelola akun pengguna</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
+        <a href="<?= BASE_URL ?>setup" class="menu-item">
+            <div class="menu-icon" style="background:var(--success-bg);color:var(--success);"><i class="bi bi-database-gear"></i></div>
+            <div class="menu-text"><h6>Setup Database</h6><small>Inisialisasi tabel dan data awal</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
+        <?php endif; ?>
+        <a href="<?= BASE_URL ?>help" class="menu-item">
+            <div class="menu-icon" style="background: var(--danger-bg); color: var(--primary);"><i class="bi bi-question-circle"></i></div>
+            <div class="menu-text"><h6>Pusat Bantuan &amp; Panduan</h6><small>Cara penggunaan &amp; solusi perbaikan masalah</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
+    </ul>
+
+    <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:var(--font-size-xs);">
+        AlfarezMart v1.1.4 &middot; PWA Inventory System<br>
+        &copy; 2026 AlfarezMart
+    </div>
+</div>
+
+<!-- Chart Initialization Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    <?php if ($userLevel !== 'staff'): ?>
+    const weeklyData = <?= json_encode($weeklySeries ?? []) ?>;
+    const topCatData = <?= json_encode($topCategories ?? []) ?>;
+    const isSuperadmin = <?= json_encode($userLevel === 'superadmin') ?>;
+
+    // 1. Weekly Sales Bar Chart
+    const ctxWeekly = document.getElementById('chartWeeklySales');
+    if (ctxWeekly && typeof Chart !== 'undefined') {
+        const labels = weeklyData.map(d => d.label);
+        const dataValues = weeklyData.map(d => isSuperadmin ? d.revenue : d.transactions);
+        
+        new Chart(ctxWeekly.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: isSuperadmin ? 'Omzet (Rp)' : 'Transaksi',
+                    data: dataValues,
+                    backgroundColor: isSuperadmin ? 'rgba(230, 57, 70, 0.75)' : 'rgba(59, 130, 246, 0.75)',
+                    borderColor: isSuperadmin ? '#e63946' : '#3b82f6',
+                    borderWidth: 1.5,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let val = context.raw || 0;
+                                return isSuperadmin ? ' Omzet: Rp ' + val.toLocaleString('id-ID') : ' Transaksi: ' + val;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#6b7394', font: { size: 9 } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: {
+                            color: '#6b7394',
+                            font: { size: 9 },
+                            callback: function(value) {
+                                if (!isSuperadmin) return value;
+                                if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+                                if (value >= 1000) return (value / 1000).toFixed(0) + 'k';
+                                return value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Top Categories Doughnut Chart
+    const ctxCat = document.getElementById('chartTopCategories');
+    if (ctxCat && typeof Chart !== 'undefined') {
+        const catLabels = topCatData.map(c => c.category_name);
+        const catValues = topCatData.map(c => isSuperadmin ? parseFloat(c.total_revenue) : parseInt(c.total_qty));
+        
+        const colors = [
+            '#e63946', '#3b82f6', '#10b981', '#f59e0b', '#818cf8', '#ec4899'
+        ];
+
+        new Chart(ctxCat.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: catLabels.length > 0 ? catLabels : ['Belum Ada Data'],
+                datasets: [{
+                    data: catValues.length > 0 ? catValues : [1],
+                    backgroundColor: catLabels.length > 0 ? colors.slice(0, catLabels.length) : ['#334155'],
+                    borderWidth: 2,
+                    borderColor: 'var(--surface-1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: '#a0a8c0',
+                            font: { size: 9 },
+                            padding: 6,
+                            boxWidth: 10
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let val = context.raw || 0;
+                                return isSuperadmin ? ' ' + context.label + ': Rp ' + val.toLocaleString('id-ID') : ' ' + context.label + ': ' + val + ' pcs';
+                            }
+                        }
+                    }
+                },
+                layout: {
+                    padding: { top: 0, bottom: 4, left: 4, right: 4 }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+    <?php endif; ?>
+});
+</script>
 
     <!-- Manajemen Data -->
     <div class="section-title">Manajemen Data</div>
