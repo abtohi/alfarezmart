@@ -95,6 +95,41 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
         }
     }
 
+    // Helper to queue mutation offline
+    async function fallbackOfflineQueue() {
+        if (window.OfflineDB && ['POST', 'PUT', 'DELETE'].includes(method)) {
+            try {
+                let payloadData = null;
+                if (options.body) {
+                    if (options.body instanceof FormData) {
+                        payloadData = {};
+                        for (let [key, value] of options.body.entries()) {
+                            if (value instanceof File) continue;
+                            if (key.endsWith('[]')) {
+                                const baseKey = key.slice(0, -2);
+                                if (!payloadData[baseKey]) payloadData[baseKey] = [];
+                                payloadData[baseKey].push(value);
+                            } else {
+                                payloadData[key] = value;
+                            }
+                        }
+                    } else if (typeof options.body === 'string') {
+                        payloadData = JSON.parse(options.body);
+                    } else {
+                        payloadData = options.body;
+                    }
+                }
+                await window.OfflineDB.addPendingChange(endpoint, method, payloadData);
+                if (typeof updateSyncBadge === 'function') updateSyncBadge();
+                showToast('Sinyal lemah: Data disimpan ke antrian offline', 'warning');
+                return { success: true, message: 'Disimpan offline (Sinyal Lemah)', invoice: 'OFF-' + Date.now(), id: 'off_' + Date.now() };
+            } catch (e) {
+                console.error("Gagal simpan antrian offline", e);
+            }
+        }
+        return null;
+    }
+
     const config = { ...options };
     if (!config.headers) config.headers = {};
     if (!(options.body instanceof FormData) && !config.headers['Content-Type']) {
@@ -107,14 +142,20 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
         config.headers['X-CSRF-Token'] = csrfToken;
     }
 
+    // Add 6s AbortController timeout for weak network signal resilience
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    if (!config.signal) config.signal = controller.signal;
+
     try {
         const response = await fetch(endpoint, config);
+        clearTimeout(timeoutId);
         
         // Read response as text first to avoid json parse crash on empty/invalid body
         const text = await response.text();
         
         if (!text || text.trim().length === 0) {
-            throw new Error('Server mengembalikan respons kosong. Kemungkinan timeout atau error internal.');
+            throw new Error('Server mengembalikan respons kosong.');
         }
         
         let jsonData;
@@ -123,7 +164,7 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
         } catch (parseErr) {
             console.error('Response bukan JSON valid:', text.substring(0, 500));
             if (text.includes('<br') || text.includes('<html') || text.includes('Fatal error')) {
-                throw new Error('Server error (kemungkinan timeout atau kehabisan memori). Coba lagi dengan gambar yang lebih kecil.');
+                throw new Error('Server error (kemungkinan timeout).');
             }
             throw new Error('Respons server tidak valid (bukan JSON)');
         }
@@ -131,15 +172,16 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
         if (!response.ok) throw new Error(jsonData.error || 'Request failed');
         return jsonData;
     } catch (error) {
-        // Fallback for network error if not caught earlier
-        if (!navigator.onLine && ['POST', 'PUT', 'DELETE'].includes(method)) {
-            // Already handled above, but just in case connection dropped exactly during fetch
-            console.error('API Error during request while connection dropped:', error);
-            throw new Error('Koneksi terputus saat mengirim data.');
+        clearTimeout(timeoutId);
+        
+        // Fallback for network error / weak signal timeout
+        if (['POST', 'PUT', 'DELETE'].includes(method)) {
+            const offlineRes = await fallbackOfflineQueue();
+            if (offlineRes) return offlineRes;
         }
 
         console.error('API Error:', error);
-        showToast(error.message, 'error');
+        showToast(error.message || 'Koneksi terputus', 'error');
         throw error;
     }
 }

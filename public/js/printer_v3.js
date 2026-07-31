@@ -157,20 +157,41 @@ class ThermalPrinter {
     }
 
     async loadStoreSettings() {
+        // 1. Read immediately from LocalStorage for 0ms offline print speed
         try {
-            const res = await fetch(`${BASE_URL}api/settings/receipt`);
-            this.storeSettings = await res.json();
+            const cached = localStorage.getItem('alfarezmart_receipt_settings');
+            if (cached) {
+                this.storeSettings = JSON.parse(cached);
+            }
+        } catch(e) {}
+
+        // 2. Fetch fresh settings asynchronously (2s timeout, non-blocking if offline)
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2000);
+            const res = await fetch(`${BASE_URL}api/settings/receipt`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+                const fresh = await res.json();
+                this.storeSettings = fresh;
+                try { localStorage.setItem('alfarezmart_receipt_settings', JSON.stringify(fresh)); } catch(e){}
+            }
         } catch (e) {
-            this.storeSettings = {
-                store_name: 'AlfarezMart', store_address: '', store_phone: '',
-                thermal_printer_width: 58, receipt_header: '', receipt_footer: '', store_logo: ''
-            };
+            if (!this.storeSettings) {
+                this.storeSettings = {
+                    store_name: 'AlfarezMart', store_address: '', store_phone: '',
+                    thermal_printer_width: 58, receipt_header: '', receipt_footer: '', store_logo: ''
+                };
+            }
         }
         return this.storeSettings;
     }
 
     setStoreSettings(settings) {
         this.storeSettings = settings;
+        try {
+            localStorage.setItem('alfarezmart_receipt_settings', JSON.stringify(settings));
+        } catch(e) {}
     }
 
     /**
