@@ -59,23 +59,23 @@ body { overscroll-behavior-y: none !important; }
     </div>
 
     <!-- Photo Preview Modal -->
-    <div id="photoPreviewModal" class="modal-backdrop" style="display:none; z-index:2000;">
-        <div class="modal-content" style="max-width:400px; padding:0; overflow:hidden; display:flex; flex-direction:column; height:90vh;">
-            <div style="padding:16px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="font-size:var(--font-size-md); margin:0;">Pratinjau Foto</h3>
-                <button class="btn-close-custom" onclick="closePhotoPreview()"><i class="bi bi-x-lg"></i></button>
+    <div id="photoPreviewModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">
+        <div class="modal-content" style="width:100%; max-width:850px; height:85vh; max-height:800px; padding:0; overflow:hidden; display:flex; flex-direction:column; background:var(--surface-1, #1e1e2d); border-radius:12px; border:1px solid var(--border-color); box-shadow:0 20px 50px rgba(0,0,0,0.6);">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; background:var(--surface-2, #252538);">
+                <h3 style="font-size:16px; font-weight:700; margin:0; color:var(--text-primary);"><i class="bi bi-image" style="color:var(--primary); margin-right:8px;"></i>Pratinjau Foto Invoice</h3>
+                <button class="btn-close-custom" onclick="closePhotoPreview()" style="background:none; border:none; color:var(--text-muted); font-size:18px; cursor:pointer; padding:4px 8px;"><i class="bi bi-x-lg"></i></button>
             </div>
-            <div style="flex:1; overflow:hidden; background:#111; position:relative; display:flex; align-items:center; justify-content:center;">
-                <canvas id="photoPreviewCanvas" style="max-width:100%; max-height:100%; object-fit:contain;"></canvas>
+            <div style="flex:1; overflow:hidden; background:#0a0a0f; position:relative; display:flex; align-items:center; justify-content:center; padding:16px;">
+                <canvas id="photoPreviewCanvas" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:6px; box-shadow:0 4px 20px rgba(0,0,0,0.5);"></canvas>
             </div>
-            <div style="padding:16px; background:var(--surface-1);">
-                <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; cursor:pointer;">
+            <div style="padding:16px 20px; background:var(--surface-1); border-top:1px solid var(--border-color); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
                     <input type="checkbox" id="chkEnhancePhoto" checked onchange="applyPhotoFilter()" style="width:18px;height:18px;accent-color:var(--primary);">
-                    <span style="font-size:13px; font-weight:600; color:var(--text-primary);">Mode Dokumen (Perjelas Teks)</span>
+                    <span style="font-size:13px; font-weight:600; color:var(--text-primary);">Mode Dokumen (Perjelas Teks & Auto Sharpen)</span>
                 </label>
-                <div style="display:flex; gap:8px;">
-                    <button type="button" class="btn-outline-custom" style="flex:1;" onclick="closePhotoPreview()">Batal</button>
-                    <button type="button" class="btn-primary-custom" style="flex:1;" onclick="savePhotoPreview()">Gunakan Foto</button>
+                <div style="display:flex; gap:10px; min-width:240px;">
+                    <button type="button" class="btn-outline-custom" style="flex:1; padding:8px 16px;" onclick="closePhotoPreview()">Batal</button>
+                    <button type="button" class="btn-primary-custom" style="flex:1; padding:8px 16px;" onclick="savePhotoPreview()"><i class="bi bi-check2-circle"></i> Gunakan Foto</button>
                 </div>
             </div>
         </div>
