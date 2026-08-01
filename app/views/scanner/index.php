@@ -1,4 +1,4 @@
-<!-- Barcode Scanner View - E-Commerce Style (v1.1.7) -->
+<!-- Barcode Scanner View - E-Commerce Style with Search Back Navigation (v1.1.8) -->
 <?php
 $scannerUserLevel = $_SESSION['user_level'] ?? '';
 $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
@@ -149,10 +149,16 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
 <script>
 const SCANNER_IS_SUPERADMIN = <?= $scannerIsSuperadmin ? 'true' : 'false' ?>;
 
+// Search state for Back button navigation
+let lastSearchKeyword = '';
+let lastSearchResultsData = null;
+
 async function lookupBarcode() {
     const input = document.getElementById('barcodeInput');
     const code = input.value.trim();
     if (!code) return;
+
+    lastSearchKeyword = code;
     
     const resultDiv = document.getElementById('scanResult');
     resultDiv.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><div style="font-size:12px;color:var(--text-muted);margin-top:10px;">Mencari produk...</div></div>';
@@ -208,6 +214,7 @@ async function lookupBarcode() {
 }
 
 function renderMultipleSearchResults(products, isOffline) {
+    lastSearchResultsData = { products, isOffline };
     const resultDiv = document.getElementById('scanResult');
     const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
 
@@ -252,6 +259,22 @@ function renderMultipleSearchResults(products, isOffline) {
     }).join('');
 
     resultDiv.innerHTML = `<div class="scan-results-grid">${cardsHtml}</div>`;
+}
+
+function goBackToSearchResults() {
+    const input = document.getElementById('barcodeInput');
+    if (lastSearchKeyword) {
+        input.value = lastSearchKeyword;
+    }
+    
+    if (lastSearchResultsData && lastSearchResultsData.products && lastSearchResultsData.products.length > 1) {
+        renderMultipleSearchResults(lastSearchResultsData.products, lastSearchResultsData.isOffline);
+    } else if (lastSearchKeyword) {
+        lookupBarcode();
+    } else {
+        document.getElementById('scanResult').innerHTML = '';
+    }
+    input.focus();
 }
 
 function renderPackagingsForList(packagings) {
@@ -361,8 +384,29 @@ function renderProductScanResult(data, isOffline) {
             </div>
         `;
     }).join('');
+
+    let backButtonHtml = '';
+    if (lastSearchResultsData && lastSearchResultsData.products && lastSearchResultsData.products.length > 1) {
+        backButtonHtml = `
+            <div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                <button type="button" onclick="goBackToSearchResults()" class="btn btn-outline-primary" style="font-size:12px; font-weight:700; padding:8px 16px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
+                    <i class="bi bi-arrow-left"></i> Kembali ke Hasil Pencarian
+                </button>
+                ${lastSearchKeyword ? `<span style="font-size:12px; color:var(--text-muted);">Pencarian: <strong style="color:var(--text-primary);">"${lastSearchKeyword}"</strong></span>` : ''}
+            </div>
+        `;
+    } else if (lastSearchKeyword) {
+        backButtonHtml = `
+            <div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+                <button type="button" onclick="goBackToSearchResults()" class="btn btn-outline-primary" style="font-size:12px; font-weight:700; padding:8px 16px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
+                    <i class="bi bi-arrow-left"></i> Kembali ke Pencarian
+                </button>
+            </div>
+        `;
+    }
     
     resultDiv.innerHTML = `
+        ${backButtonHtml}
         <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:20px; border:1px solid var(--border-color); box-shadow:0 4px 16px rgba(0,0,0,0.06);">
             <!-- Large E-Commerce Showcase Stage -->
             <div class="scan-card-image-stage" style="height: 220px; margin-bottom: 16px;">
