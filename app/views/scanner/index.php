@@ -171,26 +171,34 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
         font-size: 11px !important;
     }
 
-    /* Back Button Bar Mobile */
+    /* Back Button Bar Mobile & Desktop Side-by-Side */
     .scanner-back-btn-wrapper {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 6px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 8px !important;
         margin-bottom: 14px !important;
+        width: 100% !important;
         position: relative !important;
         z-index: 10 !important;
     }
-    .scanner-back-btn-wrapper button {
-        width: 100% !important;
-        justify-content: center !important;
+    .scanner-back-btn {
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
         font-size: 11px !important;
-        padding: 8px 12px !important;
+        padding: 6px 10px !important;
+        border-radius: 8px !important;
     }
     .scanner-back-keyword {
         font-size: 11px !important;
-        text-align: center !important;
-        display: block !important;
-        width: 100% !important;
+        text-align: right !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        max-width: 52% !important;
+        color: var(--text-muted) !important;
+        display: inline-block !important;
     }
 
     /* Mobile Flex Wrapper */
@@ -269,6 +277,8 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
     .scanner-detail-supplier-card {
         padding: 16px !important;
         margin-bottom: 0 !important;
+        overflow: hidden !important;
+        max-width: 100% !important;
     }
 }
 </style>
@@ -474,7 +484,9 @@ function toggleProductSupplierHistory(idx) {
             icon.classList.add('bi-chevron-right');
         }
     }
-}let currentSupplierList = [];
+}
+
+let currentSupplierList = [];
 let currentSupplierPage = 1;
 const SUPPLIER_PAGE_SIZE = 3;
 
@@ -515,24 +527,24 @@ function renderSupplierGroupedSectionHtml(suppliers, page = 1) {
                 return `
                     <tr style="border-bottom:1px solid var(--border-color); font-size:11px;">
                         <td style="padding:6px 8px; color:var(--text-muted); white-space:nowrap;">${pDate}</td>
-                        <td style="padding:6px 8px; font-weight:700; color:var(--primary); font-family:monospace;">${p.purchase_code || p.purchase_number || '-'}</td>
-                        <td style="padding:6px 8px;">${qty} ${p.unit_name || 'Pcs'}</td>
-                        <td style="padding:6px 8px; text-align:right; font-weight:700;">${formatRupiah(itemBuy)}</td>
-                        <td style="padding:6px 8px; text-align:right; font-weight:700; color:var(--success);">${formatRupiah(subtotal)}</td>
+                        <td style="padding:6px 8px; font-weight:700; color:var(--primary); font-family:monospace; white-space:nowrap;">${p.purchase_code || p.purchase_number || '-'}</td>
+                        <td style="padding:6px 8px; white-space:nowrap;">${qty} ${p.unit_name || 'Pcs'}</td>
+                        <td style="padding:6px 8px; text-align:right; font-weight:700; white-space:nowrap;">${formatRupiah(itemBuy)}</td>
+                        <td style="padding:6px 8px; text-align:right; font-weight:700; color:var(--success); white-space:nowrap;">${formatRupiah(subtotal)}</td>
                     </tr>
                 `;
             }).join('');
 
             purchasesTableHtml = `
-                <div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-top:8px;">
-                    <table class="w-100" style="font-size: 11px; border-collapse: collapse;">
+                <div style="max-height: 220px; overflow-x: auto; overflow-y: auto; max-width: 100%; width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-top:8px; -webkit-overflow-scrolling: touch;">
+                    <table style="width: 100%; min-width: 460px; font-size: 11px; border-collapse: collapse;">
                         <thead style="background: var(--surface-2); position: sticky; top: 0; z-index: 2;">
                             <tr style="border-bottom: 1px solid var(--border-color); text-transform: uppercase; font-size: 9px; color: var(--text-muted);">
-                                <th style="padding:6px 8px;">Tanggal</th>
-                                <th style="padding:6px 8px;">No. Invoice</th>
-                                <th style="padding:6px 8px;">Qty</th>
-                                <th style="padding:6px 8px; text-align:right;">Harga Beli</th>
-                                <th style="padding:6px 8px; text-align:right;">Total</th>
+                                <th style="padding:6px 8px; white-space:nowrap;">Tanggal</th>
+                                <th style="padding:6px 8px; white-space:nowrap;">No. Invoice</th>
+                                <th style="padding:6px 8px; white-space:nowrap;">Qty</th>
+                                <th style="padding:6px 8px; text-align:right; white-space:nowrap;">Harga Beli</th>
+                                <th style="padding:6px 8px; text-align:right; white-space:nowrap;">Total</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -768,18 +780,19 @@ function renderProductScanResult(data, isOffline) {
     let backButtonHtml = '';
     if (lastSearchResultsData && lastSearchResultsData.products && lastSearchResultsData.products.length > 1) {
         backButtonHtml = `
-            <div class="scanner-back-btn-wrapper" style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; position:relative; z-index:10; width:100%;">
-                <button type="button" onclick="goBackToSearchResults()" class="btn btn-outline-primary" style="font-size:12px; font-weight:700; padding:8px 16px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
-                    <i class="bi bi-arrow-left"></i> Kembali ke Hasil Pencarian
+            <div class="scanner-back-btn-wrapper" style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; gap:10px; position:relative; z-index:10; width:100%;">
+                <button type="button" onclick="goBackToSearchResults()" class="btn btn-outline-primary scanner-back-btn" style="font-size:12px; font-weight:700; padding:7px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; flex-shrink:0;">
+                    <i class="bi bi-arrow-left"></i> Kembali ke Hasil
                 </button>
-                ${lastSearchKeyword ? `<span class="scanner-back-keyword" style="font-size:12px; color:var(--text-muted);">Pencarian: <strong style="color:var(--text-primary);">"${lastSearchKeyword}"</strong></span>` : ''}
+                ${lastSearchKeyword ? `<span class="scanner-back-keyword" style="font-size:12px; color:var(--text-muted); text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:55%;">Pencarian: <strong style="color:var(--text-primary);">"${lastSearchKeyword}"</strong></span>` : ''}
             </div>`;
     } else if (lastSearchKeyword) {
         backButtonHtml = `
-            <div class="scanner-back-btn-wrapper" style="margin-bottom:16px; position:relative; z-index:10; width:100%;">
-                <button type="button" onclick="goBackToSearchResults()" class="btn btn-outline-primary" style="font-size:12px; font-weight:700; padding:8px 16px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
+            <div class="scanner-back-btn-wrapper" style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; gap:10px; position:relative; z-index:10; width:100%;">
+                <button type="button" onclick="goBackToSearchResults()" class="btn btn-outline-primary scanner-back-btn" style="font-size:12px; font-weight:700; padding:7px 14px; border-radius:8px; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; flex-shrink:0;">
                     <i class="bi bi-arrow-left"></i> Kembali ke Pencarian
                 </button>
+                <span class="scanner-back-keyword" style="font-size:12px; color:var(--text-muted); text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:55%;">Pencarian: <strong style="color:var(--text-primary);">"${lastSearchKeyword}"</strong></span>
             </div>`;
     }
 
