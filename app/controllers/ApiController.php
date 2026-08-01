@@ -568,7 +568,7 @@ class ApiController extends Controller
             $this->json(['error' => 'Produk tidak ditemukan'], 404);
             return;
         }
-        $product['packagings'] = $model->getPackagings($product['id']);
+        $product = $this->enrichProductDetailData($product);
         $this->json($product);
     }
 
@@ -580,8 +580,99 @@ class ApiController extends Controller
             $this->json(['error' => 'Produk tidak ditemukan'], 404);
             return;
         }
-        $product['packagings'] = $model->getPackagings($product['id']);
+        $product = $this->enrichProductDetailData($product);
         $this->json($product);
+    }
+
+    private function enrichProductDetailData(array $product): array
+    {
+        $model = new ProductModel();
+        $productId = (int)$product['id'];
+
+        // 1. Packagings with Markup % calculation
+        $packagings = $model->getPackagings($productId);
+        foreach ($packagings as &$p) {
+            $buyPrice = (float)($p['buy_price'] ?? 0);
+            $retailPrice = (float)($p['sell_price_retail'] ?? 0);
+            $wholesalePrice = (float)($p['sell_price_wholesale'] ?? 0);
+
+            // Calculate Markup % = ((Sell - Buy) / Buy) * 100
+            $p['markup_retail_percent'] = ($buyPrice > 0) ? round((($retailPrice - $buyPrice) / $buyPrice) * 100, 1) : 0;
+            $p['profit_retail_nominal'] = $retailPrice - $buyPrice;
+
+            $p['markup_wholesale_percent'] = ($buyPrice > 0 && $wholesalePrice > 0) ? round((($wholesalePrice - $buyPrice) / $buyPrice) * 100, 1) : 0;
+            $p['profit_wholesale_nominal'] = ($wholesalePrice > 0) ? ($wholesalePrice - $buyPrice) : 0;
+        }
+        unset($p);
+        $product['packagings'] = $packagings;
+
+        // 2. Fetch Suppliers & Purchase History grouped by Supplier
+        $suppliers = [];
+        try {
+            $stmtSup = $this->db->prepare("
+                SELECT DISTINCT s.id as supplier_id, s.name as supplier_name, s.phone, s.address, s.contact_person,
+                       COALESCE(sp.last_buy_price, 0) as last_buy_price,
+                       sp.last_purchase_date,
+                       COALESCE(sp.purchase_count, 0) as purchase_count
+                FROM suppliers s
+                LEFT JOIN supplier_products sp ON sp.supplier_id = s.id AND sp.product_id = :pid
+                WHERE sp.product_id = :pid OR EXISTS (
+                    SELECT 1 FROM purchases pu JOIN purchase_items pi ON pi.purchase_id = pu.id WHERE pu.supplier_id = s.id AND pi.product_id = :pid
+                )
+                ORDER BY sp.last_purchase_date DESC, s.name ASC
+            ");
+            $stmtSup->execute([':pid' => $productId]);
+            $supplierRows = $stmtSup->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            foreach ($supplierRows as $sup) {
+                $sid = (int)$sup['supplier_id'];
+                
+                // Fetch purchase history for this product at this supplier (sorted by date DESC, latest on top)
+                $stmtHist = $this->db->prepare("
+                    SELECT pu.id as purchase_id, pu.purchase_number, pu.purchase_date, pu.status, pu.notes,
+                           pi.quantity, pi.buy_price as item_buy_price, pi.subtotal as item_subtotal,
+                           u.name as unit_name, pp.level as packaging_level, pp.base_qty
+                    FROM purchase_items pi
+                    JOIN purchases pu ON pi.purchase_id = pu.id
+                    LEFT JOIN product_packagings pp ON pi.packaging_id = pp.id
+                    LEFT JOIN units u ON pp.unit_id = u.id
+                    WHERE pi.product_id = :pid AND pu.supplier_id = :sid
+                    ORDER BY pu.purchase_date DESC, pu.id DESC
+                    LIMIT 50
+                ");
+                $stmtHist->execute([':pid' => $productId, ':sid' => $sid]);
+                $history = $stmtHist->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                $sup['purchases'] = $history;
+                $suppliers[] = $sup;
+            }
+        } catch (\Throwable $e) {
+            error_log("[enrichProductDetailData] Supplier history query error: " . $e->getMessage());
+        }
+        $product['suppliers'] = $suppliers;
+
+        // 3. Last Purchase Insight
+        $lastPurchase = null;
+        try {
+            $stmtLast = $this->db->prepare("
+                SELECT pu.purchase_date, pu.purchase_number, s.name as supplier_name, pi.buy_price, u.name as unit_name
+                FROM purchase_items pi
+                JOIN purchases pu ON pi.purchase_id = pu.id
+                LEFT JOIN suppliers s ON pu.supplier_id = s.id
+                LEFT JOIN product_packagings pp ON pi.packaging_id = pp.id
+                LEFT JOIN units u ON pp.unit_id = u.id
+                WHERE pi.product_id = :pid
+                ORDER BY pu.purchase_date DESC, pu.id DESC
+                LIMIT 1
+            ");
+            $stmtLast->execute([':pid' => $productId]);
+            $lastPurchase = $stmtLast->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (\Throwable $e) {
+            error_log("[enrichProductDetailData] Last purchase query error: " . $e->getMessage());
+        }
+        $product['last_purchase'] = $lastPurchase;
+
+        return $product;
     }
 
     public function getProductVariants(int $id)
