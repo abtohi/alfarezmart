@@ -5,22 +5,22 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
 ?>
 <div class="page-section" style="padding-bottom:100px;">
     <!-- Modern Header -->
-    <div style="background: linear-gradient(135deg, var(--surface-1), var(--surface-2)); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 22px 20px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+    <div class="scanner-header-card" style="background: linear-gradient(135deg, var(--surface-1), var(--surface-2)); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 22px 20px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
         <div style="margin-bottom: 14px;">
-            <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 4px; color: var(--text-primary); letter-spacing: -0.3px; display:flex; align-items:center; gap:8px;">
+            <h2 class="scanner-page-title" style="font-size: 1.4rem; font-weight: 800; margin-bottom: 4px; color: var(--text-primary); letter-spacing: -0.3px; display:flex; align-items:center; gap:8px;">
                 <i class="bi bi-upc-scan text-primary"></i> Cek Harga &amp; Scan Barcode
             </h2>
-            <p style="color: var(--text-muted); font-size: 12px; margin: 0;">Scan barcode produk atau ketik nama/kode barcode untuk cek harga &amp; stok real-time</p>
+            <p class="scanner-page-subtitle" style="color: var(--text-muted); font-size: 12px; margin: 0;">Scan barcode produk atau ketik nama/kode barcode untuk cek harga &amp; stok real-time</p>
         </div>
 
         <!-- Manual Input Bar with Camera Trigger Icon -->
         <div style="position: relative;">
-            <div style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 4px 6px 4px 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+            <div class="scanner-search-bar" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 4px 6px 4px 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
                 <i class="bi bi-upc-scan" onclick="openGlobalScanner()" style="color: var(--primary); font-size: 1.3rem; cursor: pointer;" title="Klik ikon barcode ini untuk Buka Kamera Scanner"></i>
                 <input type="text" id="barcodeInput" placeholder="Ketik nama produk atau scan kode barcode..." 
                        style="flex:1; border:none; background:transparent; padding:10px 0; color:var(--text-primary); font-size:13px; outline:none; font-family: var(--font-family);" 
                        autocomplete="off" autofocus>
-                <button onclick="lookupBarcode()" style="border:none; background:var(--primary); color:white; padding:9px 22px; border-radius: 8px; font-weight:700; font-size: 12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                <button onclick="lookupBarcode()" class="scanner-search-btn" style="border:none; background:var(--primary); color:white; padding:9px 22px; border-radius: 8px; font-weight:700; font-size: 12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
                     <i class="bi bi-search"></i> Cari
                 </button>
             </div>
@@ -148,6 +148,52 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
 
 /* Mobile Responsive Detail View Styling (Max-Width 991.98px) */
 @media (max-width: 991.98px) {
+    /* Page Header Card Mobile */
+    .scanner-header-card {
+        padding: 14px 16px !important;
+        margin-bottom: 14px !important;
+    }
+    .scanner-page-title {
+        font-size: 1.05rem !important;
+        margin-bottom: 2px !important;
+        letter-spacing: -0.2px !important;
+    }
+    .scanner-page-subtitle {
+        font-size: 10px !important;
+        line-height: 1.35 !important;
+    }
+    .scanner-search-bar {
+        padding: 3px 4px 3px 10px !important;
+        gap: 6px !important;
+    }
+    .scanner-search-btn {
+        padding: 7px 14px !important;
+        font-size: 11px !important;
+    }
+
+    /* Back Button Bar Mobile */
+    .scanner-back-btn-wrapper {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 6px !important;
+        margin-bottom: 14px !important;
+        position: relative !important;
+        z-index: 10 !important;
+    }
+    .scanner-back-btn-wrapper button {
+        width: 100% !important;
+        justify-content: center !important;
+        font-size: 11px !important;
+        padding: 8px 12px !important;
+    }
+    .scanner-back-keyword {
+        font-size: 11px !important;
+        text-align: center !important;
+        display: block !important;
+        width: 100% !important;
+    }
+
+    /* Mobile Flex Wrapper */
     .scan-mobile-flex-wrapper {
         display: flex !important;
         flex-direction: column !important;
@@ -726,7 +772,7 @@ function renderProductScanResult(data, isOffline) {
                 <button type="button" onclick="goBackToSearchResults()" class="btn btn-outline-primary" style="font-size:12px; font-weight:700; padding:8px 16px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
                     <i class="bi bi-arrow-left"></i> Kembali ke Hasil Pencarian
                 </button>
-                ${lastSearchKeyword ? `<span style="font-size:12px; color:var(--text-muted);">Pencarian: <strong style="color:var(--text-primary);">"${lastSearchKeyword}"</strong></span>` : ''}
+                ${lastSearchKeyword ? `<span class="scanner-back-keyword" style="font-size:12px; color:var(--text-muted);">Pencarian: <strong style="color:var(--text-primary);">"${lastSearchKeyword}"</strong></span>` : ''}
             </div>`;
     } else if (lastSearchKeyword) {
         backButtonHtml = `
