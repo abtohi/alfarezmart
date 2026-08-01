@@ -178,7 +178,7 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
         align-items: center !important;
         justify-content: space-between !important;
         gap: 8px !important;
-        margin-bottom: 14px !important;
+        margin-bottom: 16px !important;
         width: 100% !important;
         position: relative !important;
         z-index: 10 !important;
@@ -201,21 +201,25 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
         display: inline-block !important;
     }
 
-    /* Mobile Flex Wrapper */
+    /* Mobile Flex Wrapper - Align Left & Right Borders 100% with Header Card */
     .scan-mobile-flex-wrapper {
         display: flex !important;
         flex-direction: column !important;
         gap: 14px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
     }
     .scan-mobile-flex-col {
         display: contents !important;
     }
-    .scan-m-order-1 { order: 1 !important; margin-bottom: 0 !important; }
-    .scan-m-order-2 { order: 2 !important; margin-bottom: 0 !important; }
-    .scan-m-order-3 { order: 3 !important; margin-bottom: 0 !important; }
-    .scan-m-order-4 { order: 4 !important; margin-bottom: 0 !important; }
-    .scan-m-order-5 { order: 5 !important; margin-bottom: 0 !important; }
-    .scan-m-order-6 { order: 6 !important; margin-bottom: 0 !important; }
+    .scan-m-order-1 { order: 1 !important; margin-bottom: 0 !important; margin-top: 0 !important; }
+    .scan-m-order-2 { order: 2 !important; margin-bottom: 0 !important; margin-top: 0 !important; }
+    .scan-m-order-3 { order: 3 !important; margin-bottom: 0 !important; margin-top: 0 !important; }
+    .scan-m-order-4 { order: 4 !important; margin-bottom: 0 !important; margin-top: 0 !important; }
+    .scan-m-order-5 { order: 5 !important; margin-bottom: 0 !important; margin-top: 0 !important; }
+    .scan-m-order-6 { order: 6 !important; margin-bottom: 0 !important; margin-top: 0 !important; }
 
     /* Photo Stage Mobile */
     .scanner-detail-photo-stage {
