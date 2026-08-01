@@ -972,7 +972,8 @@ class DigiflazzController extends Controller {
                     'profit' => 0,
                     'modal_sum' => 0,
                     'process_time_sum' => 0,
-                    'process_time_count' => 0
+                    'process_time_count' => 0,
+                    'transactions' => []
                 ];
             }
 
@@ -980,6 +981,21 @@ class DigiflazzController extends Controller {
             if (!empty($handle) && empty($sellers[$realSeller]['handle'])) {
                 $sellers[$realSeller]['handle'] = $handle;
             }
+
+            // Save transaction record to seller's transaction history
+            $sellers[$realSeller]['transactions'][] = [
+                'ref_id' => $trx['ref_id'],
+                'product_name' => $trx['product_name'] ?? '',
+                'customer_no' => $trx['customer_no'] ?? '',
+                'category' => $trx['category'] ?? '',
+                'modal_price' => (float)($trx['modal_price'] ?? 0),
+                'sell_price' => (float)($trx['sell_price'] ?? 0),
+                'profit' => (float)($trx['sell_price'] ?? 0) - (float)($trx['modal_price'] ?? 0),
+                'status' => strtolower($trx['status']),
+                'created_at' => $trx['created_at'],
+                'updated_at' => $trx['updated_at'],
+                'duration_seconds' => $processTime
+            ];
 
             if ($isSuccess) {
                 $sellers[$realSeller]['success']++;

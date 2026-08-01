@@ -592,6 +592,95 @@
         });
     }
 
+    function toggleSellerHistory(idx) {
+        const historyRow = document.getElementById(`history-row-seller-${idx}`);
+        const chevron = document.getElementById(`chevron-seller-${idx}`);
+        if (!historyRow) return;
+
+        if (historyRow.style.display === 'none' || !historyRow.style.display) {
+            historyRow.style.display = 'table-row';
+            if (chevron) {
+                chevron.classList.remove('bi-chevron-right');
+                chevron.classList.add('bi-chevron-down');
+                chevron.classList.add('text-primary');
+            }
+        } else {
+            historyRow.style.display = 'none';
+            if (chevron) {
+                chevron.classList.remove('bi-chevron-down');
+                chevron.classList.remove('text-primary');
+                chevron.classList.add('bi-chevron-right');
+            }
+        }
+    }
+
+    function renderSellerTransactionHistory(trxList) {
+        if (!trxList || trxList.length === 0) {
+            return `<div class="text-center py-3 text-muted" style="font-size:11px;">Tidak ada rincian riwayat transaksi</div>`;
+        }
+
+        let rowsHtml = trxList.map(t => {
+            const d = new Date(t.created_at);
+            const dateStr = d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+            let speedBadge = '<span style="color:var(--text-muted);font-size:10px;">-</span>';
+            if (t.duration_seconds !== null && t.duration_seconds !== undefined) {
+                let speedVal = parseInt(t.duration_seconds);
+                let speedColor = speedVal <= 5 ? 'background:rgba(16,185,129,0.12);color:#10b981;' : (speedVal <= 20 ? 'background:rgba(59,130,246,0.12);color:#3b82f6;' : 'background:rgba(245,158,11,0.12);color:#f59e0b;');
+                speedBadge = `<span style="${speedColor}font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;white-space:nowrap;"><i class="bi bi-stopwatch me-1"></i>${speedVal} dtk</span>`;
+            }
+
+            let statusBadge = '';
+            if (t.status === 'success' || t.status === 'sukses') {
+                statusBadge = '<span class="badge bg-success bg-opacity-10 text-success fw-bold" style="font-size:10px;"><i class="bi bi-check-circle-fill me-1"></i>Sukses</span>';
+            } else if (t.status === 'failed' || t.status === 'gagal') {
+                statusBadge = '<span class="badge bg-danger bg-opacity-10 text-danger fw-bold" style="font-size:10px;"><i class="bi bi-x-circle-fill me-1"></i>Gagal</span>';
+            } else {
+                statusBadge = '<span class="badge bg-warning bg-opacity-10 text-warning fw-bold" style="font-size:10px;"><i class="bi bi-hourglass-split me-1"></i>Proses</span>';
+            }
+
+            return `
+                <tr style="border-bottom:1px solid var(--border-color); font-size:11px;">
+                    <td style="padding:8px 10px; white-space:nowrap; color:var(--text-muted);">${dateStr}</td>
+                    <td style="padding:8px 10px;">
+                        <div style="font-weight:700; color:var(--text-primary);">${t.product_name}</div>
+                        <div style="font-family:monospace; font-size:10px; color:var(--text-secondary);">${t.customer_no}</div>
+                    </td>
+                    <td style="padding:8px 10px; text-align:right;">Rp ${parseInt(t.modal_price).toLocaleString('id-ID')}</td>
+                    <td style="padding:8px 10px; text-align:right;">
+                        <div style="font-weight:700;">Rp ${parseInt(t.sell_price).toLocaleString('id-ID')}</div>
+                        <div style="font-size:9px; color:var(--success); font-weight:600;">+Rp ${parseInt(t.profit).toLocaleString('id-ID')}</div>
+                    </td>
+                    <td style="padding:8px 10px; text-align:center;">${speedBadge}</td>
+                    <td style="padding:8px 10px; text-align:center;">
+                        ${statusBadge}
+                        <div style="font-size:9px; color:var(--text-muted); margin-top:2px;">Ref: ${t.ref_id}</div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        return `
+            <div style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                <table class="w-100" style="font-size: 11px; border-collapse: collapse;">
+                    <thead style="background: var(--surface-2); position: sticky; top: 0; z-index: 2;">
+                        <tr style="border-bottom: 1px solid var(--border-color); text-transform: uppercase; font-size: 9px; color: var(--text-muted);">
+                            <th style="padding:8px 10px;">Waktu Transaksi</th>
+                            <th style="padding:8px 10px;">Produk &amp; Tujuan</th>
+                            <th style="padding:8px 10px; text-align:right;">Harga Modal</th>
+                            <th style="padding:8px 10px; text-align:right;">Harga Jual &amp; Profit</th>
+                            <th style="padding:8px 10px; text-align:center;">Kecepatan Transaksi</th>
+                            <th style="padding:8px 10px; text-align:center;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
     function renderSellerTable(sellers) {
         const tbody = document.getElementById('seller-tbody');
         tbody.innerHTML = '';
@@ -627,15 +716,21 @@
                 speedBadge = `<span class="speed-badge speed-lambat"><i class="bi bi-hourglass-bottom"></i> ${s.avg_process_time} detik</span>`;
             }
 
+            const trxCount = s.transactions ? s.transactions.length : 0;
+
             tbody.innerHTML += `
-                <tr>
+                <tr class="seller-main-row" onclick="toggleSellerHistory(${idx})" style="cursor:pointer;" title="Klik untuk lihat / tutup riwayat transaksi">
                     <td class="fw-semibold">
                         <div class="d-flex align-items-center gap-2">
-                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 28px; height: 28px; font-size: 11px; flex-shrink: 0;">
+                            <i id="chevron-seller-${idx}" class="bi bi-chevron-right text-muted transition-icon" style="font-size:11px;"></i>
+                            <div class="bg-primary bg-opacity-10 text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 26px; height: 26px; font-size: 11px; flex-shrink: 0;">
                                 #${idx + 1}
                             </div>
                             <div>
-                                <div class="fw-bold" style="color: var(--text-primary);">${s.name}</div>
+                                <div class="fw-bold d-flex align-items-center gap-1" style="color: var(--text-primary);">
+                                    ${s.name}
+                                    <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:9px; font-weight:600;"><i class="bi bi-list-nested me-1"></i>${trxCount} Trx</span>
+                                </div>
                                 ${s.handle ? `<div style="font-size: 10px; color: var(--text-muted);">${s.handle}</div>` : ''}
                             </div>
                         </div>
@@ -649,6 +744,24 @@
                     <td class="text-end fw-semibold">Rp ${s.revenue.toLocaleString('id-ID')}</td>
                     <td class="text-end fw-bold text-success">Rp ${s.profit.toLocaleString('id-ID')}</td>
                     <td class="text-end text-muted" style="font-size: 11px;">Rp ${s.avg_profit_per_trx.toLocaleString('id-ID')}</td>
+                </tr>
+
+                <tr id="history-row-seller-${idx}" class="seller-history-row" style="display:none; background: var(--surface-2);">
+                    <td colspan="7" style="padding: 14px 16px;">
+                        <div style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div class="fw-bold" style="font-size: 12px; color: var(--primary);">
+                                    <i class="bi bi-clock-history me-1"></i> Riwayat Transaksi Supplier ${s.name}
+                                    <span class="text-muted fw-normal ms-1">(${trxCount} Transaksi)</span>
+                                </div>
+                                <button type="button" onclick="event.stopPropagation(); toggleSellerHistory(${idx})" class="btn btn-sm btn-outline-secondary" style="font-size: 10px; padding: 2px 8px; border-radius: 4px;">
+                                    <i class="bi bi-chevron-up me-1"></i> Collapse / Tutup
+                                </button>
+                            </div>
+
+                            ${renderSellerTransactionHistory(s.transactions)}
+                        </div>
+                    </td>
                 </tr>
             `;
         });
