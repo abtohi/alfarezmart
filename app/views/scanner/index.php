@@ -348,14 +348,30 @@ function toggleProductSupplierHistory(idx) {
             icon.classList.add('bi-chevron-right');
         }
     }
+}let currentSupplierList = [];
+let currentSupplierPage = 1;
+const SUPPLIER_PAGE_SIZE = 3;
+
+function changeSupplierPage(page) {
+    currentSupplierPage = page;
+    const container = document.getElementById('scannerSupplierListContainer');
+    if (container) {
+        container.innerHTML = renderSupplierGroupedSectionHtml(currentSupplierList, currentSupplierPage);
+    }
 }
 
-function renderSupplierGroupedSection(suppliers) {
+function renderSupplierGroupedSectionHtml(suppliers, page = 1) {
     if (!suppliers || suppliers.length === 0) {
         return `<div class="text-center py-4 text-muted" style="font-size:12px;"><i class="bi bi-inbox fs-3 d-block mb-2 opacity-50"></i> Belum ada riwayat supplier terdaftar untuk produk ini.</div>`;
     }
 
-    return suppliers.map((sup, idx) => {
+    const totalSuppliers = suppliers.length;
+    const totalPages = Math.ceil(totalSuppliers / SUPPLIER_PAGE_SIZE);
+    const startIdx = (page - 1) * SUPPLIER_PAGE_SIZE;
+    const paginatedSuppliers = suppliers.slice(startIdx, startIdx + SUPPLIER_PAGE_SIZE);
+
+    let cardsHtml = paginatedSuppliers.map((sup, itemIdx) => {
+        const globalIdx = startIdx + itemIdx;
         const purchases = sup.purchases || [];
         const lastDate = sup.last_purchase_date ? new Date(sup.last_purchase_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
         const lastBuyPrice = parseFloat(sup.last_buy_price) || 0;
@@ -372,29 +388,25 @@ function renderSupplierGroupedSection(suppliers) {
 
                 return `
                     <tr style="border-bottom:1px solid var(--border-color); font-size:11px;">
-                        <td style="padding:8px 10px; color:var(--text-muted); white-space:nowrap;">${pDate}</td>
-                        <td style="padding:8px 10px; font-weight:700; color:var(--primary); font-family:monospace;">${p.purchase_code || p.purchase_number || '-'}</td>
-                        <td style="padding:8px 10px;">${qty} ${p.unit_name || 'Pcs'} <span style="font-size:9px; color:var(--text-muted);">(Isi ${p.base_qty || 1})</span></td>
-                        <td style="padding:8px 10px; text-align:right; font-weight:700;">${formatRupiah(itemBuy)}</td>
-                        <td style="padding:8px 10px; text-align:right; font-weight:700; color:var(--success);">${formatRupiah(subtotal)}</td>
-                        <td style="padding:8px 10px; text-align:center;">
-                            <span class="badge bg-success bg-opacity-10 text-success" style="font-size:9px;">${p.status || 'Selesai'}</span>
-                        </td>
+                        <td style="padding:6px 8px; color:var(--text-muted); white-space:nowrap;">${pDate}</td>
+                        <td style="padding:6px 8px; font-weight:700; color:var(--primary); font-family:monospace;">${p.purchase_code || p.purchase_number || '-'}</td>
+                        <td style="padding:6px 8px;">${qty} ${p.unit_name || 'Pcs'}</td>
+                        <td style="padding:6px 8px; text-align:right; font-weight:700;">${formatRupiah(itemBuy)}</td>
+                        <td style="padding:6px 8px; text-align:right; font-weight:700; color:var(--success);">${formatRupiah(subtotal)}</td>
                     </tr>
                 `;
             }).join('');
 
             purchasesTableHtml = `
-                <div style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-top:10px;">
+                <div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-top:8px;">
                     <table class="w-100" style="font-size: 11px; border-collapse: collapse;">
                         <thead style="background: var(--surface-2); position: sticky; top: 0; z-index: 2;">
                             <tr style="border-bottom: 1px solid var(--border-color); text-transform: uppercase; font-size: 9px; color: var(--text-muted);">
-                                <th style="padding:8px 10px;">Tanggal Pembelian</th>
-                                <th style="padding:8px 10px;">No. Invoice</th>
-                                <th style="padding:8px 10px;">Kemasan &amp; Qty</th>
-                                <th style="padding:8px 10px; text-align:right;">Harga Beli Satuan</th>
-                                <th style="padding:8px 10px; text-align:right;">Total Nilai</th>
-                                <th style="padding:8px 10px; text-align:center;">Status</th>
+                                <th style="padding:6px 8px;">Tanggal</th>
+                                <th style="padding:6px 8px;">No. Invoice</th>
+                                <th style="padding:6px 8px;">Qty</th>
+                                <th style="padding:6px 8px; text-align:right;">Harga Beli</th>
+                                <th style="padding:6px 8px; text-align:right;">Total</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -406,31 +418,30 @@ function renderSupplierGroupedSection(suppliers) {
         }
 
         return `
-            <div style="background:var(--surface-2); border:1px solid var(--border-color); border-radius:var(--radius-md); margin-bottom:12px; overflow:hidden;">
-                <div onclick="toggleProductSupplierHistory(${idx})" style="padding:14px 16px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;" onmouseover="this.style.background='var(--surface-1)'" onmouseout="this.style.background='transparent'">
+            <div style="background:var(--surface-2); border:1px solid var(--border-color); border-radius:var(--radius-md); margin-bottom:8px; overflow:hidden;">
+                <div onclick="toggleProductSupplierHistory(${globalIdx})" style="padding:10px 14px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;" onmouseover="this.style.background='var(--surface-1)'" onmouseout="this.style.background='transparent'">
                     <div class="d-flex align-items-center gap-2">
-                        <i id="prod-sup-chevron-${idx}" class="bi bi-chevron-right text-muted" style="font-size:12px; transition:transform 0.2s;"></i>
+                        <i id="prod-sup-chevron-${globalIdx}" class="bi bi-chevron-right text-muted" style="font-size:11px; transition:transform 0.2s;"></i>
                         <div>
-                            <div class="fw-bold" style="font-size:13px; color:var(--text-primary);">${sup.supplier_name}</div>
-                            <div style="font-size:11px; color:var(--text-muted);">
+                            <div class="fw-bold" style="font-size:12px; color:var(--text-primary);">${sup.supplier_name}</div>
+                            <div style="font-size:10px; color:var(--text-muted);">
                                 ${sup.address ? `<i class="bi bi-geo-alt me-1"></i>${sup.address} &middot; ` : ''}
-                                Total ${sup.purchase_count || purchases.length} Pembelian
+                                ${sup.purchase_count || purchases.length} Pembelian
                             </div>
                         </div>
                     </div>
 
                     <div class="text-end">
-                        <div style="font-size:11px; color:var(--text-muted);">Harga Beli Terakhir:</div>
-                        <div style="font-weight:700; color:var(--success); font-size:13px;">${lastBuyPrice > 0 ? formatRupiah(lastBuyPrice) : '-'}</div>
-                        <div style="font-size:9px; color:var(--text-muted);">${lastDate !== '-' ? 'Per ' + lastDate : ''}</div>
+                        <div style="font-weight:700; color:var(--success); font-size:12px;">${lastBuyPrice > 0 ? formatRupiah(lastBuyPrice) : '-'}</div>
+                        <div style="font-size:9px; color:var(--text-muted);">${lastDate !== '-' ? lastDate : ''}</div>
                     </div>
                 </div>
 
                 <!-- History Sub-panel -->
-                <div id="prod-sup-history-${idx}" style="display:none; padding:0 16px 16px; border-top:1px solid var(--border-color); background:var(--surface-1);">
-                    <div class="d-flex align-items-center justify-content-between pt-3 mb-2">
-                        <span class="fw-bold" style="font-size:11px; color:var(--primary);"><i class="bi bi-journal-text me-1"></i> Riwayat Pembelian Faktur (${purchases.length} Transaksi)</span>
-                        <button type="button" onclick="event.stopPropagation(); toggleProductSupplierHistory(${idx})" class="btn btn-sm btn-outline-secondary" style="font-size:9px; padding:2px 8px;">
+                <div id="prod-sup-history-${globalIdx}" style="display:none; padding:0 12px 12px; border-top:1px solid var(--border-color); background:var(--surface-1);">
+                    <div class="d-flex align-items-center justify-content-between pt-2 mb-1">
+                        <span class="fw-bold" style="font-size:10px; color:var(--primary);"><i class="bi bi-journal-text me-1"></i> Riwayat Faktur (${purchases.length})</span>
+                        <button type="button" onclick="event.stopPropagation(); toggleProductSupplierHistory(${globalIdx})" class="btn btn-sm btn-outline-secondary" style="font-size:9px; padding:1px 6px;">
                             <i class="bi bi-chevron-up me-1"></i> Tutup
                         </button>
                     </div>
@@ -439,6 +450,29 @@ function renderSupplierGroupedSection(suppliers) {
             </div>
         `;
     }).join('');
+
+    // Pagination Controls
+    let paginationHtml = '';
+    if (totalPages > 1) {
+        paginationHtml = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px; border-top:1px dashed var(--border-color); font-size:11px;">
+                <span style="color:var(--text-muted); font-size:10px;">Hal. <strong>${page}</strong> dari <strong>${totalPages}</strong></span>
+                <div style="display:flex; gap:3px;">
+                    <button type="button" onclick="changeSupplierPage(${page - 1})" class="btn btn-sm btn-outline-secondary" ${page === 1 ? 'disabled' : ''} style="font-size:10px; padding:1px 6px;">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    ${Array.from({length: totalPages}, (_, i) => i + 1).map(p => `
+                        <button type="button" onclick="changeSupplierPage(${p})" class="btn btn-sm ${p === page ? 'btn-primary' : 'btn-outline-secondary'}" style="font-size:10px; padding:1px 6px;">${p}</button>
+                    `).join('')}
+                    <button type="button" onclick="changeSupplierPage(${page + 1})" class="btn btn-sm btn-outline-secondary" ${page === totalPages ? 'disabled' : ''} style="font-size:10px; padding:1px 6px;">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    return cardsHtml + paginationHtml;
 }
 
 
@@ -447,6 +481,9 @@ function renderProductScanResult(data, isOffline) {
     const packagings = data.packagings || [];
     const prodName = data.name || data.full_name || 'Tanpa Nama';
     const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
+
+    currentSupplierList = data.suppliers || [];
+    currentSupplierPage = 1;
 
     // Helper: format date nicely
     const fmtDate = (d) => { try { return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); } catch(e) { return d || '-'; } };
@@ -550,18 +587,18 @@ function renderProductScanResult(data, isOffline) {
     if (data.last_purchase) {
         const lp = data.last_purchase;
         lastPurchaseInfoHtml = `
-            <div style="background:linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.03)); border:1px solid rgba(59,130,246,0.2); border-radius:10px; padding:14px 16px; margin-bottom:16px;">
-                <div style="font-size:10px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
+            <div style="background:linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.03)); border:1px solid rgba(59,130,246,0.2); border-radius:10px; padding:12px 14px;">
+                <div style="font-size:10px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
                     <i class="bi bi-clock-history"></i> Pembelian Terakhir
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                     <div>
-                        <div style="font-weight:700; font-size:13px; color:var(--text-primary);">${lp.supplier_name || '-'}</div>
-                        <div style="font-size:11px; color:var(--text-muted);">${fmtDate(lp.purchase_date)} &middot; Invoice: ${lp.purchase_code || '-'}</div>
+                        <div style="font-weight:700; font-size:12px; color:var(--text-primary);">${lp.supplier_name || '-'}</div>
+                        <div style="font-size:10px; color:var(--text-muted);">${fmtDate(lp.purchase_date)} &middot; Invoice: ${lp.purchase_code || '-'}</div>
                     </div>
                     <div style="text-align:right;">
-                        <div style="font-weight:800; color:var(--success); font-size:15px;">${formatRupiah(lp.buy_price)}</div>
-                        ${lp.unit_name ? `<div style="font-size:10px; color:var(--text-muted);">per ${lp.unit_name}</div>` : ''}
+                        <div style="font-weight:800; color:var(--success); font-size:14px;">${formatRupiah(lp.buy_price)}</div>
+                        ${lp.unit_name ? `<div style="font-size:9px; color:var(--text-muted);">per ${lp.unit_name}</div>` : ''}
                     </div>
                 </div>
             </div>`;
@@ -628,7 +665,7 @@ function renderProductScanResult(data, isOffline) {
                 <!-- Photo Showcase -->
                 <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.08); margin-bottom:16px;">
                     <!-- Photo Stage -->
-                    <div style="width:100%; aspect-ratio:1/1; max-height:480px; background:linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%); display:flex; align-items:center; justify-content:center; padding:24px; cursor:pointer;" onclick="${data.photo ? `viewFullPhoto('${baseUrl}${data.photo}')` : ''}">
+                    <div style="width:100%; aspect-ratio:1/1; max-height:460px; background:linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%); display:flex; align-items:center; justify-content:center; padding:24px; cursor:pointer;" onclick="${data.photo ? `viewFullPhoto('${baseUrl}${data.photo}')` : ''}">
                         ${data.photo
                             ? `<img id="mainProductImg" src="${baseUrl}${data.photo}" style="width:100%; height:100%; object-fit:contain; transition:transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">`
                             : `<div style="text-align:center;"><i class="bi bi-box-seam" style="font-size:6rem; color:var(--primary); opacity:0.4;"></i><div style="font-size:12px; color:var(--text-muted); margin-top:8px;">Belum ada foto produk</div></div>`
@@ -659,7 +696,7 @@ function renderProductScanResult(data, isOffline) {
                 </div>
             </div>
 
-            <!-- ── RIGHT COLUMN: HEADER, KEMASAN & HARGA, LAST PURCHASE ── -->
+            <!-- ── RIGHT COLUMN: HEADER, KEMASAN & HARGA, LAST PURCHASE, PEMASOK & RIWAYAT ── -->
             <div class="col-lg-7 col-md-12">
                 <!-- Product Title & Badges Header -->
                 <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:20px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.06); margin-bottom:16px;">
@@ -691,25 +728,25 @@ function renderProductScanResult(data, isOffline) {
 
                 <!-- Last Purchase Insight (Pembelian Terakhir - BELOW Kemasan & Harga) -->
                 ${lastPurchaseInfoHtml ? `
-                    <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:20px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+                    <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px; box-shadow:0 4px 20px rgba(0,0,0,0.06); margin-bottom:16px;">
                         ${lastPurchaseInfoHtml}
                     </div>
                 ` : ''}
-            </div>
-        </div>
 
-        <!-- ═══ BOTTOM: Supplier Details & Purchase History ═══ -->
-        <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
-            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #f59e0b, #d97706); display:flex; align-items:center; justify-content:center;"><i class="bi bi-truck text-white" style="font-size:16px;"></i></div>
-                    <div>
-                        <h5 class="fw-bold mb-0" style="font-size:15px; color:var(--text-primary);">Pemasok &amp; Riwayat Pembelian</h5>
-                        <span class="text-muted" style="font-size:11px;">${suppliersCount} supplier terdaftar &middot; Klik untuk lihat riwayat faktur</span>
+                <!-- Pemasok & Riwayat Pembelian (RIGHT Column, under Pembelian Terakhir with Pagination) -->
+                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:20px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg, #f59e0b, #d97706); display:flex; align-items:center; justify-content:center;"><i class="bi bi-truck text-white" style="font-size:13px;"></i></div>
+                            <div style="font-weight:800; font-size:14px; color:var(--text-primary);">Pemasok &amp; Riwayat Pembelian</div>
+                        </div>
+                        <span style="font-size:11px; color:var(--text-muted); font-weight:600;">${suppliersCount} Pemasok</span>
+                    </div>
+                    <div id="scannerSupplierListContainer">
+                        ${renderSupplierGroupedSectionHtml(data.suppliers, 1)}
                     </div>
                 </div>
             </div>
-            ${renderSupplierGroupedSection(data.suppliers)}
         </div>
     `;
 }
