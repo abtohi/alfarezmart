@@ -372,18 +372,28 @@ async function lookupBarcode() {
     }
 }
 
+function selectSearchResultItem(idx) {
+    if (!lastSearchResultsData || !lastSearchResultsData.products || !lastSearchResultsData.products[idx]) return;
+    const p = lastSearchResultsData.products[idx];
+    if (lastSearchResultsData.isOffline) {
+        showProductResultOffline(p);
+    } else {
+        fetchProductDetail(p.id);
+    }
+}
+
 function renderMultipleSearchResults(products, isOffline) {
     lastSearchResultsData = { products, isOffline };
     const resultDiv = document.getElementById('scanResult');
     const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
 
-    let cardsHtml = products.map(p => {
+    let cardsHtml = products.map((p, idx) => {
         const prodName = p.name || p.full_name || 'Tanpa Nama';
         const brand = p.brand_name || '';
         const category = p.category_name || '';
         
         return `
-            <div class="scan-result-card" onclick="${isOffline ? `showProductResultOffline(${JSON.stringify(p).replace(/'/g, "&#39;")})` : `fetchProductDetail(${p.id})`}">
+            <div class="scan-result-card" onclick="selectSearchResultItem(${idx})">
                 <!-- Top E-Commerce Showcase Stage (Large Image) -->
                 <div class="scan-card-image-stage">
                     ${p.photo 
