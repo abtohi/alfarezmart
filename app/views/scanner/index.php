@@ -695,8 +695,11 @@ function renderProductScanResult(data, isOffline) {
     const isAvailable = data.is_available !== undefined ? (data.is_available == 1 ? '<span style="color:var(--success); font-weight:700;">✓ Tersedia</span>' : '<span style="color:var(--danger); font-weight:700;">✗ Tidak Tersedia</span>') : '';
     const suppliersCount = data.suppliers ? data.suppliers.length : 0;
 
+    const rawStock = parseFloat(data.current_qty_base ?? 0);
+    const stockDisplay = (rawStock % 1 === 0) ? parseInt(rawStock) : parseFloat(rawStock.toFixed(2));
+
     let metaRows = [];
-    metaRows.push(['Stok Tersedia', `<strong style="color:var(--primary); font-size:13px; font-weight:800;">${data.current_qty_base ?? 0}</strong> Base Pcs`]);
+    metaRows.push(['Stok Tersedia', `<strong style="color:var(--primary); font-size:13px; font-weight:800;">${stockDisplay}</strong> Base Pcs`]);
     if (productType) metaRows.push(['Jenis Produk', productType]);
     if (variant) metaRows.push(['Varian', variant]);
     if (weightVal) metaRows.push(['Berat / Volume', weightVal]);
@@ -719,7 +722,7 @@ function renderProductScanResult(data, isOffline) {
     let backButtonHtml = '';
     if (lastSearchResultsData && lastSearchResultsData.products && lastSearchResultsData.products.length > 1) {
         backButtonHtml = `
-            <div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+            <div class="scanner-back-btn-wrapper" style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; position:relative; z-index:10; width:100%;">
                 <button type="button" onclick="goBackToSearchResults()" class="btn btn-outline-primary" style="font-size:12px; font-weight:700; padding:8px 16px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
                     <i class="bi bi-arrow-left"></i> Kembali ke Hasil Pencarian
                 </button>
@@ -727,7 +730,7 @@ function renderProductScanResult(data, isOffline) {
             </div>`;
     } else if (lastSearchKeyword) {
         backButtonHtml = `
-            <div style="margin-bottom:16px;">
+            <div class="scanner-back-btn-wrapper" style="margin-bottom:16px; position:relative; z-index:10; width:100%;">
                 <button type="button" onclick="goBackToSearchResults()" class="btn btn-outline-primary" style="font-size:12px; font-weight:700; padding:8px 16px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
                     <i class="bi bi-arrow-left"></i> Kembali ke Pencarian
                 </button>
@@ -787,7 +790,7 @@ function renderProductScanResult(data, isOffline) {
                         <span class="scan-pill-badge brand" style="font-size:11px; padding:4px 12px;"><i class="bi bi-award me-1"></i>${data.brand_name || 'Tanpa Brand'}</span>
                         <span class="scan-pill-badge category" style="font-size:11px; padding:4px 12px;"><i class="bi bi-tag me-1"></i>${data.category_name || 'Tanpa Kategori'}</span>
                         ${data.short_label ? `<span class="scan-short-label" style="font-size:11px; padding:4px 12px;"><i class="bi bi-receipt me-1"></i>${data.short_label}</span>` : ''}
-                        <span class="scan-pill-badge" style="font-size:11px; padding:4px 12px; background:rgba(59,130,246,0.1); color:var(--primary); font-weight:700; border:1px solid rgba(59,130,246,0.2);"><i class="bi bi-box-seam me-1"></i>Stok: ${data.current_qty_base ?? 0} Base Pcs</span>
+                        <span class="scan-pill-badge" style="font-size:11px; padding:4px 12px; background:rgba(59,130,246,0.1); color:var(--primary); font-weight:700; border:1px solid rgba(59,130,246,0.2);"><i class="bi bi-box-seam me-1"></i>Stok: ${stockDisplay} Base Pcs</span>
                     </div>
                 </div>
 
