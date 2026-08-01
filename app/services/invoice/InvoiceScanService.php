@@ -355,18 +355,10 @@ class InvoiceScanService
         // Prevent timeout issues
         set_time_limit(120);
 
-        // Free vision model fallback chain — tried in order when 429 rate-limit hit
-        $FREE_VISION_MODELS = [
-            'google/gemma-4-31b-it:free',
-            'google/gemma-4-26b-a4b-it:free',
-            'nvidia/nemotron-nano-12b-v2-vl:free',
-        ];
-
-        // Build the list of models to try:
-        // - Primary: the configured model (default: openrouter/auto)
-        // - Fallbacks: free vision models, only tried if primary returns 429/5xx
+        // Free vision model fallback chain — tried in order when 402/429/5xx error occurs
         $FREE_VISION_FALLBACKS = [
             'openrouter/free',
+            'google/gemma-4-31b-it:free',
             'google/gemma-4-26b-a4b-it:free',
             'nvidia/nemotron-nano-12b-v2-vl:free',
         ];
@@ -400,7 +392,7 @@ class InvoiceScanService
                 ],
                 'response_format' => ['type' => 'json_object'],
                 'temperature'     => 0.1,
-                'max_tokens'      => 8000, // Increased to prevent output truncation
+                'max_tokens'      => 2500, // Reduced from 8000 to 2500 to prevent OpenRouter credit pre-allocation (402) errors
             ];
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
@@ -432,7 +424,7 @@ class InvoiceScanService
             if ($httpCode === 429) {
                 $nextModel = $modelsToTry[$attempt + 1] ?? null;
                 error_log("[AlfarezMart] Model {$tryModel} rate-limited (429). " . ($nextModel ? "Trying: $nextModel" : "No more fallbacks."));
-                $lastError = "Model {$tryModel} sedang dibatasi (rate limit). Mencoba model lain...";
+                $lastError = "Model {$tryModel} sedang dibatasi (rate limit). Mencoba model gratis...";
                 continue;
             }
 
@@ -440,8 +432,15 @@ class InvoiceScanService
                 $errData = json_decode($response, true);
                 $msg = $errData['error']['message'] ?? 'Unknown error';
                 $lastError = "OpenRouter API Error ($httpCode): $msg";
-                if ($httpCode >= 500) continue; // server error, retry
-                break; // 4xx client error, stop
+
+                // Fallback to free models if credit error (402), bad request/max_tokens (400), or server error (5xx)
+                if ($httpCode >= 500 || $httpCode === 402 || $httpCode === 400) {
+                    $nextModel = $modelsToTry[$attempt + 1] ?? null;
+                    error_log("[AlfarezMart] Model {$tryModel} returned HTTP $httpCode ($msg). " . ($nextModel ? "Fallback to: $nextModel" : "No more fallbacks."));
+                    continue; // try next fallback model
+                }
+
+                break; // 4xx client error (e.g. 401 Unauthorized API key), stop
             }
 
             // Success
