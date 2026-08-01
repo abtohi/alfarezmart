@@ -430,7 +430,7 @@
     function renderTopSellers(topSellers) {
         const container = document.getElementById('top-sellers-list');
         if (!topSellers || topSellers.length === 0) {
-            container.innerHTML = `<div class="text-center py-4 text-muted" style="font-size:12px;">Belum ada data seller untuk diperingkatkan</div>`;
+            container.innerHTML = `<div class="text-center py-4 text-muted" style="font-size:12px;"><i class="bi bi-info-circle me-1 text-info"></i>Belum ada seller yang memenuhi kriteria Top Seller (Sukses &amp; Profit > 0)</div>`;
             return;
         }
 

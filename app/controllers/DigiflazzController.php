@@ -1017,14 +1017,20 @@ class DigiflazzController extends Controller {
             $sellerResults[] = $s;
         }
 
-        // Sort Top Sellers Leaderboard (by Score DESC, then Success Rate DESC, then Avg Speed ASC)
-        $topSellers = $sellerResults;
-        usort($topSellers, function($a, $b) {
-            if ($b['score'] != $a['score']) return $b['score'] <=> $a['score'];
+        // Filter out sellers with 0 success rate, 0 successful transactions, or <= 0 profit for Top Seller Leaderboard
+        $eligibleTopSellers = array_filter($sellerResults, function($s) {
+            return $s['success'] > 0 && $s['success_rate'] > 0 && $s['profit'] > 0;
+        });
+
+        // Sort Top Sellers Leaderboard (by Profit DESC, then Success Rate DESC, then Score DESC, then Avg Speed ASC)
+        usort($eligibleTopSellers, function($a, $b) {
+            if ($b['profit'] != $a['profit']) return $b['profit'] <=> $a['profit'];
             if ($b['success_rate'] != $a['success_rate']) return $b['success_rate'] <=> $a['success_rate'];
+            if ($b['score'] != $a['score']) return $b['score'] <=> $a['score'];
             return $a['avg_process_time'] <=> $b['avg_process_time'];
         });
-        $top5Sellers = array_slice($topSellers, 0, 5);
+        $top5Sellers = array_values($eligibleTopSellers);
+        $top5Sellers = array_slice($top5Sellers, 0, 5);
 
         // Sort default seller table by Total Trx DESC
         usort($sellerResults, function($a, $b) {
