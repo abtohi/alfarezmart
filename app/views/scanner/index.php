@@ -579,6 +579,7 @@ function renderProductScanResult(data, isOffline) {
     const suppliersCount = data.suppliers ? data.suppliers.length : 0;
 
     let metaRows = [];
+    metaRows.push(['Stok Tersedia', `<strong style="color:var(--primary); font-size:13px; font-weight:800;">${data.current_qty_base ?? 0}</strong> Base Pcs`]);
     if (productType) metaRows.push(['Jenis Produk', productType]);
     if (variant) metaRows.push(['Varian', variant]);
     if (weightVal) metaRows.push(['Berat / Volume', weightVal]);
@@ -658,39 +659,26 @@ function renderProductScanResult(data, isOffline) {
                 </div>
             </div>
 
-            <!-- ── RIGHT COLUMN: HEADER, LAST PURCHASE & KEMASAN & HARGA ── -->
+            <!-- ── RIGHT COLUMN: HEADER, KEMASAN & HARGA, LAST PURCHASE ── -->
             <div class="col-lg-7 col-md-12">
-                <!-- Product Title & Stock Badges -->
-                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,0.06); margin-bottom:16px;">
+                <!-- Product Title & Badges Header -->
+                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:20px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.06); margin-bottom:16px;">
                     <h2 style="font-size:1.5rem; font-weight:800; color:var(--text-primary); margin-bottom:10px; line-height:1.3; letter-spacing:-0.3px;">
                         ${prodName}
                         ${isOffline ? `<span class="badge bg-warning text-dark" style="font-size:10px; vertical-align:middle; margin-left:6px;">OFFLINE</span>` : ''}
                     </h2>
 
                     <!-- Badges -->
-                    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px;">
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
                         <span class="scan-pill-badge brand" style="font-size:11px; padding:4px 12px;"><i class="bi bi-award me-1"></i>${data.brand_name || 'Tanpa Brand'}</span>
                         <span class="scan-pill-badge category" style="font-size:11px; padding:4px 12px;"><i class="bi bi-tag me-1"></i>${data.category_name || 'Tanpa Kategori'}</span>
                         ${data.short_label ? `<span class="scan-short-label" style="font-size:11px; padding:4px 12px;"><i class="bi bi-receipt me-1"></i>${data.short_label}</span>` : ''}
+                        <span class="scan-pill-badge" style="font-size:11px; padding:4px 12px; background:rgba(59,130,246,0.1); color:var(--primary); font-weight:700; border:1px solid rgba(59,130,246,0.2);"><i class="bi bi-box-seam me-1"></i>Stok: ${data.current_qty_base ?? 0} Base Pcs</span>
                     </div>
-
-                    <!-- Stock Badge -->
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
-                        <div style="background:linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.03)); border:1px solid rgba(59,130,246,0.2); border-radius:10px; padding:10px 16px; display:flex; align-items:center; gap:8px;">
-                            <i class="bi bi-box-seam text-primary" style="font-size:1.2rem;"></i>
-                            <div>
-                                <div style="font-size:10px; color:var(--text-muted); font-weight:600;">Stok Tersedia</div>
-                                <div style="font-weight:800; color:var(--primary); font-size:16px;">${data.current_qty_base ?? 0} <span style="font-size:11px; font-weight:600;">Base Pcs</span></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Last Purchase Insight (Pembelian Terakhir) -->
-                    ${lastPurchaseInfoHtml}
                 </div>
 
-                <!-- Kemasan & Harga Cards (Directly on the Right) -->
-                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+                <!-- Kemasan & Harga Cards (ABOVE Pembelian Terakhir) -->
+                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,0.06); margin-bottom:16px;">
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
                         <div style="font-weight:800; font-size:14px; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
                             <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg, var(--primary), #6366f1); display:flex; align-items:center; justify-content:center;"><i class="bi bi-layers-half text-white" style="font-size:14px;"></i></div>
@@ -700,6 +688,13 @@ function renderProductScanResult(data, isOffline) {
                     </div>
                     ${packagingCardsHtml || '<div style="color:var(--text-muted); font-size:12px; text-align:center; padding:20px 0;"><i class="bi bi-inbox fs-3 d-block mb-2 opacity-50"></i>Belum ada kemasan terdaftar</div>'}
                 </div>
+
+                <!-- Last Purchase Insight (Pembelian Terakhir - BELOW Kemasan & Harga) -->
+                ${lastPurchaseInfoHtml ? `
+                    <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:20px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+                        ${lastPurchaseInfoHtml}
+                    </div>
+                ` : ''}
             </div>
         </div>
 
