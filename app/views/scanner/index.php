@@ -348,9 +348,9 @@ async function lookupBarcode() {
             return;
         }
 
-        // Try search by name online with 800ms fast timeout
+        // Try search by name online with 3000ms timeout
         const searchController = new AbortController();
-        const searchTimeout = setTimeout(() => searchController.abort(), 800);
+        const searchTimeout = setTimeout(() => searchController.abort(), 3000);
 
         try {
             const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/search?q=${encodeURIComponent(code)}`, { signal: searchController.signal });
@@ -378,7 +378,10 @@ function selectSearchResultItem(idx) {
     if (lastSearchResultsData.isOffline) {
         showProductResultOffline(p);
     } else {
-        fetchProductDetail(p.id);
+        // Render immediately from in-memory product data (0ms instant display!)
+        showProductResult(p);
+        // Enrich with detailed supplier/purchase history from server asynchronously
+        fetchProductDetail(p.id, p);
     }
 }
 
@@ -474,17 +477,33 @@ function renderPackagingsForList(packagings) {
     '</div>';
 }
 
-async function fetchProductDetail(id) {
+async function fetchProductDetail(id, fallbackObj = null) {
     const resultDiv = document.getElementById('scanResult');
-    resultDiv.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+    if (!fallbackObj) {
+        resultDiv.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        if (typeof OfflineDB !== 'undefined') {
+            try {
+                const localP = await OfflineDB.findByBarcode(id);
+                if (localP) showProductResultOffline(localP);
+            } catch(e) {}
+        }
+    }
     
     try {
-        const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/${id}`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/${id}`, { signal: controller.signal });
+        clearTimeout(timeoutId);
         if (!res.ok) throw new Error('Not found');
         const data = await res.json();
         showProductResult(data);
     } catch (e) {
-        resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-exclamation-triangle fs-1 text-danger"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Error</h4><p style="font-size:12px;color:var(--text-muted);">Gagal mengambil detail produk.</p></div>';
+        if (!fallbackObj) {
+            const spinner = resultDiv.querySelector('.spinner-border');
+            if (spinner) {
+                resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-exclamation-triangle fs-1 text-danger"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Error</h4><p style="font-size:12px;color:var(--text-muted);">Gagal mengambil detail produk.</p></div>';
+            }
+        }
     }
 }
 
