@@ -246,6 +246,45 @@ function closePhotoPreview() {
     document.getElementById('photoPreviewModal').style.display = 'none';
 }
 
+function sharpenCanvas(ctx, width, height, mix = 0.45) {
+    try {
+        const weights = [
+             0, -1,  0,
+            -1,  5, -1,
+             0, -1,  0
+        ];
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+        const copyData = new Uint8ClampedArray(data);
+        const side = 3, halfSide = 1;
+        const w = width, h = height;
+
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const dstOff = (y * w + x) * 4;
+                let r = 0, g = 0, b = 0;
+                for (let cy = 0; cy < side; cy++) {
+                    for (let cx = 0; cx < side; cx++) {
+                        const scx = Math.min(w - 1, Math.max(0, x + cx - halfSide));
+                        const scy = Math.min(h - 1, Math.max(0, y + cy - halfSide));
+                        const srcOff = (scy * w + scx) * 4;
+                        const wt = weights[cy * side + cx];
+                        r += copyData[srcOff] * wt;
+                        g += copyData[srcOff + 1] * wt;
+                        b += copyData[srcOff + 2] * wt;
+                    }
+                }
+                data[dstOff]     = Math.min(255, Math.max(0, copyData[dstOff] * (1 - mix) + r * mix));
+                data[dstOff + 1] = Math.min(255, Math.max(0, copyData[dstOff + 1] * (1 - mix) + g * mix));
+                data[dstOff + 2] = Math.min(255, Math.max(0, copyData[dstOff + 2] * (1 - mix) + b * mix));
+            }
+        }
+        ctx.putImageData(imageData, 0, 0);
+    } catch (e) {
+        console.warn('Canvas sharpen error:', e);
+    }
+}
+
 function applyPhotoFilter() {
     if (!originalPhotoImg) return;
     const canvas = document.getElementById('photoPreviewCanvas');
@@ -253,7 +292,7 @@ function applyPhotoFilter() {
     
     let width = originalPhotoImg.width;
     let height = originalPhotoImg.height;
-    const max_size = 1200;
+    const max_size = 1400; // Increased to 1400px for crystal-clear character OCR
     
     if (width > height) {
         if (width > max_size) { height *= max_size / width; width = max_size; }
@@ -261,18 +300,24 @@ function applyPhotoFilter() {
         if (height > max_size) { width *= max_size / height; height = max_size; }
     }
     
+    width = Math.round(width);
+    height = Math.round(height);
+    
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
     
     if (isEnhanced) {
-        // Document mode: Grayscale, high contrast, slightly increased brightness
-        ctx.filter = 'grayscale(100%) contrast(150%) brightness(110%)';
+        // Document Mode: Grayscale + 160% High Contrast + 115% Brightness
+        ctx.filter = 'grayscale(100%) contrast(160%) brightness(115%)';
+        ctx.drawImage(originalPhotoImg, 0, 0, width, height);
+        ctx.filter = 'none';
+        // Apply 3x3 Unsharp Mask convolution filter to sharpen blurry text edges
+        sharpenCanvas(ctx, width, height, 0.45);
     } else {
         ctx.filter = 'none';
+        ctx.drawImage(originalPhotoImg, 0, 0, width, height);
     }
-    
-    ctx.drawImage(originalPhotoImg, 0, 0, width, height);
 }
 
 function savePhotoPreview() {

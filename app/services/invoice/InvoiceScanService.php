@@ -352,27 +352,39 @@ class InvoiceScanService
             throw new \Exception('API Key AI Scanner belum diatur di Pengaturan Aplikasi.');
         }
 
-        // Prevent timeout issues
+        // Clean base64 data prefix if present
+        if (strpos($imageB64, 'base64,') !== false) {
+            $imageB64 = substr($imageB64, strpos($imageB64, 'base64,') + 7);
+        }
+
+        // Prevent PHP script timeout
         set_time_limit(120);
 
-        // Free vision model fallback chain — ordered by response speed & reliability
+        // ----------------------------------------------------------------
+        // DIRECT GOOGLE GEMINI API (When API key starts with AIzaSy)
+        // ----------------------------------------------------------------
+        if (str_starts_with($apiKey, 'AIzaSy')) {
+            return $this->callDirectGeminiAPI($systemPrompt, $userPrompt, $imageB64, $imageFormat, $apiKey);
+        }
+
+        // ----------------------------------------------------------------
+        // OPENROUTER API (With rapid 12s failover across vision models)
+        // ----------------------------------------------------------------
         $FREE_VISION_FALLBACKS = [
-            'google/gemma-4-26b-a4b-it:free',           // Google Gemma 4 26B MoE - fast & responsive
-            'google/gemma-4-31b-it:free',               // Google Gemma 4 31B
-            'nvidia/nemotron-nano-12b-v2-vl:free',      // NVIDIA Nemotron 12B Vision
-            'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', // NVIDIA Omni 30B
+            'google/gemini-2.0-flash-001',               // Gemini 2.0 Flash (Fastest OCR, ~1-2s)
+            'google/gemini-2.5-flash',                   // Gemini 2.5 Flash
+            'google/gemma-4-26b-a4b-it:free',           // Gemma 4 26B MoE (Free)
+            'google/gemma-4-31b-it:free',               // Gemma 4 31B (Free)
+            'nvidia/nemotron-nano-12b-v2-vl:free',      // Nemotron 12B Vision (Free)
         ];
 
-        $modelsToTry = [$model];
-        // Only add free fallbacks if primary model is not already one of them
-        if (!in_array($model, $FREE_VISION_FALLBACKS)) {
-            foreach ($FREE_VISION_FALLBACKS as $fb) {
+        $modelsToTry = [];
+        if ($model && $model !== 'openrouter/auto' && !in_array($model, $FREE_VISION_FALLBACKS)) {
+            $modelsToTry[] = $model;
+        }
+        foreach ($FREE_VISION_FALLBACKS as $fb) {
+            if (!in_array($fb, $modelsToTry)) {
                 $modelsToTry[] = $fb;
-            }
-        } else {
-            // Primary IS a free model — add remaining free models as fallbacks
-            foreach ($FREE_VISION_FALLBACKS as $fb) {
-                if ($fb !== $model) $modelsToTry[] = $fb;
             }
         }
 
@@ -380,7 +392,6 @@ class InvoiceScanService
         $lastError  = null;
 
         foreach ($modelsToTry as $attempt => $tryModel) {
-            // Combine system prompt and user prompt into user content text for maximum compatibility across all OpenRouter vision models
             $combinedText = "System Context: " . $systemPrompt . "\n\nUser Task: " . $userPrompt;
 
             $payload = [
@@ -395,8 +406,7 @@ class InvoiceScanService
                 'max_tokens'  => 2500,
             ];
 
-            // Only add response_format for specific paid models (e.g. OpenAI gpt-4o), do NOT send it for free/auto models as many free vision models reject json_object with HTTP 400!
-            if (in_array($tryModel, ['openai/gpt-4o', 'openai/gpt-4o-mini', 'google/gemini-2.0-flash-001'])) {
+            if (in_array($tryModel, ['openai/gpt-4o', 'openai/gpt-4o-mini', 'google/gemini-2.0-flash-001', 'google/gemini-2.5-flash'])) {
                 $payload['response_format'] = ['type' => 'json_object'];
             }
 
@@ -411,10 +421,9 @@ class InvoiceScanService
                 'X-Title: AlfarezMart'
             ]);
 
-            // Per-model timeout: 18s for free models, 28s for paid/auto models.
-            // Rapid failover ensures we try 2-3 models within 40 seconds before browser aborts!
+            // Rapid failover timeout: 12s per model attempt for free, 20s for paid models
             $isFreeModel = str_contains($tryModel, ':free') || str_contains($tryModel, 'openrouter/free');
-            $timeout = $isFreeModel ? 18 : 28;
+            $timeout = $isFreeModel ? 12 : 20;
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
@@ -423,15 +432,14 @@ class InvoiceScanService
             $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
             if ($err) {
-                $lastError = "Koneksi ke OpenRouter gagal ({$tryModel}): " . $err;
+                $lastError = "Koneksi ke AI gagal ({$tryModel}): " . $err;
                 error_log("[AlfarezMart] Model {$tryModel} curl error: $err");
-                continue; // try next model
+                continue; // Try next model immediately
             }
 
             if ($httpCode === 429) {
-                $nextModel = $modelsToTry[$attempt + 1] ?? null;
-                error_log("[AlfarezMart] Model {$tryModel} rate-limited (429). " . ($nextModel ? "Trying: $nextModel" : "No more fallbacks."));
-                $lastError = "Model {$tryModel} sedang dibatasi (rate limit). Mencoba model gratis...";
+                error_log("[AlfarezMart] Model {$tryModel} rate-limited (429). Trying next fallback.");
+                $lastError = "Model {$tryModel} sedang sibuk (rate limit). Mencoba model alternatif...";
                 continue;
             }
 
@@ -441,20 +449,18 @@ class InvoiceScanService
                 $lastError = "OpenRouter API Error ($httpCode): $msg";
                 error_log("[AlfarezMart] Model {$tryModel} failed with HTTP $httpCode: $msg");
 
-                // Fallback to free models if credit error (402), bad request (400), rate limit (429), not found (404), or server error (5xx)
                 if ($httpCode >= 500 || in_array($httpCode, [400, 402, 404, 429])) {
-                    continue; // try next fallback model
+                    continue; // Try next fallback model
                 }
 
-                break; // 4xx client error (e.g. 401 Unauthorized API key), stop
+                break; // Stop on 401 Unauthorized API key error
             }
 
-            // HTTP 200 Success — Parse AI response
             $resData = json_decode($response, true);
             $content = $resData['choices'][0]['message']['content'] ?? '';
 
             if (empty($content)) {
-                error_log("[AlfarezMart] Model {$tryModel} returned empty content in choices.");
+                error_log("[AlfarezMart] Model {$tryModel} returned empty content.");
                 $lastError = "Model {$tryModel} mengembalikan respons kosong.";
                 continue;
             }
@@ -464,12 +470,12 @@ class InvoiceScanService
             $content = preg_replace('/```\s*/', '', $content);
             $content = trim($content);
 
-            // 1. Direct JSON parse
             $jsonParsed = json_decode($content, true);
 
-            // 2. Regex JSON extraction between '{' and '}' if direct parse fails
             if (!is_array($jsonParsed)) {
-                if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
+                if (preg_match('/\[[\s\S]*\]/', $content, $matches)) {
+                    $jsonParsed = json_decode($matches[0], true);
+                } elseif (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
                     $jsonParsed = json_decode($matches[0], true);
                 }
             }
@@ -478,12 +484,98 @@ class InvoiceScanService
                 return $jsonParsed;
             }
 
-            error_log("[AlfarezMart] Model {$tryModel} output could not be parsed as JSON: " . substr($content, 0, 150));
-            $lastError = "Model {$tryModel} mengembalikan format JSON yang tidak valid.";
+            error_log("[AlfarezMart] Model {$tryModel} output invalid JSON: " . substr($content, 0, 150));
+            $lastError = "Model {$tryModel} mengembalikan format JSON tidak valid.";
             continue;
         }
 
-        throw new \Exception($lastError ?? 'AI gagal memproses gambar setelah mencoba semua model.');
+        throw new \Exception($lastError ?? 'AI gagal memproses gambar invoice.');
+    }
+
+    /**
+     * Direct call to Google Gemini REST API (when key starts with AIzaSy)
+     */
+    private function callDirectGeminiAPI(
+        string $systemPrompt,
+        string $userPrompt,
+        string $imageB64,
+        string $imageFormat,
+        string $apiKey
+    ): array {
+        $mimeType = match (strtolower($imageFormat)) {
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            default => 'image/jpeg',
+        };
+
+        $combinedPrompt = "System Instructions:\n" . $systemPrompt . "\n\nUser Prompt:\n" . $userPrompt;
+
+        $payload = [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $combinedPrompt],
+                        [
+                            'inline_data' => [
+                                'mime_type' => $mimeType,
+                                'data'      => $imageB64
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            'generationConfig' => [
+                'temperature'     => 0.1,
+                'maxOutputTokens' => 3000,
+                'responseMimeType'=> 'application/json'
+            ]
+        ];
+
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" . $apiKey;
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+        $response = curl_exec($ch);
+        $err      = curl_error($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        if ($err) {
+            throw new \Exception("Koneksi ke Gemini API gagal: " . $err);
+        }
+
+        if ($httpCode !== 200) {
+            $errData = json_decode($response, true);
+            $msg = $errData['error']['message'] ?? ('Gemini API Error (' . $httpCode . ')');
+            throw new \Exception("Gemini API Error: " . $msg);
+        }
+
+        $resData = json_decode($response, true);
+        $content = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
+
+        $content = preg_replace('/```json\s*/i', '', $content);
+        $content = preg_replace('/```\s*/', '', $content);
+        $content = trim($content);
+
+        $jsonParsed = json_decode($content, true);
+        if (!is_array($jsonParsed)) {
+            if (preg_match('/\[[\s\S]*\]/', $content, $matches)) {
+                $jsonParsed = json_decode($matches[0], true);
+            } elseif (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
+                $jsonParsed = json_decode($matches[0], true);
+            }
+        }
+
+        if (is_array($jsonParsed) && !empty($jsonParsed)) {
+            return $jsonParsed;
+        }
+
+        throw new \Exception("Gemini API mengembalikan format JSON tidak valid.");
     }
 
     // ----------------------------------------------------------------
