@@ -145,6 +145,86 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
     padding: 2px 8px;
     border-radius: 4px;
 }
+
+/* Mobile Responsive Detail View Styling (Max-Width 991.98px) */
+@media (max-width: 991.98px) {
+    .scan-mobile-flex-wrapper {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 14px !important;
+    }
+    .scan-mobile-flex-col {
+        display: contents !important;
+    }
+    .scan-m-order-1 { order: 1 !important; margin-bottom: 0 !important; }
+    .scan-m-order-2 { order: 2 !important; margin-bottom: 0 !important; }
+    .scan-m-order-3 { order: 3 !important; margin-bottom: 0 !important; }
+    .scan-m-order-4 { order: 4 !important; margin-bottom: 0 !important; }
+    .scan-m-order-5 { order: 5 !important; margin-bottom: 0 !important; }
+    .scan-m-order-6 { order: 6 !important; margin-bottom: 0 !important; }
+
+    /* Photo Stage Mobile */
+    .scanner-detail-photo-stage {
+        max-height: 240px !important;
+        padding: 12px !important;
+    }
+    .scanner-detail-photo-stage img {
+        max-height: 210px !important;
+    }
+    .scanner-detail-photo-card {
+        margin-bottom: 0 !important;
+    }
+
+    /* Product Title & Header Mobile */
+    .scanner-detail-header-card {
+        padding: 16px !important;
+        margin-bottom: 0 !important;
+    }
+    .scanner-detail-prod-title {
+        font-size: 1.15rem !important;
+        margin-bottom: 8px !important;
+    }
+
+    /* Packaging & Pricing Cards Mobile */
+    .scanner-detail-pkg-card {
+        padding: 16px !important;
+        margin-bottom: 0 !important;
+    }
+    .scanner-pkg-card {
+        padding: 12px !important;
+        margin-bottom: 10px !important;
+    }
+    .scanner-price-grid {
+        gap: 8px !important;
+    }
+    .scanner-price-box {
+        padding: 8px 10px !important;
+    }
+    .scanner-price-val {
+        font-size: 15px !important;
+    }
+    .scanner-modal-text {
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        color: var(--text-muted) !important;
+        opacity: 0.8 !important;
+    }
+
+    /* Info & History Cards Mobile */
+    .scanner-detail-info-card {
+        padding: 16px !important;
+        margin-bottom: 0 !important;
+        margin-top: 0 !important;
+    }
+    .scanner-detail-lastpurchase-card {
+        padding: 12px 14px !important;
+        margin-bottom: 0 !important;
+    }
+    .scanner-detail-supplier-card {
+        padding: 16px !important;
+        margin-bottom: 0 !important;
+    }
+}
 </style>
 
 <script>
@@ -503,8 +583,8 @@ function renderProductScanResult(data, isOffline) {
         let tierHtml = '';
         if (p.qty_prices && p.qty_prices.length > 0) {
             tierHtml = `
-                <div style="margin-top:12px; padding:10px 12px; background:var(--surface-1); border-radius:8px; border:1px solid var(--border-color);">
-                    <div style="font-size:11px; font-weight:700; color:var(--info); margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+                <div style="margin-top:10px; padding:8px 10px; background:var(--surface-1); border-radius:8px; border:1px solid var(--border-color);">
+                    <div style="font-size:10px; font-weight:700; color:var(--info); margin-bottom:4px; display:flex; align-items:center; gap:4px;">
                         <i class="bi bi-layers"></i> Harga Grosir Bertingkat
                     </div>
                     ${p.qty_prices.map(t => {
@@ -512,8 +592,8 @@ function renderProductScanResult(data, isOffline) {
                         const tMarkup = modal > 0 ? (((tPrice - modal) / modal) * 100).toFixed(1) : 0;
                         const mode = t.sale_mode || 'both';
                         const modeIcon = mode === 'retail' ? 'bi-person' : (mode === 'wholesale' ? 'bi-people' : 'bi-arrow-left-right');
-                        return `<div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; padding:4px 0; border-bottom:1px dotted var(--border-color);">
-                            <span><i class="bi ${modeIcon} me-1 text-muted" style="font-size:10px;"></i>Min. <strong>${t.min_qty}</strong> ${p.unit_name || 'pcs'}</span>
+                        return `<div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; padding:3px 0; border-bottom:1px dotted var(--border-color);">
+                            <span><i class="bi ${modeIcon} me-1 text-muted" style="font-size:9px;"></i>Min. <strong>${t.min_qty}</strong> ${p.unit_name || 'pcs'}</span>
                             <span style="font-weight:700; color:var(--text-primary);">${formatRupiah(tPrice)} <span style="font-weight:600; color:var(--success); font-size:9px;">(+${tMarkup}%)</span></span>
                         </div>`;
                     }).join('')}
@@ -521,57 +601,57 @@ function renderProductScanResult(data, isOffline) {
         }
 
         return `
-        <div class="scanner-pkg-card" style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:12px; padding:16px; margin-bottom:14px; transition:all 0.2s ease;">
+        <div class="scanner-pkg-card" style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:12px; padding:14px; margin-bottom:12px; transition:all 0.2s ease;">
             <!-- Packaging Header -->
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, var(--primary), #6366f1); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:14px;">${pIdx + 1}</div>
+                    <div style="width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg, var(--primary), #6366f1); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:13px;">${pIdx + 1}</div>
                     <div>
-                        <div style="font-weight:800; font-size:15px; color:var(--text-primary); line-height:1.2;">${p.unit_name || 'Level ' + p.level}</div>
-                        <div style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:2px;">
+                        <div style="font-weight:800; font-size:14px; color:var(--text-primary); line-height:1.2;">${p.unit_name || 'Level ' + p.level}</div>
+                        <div style="font-size:10px; color:var(--text-muted); display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:2px;">
                             <span><i class="bi bi-box me-1"></i>Isi ${baseQty} pcs</span>
                             ${p.barcode ? `<span style="font-family:'Courier New',monospace; background:var(--surface-2); padding:1px 6px; border-radius:4px; border:1px solid var(--border-color);"><i class="bi bi-upc me-1"></i>${p.barcode}</span>` : ''}
                         </div>
                     </div>
                 </div>
-                ${SCANNER_IS_SUPERADMIN && modal > 0 ? `<div style="text-align:right;"><div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px;">Modal</div><div style="font-weight:800; font-size:16px; color:var(--text-primary);">${formatRupiah(modal)}</div></div>` : ''}
+                ${SCANNER_IS_SUPERADMIN && modal > 0 ? `<div style="text-align:right;"><div style="font-size:9px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px;">Modal</div><div class="scanner-modal-text" style="font-weight:700; font-size:13px; color:var(--text-muted); opacity:0.85;">${formatRupiah(modal)}</div></div>` : ''}
             </div>
 
             <!-- Price Grid: Ecer + Grosir -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:4px;">
+            <div class="scanner-price-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:4px;">
                 <!-- Ecer Card -->
-                <div style="background:linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02)); padding:12px; border-radius:10px; border:1px solid rgba(16,185,129,0.18);">
-                    <div style="font-size:10px; font-weight:700; color:var(--success); text-transform:uppercase; letter-spacing:0.3px; margin-bottom:4px;">
+                <div class="scanner-price-box" style="background:linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02)); padding:10px 12px; border-radius:10px; border:1px solid rgba(16,185,129,0.18);">
+                    <div style="font-size:9px; font-weight:700; color:var(--success); text-transform:uppercase; letter-spacing:0.3px; margin-bottom:3px;">
                         <i class="bi bi-person me-1"></i>Harga Ecer
                     </div>
-                    <div style="font-weight:800; color:var(--success); font-size:18px; line-height:1.2;">${ecer > 0 ? formatRupiah(ecer) : '-'}</div>
+                    <div class="scanner-price-val" style="font-weight:800; color:var(--success); font-size:17px; line-height:1.2;">${ecer > 0 ? formatRupiah(ecer) : '-'}</div>
                     ${SCANNER_IS_SUPERADMIN && modal > 0 && ecer > 0 ? `
-                        <div style="margin-top:6px; padding-top:6px; border-top:1px dashed rgba(16,185,129,0.2);">
-                            <div style="display:flex; justify-content:space-between; font-size:10px;">
+                        <div style="margin-top:4px; padding-top:4px; border-top:1px dashed rgba(16,185,129,0.2);">
+                            <div style="display:flex; justify-content:space-between; font-size:9px;">
                                 <span style="color:var(--text-muted);">Markup</span>
                                 <span style="font-weight:700; color:var(--success);">+${markupRetailPct}%</span>
                             </div>
-                            <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:2px;">
-                                <span style="color:var(--text-muted);">Profit / pcs</span>
+                            <div style="display:flex; justify-content:space-between; font-size:9px; margin-top:1px;">
+                                <span style="color:var(--text-muted);">Profit/pcs</span>
                                 <span style="font-weight:700; color:var(--success);">+${formatRupiah(profitRetailNominal)}</span>
                             </div>
                         </div>
                     ` : ''}
                 </div>
                 <!-- Grosir Card -->
-                <div style="background:linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.02)); padding:12px; border-radius:10px; border:1px solid rgba(245,158,11,0.18);">
-                    <div style="font-size:10px; font-weight:700; color:var(--warning); text-transform:uppercase; letter-spacing:0.3px; margin-bottom:4px;">
+                <div class="scanner-price-box" style="background:linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.02)); padding:10px 12px; border-radius:10px; border:1px solid rgba(245,158,11,0.18);">
+                    <div style="font-size:9px; font-weight:700; color:var(--warning); text-transform:uppercase; letter-spacing:0.3px; margin-bottom:3px;">
                         <i class="bi bi-people me-1"></i>Harga Grosir
                     </div>
-                    <div style="font-weight:800; color:var(--warning); font-size:18px; line-height:1.2;">${grosir > 0 ? formatRupiah(grosir) : '-'}</div>
+                    <div class="scanner-price-val" style="font-weight:800; color:var(--warning); font-size:17px; line-height:1.2;">${grosir > 0 ? formatRupiah(grosir) : '-'}</div>
                     ${SCANNER_IS_SUPERADMIN && modal > 0 && grosir > 0 ? `
-                        <div style="margin-top:6px; padding-top:6px; border-top:1px dashed rgba(245,158,11,0.2);">
-                            <div style="display:flex; justify-content:space-between; font-size:10px;">
+                        <div style="margin-top:4px; padding-top:4px; border-top:1px dashed rgba(245,158,11,0.2);">
+                            <div style="display:flex; justify-content:space-between; font-size:9px;">
                                 <span style="color:var(--text-muted);">Markup</span>
                                 <span style="font-weight:700; color:var(--warning);">+${markupWholesalePct}%</span>
                             </div>
-                            <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:2px;">
-                                <span style="color:var(--text-muted);">Profit / pcs</span>
+                            <div style="display:flex; justify-content:space-between; font-size:9px; margin-top:1px;">
+                                <span style="color:var(--text-muted);">Profit/pcs</span>
                                 <span style="font-weight:700; color:var(--warning);">+${formatRupiah(profitWholesaleNominal)}</span>
                             </div>
                         </div>
@@ -629,7 +709,7 @@ function renderProductScanResult(data, isOffline) {
     metaRows.push(['Tanggal Didaftarkan', createdAt]);
 
     let productMetaHtml = metaRows.map(([label, val]) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--border-color); font-size:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid var(--border-color); font-size:11px;">
             <span style="color:var(--text-muted); font-weight:600;"><i class="bi bi-dot text-primary me-1"></i>${label}</span>
             <span style="color:var(--text-primary); font-weight:600; text-align:right;">${val}</span>
         </div>
@@ -654,38 +734,37 @@ function renderProductScanResult(data, isOffline) {
             </div>`;
     }
 
-    // ── 5. Assemble Full Layout ───────────────────────────────────
+    // ── 5. Assemble Full Layout (Desktop & Mobile Unified Structure) ──
     resultDiv.innerHTML = `
         ${backButtonHtml}
 
-        <!-- ═══ 2-COLUMN SPLIT (Desktop) ═══ -->
-        <div class="row g-4 mb-4">
-            <!-- ── LEFT COLUMN: PHOTO SHOWCASE & INFORMASI PRODUK ── -->
-            <div class="col-lg-5 col-md-12">
-                <!-- Photo Showcase -->
-                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.08); margin-bottom:16px;">
+        <div class="row g-4 mb-4 scan-mobile-flex-wrapper">
+            <!-- ── LEFT COLUMN (DESKTOP) ── -->
+            <div class="col-lg-5 col-md-12 scan-mobile-flex-col">
+                <!-- 1. Photo Showcase (Mobile Order 1) -->
+                <div class="scanner-detail-photo-card scan-m-order-1" style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.08); margin-bottom:16px;">
                     <!-- Photo Stage -->
-                    <div style="width:100%; aspect-ratio:1/1; max-height:460px; background:linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%); display:flex; align-items:center; justify-content:center; padding:24px; cursor:pointer;" onclick="${data.photo ? `viewFullPhoto('${baseUrl}${data.photo}')` : ''}">
+                    <div class="scanner-detail-photo-stage" style="width:100%; aspect-ratio:1/1; max-height:460px; background:linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%); display:flex; align-items:center; justify-content:center; padding:20px; cursor:pointer;" onclick="${data.photo ? `viewFullPhoto('${baseUrl}${data.photo}')` : ''}">
                         ${data.photo
                             ? `<img id="mainProductImg" src="${baseUrl}${data.photo}" style="width:100%; height:100%; object-fit:contain; transition:transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">`
-                            : `<div style="text-align:center;"><i class="bi bi-box-seam" style="font-size:6rem; color:var(--primary); opacity:0.4;"></i><div style="font-size:12px; color:var(--text-muted); margin-top:8px;">Belum ada foto produk</div></div>`
+                            : `<div style="text-align:center;"><i class="bi bi-box-seam" style="font-size:4.5rem; color:var(--primary); opacity:0.4;"></i><div style="font-size:11px; color:var(--text-muted); margin-top:6px;">Belum ada foto produk</div></div>`
                         }
                     </div>
                     <!-- Download & Expand Buttons -->
-                    <div style="padding:12px 16px; border-top:1px solid var(--border-color); display:flex; gap:8px;">
+                    <div style="padding:10px 14px; border-top:1px solid var(--border-color); display:flex; gap:8px;">
                         ${data.photo ? `
-                            <a href="${baseUrl}${data.photo}" download="${prodName.replace(/[^a-zA-Z0-9]/g, '_')}.jpg" target="_blank" class="btn btn-outline-primary flex-fill" style="font-size:12px; font-weight:700; border-radius:8px; padding:8px 12px;">
+                            <a href="${baseUrl}${data.photo}" download="${prodName.replace(/[^a-zA-Z0-9]/g, '_')}.jpg" target="_blank" class="btn btn-outline-primary flex-fill" style="font-size:11px; font-weight:700; border-radius:8px; padding:6px 10px;">
                                 <i class="bi bi-download me-1"></i> Download Foto
                             </a>
-                            <button type="button" onclick="viewFullPhoto('${baseUrl}${data.photo}')" class="btn btn-primary" style="font-size:12px; font-weight:700; border-radius:8px; padding:8px 14px;" title="Perbesar Foto">
+                            <button type="button" onclick="viewFullPhoto('${baseUrl}${data.photo}')" class="btn btn-primary" style="font-size:11px; font-weight:700; border-radius:8px; padding:6px 12px;" title="Perbesar Foto">
                                 <i class="bi bi-arrows-fullscreen"></i>
                             </button>
                         ` : `<div class="text-muted w-100 text-center py-1" style="font-size:11px;">Foto belum tersedia</div>`}
                     </div>
                 </div>
 
-                <!-- Product Info Metadata (Below Image) -->
-                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:20px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+                <!-- 4. Informasi Produk (Mobile Order 4, Desktop Bottom Left) -->
+                <div class="scanner-detail-info-card scan-m-order-4" style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:20px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
                     <div style="font-weight:800; font-size:13px; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
                         <div style="width:26px; height:26px; border-radius:6px; background:linear-gradient(135deg, var(--primary), #6366f1); display:flex; align-items:center; justify-content:center;"><i class="bi bi-info-circle text-white" style="font-size:13px;"></i></div>
                         Informasi Produk
@@ -696,17 +775,15 @@ function renderProductScanResult(data, isOffline) {
                 </div>
             </div>
 
-            <!-- ── RIGHT COLUMN: HEADER, KEMASAN & HARGA, LAST PURCHASE, PEMASOK & RIWAYAT ── -->
-            <div class="col-lg-7 col-md-12">
-                <!-- Product Title & Badges Header -->
-                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:20px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.06); margin-bottom:16px;">
-                    <h2 style="font-size:1.5rem; font-weight:800; color:var(--text-primary); margin-bottom:10px; line-height:1.3; letter-spacing:-0.3px;">
+            <!-- ── RIGHT COLUMN (DESKTOP) ── -->
+            <div class="col-lg-7 col-md-12 scan-mobile-flex-col">
+                <!-- 2. Product Title & Badges Header (Mobile Order 2) -->
+                <div class="scanner-detail-header-card scan-m-order-2" style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:20px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.06); margin-bottom:16px;">
+                    <h2 class="scanner-detail-prod-title" style="font-size:1.4rem; font-weight:800; color:var(--text-primary); margin-bottom:10px; line-height:1.3; letter-spacing:-0.3px;">
                         ${prodName}
                         ${isOffline ? `<span class="badge bg-warning text-dark" style="font-size:10px; vertical-align:middle; margin-left:6px;">OFFLINE</span>` : ''}
                     </h2>
-
-                    <!-- Badges -->
-                    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                    <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
                         <span class="scan-pill-badge brand" style="font-size:11px; padding:4px 12px;"><i class="bi bi-award me-1"></i>${data.brand_name || 'Tanpa Brand'}</span>
                         <span class="scan-pill-badge category" style="font-size:11px; padding:4px 12px;"><i class="bi bi-tag me-1"></i>${data.category_name || 'Tanpa Kategori'}</span>
                         ${data.short_label ? `<span class="scan-short-label" style="font-size:11px; padding:4px 12px;"><i class="bi bi-receipt me-1"></i>${data.short_label}</span>` : ''}
@@ -714,9 +791,9 @@ function renderProductScanResult(data, isOffline) {
                     </div>
                 </div>
 
-                <!-- Kemasan & Harga Cards (ABOVE Pembelian Terakhir) -->
-                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,0.06); margin-bottom:16px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
+                <!-- 3. Kemasan & Harga Cards (Mobile Order 3) -->
+                <div class="scanner-detail-pkg-card scan-m-order-3" style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:20px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.06); margin-bottom:16px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
                         <div style="font-weight:800; font-size:14px; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
                             <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg, var(--primary), #6366f1); display:flex; align-items:center; justify-content:center;"><i class="bi bi-layers-half text-white" style="font-size:14px;"></i></div>
                             Kemasan &amp; Harga
@@ -726,15 +803,15 @@ function renderProductScanResult(data, isOffline) {
                     ${packagingCardsHtml || '<div style="color:var(--text-muted); font-size:12px; text-align:center; padding:20px 0;"><i class="bi bi-inbox fs-3 d-block mb-2 opacity-50"></i>Belum ada kemasan terdaftar</div>'}
                 </div>
 
-                <!-- Last Purchase Insight (Pembelian Terakhir - BELOW Kemasan & Harga) -->
+                <!-- 5. Pembelian Terakhir Insight (Mobile Order 5) -->
                 ${lastPurchaseInfoHtml ? `
-                    <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px; box-shadow:0 4px 20px rgba(0,0,0,0.06); margin-bottom:16px;">
+                    <div class="scanner-detail-lastpurchase-card scan-m-order-5" style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:16px 20px; box-shadow:0 4px 20px rgba(0,0,0,0.06); margin-bottom:16px;">
                         ${lastPurchaseInfoHtml}
                     </div>
                 ` : ''}
 
-                <!-- Pemasok & Riwayat Pembelian (RIGHT Column, under Pembelian Terakhir with Pagination) -->
-                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:20px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+                <!-- 6. Pemasok & Riwayat Pembelian (Mobile Order 6) -->
+                <div class="scanner-detail-supplier-card scan-m-order-6" style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:20px 24px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
                         <div style="display:flex; align-items:center; gap:8px;">
                             <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg, #f59e0b, #d97706); display:flex; align-items:center; justify-content:center;"><i class="bi bi-truck text-white" style="font-size:13px;"></i></div>

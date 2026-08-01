@@ -633,12 +633,6 @@ class ApiController extends Controller
             $stmtSup->execute([':pid1' => $productId, ':pid2' => $productId]);
             $rawSupplierRows = $stmtSup->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-            // Fallback: If no purchase history or supplier_product record yet, show suppliers from master list
-            if (empty($rawSupplierRows)) {
-                $stmtAllSup = $this->db->query("SELECT id as supplier_id, name as supplier_name, address, notes, 0 as last_buy_price, NULL as last_purchase_date, 0 as purchase_count FROM suppliers ORDER BY name ASC LIMIT 10");
-                $rawSupplierRows = $stmtAllSup ? ($stmtAllSup->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
-            }
-
             // Deduplicate suppliers cleanly by supplier_id
             $suppliersMap = [];
             foreach ($rawSupplierRows as $sup) {
