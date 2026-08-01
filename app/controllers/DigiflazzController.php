@@ -10,6 +10,10 @@ class DigiflazzController extends Controller {
 
     public function __construct() {
         parent::__construct();
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        if (strpos($uri, '/webhook') === false) {
+            $this->requireService('ppob');
+        }
         $this->digiService = new DigiflazzService();
         $this->digiModel = new DigiflazzModel();
     }

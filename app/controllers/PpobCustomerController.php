@@ -8,6 +8,7 @@ class PpobCustomerController extends Controller {
 
     public function __construct() {
         parent::__construct();
+        $this->requireService('ppob');
         require_once __DIR__ . '/../models/PpobCustomerModel.php';
         $this->model = new PpobCustomerModel();
     }

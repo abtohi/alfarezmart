@@ -19,139 +19,326 @@
 
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
-    <!-- Level Legend -->
-    <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;">
-        <div style="font-weight:700;font-size:var(--font-size-xs);color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-            <i class="bi bi-shield-lock" style="color:var(--primary);"></i> Level Akses
+    <!-- Tab Submenu Navigation -->
+    <div style="display:flex;gap:8px;border-bottom:1px solid var(--border-color);margin-bottom:20px;padding-bottom:10px;">
+        <button id="tabUsersBtn" onclick="switchUserTab('users')" class="btn" style="border-radius:20px;padding:8px 18px;font-size:12px;font-weight:700;background:var(--primary);color:#fff;">
+            <i class="bi bi-people-fill me-1"></i> Daftar Pengguna
+        </button>
+        <button id="tabAccessBtn" onclick="switchUserTab('access')" class="btn" style="border-radius:20px;padding:8px 18px;font-size:12px;font-weight:600;background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border-color);">
+            <i class="bi bi-shield-check me-1"></i> Kontrol Akses Layanan (Role Permissions)
+        </button>
+    </div>
+
+    <!-- TAB 1: DAFTAR PENGGUNA -->
+    <div id="usersTabContent">
+        <!-- Level Legend -->
+        <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:16px;margin-bottom:16px;">
+            <div style="font-weight:700;font-size:var(--font-size-xs);color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+                <i class="bi bi-shield-lock" style="color:var(--primary);"></i> Level Akses
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;">
+                <div style="background:linear-gradient(135deg,rgba(230,57,70,0.12),rgba(230,57,70,0.04));border:1px solid rgba(230,57,70,0.25);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:rgba(230,57,70,0.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="bi bi-shield-fill-check" style="color:#e63946;font-size:14px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:12px;color:#e63946;margin-bottom:2px;">Superadmin</div>
+                        <div style="font-size:10px;color:var(--text-muted);line-height:1.4;">Akses penuh semua fitur &amp; pengaturan sistem</div>
+                    </div>
+                </div>
+                <div style="background:linear-gradient(135deg,rgba(46,213,115,0.10),rgba(46,213,115,0.03));border:1px solid rgba(46,213,115,0.22);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:rgba(46,213,115,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="bi bi-person-fill-gear" style="color:#2ed573;font-size:14px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:12px;color:#2ed573;margin-bottom:2px;">Admin</div>
+                        <div style="font-size:10px;color:var(--text-muted);line-height:1.4;">Tambah &amp; edit produk, input barang, tanpa hapus</div>
+                    </div>
+                </div>
+                <div style="background:linear-gradient(135deg,rgba(76,201,240,0.10),rgba(76,201,240,0.03));border:1px solid rgba(76,201,240,0.22);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:rgba(76,201,240,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="bi bi-person-fill-check" style="color:#4cc9f0;font-size:14px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:12px;color:#4cc9f0;margin-bottom:2px;">Staff</div>
+                        <div style="font-size:10px;color:var(--text-muted);line-height:1.4;">Scan barcode, POS kasir, cetak struk</div>
+                    </div>
+                </div>
+                <div style="background:linear-gradient(135deg,rgba(255,165,2,0.08),rgba(255,165,2,0.02));border:1px solid rgba(255,165,2,0.2);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,165,2,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="bi bi-person-fill" style="color:#ffa502;font-size:14px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:700;font-size:12px;color:#ffa502;margin-bottom:2px;">Customer</div>
+                        <div style="font-size:10px;color:var(--text-muted);line-height:1.4;">Fitur pelanggan <em style="opacity:0.7;">(Coming Soon)</em></div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;">
-            <div style="background:linear-gradient(135deg,rgba(230,57,70,0.12),rgba(230,57,70,0.04));border:1px solid rgba(230,57,70,0.25);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;">
-                <div style="width:32px;height:32px;border-radius:50%;background:rgba(230,57,70,0.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="bi bi-shield-fill-check" style="color:#e63946;font-size:14px;"></i>
+
+        <!-- User List -->
+        <div id="userListContainer">
+            <?php foreach (($users['data'] ?? []) as $u): ?>
+            <?php
+                $levelClass = match($u['user_level']) {
+                    'superadmin' => 'badge-danger',
+                    'admin'      => 'badge-success',
+                    'staff'      => 'badge-info',
+                    default      => 'badge-warning',
+                };
+            ?>
+            <div class="user-card" id="user-row-<?= $u['id'] ?>" style="<?= !$u['is_active'] ? 'opacity:0.55;' : '' ?>">
+                <!-- Main Row -->
+                <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+                    <div style="position:relative;flex-shrink:0;">
+                        <div style="width:42px;height:42px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:var(--primary);">
+                            <?= strtoupper(substr($u['name'], 0, 1)) ?>
+                        </div>
+                        <span class="online-dot" id="dot-<?= $u['id'] ?>" style="display:none;"></span>
+                    </div>
+                    <div style="flex:1;min-width:120px;">
+                        <div style="font-weight:600;font-size:var(--font-size-sm);display:flex;align-items:center;gap:6px;">
+                            <?= htmlspecialchars($u['name']) ?>
+                            <span id="online-badge-<?= $u['id'] ?>" style="display:none;font-size:9px;background:rgba(46,213,115,0.15);color:#2ed573;border:1px solid rgba(46,213,115,0.3);border-radius:20px;padding:1px 7px;font-weight:600;">● Online</span>
+                        </div>
+                        <div style="font-size:11px;color:var(--text-muted);"><?= htmlspecialchars($u['email'] ?? $u['phone'] ?? '-') ?></div>
+                        <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;">
+                            <span class="badge-custom <?= $levelClass ?>"><?= ucfirst($u['user_level']) ?></span>
+                            <?php if (!$u['is_active']): ?><span class="badge-custom badge-danger">Nonaktif</span><?php endif; ?>
+                            <span id="lastseen-<?= $u['id'] ?>" style="font-size:9px;color:var(--text-muted);"></span>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+                        <button onclick="openActivityPanel(<?= $u['id'] ?>)"
+                                title="Lihat Aktivitas"
+                                id="act-btn-<?= $u['id'] ?>"
+                                style="background:rgba(76,201,240,0.12);color:#4cc9f0;border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
+                            <i class="bi bi-graph-up"></i> Aktivitas
+                        </button>
+                        <button onclick="openEditUserModal(<?= htmlspecialchars(json_encode([
+                            'id' => $u['id'],
+                            'name' => $u['name'],
+                            'email' => $u['email'],
+                            'phone' => $u['phone'],
+                            'user_level' => $u['user_level'],
+                            'work_days' => $u['work_days'],
+                            'work_start' => $u['work_start'],
+                            'work_end' => $u['work_end']
+                        ])) ?>)"
+                                title="Edit User"
+                                style="background:var(--primary-bg);color:var(--primary);border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
+                            <i class="bi bi-pencil-square"></i> Edit
+                        </button>
+                        <button onclick="toggleUser(<?= $u['id'] ?>, <?= $u['is_active'] ? 'false':'true' ?>)"
+                                title="<?= $u['is_active'] ? 'Nonaktifkan':'Aktifkan' ?>"
+                                style="background:<?= $u['is_active'] ? 'var(--warning-bg)':'var(--success-bg)' ?>;color:<?= $u['is_active'] ? 'var(--warning)':'var(--success)' ?>;border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
+                            <i class="bi bi-<?= $u['is_active'] ? 'pause-circle':'play-circle' ?>"></i>
+                            <?= $u['is_active'] ? 'Nonaktif':'Aktifkan' ?>
+                        </button>
+                        <button onclick="resetPassword(<?= $u['id'] ?>, '<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>')"
+                                title="Reset Password"
+                                style="background:var(--info-bg);color:var(--info);border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
+                            <i class="bi bi-key"></i>
+                        </button>
+                        <?php if ($u['id'] !== ($_SESSION['user_id'] ?? 0)): ?>
+                        <button onclick="deleteUser(<?= $u['id'] ?>, '<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>')"
+                                title="Hapus User"
+                                style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        <?php endif; ?>
+                    </div>
                 </div>
-                <div>
-                    <div style="font-weight:700;font-size:12px;color:#e63946;margin-bottom:2px;">Superadmin</div>
-                    <div style="font-size:10px;color:var(--text-muted);line-height:1.4;">Akses penuh semua fitur &amp; pengaturan sistem</div>
+
+                <!-- Activity Panel (hidden, toggled per user) -->
+                <div class="activity-panel" id="activity-panel-<?= $u['id'] ?>" style="display:none;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                        <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px;">
+                            <i class="bi bi-activity" style="color:#4cc9f0;"></i> Aktivitas Pengguna
+                        </div>
+                        <button onclick="closeActivityPanel(<?= $u['id'] ?>)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;line-height:1;">×</button>
+                    </div>
+                    <div id="activity-content-<?= $u['id'] ?>" style="min-height:60px;display:flex;align-items:center;justify-content:center;">
+                        <span style="color:var(--text-muted);font-size:12px;"><i class="bi bi-hourglass-split"></i> Memuat...</span>
+                    </div>
                 </div>
             </div>
-            <div style="background:linear-gradient(135deg,rgba(46,213,115,0.10),rgba(46,213,115,0.03));border:1px solid rgba(46,213,115,0.22);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;">
-                <div style="width:32px;height:32px;border-radius:50%;background:rgba(46,213,115,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="bi bi-person-fill-gear" style="color:#2ed573;font-size:14px;"></i>
-                </div>
-                <div>
-                    <div style="font-weight:700;font-size:12px;color:#2ed573;margin-bottom:2px;">Admin</div>
-                    <div style="font-size:10px;color:var(--text-muted);line-height:1.4;">Tambah &amp; edit produk, input barang, tanpa hapus</div>
-                </div>
-            </div>
-            <div style="background:linear-gradient(135deg,rgba(76,201,240,0.10),rgba(76,201,240,0.03));border:1px solid rgba(76,201,240,0.22);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;">
-                <div style="width:32px;height:32px;border-radius:50%;background:rgba(76,201,240,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="bi bi-person-fill-check" style="color:#4cc9f0;font-size:14px;"></i>
-                </div>
-                <div>
-                    <div style="font-weight:700;font-size:12px;color:#4cc9f0;margin-bottom:2px;">Staff</div>
-                    <div style="font-size:10px;color:var(--text-muted);line-height:1.4;">Scan barcode, POS kasir, cetak struk</div>
-                </div>
-            </div>
-            <div style="background:linear-gradient(135deg,rgba(255,165,2,0.08),rgba(255,165,2,0.02));border:1px solid rgba(255,165,2,0.2);border-radius:var(--radius-md);padding:10px 12px;display:flex;align-items:flex-start;gap:8px;">
-                <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,165,2,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="bi bi-person-fill" style="color:#ffa502;font-size:14px;"></i>
-                </div>
-                <div>
-                    <div style="font-weight:700;font-size:12px;color:#ffa502;margin-bottom:2px;">Customer</div>
-                    <div style="font-size:10px;color:var(--text-muted);line-height:1.4;">Fitur pelanggan <em style="opacity:0.7;">(Coming Soon)</em></div>
-                </div>
-            </div>
+            <?php endforeach; ?>
         </div>
     </div>
 
-    <!-- User List -->
-    <div id="userListContainer">
-        <?php foreach (($users['data'] ?? []) as $u): ?>
-        <?php
-            $levelClass = match($u['user_level']) {
-                'superadmin' => 'badge-danger',
-                'admin'      => 'badge-success',
-                'staff'      => 'badge-info',
-                default      => 'badge-warning',
-            };
-        ?>
-        <div class="user-card" id="user-row-<?= $u['id'] ?>" style="<?= !$u['is_active'] ? 'opacity:0.55;' : '' ?>">
-            <!-- Main Row -->
-            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
-                <div style="position:relative;flex-shrink:0;">
-                    <div style="width:42px;height:42px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.1rem;color:var(--primary);">
-                        <?= strtoupper(substr($u['name'], 0, 1)) ?>
-                    </div>
-                    <span class="online-dot" id="dot-<?= $u['id'] ?>" style="display:none;"></span>
+    <!-- TAB 2: KONTROL AKSES LAYANAN -->
+    <div id="accessTabContent" style="display:none;">
+        <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px;box-shadow:0 4px 16px rgba(0,0,0,0.04);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+                <div>
+                    <h4 style="font-size:15px;font-weight:800;margin-bottom:4px;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+                        <i class="bi bi-sliders text-primary"></i> Matriks Kontrol Akses Layanan Toko
+                    </h4>
+                    <p style="font-size:12px;color:var(--text-muted);margin:0;">Atur secara penuh layanan dan fitur yang boleh diakses oleh role <strong>Admin</strong> dan <strong>Staff</strong>. Superadmin selalu memiliki akses penuh ke seluruh sistem.</p>
                 </div>
-                <div style="flex:1;min-width:120px;">
-                    <div style="font-weight:600;font-size:var(--font-size-sm);display:flex;align-items:center;gap:6px;">
-                        <?= htmlspecialchars($u['name']) ?>
-                        <span id="online-badge-<?= $u['id'] ?>" style="display:none;font-size:9px;background:rgba(46,213,115,0.15);color:#2ed573;border:1px solid rgba(46,213,115,0.3);border-radius:20px;padding:1px 7px;font-weight:600;">● Online</span>
-                    </div>
-                    <div style="font-size:11px;color:var(--text-muted);"><?= htmlspecialchars($u['email'] ?? $u['phone'] ?? '-') ?></div>
-                    <div style="margin-top:3px;display:flex;flex-wrap:wrap;align-items:center;gap:4px;">
-                        <span class="badge-custom <?= $levelClass ?>"><?= ucfirst($u['user_level']) ?></span>
-                        <?php if (!$u['is_active']): ?><span class="badge-custom badge-danger">Nonaktif</span><?php endif; ?>
-                        <span id="lastseen-<?= $u['id'] ?>" style="font-size:9px;color:var(--text-muted);"></span>
-                    </div>
-                </div>
-                <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
-                    <button onclick="openActivityPanel(<?= $u['id'] ?>)"
-                            title="Lihat Aktivitas"
-                            id="act-btn-<?= $u['id'] ?>"
-                            style="background:rgba(76,201,240,0.12);color:#4cc9f0;border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
-                        <i class="bi bi-graph-up"></i> Aktivitas
-                    </button>
-                    <button onclick="openEditUserModal(<?= htmlspecialchars(json_encode([
-                        'id' => $u['id'],
-                        'name' => $u['name'],
-                        'email' => $u['email'],
-                        'phone' => $u['phone'],
-                        'user_level' => $u['user_level'],
-                        'work_days' => $u['work_days'],
-                        'work_start' => $u['work_start'],
-                        'work_end' => $u['work_end']
-                    ])) ?>)"
-                            title="Edit User"
-                            style="background:var(--primary-bg);color:var(--primary);border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
-                        <i class="bi bi-pencil-square"></i> Edit
-                    </button>
-                    <button onclick="toggleUser(<?= $u['id'] ?>, <?= $u['is_active'] ? 'false':'true' ?>)"
-                            title="<?= $u['is_active'] ? 'Nonaktifkan':'Aktifkan' ?>"
-                            style="background:<?= $u['is_active'] ? 'var(--warning-bg)':'var(--success-bg)' ?>;color:<?= $u['is_active'] ? 'var(--warning)':'var(--success)' ?>;border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
-                        <i class="bi bi-<?= $u['is_active'] ? 'pause-circle':'play-circle' ?>"></i>
-                        <?= $u['is_active'] ? 'Nonaktif':'Aktifkan' ?>
-                    </button>
-                    <button onclick="resetPassword(<?= $u['id'] ?>, '<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>')"
-                            title="Reset Password"
-                            style="background:var(--info-bg);color:var(--info);border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
-                        <i class="bi bi-key"></i>
-                    </button>
-                    <?php if ($u['id'] !== ($_SESSION['user_id'] ?? 0)): ?>
-                    <button onclick="deleteUser(<?= $u['id'] ?>, '<?= htmlspecialchars($u['name'], ENT_QUOTES) ?>')"
-                            title="Hapus User"
-                            style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:var(--radius-sm);padding:6px 10px;cursor:pointer;font-size:11px;">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                    <?php endif; ?>
+                <button onclick="saveAccessControlSettings()" class="btn-primary-custom" style="padding:10px 20px;font-size:12px;font-weight:700;border-radius:var(--radius-md);">
+                    <i class="bi bi-check-circle-fill me-1"></i> Simpan Kontrol Akses
+                </button>
+            </div>
+
+            <!-- Notice Banner -->
+            <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:20px;display:flex;align-items:flex-start;gap:10px;">
+                <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0" style="margin-top:2px;"></i>
+                <div style="font-size:12px;color:var(--text-primary);line-height:1.5;">
+                    <strong>Restriksi Keamanan:</strong> Jika suatu layanan tidak dicentang (Nonaktif), seluruh menu, halaman, tombol, dan endpoint API yang berkaitan dengan layanan tersebut akan <strong>sepenuhnya disembunyikan dan diblokir rapat</strong> untuk role tersebut.
                 </div>
             </div>
 
-            <!-- Activity Panel (hidden, toggled per user) -->
-            <div class="activity-panel" id="activity-panel-<?= $u['id'] ?>" style="display:none;">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-                    <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px;">
-                        <i class="bi bi-activity" style="color:#4cc9f0;"></i> Aktivitas Pengguna
-                    </div>
-                    <button onclick="closeActivityPanel(<?= $u['id'] ?>)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0;line-height:1;">×</button>
-                </div>
-                <div id="activity-content-<?= $u['id'] ?>" style="min-height:60px;display:flex;align-items:center;justify-content:center;">
-                    <span style="color:var(--text-muted);font-size:12px;"><i class="bi bi-hourglass-split"></i> Memuat...</span>
-                </div>
+            <?php
+            $servicesList = [
+                'ppob' => [
+                    'title' => 'Produk Digital & Transaksi PPOB',
+                    'desc'  => 'Pulsa, Paket Data, Token PLN, E-Wallet, & Game (Digiflazz)',
+                    'icon'  => 'bi-phone-fill',
+                    'color' => '#a855f7',
+                    'is_special' => true,
+                    'note'  => 'Default: Hanya Superadmin'
+                ],
+                'finance' => [
+                    'title' => 'Keuangan & Dompet Toko',
+                    'desc'  => 'Pencatatan kas masuk/keluar, saldo dompet & mutasi harian',
+                    'icon'  => 'bi-wallet2',
+                    'color' => '#818cf8'
+                ],
+                'reports' => [
+                    'title' => 'Laporan Keuangan & Analitik',
+                    'desc'  => 'Grafik omzet, profit, ringkasan transaksi & neraca',
+                    'icon'  => 'bi-graph-up-arrow',
+                    'color' => '#f59e0b'
+                ],
+                'debts' => [
+                    'title' => 'Catatan Hutang Piutang',
+                    'desc'  => 'Kelola hutang toko ke supplier & hutang pelanggan',
+                    'icon'  => 'bi-journal-text',
+                    'color' => '#ef4444'
+                ],
+                'purchases' => [
+                    'title' => 'Pembelian & Barang Masuk',
+                    'desc'  => 'Input faktur belanja, restok barang & scan invoice AI',
+                    'icon'  => 'bi-cart-check-fill',
+                    'color' => '#10b981'
+                ],
+                'suppliers' => [
+                    'title' => 'Database Supplier & Sales',
+                    'desc'  => 'Manajemen data pemasok barang & kontak agen sales',
+                    'icon'  => 'bi-building',
+                    'color' => '#3b82f6'
+                ],
+                'customers' => [
+                    'title' => 'Database Pelanggan Toko',
+                    'desc'  => 'Manajemen data pelanggan & tier harga grosir',
+                    'icon'  => 'bi-people-fill',
+                    'color' => '#06b6d4'
+                ],
+                'products' => [
+                    'title' => 'Daftar & Stok Produk',
+                    'desc'  => 'Manajemen produk, harga jual, stok minimum & barcode',
+                    'icon'  => 'bi-box-seam-fill',
+                    'color' => '#10b981'
+                ],
+                'catalog' => [
+                    'title' => 'Pembuatan Katalog Produk',
+                    'desc'  => 'Cetak & ekspor katalog flyer produk ke pelanggan',
+                    'icon'  => 'bi-journal-richtext',
+                    'color' => '#ec4899'
+                ],
+                'multivariant' => [
+                    'title' => 'Harga Multivarian',
+                    'desc'  => 'Pengaturan tier harga grosir per kemasan/varian produk',
+                    'icon'  => 'bi-diagram-3-fill',
+                    'color' => '#8b5cf6'
+                ],
+                'product_history' => [
+                    'title' => 'Histori Harga & Produk',
+                    'desc'  => 'Catatan riwayat perubahan harga & riwayat pembelian produk',
+                    'icon'  => 'bi-tags-fill',
+                    'color' => '#f97316'
+                ],
+                'supplier_analysis' => [
+                    'title' => 'Analisis Harga Supplier',
+                    'desc'  => 'Perbandingan harga beli antar supplier',
+                    'icon'  => 'bi-bar-chart-line-fill',
+                    'color' => '#6366f1'
+                ],
+                'export_data' => [
+                    'title' => 'Export Data Excel',
+                    'desc'  => 'Unduh laporan data produk & transaksi ke Excel',
+                    'icon'  => 'bi-file-earmark-excel-fill',
+                    'color' => '#10b981'
+                ],
+                'order_estimate' => [
+                    'title' => 'Hitung Orderan Supplier',
+                    'desc'  => 'Kalkulator estimasi belanja restok barang',
+                    'icon'  => 'bi-clipboard-check-fill',
+                    'color' => '#14b8a6'
+                ],
+            ];
+            ?>
+
+            <div class="table-responsive">
+                <table class="table align-middle" style="width:100%;border-collapse:separate;border-spacing:0 8px;">
+                    <thead>
+                        <tr style="background:var(--surface-2);color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">
+                            <th style="padding:12px 16px;border-radius:var(--radius-md) 0 0 var(--radius-md);">Nama Layanan / Fitur</th>
+                            <th class="text-center" style="padding:12px 16px;width:140px;">Role Admin</th>
+                            <th class="text-center" style="padding:12px 16px;width:140px;border-radius:0 var(--radius-md) var(--radius-md) 0;">Role Staff</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($servicesList as $key => $srv): ?>
+                        <?php 
+                            $adminActive = in_array($key, $adminPermissions ?? [], true);
+                            $staffActive = in_array($key, $staffPermissions ?? [], true);
+                        ?>
+                        <tr style="background:var(--surface-2);border-radius:var(--radius-md);transition:background 0.2s;">
+                            <td style="padding:14px 16px;border-top-left-radius:var(--radius-md);border-bottom-left-radius:var(--radius-md);">
+                                <div style="display:flex;align-items:center;gap:12px;">
+                                    <div style="width:38px;height:38px;border-radius:10px;background:<?= $srv['color'] ?>15;color:<?= $srv['color'] ?>;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">
+                                        <i class="bi <?= $srv['icon'] ?>"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:700;font-size:13px;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                                            <?= htmlspecialchars($srv['title']) ?>
+                                            <?php if (!empty($srv['is_special'])): ?>
+                                                <span class="badge bg-purple bg-opacity-10 text-purple fw-bold" style="font-size:9px;color:#a855f7;background:rgba(168,85,247,0.12);padding:2px 8px;border-radius:12px;">
+                                                    <i class="bi bi-shield-lock-fill me-1"></i><?= $srv['note'] ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+                                            <?= htmlspecialchars($srv['desc']) ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-center" style="padding:14px 16px;vertical-align:middle;">
+                                <div class="form-check form-switch d-flex justify-content-center m-0">
+                                    <input class="form-check-input perm-admin-check" type="checkbox" value="<?= $key ?>" id="admin_perm_<?= $key ?>" <?= $adminActive ? 'checked' : '' ?> style="width:2.4em;height:1.2em;cursor:pointer;">
+                                </div>
+                            </td>
+                            <td class="text-center" style="padding:14px 16px;border-top-right-radius:var(--radius-md);border-bottom-right-radius:var(--radius-md);vertical-align:middle;">
+                                <div class="form-check form-switch d-flex justify-content-center m-0">
+                                    <input class="form-check-input perm-staff-check" type="checkbox" value="<?= $key ?>" id="staff_perm_<?= $key ?>" <?= $staffActive ? 'checked' : '' ?> style="width:2.4em;height:1.2em;cursor:pointer;">
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top:20px;text-align:right;">
+                <button onclick="saveAccessControlSettings()" class="btn-primary-custom" style="padding:10px 24px;font-size:13px;font-weight:700;border-radius:var(--radius-md);">
+                    <i class="bi bi-check-circle-fill me-1"></i> Simpan Kontrol Akses
+                </button>
             </div>
         </div>
-        <?php endforeach; ?>
     </div>
 </div>
 

@@ -269,6 +269,7 @@
                 <div class="dash-kpi-sub">Penjualan Hari Ini</div>
             </a>
 
+            <?php if ($this->hasServiceAccess('ppob')): ?>
             <a href="<?= BASE_URL ?>ppob/summary" class="dash-kpi-card">
                 <div class="dash-kpi-header">
                     <span class="dash-kpi-title">PPOB Hari Ini</span>
@@ -283,6 +284,7 @@
                     <?= number_format($ppobStats['today_total'] ?? 0) ?> Trx &middot; Profit: <strong style="color:var(--success);">Rp <?= number_format($ppobStats['today_profit'] ?? 0, 0, ',', '.') ?></strong>
                 </div>
             </a>
+            <?php endif; ?>
 
             <a href="<?= BASE_URL ?>products?filter=low_stock" class="dash-kpi-card">
                 <div class="dash-kpi-header">
@@ -312,6 +314,7 @@
                 <div class="dash-kpi-sub">Penjualan Kasir POS</div>
             </a>
 
+            <?php if ($this->hasServiceAccess('ppob')): ?>
             <a href="<?= BASE_URL ?>ppob" class="dash-kpi-card">
                 <div class="dash-kpi-header">
                     <span class="dash-kpi-title">PPOB Hari Ini</span>
@@ -326,6 +329,7 @@
                     <span style="color:var(--success);"><?= $ppobStats['today_success'] ?? 0 ?> Sukses</span> &middot; <span style="color:var(--danger);"><?= $ppobStats['today_failed'] ?? 0 ?> Gagal</span>
                 </div>
             </a>
+            <?php endif; ?>
 
             <a href="<?= BASE_URL ?>products?filter=low_stock" class="dash-kpi-card">
                 <div class="dash-kpi-header">
@@ -368,6 +372,7 @@
 
         <?php else: ?>
             <!-- Staff: Pure Operational Inventory (NO MONEY INFO) -->
+            <?php if ($this->hasServiceAccess('ppob')): ?>
             <a href="<?= BASE_URL ?>ppob" class="dash-kpi-card">
                 <div class="dash-kpi-header">
                     <span class="dash-kpi-title">PPOB Hari Ini</span>
@@ -380,6 +385,7 @@
                 </div>
                 <div class="dash-kpi-sub">Produk Digital PPOB</div>
             </a>
+            <?php endif; ?>
 
             <a href="<?= BASE_URL ?>products" class="dash-kpi-card">
                 <div class="dash-kpi-header">
@@ -435,12 +441,14 @@
     <!-- 2. AKSI CEPAT MENU -->
     <div class="section-title">Aksi Cepat Menu</div>
     <div class="dash-quick-grid">
+        <?php if ($this->hasServiceAccess('ppob')): ?>
         <a href="<?= BASE_URL ?>ppob" class="quick-action">
             <div class="action-icon" style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15)); color: #818cf8;">
                 <i class="bi bi-phone-fill"></i>
             </div>
             <span class="action-label">Produk Digital</span>
         </a>
+        <?php endif; ?>
         <a href="<?= BASE_URL ?>customers" class="quick-action">
             <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-people-fill"></i></div>
             <span class="action-label">Pelanggan</span>
@@ -616,6 +624,7 @@
     </div>
 
     <!-- 5. STATISTIK & INSIGHT PPOB (PRODUK DIGITAL) -->
+    <?php if ($this->hasServiceAccess('ppob')): ?>
     <div class="d-flex align-items-center justify-content-between mb-2">
         <div class="section-title mb-0" style="display:flex;align-items:center;gap:8px;">
             <i class="bi bi-phone-fill" style="color:#a855f7;"></i>
@@ -802,6 +811,7 @@
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- 6. MANAJEMEN DATA -->
     <div class="section-title">Manajemen Data</div>
@@ -869,7 +879,7 @@
     </ul>
 
     <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:var(--font-size-xs);">
-        AlfarezMart v1.1.5 &middot; PWA Inventory System<br>
+        AlfarezMart v1.1.6 &middot; PWA Inventory System<br>
         &copy; 2026 AlfarezMart
     </div>
 </div>

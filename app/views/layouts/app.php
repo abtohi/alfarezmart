@@ -217,10 +217,12 @@ if ($userLevel === 'staff') {
                 <span>Kasir POS</span>
             </a>
             <div class="sidebar-separator"></div>
+            <?php if ($this->hasServiceAccess('ppob')): ?>
             <a href="<?= BASE_URL ?>ppob" class="sidebar-item">
                 <i class="bi bi-phone"></i>
                 <span>Produk Digital (PPOB)</span>
             </a>
+            <?php endif; ?>
             <a href="<?= BASE_URL ?>sales" class="sidebar-item">
                 <i class="bi bi-clock-history"></i>
                 <span>Riwayat Penjualan</span>
@@ -233,16 +235,20 @@ if ($userLevel === 'staff') {
                 <i class="bi bi-people"></i>
                 <span>Pelanggan</span>
             </a>
-            <?php if (($currentUser['level'] ?? '') !== 'staff'): ?>
             <div class="sidebar-separator"></div>
+            <?php if ($this->hasServiceAccess('debts')): ?>
             <a href="<?= BASE_URL ?>debts" class="sidebar-item">
                 <i class="bi bi-journal-text"></i>
                 <span>Hutang &amp; Piutang</span>
             </a>
+            <?php endif; ?>
+            <?php if ($this->hasServiceAccess('finance')): ?>
             <a href="<?= BASE_URL ?>finance" class="sidebar-item">
                 <i class="bi bi-wallet2"></i>
                 <span>Keuangan</span>
             </a>
+            <?php endif; ?>
+            <?php if ($this->hasServiceAccess('reports')): ?>
             <a href="<?= BASE_URL ?>reports" class="sidebar-item">
                 <i class="bi bi-graph-up"></i>
                 <span>Laporan</span>

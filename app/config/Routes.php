@@ -233,6 +233,7 @@ $router->get('/api/users/{id}/activity', 'ApiController@getUserActivity');
 
 // User Management Web Routes
 $router->get('/users', 'UserController@index');
+$router->post('/api/users/access-control/save', 'UserController@saveAccessControl');
 
 // Debts Web Routes
 $router->get('/debts', 'DebtController@index');

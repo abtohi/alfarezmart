@@ -181,5 +181,65 @@ if (!class_exists('Controller')) {
         header('Location: ' . BASE_URL . 'products');
         exit;
     }
+
+    /**
+     * Check if a specific service/feature is allowed for the user's role.
+     * Superadmin always has full access.
+     */
+    public function hasServiceAccess(string $serviceKey, ?string $userLevel = null): bool
+    {
+        $level = strtolower((string)($userLevel ?? $this->userLevel()));
+        if ($level === 'superadmin') {
+            return true;
+        }
+
+        // Default allowed services per role (PPOB is strictly OFF for admin & staff by default)
+        $defaults = [
+            'admin' => [
+                'finance', 'reports', 'debts', 'purchases', 'suppliers',
+                'customers', 'products', 'catalog', 'multivariant',
+                'product_history', 'supplier_analysis', 'export_data', 'order_estimate'
+            ],
+            'staff' => [
+                'suppliers', 'customers', 'products', 'catalog',
+                'product_history', 'supplier_analysis', 'order_estimate'
+            ],
+        ];
+
+        try {
+            $settingModel = new SettingModel();
+            $savedJson = $settingModel->get('role_permissions_' . $level, null);
+            if ($savedJson !== null) {
+                $allowed = json_decode($savedJson, true);
+                if (is_array($allowed)) {
+                    return in_array($serviceKey, $allowed, true);
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[Controller] Error reading role permissions: ' . $e->getMessage());
+        }
+
+        $roleDefaults = $defaults[$level] ?? [];
+        return in_array($serviceKey, $roleDefaults, true);
+    }
+
+    /**
+     * Guard: Block access if the requested service is disabled for the user's role.
+     */
+    public function requireService(string $serviceKey): void
+    {
+        if ($this->hasServiceAccess($serviceKey)) {
+            return;
+        }
+
+        $uri = $_SERVER['REQUEST_URI'] ?? '';
+        $msg = 'Akses ditolak. Layanan ini tidak diizinkan oleh Superadmin.';
+        if (strpos($uri, '/api/') !== false) {
+            $this->json(['error' => $msg], 403);
+        }
+        $_SESSION['_flash']['error'] = $msg;
+        header('Location: ' . BASE_URL);
+        exit;
+    }
     }
 }
