@@ -610,7 +610,7 @@ class ApiController extends Controller
         $suppliers = [];
         try {
             $stmtSup = $this->db->prepare("
-                SELECT DISTINCT s.id as supplier_id, s.name as supplier_name, s.phone, s.address, s.contact_person,
+                SELECT DISTINCT s.id as supplier_id, s.name as supplier_name, s.address, s.notes,
                        COALESCE(sp.last_buy_price, 0) as last_buy_price,
                        sp.last_purchase_date,
                        COALESCE(sp.purchase_count, 0) as purchase_count
@@ -620,7 +620,7 @@ class ApiController extends Controller
 
                 UNION
 
-                SELECT DISTINCT s.id as supplier_id, s.name as supplier_name, s.phone, s.address, s.contact_person,
+                SELECT DISTINCT s.id as supplier_id, s.name as supplier_name, s.address, s.notes,
                        0 as last_buy_price,
                        MAX(pu.purchase_date) as last_purchase_date,
                        COUNT(pu.id) as purchase_count
@@ -628,24 +628,42 @@ class ApiController extends Controller
                 JOIN purchases pu ON pu.supplier_id = s.id
                 JOIN purchase_items pi ON pi.purchase_id = pu.id
                 WHERE pi.product_id = :pid2
-                GROUP BY s.id, s.name, s.phone, s.address, s.contact_person
+                GROUP BY s.id, s.name, s.address, s.notes
             ");
             $stmtSup->execute([':pid1' => $productId, ':pid2' => $productId]);
-            $supplierRows = $stmtSup->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $rawSupplierRows = $stmtSup->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             // Fallback: If no purchase history or supplier_product record yet, show suppliers from master list
-            if (empty($supplierRows)) {
-                $stmtAllSup = $this->db->query("SELECT id as supplier_id, name as supplier_name, phone, address, contact_person, 0 as last_buy_price, NULL as last_purchase_date, 0 as purchase_count FROM suppliers ORDER BY name ASC LIMIT 10");
-                $supplierRows = $stmtAllSup ? ($stmtAllSup->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+            if (empty($rawSupplierRows)) {
+                $stmtAllSup = $this->db->query("SELECT id as supplier_id, name as supplier_name, address, notes, 0 as last_buy_price, NULL as last_purchase_date, 0 as purchase_count FROM suppliers ORDER BY name ASC LIMIT 10");
+                $rawSupplierRows = $stmtAllSup ? ($stmtAllSup->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
             }
+
+            // Deduplicate suppliers cleanly by supplier_id
+            $suppliersMap = [];
+            foreach ($rawSupplierRows as $sup) {
+                $sid = (int)$sup['supplier_id'];
+                if (!isset($suppliersMap[$sid])) {
+                    $suppliersMap[$sid] = $sup;
+                } else {
+                    if (empty($suppliersMap[$sid]['last_buy_price']) && !empty($sup['last_buy_price'])) {
+                        $suppliersMap[$sid]['last_buy_price'] = $sup['last_buy_price'];
+                    }
+                    if (empty($suppliersMap[$sid]['last_purchase_date']) && !empty($sup['last_purchase_date'])) {
+                        $suppliersMap[$sid]['last_purchase_date'] = $sup['last_purchase_date'];
+                    }
+                    $suppliersMap[$sid]['purchase_count'] = max((int)$suppliersMap[$sid]['purchase_count'], (int)$sup['purchase_count']);
+                }
+            }
+            $supplierRows = array_values($suppliersMap);
 
             foreach ($supplierRows as $sup) {
                 $sid = (int)$sup['supplier_id'];
                 
                 // Fetch purchase history for this product at this supplier (sorted by date DESC, latest on top)
                 $stmtHist = $this->db->prepare("
-                    SELECT pu.id as purchase_id, pu.purchase_number, pu.purchase_date, pu.status, pu.notes,
-                           pi.quantity, pi.buy_price as item_buy_price, pi.subtotal as item_subtotal,
+                    SELECT pu.id as purchase_id, pu.purchase_code, pu.purchase_date, pu.notes,
+                           pi.quantity, pi.buy_price as item_buy_price, pi.total_price as item_subtotal,
                            u.name as unit_name, pp.level as packaging_level, pp.base_qty
                     FROM purchase_items pi
                     JOIN purchases pu ON pi.purchase_id = pu.id
@@ -670,7 +688,7 @@ class ApiController extends Controller
         $lastPurchase = null;
         try {
             $stmtLast = $this->db->prepare("
-                SELECT pu.purchase_date, pu.purchase_number, s.name as supplier_name, pi.buy_price, u.name as unit_name
+                SELECT pu.purchase_date, pu.purchase_code, s.name as supplier_name, pi.buy_price, u.name as unit_name
                 FROM purchase_items pi
                 JOIN purchases pu ON pi.purchase_id = pu.id
                 LEFT JOIN suppliers s ON pu.supplier_id = s.id

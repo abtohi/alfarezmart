@@ -372,7 +372,7 @@ function renderSupplierGroupedSection(suppliers) {
                 return `
                     <tr style="border-bottom:1px solid var(--border-color); font-size:11px;">
                         <td style="padding:8px 10px; color:var(--text-muted); white-space:nowrap;">${pDate}</td>
-                        <td style="padding:8px 10px; font-weight:700; color:var(--primary); font-family:monospace;">${p.purchase_number || '-'}</td>
+                        <td style="padding:8px 10px; font-weight:700; color:var(--primary); font-family:monospace;">${p.purchase_code || p.purchase_number || '-'}</td>
                         <td style="padding:8px 10px;">${qty} ${p.unit_name || 'Pcs'} <span style="font-size:9px; color:var(--text-muted);">(Isi ${p.base_qty || 1})</span></td>
                         <td style="padding:8px 10px; text-align:right; font-weight:700;">${formatRupiah(itemBuy)}</td>
                         <td style="padding:8px 10px; text-align:right; font-weight:700; color:var(--success);">${formatRupiah(subtotal)}</td>
@@ -412,7 +412,7 @@ function renderSupplierGroupedSection(suppliers) {
                         <div>
                             <div class="fw-bold" style="font-size:13px; color:var(--text-primary);">${sup.supplier_name}</div>
                             <div style="font-size:11px; color:var(--text-muted);">
-                                ${sup.phone ? `<i class="bi bi-telephone me-1"></i>${sup.phone} &middot; ` : ''}
+                                ${sup.address ? `<i class="bi bi-geo-alt me-1"></i>${sup.address} &middot; ` : ''}
                                 Total ${sup.purchase_count || purchases.length} Pembelian
                             </div>
                         </div>
@@ -546,7 +546,7 @@ function renderProductScanResult(data, isOffline) {
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px;">
                     <div>
                         <strong style="color:var(--text-primary);">${lp.supplier_name || 'Supplier Tanpa Nama'}</strong>
-                        <span class="text-muted" style="font-size:11px;">&middot; ${lpDate} (${lp.purchase_number || '-'})</span>
+                        <span class="text-muted" style="font-size:11px;">&middot; ${lpDate} (${lp.purchase_code || lp.purchase_number || '-'})</span>
                     </div>
                     <div style="font-weight:700; color:var(--success);">
                         ${formatRupiah(lp.buy_price)} ${lp.unit_name ? '/ ' + lp.unit_name : ''}
@@ -586,9 +586,9 @@ function renderProductScanResult(data, isOffline) {
             <div class="col-lg-5 col-md-12">
                 <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:20px; text-align:center; height:100%; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
                     <div>
-                        <div style="position:relative; width:100%; min-height:450px; background:var(--surface-2); border-radius:var(--radius-md); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:16px;">
+                        <div style="position:relative; width:100%; height:450px; background:var(--surface-2); border-radius:var(--radius-md); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:16px; padding:16px;">
                             ${data.photo 
-                                ? `<img id="mainProductImg" src="${baseUrl}${data.photo}" style="max-height:430px; width:auto; max-width:100%; object-fit:contain; cursor:pointer;" onclick="viewFullPhoto(this.src)">`
+                                ? `<img id="mainProductImg" src="${baseUrl}${data.photo}" style="width:100%; height:100%; max-height:420px; object-fit:contain; cursor:pointer;" onclick="viewFullPhoto(this.src)">`
                                 : `<div style="font-size:6rem; color:var(--primary); opacity:0.65;"><i class="bi bi-box-seam"></i></div>`
                             }
                         </div>
