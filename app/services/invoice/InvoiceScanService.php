@@ -166,8 +166,8 @@ class InvoiceScanService
             // STAGE 6: Self-Correction (if needed)
             // ================================================================
             $modelName = $this->getModelName();
-            $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free'];
-            if (($hasLowConf || !empty($correctionHints)) && !in_array($modelName, $freeTierModels)) {
+            $isFreeTierModel = str_contains($modelName, ':free') || str_contains($modelName, 'openrouter/free');
+            if (($hasLowConf || !empty($correctionHints)) && !$isFreeTierModel) {
                 $items = $this->selfCorrection->correct(
                     $items,
                     $hasLowConf,
@@ -355,13 +355,13 @@ class InvoiceScanService
         // Prevent timeout issues
         set_time_limit(120);
 
-        // Free vision model fallback chain — tried in order when primary model returns 402/400/429/5xx error
+        // Free vision model fallback chain — tried in order when primary model returns 402/400/429/5xx/404 error
         $FREE_VISION_FALLBACKS = [
             'openrouter/free',
             'google/gemini-2.0-flash-exp:free',
+            'google/gemini-2.0-flash-lite-preview-02-05:free',
             'meta-llama/llama-3.2-11b-vision-instruct:free',
             'qwen/qwen-2-vl-7b-instruct:free',
-            'mistralai/pixtral-12b:free',
         ];
 
         $modelsToTry = [$model];
@@ -381,22 +381,23 @@ class InvoiceScanService
         $lastError  = null;
 
         foreach ($modelsToTry as $attempt => $tryModel) {
+            // Combine system prompt and user prompt into user content text for maximum compatibility across all OpenRouter vision models
+            $combinedText = "System Context: " . $systemPrompt . "\n\nUser Task: " . $userPrompt;
+
             $payload = [
                 'model'   => $tryModel,
                 'messages' => [
-                    ['role' => 'system', 'content' => $systemPrompt],
-                    ['role' => 'user',   'content' => [
-                        ['type' => 'text', 'text' => $userPrompt],
+                    ['role' => 'user', 'content' => [
+                        ['type' => 'text', 'text' => $combinedText],
                         $imageBlock
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => 2500, // Reduced from 8000 to 2500 to prevent OpenRouter credit pre-allocation (402) errors
+                'max_tokens'  => 2500,
             ];
 
-            // Only add response_format for paid/auto models.
-            // Do NOT send response_format json_object for free models as OpenRouter rejects them with HTTP 400!
-            if (!str_contains($tryModel, ':free') && !str_contains($tryModel, 'openrouter/free')) {
+            // Only add response_format for specific paid models (e.g. OpenAI gpt-4o), do NOT send it for free/auto models as many free vision models reject json_object with HTTP 400!
+            if (in_array($tryModel, ['openai/gpt-4o', 'openai/gpt-4o-mini', 'google/gemini-2.0-flash-001'])) {
                 $payload['response_format'] = ['type' => 'json_object'];
             }
 
@@ -436,12 +437,12 @@ class InvoiceScanService
 
             if ($httpCode !== 200) {
                 $errData = json_decode($response, true);
-                $msg = $errData['error']['message'] ?? 'Unknown error';
+                $msg = $errData['error']['message'] ?? ($errData['message'] ?? 'Unknown error');
                 $lastError = "OpenRouter API Error ($httpCode): $msg";
                 error_log("[AlfarezMart] Model {$tryModel} failed with HTTP $httpCode: $msg");
 
-                // Fallback to free models if credit error (402), bad request/max_tokens (400), or server error (5xx)
-                if ($httpCode >= 500 || $httpCode === 402 || $httpCode === 400 || $httpCode === 404) {
+                // Fallback to free models if credit error (402), bad request (400), rate limit (429), not found (404), or server error (5xx)
+                if ($httpCode >= 500 || in_array($httpCode, [400, 402, 404, 429])) {
                     continue; // try next fallback model
                 }
 
