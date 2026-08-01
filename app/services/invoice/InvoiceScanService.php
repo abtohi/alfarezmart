@@ -355,17 +355,17 @@ class InvoiceScanService
         // Prevent timeout issues
         set_time_limit(120);
 
-        // Free vision model fallback chain — tried in order when 402/429/5xx error occurs
+        // Free vision model fallback chain — tried in order when primary model returns 402/400/429/5xx error
         $FREE_VISION_FALLBACKS = [
             'openrouter/free',
-            'google/gemma-4-31b-it:free',
-            'google/gemma-4-26b-a4b-it:free',
-            'nvidia/nemotron-nano-12b-v2-vl:free',
+            'google/gemini-2.0-flash-exp:free',
+            'meta-llama/llama-3.2-11b-vision-instruct:free',
+            'qwen/qwen-2-vl-7b-instruct:free',
+            'mistralai/pixtral-12b:free',
         ];
 
         $modelsToTry = [$model];
-        // Only add free fallbacks if the primary is NOT already one of them
-        // (avoids duplicates and unnecessary retries for paid models)
+        // Only add free fallbacks if primary model is not already one of them
         if (!in_array($model, $FREE_VISION_FALLBACKS)) {
             foreach ($FREE_VISION_FALLBACKS as $fb) {
                 $modelsToTry[] = $fb;
@@ -390,10 +390,15 @@ class InvoiceScanService
                         $imageBlock
                     ]]
                 ],
-                'response_format' => ['type' => 'json_object'],
-                'temperature'     => 0.1,
-                'max_tokens'      => 2500, // Reduced from 8000 to 2500 to prevent OpenRouter credit pre-allocation (402) errors
+                'temperature' => 0.1,
+                'max_tokens'  => 2500, // Reduced from 8000 to 2500 to prevent OpenRouter credit pre-allocation (402) errors
             ];
+
+            // Only add response_format for paid/auto models.
+            // Do NOT send response_format json_object for free models as OpenRouter rejects them with HTTP 400!
+            if (!str_contains($tryModel, ':free') && !str_contains($tryModel, 'openrouter/free')) {
+                $payload['response_format'] = ['type' => 'json_object'];
+            }
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -406,9 +411,9 @@ class InvoiceScanService
                 'X-Title: AlfarezMart'
             ]);
 
-            // Free tier gets a shorter timeout (55s); auto/paid models get full 110s
-            $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-nano-12b-v2-vl:free'];
-            $timeout = in_array($tryModel, $freeTierModels) ? 55 : 110;
+            // Free tier timeout (55s); auto/paid models get 110s
+            $isFreeModel = str_contains($tryModel, ':free') || str_contains($tryModel, 'openrouter/free');
+            $timeout = $isFreeModel ? 55 : 110;
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
@@ -417,7 +422,8 @@ class InvoiceScanService
             $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
             if ($err) {
-                $lastError = "Koneksi ke OpenRouter gagal: " . $err;
+                $lastError = "Koneksi ke OpenRouter gagal ({$tryModel}): " . $err;
+                error_log("[AlfarezMart] Model {$tryModel} curl error: $err");
                 continue; // try next model
             }
 
@@ -432,23 +438,48 @@ class InvoiceScanService
                 $errData = json_decode($response, true);
                 $msg = $errData['error']['message'] ?? 'Unknown error';
                 $lastError = "OpenRouter API Error ($httpCode): $msg";
+                error_log("[AlfarezMart] Model {$tryModel} failed with HTTP $httpCode: $msg");
 
                 // Fallback to free models if credit error (402), bad request/max_tokens (400), or server error (5xx)
-                if ($httpCode >= 500 || $httpCode === 402 || $httpCode === 400) {
-                    $nextModel = $modelsToTry[$attempt + 1] ?? null;
-                    error_log("[AlfarezMart] Model {$tryModel} returned HTTP $httpCode ($msg). " . ($nextModel ? "Fallback to: $nextModel" : "No more fallbacks."));
+                if ($httpCode >= 500 || $httpCode === 402 || $httpCode === 400 || $httpCode === 404) {
                     continue; // try next fallback model
                 }
 
                 break; // 4xx client error (e.g. 401 Unauthorized API key), stop
             }
 
-            // Success
+            // HTTP 200 Success — Parse AI response
             $resData = json_decode($response, true);
             $content = $resData['choices'][0]['message']['content'] ?? '';
-            $content = preg_replace('/```json\s*/', '', $content);
-            $content = preg_replace('/```\s*/', '',   $content);
-            return json_decode(trim($content), true);
+
+            if (empty($content)) {
+                error_log("[AlfarezMart] Model {$tryModel} returned empty content in choices.");
+                $lastError = "Model {$tryModel} mengembalikan respons kosong.";
+                continue;
+            }
+
+            // Strip markdown codeblock backticks if present
+            $content = preg_replace('/```json\s*/i', '', $content);
+            $content = preg_replace('/```\s*/', '', $content);
+            $content = trim($content);
+
+            // 1. Direct JSON parse
+            $jsonParsed = json_decode($content, true);
+
+            // 2. Regex JSON extraction between '{' and '}' if direct parse fails
+            if (!is_array($jsonParsed)) {
+                if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
+                    $jsonParsed = json_decode($matches[0], true);
+                }
+            }
+
+            if (is_array($jsonParsed) && !empty($jsonParsed)) {
+                return $jsonParsed;
+            }
+
+            error_log("[AlfarezMart] Model {$tryModel} output could not be parsed as JSON: " . substr($content, 0, 150));
+            $lastError = "Model {$tryModel} mengembalikan format JSON yang tidak valid.";
+            continue;
         }
 
         throw new \Exception($lastError ?? 'AI gagal memproses gambar setelah mencoba semua model.');

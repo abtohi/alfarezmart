@@ -337,9 +337,10 @@
         { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', meta: 'Cepat (Paid)', icon: 'O', bg: 'linear-gradient(135deg,#10a37f,#0b7057)', badge: 'Pro', badgeClass: 'pro' },
         { id: 'openai/gpt-4o', name: 'GPT-4o', meta: 'Cerdas (Paid)', icon: 'O', bg: 'linear-gradient(135deg,#10a37f,#000000)', badge: 'Pro', badgeClass: 'pro' },
         { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', meta: 'Akurat (Paid)', icon: 'C', bg: 'linear-gradient(135deg,#d97757,#b35f42)', badge: 'Pro', badgeClass: 'pro' },
-        { id: 'google/gemma-4-31b-it:free', name: 'Gemma 4 31B', meta: 'Terbaik (Gratis)', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#FBBC04)', badge: 'Free', badgeClass: 'free' },
-        { id: 'google/gemma-4-26b-a4b-it:free', name: 'Gemma 4 26B', meta: 'Sangat Cepat (Gratis)', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#FBBC04)', badge: 'Free', badgeClass: 'free' },
-        { id: 'nvidia/nemotron-nano-12b-v2-vl:free', name: 'Nemotron VL', meta: 'Akurat (Gratis)', icon: 'N', bg: 'linear-gradient(135deg,#76b900,#3a5b00)', badge: 'Free', badgeClass: 'free' }
+        { id: 'openrouter/free', name: 'OpenRouter Free Auto', meta: 'Auto Free Model (Gratis 100%)', icon: 'F', bg: 'linear-gradient(135deg,#10b981,#059669)', badge: 'Free', badgeClass: 'free' },
+        { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash (Free)', meta: 'Akurat & Cepat (Gratis)', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#FBBC04)', badge: 'Free', badgeClass: 'free' },
+        { id: 'meta-llama/llama-3.2-11b-vision-instruct:free', name: 'Llama 3.2 11B Vision', meta: 'OCR Handal (Gratis)', icon: 'L', bg: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', badge: 'Free', badgeClass: 'free' },
+        { id: 'qwen/qwen-2-vl-7b-instruct:free', name: 'Qwen 2 VL 7B', meta: 'OCR Presisi (Gratis)', icon: 'Q', bg: 'linear-gradient(135deg,#8b5cf6,#6d28d9)', badge: 'Free', badgeClass: 'free' }
     ];
 
     function renderModels(filterText = '') {
