@@ -281,56 +281,59 @@
             ];
             ?>
 
-            <div class="table-responsive">
-                <table class="table align-middle" style="width:100%;border-collapse:separate;border-spacing:0 8px;">
-                    <thead>
-                        <tr style="background:var(--surface-2);color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">
-                            <th style="padding:12px 16px;border-radius:var(--radius-md) 0 0 var(--radius-md);">Nama Layanan / Fitur</th>
-                            <th class="text-center" style="padding:12px 16px;width:140px;">Role Admin</th>
-                            <th class="text-center" style="padding:12px 16px;width:140px;border-radius:0 var(--radius-md) var(--radius-md) 0;">Role Staff</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($servicesList as $key => $srv): ?>
-                        <?php 
-                            $adminActive = in_array($key, $adminPermissions ?? [], true);
-                            $staffActive = in_array($key, $staffPermissions ?? [], true);
-                        ?>
-                        <tr style="background:var(--surface-2);border-radius:var(--radius-md);transition:background 0.2s;">
-                            <td style="padding:14px 16px;border-top-left-radius:var(--radius-md);border-bottom-left-radius:var(--radius-md);">
-                                <div style="display:flex;align-items:center;gap:12px;">
-                                    <div style="width:38px;height:38px;border-radius:10px;background:<?= $srv['color'] ?>15;color:<?= $srv['color'] ?>;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">
-                                        <i class="bi <?= $srv['icon'] ?>"></i>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight:700;font-size:13px;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
-                                            <?= htmlspecialchars($srv['title']) ?>
-                                            <?php if (!empty($srv['is_special'])): ?>
-                                                <span class="badge bg-purple bg-opacity-10 text-purple fw-bold" style="font-size:9px;color:#a855f7;background:rgba(168,85,247,0.12);padding:2px 8px;border-radius:12px;">
-                                                    <i class="bi bi-shield-lock-fill me-1"></i><?= $srv['note'] ?>
-                                                </span>
-                                            <?php endif; ?>
-                                        </div>
-                                        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
-                                            <?= htmlspecialchars($srv['desc']) ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="text-center" style="padding:14px 16px;vertical-align:middle;">
-                                <div class="form-check form-switch d-flex justify-content-center m-0">
-                                    <input class="form-check-input perm-admin-check" type="checkbox" value="<?= $key ?>" id="admin_perm_<?= $key ?>" <?= $adminActive ? 'checked' : '' ?> style="width:2.4em;height:1.2em;cursor:pointer;">
-                                </div>
-                            </td>
-                            <td class="text-center" style="padding:14px 16px;border-top-right-radius:var(--radius-md);border-bottom-right-radius:var(--radius-md);vertical-align:middle;">
-                                <div class="form-check form-switch d-flex justify-content-center m-0">
-                                    <input class="form-check-input perm-staff-check" type="checkbox" value="<?= $key ?>" id="staff_perm_<?= $key ?>" <?= $staffActive ? 'checked' : '' ?> style="width:2.4em;height:1.2em;cursor:pointer;">
-                                </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+            <!-- Header Legend for Access Matrix -->
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);margin-bottom:12px;color:var(--text-muted);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">
+                <div>Nama Layanan / Fitur Sistem</div>
+                <div style="display:flex;gap:36px;padding-right:8px;">
+                    <span style="width:50px;text-align:center;">Admin</span>
+                    <span style="width:50px;text-align:center;">Staff</span>
+                </div>
+            </div>
+
+            <!-- Service Items List -->
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <?php foreach ($servicesList as $key => $srv): ?>
+                <?php 
+                    $adminActive = in_array($key, $adminPermissions ?? [], true);
+                    $staffActive = in_array($key, $staffPermissions ?? [], true);
+                ?>
+                <div class="access-item-card" style="background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;transition:all 0.2s;">
+                    <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:240px;">
+                        <div style="width:40px;height:40px;border-radius:12px;background:<?= $srv['color'] ?>18;color:<?= $srv['color'] ?>;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;border:1px solid <?= $srv['color'] ?>30;">
+                            <i class="bi <?= $srv['icon'] ?>"></i>
+                        </div>
+                        <div>
+                            <div style="font-weight:700;font-size:13px;color:var(--text-primary);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                                <?= htmlspecialchars($srv['title']) ?>
+                                <?php if (!empty($srv['is_special'])): ?>
+                                    <span class="badge" style="font-size:9px;color:#a855f7;background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.3);padding:2px 8px;border-radius:12px;">
+                                        <i class="bi bi-shield-lock-fill me-1"></i><?= $srv['note'] ?>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+                            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+                                <?= htmlspecialchars($srv['desc']) ?>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;align-items:center;gap:36px;flex-shrink:0;padding-right:8px;">
+                        <!-- Role Admin Toggle -->
+                        <div style="text-align:center;width:50px;">
+                            <div class="form-check form-switch d-flex justify-content-center m-0">
+                                <input class="form-check-input perm-admin-check" type="checkbox" value="<?= $key ?>" id="admin_perm_<?= $key ?>" <?= $adminActive ? 'checked' : '' ?> style="width:2.5em;height:1.3em;cursor:pointer;">
+                            </div>
+                        </div>
+
+                        <!-- Role Staff Toggle -->
+                        <div style="text-align:center;width:50px;">
+                            <div class="form-check form-switch d-flex justify-content-center m-0">
+                                <input class="form-check-input perm-staff-check" type="checkbox" value="<?= $key ?>" id="staff_perm_<?= $key ?>" <?= $staffActive ? 'checked' : '' ?> style="width:2.5em;height:1.3em;cursor:pointer;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
             </div>
 
             <div style="margin-top:20px;text-align:right;">
@@ -343,6 +346,10 @@
 </div>
 
 <style>
+.access-item-card:hover {
+    border-color: var(--primary) !important;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
 .user-card {
     background: var(--surface-1);
     border: 1px solid var(--border-color);
