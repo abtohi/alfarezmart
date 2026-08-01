@@ -163,23 +163,13 @@ class PromptBuilder
             $lines[] = "Gunakan daftar ini untuk mencocokkan nama/kode barang di invoice:";
             $count   = 0;
             foreach ($supplierProducts as $p) {
-                if ($count >= 35) { // Limit to 35 items to keep payload small & fast
+                if ($count >= 15) { // Compact limit to 15 items to stay well below 2603 free prompt token limit
                     $lines[] = "... dan " . (count($supplierProducts) - $count) . " produk lainnya";
                     break;
                 }
                 $line = "- [{$p['code']}] {$p['full_name']}";
                 if (!empty($p['supplier_product_code'])) {
-                    $line .= " (Kode Supplier: {$p['supplier_product_code']})";
-                }
-                if (!empty($p['supplier_invoice_name'])) {
-                    $line .= " [Nama Invoice: {$p['supplier_invoice_name']}]";
-                }
-                if (!empty($p['packagings'])) {
-                    $pkgParts = [];
-                    foreach ($p['packagings'] as $pkg) {
-                        $pkgParts[] = "{$pkg['unit_name']}@Rp" . number_format($pkg['buy_price'], 0, ',', '.');
-                    }
-                    $line .= " — Kemasan: " . implode(', ', $pkgParts);
+                    $line .= " (Kode: {$p['supplier_product_code']})";
                 }
                 $lines[] = $line;
                 $count++;

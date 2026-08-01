@@ -292,7 +292,7 @@ function applyPhotoFilter() {
     
     let width = originalPhotoImg.width;
     let height = originalPhotoImg.height;
-    const max_size = 1400; // Increased to 1400px for crystal-clear character OCR
+    const max_size = 900; // Optimized to 900px to keep vision token count under OpenRouter free limits (< 2603 tokens)!
     
     if (width > height) {
         if (width > max_size) { height *= max_size / width; width = max_size; }
