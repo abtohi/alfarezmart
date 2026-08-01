@@ -368,18 +368,19 @@ class InvoiceScanService
         }
 
         // ----------------------------------------------------------------
-        // OPENROUTER API (With rapid 12s failover across vision models)
+        // OPENROUTER API (With rapid 6s failover across vision models)
         // ----------------------------------------------------------------
         $FREE_VISION_FALLBACKS = [
-            'google/gemini-2.0-flash-001',               // Gemini 2.0 Flash (Fastest OCR, ~1-2s)
-            'google/gemini-2.5-flash',                   // Gemini 2.5 Flash
-            'google/gemma-4-26b-a4b-it:free',           // Gemma 4 26B MoE (Free)
+            'google/gemma-4-26b-a4b-it:free',           // Gemma 4 26B MoE (Free - Fast)
             'google/gemma-4-31b-it:free',               // Gemma 4 31B (Free)
             'nvidia/nemotron-nano-12b-v2-vl:free',      // Nemotron 12B Vision (Free)
+            'google/gemini-2.0-flash-001',               // Gemini 2.0 Flash
+            'google/gemini-2.5-flash',                   // Gemini 2.5 Flash
         ];
 
+        // Always put user selected model FIRST
         $modelsToTry = [];
-        if ($model && $model !== 'openrouter/auto' && !in_array($model, $FREE_VISION_FALLBACKS)) {
+        if (!empty($model)) {
             $modelsToTry[] = $model;
         }
         foreach ($FREE_VISION_FALLBACKS as $fb) {
@@ -421,9 +422,10 @@ class InvoiceScanService
                 'X-Title: AlfarezMart'
             ]);
 
-            // Rapid failover timeout: 12s per model attempt for free, 20s for paid models
+            // Rapid failover timeout: 6s per model attempt for free models, 14s for paid models
+            // Short timeouts ensure 4 model attempts finish in < 24 seconds total!
             $isFreeModel = str_contains($tryModel, ':free') || str_contains($tryModel, 'openrouter/free');
-            $timeout = $isFreeModel ? 12 : 20;
+            $timeout = $isFreeModel ? 6 : 14;
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
@@ -432,21 +434,21 @@ class InvoiceScanService
             $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
             if ($err) {
-                $lastError = "Koneksi ke AI gagal ({$tryModel}): " . $err;
-                error_log("[AlfarezMart] Model {$tryModel} curl error: $err");
+                $lastError = "Koneksi ke AI ({$tryModel}) lambat: " . $err;
+                error_log("[AlfarezMart] Model {$tryModel} curl timeout/error: $err");
                 continue; // Try next model immediately
             }
 
             if ($httpCode === 429) {
                 error_log("[AlfarezMart] Model {$tryModel} rate-limited (429). Trying next fallback.");
-                $lastError = "Model {$tryModel} sedang sibuk (rate limit). Mencoba model alternatif...";
+                $lastError = "Model {$tryModel} sedang sibuk. Mencoba model alternatif...";
                 continue;
             }
 
             if ($httpCode !== 200) {
                 $errData = json_decode($response, true);
                 $msg = $errData['error']['message'] ?? ($errData['message'] ?? 'Unknown error');
-                $lastError = "OpenRouter API Error ($httpCode): $msg";
+                $lastError = "OpenRouter Error ($httpCode): $msg";
                 error_log("[AlfarezMart] Model {$tryModel} failed with HTTP $httpCode: $msg");
 
                 if ($httpCode >= 500 || in_array($httpCode, [400, 402, 404, 429])) {
