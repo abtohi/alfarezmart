@@ -142,6 +142,9 @@ class InvoiceScanService
                 throw new \Exception('AI gagal memproses gambar atau mengembalikan respons kosong.');
             }
 
+            // Re-verify DB connection after cURL HTTP delay to prevent 'MySQL server has gone away'
+            $this->db = Database::getInstance()->getConnection();
+
             // ================================================================
             // STAGE 5: Run Pipeline (Layout -> Parse -> Validate -> Match -> Score)
             // ================================================================
