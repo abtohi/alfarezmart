@@ -355,14 +355,16 @@ class InvoiceScanService
         // Prevent timeout issues
         set_time_limit(120);
 
-        // Free vision model fallback chain — tried in order when primary model returns 402/400/429/5xx/404 error
+        // Free vision model fallback chain — verified ACTIVE as of 2026-08-01 via OpenRouter API
+        // All models below confirmed free (pricing=0) and support image input_modalities
         $FREE_VISION_FALLBACKS = [
-            'openrouter/free',
-            'google/gemini-2.0-flash-exp:free',
-            'google/gemini-2.0-flash-lite-preview-02-05:free',
-            'meta-llama/llama-3.2-11b-vision-instruct:free',
-            'qwen/qwen-2-vl-7b-instruct:free',
+            'google/gemma-4-27b-it:free',               // Google Gemma 4 27B - most capable free vision
+            'google/gemma-4-26b-a4b-it:free',           // Google Gemma 4 26B MoE variant
+            'google/gemma-4-31b-it:free',               // Google Gemma 4 31B
+            'nvidia/nemotron-nano-12b-v2-vl:free',      // NVIDIA Nemotron 12B Vision-Language
+            'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', // NVIDIA Omni 30B
         ];
+
 
         $modelsToTry = [$model];
         // Only add free fallbacks if primary model is not already one of them

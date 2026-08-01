@@ -331,17 +331,19 @@
 
     const scannerModels = [
         { id: 'openrouter/auto', name: 'Auto (Default)', meta: 'Pilih model terbaik otomatis', icon: 'A', bg: 'linear-gradient(135deg,#5c5c5c,#2c2c2c)', badge: 'Default', badgeClass: 'pro' },
-        { id: 'openrouter/free', name: 'OpenRouter Free Auto', meta: 'Auto Free Model (Gratis 100%)', icon: 'F', bg: 'linear-gradient(135deg,#10b981,#059669)', badge: 'Free', badgeClass: 'free' },
-        { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash (Free)', meta: 'Akurat & Cepat (Gratis)', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#FBBC04)', badge: 'Free', badgeClass: 'free' },
-        { id: 'meta-llama/llama-3.2-11b-vision-instruct:free', name: 'Llama 3.2 11B Vision (Free)', meta: 'OCR Handal (Gratis)', icon: 'L', bg: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', badge: 'Free', badgeClass: 'free' },
-        { id: 'qwen/qwen-2-vl-7b-instruct:free', name: 'Qwen 2 VL 7B (Free)', meta: 'OCR Presisi (Gratis)', icon: 'Q', bg: 'linear-gradient(135deg,#8b5cf6,#6d28d9)', badge: 'Free', badgeClass: 'free' },
+        { id: 'google/gemma-4-27b-it:free', name: 'Gemma 4 27B Vision (Free)', meta: 'Google - Paling Cerdas Gratis', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#0F9D58)', badge: 'Free', badgeClass: 'free' },
+        { id: 'google/gemma-4-26b-a4b-it:free', name: 'Gemma 4 26B MoE (Free)', meta: 'Google - Cepat & Akurat (Gratis)', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#FBBC04)', badge: 'Free', badgeClass: 'free' },
+        { id: 'google/gemma-4-31b-it:free', name: 'Gemma 4 31B (Free)', meta: 'Google - Akurat (Gratis)', icon: 'G', bg: 'linear-gradient(135deg,#34A853,#0F9D58)', badge: 'Free', badgeClass: 'free' },
+        { id: 'nvidia/nemotron-nano-12b-v2-vl:free', name: 'Nemotron 12B Vision (Free)', meta: 'NVIDIA - OCR Vision (Gratis)', icon: 'N', bg: 'linear-gradient(135deg,#76b900,#4a7400)', badge: 'Free', badgeClass: 'free' },
+        { id: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', name: 'Nemotron Omni 30B (Free)', meta: 'NVIDIA - Multimodal Reasoning (Gratis)', icon: 'N', bg: 'linear-gradient(135deg,#76b900,#1a3300)', badge: 'Free', badgeClass: 'free' },
         { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash', meta: 'Handal & Cepat (Paid)', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#1AA260)', badge: 'Pro', badgeClass: 'pro' },
-        { id: 'google/gemini-1.5-flash', name: 'Gemini 1.5 Flash', meta: 'Cepat & Akurat (Paid)', icon: 'G', bg: 'linear-gradient(135deg,#FBBC04,#F9AB00)', badge: 'Pro', badgeClass: 'pro' },
-        { id: 'google/gemini-1.5-pro', name: 'Gemini 1.5 Pro', meta: 'Paling Cerdas (Paid)', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#34A853)', badge: 'Pro', badgeClass: 'pro' },
+        { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', meta: 'Cepat & Cerdas (Paid)', icon: 'G', bg: 'linear-gradient(135deg,#FBBC04,#4285F4)', badge: 'Pro', badgeClass: 'pro' },
+        { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', meta: 'Paling Cerdas Google (Paid)', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#34A853)', badge: 'Pro', badgeClass: 'pro' },
         { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', meta: 'Cepat (Paid)', icon: 'O', bg: 'linear-gradient(135deg,#10a37f,#0b7057)', badge: 'Pro', badgeClass: 'pro' },
         { id: 'openai/gpt-4o', name: 'GPT-4o', meta: 'Cerdas (Paid)', icon: 'O', bg: 'linear-gradient(135deg,#10a37f,#000000)', badge: 'Pro', badgeClass: 'pro' },
-        { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', meta: 'Akurat (Paid)', icon: 'C', bg: 'linear-gradient(135deg,#d97757,#b35f42)', badge: 'Pro', badgeClass: 'pro' }
+        { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4', meta: 'Akurat (Paid)', icon: 'C', bg: 'linear-gradient(135deg,#d97757,#b35f42)', badge: 'Pro', badgeClass: 'pro' }
     ];
+
 
     function renderModels(filterText = '') {
         const container = document.getElementById('aiModelItems');
