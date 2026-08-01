@@ -1052,10 +1052,12 @@
         border-color: var(--primary) !important;
     }
 
-    /* Multi-product search results in 2 columns */
-    #scanResult:has(> .product-card:nth-child(2)) {
+    /* Multi-product search results in 3 columns for desktop */
+    #scanResult:has(> .product-card:nth-child(2)),
+    #scanResult:has(> .scan-result-card:nth-child(2)),
+    #scanResult.grid-3-col {
         display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
+        grid-template-columns: repeat(3, 1fr) !important;
         gap: 16px !important;
     }
 

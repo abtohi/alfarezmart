@@ -1,46 +1,162 @@
-<!-- Barcode Scanner View -->
+<!-- Barcode Scanner View - Redesigned (v1.1.6) -->
 <?php
 $scannerUserLevel = $_SESSION['user_level'] ?? '';
 $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
 ?>
-<div class="page-section">
-    <div class="scanner-header" style="margin-bottom: 20px;">
-        <h2 style="font-size: var(--font-size-xl); font-weight: 800; margin-bottom: 4px; color: var(--text-primary); letter-spacing: -0.3px;">Cek Harga</h2>
-        <p style="color: var(--text-muted); font-size: var(--font-size-sm); margin: 0;">Scan barcode atau ketik manual untuk cek harga</p>
-    </div>
-
-    <!-- Manual Input & Camera Trigger -->
-    <div style="margin-bottom: 16px;">
-        <div class="search-input-wrapper" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 0 16px; display: flex; align-items: center; gap: 10px;">
-            <i class="bi bi-upc-scan" onclick="openGlobalScanner()" style="color: var(--primary); font-size: 1.3rem; cursor: pointer;" title="Klik untuk Buka Kamera Scanner"></i>
-            <input type="text" id="barcodeInput" placeholder="Ketik barcode atau nama produk..." 
-                   style="flex:1; border:none; background:transparent; padding:14px 0; color:var(--text-primary); font-size:var(--font-size-base); outline:none; font-family: var(--font-family);" 
-                   autocomplete="off" autofocus>
-            <button onclick="lookupBarcode()" style="border:none; background:var(--primary); color:white; padding:8px 20px; border-radius: 8px; font-weight:600; font-size: var(--font-size-sm); cursor:pointer;">
-                Cari
+<div class="page-section" style="padding-bottom:100px;">
+    <!-- Modern Header -->
+    <div style="background: linear-gradient(135deg, var(--surface-1), var(--surface-2)); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 22px 20px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+                <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 4px; color: var(--text-primary); letter-spacing: -0.3px; display:flex; align-items:center; gap:8px;">
+                    <i class="bi bi-upc-scan text-primary"></i> Cek Harga &amp; Scan Barcode
+                </h2>
+                <p style="color: var(--text-muted); font-size: 12px; margin: 0;">Scan barcode produk atau ketik nama/kode barcode untuk cek harga &amp; stok real-time</p>
+            </div>
+            
+            <button onclick="openGlobalScanner()" class="btn-primary-custom" style="padding:10px 18px; font-size:12px; font-weight:700; border-radius:20px; display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, #e63946, #d62828);">
+                <i class="bi bi-camera-fill"></i> Buka Kamera Scanner
             </button>
+        </div>
+
+        <!-- Manual Input Bar -->
+        <div style="margin-top: 18px; position: relative;">
+            <div style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 4px 6px 4px 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                <i class="bi bi-upc-scan" onclick="openGlobalScanner()" style="color: var(--primary); font-size: 1.3rem; cursor: pointer;" title="Klik untuk Buka Kamera Scanner"></i>
+                <input type="text" id="barcodeInput" placeholder="Ketik nama produk atau scan kode barcode..." 
+                       style="flex:1; border:none; background:transparent; padding:10px 0; color:var(--text-primary); font-size:13px; outline:none; font-family: var(--font-family);" 
+                       autocomplete="off" autofocus>
+                <button onclick="lookupBarcode()" style="border:none; background:var(--primary); color:white; padding:9px 22px; border-radius: 8px; font-weight:700; font-size: 12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                    <i class="bi bi-search"></i> Cari
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Desktop hardware scanner hint (hidden on mobile via CSS) -->
-    <div class="desktop-scanner-hint">
-        <i class="bi bi-bluetooth"></i>
-        Hubungkan scanner barcode USB/Bluetooth — barcode akan otomatis terdeteksi. Tekan <kbd style="background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:0.75rem;border:1px solid var(--border-color);">F2</kbd> untuk fokus ke input.
+    <!-- Desktop Hardware Scanner Hint -->
+    <div class="desktop-scanner-hint" style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; margin-bottom:20px; font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:8px;">
+        <i class="bi bi-bluetooth text-info" style="font-size:1.1rem;"></i>
+        <span>Hubungkan scanner barcode USB/Bluetooth — barcode otomatis terdeteksi. Tekan <kbd style="background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:0.75rem;border:1px solid var(--border-color);color:var(--text-primary);">F2</kbd> untuk fokus ke pencarian.</span>
     </div>
 
-    <!-- Result Area -->
+    <!-- Result Area (3 Split Columns Grid on Desktop) -->
     <div id="scanResult"></div>
 </div>
 
+<style>
+.scan-results-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+@media (min-width: 640px) {
+    .scan-results-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (min-width: 992px) {
+    .scan-results-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+}
+
+.scan-result-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.22s ease;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+    cursor: pointer;
+    box-sizing: border-box;
+}
+.scan-result-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--primary) !important;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.18) !important;
+}
+.scan-card-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.scan-card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.scan-card-thumb-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, rgba(230,57,70,0.15), rgba(230,57,70,0.05));
+    border: 1px solid rgba(230,57,70,0.2);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+}
+.scan-card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.35;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.scan-pill-badge {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    display: inline-block;
+}
+.scan-pill-badge.brand {
+    background: rgba(59,130,246,0.12);
+    color: #3b82f6;
+    border: 1px solid rgba(59,130,246,0.2);
+}
+.scan-pill-badge.category {
+    background: rgba(16,185,129,0.12);
+    color: #10b981;
+    border: 1px solid rgba(16,185,129,0.2);
+}
+.scan-short-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    background: var(--surface-2);
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+</style>
+
 <script>
 const SCANNER_IS_SUPERADMIN = <?= $scannerIsSuperadmin ? 'true' : 'false' ?>;
+
 async function lookupBarcode() {
     const input = document.getElementById('barcodeInput');
     const code = input.value.trim();
     if (!code) return;
     
     const resultDiv = document.getElementById('scanResult');
-    resultDiv.innerHTML = '<div style="text-align:center;padding:20px;"><div class="skeleton" style="width:100%;height:120px;"></div></div>';
+    resultDiv.innerHTML = '<div style="text-align:center;padding:30px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Mencari produk...</div></div>';
     
     try {
         const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/barcode/${encodeURIComponent(code)}`);
@@ -62,29 +178,13 @@ async function lookupBarcode() {
                     if (searchData.length === 1) {
                         showProductResultOffline(searchData[0]);
                     } else {
-                        resultDiv.innerHTML = searchData.map(prod => `
-                            <div class="product-card" onclick='showProductResultOffline(${JSON.stringify(prod).replace(/'/g, "&#39;")})' style="cursor:pointer; flex-direction:column; align-items:stretch;">
-                                <div style="display:flex; align-items:center;">
-                                    ${prod.photo 
-                                        ? `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:transparent; flex-shrink:0; margin-right:16px;">
-                                               <img src="${typeof BASE_URL !== 'undefined' ? BASE_URL : '/'}${prod.photo}" style="width:100%; height:100%; object-fit:contain;">
-                                           </div>`
-                                        : `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; background:var(--primary-bg); color:var(--primary); font-size:1.5rem; flex-shrink:0; margin-right:16px;"><i class="bi bi-box-seam"></i></div>`
-                                    }
-                                    <div class="product-info" style="flex:1;">
-                                        <div class="product-name">${prod.full_name}</div>
-                                        <div class="product-category">${prod.brand_name || ''} · ${prod.category_name || ''}</div>
-                                    </div>
-                                </div>
-                                ${renderPackagingsForList(prod.packagings)}
-                            </div>
-                        `).join('');
+                        renderMultipleSearchResults(searchData, true);
                     }
                 } else {
-                    resultDiv.innerHTML = '<div class="empty-state"><i class="bi bi-search"></i><h3>Tidak Ditemukan</h3><p>Produk dengan barcode/nama tersebut tidak ada di database lokal (Offline)</p></div>';
+                    resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-search fs-1 text-muted"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Produk Tidak Ditemukan</h4><p style="font-size:12px;color:var(--text-muted);">Produk dengan barcode/nama tersebut tidak ada di database offline.</p></div>';
                 }
             } catch (offErr) {
-                resultDiv.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><h3>Error</h3><p>Gagal mencari produk di database lokal</p></div>';
+                resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-exclamation-triangle fs-1 text-danger"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Error Database</h4><p style="font-size:12px;color:var(--text-muted);">Gagal mencari produk di database lokal.</p></div>';
             }
             return;
         }
@@ -98,35 +198,68 @@ async function lookupBarcode() {
                 if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
                 fetchProductDetail(searchData[0].id);
             } else if (searchData.length > 0) {
-                resultDiv.innerHTML = searchData.map(p => `
-                    <div class="product-card" onclick="fetchProductDetail(${p.id})" style="cursor:pointer; flex-direction:column; align-items:stretch;">
-                        <div style="display:flex; align-items:center;">
-                            ${p.photo 
-                                ? `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:transparent; flex-shrink:0; margin-right:16px;">
-                                       <img src="${typeof BASE_URL !== 'undefined' ? BASE_URL : '/'}${p.photo}" style="width:100%; height:100%; object-fit:contain;">
-                                   </div>`
-                                : `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; background:var(--primary-bg); color:var(--primary); font-size:1.5rem; flex-shrink:0; margin-right:16px;"><i class="bi bi-box-seam"></i></div>`
-                            }
-                            <div class="product-info" style="flex:1;">
-                                <div class="product-name">${p.full_name}</div>
-                                <div class="product-category">${p.brand_name || ''} · ${p.category_name || ''}</div>
-                            </div>
-                        </div>
-                        ${renderPackagingsForList(p.packagings)}
-                    </div>
-                `).join('');
+                renderMultipleSearchResults(searchData, false);
             } else {
-                resultDiv.innerHTML = '<div class="empty-state"><i class="bi bi-search"></i><h3>Tidak Ditemukan</h3><p>Produk dengan barcode/nama tersebut tidak ada di database</p></div>';
+                resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-search fs-1 text-muted"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Produk Tidak Ditemukan</h4><p style="font-size:12px;color:var(--text-muted);">Produk dengan kata kunci "'+code+'" tidak ditemukan.</p></div>';
             }
         } catch (e2) {
-            resultDiv.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><h3>Error</h3><p>Gagal mencari produk</p></div>';
+            resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-exclamation-triangle fs-1 text-danger"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Gagal Memuat Produk</h4><p style="font-size:12px;color:var(--text-muted);">Terjadi kesalahan saat mengambil data dari server.</p></div>';
         }
     }
 }
 
+function renderMultipleSearchResults(products, isOffline) {
+    const resultDiv = document.getElementById('scanResult');
+    const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
+
+    let cardsHtml = products.map(p => {
+        const prodName = p.name || p.full_name || 'Tanpa Nama';
+        const brand = p.brand_name || '';
+        const category = p.category_name || '';
+        
+        return `
+            <div class="scan-result-card" onclick="${isOffline ? `showProductResultOffline(${JSON.stringify(p).replace(/'/g, "&#39;")})` : `fetchProductDetail(${p.id})`}">
+                <div>
+                    <!-- Header Product -->
+                    <div style="display:flex; gap:12px; align-items:flex-start; margin-bottom:12px;">
+                        ${p.photo 
+                            ? `<div class="scan-card-thumb">
+                                   <img src="${baseUrl}${p.photo}">
+                               </div>`
+                            : `<div class="scan-card-thumb-icon">
+                                   <i class="bi bi-box-seam"></i>
+                               </div>`
+                        }
+                        <div style="flex:1; min-width:0;">
+                            <div class="scan-card-title">${prodName}</div>
+                            <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">
+                                ${brand ? `<span class="scan-pill-badge brand"><i class="bi bi-award me-1"></i>${brand}</span>` : ''}
+                                ${category ? `<span class="scan-pill-badge category"><i class="bi bi-tag me-1"></i>${category}</span>` : ''}
+                            </div>
+                            ${p.short_label ? `<div class="scan-short-label">Label: ${p.short_label}</div>` : ''}
+                        </div>
+                    </div>
+
+                    <!-- Packaging List -->
+                    ${renderPackagingsForList(p.packagings)}
+                </div>
+
+                <!-- Footer Action -->
+                <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border-color);">
+                    <button class="btn-primary-custom w-100" style="padding:6px 12px; font-size:11px; border-radius:6px;">
+                        <i class="bi bi-eye-fill me-1"></i> Detail &amp; Cek Lengkap
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    resultDiv.innerHTML = `<div class="scan-results-grid">${cardsHtml}</div>`;
+}
+
 function renderPackagingsForList(packagings) {
     if (!packagings || packagings.length === 0) return '';
-    return '<div style="margin-top:10px; border-top:1px dashed var(--border-color); padding-top:10px;">' +
+    return '<div style="margin-top:8px; background:var(--surface-2); border-radius:var(--radius-md); padding:10px; border:1px solid var(--border-color);">' +
         packagings.map(pkg => {
             const jenis = pkg.unit_name || ('Level ' + pkg.level);
             const qty = pkg.base_qty || 1;
@@ -137,16 +270,14 @@ function renderPackagingsForList(packagings) {
             const marginPct = modal > 0 ? ((marginAmt / modal) * 100).toFixed(1) : 0;
             
             return `
-                <div style="margin-bottom:8px;">
+                <div style="margin-bottom:6px; padding-bottom:6px; border-bottom:1px dashed var(--border-color);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
                         <div style="font-weight:700; font-size:11px; color:var(--text-primary);">${jenis} <span style="font-weight:400; color:var(--text-muted); font-size:9px;">(Isi ${qty})</span></div>
-                        <div style="font-size:9px; color:rgba(150, 150, 150, 0.4); text-shadow:0 1px 1px rgba(0,0,0,0.1); text-align:right;">
-                            ${SCANNER_IS_SUPERADMIN && modal > 0 ? `M: ${formatRupiah(modal)} | P: ${formatRupiah(marginAmt)} (${marginPct}%)` : ''}
-                        </div>
+                        ${SCANNER_IS_SUPERADMIN && modal > 0 ? `<div style="font-size:9px; color:var(--text-muted); font-weight:600;">M: ${formatRupiah(modal)} | Profit ${marginPct}%</div>` : ''}
                     </div>
-                    <div style="display:flex; justify-content:space-between; font-size:12px;">
-                        <div>${ecer > 0 ? `<span style="color:var(--text-muted); font-size:9px;">Ecer:</span> <span style="color:var(--success); font-weight:700;">${formatRupiah(ecer)}</span>` : ''}</div>
-                        <div>${grosir > 0 ? `<span style="color:var(--text-muted); font-size:9px;">Grosir:</span> <span style="color:var(--warning); font-weight:600;">${formatRupiah(grosir)}</span>` : ''}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px;">
+                        <div>${ecer > 0 ? `<span style="color:var(--text-muted); font-size:9px;">Ecer:</span> <strong style="color:var(--success);">${formatRupiah(ecer)}</strong>` : ''}</div>
+                        <div>${grosir > 0 ? `<span style="color:var(--text-muted); font-size:9px;">Grosir:</span> <strong style="color:var(--warning);">${formatRupiah(grosir)}</strong>` : ''}</div>
                     </div>
                 </div>
             `;
@@ -156,7 +287,7 @@ function renderPackagingsForList(packagings) {
 
 async function fetchProductDetail(id) {
     const resultDiv = document.getElementById('scanResult');
-    resultDiv.innerHTML = '<div style="text-align:center;padding:20px;"><div class="skeleton" style="width:100%;height:120px;"></div></div>';
+    resultDiv.innerHTML = '<div style="text-align:center;padding:30px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
     
     try {
         const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/${id}`);
@@ -164,7 +295,7 @@ async function fetchProductDetail(id) {
         const data = await res.json();
         showProductResult(data);
     } catch (e) {
-        resultDiv.innerHTML = '<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><h3>Error</h3><p>Gagal mengambil detail produk</p></div>';
+        resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-exclamation-triangle fs-1 text-danger"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Error</h4><p style="font-size:12px;color:var(--text-muted);">Gagal mengambil detail produk.</p></div>';
     }
 }
 
@@ -179,7 +310,9 @@ function showProductResult(data) {
 function renderProductScanResult(data, isOffline) {
     const resultDiv = document.getElementById('scanResult');
     const packagings = data.packagings || [];
-    
+    const prodName = data.name || data.full_name || 'Tanpa Nama';
+    const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
+
     let priceHtml = packagings.map(p => {
         const modal = parseFloat(p.buy_price) || 0;
         const ecer = parseFloat(p.sell_price_retail) || 0;
@@ -191,13 +324,13 @@ function renderProductScanResult(data, isOffline) {
         let tierHtml = '';
         if (p.qty_prices && p.qty_prices.length > 0) {
             tierHtml = `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-color);">
-                <div style="font-size:10px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Harga Tier / Kuantitas:</div>
+                <div style="font-size:10px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Harga Tier / Grosir Bertingkat:</div>
                 ${p.qty_prices.map(t => {
                     const tPrice = parseFloat(t.unit_price) || 0;
                     const mode = t.sale_mode || 'both';
                     const modeLabel = mode === 'retail' ? '<span style="color:var(--success);">Ecer</span>' : (mode === 'wholesale' ? '<span style="color:var(--warning);">Grosir</span>' : '<span style="color:var(--info);">Ecer/Grosir</span>');
                     return `<div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:2px;">
-                        <span><i class="bi bi-layers" style="margin-right:4px;"></i>Min. ${t.min_qty} ${p.unit_name}</span>
+                        <span><i class="bi bi-layers me-1"></i>Min. ${t.min_qty} ${p.unit_name}</span>
                         <span style="text-align:right; font-weight:600;">
                             ${modeLabel}: ${formatRupiah(tPrice)}
                         </span>
@@ -209,20 +342,22 @@ function renderProductScanResult(data, isOffline) {
         const baseQty = parseFloat(p.base_qty) || 1;
         
         return `
-            <div style="padding:12px 0; border-bottom:1px solid var(--border-color);">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
+            <div style="padding:14px 0; border-bottom:1px solid var(--border-color);">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; flex-wrap:wrap; gap:8px;">
                     <div>
-                        <div style="font-weight:700; font-size:var(--font-size-sm); color:var(--text-primary);">
+                        <div style="font-weight:700; font-size:13px; color:var(--text-primary);">
                             ${p.unit_name || 'Level '+p.level} 
-                            <span style="font-size:10px; font-weight:400; color:var(--text-muted); background:var(--surface-2); padding:2px 6px; border-radius:4px; margin-left:4px;">Isi ${baseQty} pcs</span>
+                            <span style="font-size:10px; font-weight:600; color:var(--text-muted); background:var(--surface-2); padding:2px 8px; border-radius:12px; margin-left:4px;">Isi ${baseQty} pcs</span>
                         </div>
-                        <div style="font-size:9px; color:rgba(150, 150, 150, 0.4); margin-top:2px; text-shadow:0 1px 1px rgba(0,0,0,0.1);">
-                            ${SCANNER_IS_SUPERADMIN && modal > 0 ? `M: ${formatRupiah(modal)} | P: ${formatRupiah(marginAmt)} (${marginPct}%)` : ''}
-                        </div>
+                        ${SCANNER_IS_SUPERADMIN && modal > 0 ? `
+                            <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">
+                                Modal: <strong>${formatRupiah(modal)}</strong> &middot; Margin: <strong style="color:var(--success);">${formatRupiah(marginAmt)} (${marginPct}%)</strong>
+                            </div>
+                        ` : ''}
                     </div>
                     <div style="text-align:right;">
-                        <div style="color:var(--success); font-weight:700; font-size:var(--font-size-base);">${formatRupiah(ecer)} <span style="font-size:9px;font-weight:400;color:var(--text-muted);">Ecer</span></div>
-                        ${grosir > 0 ? `<div style="color:var(--warning); font-weight:600; font-size:var(--font-size-sm); margin-top:2px;">${formatRupiah(grosir)} <span style="font-size:9px;font-weight:400;color:var(--text-muted);">Grosir</span></div>` : ''}
+                        <div style="color:var(--success); font-weight:700; font-size:14px;">${formatRupiah(ecer)} <span style="font-size:10px;font-weight:600;color:var(--text-muted);">Ecer</span></div>
+                        ${grosir > 0 ? `<div style="color:var(--warning); font-weight:600; font-size:12px; margin-top:2px;">${formatRupiah(grosir)} <span style="font-size:10px;font-weight:400;color:var(--text-muted);">Grosir</span></div>` : ''}
                     </div>
                 </div>
                 ${tierHtml}
@@ -231,34 +366,34 @@ function renderProductScanResult(data, isOffline) {
     }).join('');
     
     resultDiv.innerHTML = `
-        <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; border:1px solid var(--border-color); box-shadow:0 4px 12px rgba(0,0,0,0.05);">
-            <div style="display:flex; gap:14px; margin-bottom:16px;">
+        <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:20px; border:1px solid var(--border-color); box-shadow:0 4px 16px rgba(0,0,0,0.06);">
+            <div style="display:flex; gap:16px; margin-bottom:18px; flex-wrap:wrap; align-items:flex-start;">
                 ${data.photo 
-                    ? `<div style="width:60px;height:60px;border-radius:var(--radius-md);overflow:hidden;display:flex;align-items:center;justify-content:center;background:transparent;flex-shrink:0;">
-                           <img src="${(typeof BASE_URL !== 'undefined' ? BASE_URL : '/')}${data.photo}" style="width:100%;height:100%;object-fit:contain;cursor:pointer;" onclick="viewFullPhoto(this.src)">
+                    ? `<div style="width:72px;height:72px;border-radius:var(--radius-md);overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--surface-2);border:1px solid var(--border-color);flex-shrink:0;">
+                           <img src="${baseUrl}${data.photo}" style="width:100%;height:100%;object-fit:contain;cursor:pointer;" onclick="viewFullPhoto(this.src)">
                        </div>`
-                    : `<div style="width:50px;height:50px;background:var(--primary-bg);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                           <i class="bi bi-upc-scan" style="font-size:1.5rem;color:var(--primary);"></i>
+                    : `<div style="width:72px;height:72px;background:linear-gradient(135deg, rgba(230,57,70,0.15), rgba(230,57,70,0.05));border:1px solid rgba(230,57,70,0.2);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--primary);">
+                           <i class="bi bi-upc-scan" style="font-size:1.8rem;"></i>
                        </div>`
                 }
-                <div style="flex:1; min-width:0;">
-                    <h3 style="font-size:var(--font-size-md); font-weight:700; margin-bottom:4px; line-height:1.2;">
-                        ${data.full_name} 
-                        ${isOffline ? `<span class="badge" style="background:var(--warning);color:black;font-size:9px;vertical-align:middle;margin-left:4px;">OFFLINE</span>` : ''}
+                <div style="flex:1; min-width:220px;">
+                    <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:6px; line-height:1.3; color:var(--text-primary);">
+                        ${prodName} 
+                        ${isOffline ? `<span class="badge bg-warning text-dark" style="font-size:9px;vertical-align:middle;margin-left:4px;">OFFLINE</span>` : ''}
                     </h3>
-                    <div style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:6px;">
-                        <i class="bi bi-tag-fill" style="color:var(--info);"></i>
-                        ${data.brand_name || 'Tanpa Brand'} · ${data.category_name || 'Tanpa Kategori'}
+                    <div style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <span class="scan-pill-badge brand"><i class="bi bi-award me-1"></i>${data.brand_name || 'Tanpa Brand'}</span>
+                        <span class="scan-pill-badge category"><i class="bi bi-tag me-1"></i>${data.category_name || 'Tanpa Kategori'}</span>
+                        ${data.short_label ? `<span class="scan-short-label">Label Struk: ${data.short_label}</span>` : ''}
                     </div>
-                    ${data.short_label ? `<div style="font-size:10px; color:var(--text-secondary); margin-top:4px; background:var(--surface-2); display:inline-block; padding:2px 8px; border-radius:10px;">Label: ${data.short_label}</div>` : ''}
                 </div>
             </div>
             
-            <div style="background:var(--bg-default); border-radius:var(--radius-md); padding:12px; border:1px solid var(--border-color);">
-                <div style="font-weight:700; font-size:11px; margin-bottom:8px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">
-                    <i class="bi bi-list-ul" style="margin-right:4px;"></i> Harga per Kemasan
+            <div style="background:var(--surface-2); border-radius:var(--radius-md); padding:16px; border:1px solid var(--border-color);">
+                <div style="font-weight:700; font-size:11px; margin-bottom:10px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
+                    <i class="bi bi-list-ul text-primary"></i> Daftar Harga per Kemasan
                 </div>
-                ${priceHtml || '<div style="color:var(--text-muted);font-size:var(--font-size-sm);text-align:center;padding:12px 0;">Belum ada harga</div>'}
+                ${priceHtml || '<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:12px 0;">Belum ada kemasan terdaftar</div>'}
             </div>
         </div>
     `;
@@ -271,7 +406,7 @@ function openGlobalScanner() {
             lookupBarcode();
         });
     } else {
-        showToast('Scanner module not loaded', 'error');
+        if (typeof showToast === 'function') showToast('Scanner module tidak tersedia', 'error');
     }
 }
 
@@ -283,7 +418,7 @@ document.getElementById('barcodeInput')?.addEventListener('input', (e) => {
     }, 300);
 });
 
-// Also support Enter key for immediate search
+// Support Enter key for immediate search
 document.getElementById('barcodeInput')?.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         clearTimeout(scannerTimer);
@@ -294,5 +429,3 @@ document.getElementById('barcodeInput')?.addEventListener('keypress', (e) => {
 // Auto-focus
 document.getElementById('barcodeInput')?.focus();
 </script>
-
-
