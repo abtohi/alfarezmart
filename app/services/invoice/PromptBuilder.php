@@ -163,7 +163,7 @@ class PromptBuilder
             $lines[] = "Gunakan daftar ini untuk mencocokkan nama/kode barang di invoice:";
             $count   = 0;
             foreach ($supplierProducts as $p) {
-                if ($count >= 80) { // Limit to avoid token overflow
+                if ($count >= 35) { // Limit to 35 items to keep payload small & fast
                     $lines[] = "... dan " . (count($supplierProducts) - $count) . " produk lainnya";
                     break;
                 }

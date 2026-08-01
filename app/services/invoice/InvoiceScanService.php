@@ -355,16 +355,13 @@ class InvoiceScanService
         // Prevent timeout issues
         set_time_limit(120);
 
-        // Free vision model fallback chain — verified ACTIVE as of 2026-08-01 via OpenRouter API
-        // All models below confirmed free (pricing=0) and support image input_modalities
+        // Free vision model fallback chain — ordered by response speed & reliability
         $FREE_VISION_FALLBACKS = [
-            'google/gemma-4-27b-it:free',               // Google Gemma 4 27B - most capable free vision
-            'google/gemma-4-26b-a4b-it:free',           // Google Gemma 4 26B MoE variant
+            'google/gemma-4-26b-a4b-it:free',           // Google Gemma 4 26B MoE - fast & responsive
             'google/gemma-4-31b-it:free',               // Google Gemma 4 31B
-            'nvidia/nemotron-nano-12b-v2-vl:free',      // NVIDIA Nemotron 12B Vision-Language
+            'nvidia/nemotron-nano-12b-v2-vl:free',      // NVIDIA Nemotron 12B Vision
             'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', // NVIDIA Omni 30B
         ];
-
 
         $modelsToTry = [$model];
         // Only add free fallbacks if primary model is not already one of them
@@ -414,9 +411,10 @@ class InvoiceScanService
                 'X-Title: AlfarezMart'
             ]);
 
-            // Free tier timeout (55s); auto/paid models get 110s
+            // Per-model timeout: 18s for free models, 28s for paid/auto models.
+            // Rapid failover ensures we try 2-3 models within 40 seconds before browser aborts!
             $isFreeModel = str_contains($tryModel, ':free') || str_contains($tryModel, 'openrouter/free');
-            $timeout = $isFreeModel ? 55 : 110;
+            $timeout = $isFreeModel ? 18 : 28;
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 

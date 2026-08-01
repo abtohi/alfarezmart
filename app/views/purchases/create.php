@@ -343,7 +343,7 @@ async function scanInvoiceWithAI() {
         
         // Use custom fetch with 65s timeout (backend free model timeout = 55s)
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 65000); // 65 sec
+        const timeout = setTimeout(() => controller.abort(), 90000); // 90 sec timeout
         
         let result;
         try {
@@ -372,7 +372,7 @@ async function scanInvoiceWithAI() {
         } catch(fetchErr) {
             clearTimeout(timeout);
             if (fetchErr.name === 'AbortError') {
-                throw new Error('Request timeout (65 detik). AI sedang sibuk, coba lagi dalam beberapa menit.');
+                throw new Error('Request timeout (90 detik). Jaringan lambat atau AI sibuk, silakan coba lagi.');
             }
             throw fetchErr;
         }
