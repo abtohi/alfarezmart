@@ -622,35 +622,45 @@ function renderProductScanResult(data, isOffline) {
 
         <!-- ═══ 2-COLUMN SPLIT (Desktop) ═══ -->
         <div class="row g-4 mb-4">
-            <!-- ── LEFT: PHOTO SHOWCASE (Sticky on Desktop) ── -->
+            <!-- ── LEFT COLUMN: PHOTO SHOWCASE & INFORMASI PRODUK ── -->
             <div class="col-lg-5 col-md-12">
-                <div class="scanner-detail-photo-col" style="position:sticky; top:80px;">
-                    <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.08);">
-                        <!-- Photo Stage -->
-                        <div style="width:100%; aspect-ratio:1/1; max-height:520px; background:linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%); display:flex; align-items:center; justify-content:center; padding:24px; cursor:pointer;" onclick="${data.photo ? `viewFullPhoto('${baseUrl}${data.photo}')` : ''}">
-                            ${data.photo
-                                ? `<img id="mainProductImg" src="${baseUrl}${data.photo}" style="width:100%; height:100%; object-fit:contain; transition:transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">`
-                                : `<div style="text-align:center;"><i class="bi bi-box-seam" style="font-size:6rem; color:var(--primary); opacity:0.4;"></i><div style="font-size:12px; color:var(--text-muted); margin-top:8px;">Belum ada foto produk</div></div>`
-                            }
-                        </div>
-                        <!-- Download & Expand Buttons -->
-                        <div style="padding:12px 16px; border-top:1px solid var(--border-color); display:flex; gap:8px;">
-                            ${data.photo ? `
-                                <a href="${baseUrl}${data.photo}" download="${prodName.replace(/[^a-zA-Z0-9]/g, '_')}.jpg" target="_blank" class="btn btn-outline-primary flex-fill" style="font-size:12px; font-weight:700; border-radius:8px; padding:8px 12px;">
-                                    <i class="bi bi-download me-1"></i> Download Foto
-                                </a>
-                                <button type="button" onclick="viewFullPhoto('${baseUrl}${data.photo}')" class="btn btn-primary" style="font-size:12px; font-weight:700; border-radius:8px; padding:8px 14px;" title="Perbesar Foto">
-                                    <i class="bi bi-arrows-fullscreen"></i>
-                                </button>
-                            ` : `<div class="text-muted w-100 text-center py-1" style="font-size:11px;">Foto belum tersedia</div>`}
-                        </div>
+                <!-- Photo Showcase -->
+                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.08); margin-bottom:16px;">
+                    <!-- Photo Stage -->
+                    <div style="width:100%; aspect-ratio:1/1; max-height:480px; background:linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%); display:flex; align-items:center; justify-content:center; padding:24px; cursor:pointer;" onclick="${data.photo ? `viewFullPhoto('${baseUrl}${data.photo}')` : ''}">
+                        ${data.photo
+                            ? `<img id="mainProductImg" src="${baseUrl}${data.photo}" style="width:100%; height:100%; object-fit:contain; transition:transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">`
+                            : `<div style="text-align:center;"><i class="bi bi-box-seam" style="font-size:6rem; color:var(--primary); opacity:0.4;"></i><div style="font-size:12px; color:var(--text-muted); margin-top:8px;">Belum ada foto produk</div></div>`
+                        }
+                    </div>
+                    <!-- Download & Expand Buttons -->
+                    <div style="padding:12px 16px; border-top:1px solid var(--border-color); display:flex; gap:8px;">
+                        ${data.photo ? `
+                            <a href="${baseUrl}${data.photo}" download="${prodName.replace(/[^a-zA-Z0-9]/g, '_')}.jpg" target="_blank" class="btn btn-outline-primary flex-fill" style="font-size:12px; font-weight:700; border-radius:8px; padding:8px 12px;">
+                                <i class="bi bi-download me-1"></i> Download Foto
+                            </a>
+                            <button type="button" onclick="viewFullPhoto('${baseUrl}${data.photo}')" class="btn btn-primary" style="font-size:12px; font-weight:700; border-radius:8px; padding:8px 14px;" title="Perbesar Foto">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                            </button>
+                        ` : `<div class="text-muted w-100 text-center py-1" style="font-size:11px;">Foto belum tersedia</div>`}
+                    </div>
+                </div>
+
+                <!-- Product Info Metadata (Below Image) -->
+                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:20px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+                    <div style="font-weight:800; font-size:13px; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+                        <div style="width:26px; height:26px; border-radius:6px; background:linear-gradient(135deg, var(--primary), #6366f1); display:flex; align-items:center; justify-content:center;"><i class="bi bi-info-circle text-white" style="font-size:13px;"></i></div>
+                        Informasi Produk
+                    </div>
+                    <div style="background:var(--surface-2); border-radius:10px; padding:12px 14px; border:1px solid var(--border-color);">
+                        ${productMetaHtml}
                     </div>
                 </div>
             </div>
 
-            <!-- ── RIGHT: PRODUCT INFO & PRICING ── -->
+            <!-- ── RIGHT COLUMN: HEADER, LAST PURCHASE & KEMASAN & HARGA ── -->
             <div class="col-lg-7 col-md-12">
-                <!-- Product Title & Meta -->
+                <!-- Product Title & Stock Badges -->
                 <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,0.06); margin-bottom:16px;">
                     <h2 style="font-size:1.5rem; font-weight:800; color:var(--text-primary); margin-bottom:10px; line-height:1.3; letter-spacing:-0.3px;">
                         ${prodName}
@@ -658,14 +668,14 @@ function renderProductScanResult(data, isOffline) {
                     </h2>
 
                     <!-- Badges -->
-                    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:16px;">
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px;">
                         <span class="scan-pill-badge brand" style="font-size:11px; padding:4px 12px;"><i class="bi bi-award me-1"></i>${data.brand_name || 'Tanpa Brand'}</span>
                         <span class="scan-pill-badge category" style="font-size:11px; padding:4px 12px;"><i class="bi bi-tag me-1"></i>${data.category_name || 'Tanpa Kategori'}</span>
                         ${data.short_label ? `<span class="scan-short-label" style="font-size:11px; padding:4px 12px;"><i class="bi bi-receipt me-1"></i>${data.short_label}</span>` : ''}
                     </div>
 
                     <!-- Stock Badge -->
-                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px;">
                         <div style="background:linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.03)); border:1px solid rgba(59,130,246,0.2); border-radius:10px; padding:10px 16px; display:flex; align-items:center; gap:8px;">
                             <i class="bi bi-box-seam text-primary" style="font-size:1.2rem;"></i>
                             <div>
@@ -675,26 +685,18 @@ function renderProductScanResult(data, isOffline) {
                         </div>
                     </div>
 
-                    <!-- Last Purchase Insight -->
+                    <!-- Last Purchase Insight (Pembelian Terakhir) -->
                     ${lastPurchaseInfoHtml}
-
-                    <!-- Product Info Metadata -->
-                    <div style="background:var(--surface-2); border-radius:10px; padding:14px 16px; border:1px solid var(--border-color);">
-                        <div style="font-weight:700; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-                            <i class="bi bi-info-circle text-primary"></i> Informasi Produk
-                        </div>
-                        ${productMetaHtml}
-                    </div>
                 </div>
 
-                <!-- Packaging Pricing Cards -->
+                <!-- Kemasan & Harga Cards (Directly on the Right) -->
                 <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
                         <div style="font-weight:800; font-size:14px; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
                             <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg, var(--primary), #6366f1); display:flex; align-items:center; justify-content:center;"><i class="bi bi-layers-half text-white" style="font-size:14px;"></i></div>
                             Kemasan &amp; Harga
                         </div>
-                        <span style="font-size:11px; color:var(--text-muted);">${packagings.length} Level Kemasan</span>
+                        <span style="font-size:11px; color:var(--text-muted); font-weight:600;">${packagings.length} Level Kemasan</span>
                     </div>
                     ${packagingCardsHtml || '<div style="color:var(--text-muted); font-size:12px; text-align:center; padding:20px 0;"><i class="bi bi-inbox fs-3 d-block mb-2 opacity-50"></i>Belum ada kemasan terdaftar</div>'}
                 </div>
