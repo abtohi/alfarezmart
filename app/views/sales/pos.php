@@ -443,7 +443,7 @@ async function preloadPosCatalog() {
         }
     } catch(e) {}
 
-    // 2. Load from Dexie IndexedDB if catalog is still empty
+    // 2. Load from Dexie IndexedDB if localStorage is still empty
     if (window._posProductsCatalog.length === 0 && typeof db !== 'undefined' && db.products) {
         try {
             const dbItems = await db.products.filter(p => p.is_available != 0 && p.is_available !== '0' && p.is_available !== false).toArray();
@@ -453,23 +453,34 @@ async function preloadPosCatalog() {
         } catch(e) {}
     }
 
-    // 3. Background sync from server (non-blocking 3s timeout)
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        const res = await fetch(`${BASE_URL}api/products/sync?pos=1&_t=` + Date.now(), { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (res.ok) {
-            const data = await res.json();
-            if (data && data.products && Array.isArray(data.products)) {
-                window._posProductsCatalog = data.products;
-                try { localStorage.setItem('pos_catalog_cache', JSON.stringify(data.products)); } catch(e){}
-                if (typeof db !== 'undefined' && db.products) {
-                    db.products.clear().then(() => db.products.bulkPut(data.products)).catch(() => {});
+    // 3. Always fetch fresh catalog from server (non-blocking, 5s timeout)
+    // This ensures new products are ALWAYS available, even if not yet synced locally.
+    if (navigator.onLine) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const res = await fetch(`${BASE_URL}api/products/sync?pos=1&_t=` + Date.now(), { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.products && Array.isArray(data.products)) {
+                    // Update in-memory catalog immediately
+                    window._posProductsCatalog = data.products;
+                    // Update Dexie IndexedDB in background (non-blocking)
+                    if (typeof db !== 'undefined' && db.products) {
+                        db.products.clear().then(() => db.products.bulkPut(data.products)).catch(() => {});
+                    }
+                    // Update localStorage cache (cap at 1.5MB to avoid quota errors)
+                    try {
+                        const serialized = JSON.stringify(data.products);
+                        if (serialized.length < 1500000) {
+                            localStorage.setItem('pos_catalog_cache', serialized);
+                        }
+                    } catch(e) {}
                 }
             }
-        }
-    } catch(e) {}
+        } catch(e) {}
+    }
 }
 
 let _posSearchDebounceTimer = null;

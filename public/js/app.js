@@ -223,29 +223,55 @@ function initSearch() {
                     </div>
                 `).join('');
             } else {
-                // Default Product Search (Instant Search via Dexie.js)
+                // Default Product Search
+                // Strategy: When online → always use server (accurate, includes new products).
+                //           When offline → use IndexedDB only.
+                //           IndexedDB is shown ONLY as instant preview while server fetches.
                 try {
-                    let data = [];
-                    if (typeof OfflineDB !== 'undefined') {
-                        data = await OfflineDB.searchProducts(q);
-                    }
-                    
-                    // Fallback to API if Dexie has no data and online
-                    if ((!data || data.length === 0) && navigator.onLine) {
-                        data = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
-                    }
+                    const currentQ = q;
 
-                    if (input.value.trim().length < 2) { results.innerHTML = ''; return; }
-                    renderProductSearch(data, results);
+                    if (navigator.onLine) {
+                        // Show instant offline preview immediately (no wait)
+                        if (typeof OfflineDB !== 'undefined') {
+                            const offlineData = await OfflineDB.searchProducts(currentQ);
+                            if (input.value.trim() !== currentQ) return; // stale
+                            if (offlineData && offlineData.length > 0) {
+                                renderProductSearch(offlineData, results, true); // true = "preview" badge
+                            }
+                        }
+                        // Then fetch accurate server results (handles new products not yet in local cache)
+                        const serverData = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(currentQ)}`);
+                        if (input.value.trim() !== currentQ) return; // stale
+                        if (input.value.trim().length < 2) { results.innerHTML = ''; return; }
+                        renderProductSearch(serverData, results);
+                    } else {
+                        // Full offline mode — use IndexedDB only
+                        let data = [];
+                        if (typeof OfflineDB !== 'undefined') {
+                            data = await OfflineDB.searchProducts(currentQ);
+                        }
+                        if (input.value.trim() !== currentQ) return;
+                        if (input.value.trim().length < 2) { results.innerHTML = ''; return; }
+                        renderProductSearch(data, results);
+                    }
                 } catch (e) {
-                    results.innerHTML = '<div class="empty-state" style="padding:24px"><p>Gagal mencari produk</p></div>';
+                    // Server failed → show offline results as fallback
+                    try {
+                        if (typeof OfflineDB !== 'undefined') {
+                            const fallback = await OfflineDB.searchProducts(q);
+                            if (input.value.trim().length >= 2) renderProductSearch(fallback, results);
+                        }
+                    } catch (e2) {
+                        results.innerHTML = '<div class="empty-state" style="padding:24px"><p>Gagal mencari produk</p></div>';
+                    }
                 }
             }
         } catch (e) {
             results.innerHTML = '<div class="empty-state" style="padding:24px"><p>Gagal mencari</p></div>';
         }
-    }, 150)); // Kurangi debounce time ke 150ms karena query lokal sangat cepat
+    }, 200)); // 200ms debounce — gives offline preview time to show before server call
 }
+
 
 function renderProductSearch(data, results) {
     if (!data || data.length === 0) {
