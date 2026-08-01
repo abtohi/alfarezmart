@@ -395,8 +395,6 @@ class InvoiceScanService
         foreach ($modelsToTry as $attempt => $tryModel) {
             $combinedText = "System Context: " . $systemPrompt . "\n\nUser Task: " . $userPrompt;
 
-            $isFreeModel = str_contains($tryModel, ':free') || str_contains($tryModel, 'openrouter/free');
-            
             $payload = [
                 'model'   => $tryModel,
                 'messages' => [
@@ -406,7 +404,7 @@ class InvoiceScanService
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => $isFreeModel ? 500 : 550, // Reduced from 2500 to 550 so low/zero-balance API keys pass credit checks!
+                'max_tokens'  => 300, // Set to 300 tokens to pass OpenRouter free credit pre-checks (< 365 limit)!
             ];
 
             if (in_array($tryModel, ['openai/gpt-4o', 'openai/gpt-4o-mini', 'google/gemini-2.0-flash-001', 'google/gemini-2.5-flash'])) {
@@ -425,7 +423,6 @@ class InvoiceScanService
             ]);
 
             // Rapid failover timeout: 6s per model attempt for free models, 14s for paid models
-            // Short timeouts ensure 4 model attempts finish in < 24 seconds total!
             $isFreeModel = str_contains($tryModel, ':free') || str_contains($tryModel, 'openrouter/free');
             $timeout = $isFreeModel ? 6 : 14;
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
@@ -434,6 +431,17 @@ class InvoiceScanService
             $response = curl_exec($ch);
             $err      = curl_error($ch);
             $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+            // Handle HTTP 402 (credit estimation error) with instant 250 token retry
+            if ($httpCode === 402) {
+                error_log("[AlfarezMart] Model {$tryModel} 402 credit limit, retrying with max_tokens=250");
+                $payload['max_tokens'] = 250;
+                unset($payload['response_format']);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+                $response = curl_exec($ch);
+                $err      = curl_error($ch);
+                $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            }
 
             if ($err) {
                 $lastError = "Koneksi ke AI ({$tryModel}) lambat: " . $err;
