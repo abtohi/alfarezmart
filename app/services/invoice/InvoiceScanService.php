@@ -395,6 +395,8 @@ class InvoiceScanService
         foreach ($modelsToTry as $attempt => $tryModel) {
             $combinedText = "System Context: " . $systemPrompt . "\n\nUser Task: " . $userPrompt;
 
+            $isFreeModel = str_contains($tryModel, ':free') || str_contains($tryModel, 'openrouter/free');
+            
             $payload = [
                 'model'   => $tryModel,
                 'messages' => [
@@ -404,7 +406,7 @@ class InvoiceScanService
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => 2500,
+                'max_tokens'  => $isFreeModel ? 500 : 550, // Reduced from 2500 to 550 so low/zero-balance API keys pass credit checks!
             ];
 
             if (in_array($tryModel, ['openai/gpt-4o', 'openai/gpt-4o-mini', 'google/gemini-2.0-flash-001', 'google/gemini-2.5-flash'])) {
