@@ -586,10 +586,10 @@ function renderProductScanResult(data, isOffline) {
             <div class="col-lg-5 col-md-12">
                 <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:20px; text-align:center; height:100%; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
                     <div>
-                        <div style="position:relative; width:100%; height:320px; background:var(--surface-2); border-radius:var(--radius-md); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:16px;">
+                        <div style="position:relative; width:100%; min-height:450px; background:var(--surface-2); border-radius:var(--radius-md); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:16px;">
                             ${data.photo 
-                                ? `<img id="mainProductImg" src="${baseUrl}${data.photo}" style="max-height:290px; width:auto; max-width:100%; object-fit:contain; cursor:pointer;" onclick="viewFullPhoto(this.src)">`
-                                : `<div style="font-size:5rem; color:var(--primary); opacity:0.65;"><i class="bi bi-box-seam"></i></div>`
+                                ? `<img id="mainProductImg" src="${baseUrl}${data.photo}" style="max-height:430px; width:auto; max-width:100%; object-fit:contain; cursor:pointer;" onclick="viewFullPhoto(this.src)">`
+                                : `<div style="font-size:6rem; color:var(--primary); opacity:0.65;"><i class="bi bi-box-seam"></i></div>`
                             }
                         </div>
                     </div>

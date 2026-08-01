@@ -199,4 +199,6 @@ function calcMarkup(buy, sell) {
 }
 
 // Alias for backward compatibility (in case it's used elsewhere)
-const calcMargin = calcMarkup;
+function calcMargin(buy, sell) {
+    return calcMarkup(buy, sell);
+}

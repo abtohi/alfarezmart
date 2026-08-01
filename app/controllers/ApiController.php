@@ -615,14 +615,29 @@ class ApiController extends Controller
                        sp.last_purchase_date,
                        COALESCE(sp.purchase_count, 0) as purchase_count
                 FROM suppliers s
-                LEFT JOIN supplier_products sp ON sp.supplier_id = s.id AND sp.product_id = :pid
-                WHERE sp.product_id = :pid OR EXISTS (
-                    SELECT 1 FROM purchases pu JOIN purchase_items pi ON pi.purchase_id = pu.id WHERE pu.supplier_id = s.id AND pi.product_id = :pid
-                )
-                ORDER BY sp.last_purchase_date DESC, s.name ASC
+                JOIN supplier_products sp ON sp.supplier_id = s.id
+                WHERE sp.product_id = :pid1
+
+                UNION
+
+                SELECT DISTINCT s.id as supplier_id, s.name as supplier_name, s.phone, s.address, s.contact_person,
+                       0 as last_buy_price,
+                       MAX(pu.purchase_date) as last_purchase_date,
+                       COUNT(pu.id) as purchase_count
+                FROM suppliers s
+                JOIN purchases pu ON pu.supplier_id = s.id
+                JOIN purchase_items pi ON pi.purchase_id = pu.id
+                WHERE pi.product_id = :pid2
+                GROUP BY s.id, s.name, s.phone, s.address, s.contact_person
             ");
-            $stmtSup->execute([':pid' => $productId]);
+            $stmtSup->execute([':pid1' => $productId, ':pid2' => $productId]);
             $supplierRows = $stmtSup->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            // Fallback: If no purchase history or supplier_product record yet, show suppliers from master list
+            if (empty($supplierRows)) {
+                $stmtAllSup = $this->db->query("SELECT id as supplier_id, name as supplier_name, phone, address, contact_person, 0 as last_buy_price, NULL as last_purchase_date, 0 as purchase_count FROM suppliers ORDER BY name ASC LIMIT 10");
+                $supplierRows = $stmtAllSup ? ($stmtAllSup->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+            }
 
             foreach ($supplierRows as $sup) {
                 $sid = (int)$sup['supplier_id'];
