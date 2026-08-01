@@ -845,6 +845,72 @@ async function pollOnlineStatus() {
 document.addEventListener('DOMContentLoaded', () => {
     pollOnlineStatus();
     setInterval(pollOnlineStatus, 30000); // Check every 30 seconds
+
+    // Check URL query param or hash for active tab
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('tab') === 'access' || window.location.hash === '#access') {
+        switchUserTab('access');
+    }
 });
 
+function switchUserTab(tabName) {
+    const usersTab = document.getElementById('usersTabContent');
+    const accessTab = document.getElementById('accessTabContent');
+    const btnUsers = document.getElementById('tabUsersBtn');
+    const btnAccess = document.getElementById('tabAccessBtn');
+
+    if (!usersTab || !accessTab) return;
+
+    if (tabName === 'access') {
+        usersTab.style.display = 'none';
+        accessTab.style.display = 'block';
+        if (btnUsers) {
+            btnUsers.style.background = 'var(--surface-2)';
+            btnUsers.style.color = 'var(--text-muted)';
+            btnUsers.style.border = '1px solid var(--border-color)';
+        }
+        if (btnAccess) {
+            btnAccess.style.background = 'var(--primary)';
+            btnAccess.style.color = '#fff';
+            btnAccess.style.border = 'none';
+        }
+    } else {
+        accessTab.style.display = 'none';
+        usersTab.style.display = 'block';
+        if (btnAccess) {
+            btnAccess.style.background = 'var(--surface-2)';
+            btnAccess.style.color = 'var(--text-muted)';
+            btnAccess.style.border = '1px solid var(--border-color)';
+        }
+        if (btnUsers) {
+            btnUsers.style.background = 'var(--primary)';
+            btnUsers.style.color = '#fff';
+            btnUsers.style.border = 'none';
+        }
+    }
+}
+
+async function saveAccessControlSettings() {
+    const csrf = document.getElementById('csrfToken').value;
+    const adminPerms = [];
+    document.querySelectorAll('.perm-admin-check:checked').forEach(cb => adminPerms.push(cb.value));
+    const staffPerms = [];
+    document.querySelectorAll('.perm-staff-check:checked').forEach(cb => staffPerms.push(cb.value));
+
+    try {
+        const res = await api(`${BASE_URL}api/users/access-control/save`, 'POST', {
+            csrf_token: csrf,
+            admin_permissions: adminPerms,
+            staff_permissions: staffPerms
+        });
+        if (res.success) {
+            alert(res.message || 'Pengaturan Kontrol Akses Layanan berhasil disimpan');
+            location.reload();
+        } else {
+            alert(res.error || res.message || 'Gagal menyimpan kontrol akses');
+        }
+    } catch (e) {
+        alert('Terjadi kesalahan koneksi saat menyimpan kontrol akses');
+    }
+}
 </script>
