@@ -304,6 +304,8 @@ async function lookupBarcode() {
     const resultDiv = document.getElementById('scanResult');
     resultDiv.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><div style="font-size:12px;color:var(--text-muted);margin-top:10px;">Mencari produk...</div></div>';
     
+    const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
+
     // 1. Instant local IndexedDB pre-lookup (< 15ms)
     let offlineFound = null;
     if (typeof OfflineDB !== 'undefined') {
@@ -320,56 +322,58 @@ async function lookupBarcode() {
         } catch (e) {}
     }
 
-    // 2. Try fast server API fetch with 600ms timeout for weak signal resilience
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 600);
-
+    // 2. Try online barcode lookup via API
     try {
-        const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/barcode/${encodeURIComponent(code)}`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (!res.ok) throw new Error('Not found');
-        const data = await res.json();
-        if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-        showProductResult(data);
-        return;
-    } catch (e) {
-        clearTimeout(timeoutId);
+        let data = null;
+        if (typeof api === 'function') {
+            data = await api(`${baseUrl}api/products/barcode/${encodeURIComponent(code)}`);
+        } else {
+            const res = await fetch(`${baseUrl}api/products/barcode/${encodeURIComponent(code)}`, { credentials: 'same-origin' });
+            if (res.ok) data = await res.json();
+        }
 
-        // Weak signal / Offline fallback: render local IndexedDB result immediately
-        if (offlineFound) {
+        if (data && data.id) {
             if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-            if (offlineFound.type === 'single') {
-                showProductResultOffline(offlineFound.data);
-            } else if (offlineFound.data.length === 1) {
-                showProductResultOffline(offlineFound.data[0]);
-            } else {
-                renderMultipleSearchResults(offlineFound.data, true);
-            }
+            showProductResult(data);
             return;
         }
+    } catch (e) {}
 
-        // Try search by name online with 3000ms timeout
-        const searchController = new AbortController();
-        const searchTimeout = setTimeout(() => searchController.abort(), 3000);
-
-        try {
-            const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/search?q=${encodeURIComponent(code)}`, { signal: searchController.signal });
-            clearTimeout(searchTimeout);
-            if (!res.ok) throw new Error('Search failed');
-            const searchData = await res.json();
-            if (searchData.length === 1) {
-                if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                fetchProductDetail(searchData[0].id);
-            } else if (searchData.length > 0) {
-                renderMultipleSearchResults(searchData, false);
-            } else {
-                resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-search fs-1 text-muted"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Produk Tidak Ditemukan</h4><p style="font-size:12px;color:var(--text-muted);">Produk dengan kata kunci "'+code+'" tidak ditemukan.</p></div>';
-            }
-        } catch (searchErr) {
-            clearTimeout(searchTimeout);
-            resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-search fs-1 text-muted"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Produk Tidak Ditemukan</h4><p style="font-size:12px;color:var(--text-muted);">Tidak ada hasil untuk "'+code+'".</p></div>';
+    // 3. Fallback: try online name search via API
+    try {
+        let searchData = null;
+        if (typeof api === 'function') {
+            searchData = await api(`${baseUrl}api/products/search?q=${encodeURIComponent(code)}`);
+        } else {
+            const res = await fetch(`${baseUrl}api/products/search?q=${encodeURIComponent(code)}`, { credentials: 'same-origin' });
+            if (res.ok) searchData = await res.json();
         }
+
+        if (Array.isArray(searchData) && searchData.length === 1) {
+            if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+            fetchProductDetail(searchData[0].id);
+            return;
+        } else if (Array.isArray(searchData) && searchData.length > 0) {
+            renderMultipleSearchResults(searchData, false);
+            return;
+        }
+    } catch (searchErr) {}
+
+    // 4. Final offline fallback if server calls failed or returned nothing
+    if (offlineFound) {
+        if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+        if (offlineFound.type === 'single') {
+            showProductResultOffline(offlineFound.data);
+        } else if (offlineFound.data.length === 1) {
+            showProductResultOffline(offlineFound.data[0]);
+        } else {
+            renderMultipleSearchResults(offlineFound.data, true);
+        }
+        return;
     }
+
+    // 5. Not found state
+    resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-search fs-1 text-muted"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Produk Tidak Ditemukan</h4><p style="font-size:12px;color:var(--text-muted);">Tidak ada hasil untuk "'+code+'".</p></div>';
 }
 
 function selectSearchResultItem(idx) {
@@ -378,7 +382,7 @@ function selectSearchResultItem(idx) {
     if (lastSearchResultsData.isOffline) {
         showProductResultOffline(p);
     } else {
-        // Render immediately from in-memory product data (0ms instant display!)
+        // Render immediately from in-memory product data (0ms instant display)
         showProductResult(p);
         // Enrich with detailed supplier/purchase history from server asynchronously
         fetchProductDetail(p.id, p);
@@ -489,15 +493,21 @@ async function fetchProductDetail(id, fallbackObj = null) {
         }
     }
     
+    const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/${id}`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (!res.ok) throw new Error('Not found');
-        const data = await res.json();
-        showProductResult(data);
+        let data = null;
+        if (typeof api === 'function') {
+            data = await api(`${baseUrl}api/products/${id}`);
+        } else {
+            const res = await fetch(`${baseUrl}api/products/${id}`, { credentials: 'same-origin' });
+            if (res.ok) data = await res.json();
+        }
+
+        if (data && data.id) {
+            showProductResult(data);
+        }
     } catch (e) {
+        console.error("fetchProductDetail error:", e);
         if (!fallbackObj) {
             const spinner = resultDiv.querySelector('.spinner-border');
             if (spinner) {
