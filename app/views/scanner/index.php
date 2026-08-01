@@ -304,40 +304,57 @@ async function lookupBarcode() {
     const resultDiv = document.getElementById('scanResult');
     resultDiv.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><div style="font-size:12px;color:var(--text-muted);margin-top:10px;">Mencari produk...</div></div>';
     
+    // 1. Instant local IndexedDB pre-lookup (< 15ms)
+    let offlineFound = null;
+    if (typeof OfflineDB !== 'undefined') {
+        try {
+            const p = await OfflineDB.findByBarcode(code);
+            if (p) {
+                offlineFound = { type: 'single', data: p };
+            } else {
+                const searchData = await OfflineDB.searchProducts(code);
+                if (searchData && searchData.length > 0) {
+                    offlineFound = { type: 'multi', data: searchData };
+                }
+            }
+        } catch (e) {}
+    }
+
+    // 2. Try fast server API fetch with 600ms timeout for weak signal resilience
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 600);
+
     try {
-        const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/barcode/${encodeURIComponent(code)}`);
+        const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/barcode/${encodeURIComponent(code)}`, { signal: controller.signal });
+        clearTimeout(timeoutId);
         if (!res.ok) throw new Error('Not found');
         const data = await res.json();
         if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
         showProductResult(data);
+        return;
     } catch (e) {
-        if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
-            try {
-                const p = await OfflineDB.findByBarcode(code);
-                if (p) {
-                    if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                    showProductResultOffline(p);
-                    return;
-                }
-                const searchData = await OfflineDB.searchProducts(code);
-                if (searchData && searchData.length > 0) {
-                    if (searchData.length === 1) {
-                        showProductResultOffline(searchData[0]);
-                    } else {
-                        renderMultipleSearchResults(searchData, true);
-                    }
-                } else {
-                    resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-search fs-1 text-muted"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Produk Tidak Ditemukan</h4><p style="font-size:12px;color:var(--text-muted);">Produk dengan barcode/nama tersebut tidak ada di database offline.</p></div>';
-                }
-            } catch (offErr) {
-                resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-exclamation-triangle fs-1 text-danger"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Error Database</h4><p style="font-size:12px;color:var(--text-muted);">Gagal mencari produk di database lokal.</p></div>';
+        clearTimeout(timeoutId);
+
+        // Weak signal / Offline fallback: render local IndexedDB result immediately
+        if (offlineFound) {
+            if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+            if (offlineFound.type === 'single') {
+                showProductResultOffline(offlineFound.data);
+            } else if (offlineFound.data.length === 1) {
+                showProductResultOffline(offlineFound.data[0]);
+            } else {
+                renderMultipleSearchResults(offlineFound.data, true);
             }
             return;
         }
 
-        // Try search by name online
+        // Try search by name online with 800ms fast timeout
+        const searchController = new AbortController();
+        const searchTimeout = setTimeout(() => searchController.abort(), 800);
+
         try {
-            const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/search?q=${encodeURIComponent(code)}`);
+            const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/search?q=${encodeURIComponent(code)}`, { signal: searchController.signal });
+            clearTimeout(searchTimeout);
             if (!res.ok) throw new Error('Search failed');
             const searchData = await res.json();
             if (searchData.length === 1) {
@@ -348,8 +365,9 @@ async function lookupBarcode() {
             } else {
                 resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-search fs-1 text-muted"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Produk Tidak Ditemukan</h4><p style="font-size:12px;color:var(--text-muted);">Produk dengan kata kunci "'+code+'" tidak ditemukan.</p></div>';
             }
-        } catch (e2) {
-            resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-exclamation-triangle fs-1 text-danger"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Gagal Memuat Produk</h4><p style="font-size:12px;color:var(--text-muted);">Terjadi kesalahan saat mengambil data dari server.</p></div>';
+        } catch (searchErr) {
+            clearTimeout(searchTimeout);
+            resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-search fs-1 text-muted"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Produk Tidak Ditemukan</h4><p style="font-size:12px;color:var(--text-muted);">Tidak ada hasil untuk "'+code+'".</p></div>';
         }
     }
 }

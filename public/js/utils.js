@@ -142,9 +142,11 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
         config.headers['X-CSRF-Token'] = csrfToken;
     }
 
-    // Add 6s AbortController timeout for weak network signal resilience
+    // Add AbortController timeout (800ms for GET search, 5000ms for mutations) for weak network signal resilience
+    const isGetMethod = method === 'GET';
+    const timeoutMs = config.timeout || (isGetMethod ? 800 : 5000);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     if (!config.signal) config.signal = controller.signal;
 
     try {

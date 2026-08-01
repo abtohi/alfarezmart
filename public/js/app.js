@@ -141,10 +141,10 @@ async function triggerSync() {
                 // syncPendingChanges will also sync products when done
                 await syncPendingChanges(); 
             } else {
-                showToast('Sedang sinkronisasi data master...', 'info');
+                showToast('Mengunduh data master & foto produk...', 'info', 4000);
                 if (typeof OfflineDB.syncAllDataFromServer === 'function') {
                     await OfflineDB.syncAllDataFromServer();
-                    showToast(`Berhasil sinkronisasi data master ke perangkat`, 'success');
+                    showToast('✅ Data & foto produk berhasil diunduh — siap offline!', 'success', 4000);
                 } else {
                     const count = await OfflineDB.syncProductsFromServer();
                     showToast(`Berhasil sinkronisasi ${count} produk ke perangkat`, 'success');

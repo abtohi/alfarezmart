@@ -1,14 +1,15 @@
 /**
  * AlfarezMart PWA - Service Worker
- * Cache Strategy: Cache First for assets, Network First for API
+ * Cache Strategy: Cache First for assets & images, Network First with 600ms Fast Timeout for API & Navigation
  */
-const CACHE_NAME = 'alfarezmart-cache-v15.60';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v15.60';
+const CACHE_NAME = 'alfarezmart-cache-v16.0';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v16.0';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
     BASE_URL + 'sales',
     BASE_URL + 'sales/pos',
+    BASE_URL + 'scanner',
     BASE_URL + 'products',
     BASE_URL + 'products/create',
     BASE_URL + 'suppliers',
@@ -42,7 +43,6 @@ const STATIC_ASSETS = [
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
-            // Cache each asset individually so one failure doesn't stop the rest
             return Promise.all(
                 STATIC_ASSETS.map(url => {
                     return fetch(url, { cache: 'no-cache', credentials: 'same-origin' })
@@ -82,31 +82,58 @@ self.addEventListener('fetch', event => {
         return;
     }
 
+    // ── 1. API Requests: Network First with 600ms Fast Timeout for Weak Signal ──
     if (url.pathname.includes('/api/')) {
         event.respondWith(
-            fetch(event.request, { cache: 'no-cache' }).then(response => {
-                // Only cache successful responses (2xx) — never cache auth errors (401/403)
-                if (response.ok) {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-                }
-                return response;
-            }).catch(() => {
-                return caches.match(event.request).then(cached => {
-                    if (cached) return cached;
-                    // Return a proper JSON offline response — never null
-                    return new Response(
-                        JSON.stringify({ offline: true, error: 'Offline', data: [] }),
-                        { status: 503, headers: { 'Content-Type': 'application/json' } }
-                    );
-                });
+            new Promise((resolve) => {
+                let isResolved = false;
+
+                // 600ms Fast Timeout for weak signal fallback to cache
+                const timeoutId = setTimeout(() => {
+                    if (!isResolved) {
+                        caches.match(event.request, { ignoreSearch: true }).then(cached => {
+                            if (cached && !isResolved) {
+                                isResolved = true;
+                                resolve(cached);
+                            }
+                        });
+                    }
+                }, 600);
+
+                fetch(event.request, { cache: 'no-cache' })
+                    .then(response => {
+                        clearTimeout(timeoutId);
+                        if (response.ok) {
+                            const clone = response.clone();
+                            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                        }
+                        if (!isResolved) {
+                            isResolved = true;
+                            resolve(response);
+                        }
+                    })
+                    .catch(() => {
+                        clearTimeout(timeoutId);
+                        if (!isResolved) {
+                            caches.match(event.request, { ignoreSearch: true }).then(cached => {
+                                isResolved = true;
+                                if (cached) {
+                                    resolve(cached);
+                                } else {
+                                    resolve(new Response(
+                                        JSON.stringify({ offline: true, error: 'Offline', data: [] }),
+                                        { status: 503, headers: { 'Content-Type': 'application/json' } }
+                                    ));
+                                }
+                            });
+                        }
+                    });
             })
         );
         return;
     }
 
-    // PENTING: Halaman auth (login/logout) TIDAK BOLEH di-cache karena mengandung CSRF token
-    // Selalu ambil dari network agar token selalu fresh dan tidak expired
+    // ── 2. Auth Pages: Always bypass cache for CSRF freshness ──
     const authPaths = ['/login', '/logout', '/register'];
     const isAuthPage = authPaths.some(p => url.pathname === BASE_URL.replace(/\/$/, '') + p || url.pathname.endsWith(p));
     if (isAuthPage) {
@@ -114,7 +141,34 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    if (event.request.destination === 'style' || event.request.destination === 'script' || event.request.destination === 'image' || event.request.destination === 'font') {
+    // ── 3. Images: Cache First with Dynamic Fallback for 100% Crisp Offline Rendering ──
+    const isImage = event.request.destination === 'image' || 
+                    url.pathname.includes('/uploads/') || 
+                    url.pathname.match(/\.(jpg|jpeg|png|webp|gif|svg|ico)($|\?)/i);
+
+    if (isImage) {
+        event.respondWith(
+            caches.match(event.request, { ignoreSearch: true }).then(cached => {
+                if (cached) return cached;
+
+                return fetch(event.request, { cache: 'no-cache' }).then(response => {
+                    if (!response || (response.status !== 200 && response.type !== 'opaque') || !event.request.url.startsWith('http')) {
+                        return response;
+                    }
+                    const clone = response.clone();
+                    caches.open(DYNAMIC_CACHE).then(cache => cache.put(event.request, clone).catch(() => {}));
+                    return response;
+                }).catch(() => {
+                    // Fallback to placeholder if offline and image not cached
+                    return new Response('', { status: 404, statusText: 'Image Offline' });
+                });
+            })
+        );
+        return;
+    }
+
+    // ── 4. Styles, Scripts, Fonts: Cache First ──
+    if (event.request.destination === 'style' || event.request.destination === 'script' || event.request.destination === 'font') {
         event.respondWith(
             caches.match(event.request, { ignoreSearch: true }).then(cached => {
                 return cached || fetch(event.request, { cache: 'no-cache' }).then(response => {
@@ -130,20 +184,20 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Default for HTML/Navigation requests: Network First with Timeout (800ms)
+    // ── 5. HTML/Navigation Requests: Network First with 600ms Fast Timeout ──
     event.respondWith(
         new Promise((resolve) => {
             let isResolved = false;
             const timeoutId = setTimeout(() => {
                 if (!isResolved) {
                     caches.match(event.request, { ignoreSearch: true }).then(cached => {
-                        if (cached) {
+                        if (cached && !isResolved) {
                             isResolved = true;
                             resolve(cached);
                         }
                     });
                 }
-            }, 1200); // 1200ms fast fallback for weak signal navigation
+            }, 600); // 600ms fast fallback for weak signal page switching
 
             fetch(event.request, { cache: 'no-cache' })
                 .then(response => {
@@ -161,41 +215,36 @@ self.addEventListener('fetch', event => {
                     clearTimeout(timeoutId);
                     if (!isResolved) {
                         isResolved = true;
-                        
-                            caches.match(event.request, { ignoreSearch: true }).then(cached => {
-                                if (cached) {
-                                    resolve(cached);
-                                } else {
-                                    const urlObj = new URL(event.request.url);
-                                    
-                                    // Helper function to resolve with base if everything fails
-                                    const fallbackToBase = () => {
-                                        caches.match(BASE_URL).then(baseCached => {
-                                            resolve(baseCached || new Response('<html><body><h1>Offline</h1><p>Mohon periksa koneksi internet Anda.</p></body></html>', { 
-                                                status: 200, 
-                                                headers: {'Content-Type': 'text/html'} 
-                                            }));
-                                        });
-                                    };
+                        caches.match(event.request, { ignoreSearch: true }).then(cached => {
+                            if (cached) {
+                                resolve(cached);
+                            } else {
+                                const urlObj = new URL(event.request.url);
+                                const fallbackToBase = () => {
+                                    caches.match(BASE_URL).then(baseCached => {
+                                        resolve(baseCached || new Response('<html><body><h1>Offline</h1><p>Mohon periksa koneksi internet Anda.</p></body></html>', { 
+                                            status: 200, 
+                                            headers: {'Content-Type': 'text/html'} 
+                                        }));
+                                    });
+                                };
 
-                                    if (urlObj.pathname.endsWith('/') && urlObj.pathname.length > BASE_URL.length) {
-                                        // Try without trailing slash
-                                        urlObj.pathname = urlObj.pathname.slice(0, -1);
-                                        caches.match(urlObj.href, { ignoreSearch: true }).then(cachedNoSlash => {
-                                            if (cachedNoSlash) resolve(cachedNoSlash);
-                                            else fallbackToBase();
-                                        });
-                                    } else {
-                                        // Try with trailing slash
-                                        const origPathname = urlObj.pathname;
-                                        urlObj.pathname = origPathname + '/';
-                                        caches.match(urlObj.href, { ignoreSearch: true }).then(cachedWithSlash => {
-                                            if (cachedWithSlash) resolve(cachedWithSlash);
-                                            else fallbackToBase();
-                                        });
-                                    }
+                                if (urlObj.pathname.endsWith('/') && urlObj.pathname.length > BASE_URL.length) {
+                                    urlObj.pathname = urlObj.pathname.slice(0, -1);
+                                    caches.match(urlObj.href, { ignoreSearch: true }).then(cachedNoSlash => {
+                                        if (cachedNoSlash) resolve(cachedNoSlash);
+                                        else fallbackToBase();
+                                    });
+                                } else {
+                                    const origPathname = urlObj.pathname;
+                                    urlObj.pathname = origPathname + '/';
+                                    caches.match(urlObj.href, { ignoreSearch: true }).then(cachedWithSlash => {
+                                        if (cachedWithSlash) resolve(cachedWithSlash);
+                                        else fallbackToBase();
+                                    });
                                 }
-                            });
+                            }
+                        });
                     }
                 });
         })
