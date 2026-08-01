@@ -441,23 +441,24 @@ function renderSupplierGroupedSection(suppliers) {
     }).join('');
 }
 
+
 function renderProductScanResult(data, isOffline) {
     const resultDiv = document.getElementById('scanResult');
     const packagings = data.packagings || [];
     const prodName = data.name || data.full_name || 'Tanpa Nama';
     const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
 
-    // 1. Packagings & Markup % Breakdown
-    let packagingsPricingTableHtml = packagings.map(p => {
+    // Helper: format date nicely
+    const fmtDate = (d) => { try { return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); } catch(e) { return d || '-'; } };
+
+    // ── 1. Build Packaging Cards ──────────────────────────────────
+    let packagingCardsHtml = packagings.map((p, pIdx) => {
         const modal = parseFloat(p.buy_price) || 0;
         const ecer = parseFloat(p.sell_price_retail) || 0;
         const grosir = parseFloat(p.sell_price_wholesale) || 0;
         const baseQty = parseFloat(p.base_qty) || 1;
-
-        // Markup % = ((Sell - Modal) / Modal) * 100
         const markupRetailPct = (p.markup_retail_percent !== undefined) ? p.markup_retail_percent : (modal > 0 ? (((ecer - modal) / modal) * 100).toFixed(1) : 0);
         const profitRetailNominal = (p.profit_retail_nominal !== undefined) ? p.profit_retail_nominal : (ecer - modal);
-
         const markupWholesalePct = (p.markup_wholesale_percent !== undefined) ? p.markup_wholesale_percent : ((modal > 0 && grosir > 0) ? (((grosir - modal) / modal) * 100).toFixed(1) : 0);
         const profitWholesaleNominal = (p.profit_wholesale_nominal !== undefined) ? p.profit_wholesale_nominal : (grosir > 0 ? (grosir - modal) : 0);
 
@@ -465,99 +466,138 @@ function renderProductScanResult(data, isOffline) {
         let tierHtml = '';
         if (p.qty_prices && p.qty_prices.length > 0) {
             tierHtml = `
-                <div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-color);">
-                    <div style="font-size:10px; font-weight:700; color:var(--text-secondary); margin-bottom:4px;"><i class="bi bi-layers me-1 text-info"></i>Harga Grosir Bertingkat / Tier:</div>
+                <div style="margin-top:12px; padding:10px 12px; background:var(--surface-1); border-radius:8px; border:1px solid var(--border-color);">
+                    <div style="font-size:11px; font-weight:700; color:var(--info); margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+                        <i class="bi bi-layers"></i> Harga Grosir Bertingkat
+                    </div>
                     ${p.qty_prices.map(t => {
                         const tPrice = parseFloat(t.unit_price) || 0;
                         const tMarkup = modal > 0 ? (((tPrice - modal) / modal) * 100).toFixed(1) : 0;
-                        return `
-                            <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:2px;">
-                                <span>Min. ${t.min_qty} ${p.unit_name}</span>
-                                <span style="font-weight:700;">${formatRupiah(tPrice)} <span style="color:var(--success); font-size:9px;">(Markup +${tMarkup}%)</span></span>
-                            </div>
-                        `;
+                        const mode = t.sale_mode || 'both';
+                        const modeIcon = mode === 'retail' ? 'bi-person' : (mode === 'wholesale' ? 'bi-people' : 'bi-arrow-left-right');
+                        return `<div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; padding:4px 0; border-bottom:1px dotted var(--border-color);">
+                            <span><i class="bi ${modeIcon} me-1 text-muted" style="font-size:10px;"></i>Min. <strong>${t.min_qty}</strong> ${p.unit_name || 'pcs'}</span>
+                            <span style="font-weight:700; color:var(--text-primary);">${formatRupiah(tPrice)} <span style="font-weight:600; color:var(--success); font-size:9px;">(+${tMarkup}%)</span></span>
+                        </div>`;
                     }).join('')}
-                </div>
-            `;
+                </div>`;
         }
 
         return `
-            <div style="padding:14px 0; border-bottom:1px solid var(--border-color);">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; flex-wrap:wrap; gap:10px;">
+        <div class="scanner-pkg-card" style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:12px; padding:16px; margin-bottom:14px; transition:all 0.2s ease;">
+            <!-- Packaging Header -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, var(--primary), #6366f1); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:14px;">${pIdx + 1}</div>
                     <div>
-                        <div style="font-weight:800; font-size:14px; color:var(--text-primary);">
-                            ${p.unit_name || 'Level '+p.level}
-                            <span style="font-size:10px; font-weight:600; color:var(--text-muted); background:var(--surface-1); padding:2px 8px; border-radius:12px; margin-left:6px; border:1px solid var(--border-color);">Isi ${baseQty} pcs</span>
-                            ${p.barcode ? `<span style="font-family:monospace; font-size:10px; color:var(--text-muted); margin-left:6px;"><i class="bi bi-upc me-1"></i>${p.barcode}</span>` : ''}
+                        <div style="font-weight:800; font-size:15px; color:var(--text-primary); line-height:1.2;">${p.unit_name || 'Level ' + p.level}</div>
+                        <div style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:2px;">
+                            <span><i class="bi bi-box me-1"></i>Isi ${baseQty} pcs</span>
+                            ${p.barcode ? `<span style="font-family:'Courier New',monospace; background:var(--surface-2); padding:1px 6px; border-radius:4px; border:1px solid var(--border-color);"><i class="bi bi-upc me-1"></i>${p.barcode}</span>` : ''}
                         </div>
                     </div>
                 </div>
-
-                <div class="row g-2 mb-2" style="font-size:11px;">
-                    <!-- Harga Modal -->
-                    <div class="col-md-4 col-12">
-                        <div style="background:var(--surface-1); padding:8px 10px; border-radius:6px; border:1px solid var(--border-color);">
-                            <div style="font-size:10px; color:var(--text-muted);">Harga Modal (Beli):</div>
-                            <div style="font-weight:800; color:var(--text-primary); font-size:13px;">${modal > 0 ? formatRupiah(modal) : '-'}</div>
-                        </div>
-                    </div>
-
-                    <!-- Harga Ecer & Markup -->
-                    <div class="col-md-4 col-6">
-                        <div style="background:rgba(16,185,129,0.08); padding:8px 10px; border-radius:6px; border:1px solid rgba(16,185,129,0.2);">
-                            <div style="font-size:10px; color:var(--success); font-weight:600;">Harga Ecer:</div>
-                            <div style="font-weight:800; color:var(--success); font-size:13px;">${ecer > 0 ? formatRupiah(ecer) : '-'}</div>
-                            ${modal > 0 && ecer > 0 ? `
-                                <div style="font-size:9px; color:var(--success); font-weight:700; margin-top:2px;">
-                                    Markup: +${markupRetailPct}% (+${formatRupiah(profitRetailNominal)})
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-
-                    <!-- Harga Grosir & Markup -->
-                    <div class="col-md-4 col-6">
-                        <div style="background:rgba(245,158,11,0.08); padding:8px 10px; border-radius:6px; border:1px solid rgba(245,158,11,0.2);">
-                            <div style="font-size:10px; color:var(--warning); font-weight:600;">Harga Grosir:</div>
-                            <div style="font-weight:800; color:var(--warning); font-size:13px;">${grosir > 0 ? formatRupiah(grosir) : '-'}</div>
-                            ${modal > 0 && grosir > 0 ? `
-                                <div style="font-size:9px; color:var(--warning); font-weight:700; margin-top:2px;">
-                                    Markup: +${markupWholesalePct}% (+${formatRupiah(profitWholesaleNominal)})
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
-
-                ${tierHtml}
+                ${SCANNER_IS_SUPERADMIN && modal > 0 ? `<div style="text-align:right;"><div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.3px;">Modal</div><div style="font-weight:800; font-size:16px; color:var(--text-primary);">${formatRupiah(modal)}</div></div>` : ''}
             </div>
-        `;
+
+            <!-- Price Grid: Ecer + Grosir -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:4px;">
+                <!-- Ecer Card -->
+                <div style="background:linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.02)); padding:12px; border-radius:10px; border:1px solid rgba(16,185,129,0.18);">
+                    <div style="font-size:10px; font-weight:700; color:var(--success); text-transform:uppercase; letter-spacing:0.3px; margin-bottom:4px;">
+                        <i class="bi bi-person me-1"></i>Harga Ecer
+                    </div>
+                    <div style="font-weight:800; color:var(--success); font-size:18px; line-height:1.2;">${ecer > 0 ? formatRupiah(ecer) : '-'}</div>
+                    ${SCANNER_IS_SUPERADMIN && modal > 0 && ecer > 0 ? `
+                        <div style="margin-top:6px; padding-top:6px; border-top:1px dashed rgba(16,185,129,0.2);">
+                            <div style="display:flex; justify-content:space-between; font-size:10px;">
+                                <span style="color:var(--text-muted);">Markup</span>
+                                <span style="font-weight:700; color:var(--success);">+${markupRetailPct}%</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:2px;">
+                                <span style="color:var(--text-muted);">Profit / pcs</span>
+                                <span style="font-weight:700; color:var(--success);">+${formatRupiah(profitRetailNominal)}</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+                <!-- Grosir Card -->
+                <div style="background:linear-gradient(135deg, rgba(245,158,11,0.08), rgba(245,158,11,0.02)); padding:12px; border-radius:10px; border:1px solid rgba(245,158,11,0.18);">
+                    <div style="font-size:10px; font-weight:700; color:var(--warning); text-transform:uppercase; letter-spacing:0.3px; margin-bottom:4px;">
+                        <i class="bi bi-people me-1"></i>Harga Grosir
+                    </div>
+                    <div style="font-weight:800; color:var(--warning); font-size:18px; line-height:1.2;">${grosir > 0 ? formatRupiah(grosir) : '-'}</div>
+                    ${SCANNER_IS_SUPERADMIN && modal > 0 && grosir > 0 ? `
+                        <div style="margin-top:6px; padding-top:6px; border-top:1px dashed rgba(245,158,11,0.2);">
+                            <div style="display:flex; justify-content:space-between; font-size:10px;">
+                                <span style="color:var(--text-muted);">Markup</span>
+                                <span style="font-weight:700; color:var(--warning);">+${markupWholesalePct}%</span>
+                            </div>
+                            <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:2px;">
+                                <span style="color:var(--text-muted);">Profit / pcs</span>
+                                <span style="font-weight:700; color:var(--warning);">+${formatRupiah(profitWholesaleNominal)}</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            ${tierHtml}
+        </div>`;
     }).join('');
 
-    // 2. Last Purchase Insight Card
+    // ── 2. Last Purchase Insight ──────────────────────────────────
     let lastPurchaseInfoHtml = '';
     if (data.last_purchase) {
         const lp = data.last_purchase;
-        const lpDate = new Date(lp.purchase_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
         lastPurchaseInfoHtml = `
-            <div style="background:linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.02)); border:1px solid rgba(59,130,246,0.2); border-radius:var(--radius-md); padding:12px 14px; margin-bottom:14px;">
-                <div style="font-size:10px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+            <div style="background:linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.03)); border:1px solid rgba(59,130,246,0.2); border-radius:10px; padding:14px 16px; margin-bottom:16px;">
+                <div style="font-size:10px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; display:flex; align-items:center; gap:6px;">
                     <i class="bi bi-clock-history"></i> Pembelian Terakhir
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                     <div>
-                        <strong style="color:var(--text-primary);">${lp.supplier_name || 'Supplier Tanpa Nama'}</strong>
-                        <span class="text-muted" style="font-size:11px;">&middot; ${lpDate} (${lp.purchase_code || lp.purchase_number || '-'})</span>
+                        <div style="font-weight:700; font-size:13px; color:var(--text-primary);">${lp.supplier_name || '-'}</div>
+                        <div style="font-size:11px; color:var(--text-muted);">${fmtDate(lp.purchase_date)} &middot; Invoice: ${lp.purchase_code || '-'}</div>
                     </div>
-                    <div style="font-weight:700; color:var(--success);">
-                        ${formatRupiah(lp.buy_price)} ${lp.unit_name ? '/ ' + lp.unit_name : ''}
+                    <div style="text-align:right;">
+                        <div style="font-weight:800; color:var(--success); font-size:15px;">${formatRupiah(lp.buy_price)}</div>
+                        ${lp.unit_name ? `<div style="font-size:10px; color:var(--text-muted);">per ${lp.unit_name}</div>` : ''}
                     </div>
                 </div>
-            </div>
-        `;
+            </div>`;
     }
 
-    // 3. Back Button Bar
+    // ── 3. Product Info Metadata Grid ─────────────────────────────
+    const productType = data.product_type || '';
+    const variant = data.variant || '';
+    const weightVal = data.weight_value ? `${parseFloat(data.weight_value)}${data.weight_unit || ''}` : '';
+    const invoiceName = data.invoice_name || data.supplier_invoice_name || '';
+    const productCode = data.code || data.supplier_product_code || '';
+    const createdAt = data.created_at ? fmtDate(data.created_at) : '-';
+    const updatedAt = data.updated_at ? fmtDate(data.updated_at) : '-';
+    const isAvailable = data.is_available !== undefined ? (data.is_available == 1 ? '<span style="color:var(--success); font-weight:700;">✓ Tersedia</span>' : '<span style="color:var(--danger); font-weight:700;">✗ Tidak Tersedia</span>') : '';
+    const suppliersCount = data.suppliers ? data.suppliers.length : 0;
+
+    let metaRows = [];
+    if (productType) metaRows.push(['Jenis Produk', productType]);
+    if (variant) metaRows.push(['Varian', variant]);
+    if (weightVal) metaRows.push(['Berat / Volume', weightVal]);
+    if (productCode) metaRows.push(['Kode Produk', `<code style="background:var(--surface-2); padding:1px 6px; border-radius:4px; font-family:monospace; font-size:11px;">${productCode}</code>`]);
+    if (invoiceName) metaRows.push(['Nama Invoice', invoiceName]);
+    if (isAvailable) metaRows.push(['Status Ketersediaan', isAvailable]);
+    metaRows.push(['Jumlah Supplier', `<strong>${suppliersCount}</strong> Pemasok Terdaftar`]);
+    metaRows.push(['Jumlah Kemasan', `<strong>${packagings.length}</strong> Level Kemasan`]);
+    metaRows.push(['Terakhir Diperbarui', updatedAt]);
+    metaRows.push(['Tanggal Didaftarkan', createdAt]);
+
+    let productMetaHtml = metaRows.map(([label, val]) => `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--border-color); font-size:12px;">
+            <span style="color:var(--text-muted); font-weight:600;"><i class="bi bi-dot text-primary me-1"></i>${label}</span>
+            <span style="color:var(--text-primary); font-weight:600; text-align:right;">${val}</span>
+        </div>
+    `).join('');
+
+    // ── 4. Back Button ────────────────────────────────────────────
     let backButtonHtml = '';
     if (lastSearchResultsData && lastSearchResultsData.products && lastSearchResultsData.products.length > 1) {
         backButtonHtml = `
@@ -566,87 +606,112 @@ function renderProductScanResult(data, isOffline) {
                     <i class="bi bi-arrow-left"></i> Kembali ke Hasil Pencarian
                 </button>
                 ${lastSearchKeyword ? `<span style="font-size:12px; color:var(--text-muted);">Pencarian: <strong style="color:var(--text-primary);">"${lastSearchKeyword}"</strong></span>` : ''}
-            </div>
-        `;
+            </div>`;
     } else if (lastSearchKeyword) {
         backButtonHtml = `
-            <div style="margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+            <div style="margin-bottom:16px;">
                 <button type="button" onclick="goBackToSearchResults()" class="btn btn-outline-primary" style="font-size:12px; font-weight:700; padding:8px 16px; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
                     <i class="bi bi-arrow-left"></i> Kembali ke Pencarian
                 </button>
-            </div>
-        `;
+            </div>`;
     }
-    
+
+    // ── 5. Assemble Full Layout ───────────────────────────────────
     resultDiv.innerHTML = `
         ${backButtonHtml}
-        
-        <!-- 2 SPLIT COLUMNS (Desktop) / 1 COLUMN (Mobile) -->
+
+        <!-- ═══ 2-COLUMN SPLIT (Desktop) ═══ -->
         <div class="row g-4 mb-4">
-            <!-- LEFT COLUMN: Large Photo Showcase Stage + Download Button -->
+            <!-- ── LEFT: PHOTO SHOWCASE (Sticky on Desktop) ── -->
             <div class="col-lg-5 col-md-12">
-                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:20px; text-align:center; height:100%; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
-                    <div>
-                        <div style="position:relative; width:100%; height:450px; background:var(--surface-2); border-radius:var(--radius-md); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; overflow:hidden; margin-bottom:16px; padding:16px;">
-                            ${data.photo 
-                                ? `<img id="mainProductImg" src="${baseUrl}${data.photo}" style="width:100%; height:100%; max-height:420px; object-fit:contain; cursor:pointer;" onclick="viewFullPhoto(this.src)">`
-                                : `<div style="font-size:6rem; color:var(--primary); opacity:0.65;"><i class="bi bi-box-seam"></i></div>`
+                <div class="scanner-detail-photo-col" style="position:sticky; top:80px;">
+                    <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.08);">
+                        <!-- Photo Stage -->
+                        <div style="width:100%; aspect-ratio:1/1; max-height:520px; background:linear-gradient(180deg, var(--surface-2) 0%, var(--surface-1) 100%); display:flex; align-items:center; justify-content:center; padding:24px; cursor:pointer;" onclick="${data.photo ? `viewFullPhoto('${baseUrl}${data.photo}')` : ''}">
+                            ${data.photo
+                                ? `<img id="mainProductImg" src="${baseUrl}${data.photo}" style="width:100%; height:100%; object-fit:contain; transition:transform 0.3s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">`
+                                : `<div style="text-align:center;"><i class="bi bi-box-seam" style="font-size:6rem; color:var(--primary); opacity:0.4;"></i><div style="font-size:12px; color:var(--text-muted); margin-top:8px;">Belum ada foto produk</div></div>`
                             }
                         </div>
-                    </div>
-
-                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                        ${data.photo ? `
-                            <a href="${baseUrl}${data.photo}" download="${prodName.replace(/[^a-zA-Z0-9]/g, '_')}.jpg" target="_blank" class="btn btn-outline-primary flex-fill py-2" style="font-size:12px; font-weight:700; border-radius:8px;">
-                                <i class="bi bi-download me-1"></i> Download Foto Produk
-                            </a>
-                            <button type="button" onclick="viewFullPhoto('${baseUrl}${data.photo}')" class="btn btn-secondary py-2" style="font-size:12px; font-weight:700; border-radius:8px;" title="Perbesar Foto">
-                                <i class="bi bi-arrows-angle-expand"></i>
-                            </button>
-                        ` : '<div class="text-muted w-100" style="font-size:11px;">Belum ada foto produk ter-upload</div>'}
+                        <!-- Download & Expand Buttons -->
+                        <div style="padding:12px 16px; border-top:1px solid var(--border-color); display:flex; gap:8px;">
+                            ${data.photo ? `
+                                <a href="${baseUrl}${data.photo}" download="${prodName.replace(/[^a-zA-Z0-9]/g, '_')}.jpg" target="_blank" class="btn btn-outline-primary flex-fill" style="font-size:12px; font-weight:700; border-radius:8px; padding:8px 12px;">
+                                    <i class="bi bi-download me-1"></i> Download Foto
+                                </a>
+                                <button type="button" onclick="viewFullPhoto('${baseUrl}${data.photo}')" class="btn btn-primary" style="font-size:12px; font-weight:700; border-radius:8px; padding:8px 14px;" title="Perbesar Foto">
+                                    <i class="bi bi-arrows-fullscreen"></i>
+                                </button>
+                            ` : `<div class="text-muted w-100 text-center py-1" style="font-size:11px;">Foto belum tersedia</div>`}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- RIGHT COLUMN: Product Info & Packaging Pricing Breakdown -->
+            <!-- ── RIGHT: PRODUCT INFO & PRICING ── -->
             <div class="col-lg-7 col-md-12">
-                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:24px; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
-                    <!-- Header Badges & Title -->
-                    <h2 style="font-size:1.4rem; font-weight:800; color:var(--text-primary); margin-bottom:8px; line-height:1.3;">
+                <!-- Product Title & Meta -->
+                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,0.06); margin-bottom:16px;">
+                    <h2 style="font-size:1.5rem; font-weight:800; color:var(--text-primary); margin-bottom:10px; line-height:1.3; letter-spacing:-0.3px;">
                         ${prodName}
                         ${isOffline ? `<span class="badge bg-warning text-dark" style="font-size:10px; vertical-align:middle; margin-left:6px;">OFFLINE</span>` : ''}
                     </h2>
 
+                    <!-- Badges -->
                     <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:16px;">
-                        <span class="scan-pill-badge brand" style="font-size:11px; padding:3px 10px;"><i class="bi bi-award me-1"></i>${data.brand_name || 'Tanpa Brand'}</span>
-                        <span class="scan-pill-badge category" style="font-size:11px; padding:3px 10px;"><i class="bi bi-tag me-1"></i>${data.category_name || 'Tanpa Kategori'}</span>
-                        ${data.short_label ? `<span class="scan-short-label" style="font-size:11px; padding:3px 10px;">Label Struk: ${data.short_label}</span>` : ''}
-                        <span class="badge bg-info bg-opacity-10 text-info fw-bold" style="font-size:11px; padding:4px 8px;">Stok: ${data.current_qty_base ?? 0} Base Pcs</span>
+                        <span class="scan-pill-badge brand" style="font-size:11px; padding:4px 12px;"><i class="bi bi-award me-1"></i>${data.brand_name || 'Tanpa Brand'}</span>
+                        <span class="scan-pill-badge category" style="font-size:11px; padding:4px 12px;"><i class="bi bi-tag me-1"></i>${data.category_name || 'Tanpa Kategori'}</span>
+                        ${data.short_label ? `<span class="scan-short-label" style="font-size:11px; padding:4px 12px;"><i class="bi bi-receipt me-1"></i>${data.short_label}</span>` : ''}
                     </div>
 
-                    <!-- Pembelian Terakhir (Last Purchase Insight Card) -->
+                    <!-- Stock Badge -->
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+                        <div style="background:linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.03)); border:1px solid rgba(59,130,246,0.2); border-radius:10px; padding:10px 16px; display:flex; align-items:center; gap:8px;">
+                            <i class="bi bi-box-seam text-primary" style="font-size:1.2rem;"></i>
+                            <div>
+                                <div style="font-size:10px; color:var(--text-muted); font-weight:600;">Stok Tersedia</div>
+                                <div style="font-weight:800; color:var(--primary); font-size:16px;">${data.current_qty_base ?? 0} <span style="font-size:11px; font-weight:600;">Base Pcs</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Last Purchase Insight -->
                     ${lastPurchaseInfoHtml}
 
-                    <!-- Detail Kemasan & Harga (Harga Modal, Harga Jual Ecer & Grosir, Markup %, Selisih Nominal) -->
-                    <div style="background:var(--surface-2); border-radius:var(--radius-md); padding:16px; border:1px solid var(--border-color); margin-top:16px;">
-                        <div style="font-weight:700; font-size:12px; margin-bottom:12px; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.5px; display:flex; align-items:center; gap:6px;">
-                            <i class="bi bi-layers-half text-primary"></i> Detail Kemasan, Harga &amp; Persentase Markup
+                    <!-- Product Info Metadata -->
+                    <div style="background:var(--surface-2); border-radius:10px; padding:14px 16px; border:1px solid var(--border-color);">
+                        <div style="font-weight:700; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                            <i class="bi bi-info-circle text-primary"></i> Informasi Produk
                         </div>
-                        ${packagingsPricingTableHtml || '<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:12px 0;">Belum ada kemasan terdaftar</div>'}
+                        ${productMetaHtml}
                     </div>
+                </div>
+
+                <!-- Packaging Pricing Cards -->
+                <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px;">
+                        <div style="font-weight:800; font-size:14px; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+                            <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg, var(--primary), #6366f1); display:flex; align-items:center; justify-content:center;"><i class="bi bi-layers-half text-white" style="font-size:14px;"></i></div>
+                            Kemasan &amp; Harga
+                        </div>
+                        <span style="font-size:11px; color:var(--text-muted);">${packagings.length} Level Kemasan</span>
+                    </div>
+                    ${packagingCardsHtml || '<div style="color:var(--text-muted); font-size:12px; text-align:center; padding:20px 0;"><i class="bi bi-inbox fs-3 d-block mb-2 opacity-50"></i>Belum ada kemasan terdaftar</div>'}
                 </div>
             </div>
         </div>
 
-        <!-- BOTTOM SECTION: Supplier Details & Purchase History Grouped by Supplier -->
-        <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:24px; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
+        <!-- ═══ BOTTOM: Supplier Details & Purchase History ═══ -->
+        <div style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:16px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
             <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                <div>
-                    <h5 class="fw-bold mb-1" style="font-size:15px; color:var(--text-primary);"><i class="bi bi-truck me-2 text-primary"></i>Pemasok / Detail Supplier (${data.suppliers ? data.suppliers.length : 0} Supplier)</h5>
-                    <span class="text-muted" style="font-size:11px;">Daftar supplier yang menyuplai produk ini beserta riwayat pembelian lengkap (diurutkan dari tanggal terbaru)</span>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, #f59e0b, #d97706); display:flex; align-items:center; justify-content:center;"><i class="bi bi-truck text-white" style="font-size:16px;"></i></div>
+                    <div>
+                        <h5 class="fw-bold mb-0" style="font-size:15px; color:var(--text-primary);">Pemasok &amp; Riwayat Pembelian</h5>
+                        <span class="text-muted" style="font-size:11px;">${suppliersCount} supplier terdaftar &middot; Klik untuk lihat riwayat faktur</span>
+                    </div>
                 </div>
             </div>
-
             ${renderSupplierGroupedSection(data.suppliers)}
         </div>
     `;
