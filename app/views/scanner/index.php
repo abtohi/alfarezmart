@@ -1,4 +1,4 @@
-<!-- Barcode Scanner View - Redesigned (v1.1.6) -->
+<!-- Barcode Scanner View - E-Commerce Style (v1.1.7) -->
 <?php
 $scannerUserLevel = $_SESSION['user_level'] ?? '';
 $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
@@ -6,23 +6,17 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
 <div class="page-section" style="padding-bottom:100px;">
     <!-- Modern Header -->
     <div style="background: linear-gradient(135deg, var(--surface-1), var(--surface-2)); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 22px 20px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-            <div>
-                <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 4px; color: var(--text-primary); letter-spacing: -0.3px; display:flex; align-items:center; gap:8px;">
-                    <i class="bi bi-upc-scan text-primary"></i> Cek Harga &amp; Scan Barcode
-                </h2>
-                <p style="color: var(--text-muted); font-size: 12px; margin: 0;">Scan barcode produk atau ketik nama/kode barcode untuk cek harga &amp; stok real-time</p>
-            </div>
-            
-            <button onclick="openGlobalScanner()" class="btn-primary-custom" style="padding:10px 18px; font-size:12px; font-weight:700; border-radius:20px; display:inline-flex; align-items:center; gap:6px; background:linear-gradient(135deg, #e63946, #d62828);">
-                <i class="bi bi-camera-fill"></i> Buka Kamera Scanner
-            </button>
+        <div style="margin-bottom: 14px;">
+            <h2 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 4px; color: var(--text-primary); letter-spacing: -0.3px; display:flex; align-items:center; gap:8px;">
+                <i class="bi bi-upc-scan text-primary"></i> Cek Harga &amp; Scan Barcode
+            </h2>
+            <p style="color: var(--text-muted); font-size: 12px; margin: 0;">Scan barcode produk atau ketik nama/kode barcode untuk cek harga &amp; stok real-time</p>
         </div>
 
-        <!-- Manual Input Bar -->
-        <div style="margin-top: 18px; position: relative;">
+        <!-- Manual Input Bar with Camera Trigger Icon -->
+        <div style="position: relative;">
             <div style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 4px 6px 4px 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-                <i class="bi bi-upc-scan" onclick="openGlobalScanner()" style="color: var(--primary); font-size: 1.3rem; cursor: pointer;" title="Klik untuk Buka Kamera Scanner"></i>
+                <i class="bi bi-upc-scan" onclick="openGlobalScanner()" style="color: var(--primary); font-size: 1.3rem; cursor: pointer;" title="Klik ikon barcode ini untuk Buka Kamera Scanner"></i>
                 <input type="text" id="barcodeInput" placeholder="Ketik nama produk atau scan kode barcode..." 
                        style="flex:1; border:none; background:transparent; padding:10px 0; color:var(--text-primary); font-size:13px; outline:none; font-family: var(--font-family);" 
                        autocomplete="off" autofocus>
@@ -47,7 +41,7 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
 .scan-results-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 18px;
 }
 @media (min-width: 640px) {
     .scan-results-grid {
@@ -68,49 +62,54 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    transition: all 0.22s ease;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
     cursor: pointer;
     box-sizing: border-box;
+    height: 100%;
 }
 .scan-result-card:hover {
     transform: translateY(-4px);
     border-color: var(--primary) !important;
-    box-shadow: 0 10px 28px rgba(0,0,0,0.18) !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.2) !important;
 }
-.scan-card-thumb {
-    width: 56px;
-    height: 56px;
+
+/* Large E-Commerce Showcase Stage */
+.scan-card-image-stage {
+    width: 100%;
+    height: 180px;
     border-radius: var(--radius-md);
-    overflow: hidden;
     background: var(--surface-2);
     border: 1px solid var(--border-color);
-    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
+    margin-bottom: 14px;
+    position: relative;
 }
-.scan-card-thumb img {
-    width: 100%;
-    height: 100%;
+.scan-card-image-stage img {
+    max-height: 160px;
+    width: auto;
+    max-width: 100%;
     object-fit: contain;
+    transition: transform 0.3s ease;
 }
-.scan-card-thumb-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: var(--radius-md);
-    background: linear-gradient(135deg, rgba(230,57,70,0.15), rgba(230,57,70,0.05));
-    border: 1px solid rgba(230,57,70,0.2);
+.scan-result-card:hover .scan-card-image-stage img {
+    transform: scale(1.08);
+}
+.scan-card-no-image {
+    font-size: 3.2rem;
     color: var(--primary);
+    opacity: 0.65;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.4rem;
-    flex-shrink: 0;
 }
+
 .scan-card-title {
-    font-size: 13px;
-    font-weight: 700;
+    font-size: 14px;
+    font-weight: 800;
     color: var(--text-primary);
     line-height: 1.35;
     word-break: break-word;
@@ -118,11 +117,12 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    margin-bottom: 6px;
 }
 .scan-pill-badge {
     font-size: 9px;
     font-weight: 600;
-    padding: 2px 7px;
+    padding: 2px 8px;
     border-radius: 10px;
     display: inline-block;
 }
@@ -139,10 +139,9 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
 .scan-short-label {
     font-size: 10px;
     color: var(--text-muted);
-    margin-top: 4px;
     background: var(--surface-2);
     display: inline-block;
-    padding: 2px 6px;
+    padding: 2px 8px;
     border-radius: 4px;
 }
 </style>
@@ -156,7 +155,7 @@ async function lookupBarcode() {
     if (!code) return;
     
     const resultDiv = document.getElementById('scanResult');
-    resultDiv.innerHTML = '<div style="text-align:center;padding:30px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Mencari produk...</div></div>';
+    resultDiv.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><div style="font-size:12px;color:var(--text-muted);margin-top:10px;">Mencari produk...</div></div>';
     
     try {
         const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/barcode/${encodeURIComponent(code)}`);
@@ -219,36 +218,34 @@ function renderMultipleSearchResults(products, isOffline) {
         
         return `
             <div class="scan-result-card" onclick="${isOffline ? `showProductResultOffline(${JSON.stringify(p).replace(/'/g, "&#39;")})` : `fetchProductDetail(${p.id})`}">
-                <div>
-                    <!-- Header Product -->
-                    <div style="display:flex; gap:12px; align-items:flex-start; margin-bottom:12px;">
-                        ${p.photo 
-                            ? `<div class="scan-card-thumb">
-                                   <img src="${baseUrl}${p.photo}">
-                               </div>`
-                            : `<div class="scan-card-thumb-icon">
-                                   <i class="bi bi-box-seam"></i>
-                               </div>`
-                        }
-                        <div style="flex:1; min-width:0;">
-                            <div class="scan-card-title">${prodName}</div>
-                            <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">
-                                ${brand ? `<span class="scan-pill-badge brand"><i class="bi bi-award me-1"></i>${brand}</span>` : ''}
-                                ${category ? `<span class="scan-pill-badge category"><i class="bi bi-tag me-1"></i>${category}</span>` : ''}
-                            </div>
-                            ${p.short_label ? `<div class="scan-short-label">Label: ${p.short_label}</div>` : ''}
-                        </div>
-                    </div>
-
-                    <!-- Packaging List -->
-                    ${renderPackagingsForList(p.packagings)}
+                <!-- Top E-Commerce Showcase Stage (Large Image) -->
+                <div class="scan-card-image-stage">
+                    ${p.photo 
+                        ? `<img src="${baseUrl}${p.photo}" alt="${prodName}">`
+                        : `<div class="scan-card-no-image"><i class="bi bi-box-seam"></i></div>`
+                    }
                 </div>
 
-                <!-- Footer Action -->
-                <div style="margin-top:12px; padding-top:10px; border-top:1px solid var(--border-color);">
-                    <button class="btn-primary-custom w-100" style="padding:6px 12px; font-size:11px; border-radius:6px;">
-                        <i class="bi bi-eye-fill me-1"></i> Detail &amp; Cek Lengkap
-                    </button>
+                <!-- Product Details -->
+                <div style="flex:1; display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                        <div class="scan-card-title">${prodName}</div>
+                        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">
+                            ${brand ? `<span class="scan-pill-badge brand"><i class="bi bi-award me-1"></i>${brand}</span>` : ''}
+                            ${category ? `<span class="scan-pill-badge category"><i class="bi bi-tag me-1"></i>${category}</span>` : ''}
+                        </div>
+                        ${p.short_label ? `<div class="scan-short-label" style="margin-bottom:6px;">Label: ${p.short_label}</div>` : ''}
+
+                        <!-- Packaging List -->
+                        ${renderPackagingsForList(p.packagings)}
+                    </div>
+
+                    <!-- Footer Action -->
+                    <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--border-color);">
+                        <button class="btn-primary-custom w-100" style="padding:8px 14px; font-size:12px; font-weight:700; border-radius:8px;">
+                            <i class="bi bi-eye-fill me-1"></i> Detail &amp; Cek Lengkap
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
@@ -259,7 +256,7 @@ function renderMultipleSearchResults(products, isOffline) {
 
 function renderPackagingsForList(packagings) {
     if (!packagings || packagings.length === 0) return '';
-    return '<div style="margin-top:8px; background:var(--surface-2); border-radius:var(--radius-md); padding:10px; border:1px solid var(--border-color);">' +
+    return '<div style="margin-top:6px; background:var(--surface-2); border-radius:var(--radius-md); padding:10px; border:1px solid var(--border-color);">' +
         packagings.map(pkg => {
             const jenis = pkg.unit_name || ('Level ' + pkg.level);
             const qty = pkg.base_qty || 1;
@@ -287,7 +284,7 @@ function renderPackagingsForList(packagings) {
 
 async function fetchProductDetail(id) {
     const resultDiv = document.getElementById('scanResult');
-    resultDiv.innerHTML = '<div style="text-align:center;padding:30px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+    resultDiv.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
     
     try {
         const res = await fetch(`${typeof BASE_URL !== 'undefined' ? BASE_URL : '/' }api/products/${id}`);
@@ -367,25 +364,23 @@ function renderProductScanResult(data, isOffline) {
     
     resultDiv.innerHTML = `
         <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:20px; border:1px solid var(--border-color); box-shadow:0 4px 16px rgba(0,0,0,0.06);">
-            <div style="display:flex; gap:16px; margin-bottom:18px; flex-wrap:wrap; align-items:flex-start;">
+            <!-- Large E-Commerce Showcase Stage -->
+            <div class="scan-card-image-stage" style="height: 220px; margin-bottom: 16px;">
                 ${data.photo 
-                    ? `<div style="width:72px;height:72px;border-radius:var(--radius-md);overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--surface-2);border:1px solid var(--border-color);flex-shrink:0;">
-                           <img src="${baseUrl}${data.photo}" style="width:100%;height:100%;object-fit:contain;cursor:pointer;" onclick="viewFullPhoto(this.src)">
-                       </div>`
-                    : `<div style="width:72px;height:72px;background:linear-gradient(135deg, rgba(230,57,70,0.15), rgba(230,57,70,0.05));border:1px solid rgba(230,57,70,0.2);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--primary);">
-                           <i class="bi bi-upc-scan" style="font-size:1.8rem;"></i>
-                       </div>`
+                    ? `<img src="${baseUrl}${data.photo}" style="max-height: 200px; cursor:pointer;" onclick="viewFullPhoto(this.src)">`
+                    : `<div class="scan-card-no-image" style="font-size: 4rem;"><i class="bi bi-upc-scan"></i></div>`
                 }
-                <div style="flex:1; min-width:220px;">
-                    <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:6px; line-height:1.3; color:var(--text-primary);">
-                        ${prodName} 
-                        ${isOffline ? `<span class="badge bg-warning text-dark" style="font-size:9px;vertical-align:middle;margin-left:4px;">OFFLINE</span>` : ''}
-                    </h3>
-                    <div style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                        <span class="scan-pill-badge brand"><i class="bi bi-award me-1"></i>${data.brand_name || 'Tanpa Brand'}</span>
-                        <span class="scan-pill-badge category"><i class="bi bi-tag me-1"></i>${data.category_name || 'Tanpa Kategori'}</span>
-                        ${data.short_label ? `<span class="scan-short-label">Label Struk: ${data.short_label}</span>` : ''}
-                    </div>
+            </div>
+
+            <div style="margin-bottom:16px;">
+                <h3 style="font-size:1.2rem; font-weight:800; margin-bottom:8px; line-height:1.3; color:var(--text-primary);">
+                    ${prodName} 
+                    ${isOffline ? `<span class="badge bg-warning text-dark" style="font-size:9px;vertical-align:middle;margin-left:4px;">OFFLINE</span>` : ''}
+                </h3>
+                <div style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <span class="scan-pill-badge brand"><i class="bi bi-award me-1"></i>${data.brand_name || 'Tanpa Brand'}</span>
+                    <span class="scan-pill-badge category"><i class="bi bi-tag me-1"></i>${data.category_name || 'Tanpa Kategori'}</span>
+                    ${data.short_label ? `<span class="scan-short-label">Label Struk: ${data.short_label}</span>` : ''}
                 </div>
             </div>
             
