@@ -1,8 +1,8 @@
 /**
  * AlfarezMart PWA - Service Worker (public/sw.js)
  */
-const CACHE_NAME = 'alfarezmart-cache-v16.0';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v16.0';
+const CACHE_NAME = 'alfarezmart-cache-v16.1';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v16.1';
 const BASE_URL = self.location.pathname.replace('/public/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -107,7 +107,6 @@ self.addEventListener('fetch', event => {
                         if (!isResolved) {
                             isResolved = true;
                             caches.match(event.request, { ignoreSearch: true }).then(cached => {
-                                isResolved = true;
                                 if (cached) {
                                     resolve(cached);
                                 } else {
@@ -124,8 +123,8 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    const isImage = event.request.destination === 'image' || 
-                    url.pathname.includes('/uploads/') || 
+    const isImage = event.request.destination === 'image' ||
+                    url.pathname.includes('/uploads/') ||
                     url.pathname.match(/\.(jpg|jpeg|png|webp|gif|svg|ico)($|\?)/i);
 
     if (isImage) {
