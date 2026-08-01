@@ -810,6 +810,18 @@ class DigiflazzController extends Controller {
 
             $t['balance_after'] = $balAfter;
             $t['balance_before'] = $balBefore;
+
+            // Calculate transaction duration (speed) for successful transactions
+            $durationSeconds = null;
+            if (in_array(strtolower($t['status']), ['success', 'sukses']) && !empty($t['created_at']) && !empty($t['updated_at'])) {
+                $created = strtotime($t['created_at']);
+                $updated = strtotime($t['updated_at']);
+                $diff = $updated - $created;
+                if ($diff >= 0 && $diff <= 600) {
+                    $durationSeconds = $diff;
+                }
+            }
+            $t['duration_seconds'] = $durationSeconds;
         }
         
         if ($status_filter !== 'all') {
@@ -917,7 +929,7 @@ class DigiflazzController extends Controller {
             // Processing Speed in Seconds (Valid API callback window: 0 to 300 seconds / 5 mins max)
             // Diffs > 300s indicate batch migration updates or late manual status checks, not real-time API speed
             $processTime = null;
-            if ($isSuccess || $isFailed) {
+            if ($isSuccess) {
                 $created = strtotime($trx['created_at']);
                 $updated = strtotime($trx['updated_at']);
                 $diff = $updated - $created;

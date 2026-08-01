@@ -388,15 +388,24 @@ class DigiflazzModel {
         $stmt = $this->db->query("
             SELECT 
                 COUNT(*) as total_trx,
-                SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) as success_count,
-                SUM(CASE WHEN status = 'pending' OR status = 'processing' THEN 1 ELSE 0 END) as pending_count,
-                SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_count,
-                SUM(CASE WHEN status = 'success' THEN sell_price ELSE 0 END) as total_revenue,
-                SUM(CASE WHEN status = 'success' THEN modal_price ELSE 0 END) as total_cost,
-                SUM(CASE WHEN status = 'success' THEN profit ELSE 0 END) as total_profit
+                SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN 1 ELSE 0 END) as success_count,
+                SUM(CASE WHEN LOWER(status) IN ('pending', 'processing') THEN 1 ELSE 0 END) as pending_count,
+                SUM(CASE WHEN LOWER(status) IN ('failed', 'gagal') THEN 1 ELSE 0 END) as failed_count,
+                SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN sell_price ELSE 0 END) as total_revenue,
+                SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN modal_price ELSE 0 END) as total_cost,
+                SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN profit ELSE 0 END) as total_profit,
+                AVG(CASE WHEN LOWER(status) IN ('success', 'sukses') 
+                             AND TIMESTAMPDIFF(SECOND, created_at, updated_at) >= 0 
+                             AND TIMESTAMPDIFF(SECOND, created_at, updated_at) <= 300 
+                        THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
+                        ELSE NULL END) as avg_speed
             FROM digi_transactions
         ");
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $row['avg_speed'] = $row['avg_speed'] !== null ? round((float)$row['avg_speed'], 1) : 0;
+        }
+        return $row;
     }
 
     /**
@@ -549,11 +558,11 @@ class DigiflazzModel {
                 SELECT seller_name,
                        COUNT(id) as total,
                        SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN 1 ELSE 0 END) as success,
-                       AVG(CASE WHEN LOWER(status) IN ('success', 'failed', 'sukses', 'gagal') 
-                                     AND TIMESTAMPDIFF(SECOND, created_at, updated_at) >= 0 
-                                     AND TIMESTAMPDIFF(SECOND, created_at, updated_at) <= 300 
-                                THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
-                                ELSE NULL END) as avg_speed
+                        AVG(CASE WHEN LOWER(status) IN ('success', 'sukses') 
+                                      AND TIMESTAMPDIFF(SECOND, created_at, updated_at) >= 0 
+                                      AND TIMESTAMPDIFF(SECOND, created_at, updated_at) <= 300 
+                                 THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
+                                 ELSE NULL END) as avg_speed
                 FROM digi_transactions
                 WHERE seller_name IS NOT NULL AND seller_name != '' 
                   AND LOWER(status) IN ('success', 'failed', 'sukses', 'gagal')
