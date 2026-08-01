@@ -101,6 +101,88 @@ class DashboardController extends Controller
         $stmtTopToday->execute([':today' => $today]);
         $topProductsToday = $stmtTopToday->fetchAll() ?: [];
 
+        // 4. PPOB Analytics Data for Dashboard
+        $ppobStats = [
+            'today_total' => 0,
+            'today_success' => 0,
+            'today_pending' => 0,
+            'today_failed' => 0,
+            'today_revenue' => 0,
+            'today_profit' => 0,
+            'today_success_rate' => 0,
+            'today_avg_speed' => 0,
+        ];
+        $ppobTopToday = [];
+        $ppobCat30Days = [];
+
+        try {
+            $stmtPpobToday = $db->prepare("
+                SELECT 
+                    COUNT(*) as total_count,
+                    SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN 1 ELSE 0 END) as success_count,
+                    SUM(CASE WHEN LOWER(status) IN ('pending', 'processing') THEN 1 ELSE 0 END) as pending_count,
+                    SUM(CASE WHEN LOWER(status) IN ('failed', 'gagal') THEN 1 ELSE 0 END) as failed_count,
+                    COALESCE(SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN sell_price ELSE 0 END), 0) as revenue,
+                    COALESCE(SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN profit ELSE 0 END), 0) as profit,
+                    AVG(CASE WHEN LOWER(status) IN ('success', 'sukses', 'failed', 'gagal') 
+                                 AND TIMESTAMPDIFF(SECOND, created_at, updated_at) >= 0 
+                                 AND TIMESTAMPDIFF(SECOND, created_at, updated_at) <= 300 
+                            THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
+                            ELSE NULL END) as avg_speed
+                FROM digi_transactions
+                WHERE DATE(created_at) = :today
+            ");
+            $stmtPpobToday->execute([':today' => $today]);
+            $rowP = $stmtPpobToday->fetch(PDO::FETCH_ASSOC);
+            if ($rowP) {
+                $ppobStats['today_total'] = (int)($rowP['total_count'] ?? 0);
+                $ppobStats['today_success'] = (int)($rowP['success_count'] ?? 0);
+                $ppobStats['today_pending'] = (int)($rowP['pending_count'] ?? 0);
+                $ppobStats['today_failed'] = (int)($rowP['failed_count'] ?? 0);
+                $ppobStats['today_revenue'] = (float)($rowP['revenue'] ?? 0);
+                $ppobStats['today_profit'] = (float)($rowP['profit'] ?? 0);
+                $ppobStats['today_avg_speed'] = $rowP['avg_speed'] !== null ? round((float)$rowP['avg_speed'], 1) : 0;
+                if ($ppobStats['today_total'] > 0) {
+                    $ppobStats['today_success_rate'] = round(($ppobStats['today_success'] / $ppobStats['today_total']) * 100, 1);
+                }
+            }
+
+            // Top 5 PPOB products sold today
+            $stmtTopPpob = $db->prepare("
+                SELECT 
+                    product_name,
+                    category,
+                    COUNT(*) as qty,
+                    COALESCE(SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN sell_price ELSE 0 END), 0) as revenue,
+                    COALESCE(SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN profit ELSE 0 END), 0) as profit
+                FROM digi_transactions
+                WHERE DATE(created_at) = :today
+                GROUP BY product_name, category
+                ORDER BY qty DESC
+                LIMIT 5
+            ");
+            $stmtTopPpob->execute([':today' => $today]);
+            $ppobTopToday = $stmtTopPpob->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            // PPOB category distribution (last 30 days)
+            $stmtCatPpob = $db->prepare("
+                SELECT 
+                    COALESCE(NULLIF(category, ''), 'Lainnya') as category_name,
+                    COUNT(*) as total_qty,
+                    COALESCE(SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN sell_price ELSE 0 END), 0) as total_revenue
+                FROM digi_transactions
+                WHERE DATE(created_at) BETWEEN :s AND :e
+                GROUP BY category_name
+                ORDER BY total_qty DESC
+                LIMIT 5
+            ");
+            $stmtCatPpob->execute([':s' => $thirtyDaysAgo, ':e' => $today]);
+            $ppobCat30Days = $stmtCatPpob->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        } catch (\Throwable $e) {
+            error_log("[DashboardController] PPOB query error: " . $e->getMessage());
+        }
+
         $this->view('dashboard.index', [
             'title' => 'Dashboard',
             'activeNav' => 'home',
@@ -108,6 +190,9 @@ class DashboardController extends Controller
             'weeklySeries' => $weeklySeries,
             'topCategories' => $topCategories,
             'topProductsToday' => $topProductsToday,
+            'ppobStats' => $ppobStats,
+            'ppobTopToday' => $ppobTopToday,
+            'ppobCat30Days' => $ppobCat30Days,
         ]);
     }
 

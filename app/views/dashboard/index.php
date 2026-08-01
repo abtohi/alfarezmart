@@ -161,7 +161,7 @@
 /* Desktop Layout Adjustments */
 @media (min-width: 992px) {
     .dash-kpi-grid {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
         gap: 16px;
     }
     .dash-kpi-card {
@@ -269,6 +269,21 @@
                 <div class="dash-kpi-sub">Penjualan Hari Ini</div>
             </a>
 
+            <a href="<?= BASE_URL ?>ppob/summary" class="dash-kpi-card">
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">PPOB Hari Ini</span>
+                    <div class="dash-kpi-icon" style="background:rgba(168,85,247,0.12);color:#a855f7;">
+                        <i class="bi bi-phone-fill"></i>
+                    </div>
+                </div>
+                <div class="dash-kpi-value" style="color:#a855f7;">
+                    Rp <?= number_format($ppobStats['today_revenue'] ?? 0, 0, ',', '.') ?>
+                </div>
+                <div class="dash-kpi-sub">
+                    <?= number_format($ppobStats['today_total'] ?? 0) ?> Trx &middot; Profit: <strong style="color:var(--success);">Rp <?= number_format($ppobStats['today_profit'] ?? 0, 0, ',', '.') ?></strong>
+                </div>
+            </a>
+
             <a href="<?= BASE_URL ?>products?filter=low_stock" class="dash-kpi-card">
                 <div class="dash-kpi-header">
                     <span class="dash-kpi-title">Stok Terendah</span>
@@ -295,6 +310,21 @@
                     <?= number_format($stats['today_transactions'] ?? 0) ?> Struk
                 </div>
                 <div class="dash-kpi-sub">Penjualan Kasir POS</div>
+            </a>
+
+            <a href="<?= BASE_URL ?>ppob" class="dash-kpi-card">
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">PPOB Hari Ini</span>
+                    <div class="dash-kpi-icon" style="background:rgba(168,85,247,0.12);color:#a855f7;">
+                        <i class="bi bi-phone-fill"></i>
+                    </div>
+                </div>
+                <div class="dash-kpi-value" style="color:#a855f7;">
+                    <?= number_format($ppobStats['today_total'] ?? 0) ?> Transaksi
+                </div>
+                <div class="dash-kpi-sub">
+                    <span style="color:var(--success);"><?= $ppobStats['today_success'] ?? 0 ?> Sukses</span> &middot; <span style="color:var(--danger);"><?= $ppobStats['today_failed'] ?? 0 ?> Gagal</span>
+                </div>
             </a>
 
             <a href="<?= BASE_URL ?>products?filter=low_stock" class="dash-kpi-card">
@@ -338,6 +368,19 @@
 
         <?php else: ?>
             <!-- Staff: Pure Operational Inventory (NO MONEY INFO) -->
+            <a href="<?= BASE_URL ?>ppob" class="dash-kpi-card">
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">PPOB Hari Ini</span>
+                    <div class="dash-kpi-icon" style="background:rgba(168,85,247,0.12);color:#a855f7;">
+                        <i class="bi bi-phone-fill"></i>
+                    </div>
+                </div>
+                <div class="dash-kpi-value" style="color:#a855f7;">
+                    <?= number_format($ppobStats['today_total'] ?? 0) ?> Transaksi
+                </div>
+                <div class="dash-kpi-sub">Produk Digital PPOB</div>
+            </a>
+
             <a href="<?= BASE_URL ?>products" class="dash-kpi-card">
                 <div class="dash-kpi-header">
                     <span class="dash-kpi-title">Total Produk</span>
@@ -572,7 +615,195 @@
         </div>
     </div>
 
-    <!-- 5. MANAJEMEN DATA -->
+    <!-- 5. STATISTIK & INSIGHT PPOB (PRODUK DIGITAL) -->
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="section-title mb-0" style="display:flex;align-items:center;gap:8px;">
+            <i class="bi bi-phone-fill" style="color:#a855f7;"></i>
+            <span>Statistik &amp; Insight PPOB (Produk Digital)</span>
+        </div>
+        <a href="<?= BASE_URL ?>ppob/summary" class="badge-custom badge-primary text-decoration-none" style="font-size:11px;padding:6px 12px;border-radius:20px;display:inline-flex;align-items:center;gap:4px;">
+            Detail Analytics PPOB <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+
+    <!-- PPOB Metrics Grid -->
+    <div class="dash-kpi-grid mb-3">
+        <div class="dash-kpi-card">
+            <div class="dash-kpi-header">
+                <span class="dash-kpi-title">Trx PPOB Hari Ini</span>
+                <div class="dash-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">
+                    <i class="bi bi-receipt"></i>
+                </div>
+            </div>
+            <div class="dash-kpi-value">
+                <?= number_format($ppobStats['today_total'] ?? 0) ?> <span style="font-size:0.8rem;font-weight:600;">Trx</span>
+            </div>
+            <div class="dash-kpi-sub">
+                <span style="color:var(--success);font-weight:600;"><?= number_format($ppobStats['today_success'] ?? 0) ?> Sukses</span> &middot;
+                <span style="color:var(--danger);"><?= number_format($ppobStats['today_failed'] ?? 0) ?> Gagal</span>
+            </div>
+        </div>
+
+        <?php if ($userLevel === 'superadmin'): ?>
+        <div class="dash-kpi-card">
+            <div class="dash-kpi-header">
+                <span class="dash-kpi-title">Omzet PPOB Hari Ini</span>
+                <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+            </div>
+            <div class="dash-kpi-value" style="color:var(--success);">
+                Rp <?= number_format($ppobStats['today_revenue'] ?? 0, 0, ',', '.') ?>
+            </div>
+            <div class="dash-kpi-sub">
+                Profit: <strong style="color:var(--success);">Rp <?= number_format($ppobStats['today_profit'] ?? 0, 0, ',', '.') ?></strong>
+            </div>
+        </div>
+        <?php else: ?>
+        <div class="dash-kpi-card">
+            <div class="dash-kpi-header">
+                <span class="dash-kpi-title">Sedang Diproses</span>
+                <div class="dash-kpi-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b;">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+            </div>
+            <div class="dash-kpi-value" style="color:#f59e0b;">
+                <?= number_format($ppobStats['today_pending'] ?? 0) ?> Trx
+            </div>
+            <div class="dash-kpi-sub">Status Pending / Process</div>
+        </div>
+        <?php endif; ?>
+
+        <div class="dash-kpi-card">
+            <div class="dash-kpi-header">
+                <span class="dash-kpi-title">Success Rate (SR)</span>
+                <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+            </div>
+            <div class="dash-kpi-value <?= ($ppobStats['today_success_rate'] ?? 0) >= 80 ? 'text-success' : (($ppobStats['today_success_rate'] ?? 0) >= 60 ? 'text-warning' : '') ?>">
+                <?= number_format($ppobStats['today_success_rate'] ?? 0, 1) ?>%
+            </div>
+            <div class="dash-kpi-sub">Tingkat Keberhasilan</div>
+        </div>
+
+        <div class="dash-kpi-card">
+            <div class="dash-kpi-header">
+                <span class="dash-kpi-title">Avg Kecepatan Supplier</span>
+                <div class="dash-kpi-icon" style="background:rgba(129,140,248,0.12);color:#818cf8;">
+                    <i class="bi bi-lightning-charge-fill"></i>
+                </div>
+            </div>
+            <div class="dash-kpi-value text-primary">
+                <?= $ppobStats['today_avg_speed'] ?? 0 ?> <span style="font-size:0.8rem;font-weight:600;">dtk</span>
+            </div>
+            <div class="dash-kpi-sub">
+                <?php 
+                    $spd = $ppobStats['today_avg_speed'] ?? 0;
+                    if ($spd > 0 && $spd <= 5) echo '⚡ Kilat';
+                    elseif ($spd <= 20) echo '⏱️ Cepat';
+                    else echo '⏳ Normal';
+                ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- PPOB Widgets Grid -->
+    <div class="dash-charts-grid mb-4">
+        <!-- Widget 1: Top 5 Transaksi PPOB Hari Ini -->
+        <div class="dash-chart-card">
+            <div class="dash-chart-header">
+                <div class="dash-chart-title">
+                    <i class="bi bi-trophy-fill" style="color:#a855f7;"></i>
+                    <span>Top 5 Transaksi PPOB Hari Ini</span>
+                </div>
+                <span class="badge-custom badge-primary" style="font-size:10px;">Produk Digital</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <?php if (!empty($ppobTopToday)): ?>
+                    <?php foreach ($ppobTopToday as $idx => $item): ?>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-2);border-radius:var(--radius-md);border:1px solid var(--border-color);">
+                        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
+                            <div style="width:26px;height:26px;border-radius:50%;background:<?= $idx === 0 ? '#a855f7' : ($idx === 1 ? '#3b82f6' : ($idx === 2 ? '#10b981' : 'var(--surface-3)')) ?>;color:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;">
+                                <?= $idx + 1 ?>
+                            </div>
+                            <div style="min-width:0;">
+                                <div style="font-size:12px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="<?= htmlspecialchars($item['product_name']) ?>">
+                                    <?= htmlspecialchars($item['product_name']) ?>
+                                </div>
+                                <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:9px;padding:2px 6px;">
+                                    <?= htmlspecialchars(strtoupper(str_replace('_', ' ', $item['category'] ?? 'PPOB'))) ?>
+                                </span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;flex-shrink:0;">
+                            <span style="font-size:12px;font-weight:800;color:#a855f7;"><?= number_format($item['qty']) ?> Trx</span>
+                            <?php if ($userLevel === 'superadmin'): ?>
+                                <div style="font-size:10px;color:var(--text-muted);">Rp <?= number_format($item['revenue'], 0, ',', '.') ?></div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div style="text-align:center;padding:28px 0;color:var(--text-muted);font-size:12px;">
+                        <i class="bi bi-phone" style="font-size:1.6rem;display:block;margin-bottom:6px;opacity:0.6;"></i>
+                        Belum ada transaksi PPOB hari ini
+                        <div style="margin-top:8px;">
+                            <a href="<?= BASE_URL ?>ppob" class="btn btn-sm btn-outline-primary py-1 px-3" style="font-size:11px;border-radius:20px;">
+                                <i class="bi bi-plus-circle me-1"></i> Transaksi PPOB Baru
+                            </a>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Widget 2: Kategori PPOB Terpopuler (30 Hari) -->
+        <div class="dash-chart-card">
+            <div class="dash-chart-header">
+                <div class="dash-chart-title">
+                    <i class="bi bi-pie-chart-fill" style="color:#06b6d4;"></i>
+                    <span>Kategori PPOB (30 Hari)</span>
+                </div>
+                <a href="<?= BASE_URL ?>ppob/summary" style="font-size:11px;color:var(--primary);text-decoration:none;font-weight:600;">
+                    Analytics <i class="bi bi-chevron-right" style="font-size:8px;"></i>
+                </a>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+                <?php if (!empty($ppobCat30Days)): ?>
+                    <?php 
+                        $totalCatSum = array_sum(array_column($ppobCat30Days, 'total_qty')) ?: 1;
+                        $catColors = ['#a855f7', '#3b82f6', '#10b981', '#f59e0b', '#ec4899'];
+                    ?>
+                    <?php foreach ($ppobCat30Days as $idx => $cat): ?>
+                        <?php 
+                            $pct = round(($cat['total_qty'] / $totalCatSum) * 100, 1);
+                            $color = $catColors[$idx % count($catColors)];
+                        ?>
+                        <div>
+                            <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;margin-bottom:4px;">
+                                <span style="color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                                    <span style="width:8px;height:8px;border-radius:50%;background:<?= $color ?>;display:inline-block;"></span>
+                                    <?= htmlspecialchars(strtoupper(str_replace('_', ' ', $cat['category_name']))) ?>
+                                </span>
+                                <span><?= number_format($cat['total_qty']) ?> Trx (<?= $pct ?>%)</span>
+                            </div>
+                            <div style="width:100%;height:6px;background:var(--surface-3);border-radius:4px;overflow:hidden;">
+                                <div style="width:<?= $pct ?>%;height:100%;background:<?= $color ?>;border-radius:4px;"></div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div style="text-align:center;padding:28px 0;color:var(--text-muted);font-size:12px;">
+                        <i class="bi bi-bar-chart" style="font-size:1.6rem;display:block;margin-bottom:6px;opacity:0.6;"></i>
+                        Belum ada histori kategori PPOB
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. MANAJEMEN DATA -->
     <div class="section-title">Manajemen Data</div>
     <ul class="menu-list" style="margin-bottom:24px;">
         <a href="<?= BASE_URL ?>products" class="menu-item">
@@ -638,7 +869,7 @@
     </ul>
 
     <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:var(--font-size-xs);">
-        AlfarezMart v1.1.4 &middot; PWA Inventory System<br>
+        AlfarezMart v1.1.5 &middot; PWA Inventory System<br>
         &copy; 2026 AlfarezMart
     </div>
 </div>
