@@ -1094,6 +1094,5 @@ document.addEventListener('click', (e) => {
             window.showGlobalBarcodeModal(e.detail.code);
         }
     });
-})();
 </script>
 

@@ -559,11 +559,92 @@ async function fetchProductDetail(id, fallbackObj = null) {
     }
 }
 
-function showProductResultOffline(data) {
+async function enrichProductSuppliersOffline(product) {
+    if (!product || !product.id) return product;
+    if (product.suppliers && Array.isArray(product.suppliers) && product.suppliers.length > 0 && product.last_purchase) {
+        return product; // Already has full supplier data from server
+    }
+
+    try {
+        if (typeof db === 'undefined' || !db.purchases) return product;
+
+        const allPurchases = await db.purchases.toArray();
+        const allSuppliers = typeof db.suppliers !== 'undefined' ? await db.suppliers.toArray() : [];
+        const supplierMap = {};
+        allSuppliers.forEach(s => { supplierMap[s.id] = s; });
+
+        const matchingPurchases = [];
+        allPurchases.forEach(pur => {
+            const items = pur.items || pur.purchase_items || [];
+            if (Array.isArray(items)) {
+                items.forEach(item => {
+                    if (item.product_id == product.id || item.id == product.id) {
+                        matchingPurchases.push({ purchase: pur, item: item });
+                    }
+                });
+            }
+        });
+
+        if (matchingPurchases.length > 0) {
+            matchingPurchases.sort((a, b) => new Date(b.purchase.date || b.purchase.purchase_date || 0) - new Date(a.purchase.date || a.purchase.purchase_date || 0));
+
+            const latest = matchingPurchases[0];
+            const supName = latest.purchase.supplier_name || (supplierMap[latest.purchase.supplier_id] ? supplierMap[latest.purchase.supplier_id].name : 'Pemasok');
+            product.last_purchase = {
+                supplier_name: supName,
+                purchase_date: latest.purchase.date || latest.purchase.purchase_date,
+                purchase_code: latest.purchase.invoice_number || latest.purchase.purchase_code || '-',
+                buy_price: latest.item.buy_price || latest.item.item_buy_price || 0,
+                unit_name: latest.item.unit_name || 'Pcs'
+            };
+
+            const supGroupMap = {};
+            matchingPurchases.forEach(mp => {
+                const sId = mp.purchase.supplier_id || 0;
+                const sName = mp.purchase.supplier_name || (supplierMap[sId] ? supplierMap[sId].name : 'Pemasok Umum');
+                if (!supGroupMap[sId]) {
+                    supGroupMap[sId] = {
+                        supplier_id: sId,
+                        supplier_name: sName,
+                        address: supplierMap[sId] ? supplierMap[sId].address || '' : '',
+                        last_buy_price: mp.item.buy_price || mp.item.item_buy_price || 0,
+                        last_purchase_date: mp.purchase.date || mp.purchase.purchase_date,
+                        purchase_count: 0,
+                        purchases: []
+                    };
+                }
+                supGroupMap[sId].purchase_count++;
+                supGroupMap[sId].purchases.push({
+                    purchase_id: mp.purchase.id,
+                    purchase_code: mp.purchase.invoice_number || mp.purchase.purchase_code || '-',
+                    purchase_date: mp.purchase.date || mp.purchase.purchase_date,
+                    quantity: mp.item.quantity || 1,
+                    item_buy_price: mp.item.buy_price || mp.item.item_buy_price || 0,
+                    item_subtotal: (mp.item.buy_price || mp.item.item_buy_price || 0) * (mp.item.quantity || 1),
+                    unit_name: mp.item.unit_name || 'Pcs'
+                });
+            });
+
+            product.suppliers = Object.values(supGroupMap);
+        }
+    } catch(e) {
+        console.warn("enrichProductSuppliersOffline error:", e);
+    }
+
+    return product;
+}
+
+async function showProductResultOffline(data) {
+    if (typeof enrichProductSuppliersOffline === 'function') {
+        data = await enrichProductSuppliersOffline(data);
+    }
     renderProductScanResult(data, true);
 }
 
-function showProductResult(data) {
+async function showProductResult(data) {
+    if ((!data.suppliers || data.suppliers.length === 0) && typeof enrichProductSuppliersOffline === 'function') {
+        data = await enrichProductSuppliersOffline(data);
+    }
     renderProductScanResult(data, false);
 }
 
