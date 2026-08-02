@@ -25,17 +25,19 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
 ?>
 <div class="page-section">
     <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;min-width:0;">
-        <form method="GET" action="/products" style="flex:1;min-width:0;" id="productSearchForm">
+        <form method="GET" action="<?= BASE_URL ?>products" style="flex:1;min-width:0;position:relative;" id="productSearchForm">
             <input type="hidden" name="category" value="<?= htmlspecialchars($selectedCategory ?? '') ?>">
             <input type="hidden" name="min_price" value="<?= htmlspecialchars($minPrice ?? '') ?>">
             <input type="hidden" name="max_price" value="<?= htmlspecialchars($maxPrice ?? '') ?>">
             <div class="search-input-wrapper">
                 <i class="bi bi-search"></i>
-                <input type="text" name="q" id="productSearchInput" class="no-track" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Cari produk..." autocomplete="off" oninput="filterProductsClientSide(this.value)">
+                <input type="text" name="q" id="productSearchInput" class="no-track" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Cari nama produk, brand, barcode..." autocomplete="off" oninput="handleProductSearchInput(this.value)">
                 <?php if (!empty($search)): ?>
                     <a href="<?= $clearSearchUrl ?>" style="color:var(--text-muted);text-decoration:none;flex-shrink:0;"><i class="bi bi-x-lg"></i></a>
                 <?php endif; ?>
             </div>
+            <!-- Live Recommendation Suggestions Dropdown -->
+            <div id="productSearchSuggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; background:var(--surface-1); border:1px solid var(--border-color); border-radius:14px; margin-top:6px; box-shadow:0 12px 36px rgba(0,0,0,0.3); max-height:360px; overflow-y:auto; padding:6px;"></div>
         </form>
         <button type="button" onclick="scanProductBarcode()" title="Scan Barcode"
                 style="background:var(--primary);color:white;border:none;border-radius:var(--radius-lg);padding:10px 12px;cursor:pointer;font-size:1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
@@ -1008,6 +1010,83 @@ function filterProductsClientSide(query) {
         }
     });
 }
+
+let _prodSearchTimer = null;
+
+async function handleProductSearchInput(query) {
+    filterProductsClientSide(query);
+
+    const q = (query || '').trim();
+    const sugDiv = document.getElementById('productSearchSuggestions');
+    if (!sugDiv) return;
+
+    if (q.length < 2) {
+        sugDiv.style.display = 'none';
+        sugDiv.innerHTML = '';
+        return;
+    }
+
+    clearTimeout(_prodSearchTimer);
+    _prodSearchTimer = setTimeout(async () => {
+        let results = [];
+        if (typeof OfflineDB !== 'undefined' && OfflineDB.searchProducts) {
+            try {
+                results = await OfflineDB.searchProducts(q);
+            } catch(e) {}
+        }
+
+        if (results.length < 3 && navigator.onLine) {
+            try {
+                const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
+                const res = await fetch(`${baseUrl}api/products/search?q=${encodeURIComponent(q)}`);
+                if (res.ok) {
+                    const apiData = await res.json();
+                    if (Array.isArray(apiData) && apiData.length > 0) {
+                        results = apiData;
+                    }
+                }
+            } catch(e) {}
+        }
+
+        if (results.length === 0) {
+            sugDiv.style.display = 'none';
+            sugDiv.innerHTML = '';
+            return;
+        }
+
+        const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
+        sugDiv.innerHTML = results.slice(0, 8).map(p => {
+            const name = (p.name || p.full_name || p.short_label || 'Tanpa Nama').replace(/</g,'&lt;');
+            const brand = (p.brand_name || '').replace(/</g,'&lt;');
+            const category = (p.category_name || '').replace(/</g,'&lt;');
+            const price = p.price_small_retail || (p.packagings && p.packagings[0] ? p.packagings[0].sell_price_retail : 0);
+            const priceText = price ? `Rp${parseInt(price).toLocaleString('id-ID')}` : '';
+            const photoHtml = p.photo 
+                ? `<img src="${baseUrl}${p.photo}" style="width:36px;height:36px;object-fit:contain;border-radius:6px;background:var(--surface-2);flex-shrink:0;">`
+                : `<div style="width:36px;height:36px;border-radius:6px;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;"><i class="bi bi-box-seam"></i></div>`;
+
+            return `
+                <a href="${baseUrl}products/${p.id}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;text-decoration:none;color:var(--text-primary);transition:background 0.15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">
+                    ${photoHtml}
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+                        <div style="font-size:10px;color:var(--text-muted);">${brand}${brand&&category?' · ':''}${category}</div>
+                    </div>
+                    ${priceText ? `<div style="font-weight:800;font-size:12px;color:var(--success);flex-shrink:0;">${priceText}</div>` : ''}
+                </a>`;
+        }).join('');
+
+        sugDiv.style.display = 'block';
+    }, 200);
+}
+
+document.addEventListener('click', (e) => {
+    const sugDiv = document.getElementById('productSearchSuggestions');
+    const form = document.getElementById('productSearchForm');
+    if (sugDiv && form && !form.contains(e.target)) {
+        sugDiv.style.display = 'none';
+    }
+});
 
     // Listen for hardware scanner events on products page to show global modal
     document.addEventListener('hardware-barcode-scanned-products', (e) => {

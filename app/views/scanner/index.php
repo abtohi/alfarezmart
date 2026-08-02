@@ -300,7 +300,6 @@ async function lookupBarcode() {
     if (!code) return;
 
     lastSearchKeyword = code;
-    if (input) input.select(); // Highlight text so next scan automatically replaces it!
     
     const resultDiv = document.getElementById('scanResult');
     const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
@@ -1010,25 +1009,10 @@ let lastKeypressTime = 0;
 const barcodeInpEl = document.getElementById('barcodeInput');
 
 if (barcodeInpEl) {
-    barcodeInpEl.addEventListener('focus', () => {
-        barcodeInpEl.select();
-    });
-
     barcodeInpEl.addEventListener('keydown', (e) => {
-        const now = Date.now();
         if (e.key === 'Enter') {
             clearTimeout(scannerTimer);
             lookupBarcode();
-            return;
-        }
-        if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
-            // If user or scanner starts typing after a pause (>300ms) and text wasn't selected, select it so new barcode replaces old
-            if (lastKeypressTime > 0 && (now - lastKeypressTime > 300)) {
-                if (barcodeInpEl.selectionStart === barcodeInpEl.selectionEnd) {
-                    barcodeInpEl.select();
-                }
-            }
-            lastKeypressTime = now;
         }
     });
 
@@ -1036,11 +1020,10 @@ if (barcodeInpEl) {
         clearTimeout(scannerTimer);
         scannerTimer = setTimeout(() => {
             lookupBarcode();
-        }, 300);
+        }, 350);
     });
 
-    // Auto-focus & select
+    // Auto-focus
     barcodeInpEl.focus();
-    barcodeInpEl.select();
 }
 </script>
