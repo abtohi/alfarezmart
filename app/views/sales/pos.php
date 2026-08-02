@@ -1870,6 +1870,45 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         renderCart();
+
+        // Check if there is a pending product to add from a scan on another page
+        (function checkPendingAddProduct() {
+            try {
+                const pendingRaw = localStorage.getItem('pos_pending_add_product');
+                if (!pendingRaw) return;
+                localStorage.removeItem('pos_pending_add_product');
+                
+                const pending = JSON.parse(pendingRaw);
+                if (!pending || !pending.id) return;
+                
+                setTimeout(async () => {
+                    let product = null;
+                    if (window._posProductsCatalog && window._posProductsCatalog.length > 0) {
+                        product = window._posProductsCatalog.find(p => p.id == pending.id);
+                    }
+                    if (!product && typeof OfflineDB !== 'undefined') {
+                        try { product = await OfflineDB.getProductById(pending.id); } catch(e){}
+                    }
+                    if (!product && pending.product) {
+                        product = pending.product;
+                    }
+                    if (!product) {
+                        try {
+                            const res = await fetch(`${BASE_URL}api/products/${pending.id}?pos=1`);
+                            if (res.ok) product = await res.json();
+                        } catch(e) {}
+                    }
+                    
+                    if (product && typeof addProductToCart === 'function') {
+                        addProductToCart(product);
+                        if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+                        if (typeof showToast === 'function') {
+                            showToast(`✅ ${product.short_label || product.full_name || 'Produk'} ditambahkan ke keranjang`, 'success');
+                        }
+                    }
+                }, 400);
+            } catch(e) {}
+        })();
     } catch (err) {
         console.error('POS init error:', err);
         showToast('Gagal memuat halaman kasir. Muat ulang halaman.', 'error');

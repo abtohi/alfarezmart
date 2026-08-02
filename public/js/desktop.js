@@ -143,14 +143,10 @@
     });
 
     function _routeBarcodeScan(code) {
-        // Route to the appropriate input on the current page
-        // Priority: POS > Purchase > Scanner > Products > Fallback
-
-        // POS page (posSearch or posBarcode input)
-        const posInput = document.getElementById('posSearch') ||
-                         document.getElementById('posBarcode');
+        // Priority:
+        // 1. POS page: Direct add to cart without dialog!
+        const posInput = document.getElementById('posSearch') || document.getElementById('posBarcode');
         if (posInput) {
-            // POS has its own processBarcodeScan with instant in-memory lookup
             if (typeof window.processBarcodeScan === 'function') {
                 const sug = document.getElementById('posSuggestions');
                 posInput.value = code;
@@ -164,17 +160,9 @@
             return;
         }
 
-        // Purchase / Barang Masuk page
-        const purchaseSearchInput = document.getElementById('productSearch');
-        if (purchaseSearchInput) {
-            // Dispatch custom event; purchases page handles offline-first lookup
-            document.dispatchEvent(new CustomEvent('hardware-barcode-scanned-purchase', { detail: { code } }));
-            return;
-        }
-
-        // Scanner page (/scanner)
+        // 2. Scanner page (/scanner)
         const scannerInput = document.getElementById('barcodeInput');
-        if (scannerInput) {
+        if (scannerInput && window.location.pathname.includes('/scanner')) {
             scannerInput.value = code;
             scannerInput.select();
             if (typeof window.lookupBarcode === 'function') {
@@ -183,15 +171,19 @@
             return;
         }
 
-        // Products list page — dispatch custom event; products/index.php handles it
-        const productListContainer = document.getElementById('productListContainer');
-        if (productListContainer) {
-            document.dispatchEvent(new CustomEvent('hardware-barcode-scanned-products', { detail: { code } }));
-            return;
+        // 3. Purchase page (/purchases/create)
+        const purchaseSearchInput = document.getElementById('productSearch');
+        if (purchaseSearchInput && window.location.pathname.includes('/purchases/create')) {
+            if (typeof window._doPurchaseBarcodeSearch === 'function') {
+                window._doPurchaseBarcodeSearch(code);
+                return;
+            }
         }
 
-        // Fallback: show toast
-        if (typeof window.showToast === 'function') {
+        // 4. ALL OTHER PAGES (Home, Products, Suppliers, Debts, Finance, Reports, Settings, etc.):
+        if (typeof window.showGlobalBarcodeModal === 'function') {
+            window.showGlobalBarcodeModal(code);
+        } else if (typeof window.showToast === 'function') {
             window.showToast('Barcode terdeteksi: ' + code, 'info');
         }
     }

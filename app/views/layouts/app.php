@@ -734,6 +734,208 @@ if ($userLevel === 'staff') {
             _sendLog(null, null);
         }
     })();
+    <!-- ===== Global Barcode Scan Result Modal ===== -->
+    <div id="globalBarcodeScanModal" style="display:none; position:fixed; inset:0; z-index:99990; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:16px;" onclick="closeGlobalBarcodeModal()">
+        <div id="globalBarcodeScanSheet" style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:24px; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; padding:24px; box-shadow:0 24px 80px rgba(0,0,0,0.5); animation:popInGlobalModal 0.25s cubic-bezier(0.34,1.56,0.64,1) both;" onclick="event.stopPropagation()">
+            <!-- Modal Header -->
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--border-color);">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:38px; height:38px; border-radius:12px; background:linear-gradient(135deg, var(--primary), #ef4444); color:white; display:flex; align-items:center; justify-content:center; font-size:1.1rem; box-shadow:0 4px 14px rgba(239,68,68,0.35);">
+                        <i class="bi bi-upc-scan"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight:800; font-size:15px; color:var(--text-primary); letter-spacing:-0.2px;">Hasil Pemindaian Barcode</div>
+                        <div id="globalBarcodeModalCode" style="font-size:11px; color:var(--text-muted); font-family:monospace; font-weight:600; margin-top:1px;"></div>
+                    </div>
+                </div>
+                <button type="button" onclick="closeGlobalBarcodeModal()" style="background:var(--surface-2); border:1px solid var(--border-color); color:var(--text-muted); border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:14px; transition:all 0.2s;" onmouseover="this.style.background='var(--danger-bg)';this.style.color='var(--danger)';" onmouseout="this.style.background='var(--surface-2)';this.style.color='var(--text-muted)';">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div id="globalBarcodeModalContent" style="min-height:100px;"></div>
+        </div>
+    </div>
+
+    <style>
+    @keyframes popInGlobalModal {
+        from { opacity:0; transform:scale(0.92) translateY(20px); }
+        to { opacity:1; transform:scale(1) translateY(0); }
+    }
+    </style>
+
+    <script>
+    window.closeGlobalBarcodeModal = function() {
+        const modal = document.getElementById('globalBarcodeScanModal');
+        if (modal) modal.style.display = 'none';
+    };
+
+    window.addScannedProductToPOS = function(productId, productData) {
+        try {
+            localStorage.setItem('pos_pending_add_product', JSON.stringify({
+                id: productId,
+                product: productData || null,
+                timestamp: Date.now()
+            }));
+        } catch(e) {}
+        
+        if (typeof showToast === 'function') {
+            showToast('Menambahkan ke Kasir POS...', 'info');
+        }
+        window.location.href = BASE_URL + 'sales/pos';
+    };
+
+    function renderGlobalProductCard(p, isLocal = false) {
+        const nameLabel = (p.short_label || p.invoice_name || p.full_name || '-').replace(/</g,'&lt;');
+        const fullName  = (p.full_name || '').replace(/</g,'&lt;');
+        const brand     = (p.brand_name || '').replace(/</g,'&lt;');
+        const category  = (p.category_name || '').replace(/</g,'&lt;');
+        const stockQty  = p.current_qty_base !== undefined ? parseInt(p.current_qty_base) : 0;
+        
+        const photoHtml = p.photo 
+            ? `<img src="${BASE_URL}${p.photo}" style="width:72px; height:72px; object-fit:contain; border-radius:14px; background:var(--surface-2); padding:4px; flex-shrink:0; border:1px solid var(--border-color);">`
+            : `<div style="width:72px; height:72px; border-radius:14px; background:var(--primary-bg); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:2rem; flex-shrink:0; border:1px solid var(--border-color);"><i class="bi bi-box-seam"></i></div>`;
+
+        const localBadge = isLocal ? `<span style="font-size:10px; background:rgba(234,179,8,0.15); color:#ca8a04; border:1px solid rgba(234,179,8,0.3); border-radius:6px; padding:2px 7px; font-weight:700;">Lokal</span>` : '';
+
+        // Packaging & Prices breakdown
+        let packagingsHtml = '';
+        if (p.packagings && Array.isArray(p.packagings) && p.packagings.length > 0) {
+            packagingsHtml = p.packagings.map((pkg, idx) => {
+                const priceRetail = parseFloat(pkg.sell_price_retail) || 0;
+                const priceWholesale = parseFloat(pkg.sell_price_wholesale) || 0;
+                const unitName = pkg.unit_name || pkg.unit_abbr || 'Unit';
+                
+                return `
+                    <div style="background:var(--surface-2); border:1px solid var(--border-color); border-radius:12px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="width:26px; height:26px; border-radius:7px; background:var(--primary-bg); color:var(--primary); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;">L${pkg.level || (idx+1)}</div>
+                            <span style="font-weight:700; font-size:13px; color:var(--text-primary);">${unitName}</span>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-weight:800; font-size:14px; color:var(--success);">Rp${priceRetail.toLocaleString('id-ID')}</div>
+                            ${priceWholesale > 0 ? `<div style="font-size:10px; color:var(--warning); font-weight:600;">Grosir: Rp${priceWholesale.toLocaleString('id-ID')}</div>` : ''}
+                        </div>
+                    </div>`;
+            }).join('');
+        } else if (p.price_small_retail) {
+            const price = parseInt(p.price_small_retail);
+            packagingsHtml = `
+                <div style="background:var(--surface-2); border:1px solid var(--border-color); border-radius:12px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:700; font-size:13px; color:var(--text-primary);">Harga Eceran</span>
+                    <span style="font-weight:800; font-size:15px; color:var(--success);">Rp${price.toLocaleString('id-ID')}</span>
+                </div>`;
+        }
+
+        return `
+            <div style="display:flex; gap:16px; align-items:flex-start; margin-bottom:16px;">
+                ${photoHtml}
+                <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
+                        <span style="font-weight:800; font-size:16px; color:var(--text-primary); line-height:1.3;">${nameLabel}</span>
+                        ${localBadge}
+                    </div>
+                    ${fullName && fullName !== nameLabel ? `<div style="font-size:12px; color:var(--text-muted); margin-bottom:6px; line-height:1.3;">${fullName}</div>` : ''}
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:6px;">
+                        ${brand ? `<span style="font-size:10px; background:var(--surface-2); border:1px solid var(--border-color); padding:3px 8px; border-radius:6px; color:var(--text-secondary); font-weight:600;"><i class="bi bi-tag-fill text-muted"></i> ${brand}</span>` : ''}
+                        ${category ? `<span style="font-size:10px; background:var(--surface-2); border:1px solid var(--border-color); padding:3px 8px; border-radius:6px; color:var(--text-secondary); font-weight:600;"><i class="bi bi-folder-fill text-muted"></i> ${category}</span>` : ''}
+                        <span style="font-size:10px; background:${stockQty > 0 ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)'}; color:${stockQty > 0 ? 'var(--success)' : 'var(--danger)'}; border:1px solid ${stockQty > 0 ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)'}; padding:3px 8px; border-radius:6px; font-weight:700;">
+                            <i class="bi bi-boxes"></i> Stok: ${stockQty} pcs
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Price Breakdown Section -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Daftar Harga & Level Kemasan</div>
+                ${packagingsHtml || '<div style="font-size:12px; color:var(--text-muted); padding:10px; text-align:center;">Belum ada tingkat harga</div>'}
+            </div>
+
+            <!-- Action Buttons Footer -->
+            <div style="display:flex; gap:10px; margin-top:18px;">
+                <button type="button" onclick="addScannedProductToPOS(${p.id})" class="btn-primary-custom" style="flex:1.3; padding:12px; font-size:13px; font-weight:700; border:none; border-radius:12px; background:linear-gradient(135deg, #10b981, #059669); color:white; display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; box-shadow:0 4px 14px rgba(16,185,129,0.3); transition:transform 0.15s;" onactive="this.style.transform='scale(0.97)'">
+                    <i class="bi bi-cart-plus-fill" style="font-size:1.1rem;"></i> Tambah ke Keranjang POS
+                </button>
+                <a href="${BASE_URL}products/${p.id}/edit" class="btn-outline-custom" style="flex:1; padding:12px; font-size:13px; font-weight:700; border:1px solid var(--border-color); border-radius:12px; background:var(--surface-2); color:var(--text-primary); display:flex; align-items:center; justify-content:center; gap:6px; text-decoration:none; transition:transform 0.15s;" onactive="this.style.transform='scale(0.97)'">
+                    <i class="bi bi-pencil-square" style="font-size:1.05rem; color:var(--primary);"></i> Edit Produk
+                </a>
+            </div>`;
+    }
+
+    window.showGlobalBarcodeModal = async function(code) {
+        const modal = document.getElementById('globalBarcodeScanModal');
+        const content = document.getElementById('globalBarcodeModalContent');
+        const codeEl = document.getElementById('globalBarcodeModalCode');
+
+        if (!modal || !content || !codeEl) return;
+
+        codeEl.textContent = code;
+        modal.style.display = 'flex';
+
+        if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+
+        // 1. Check local IndexedDB first for INSTANT 0ms display
+        let localProduct = null;
+        if (typeof OfflineDB !== 'undefined') {
+            try { localProduct = await OfflineDB.findByBarcode(code); } catch(e) {}
+        }
+
+        if (localProduct && localProduct.id) {
+            content.innerHTML = renderGlobalProductCard(localProduct, true);
+
+            // Background server refresh
+            try {
+                const ctrl = new AbortController();
+                setTimeout(() => ctrl.abort(), 4000);
+                const res = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(code)}`, {
+                    credentials: 'same-origin', signal: ctrl.signal
+                });
+                if (res.ok) {
+                    const fresh = await res.json();
+                    if (fresh && fresh.id) {
+                        content.innerHTML = renderGlobalProductCard(fresh, false);
+                        if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) {
+                            OfflineDB.saveProduct(fresh).catch(() => {});
+                        }
+                    }
+                }
+            } catch(e) {}
+            return;
+        }
+
+        // 2. Not in local DB -> Show spinner and fetch from server
+        content.innerHTML = `<div style="text-align:center; padding:36px 12px;"><div class="spinner-border text-primary" role="status"></div><div style="font-size:13px; color:var(--text-muted); margin-top:12px; font-weight:600;">Mencari produk di server...</div></div>`;
+
+        try {
+            const ctrl = new AbortController();
+            setTimeout(() => ctrl.abort(), 4500);
+            const res = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(code)}`, {
+                credentials: 'same-origin', signal: ctrl.signal
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.id) {
+                    content.innerHTML = renderGlobalProductCard(data, false);
+                    if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) {
+                        OfflineDB.saveProduct(data).catch(() => {});
+                    }
+                    return;
+                }
+            }
+        } catch(e) {}
+
+        // 3. Not found state
+        content.innerHTML = `
+            <div style="text-align:center; padding:32px 12px;">
+                <div style="width:56px; height:56px; border-radius:50%; background:var(--surface-2); color:var(--text-muted); display:inline-flex; align-items:center; justify-content:center; font-size:1.8rem; margin-bottom:12px;">
+                    <i class="bi bi-search"></i>
+                </div>
+                <div style="font-weight:800; font-size:15px; color:var(--text-primary);">Produk Tidak Ditemukan</div>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">Kode barcode: <span style="font-family:monospace; font-weight:600;">${escapeHtml(code)}</span></div>
+            </div>`;
+    };
     </script>
 
 </body>
