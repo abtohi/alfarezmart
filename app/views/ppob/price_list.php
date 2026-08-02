@@ -4,9 +4,10 @@
 <style>
 /* Modern Price List Design System */
 .price-page-wrapper {
-    max-width: 1300px;
-    margin: 0 auto;
-    padding: 1.5rem 1rem;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 1.25rem 1.5rem;
 }
 
 .price-header-card {
@@ -267,6 +268,9 @@ table.dataTable tbody td {
 }
 
 @media (max-width: 768px) {
+    .price-page-wrapper {
+        padding: 1rem 0.75rem;
+    }
     .price-header-card {
         padding: 1.25rem;
     }
