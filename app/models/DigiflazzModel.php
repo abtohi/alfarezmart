@@ -395,7 +395,7 @@ class DigiflazzModel {
                 SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN modal_price ELSE 0 END) as total_cost,
                 SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN profit ELSE 0 END) as total_profit,
                 AVG(CASE WHEN LOWER(status) IN ('success', 'sukses', 'failed', 'gagal') 
-                             AND TIMESTAMPDIFF(SECOND, created_at, updated_at) >= 0 
+                             AND TIMESTAMPDIFF(SECOND, created_at, updated_at) BETWEEN 0 AND 900
                         THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
                         ELSE NULL END) as avg_speed
             FROM digi_transactions
@@ -558,7 +558,7 @@ class DigiflazzModel {
                        COUNT(id) as total,
                        SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN 1 ELSE 0 END) as success,
                         AVG(CASE WHEN LOWER(status) IN ('success', 'sukses', 'failed', 'gagal') 
-                                      AND TIMESTAMPDIFF(SECOND, created_at, updated_at) >= 0 
+                                      AND TIMESTAMPDIFF(SECOND, created_at, updated_at) BETWEEN 0 AND 900
                                  THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
                                  ELSE NULL END) as avg_speed
                 FROM digi_transactions
@@ -591,7 +591,7 @@ class DigiflazzModel {
                        COUNT(id) as total,
                        SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN 1 ELSE 0 END) as success,
                        AVG(CASE WHEN LOWER(status) IN ('success', 'sukses', 'failed', 'gagal') 
-                                    AND TIMESTAMPDIFF(SECOND, created_at, updated_at) >= 0 
+                                    AND TIMESTAMPDIFF(SECOND, created_at, updated_at) BETWEEN 0 AND 900
                                THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
                                ELSE NULL END) as avg_speed
                 FROM digi_transactions
@@ -683,7 +683,7 @@ class DigiflazzModel {
         // Calculate average seller speed across all completed transactions
         $stmtSpeed = $this->db->prepare("
             SELECT AVG(CASE WHEN LOWER(status) IN ('success', 'sukses', 'failed', 'gagal') 
-                                AND TIMESTAMPDIFF(SECOND, created_at, updated_at) >= 0 
+                                AND TIMESTAMPDIFF(SECOND, created_at, updated_at) BETWEEN 0 AND 900
                            THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
                            ELSE NULL END) as avg_speed
             FROM digi_transactions

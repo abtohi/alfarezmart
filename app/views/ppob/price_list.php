@@ -489,9 +489,13 @@ async function loadPrices() {
                     let rawSpeed = (p.seller_avg_speed !== null && p.seller_avg_speed !== undefined) ? p.seller_avg_speed : ((p.product_avg_speed !== null && p.product_avg_speed !== undefined) ? p.product_avg_speed : null);
                     if (rawSpeed !== null) {
                         let speedVal = Math.round(parseFloat(rawSpeed));
-                        let sColor = speedVal <= 5 ? '#10b981' : (speedVal <= 20 ? '#3b82f6' : (speedVal <= 60 ? '#f59e0b' : '#ef4444'));
-                        let speedText = speedVal <= 59 ? `${speedVal}s` : `${Math.floor(speedVal / 60)}m, ${speedVal % 60}d`;
-                        speedSrHtml = `<span style="color: ${sColor}; font-weight: 700; font-size: 0.65rem; white-space: nowrap;" title="Kecepatan Seller/Produk"><i class="bi bi-stopwatch"></i> ${speedText}</span>`;
+                        if (speedVal > 900) {
+                            speedSrHtml = `<span style="color: var(--text-secondary); font-weight: 600; font-size: 0.65rem; white-space: nowrap;" title="Status diperbarui melalui cek status berkala (>15m)"><i class="bi bi-clock-history"></i> >15m</span>`;
+                        } else {
+                            let sColor = speedVal <= 5 ? '#10b981' : (speedVal <= 20 ? '#3b82f6' : (speedVal <= 60 ? '#f59e0b' : '#ef4444'));
+                            let speedText = speedVal <= 59 ? `${speedVal}s` : `${Math.floor(speedVal / 60)}m, ${speedVal % 60}d`;
+                            speedSrHtml = `<span style="color: ${sColor}; font-weight: 700; font-size: 0.65rem; white-space: nowrap;" title="Kecepatan Seller/Produk"><i class="bi bi-stopwatch"></i> ${speedText}</span>`;
+                        }
                     }
 
                     let prodTrxHtml = `<span style="color: #3b82f6; font-weight: 700; font-size: 0.65rem;" title="Total Transaksi Sukses Produk Ini"><i class="bi bi-bag-check-fill"></i> ${(p.product_trx_count || 0).toLocaleString('id-ID')} Trx</span>`;

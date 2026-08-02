@@ -340,9 +340,13 @@
             let speedBadge = '<span style="color:var(--text-muted);font-size:10px;">-</span>';
             if (trx.duration_seconds !== null && trx.duration_seconds !== undefined) {
                 let speedVal = Math.round(parseFloat(trx.duration_seconds));
-                let speedColor = speedVal <= 5 ? 'background:rgba(16,185,129,0.12);color:#10b981;' : (speedVal <= 20 ? 'background:rgba(59,130,246,0.12);color:#3b82f6;' : 'background:rgba(245,158,11,0.12);color:#f59e0b;');
-                let speedText = speedVal <= 59 ? `${speedVal} dtk` : `${Math.floor(speedVal / 60)}m, ${speedVal % 60}d`;
-                speedBadge = `<span style="${speedColor}font-size:10px;padding:3px 7px;border-radius:4px;font-weight:700;white-space:nowrap;"><i class="bi bi-stopwatch me-1"></i>${speedText}</span>`;
+                if (speedVal > 900) {
+                    speedBadge = `<span style="background:rgba(107,114,128,0.12);color:var(--text-secondary);font-size:9.5px;padding:3px 6px;border-radius:4px;font-weight:600;white-space:nowrap;" title="Status diperbarui melalui cek status berkala (>15m)"><i class="bi bi-clock-history me-1"></i>>15m (Sync)</span>`;
+                } else {
+                    let speedColor = speedVal <= 5 ? 'background:rgba(16,185,129,0.12);color:#10b981;' : (speedVal <= 20 ? 'background:rgba(59,130,246,0.12);color:#3b82f6;' : 'background:rgba(245,158,11,0.12);color:#f59e0b;');
+                    let speedText = speedVal <= 59 ? `${speedVal} dtk` : `${Math.floor(speedVal / 60)}m, ${speedVal % 60}d`;
+                    speedBadge = `<span style="${speedColor}font-size:10px;padding:3px 7px;border-radius:4px;font-weight:700;white-space:nowrap;"><i class="bi bi-stopwatch me-1"></i>${speedText}</span>`;
+                }
             }
 
             tbody.innerHTML += `

@@ -938,8 +938,10 @@ class DigiflazzController extends Controller {
                 $diff = $updated - $created;
                 if ($diff >= 0) {
                     $processTime = $diff;
-                    $totalSpeedSum += $diff;
-                    $totalSpeedCount++;
+                    if ($diff <= 900) {
+                        $totalSpeedSum += $diff;
+                        $totalSpeedCount++;
+                    }
                 }
             }
 
@@ -1013,7 +1015,7 @@ class DigiflazzController extends Controller {
                 $sellers[$realSeller]['pending']++;
             }
 
-            if ($processTime !== null) {
+            if ($processTime !== null && $processTime <= 900) {
                 $sellers[$realSeller]['process_time_sum'] += $processTime;
                 $sellers[$realSeller]['process_time_count']++;
             }

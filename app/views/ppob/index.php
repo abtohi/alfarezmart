@@ -2537,14 +2537,22 @@ function renderProducts(products) {
             let rawSpeed = (p.seller_avg_speed !== null && p.seller_avg_speed !== undefined) ? p.seller_avg_speed : ((p.product_avg_speed !== null && p.product_avg_speed !== undefined) ? p.product_avg_speed : null);
             if (rawSpeed !== null) {
                 let speedVal = Math.round(parseFloat(rawSpeed));
-                let speedColor = speedVal <= 5 ? '#10b981' : (speedVal <= 20 ? '#3b82f6' : (speedVal <= 60 ? '#f59e0b' : '#ef4444'));
-                let speedIcon = speedVal <= 5 ? 'bi-lightning-charge-fill' : (speedVal <= 20 ? 'bi-stopwatch' : 'bi-clock');
-                let speedText = speedVal <= 59 ? `${speedVal} dtk` : `${Math.floor(speedVal / 60)}m, ${speedVal % 60}d`;
-                speedBadge = `
-                <div class="seller-sr-chip" onclick="openSellerHistory(event, '${p.seller_name}')" style="cursor:pointer; white-space:nowrap;" title="Rata-rata Kecepatan Transaksi Seller/Produk">
-                    <span class="sr-label">Kecepatan:</span>
-                    <span style="color: ${speedColor}; font-weight: 700; white-space:nowrap;"><i class="bi ${speedIcon}" style="font-size: 0.65rem;"></i> ${speedText}</span>
-                </div>`;
+                if (speedVal > 900) {
+                    speedBadge = `
+                    <div class="seller-sr-chip" onclick="openSellerHistory(event, '${p.seller_name}')" style="cursor:pointer; white-space:nowrap;" title="Kecepatan rata-rata seller (Cek status berkala >15m)">
+                        <span class="sr-label">Kecepatan:</span>
+                        <span style="color: var(--text-secondary); font-weight: 600; white-space:nowrap;"><i class="bi bi-clock-history" style="font-size: 0.65rem;"></i> >15m</span>
+                    </div>`;
+                } else {
+                    let speedColor = speedVal <= 5 ? '#10b981' : (speedVal <= 20 ? '#3b82f6' : (speedVal <= 60 ? '#f59e0b' : '#ef4444'));
+                    let speedIcon = speedVal <= 5 ? 'bi-lightning-charge-fill' : (speedVal <= 20 ? 'bi-stopwatch' : 'bi-clock');
+                    let speedText = speedVal <= 59 ? `${speedVal} dtk` : `${Math.floor(speedVal / 60)}m, ${speedVal % 60}d`;
+                    speedBadge = `
+                    <div class="seller-sr-chip" onclick="openSellerHistory(event, '${p.seller_name}')" style="cursor:pointer; white-space:nowrap;" title="Rata-rata Kecepatan Transaksi Seller/Produk">
+                        <span class="sr-label">Kecepatan:</span>
+                        <span style="color: ${speedColor}; font-weight: 700; white-space:nowrap;"><i class="bi ${speedIcon}" style="font-size: 0.65rem;"></i> ${speedText}</span>
+                    </div>`;
+                }
             } else {
                 speedBadge = `
                 <div class="seller-sr-chip" style="white-space:nowrap;" title="Rata-rata Kecepatan Transaksi Seller/Produk">
@@ -2700,7 +2708,7 @@ async function fetchSellerHistory(page) {
             let shAvgSpeedText = '-';
             if (analytics.avg_speed !== null && analytics.avg_speed !== undefined) {
                 let spVal = Math.round(parseFloat(analytics.avg_speed));
-                shAvgSpeedText = spVal <= 59 ? `${spVal} dtk` : `${Math.floor(spVal / 60)}m, ${spVal % 60}d`;
+                shAvgSpeedText = spVal > 900 ? '>15m' : (spVal <= 59 ? `${spVal} dtk` : `${Math.floor(spVal / 60)}m, ${spVal % 60}d`);
             }
             document.getElementById('sh-txt-speed').innerHTML = `<i class="bi bi-lightning-charge-fill me-1"></i>Kecepatan: ${shAvgSpeedText}`;
             
@@ -2746,9 +2754,13 @@ async function fetchSellerHistory(page) {
                     let speedBadge = '<span style="color:var(--text-muted);font-size:10px;">-</span>';
                     if (trx.duration_seconds !== null && trx.duration_seconds !== undefined) {
                         let speedVal = Math.round(parseFloat(trx.duration_seconds));
-                        let speedColor = speedVal <= 5 ? 'background:rgba(16,185,129,0.12);color:#10b981;' : (speedVal <= 20 ? 'background:rgba(59,130,246,0.12);color:#3b82f6;' : 'background:rgba(245,158,11,0.12);color:#f59e0b;');
-                        let speedText = speedVal <= 59 ? `${speedVal} dtk` : `${Math.floor(speedVal / 60)}m, ${speedVal % 60}d`;
-                        speedBadge = `<span style="${speedColor}font-size:10px;padding:3px 7px;border-radius:4px;font-weight:700;white-space:nowrap;"><i class="bi bi-stopwatch me-1"></i>${speedText}</span>`;
+                        if (speedVal > 900) {
+                            speedBadge = `<span style="background:rgba(107,114,128,0.12);color:var(--text-secondary);font-size:9.5px;padding:3px 6px;border-radius:4px;font-weight:600;white-space:nowrap;" title="Status diperbarui melalui cek status berkala (>15m)"><i class="bi bi-clock-history me-1"></i>>15m (Sync)</span>`;
+                        } else {
+                            let speedColor = speedVal <= 5 ? 'background:rgba(16,185,129,0.12);color:#10b981;' : (speedVal <= 20 ? 'background:rgba(59,130,246,0.12);color:#3b82f6;' : 'background:rgba(245,158,11,0.12);color:#f59e0b;');
+                            let speedText = speedVal <= 59 ? `${speedVal} dtk` : `${Math.floor(speedVal / 60)}m, ${speedVal % 60}d`;
+                            speedBadge = `<span style="${speedColor}font-size:10px;padding:3px 7px;border-radius:4px;font-weight:700;white-space:nowrap;"><i class="bi bi-stopwatch me-1"></i>${speedText}</span>`;
+                        }
                     }
 
                     let refBadge = trx.ref_id ? `<span class="badge bg-dark bg-opacity-75 text-light border border-secondary" style="font-size:9px; font-weight:600; padding:2px 5px;" title="No. Referensi Sistem"><i class="bi bi-hash"></i>${trx.ref_id}</span>` : '';
