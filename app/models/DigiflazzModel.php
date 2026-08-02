@@ -590,8 +590,42 @@ class DigiflazzModel {
     }
 
     /**
-     * Get success rates for specific products (by buyer_sku_code)
+     * Get avg speed per SKU+Seller combination
+     * Returns array keyed by "sku|seller_name"
      */
+    public function getSkuSellerSpeedRates() {
+        try {
+            $stmt = $this->db->query("
+                SELECT buyer_sku_code, seller_name,
+                       COUNT(id) as total,
+                       SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN 1 ELSE 0 END) as success,
+                       AVG(CASE WHEN LOWER(status) IN ('success', 'sukses', 'failed', 'gagal')
+                                    AND TIMESTAMPDIFF(SECOND, created_at, updated_at) BETWEEN 0 AND 900
+                               THEN TIMESTAMPDIFF(SECOND, created_at, updated_at)
+                               ELSE NULL END) as avg_speed
+                FROM digi_transactions
+                WHERE buyer_sku_code IS NOT NULL AND buyer_sku_code != ''
+                  AND seller_name IS NOT NULL AND seller_name != ''
+                  AND LOWER(status) IN ('success', 'failed', 'sukses', 'gagal')
+                GROUP BY buyer_sku_code, seller_name
+            ");
+            $rates = [];
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $key = trim($row['buyer_sku_code']) . '|' . trim($row['seller_name']);
+                $rates[$key] = [
+                    'total'     => (int)$row['total'],
+                    'success'   => (int)$row['success'],
+                    'avg_speed' => $row['avg_speed'] !== null ? round((float)$row['avg_speed'], 1) : null
+                ];
+            }
+            return $rates;
+        } catch (\Exception $e) {
+            error_log("[DigiflazzModel] getSkuSellerSpeedRates error: " . $e->getMessage());
+            return [];
+        }
+    }
+
+
     public function getProductSuccessRates() {
         try {
             $stmt = $this->db->query("

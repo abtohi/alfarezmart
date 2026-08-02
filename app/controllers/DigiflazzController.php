@@ -97,6 +97,7 @@ class DigiflazzController extends Controller {
         $products = $this->digiModel->getProducts($category, $brand, $type);
         $rates = $this->digiModel->getSellerSuccessRates();
         $prodRates = $this->digiModel->getProductSuccessRates();
+        $skuSellerRates = $this->digiModel->getSkuSellerSpeedRates();
         
         foreach ($products as &$p) {
             $seller = isset($p['seller_name']) ? trim($p['seller_name']) : null;
@@ -119,6 +120,16 @@ class DigiflazzController extends Controller {
                 $p['product_success_rate'] = null;
                 $p['product_trx_count'] = 0;
                 $p['product_avg_speed'] = null;
+            }
+
+            // Per-SKU+Seller speed (kecepatan produk ini spesifik pada seller ini)
+            $skuSellerKey = $sku && $seller ? ($sku . '|' . $seller) : null;
+            if ($skuSellerKey && isset($skuSellerRates[$skuSellerKey])) {
+                $p['sku_seller_avg_speed'] = $skuSellerRates[$skuSellerKey]['avg_speed'];
+                $p['sku_seller_trx_count'] = (int)$skuSellerRates[$skuSellerKey]['total'];
+            } else {
+                $p['sku_seller_avg_speed'] = null;
+                $p['sku_seller_trx_count'] = 0;
             }
             $p['is_custom_price'] = isset($p['is_custom_price']) ? (int)$p['is_custom_price'] : 0;
         }
@@ -137,6 +148,7 @@ class DigiflazzController extends Controller {
         
         $rates = $this->digiModel->getSellerSuccessRates();
         $prodRates = $this->digiModel->getProductSuccessRates();
+        $skuSellerRates = $this->digiModel->getSkuSellerSpeedRates();
         
         foreach ($products as &$p) {
             $seller = isset($p['seller_name']) ? trim($p['seller_name']) : null;
@@ -159,6 +171,16 @@ class DigiflazzController extends Controller {
                 $p['product_success_rate'] = null;
                 $p['product_trx_count'] = 0;
                 $p['product_avg_speed'] = null;
+            }
+
+            // Per-SKU+Seller speed
+            $skuSellerKey = $sku && $seller ? ($sku . '|' . $seller) : null;
+            if ($skuSellerKey && isset($skuSellerRates[$skuSellerKey])) {
+                $p['sku_seller_avg_speed'] = $skuSellerRates[$skuSellerKey]['avg_speed'];
+                $p['sku_seller_trx_count'] = (int)$skuSellerRates[$skuSellerKey]['total'];
+            } else {
+                $p['sku_seller_avg_speed'] = null;
+                $p['sku_seller_trx_count'] = 0;
             }
             $p['is_custom_price'] = isset($p['is_custom_price']) ? (int)$p['is_custom_price'] : 0;
         }

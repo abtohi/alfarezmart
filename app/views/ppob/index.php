@@ -2535,6 +2535,17 @@ function renderProducts(products) {
 
         // Group Body (Expandable Sellers List) HTML
         let sellerItemsHtml = '';
+
+        // Helper: format seconds to human-readable speed string
+        function fmtSpeed(s) {
+            if (s > 900) return { text: '>15m', color: 'var(--text-secondary)', icon: 'bi-clock-history' };
+            let v = Math.round(s);
+            let color = v <= 5 ? '#10b981' : (v <= 20 ? '#3b82f6' : (v <= 60 ? '#f59e0b' : '#ef4444'));
+            let icon = v <= 5 ? 'bi-lightning-charge-fill' : (v <= 20 ? 'bi-stopwatch' : 'bi-clock');
+            let text = v <= 59 ? `${v}dtk` : `${Math.floor(v/60)}m ${v%60}d`;
+            return { text, color, icon };
+        }
+
         items.forEach((p, idx) => {
             const sellPrice = getPpobSellPrice(p.buyer_sku_code);
             const actualSellPrice = sellPrice && sellPrice > 0 ? sellPrice : (p.sell_price || p.seller_price);
@@ -2587,31 +2598,35 @@ function renderProducts(products) {
                 </div>`;
             }
 
-            let speedBadge = '';
-            let rawSpeed = (p.seller_avg_speed !== null && p.seller_avg_speed !== undefined) ? p.seller_avg_speed : ((p.product_avg_speed !== null && p.product_avg_speed !== undefined) ? p.product_avg_speed : null);
-            if (rawSpeed !== null) {
-                let speedVal = Math.round(parseFloat(rawSpeed));
-                if (speedVal > 900) {
-                    speedBadge = `
-                    <div class="seller-sr-chip" onclick="openSellerHistory(event, '${p.seller_name}')" style="cursor:pointer; white-space:nowrap;" title="Kecepatan rata-rata seller (Cek status berkala >15m)">
-                        <span class="sr-label">Kecepatan:</span>
-                        <span style="color: var(--text-secondary); font-weight: 600; white-space:nowrap;"><i class="bi bi-clock-history" style="font-size: 0.65rem;"></i> >15m</span>
-                    </div>`;
-                } else {
-                    let speedColor = speedVal <= 5 ? '#10b981' : (speedVal <= 20 ? '#3b82f6' : (speedVal <= 60 ? '#f59e0b' : '#ef4444'));
-                    let speedIcon = speedVal <= 5 ? 'bi-lightning-charge-fill' : (speedVal <= 20 ? 'bi-stopwatch' : 'bi-clock');
-                    let speedText = speedVal <= 59 ? `${speedVal} dtk` : `${Math.floor(speedVal / 60)}m, ${speedVal % 60}d`;
-                    speedBadge = `
-                    <div class="seller-sr-chip" onclick="openSellerHistory(event, '${p.seller_name}')" style="cursor:pointer; white-space:nowrap;" title="Rata-rata Kecepatan Transaksi Seller/Produk">
-                        <span class="sr-label">Kecepatan:</span>
-                        <span style="color: ${speedColor}; font-weight: 700; white-space:nowrap;"><i class="bi ${speedIcon}" style="font-size: 0.65rem;"></i> ${speedText}</span>
-                    </div>`;
-                }
+            // Chip 1: Kecepatan Seller global
+            let sellerSpeedBadge = '';
+            let rawSellerSpeed = (p.seller_avg_speed !== null && p.seller_avg_speed !== undefined) ? parseFloat(p.seller_avg_speed) : null;
+            if (rawSellerSpeed !== null) {
+                let sp = fmtSpeed(rawSellerSpeed);
+                sellerSpeedBadge = `<div class="seller-sr-chip" onclick="openSellerHistory(event, '${p.seller_name}')" style="cursor:pointer; white-space:nowrap;" title="Rata-rata kecepatan semua transaksi seller ini">
+                    <span class="sr-label">Spd Seller:</span>
+                    <span style="color: ${sp.color}; font-weight:700; white-space:nowrap;"><i class="bi ${sp.icon}" style="font-size:0.65rem;"></i> ${sp.text}</span>
+                </div>`;
             } else {
-                speedBadge = `
-                <div class="seller-sr-chip" style="white-space:nowrap;" title="Rata-rata Kecepatan Transaksi Seller/Produk">
-                    <span class="sr-label">Kecepatan:</span>
-                    <span class="text-muted" style="font-weight: 700; white-space:nowrap;"><i class="bi bi-clock" style="font-size: 0.65rem;"></i> -</span>
+                sellerSpeedBadge = `<div class="seller-sr-chip" style="white-space:nowrap;" title="Belum ada data kecepatan seller">
+                    <span class="sr-label">Spd Seller:</span>
+                    <span class="text-muted" style="font-weight:700; white-space:nowrap;"><i class="bi bi-clock" style="font-size:0.65rem;"></i> -</span>
+                </div>`;
+            }
+
+            // Chip 2: Kecepatan produk ini (SKU ini) dengan seller ini
+            let skuSellerSpeedBadge = '';
+            let rawSkuSellerSpeed = (p.sku_seller_avg_speed !== null && p.sku_seller_avg_speed !== undefined) ? parseFloat(p.sku_seller_avg_speed) : null;
+            if (rawSkuSellerSpeed !== null) {
+                let sp2 = fmtSpeed(rawSkuSellerSpeed);
+                skuSellerSpeedBadge = `<div class="seller-sr-chip" style="white-space:nowrap; border-color: ${sp2.color}40;" title="Rata-rata kecepatan produk ini (${p.buyer_sku_code}) spesifik pada seller ${p.seller_name}">
+                    <span class="sr-label">Spd Produk:</span>
+                    <span style="color: ${sp2.color}; font-weight:700; white-space:nowrap;"><i class="bi ${sp2.icon}" style="font-size:0.65rem;"></i> ${sp2.text}</span>
+                </div>`;
+            } else {
+                skuSellerSpeedBadge = `<div class="seller-sr-chip" style="white-space:nowrap;" title="Belum ada data kecepatan produk ini dengan seller ini">
+                    <span class="sr-label">Spd Produk:</span>
+                    <span class="text-muted" style="font-weight:700; white-space:nowrap;"><i class="bi bi-clock" style="font-size:0.65rem;"></i> -</span>
                 </div>`;
             }
 
@@ -2663,13 +2678,14 @@ function renderProducts(products) {
                                 </span>
                                 <span class="sku-code-chip">${p.buyer_sku_code}</span>
                             </div>
-                            <div class="d-flex flex-wrap align-items-center gap-1.5 mt-1">
+                            <div class="d-flex align-items-center gap-1 flex-wrap" style="row-gap:4px;">
                                 <div class="seller-sr-chip" onclick="openSellerHistory(event, '${p.seller_name}')" style="cursor:pointer;" title="SR Global Seller">
                                     <span class="sr-label">Seller:</span>
                                     ${successBadge}
                                 </div>
                                 ${prodSuccessBadge}
-                                ${speedBadge}
+                                ${sellerSpeedBadge}
+                                ${skuSellerSpeedBadge}
                                 ${prodTrxBadge}
                                 ${sellerTrxBadge}
                             </div>
