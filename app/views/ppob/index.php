@@ -2751,6 +2751,9 @@ async function fetchSellerHistory(page) {
                         speedBadge = `<span style="${speedColor}font-size:10px;padding:3px 7px;border-radius:4px;font-weight:700;white-space:nowrap;"><i class="bi bi-stopwatch me-1"></i>${speedText}</span>`;
                     }
 
+                    let refBadge = trx.ref_id ? `<span class="badge bg-dark bg-opacity-75 text-light border border-secondary" style="font-size:9px; font-weight:600; padding:2px 5px;" title="No. Referensi Sistem"><i class="bi bi-hash"></i>${trx.ref_id}</span>` : '';
+                    let trxIdBadge = (trx.digiflazz_trx_id && trx.digiflazz_trx_id !== trx.ref_id) ? `<span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25" style="font-size:9px; font-weight:600; padding:2px 5px;" title="ID Transaksi Digiflazz/Supplier"><i class="bi bi-receipt me-1"></i>Trx ID: ${trx.digiflazz_trx_id}</span>` : '';
+
                     list.innerHTML += `
                     <tr style="border-bottom: 1px solid var(--border-color);">
                         <td class="py-2 align-middle">${dateStr}</td>
@@ -2760,6 +2763,10 @@ async function fetchSellerHistory(page) {
                                 <span class="badge bg-secondary" style="font-size:9px; padding:3px 5px;">${(trx.category || '').toUpperCase()}</span> ${trx.customer_no}
                             </div>
                             ${trx.customer_name ? `<div class="text-primary fw-semibold" style="font-size:10.5px; margin-top:2px;"><i class="bi bi-person-check-fill me-1"></i>a.n. ${trx.customer_name}</div>` : ''}
+                            <div class="d-flex align-items-center gap-1 flex-wrap mt-1">
+                                ${refBadge}
+                                ${trxIdBadge}
+                            </div>
                             ${failMsg}
                         </td>
                         <td class="py-2 text-center align-middle">${speedBadge}</td>

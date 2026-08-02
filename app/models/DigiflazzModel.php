@@ -412,7 +412,7 @@ class DigiflazzModel {
      */
     public function getAnalyticsData(string $startDate, string $endDate) {
         $sql = "SELECT 
-                    t.id, t.ref_id, t.buyer_sku_code, t.category, t.product_name, t.type, t.customer_no, t.customer_name,
+                    t.id, t.ref_id, t.digiflazz_trx_id, t.buyer_sku_code, t.category, t.product_name, t.type, t.customer_no, t.customer_name,
                     t.sell_price, t.modal_price, t.status, t.raw_response, t.created_at, t.updated_at,
                     t.seller_name AS trx_seller_name,
                     p.seller_name AS prod_seller_name,
@@ -650,7 +650,7 @@ class DigiflazzModel {
         $offset = ($page - 1) * $limit;
         
         $stmt = $this->db->prepare("
-            SELECT customer_no, customer_name, status, created_at, updated_at, product_name, seller_name, message, modal_price, sell_price, profit, category
+            SELECT ref_id, digiflazz_trx_id, customer_no, customer_name, status, created_at, updated_at, product_name, seller_name, message, modal_price, sell_price, profit, category, raw_response
             FROM digi_transactions
             WHERE seller_name = :seller
             ORDER BY created_at DESC
@@ -667,6 +667,17 @@ class DigiflazzModel {
             $updated = !empty($row['updated_at']) ? strtotime($row['updated_at']) : 0;
             $diff = $updated - $created;
             $row['duration_seconds'] = ($diff >= 0 && $created > 0 && $updated > 0) ? $diff : null;
+
+            if (empty($row['digiflazz_trx_id']) || $row['digiflazz_trx_id'] === $row['ref_id']) {
+                if (!empty($row['raw_response'])) {
+                    $raw = json_decode($row['raw_response'], true);
+                    if (!empty($raw['tr_id'])) $row['digiflazz_trx_id'] = (string)$raw['tr_id'];
+                    elseif (!empty($raw['trx_id'])) $row['digiflazz_trx_id'] = (string)$raw['trx_id'];
+                    else $row['digiflazz_trx_id'] = null;
+                } else {
+                    $row['digiflazz_trx_id'] = null;
+                }
+            }
         }
 
         // Calculate average seller speed across all completed transactions

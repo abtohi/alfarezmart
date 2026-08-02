@@ -643,6 +643,9 @@
                 statusBadge = '<span class="badge bg-warning bg-opacity-10 text-warning fw-bold" style="font-size:10px;"><i class="bi bi-hourglass-split me-1"></i>Proses</span>';
             }
 
+            let refBadge = t.ref_id ? `<span style="font-size:9px; color:var(--text-muted); background:var(--surface-3); padding:1px 4px; border-radius:3px;"><i class="bi bi-hash me-0.5"></i>Ref: ${t.ref_id}</span>` : '';
+            let trxIdBadge = (t.digiflazz_trx_id && t.digiflazz_trx_id !== t.ref_id) ? `<span style="font-size:9px; color:var(--info); background:rgba(6,182,212,0.1); padding:1px 4px; border-radius:3px;"><i class="bi bi-receipt me-0.5"></i>Trx ID: ${t.digiflazz_trx_id}</span>` : '';
+
             return `
                 <tr style="border-bottom:1px solid var(--border-color); font-size:11px;">
                     <td style="padding:8px 10px; white-space:nowrap; color:var(--text-muted);">${dateStr}</td>
@@ -650,6 +653,10 @@
                         <div style="font-weight:700; color:var(--text-primary);">${t.product_name}</div>
                         <div style="font-family:monospace; font-size:10px; color:var(--text-secondary);">${t.customer_no}</div>
                         ${t.customer_name ? `<div style="font-size:10px; color:var(--primary); font-weight:600; margin-top:2px;"><i class="bi bi-person-check-fill me-1"></i>a.n. ${t.customer_name}</div>` : ''}
+                        <div style="display:flex; align-items:center; gap:4px; margin-top:3px; flex-wrap:wrap;">
+                            ${refBadge}
+                            ${trxIdBadge}
+                        </div>
                     </td>
                     <td style="padding:8px 10px; text-align:right;">Rp ${parseInt(t.modal_price).toLocaleString('id-ID')}</td>
                     <td style="padding:8px 10px; text-align:right;">

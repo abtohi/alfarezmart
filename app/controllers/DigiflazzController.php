@@ -988,6 +988,7 @@ class DigiflazzController extends Controller {
             // Save transaction record to seller's transaction history
             $sellers[$realSeller]['transactions'][] = [
                 'ref_id' => $trx['ref_id'],
+                'digiflazz_trx_id' => !empty($trx['digiflazz_trx_id']) && $trx['digiflazz_trx_id'] !== $trx['ref_id'] ? $trx['digiflazz_trx_id'] : null,
                 'product_name' => $trx['product_name'] ?? '',
                 'customer_no' => $trx['customer_no'] ?? '',
                 'customer_name' => $trx['customer_name'] ?? '',
