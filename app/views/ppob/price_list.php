@@ -217,7 +217,12 @@ table.dataTable tbody td {
     border-radius: 12px;
 }
 
-/* Custom DataTables Override for Dark & Light Themes */
+/* ── DataTables Wrapper Base ───────────────────────────── */
+.dataTables_wrapper {
+    background: var(--surface-1) !important;
+    color: var(--text-primary) !important;
+}
+
 .dataTables_wrapper .dataTables_length,
 .dataTables_wrapper .dataTables_filter {
     display: none !important;
@@ -226,45 +231,84 @@ table.dataTable tbody td {
 .dataTables_wrapper .dataTables_info {
     font-size: 0.8rem !important;
     color: var(--text-muted) !important;
-    padding: 1rem 1.25rem !important;
+    padding: 0.75rem 1.25rem !important;
 }
 
+/* ── Pagination Container ─────────────────────────────── */
 .dataTables_wrapper .dataTables_paginate {
     padding: 0.75rem 1.25rem !important;
-    display: flex !important;
-    gap: 4px !important;
-    align-items: center !important;
+    background: var(--surface-1) !important;
 }
 
-.dataTables_wrapper .dataTables_paginate .paginate_button {
+/* Override Bootstrap ul.pagination wrapper */
+.dataTables_wrapper .dataTables_paginate .pagination {
+    background: transparent !important;
+    gap: 3px !important;
+    flex-wrap: wrap !important;
+    margin: 0 !important;
+}
+
+/* ── Every page button (Bootstrap .page-link) ─────────── */
+.dataTables_wrapper .dataTables_paginate .paginate_button,
+.dataTables_wrapper .dataTables_paginate .page-item .page-link,
+.dataTables_wrapper .dataTables_paginate .pagination .page-link {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 34px !important;
+    height: 34px !important;
     font-size: 0.8rem !important;
     font-weight: 600 !important;
     border-radius: 8px !important;
-    padding: 6px 12px !important;
+    padding: 0 10px !important;
     background: var(--surface-2) !important;
     color: var(--text-secondary) !important;
     border: 1px solid var(--border-color) !important;
     cursor: pointer !important;
-    transition: all 0.2s ease !important;
+    transition: all 0.15s ease !important;
+    text-decoration: none !important;
+    box-shadow: none !important;
+    line-height: 1 !important;
 }
 
-.dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.current):not(.disabled) {
-    background: var(--surface-3) !important;
+/* ── Hover (non-active, non-disabled) ─────────────────── */
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover:not(.current):not(.disabled),
+.dataTables_wrapper .dataTables_paginate .page-item:not(.active):not(.disabled) .page-link:hover {
+    background: var(--surface-3, var(--surface-2)) !important;
     color: var(--text-primary) !important;
-    border-color: var(--border-color) !important;
+    border-color: var(--primary) !important;
 }
 
-.dataTables_wrapper .dataTables_paginate .paginate_button.current {
-    background: linear-gradient(135deg, var(--primary) 0%, #2563eb 100%) !important;
+/* ── Active / Current page ────────────────────────────── */
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .page-item.active .page-link {
+    background: var(--primary) !important;
     color: #ffffff !important;
-    border-color: transparent !important;
+    border-color: var(--primary) !important;
     font-weight: 800 !important;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3) !important;
+    box-shadow: 0 2px 8px rgba(var(--primary-rgb, 37 99 235) / 0.35) !important;
+    cursor: default !important;
 }
 
-.dataTables_wrapper .dataTables_paginate .paginate_button.disabled {
-    opacity: 0.4 !important;
+/* ── Disabled (prev/next when on first/last page) ─────── */
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled,
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover,
+.dataTables_wrapper .dataTables_paginate .page-item.disabled .page-link {
+    opacity: 0.35 !important;
     cursor: not-allowed !important;
+    background: var(--surface-2) !important;
+    color: var(--text-muted) !important;
+    border-color: var(--border-color) !important;
+    pointer-events: none !important;
+}
+
+/* ── DataTables select (length) & filter inputs ───────── */
+.dataTables_wrapper select,
+.dataTables_wrapper input[type="search"] {
+    background: var(--surface-2) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 8px !important;
 }
 
 @media (max-width: 768px) {
