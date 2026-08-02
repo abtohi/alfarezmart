@@ -28,13 +28,15 @@ class Database
                 $this->activeDriver = 'mysql';
                 return;
             } catch (\Throwable $e) {
-                // MySQL unreachable (offline / server down / connection limit)
-                error_log('[AlfarezMart] MySQL connection failed: ' . $e->getMessage());
-                if (defined('APP_DEBUG') && APP_DEBUG === 'true') {
-                    die("Database Error (MySQL): " . $e->getMessage());
+                // MySQL unreachable (offline / server down / connection limit / high load)
+                error_log('[AlfarezMart] MySQL connection failed: ' . $e->getMessage() . '. Falling back to SQLite/Offline mode.');
+                try {
+                    $this->connectSQLite();
+                    $this->activeDriver = 'sqlite';
+                    return;
+                } catch (\Throwable $sqe) {
+                    error_log('[AlfarezMart] SQLite fallback also failed: ' . $sqe->getMessage());
                 }
-                // Do not fallback to SQLite silently on a live server, as it will crash with 'no such table'.
-                die("Database connection failed. Our servers are currently experiencing high load or undergoing maintenance. Please try again in a few minutes.");
             }
         }
 
@@ -43,10 +45,12 @@ class Database
             $this->connectSQLite();
             $this->activeDriver = 'sqlite';
         } catch (\Throwable $e) {
-            if (defined('APP_DEBUG') && APP_DEBUG === 'true') {
-                die("Database Error (SQLite fallback also failed): " . $e->getMessage());
+            try {
+                $this->pdo = new PDO('sqlite::memory:');
+                $this->activeDriver = 'sqlite';
+            } catch (\Throwable $e2) {
+                error_log('[AlfarezMart] Memory DB fallback failed: ' . $e2->getMessage());
             }
-            die("Database connection failed. Please check configuration.");
         }
     }
 

@@ -863,13 +863,12 @@ async function doOfflineSearch(query) {
     }
 }
 
-// Auto-run offline search hanya jika benar-benar tidak ada koneksi internet
+// Auto-run offline search jika tidak ada koneksi internet, DB offline, atau data PHP kosong
 document.addEventListener('DOMContentLoaded', async () => {
     if (typeof OfflineDB !== 'undefined') {
         await OfflineDB.init();
-        // Jika online: biarkan server-rendered HTML tampil (sudah benar dari PHP)
-        // Jika offline: gunakan IndexedDB untuk menampilkan produk
-        if (!navigator.onLine) {
+        const hasServerCards = document.querySelectorAll('#productListContainer .product-card, #productListContainer [data-id]').length > 0;
+        if (!navigator.onLine || window.IS_DB_OFFLINE || !hasServerCards) {
             const urlParams = new URLSearchParams(window.location.search);
             const q = urlParams.get('q') || '';
             doOfflineSearch(q);

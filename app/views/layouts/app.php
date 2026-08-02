@@ -510,6 +510,7 @@ if ($userLevel === 'staff') {
     <script>
         const BASE_URL = '<?= BASE_URL ?>';
         const version = '15.00';
+        window.IS_DB_OFFLINE = <?= (class_exists('Database') && Database::getInstance()->isOffline()) ? 'true' : 'false' ?>;
     </script>
     <script src="<?= BASE_URL ?>public/js/utils.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/dexie.min.js<?= $v ?>"></script>

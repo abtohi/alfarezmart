@@ -326,91 +326,103 @@ class ProductModel extends Model
 
     public function getProductsWithPrices($page = 1, $perPage = 20, $search = '', $categoryId = null, $minPrice = null, $maxPrice = null)
     {
-        $where = "WHERE p.is_active = 1";
-        $params = [];
+        try {
+            if (!$this->db) throw new \Exception("No DB connection");
+            $where = "WHERE p.is_active = 1";
+            $params = [];
 
-        if (!empty(trim($search))) {
-            $words = array_filter(explode(' ', trim($search)), 'strlen');
-            foreach ($words as $idx => $word) {
-                // PDO requires unique param names per occurrence
-                $p_name  = ":s_{$idx}_name";
-                $p_brand = ":s_{$idx}_brand";
-                $p_bar   = ":s_{$idx}_bar";
-                $p_label = ":s_{$idx}_label";
-                $p_inv   = ":s_{$idx}_inv";
-                $p_code  = ":s_{$idx}_code";
-                $p_sinv  = ":s_{$idx}_sinv";
-                $where .= " AND (p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR p.code LIKE $p_code OR b.name LIKE $p_brand OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
-                $like = "%{$word}%";
-                $params[$p_name]  = $like;
-                $params[$p_label] = $like;
-                $params[$p_inv]   = $like;
-                $params[$p_sinv]  = $like;
-                $params[$p_code]  = $like;
-                $params[$p_brand] = $like;
-                $params[$p_bar]   = $like;
+            if (!empty(trim($search))) {
+                $words = array_filter(explode(' ', trim($search)), 'strlen');
+                foreach ($words as $idx => $word) {
+                    // PDO requires unique param names per occurrence
+                    $p_name  = ":s_{$idx}_name";
+                    $p_brand = ":s_{$idx}_brand";
+                    $p_bar   = ":s_{$idx}_bar";
+                    $p_label = ":s_{$idx}_label";
+                    $p_inv   = ":s_{$idx}_inv";
+                    $p_code  = ":s_{$idx}_code";
+                    $p_sinv  = ":s_{$idx}_sinv";
+                    $where .= " AND (p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR p.code LIKE $p_code OR b.name LIKE $p_brand OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
+                    $like = "%{$word}%";
+                    $params[$p_name]  = $like;
+                    $params[$p_label] = $like;
+                    $params[$p_inv]   = $like;
+                    $params[$p_sinv]  = $like;
+                    $params[$p_code]  = $like;
+                    $params[$p_brand] = $like;
+                    $params[$p_bar]   = $like;
+                }
             }
-        }
-        if ($categoryId) {
-            $where .= " AND p.category_id = :cat_id";
-            $params[':cat_id'] = $categoryId;
-        }
-        // Filter by price range (smallest packaging retail price)
-        if ($minPrice !== null && $minPrice >= 0) {
-            $where .= " AND (SELECT sell_price_retail FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1) >= :min_price";
-            $params[':min_price'] = (float)$minPrice;
-        }
-        if ($maxPrice !== null && $maxPrice >= 0) {
-            $where .= " AND (SELECT sell_price_retail FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1) <= :max_price";
-            $params[':max_price'] = (float)$maxPrice;
-        }
-
-        $countStmt = $this->db->prepare("
-            SELECT COUNT(*) as total FROM products p 
-            LEFT JOIN brands b ON p.brand_id = b.id {$where}
-        ");
-        $countStmt->execute($params);
-        $total = $countStmt->fetch()['total'];
-
-        $offset = ($page - 1) * $perPage;
-        $params[':limit'] = $perPage;
-        $params[':offset'] = $offset;
-
-        $orderSql = "ORDER BY COALESCE(p.updated_at, p.created_at) DESC, COALESCE(NULLIF(TRIM(p.short_label), ''), p.full_name) ASC";
-        if (!empty(trim($search))) {
-            $orderSql = "ORDER BY COALESCE(NULLIF(TRIM(p.short_label), ''), p.full_name) ASC";
-        }
-
-        // Fetch product with smallest level packaging info
-        $stmt = $this->db->prepare("
-            SELECT p.*, b.name as brand_name, c.name as category_name,
-                   (SELECT current_qty_base FROM stock WHERE product_id = p.id LIMIT 1) as current_qty_base
-            FROM products p
-            LEFT JOIN brands b ON p.brand_id = b.id
-            LEFT JOIN categories c ON p.category_id = c.id
-            {$where}
-            {$orderSql}
-            LIMIT :limit OFFSET :offset
-        ");
-        
-        foreach ($params as $key => $val) {
-            if ($key === ':limit' || $key === ':offset') {
-                $stmt->bindValue($key, $val, PDO::PARAM_INT);
-            } else {
-                $stmt->bindValue($key, $val);
+            if ($categoryId) {
+                $where .= " AND p.category_id = :cat_id";
+                $params[':cat_id'] = $categoryId;
             }
-        }
-        $stmt->execute();
-        $rows = $stmt->fetchAll();
-        $this->attachPackagingsForProductList($rows);
+            // Filter by price range (smallest packaging retail price)
+            if ($minPrice !== null && $minPrice >= 0) {
+                $where .= " AND (SELECT sell_price_retail FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1) >= :min_price";
+                $params[':min_price'] = (float)$minPrice;
+            }
+            if ($maxPrice !== null && $maxPrice >= 0) {
+                $where .= " AND (SELECT sell_price_retail FROM product_packagings WHERE product_id = p.id ORDER BY level ASC LIMIT 1) <= :max_price";
+                $params[':max_price'] = (float)$maxPrice;
+            }
 
-        return [
-            'data' => $rows,
-            'total' => $total,
-            'page' => $page,
-            'per_page' => $perPage,
-            'total_pages' => ceil($total / $perPage),
-        ];
+            $countStmt = $this->db->prepare("
+                SELECT COUNT(*) as total FROM products p 
+                LEFT JOIN brands b ON p.brand_id = b.id {$where}
+            ");
+            $countStmt->execute($params);
+            $total = $countStmt->fetch()['total'];
+
+            $offset = ($page - 1) * $perPage;
+            $params[':limit'] = $perPage;
+            $params[':offset'] = $offset;
+
+            $orderSql = "ORDER BY COALESCE(p.updated_at, p.created_at) DESC, COALESCE(NULLIF(TRIM(p.short_label), ''), p.full_name) ASC";
+            if (!empty(trim($search))) {
+                $orderSql = "ORDER BY COALESCE(NULLIF(TRIM(p.short_label), ''), p.full_name) ASC";
+            }
+
+            // Fetch product with smallest level packaging info
+            $stmt = $this->db->prepare("
+                SELECT p.*, b.name as brand_name, c.name as category_name,
+                       (SELECT current_qty_base FROM stock WHERE product_id = p.id LIMIT 1) as current_qty_base
+                FROM products p
+                LEFT JOIN brands b ON p.brand_id = b.id
+                LEFT JOIN categories c ON p.category_id = c.id
+                {$where}
+                {$orderSql}
+                LIMIT :limit OFFSET :offset
+            ");
+            
+            foreach ($params as $key => $val) {
+                if ($key === ':limit' || $key === ':offset') {
+                    $stmt->bindValue($key, $val, PDO::PARAM_INT);
+                } else {
+                    $stmt->bindValue($key, $val);
+                }
+            }
+            $stmt->execute();
+            $rows = $stmt->fetchAll();
+            $this->attachPackagingsForProductList($rows);
+
+            return [
+                'data' => $rows,
+                'total' => $total,
+                'page' => $page,
+                'per_page' => $perPage,
+                'total_pages' => ceil($total / $perPage),
+            ];
+        } catch (\Throwable $e) {
+            error_log("[ProductModel getProductsWithPrices error] " . $e->getMessage());
+            return [
+                'data' => [],
+                'total' => 0,
+                'page' => $page,
+                'per_page' => $perPage,
+                'total_pages' => 1,
+            ];
+        }
     }
 
     /**

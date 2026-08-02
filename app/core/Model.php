@@ -22,9 +22,15 @@ if (!class_exists('Model')) {
      */
     public function find($id)
     {
-        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE id = :id LIMIT 1");
-        $stmt->execute([':id' => $id]);
-        return $stmt->fetch();
+        try {
+            if (!$this->db) return null;
+            $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE id = :id LIMIT 1");
+            $stmt->execute([':id' => $id]);
+            return $stmt->fetch() ?: null;
+        } catch (\Throwable $e) {
+            error_log("[Model find error] " . $e->getMessage());
+            return null;
+        }
     }
 
     /**
@@ -32,10 +38,16 @@ if (!class_exists('Model')) {
      */
     public function all($orderBy = 'id', $direction = 'ASC')
     {
-        $direction = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
-        $stmt = $this->db->prepare("SELECT * FROM {$this->table} ORDER BY {$orderBy} {$direction}");
-        $stmt->execute();
-        return $stmt->fetchAll();
+        try {
+            if (!$this->db) return [];
+            $direction = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
+            $stmt = $this->db->prepare("SELECT * FROM {$this->table} ORDER BY {$orderBy} {$direction}");
+            $stmt->execute();
+            return $stmt->fetchAll() ?: [];
+        } catch (\Throwable $e) {
+            error_log("[Model all error] " . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -43,29 +55,42 @@ if (!class_exists('Model')) {
      */
     public function paginate($page = 1, $perPage = 20, $orderBy = 'id', $direction = 'DESC')
     {
-        $direction = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
-        $offset = ($page - 1) * $perPage;
+        try {
+            if (!$this->db) throw new \Exception("No DB connection");
+            $direction = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
+            $offset = ($page - 1) * $perPage;
 
-        // Count total
-        $countStmt = $this->db->prepare("SELECT COUNT(*) as total FROM {$this->table}");
-        $countStmt->execute();
-        $total = $countStmt->fetch()['total'];
+            // Count total
+            $countStmt = $this->db->prepare("SELECT COUNT(*) as total FROM {$this->table}");
+            $countStmt->execute();
+            $row = $countStmt->fetch();
+            $total = $row ? (int)$row['total'] : 0;
 
-        // Get data
-        $stmt = $this->db->prepare(
-            "SELECT * FROM {$this->table} ORDER BY {$orderBy} {$direction} LIMIT :limit OFFSET :offset"
-        );
-        $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
+            // Get data
+            $stmt = $this->db->prepare(
+                "SELECT * FROM {$this->table} ORDER BY {$orderBy} {$direction} LIMIT :limit OFFSET :offset"
+            );
+            $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+            $stmt->execute();
 
-        return [
-            'data' => $stmt->fetchAll(),
-            'total' => $total,
-            'page' => $page,
-            'per_page' => $perPage,
-            'total_pages' => ceil($total / $perPage),
-        ];
+            return [
+                'data' => $stmt->fetchAll() ?: [],
+                'total' => $total,
+                'page' => $page,
+                'per_page' => $perPage,
+                'total_pages' => max(1, ceil($total / $perPage)),
+            ];
+        } catch (\Throwable $e) {
+            error_log("[Model paginate error] " . $e->getMessage());
+            return [
+                'data' => [],
+                'total' => 0,
+                'page' => $page,
+                'per_page' => $perPage,
+                'total_pages' => 1,
+            ];
+        }
     }
 
     /**
@@ -129,11 +154,17 @@ if (!class_exists('Model')) {
      */
     public function where($column, $value, $operator = '=')
     {
-        $stmt = $this->db->prepare(
-            "SELECT * FROM {$this->table} WHERE {$column} {$operator} :value"
-        );
-        $stmt->execute([':value' => $value]);
-        return $stmt->fetchAll();
+        try {
+            if (!$this->db) return [];
+            $stmt = $this->db->prepare(
+                "SELECT * FROM {$this->table} WHERE {$column} {$operator} :value"
+            );
+            $stmt->execute([':value' => $value]);
+            return $stmt->fetchAll() ?: [];
+        } catch (\Throwable $e) {
+            error_log("[Model where error] " . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -141,11 +172,17 @@ if (!class_exists('Model')) {
      */
     public function search($column, $keyword)
     {
-        $stmt = $this->db->prepare(
-            "SELECT * FROM {$this->table} WHERE {$column} LIKE :keyword"
-        );
-        $stmt->execute([':keyword' => "%{$keyword}%"]);
-        return $stmt->fetchAll();
+        try {
+            if (!$this->db) return [];
+            $stmt = $this->db->prepare(
+                "SELECT * FROM {$this->table} WHERE {$column} LIKE :keyword"
+            );
+            $stmt->execute([':keyword' => "%{$keyword}%"]);
+            return $stmt->fetchAll() ?: [];
+        } catch (\Throwable $e) {
+            error_log("[Model search error] " . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -153,9 +190,16 @@ if (!class_exists('Model')) {
      */
     public function count()
     {
-        $stmt = $this->db->prepare("SELECT COUNT(*) as total FROM {$this->table}");
-        $stmt->execute();
-        return $stmt->fetch()['total'];
+        try {
+            if (!$this->db) return 0;
+            $stmt = $this->db->prepare("SELECT COUNT(*) as total FROM {$this->table}");
+            $stmt->execute();
+            $row = $stmt->fetch();
+            return $row ? (int)$row['total'] : 0;
+        } catch (\Throwable $e) {
+            error_log("[Model count error] " . $e->getMessage());
+            return 0;
+        }
     }
 
     /**
