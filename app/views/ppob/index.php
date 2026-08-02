@@ -673,6 +673,19 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     transform: rotate(30deg);
 }
 
+.btn-gear-setting.highlight-unset {
+    background: rgba(245, 158, 11, 0.15) !important;
+    color: #f59e0b !important;
+    border: 1px solid #f59e0b !important;
+    animation: pulseGearUnset 2s infinite;
+}
+
+@keyframes pulseGearUnset {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+}
+
 .seller-desc {
     font-size: 0.7rem;
     color: var(--text-muted);
@@ -2163,6 +2176,16 @@ function renderFilters(products, filterKey = 'brand') {
     allBtn.onclick = (e) => filterList('', filterKey, e.target, products);
     container.appendChild(allBtn);
     
+    // "Belum Set Harga" quick filter button
+    const unsetCount = products.filter(p => !isCustomPriceSet(p)).length;
+    if (unsetCount > 0) {
+        const unsetBtn = document.createElement('button');
+        unsetBtn.className = 'btn btn-sm btn-outline-warning text-warning border-warning rounded-pill fw-bold px-3';
+        unsetBtn.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-1"></i>Belum Set (${unsetCount})`;
+        unsetBtn.onclick = (e) => filterList('__UNSET__', filterKey, e.target, products);
+        container.appendChild(unsetBtn);
+    }
+    
     items.forEach(val => {
         const btn = document.createElement('button');
         btn.className = 'btn btn-sm btn-outline-primary rounded-pill fw-bold px-3 border-2';
@@ -2176,12 +2199,23 @@ function filterList(val, filterKey, clickedBtn, originalProducts) {
     // Update active button styling
     const container = document.getElementById('brand-filter-container');
     container.querySelectorAll('button').forEach(b => {
-        b.className = 'btn btn-sm btn-outline-primary rounded-pill fw-bold px-3 border-2';
+        if (b.innerText.includes('Belum Set')) {
+            b.className = 'btn btn-sm btn-outline-warning text-warning border-warning rounded-pill fw-bold px-3';
+        } else {
+            b.className = 'btn btn-sm btn-outline-primary rounded-pill fw-bold px-3 border-2';
+        }
     });
     
-    clickedBtn.className = 'btn btn-sm btn-primary rounded-pill fw-bold px-3';
+    if (clickedBtn.innerText.includes('Belum Set')) {
+        clickedBtn.className = 'btn btn-sm btn-warning text-dark rounded-pill fw-bold px-3';
+    } else {
+        clickedBtn.className = 'btn btn-sm btn-primary rounded-pill fw-bold px-3';
+    }
     
-    if (!val) {
+    if (val === '__UNSET__') {
+        const filtered = originalProducts.filter(p => !isCustomPriceSet(p));
+        renderProducts(filtered);
+    } else if (!val) {
         renderProducts(originalProducts);
     } else {
         const filtered = originalProducts.filter(p => p[filterKey] === val);
@@ -2205,6 +2239,16 @@ function getPpobSellPrice(sku) {
     }
     // Fallback to local storage
     return getPpobSellPrices()[sku];
+}
+
+function isCustomPriceSet(p) {
+    if (!p) return false;
+    const sku = p.buyer_sku_code;
+    const localPrices = getPpobSellPrices();
+    if (localPrices && localPrices[sku] !== undefined && localPrices[sku] !== null && parseInt(localPrices[sku]) > 0) {
+        return true;
+    }
+    return (p.is_custom_price == 1 || p.is_custom_price === '1') && parseFloat(p.sell_price) > 0;
 }
 
 async function savePpobSellPrice(sku, price) {
@@ -2414,8 +2458,13 @@ function renderProducts(products) {
         let minSellPrice = Infinity;
         let maxSellPrice = 0;
         let maxSR = null;
+        let hasUnsetSellPriceInGroup = false;
 
         items.forEach(item => {
+            if (!isCustomPriceSet(item)) {
+                hasUnsetSellPriceInGroup = true;
+            }
+
             const sp = parseFloat(item.seller_price || 0);
             const customSell = getPpobSellPrice(item.buyer_sku_code);
             const sellP = customSell && customSell > sp ? customSell : (parseFloat(item.sell_price) || sp);
@@ -2449,6 +2498,10 @@ function renderProducts(products) {
             srBadgeHtml = `<span class="badge-group-sr" style="color: ${srColor}; border-color: ${srColor}33; background: ${srColor}14;"><i class="bi bi-lightning-charge-fill me-1"></i>${maxSR}% SR</span>`;
         }
 
+        const groupUnsetBadgeHtml = hasUnsetSellPriceInGroup 
+            ? `<span class="badge bg-warning text-dark border border-warning border-opacity-50" style="font-size: 0.65rem; font-weight: 700; padding: 2px 6px;" title="Ada produk dalam kelompok ini yang harga jualnya belum diset manual oleh user"><i class="bi bi-exclamation-triangle-fill me-1"></i>Belum Set Harga</span>`
+            : '';
+
         // Create main container card
         const card = document.createElement('div');
         card.className = 'prod-group-card';
@@ -2462,6 +2515,7 @@ function renderProducts(products) {
                     <div class="d-flex flex-wrap align-items-center gap-1.5 mt-1">
                         ${countBadge}
                         ${srBadgeHtml}
+                        ${groupUnsetBadgeHtml}
                         <span class="prod-group-price-chip ms-auto me-1">${groupPriceHtml}</span>
                     </div>
                 </div>
@@ -2578,11 +2632,25 @@ function renderProducts(products) {
 
             const encodedProduct = encodeURIComponent(JSON.stringify(p));
 
+            const isCustom = isCustomPriceSet(p);
+            let unsetBadge = '';
+            let sellPriceUnsetTag = '';
+            let gearClass = 'btn-gear-setting';
+
+            if (!isCustom) {
+                unsetBadge = `<span class="badge bg-warning bg-opacity-15 text-warning border border-warning border-opacity-25" style="font-size:9.5px; font-weight:700; padding:2px 6px; white-space:nowrap;" title="Harga Jual belum diset manual oleh user (Menggunakan harga otomatis/modal)"><i class="bi bi-exclamation-triangle-fill me-1"></i>Belum Set Harga</span>`;
+                sellPriceUnsetTag = `<span class="badge bg-warning text-dark ms-1" style="font-size:8.5px; padding:1px 5px;" title="Harga jual belum di-set manual (Menggunakan harga otomatis)"><i class="bi bi-exclamation-triangle-fill"></i> Otomatis</span>`;
+                gearClass += ' highlight-unset';
+            }
+
             sellerItemsHtml += `
                 <div class="seller-option-item ${cardClass}">
                     <div class="seller-rank-header">
-                        ${rankBadgeHtml}
-                        <button class="btn-gear-setting" onclick="openSetPriceModal(event, '${encodedProduct}')" title="Atur Harga Jual SKU Ini">
+                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                            ${rankBadgeHtml}
+                            ${unsetBadge}
+                        </div>
+                        <button class="${gearClass}" onclick="openSetPriceModal(event, '${encodedProduct}')" title="Atur Harga Jual SKU Ini (${p.buyer_sku_code})">
                             <i class="bi bi-gear-fill"></i>
                         </button>
                     </div>
@@ -2617,7 +2685,7 @@ function renderProducts(products) {
                                 <span class="modal-price-val">${formatRp(p.seller_price)}</span>
                             </div>
                             <div class="d-flex flex-column">
-                                <span class="price-label-sm">Jual</span>
+                                <span class="price-label-sm">Jual ${sellPriceUnsetTag}</span>
                                 <div class="d-flex align-items-center gap-1 flex-wrap">
                                     <span class="sell-price-val">${formatRp(actualSellPrice)}</span>
                                     ${profitHtml}

@@ -307,6 +307,10 @@ table.dataTable tbody td {
                 <i class="bi bi-shop"></i>
                 <span>Brand / Provider: <b id="stat-total-brands" style="color: var(--text-primary);">0</b></span>
             </div>
+            <div class="price-stat-pill border-warning bg-warning bg-opacity-10 text-warning" style="cursor:pointer;" onclick="filterCategory('unset_price', $('#btn-pill-unset')[0])" title="Klik untuk memfilter produk yang belum di-set harga jual">
+                <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                <span>Belum Set Harga: <b id="stat-total-unset" class="text-warning">0</b></span>
+            </div>
             <div class="price-stat-pill ms-auto">
                 <i class="bi bi-clock-history text-success"></i>
                 <span>Update Otomatis: <b style="color: var(--success);">Aktif (Cron Job)</b></span>
@@ -342,6 +346,9 @@ table.dataTable tbody td {
         </button>
         <button class="cat-pill-btn" onclick="filterCategory('postpaid', this)">
             <i class="bi bi-file-earmark-text-fill"></i> Pascabayar
+        </button>
+        <button class="cat-pill-btn border-warning text-warning" id="btn-pill-unset" onclick="filterCategory('unset_price', this)">
+            <i class="bi bi-exclamation-triangle-fill text-warning"></i> Belum Set Harga (<span id="pill-unset-count">0</span>)
         </button>
     </div>
 
@@ -454,8 +461,12 @@ async function loadPrices() {
             $('#stat-total-products').text(rawProductsData.length.toLocaleString('id-ID'));
             const uniqueCats = [...new Set(rawProductsData.map(p => p.category))].filter(Boolean);
             const uniqueBrands = [...new Set(rawProductsData.map(p => p.brand))].filter(Boolean);
+            const unsetProducts = rawProductsData.filter(p => (p.is_custom_price == 0 || p.is_custom_price === '0'));
+            
             $('#stat-total-cats').text(uniqueCats.length);
             $('#stat-total-brands').text(uniqueBrands.length);
+            $('#stat-total-unset').text(unsetProducts.length.toLocaleString('id-ID'));
+            $('#pill-unset-count').text(unsetProducts.length.toLocaleString('id-ID'));
 
             // Populate Brand Select Dropdown
             const brandSelect = $('#brandFilterSelect');
@@ -532,9 +543,23 @@ async function loadPrices() {
 
                 const catNormalized = (p.category || '').toUpperCase();
                 const brandName = p.brand || '-';
+                const isUnset = (p.is_custom_price == 0 || p.is_custom_price === '0');
+
+                let unsetSkuBadge = isUnset ? `<span class="badge bg-warning text-dark ms-1" style="font-size: 8px; padding: 2px 5px;" title="Harga jual belum di-set manual"><i class="bi bi-exclamation-triangle-fill me-1"></i>Belum Set</span>` : '';
+                
+                let sellPriceHtml = '';
+                if (isUnset) {
+                    sellPriceHtml = `
+                        <div class="d-flex flex-column align-items-end">
+                            <span class="fw-bold text-warning" style="font-size: 0.84rem;">Rp ${parseInt(sellPrice).toLocaleString('id-ID')}</span>
+                            <span class="badge bg-warning text-dark mt-0.5" style="font-size: 8px; padding: 1px 4px;" title="Harga belum ditentukan manual oleh user"><i class="bi bi-exclamation-triangle-fill me-1"></i>Otomatis</span>
+                        </div>`;
+                } else {
+                    sellPriceHtml = `<span class="fw-extrabold text-success" style="font-size: 0.88rem;">Rp ${parseInt(sellPrice).toLocaleString('id-ID')}</span>`;
+                }
 
                 tbody.append(`
-                    <tr data-category="${p.category || ''}" data-brand="${brandName}" data-type="${isPostpaid ? 'postpaid' : 'prepaid'}">
+                    <tr data-category="${p.category || ''}" data-brand="${brandName}" data-type="${isPostpaid ? 'postpaid' : 'prepaid'}" data-unset="${isUnset ? '1' : '0'}">
                         <td>
                             <div class="d-flex flex-column">
                                 <span class="fw-extrabold text-uppercase" style="font-size: 0.78rem; color: var(--primary); letter-spacing: 0.4px;">${catNormalized}</span>
@@ -544,13 +569,13 @@ async function loadPrices() {
                         <td>
                             <div class="d-flex flex-column">
                                 <span class="fw-bold" style="font-size: 0.82rem; color: var(--text-primary);">${p.product_name}</span>
-                                <div class="mt-1"><span class="sku-badge">${p.buyer_sku_code}</span></div>
+                                <div class="mt-1 d-flex align-items-center flex-wrap gap-1"><span class="sku-badge">${p.buyer_sku_code}</span>${unsetSkuBadge}</div>
                             </div>
                         </td>
                         <td>${typeBadge}</td>
                         <td>${sellerHtml}</td>
                         <td class="text-end fw-semibold text-muted" style="font-size: 0.82rem;">Rp ${parseInt(sellerPrice).toLocaleString('id-ID')}</td>
-                        <td class="text-end fw-extrabold text-success" style="font-size: 0.88rem;">Rp ${parseInt(sellPrice).toLocaleString('id-ID')}</td>
+                        <td class="text-end">${sellPriceHtml}</td>
                         <td class="text-end">${profitHtml}</td>
                     </tr>
                 `);
@@ -610,7 +635,10 @@ function applyCustomFilters() {
 
         // Category filter
         if (activeCategoryFilter) {
-            if (activeCategoryFilter === 'postpaid') {
+            if (activeCategoryFilter === 'unset_price') {
+                const rowUnset = $(rowNode).data('unset') == 1 || $(rowNode).data('unset') === '1';
+                if (!rowUnset) return false;
+            } else if (activeCategoryFilter === 'postpaid') {
                 if (rowType !== 'postpaid') return false;
             } else if (rowCat !== activeCategoryFilter) {
                 return false;
