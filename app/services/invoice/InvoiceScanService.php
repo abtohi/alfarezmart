@@ -407,7 +407,7 @@ class InvoiceScanService
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => 300, // Set to 300 tokens to pass OpenRouter free credit pre-checks (< 365 limit)!
+                'max_tokens'  => 2500, // 2500 tokens to ensure all invoice items are parsed without truncation
             ];
 
             if (in_array($tryModel, ['openai/gpt-4o', 'openai/gpt-4o-mini', 'google/gemini-2.0-flash-001', 'google/gemini-2.5-flash'])) {
@@ -435,15 +435,11 @@ class InvoiceScanService
             $err      = curl_error($ch);
             $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-            // Handle HTTP 402 (credit estimation error) with instant 250 token retry
+            // Handle HTTP 402 (paid model credit check) by falling back to next free model
             if ($httpCode === 402) {
-                error_log("[AlfarezMart] Model {$tryModel} 402 credit limit, retrying with max_tokens=250");
-                $payload['max_tokens'] = 250;
-                unset($payload['response_format']);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-                $response = curl_exec($ch);
-                $err      = curl_error($ch);
-                $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                error_log("[AlfarezMart] Model {$tryModel} requires credit balance (402). Trying next fallback model.");
+                $lastError = "Model {$tryModel} membutuhkan saldo kredit. Mencoba model gratis alternatif...";
+                continue;
             }
 
             if ($err) {
@@ -480,20 +476,7 @@ class InvoiceScanService
                 continue;
             }
 
-            // Strip markdown codeblock backticks if present
-            $content = preg_replace('/```json\s*/i', '', $content);
-            $content = preg_replace('/```\s*/', '', $content);
-            $content = trim($content);
-
-            $jsonParsed = json_decode($content, true);
-
-            if (!is_array($jsonParsed)) {
-                if (preg_match('/\[[\s\S]*\]/', $content, $matches)) {
-                    $jsonParsed = json_decode($matches[0], true);
-                } elseif (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
-                    $jsonParsed = json_decode($matches[0], true);
-                }
-            }
+            $jsonParsed = $this->parseAndRepairJson($content);
 
             if (is_array($jsonParsed) && !empty($jsonParsed)) {
                 return $jsonParsed;
@@ -573,24 +556,79 @@ class InvoiceScanService
         $resData = json_decode($response, true);
         $content = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
-        $content = preg_replace('/```json\s*/i', '', $content);
-        $content = preg_replace('/```\s*/', '', $content);
-        $content = trim($content);
-
-        $jsonParsed = json_decode($content, true);
-        if (!is_array($jsonParsed)) {
-            if (preg_match('/\[[\s\S]*\]/', $content, $matches)) {
-                $jsonParsed = json_decode($matches[0], true);
-            } elseif (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
-                $jsonParsed = json_decode($matches[0], true);
-            }
-        }
+        $jsonParsed = $this->parseAndRepairJson($content);
 
         if (is_array($jsonParsed) && !empty($jsonParsed)) {
             return $jsonParsed;
         }
 
         throw new \Exception("Gemini API mengembalikan format JSON tidak valid.");
+    }
+
+    /**
+     * Robust JSON parser and repair engine for AI outputs.
+     * Extracts array of item objects even if output is partially formatted or truncated.
+     */
+    private function parseAndRepairJson(string $content): array
+    {
+        if (empty($content)) {
+            return [];
+        }
+
+        // Clean markdown backticks
+        $content = preg_replace('/```json\s*/i', '', $content);
+        $content = preg_replace('/```\s*/', '', $content);
+        $content = trim($content);
+
+        // 1. Direct JSON decode
+        $decoded = json_decode($content, true);
+        if (is_array($decoded) && !empty($decoded)) {
+            return $decoded;
+        }
+
+        // 2. Regex extract array [...]
+        if (preg_match('/\[[\s\S]*\]/', $content, $matches)) {
+            $arrayDecoded = json_decode($matches[0], true);
+            if (is_array($arrayDecoded) && !empty($arrayDecoded)) {
+                return $arrayDecoded;
+            }
+        }
+
+        // 3. Repair unclosed JSON array (starts with [ but cut off)
+        if (str_starts_with($content, '[') || preg_match('/^\s*\[/', $content)) {
+            $lastBrace = strrpos($content, '}');
+            if ($lastBrace !== false) {
+                $repaired = substr($content, 0, $lastBrace + 1) . ']';
+                $repairedDecoded = json_decode($repaired, true);
+                if (is_array($repairedDecoded) && !empty($repairedDecoded)) {
+                    return $repairedDecoded;
+                }
+            }
+        }
+
+        // 4. Regex extract ALL complete item objects {...} anywhere in $content
+        if (preg_match_all('/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/s', $content, $allMatches)) {
+            $extractedItems = [];
+            foreach ($allMatches[0] as $jsonObjStr) {
+                $itemObj = json_decode($jsonObjStr, true);
+                if (is_array($itemObj) && (isset($itemObj['name']) || isset($itemObj['item']) || isset($itemObj['product_name']) || isset($itemObj['nama']))) {
+                    $extractedItems[] = $itemObj;
+                }
+            }
+            if (!empty($extractedItems)) {
+                return $extractedItems;
+            }
+        }
+
+        // 5. Fallback single object {...}
+        if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
+            $objDecoded = json_decode($matches[0], true);
+            if (is_array($objDecoded) && !empty($objDecoded)) {
+                return $objDecoded;
+            }
+        }
+
+        return [];
     }
 
     // ----------------------------------------------------------------
