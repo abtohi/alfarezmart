@@ -1008,4 +1008,157 @@ function filterProductsClientSide(query) {
         }
     });
 }
+
+// =====================================================
+// HARDWARE BARCODE SCANNER — Instant Product Lookup
+// Triggered by desktop.js dispatching 'hardware-barcode-scanned-products'
+// Works WITHOUT needing to focus the search input first
+// =====================================================
+(function() {
+    // Create the barcode result overlay (modal-style, bottom sheet)
+    const overlay = document.createElement('div');
+    overlay.id = 'barcodeProductOverlay';
+    overlay.style.cssText = 'display:none;position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);align-items:flex-end;justify-content:center;padding:0;';
+    overlay.innerHTML = `
+        <div id="barcodeProductSheet" style="background:var(--surface-1);border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:75vh;overflow-y:auto;padding:20px 16px 32px;box-shadow:0 -8px 40px rgba(0,0,0,0.4);animation:slideUpModal 0.26s cubic-bezier(.32,1.1,.5,1) both;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:30px;height:30px;border-radius:8px;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:14px;"><i class="bi bi-upc-scan"></i></div>
+                    <div>
+                        <div style="font-weight:700;font-size:14px;color:var(--text-primary);">Hasil Scan</div>
+                        <div id="barcodeOverlayCode" style="font-size:11px;color:var(--text-muted);font-family:monospace;"></div>
+                    </div>
+                </div>
+                <button onclick="closeBarcodeProductOverlay()" style="background:var(--surface-2);border:1px solid var(--border-color);color:var(--text-muted);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div id="barcodeOverlayContent" style="min-height:60px;"></div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', (e) => {
+        if (!e.target.closest('#barcodeProductSheet')) closeBarcodeProductOverlay();
+    });
+
+    window.closeBarcodeProductOverlay = function() {
+        overlay.style.display = 'none';
+    };
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeBarcodeProductOverlay();
+    });
+
+    function renderProductCard(p, isLocal = false) {
+        const label = (p.short_label || p.full_name || '-').replace(/</g,'&lt;');
+        const brand = (p.brand_name || '').replace(/</g,'&lt;');
+        const cat   = (p.category_name || '').replace(/</g,'&lt;');
+        const imgHtml = p.photo
+            ? `<img src="${BASE_URL}${p.photo}" style="width:56px;height:56px;object-fit:contain;border-radius:10px;flex-shrink:0;">`
+            : `<div style="width:56px;height:56px;border-radius:10px;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;"><i class="bi bi-box-seam"></i></div>`;
+        let pkgHtml = '';
+        if (p.packagings && p.packagings.length > 0) {
+            pkgHtml = p.packagings.map(pkg => {
+                const pr = parseFloat(pkg.sell_price_retail)||0;
+                const pw = parseFloat(pkg.sell_price_wholesale)||0;
+                return `<span style="font-size:12px;color:var(--primary);font-weight:700;">Rp${pr.toLocaleString('id-ID')}</span><span style="font-size:10px;color:var(--text-muted);margin-left:2px;">/${pkg.unit_abbr||pkg.unit_name}${pw>0?` <span style="color:var(--warning)">(G:Rp${pw.toLocaleString('id-ID')})</span>`:''}</span>`;
+            }).join('<span style="margin:0 6px;color:var(--border-color);">·</span>');
+        }
+        const localBadge = isLocal ? `<span style="font-size:9px;background:rgba(234,179,8,0.15);color:#ca8a04;border-radius:4px;padding:1px 5px;margin-left:4px;">lokal</span>` : '';
+        return `
+            <a href="${BASE_URL}products/${p.id}" style="display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:12px;text-decoration:none;color:var(--text-primary);background:var(--surface-2);margin-bottom:8px;border:1px solid var(--border-color);" onclick="closeBarcodeProductOverlay()">
+                ${imgHtml}
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:700;font-size:14px;line-height:1.3;">${label}${localBadge}</div>
+                    ${brand||cat ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${brand}${brand&&cat?' · ':''}${cat}</div>` : ''}
+                    ${pkgHtml ? `<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:4px;">${pkgHtml}</div>` : ''}
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:3px;"><i class="bi bi-boxes"></i> Stok: ${p.current_qty_base || 0} pcs</div>
+                </div>
+                <i class="bi bi-chevron-right" style="color:var(--text-muted);font-size:14px;align-self:center;flex-shrink:0;"></i>
+            </a>`;
+    }
+
+    async function handleProductBarcodeScan(code) {
+        const content = document.getElementById('barcodeOverlayContent');
+        const codeEl  = document.getElementById('barcodeOverlayCode');
+
+        codeEl.textContent = code;
+        overlay.style.display = 'flex';
+
+        if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+
+        // STEP 1: Try IndexedDB exact barcode match INSTANTLY (<10ms)
+        let localProduct = null;
+        if (typeof OfflineDB !== 'undefined') {
+            try { localProduct = await OfflineDB.findByBarcode(code); } catch(e) {}
+        }
+
+        if (localProduct && localProduct.id) {
+            // Instantly show from local DB (no loading!)
+            content.innerHTML = renderProductCard(localProduct, true);
+
+            // Background: refresh from server
+            try {
+                const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
+                const ctrl = new AbortController();
+                setTimeout(() => ctrl.abort(), 4000);
+                const res = await fetch(`${baseUrl}api/products/barcode/${encodeURIComponent(code)}`, {
+                    credentials: 'same-origin', signal: ctrl.signal
+                });
+                if (res.ok) {
+                    const fresh = await res.json();
+                    if (fresh && fresh.id) {
+                        content.innerHTML = renderProductCard(fresh, false);
+                        if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) {
+                            OfflineDB.saveProduct(fresh).catch(() => {});
+                        }
+                    }
+                }
+            } catch(e) { /* silently ignore — local data is showing fine */ }
+            return;
+        }
+
+        // STEP 2: Local not found → show spinner then fetch from server
+        content.innerHTML = `<div style="text-align:center;padding:24px;"><div class="spinner-border text-primary spinner-border-sm" role="status"></div><div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Mencari di server...</div></div>`;
+
+        try {
+            const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
+            const ctrl = new AbortController();
+            setTimeout(() => ctrl.abort(), 4500);
+            const res = await fetch(`${baseUrl}api/products/barcode/${encodeURIComponent(code)}`, {
+                credentials: 'same-origin', signal: ctrl.signal
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.id) {
+                    content.innerHTML = renderProductCard(data, false);
+                    if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) {
+                        OfflineDB.saveProduct(data).catch(() => {});
+                    }
+                    return;
+                }
+            }
+        } catch(e) {}
+
+        // STEP 3: Not found anywhere
+        content.innerHTML = `<div style="text-align:center;padding:24px;"><i class="bi bi-search" style="font-size:2rem;color:var(--text-muted);"></i><div style="font-weight:700;margin-top:10px;font-size:14px;">Produk Tidak Ditemukan</div><div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Barcode: ${code}</div></div>`;
+    }
+
+    // Listen for hardware scanner event from desktop.js
+    document.addEventListener('hardware-barcode-scanned-products', (e) => {
+        handleProductBarcodeScan(e.detail.code);
+    });
+
+    // Also handle the global hardware-barcode-scanned on products page
+    // (for mobile scanners that dispatch the general event)
+    document.addEventListener('hardware-barcode-scanned', (e) => {
+        // Only handle if we're on the products page (no other page-specific input)
+        const productList = document.getElementById('productListContainer');
+        const posInput = document.getElementById('posSearch');
+        const purchaseInput = document.getElementById('productSearch');
+        const scannerInput = document.getElementById('barcodeInput');
+        if (productList && !posInput && !purchaseInput && !scannerInput) {
+            handleProductBarcodeScan(e.detail.code);
+        }
+    });
+})();
 </script>
+

@@ -844,67 +844,97 @@ function initPurchaseProductSearch() {
     searchInput.addEventListener('input', () => runSearch());
 }
 
+async function _doPurchaseBarcodeSearch(code) {
+    if (!code) return;
+    code = code.trim();
+
+    // ── Step 0: Instant local IndexedDB exact barcode match (<10ms) ──
+    if (typeof OfflineDB !== 'undefined') {
+        try {
+            const localProduct = await OfflineDB.findByBarcode(code);
+            if (localProduct && localProduct.id) {
+                if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+                addProductToCart(localProduct);
+                if (searchInput) searchInput.value = '';
+                if (suggestionsDiv) suggestionsDiv.innerHTML = '';
+                // Background: refresh product cache from server
+                try {
+                    const ctrl = new AbortController();
+                    setTimeout(() => ctrl.abort(), 4000);
+                    const res = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(code)}`, {
+                        credentials: 'same-origin', signal: ctrl.signal
+                    });
+                    if (res.ok) {
+                        const fresh = await res.json();
+                        if (fresh && fresh.id) OfflineDB.saveProduct(fresh).catch(() => {});
+                    }
+                } catch(e) {}
+                return;
+            }
+        } catch(e) {}
+    }
+
+    // ── Step 1: Try exact barcode API (with 4s timeout) ──
+    try {
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 4000);
+        const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(code)}`, {
+            credentials: 'same-origin', signal: ctrl.signal
+        });
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data && data.id) {
+                if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+                addProductToCart(data);
+                if (searchInput) searchInput.value = '';
+                if (suggestionsDiv) suggestionsDiv.innerHTML = '';
+                if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) OfflineDB.saveProduct(data).catch(() => {});
+                return;
+            }
+        }
+    } catch (e) { /* network error, try text search */ }
+
+    // ── Step 2: Fallback to text search with the barcode string ──
+    try {
+        const url = filterBySupplierSales && !isOtherMode && currentSupplierId
+            ? `${BASE_URL}api/purchases/search-products?q=${encodeURIComponent(code)}&supplier_id=${currentSupplierId}${currentSalesRepId ? '&sales_rep_id='+currentSalesRepId : ''}`
+            : `${BASE_URL}api/products/search?q=${encodeURIComponent(code)}`;
+        const ctrl2 = new AbortController();
+        setTimeout(() => ctrl2.abort(), 4000);
+        const sResp = await fetch(url, { credentials: 'same-origin', signal: ctrl2.signal });
+        if (sResp.ok) {
+            const results = await sResp.json();
+            if (Array.isArray(results) && results.length === 1) {
+                if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+                addProductToCart(results[0]);
+                if (searchInput) searchInput.value = '';
+                if (suggestionsDiv) suggestionsDiv.innerHTML = '';
+                return;
+            } else if (Array.isArray(results) && results.length > 1) {
+                if (searchInput) { searchInput.value = code; performProductSearch(); }
+                return;
+            }
+        }
+    } catch (e) {}
+
+    // ── Step 3: Nothing found anywhere ──
+    showToast(`Barcode tidak ditemukan: ${code}`, 'warning');
+    if (searchInput) searchInput.value = code;
+}
+
 function scanProductBarcode() {
     if (typeof BarcodeUtil !== 'undefined' && BarcodeUtil.scanBarcode) {
-        BarcodeUtil.scanBarcode(null, async (code) => {
-            if (!code) return;
-            code = code.trim();
-
-            // ── Step 1: Try exact barcode API ──
-            try {
-                const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(code)}`);
-                if (resp.ok) {
-                    const data = await resp.json();
-                    if (data && data.id) {
-                        if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                        addProductToCart(data);
-                        if (searchInput) searchInput.value = '';
-                        if (suggestionsDiv) suggestionsDiv.innerHTML = '';
-                        return;
-                    }
-                }
-            } catch (e) { /* network error, try text search */ }
-
-            // ── Step 2: Fallback to text search with the barcode string ──
-            try {
-                const url = filterBySupplierSales && !isOtherMode && currentSupplierId
-                    ? `${BASE_URL}api/purchases/search-products?q=${encodeURIComponent(code)}&supplier_id=${currentSupplierId}${currentSalesRepId ? '&sales_rep_id='+currentSalesRepId : ''}`
-                    : `${BASE_URL}api/products/search?q=${encodeURIComponent(code)}`;
-                const sResp = await fetch(url);
-                if (sResp.ok) {
-                    const results = await sResp.json();
-                    if (Array.isArray(results) && results.length === 1) {
-                        // Exactly 1 match — auto-add immediately
-                        if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                        addProductToCart(results[0]);
-                        if (searchInput) searchInput.value = '';
-                        if (suggestionsDiv) suggestionsDiv.innerHTML = '';
-                        return;
-                    } else if (Array.isArray(results) && results.length > 1) {
-                        // Multiple results — show list for manual selection
-                        if (searchInput) {
-                            searchInput.value = code;
-                            performProductSearch();
-                        }
-                        return;
-                    }
-                }
-            } catch (e) { /* search also failed */ }
-
-            // ── Step 3: Nothing found anywhere ──
-            showToast(`Barcode tidak ditemukan: ${code}`, 'warning');
-            if (searchInput) {
-                searchInput.value = code;
-            }
-        });
+        BarcodeUtil.scanBarcode(null, (code) => _doPurchaseBarcodeSearch(code));
     } else {
         const code = prompt('Masukkan kode barcode:');
-        if (code) {
-            searchInput.value = code;
-            searchInput.dispatchEvent(new Event('input'));
-        }
+        if (code) _doPurchaseBarcodeSearch(code);
     }
 }
+
+// Hardware scanner (desktop.js) routes here via 'hardware-barcode-scanned-purchase' event
+document.addEventListener('hardware-barcode-scanned-purchase', (e) => {
+    _doPurchaseBarcodeSearch(e.detail.code);
+});
 
 
 

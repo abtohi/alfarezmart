@@ -285,10 +285,80 @@ if ($userLevel === 'staff') {
     <!-- Status Bar Overlay (Android-like) -->
     <div class="status-bar-overlay"></div>
 
-    <!-- Offline Banner -->
-    <div id="offlineBanner" style="display:none; text-align:center; padding:4px; font-size:10px; color:var(--warning); font-weight:700;">
-        <i class="bi bi-wifi-off" style="margin-right:4px;"></i> Mode Offline
+    <!-- Signal Strength Banner (replaces old offlineBanner) -->
+    <div id="signalBanner" style="display:none;text-align:center;padding:5px 12px;font-size:11px;font-weight:700;transition:all 0.3s ease;border-bottom:1px solid transparent;">
+        <i id="signalBannerIcon" class="bi bi-wifi-off" style="margin-right:5px;"></i>
+        <span id="signalBannerText">Mode Offline</span>
     </div>
+    <script>
+    (function(){
+        const banner  = document.getElementById('signalBanner');
+        const icon    = document.getElementById('signalBannerIcon');
+        const txt     = document.getElementById('signalBannerText');
+
+        // States: 'online' | 'weak' | 'offline'
+        let _signalState = 'online';
+        // Expose for other scripts to read
+        window.getSignalState = () => _signalState;
+
+        function setState(state) {
+            if (_signalState === state) return;
+            _signalState = state;
+            if (state === 'online') {
+                banner.style.display = 'none';
+            } else if (state === 'weak') {
+                banner.style.display = 'block';
+                banner.style.background = 'rgba(234,179,8,0.15)';
+                banner.style.color = '#ca8a04';
+                banner.style.borderBottomColor = 'rgba(234,179,8,0.3)';
+                icon.className = 'bi bi-wifi-1';
+                txt.textContent = 'Sinyal Lemah — Scan menggunakan data lokal (instan)';
+            } else { // offline
+                banner.style.display = 'block';
+                banner.style.background = 'rgba(239,68,68,0.12)';
+                banner.style.color = '#ef4444';
+                banner.style.borderBottomColor = 'rgba(239,68,68,0.25)';
+                icon.className = 'bi bi-wifi-off';
+                txt.textContent = 'Mode Offline — Data lokal digunakan';
+            }
+            // Broadcast so pages can react
+            document.dispatchEvent(new CustomEvent('signal-state-changed', { detail: { state } }));
+        }
+
+        function checkSignal() {
+            if (!navigator.onLine) { setState('offline'); return; }
+
+            // Use Network Information API if available
+            const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+            if (conn) {
+                const slow = conn.saveData || conn.rtt > 500 || ['slow-2g','2g'].includes(conn.effectiveType);
+                setState(slow ? 'weak' : 'online');
+                return;
+            }
+
+            // Fallback: probe with a tiny image fetch and measure RTT
+            const t0 = Date.now();
+            const probe = new Image();
+            const timeout = setTimeout(() => { probe.src = ''; setState('weak'); }, 2500);
+            probe.onload  = () => { clearTimeout(timeout); setState(Date.now() - t0 > 800 ? 'weak' : 'online'); };
+            probe.onerror = () => { clearTimeout(timeout); setState(navigator.onLine ? 'weak' : 'offline'); };
+            probe.src = '<?= BASE_URL ?>public/images/Icon.png?_t=' + t0;
+        }
+
+        window.addEventListener('online',  () => checkSignal());
+        window.addEventListener('offline', () => setState('offline'));
+
+        // Network Information API change event
+        const conn2 = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (conn2) conn2.addEventListener('change', checkSignal);
+
+        // Initial check after DOM ready and every 30s
+        document.addEventListener('DOMContentLoaded', () => {
+            checkSignal();
+            setInterval(checkSignal, 30000);
+        });
+    })();
+    </script>
 
     <!-- App Header -->
     <header class="app-header" id="appHeader">

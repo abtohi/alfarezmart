@@ -144,32 +144,35 @@
 
     function _routeBarcodeScan(code) {
         // Route to the appropriate input on the current page
-        // Priority: POS barcode input > Scanner barcode input
+        // Priority: POS > Purchase > Scanner > Products > Fallback
 
-        // POS page
+        // POS page (posSearch or posBarcode input)
         const posInput = document.getElementById('posSearch') ||
-                         document.getElementById('posBarcode') ||
-                         document.querySelector('[id*="barcode"][id*="input" i]') ||
-                         document.querySelector('input[placeholder*="barcode" i]');
+                         document.getElementById('posBarcode');
         if (posInput) {
-            posInput.value = code;
-            posInput.dispatchEvent(new Event('input', { bubbles: true }));
-            posInput.dispatchEvent(new Event('change', { bubbles: true }));
-            // Try to trigger lookup
-            const form = posInput.closest('form');
-            if (form) {
-                form.dispatchEvent(new Event('submit', { bubbles: true }));
-            } else if (typeof window.lookupBarcode === 'function') {
-                window.lookupBarcode();
-            } else if (typeof window.addByBarcode === 'function') {
-                window.addByBarcode(code);
+            // POS has its own processBarcodeScan with instant in-memory lookup
+            if (typeof window.processBarcodeScan === 'function') {
+                const sug = document.getElementById('posSuggestions');
+                posInput.value = code;
+                posInput.select();
+                window.processBarcodeScan(code, posInput, sug);
+            } else {
+                posInput.value = code;
+                posInput.dispatchEvent(new Event('input', { bubbles: true }));
+                if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
             }
-            // Play beep
-            if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
             return;
         }
 
-        // Scanner page
+        // Purchase / Barang Masuk page
+        const purchaseSearchInput = document.getElementById('productSearch');
+        if (purchaseSearchInput) {
+            // Dispatch custom event; purchases page handles offline-first lookup
+            document.dispatchEvent(new CustomEvent('hardware-barcode-scanned-purchase', { detail: { code } }));
+            return;
+        }
+
+        // Scanner page (/scanner)
         const scannerInput = document.getElementById('barcodeInput');
         if (scannerInput) {
             scannerInput.value = code;
@@ -177,6 +180,13 @@
             if (typeof window.lookupBarcode === 'function') {
                 window.lookupBarcode();
             }
+            return;
+        }
+
+        // Products list page — dispatch custom event; products/index.php handles it
+        const productListContainer = document.getElementById('productListContainer');
+        if (productListContainer) {
+            document.dispatchEvent(new CustomEvent('hardware-barcode-scanned-products', { detail: { code } }));
             return;
         }
 
