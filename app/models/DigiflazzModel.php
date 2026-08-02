@@ -412,7 +412,7 @@ class DigiflazzModel {
      */
     public function getAnalyticsData(string $startDate, string $endDate) {
         $sql = "SELECT 
-                    t.id, t.ref_id, t.buyer_sku_code, t.category, t.product_name, t.type, 
+                    t.id, t.ref_id, t.buyer_sku_code, t.category, t.product_name, t.type, t.customer_no, t.customer_name,
                     t.sell_price, t.modal_price, t.status, t.raw_response, t.created_at, t.updated_at,
                     t.seller_name AS trx_seller_name,
                     p.seller_name AS prod_seller_name,
@@ -650,7 +650,7 @@ class DigiflazzModel {
         $offset = ($page - 1) * $limit;
         
         $stmt = $this->db->prepare("
-            SELECT customer_no, status, created_at, updated_at, product_name, seller_name, message, modal_price, sell_price, profit, category
+            SELECT customer_no, customer_name, status, created_at, updated_at, product_name, seller_name, message, modal_price, sell_price, profit, category
             FROM digi_transactions
             WHERE seller_name = :seller
             ORDER BY created_at DESC

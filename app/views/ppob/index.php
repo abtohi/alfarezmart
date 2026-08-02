@@ -2759,6 +2759,7 @@ async function fetchSellerHistory(page) {
                             <div class="text-muted" style="font-size:11px;">
                                 <span class="badge bg-secondary" style="font-size:9px; padding:3px 5px;">${(trx.category || '').toUpperCase()}</span> ${trx.customer_no}
                             </div>
+                            ${trx.customer_name ? `<div class="text-primary fw-semibold" style="font-size:10.5px; margin-top:2px;"><i class="bi bi-person-check-fill me-1"></i>a.n. ${trx.customer_name}</div>` : ''}
                             ${failMsg}
                         </td>
                         <td class="py-2 text-center align-middle">${speedBadge}</td>

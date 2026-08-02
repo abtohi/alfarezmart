@@ -990,6 +990,7 @@ class DigiflazzController extends Controller {
                 'ref_id' => $trx['ref_id'],
                 'product_name' => $trx['product_name'] ?? '',
                 'customer_no' => $trx['customer_no'] ?? '',
+                'customer_name' => $trx['customer_name'] ?? '',
                 'category' => $trx['category'] ?? '',
                 'modal_price' => (float)($trx['modal_price'] ?? 0),
                 'sell_price' => (float)($trx['sell_price'] ?? 0),

@@ -649,6 +649,7 @@
                     <td style="padding:8px 10px;">
                         <div style="font-weight:700; color:var(--text-primary);">${t.product_name}</div>
                         <div style="font-family:monospace; font-size:10px; color:var(--text-secondary);">${t.customer_no}</div>
+                        ${t.customer_name ? `<div style="font-size:10px; color:var(--primary); font-weight:600; margin-top:2px;"><i class="bi bi-person-check-fill me-1"></i>a.n. ${t.customer_name}</div>` : ''}
                     </td>
                     <td style="padding:8px 10px; text-align:right;">Rp ${parseInt(t.modal_price).toLocaleString('id-ID')}</td>
                     <td style="padding:8px 10px; text-align:right;">
