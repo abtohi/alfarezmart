@@ -25,19 +25,17 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
 ?>
 <div class="page-section">
     <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;min-width:0;">
-        <form method="GET" action="<?= BASE_URL ?>products" style="flex:1;min-width:0;position:relative;" id="productSearchForm">
+        <form method="GET" action="<?= BASE_URL ?>products" style="flex:1;min-width:0;" id="productSearchForm">
             <input type="hidden" name="category" value="<?= htmlspecialchars($selectedCategory ?? '') ?>">
             <input type="hidden" name="min_price" value="<?= htmlspecialchars($minPrice ?? '') ?>">
             <input type="hidden" name="max_price" value="<?= htmlspecialchars($maxPrice ?? '') ?>">
             <div class="search-input-wrapper">
                 <i class="bi bi-search"></i>
-                <input type="text" name="q" id="productSearchInput" class="no-track" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Cari nama produk, brand, barcode..." autocomplete="off" oninput="handleProductSearchInput(this.value)">
+                <input type="text" name="q" id="productSearchInput" class="no-track" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Cari produk..." autocomplete="off" oninput="filterProductsClientSide(this.value)">
                 <?php if (!empty($search)): ?>
                     <a href="<?= $clearSearchUrl ?>" style="color:var(--text-muted);text-decoration:none;flex-shrink:0;"><i class="bi bi-x-lg"></i></a>
                 <?php endif; ?>
             </div>
-            <!-- Live Recommendation Suggestions Dropdown -->
-            <div id="productSearchSuggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; background:var(--surface-1); border:1px solid var(--border-color); border-radius:14px; margin-top:6px; box-shadow:0 12px 36px rgba(0,0,0,0.3); max-height:360px; overflow-y:auto; padding:6px;"></div>
         </form>
         <button type="button" onclick="scanProductBarcode()" title="Scan Barcode"
                 style="background:var(--primary);color:white;border:none;border-radius:var(--radius-lg);padding:10px 12px;cursor:pointer;font-size:1rem;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
@@ -1011,82 +1009,122 @@ function filterProductsClientSide(query) {
     });
 }
 
-let _prodSearchTimer = null;
+// ── Realtime Live Search Dropdown (Offline-First) ─────────────────────
+(function() {
+    const input = document.getElementById('productSearchInput');
+    if (!input) return;
+    let timer = null;
 
-async function handleProductSearchInput(query) {
-    filterProductsClientSide(query);
-
-    const q = (query || '').trim();
-    const sugDiv = document.getElementById('productSearchSuggestions');
-    if (!sugDiv) return;
-
-    if (q.length < 2) {
-        sugDiv.style.display = 'none';
-        sugDiv.innerHTML = '';
-        return;
+    // Create dropdown div, append into search-input-wrapper (stable style)
+    let resultsDiv = document.createElement('div');
+    resultsDiv.id = 'productLiveResults';
+    resultsDiv.style.cssText = 'position:absolute;left:0;right:0;top:100%;z-index:100;display:none;background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-md);max-height:320px;overflow-y:auto;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,0.3);';
+    const wrapper = input.closest('.search-input-wrapper');
+    if (wrapper) {
+        wrapper.style.position = 'relative';
+        wrapper.appendChild(resultsDiv);
     }
 
-    clearTimeout(_prodSearchTimer);
-    _prodSearchTimer = setTimeout(async () => {
-        let results = [];
-        if (typeof OfflineDB !== 'undefined' && OfflineDB.searchProducts) {
-            try {
-                results = await OfflineDB.searchProducts(q);
-            } catch(e) {}
-        }
+    input.addEventListener('input', function() {
+        filterProductsClientSide(this.value);
+        clearTimeout(timer);
+        const q = this.value.trim();
+        if (q.length < 1) { resultsDiv.style.display = 'none'; return; }
 
-        if (results.length < 3 && navigator.onLine) {
+        timer = setTimeout(async () => {
             try {
-                const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
-                const res = await fetch(`${baseUrl}api/products/search?q=${encodeURIComponent(q)}`);
-                if (res.ok) {
-                    const apiData = await res.json();
-                    if (Array.isArray(apiData) && apiData.length > 0) {
-                        results = apiData;
-                    }
+                let items = [];
+
+                // 1. Offline-first: instant search from IndexedDB (0ms latency)
+                if (typeof OfflineDB !== 'undefined' && OfflineDB.searchProducts) {
+                    try { items = await OfflineDB.searchProducts(q); } catch(e) {}
                 }
-            } catch(e) {}
+
+                // 2. Background server refresh (won't block UI)
+                if (navigator.onLine) {
+                    fetch(`<?= BASE_URL ?>api/products/search?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' })
+                        .then(r => r.ok ? r.json() : null)
+                        .then(serverItems => {
+                            if (Array.isArray(serverItems) && serverItems.length > 0) {
+                                renderLiveResults(serverItems, resultsDiv);
+                            }
+                        })
+                        .catch(() => {});
+                }
+
+                if (!items || items.length === 0) {
+                    resultsDiv.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:var(--font-size-xs);">Tidak ditemukan</div>';
+                    resultsDiv.style.display = 'block';
+                    return;
+                }
+
+                renderLiveResults(items, resultsDiv);
+            } catch(e) {
+                resultsDiv.style.display = 'none';
+            }
+        }, 150);
+    });
+
+    input.addEventListener('keypress', e => {
+        if (e.key === 'Enter') {
+            resultsDiv.style.display = 'none';
+            e.preventDefault();
+            if (!navigator.onLine && typeof doOfflineSearch !== 'undefined') {
+                doOfflineSearch(input.value);
+            } else {
+                document.getElementById('productSearchForm').submit();
+            }
+        }
+    });
+
+    document.getElementById('productSearchForm').addEventListener('submit', function(e) {
+        if (!navigator.onLine && typeof doOfflineSearch !== 'undefined') {
+            e.preventDefault();
+            resultsDiv.style.display = 'none';
+            doOfflineSearch(input.value);
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#productSearchForm') && !e.target.closest('#productLiveResults'))
+            resultsDiv.style.display = 'none';
+    });
+})();
+
+function renderLiveResults(items, resultsDiv) {
+    resultsDiv.innerHTML = items.slice(0, 10).map(p => {
+        const label = (p.short_label || p.full_name || p.name || '').replace(/</g, '&lt;');
+        const brand = (p.brand_name || '').replace(/</g, '&lt;');
+        let priceText = '';
+        if (p.packagings && p.packagings.length > 0) {
+            const pkgsHtml = p.packagings.map(pkg => {
+                const price = parseFloat(pkg.sell_price_retail) || 0;
+                const unitDisp = pkg.unit_name || '';
+                return price > 0 ? `<span style="color:var(--primary);font-weight:600;font-size:9px;">Rp${price.toLocaleString('id-ID')}</span><span style="font-size:8px;color:var(--text-muted);margin-left:2px;">/${unitDisp}</span>` : '';
+            }).filter(Boolean).join('<span style="color:var(--border-color);margin:0 4px;font-size:10px;">·</span>');
+            if (pkgsHtml) {
+                priceText = `<div style="margin-top:2px;display:flex;flex-wrap:wrap;gap:2px;align-items:center;">${pkgsHtml}</div>`;
+            }
+        } else if (p.price_small_retail) {
+            const price = parseInt(p.price_small_retail);
+            priceText = `<div style="margin-top:2px;"><span style="color:var(--primary);font-weight:600;font-size:9px;">Rp${price.toLocaleString('id-ID')}</span></div>`;
         }
 
-        if (results.length === 0) {
-            sugDiv.style.display = 'none';
-            sugDiv.innerHTML = '';
-            return;
-        }
+        const imgHtml = p.photo
+            ? `<img src="${BASE_URL}${p.photo}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;background:transparent;flex-shrink:0;" loading="lazy">`
+            : `<div style="width:44px;height:44px;border-radius:8px;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;"><i class="bi bi-box-seam"></i></div>`;
 
-        const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
-        sugDiv.innerHTML = results.slice(0, 8).map(p => {
-            const name = (p.name || p.full_name || p.short_label || 'Tanpa Nama').replace(/</g,'&lt;');
-            const brand = (p.brand_name || '').replace(/</g,'&lt;');
-            const category = (p.category_name || '').replace(/</g,'&lt;');
-            const price = p.price_small_retail || (p.packagings && p.packagings[0] ? p.packagings[0].sell_price_retail : 0);
-            const priceText = price ? `Rp${parseInt(price).toLocaleString('id-ID')}` : '';
-            const photoHtml = p.photo 
-                ? `<img src="${baseUrl}${p.photo}" style="width:36px;height:36px;object-fit:contain;border-radius:6px;background:var(--surface-2);flex-shrink:0;">`
-                : `<div style="width:36px;height:36px;border-radius:6px;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;"><i class="bi bi-box-seam"></i></div>`;
-
-            return `
-                <a href="${baseUrl}products/${p.id}" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;text-decoration:none;color:var(--text-primary);transition:background 0.15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'">
-                    ${photoHtml}
+        return `<a href="<?= BASE_URL ?>products/${p.id}" style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border-color);text-decoration:none;color:var(--text-primary);font-size:var(--font-size-sm);transition:background 0.15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+                    ${imgHtml}
                     <div style="flex:1;min-width:0;">
-                        <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
-                        <div style="font-size:10px;color:var(--text-muted);">${brand}${brand&&category?' · ':''}${category}</div>
+                        <div style="font-weight:600;line-height:1.3;">${label}</div>
+                        ${brand ? `<div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:1px;">${brand}</div>` : ''}
+                        ${priceText}
                     </div>
-                    ${priceText ? `<div style="font-weight:800;font-size:12px;color:var(--success);flex-shrink:0;">${priceText}</div>` : ''}
                 </a>`;
-        }).join('');
-
-        sugDiv.style.display = 'block';
-    }, 200);
+    }).join('');
+    resultsDiv.style.display = 'block';
 }
-
-document.addEventListener('click', (e) => {
-    const sugDiv = document.getElementById('productSearchSuggestions');
-    const form = document.getElementById('productSearchForm');
-    if (sugDiv && form && !form.contains(e.target)) {
-        sugDiv.style.display = 'none';
-    }
-});
 
     // Listen for hardware scanner events on products page to show global modal
     document.addEventListener('hardware-barcode-scanned-products', (e) => {
