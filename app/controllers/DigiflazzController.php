@@ -120,6 +120,7 @@ class DigiflazzController extends Controller {
                 $p['product_trx_count'] = 0;
                 $p['product_avg_speed'] = null;
             }
+            $p['is_custom_price'] = isset($p['is_custom_price']) ? (int)$p['is_custom_price'] : 0;
         }
         
         header('Content-Type: application/json');
@@ -159,6 +160,7 @@ class DigiflazzController extends Controller {
                 $p['product_trx_count'] = 0;
                 $p['product_avg_speed'] = null;
             }
+            $p['is_custom_price'] = isset($p['is_custom_price']) ? (int)$p['is_custom_price'] : 0;
         }
         
         header('Content-Type: application/json');

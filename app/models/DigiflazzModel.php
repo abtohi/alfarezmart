@@ -10,6 +10,14 @@ class DigiflazzModel {
 
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
+        try {
+            $check = $this->db->query("SHOW COLUMNS FROM digi_products LIKE 'is_custom_price'");
+            if ($check && $check->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE digi_products ADD COLUMN is_custom_price TINYINT(1) NOT NULL DEFAULT 0 AFTER sell_price");
+            }
+        } catch (\Exception $e) {
+            error_log("[DigiflazzModel] is_custom_price migration error: " . $e->getMessage());
+        }
     }
 
     /**
