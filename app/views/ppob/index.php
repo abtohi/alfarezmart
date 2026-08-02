@@ -474,6 +474,29 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     border-color: var(--border-color);
 }
 
+.btn-group-set-price {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: rgba(var(--primary-rgb, 59, 130, 246), 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(var(--primary-rgb, 59, 130, 246), 0.3);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.btn-group-set-price:hover {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
 .badge-group-sr {
     font-size: 0.62rem;
     font-weight: 700;
@@ -1127,7 +1150,44 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     </div>
 </div>
 
-<!-- Deposit Modal -->
+<!-- Set Harga Semua Seller (Group) Modal -->
+<div class="modal fade" id="setGroupPriceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 20px; border: none; background: var(--surface-1);">
+            <div class="modal-header border-0" style="background: var(--surface-2); border-radius: 20px 20px 0 0;">
+                <h5 class="modal-title fw-bold" style="color: var(--text-primary);"><i class="bi bi-tags-fill me-2" style="color: var(--primary);"></i>Set Harga Semua Seller</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
+            </div>
+            <div class="modal-body p-4" style="color: var(--text-primary);">
+                <input type="hidden" id="sgp-group-name">
+                <input type="hidden" id="sgp-items-json">
+                <div class="mb-3 text-center">
+                    <h6 class="fw-bold mb-1" id="sgp-product-name" style="color: var(--primary);">Nama Produk</h6>
+                    <div class="text-muted small">Harga akan diterapkan ke <span id="sgp-seller-count" class="fw-bold" style="color:var(--text-primary);">0</span> seller sekaligus</div>
+                </div>
+                <!-- Seller list preview -->
+                <div id="sgp-seller-list" class="mb-3" style="background:var(--surface-2); border-radius:12px; padding:10px 14px; max-height:160px; overflow-y:auto;"></div>
+                <div class="mb-3">
+                    <label class="form-label small text-muted mb-1 fw-bold">Harga Jual Baru (untuk semua seller)</label>
+                    <div class="d-flex align-items-stretch" style="border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--surface-2);">
+                        <div class="d-flex align-items-center justify-content-center px-3 fw-bold text-muted" style="background: rgba(0,0,0,0.03); border-right: 1px solid var(--border-color);">Rp</div>
+                        <input type="number" class="form-control border-0 bg-transparent ps-2 fw-bold shadow-none" id="sgp-sell-price" placeholder="Masukkan harga jual" style="font-size: 16px; color: var(--text-primary); padding: 12px 15px;">
+                    </div>
+                    <div class="mt-2" id="sgp-profit-rows"></div>
+                </div>
+                <div class="alert alert-info rounded-3 py-2 px-3 mb-0" style="font-size:12px;">
+                    <i class="bi bi-info-circle-fill me-1"></i> Harga ini akan disimpan untuk semua seller pada produk <strong id="sgp-product-name-note"></strong>. Anda masih bisa ubah per-seller lewat tombol gerigi masing-masing.
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-4 px-4">
+                <button type="button" class="btn btn-secondary rounded-pill fw-bold px-4" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-primary flex-grow-1 rounded-pill fw-bold" id="btn-save-group-price"><i class="bi bi-check-circle me-2"></i>Simpan ke Semua Seller</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <div class="modal fade" id="depositModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border-radius: 20px; border: none;">
@@ -2372,6 +2432,127 @@ document.getElementById('btn-save-price')?.addEventListener('click', async () =>
     }
 });
 
+// Group Set Price (Cluster Price) Functions
+window.openSetGroupPriceModal = function(e, groupName, encodedItems) {
+    e.stopPropagation(); // Prevent card collapse toggle
+    const items = JSON.parse(decodeURIComponent(encodedItems));
+    
+    document.getElementById('sgp-group-name').value = groupName;
+    document.getElementById('sgp-items-json').value = encodedItems;
+    
+    document.getElementById('sgp-product-name').innerText = groupName;
+    document.getElementById('sgp-product-name-note').innerText = groupName;
+    document.getElementById('sgp-seller-count').innerText = items.length;
+    
+    // Render seller list preview inside modal
+    const sellerListEl = document.getElementById('sgp-seller-list');
+    if (sellerListEl) {
+        sellerListEl.innerHTML = items.map(item => {
+            const curSell = getPpobSellPrice(item.buyer_sku_code) || item.seller_price;
+            return `
+            <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-opacity-10" style="font-size:0.75rem;">
+                <div class="text-truncate me-2" style="max-width:180px;">
+                    <strong style="color:var(--primary);"><i class="bi bi-shop me-1"></i>${item.seller_name || 'Digiflazz'}</strong>
+                    <span class="text-muted small">(${item.buyer_sku_code})</span>
+                </div>
+                <div class="text-end">
+                    <span class="text-muted me-2">Modal: ${formatRp(item.seller_price)}</span>
+                    <span class="fw-bold text-success">Jual: ${formatRp(curSell)}</span>
+                </div>
+            </div>`;
+        }).join('');
+    }
+    
+    // Pre-fill input if all items currently share the same custom price
+    let commonPrice = '';
+    const firstPrice = getPpobSellPrice(items[0].buyer_sku_code);
+    if (firstPrice && items.every(it => getPpobSellPrice(it.buyer_sku_code) === firstPrice)) {
+        commonPrice = firstPrice;
+    }
+    document.getElementById('sgp-sell-price').value = commonPrice;
+    
+    updateGroupProfitPreview();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('setGroupPriceModal')).show();
+};
+
+document.getElementById('sgp-sell-price')?.addEventListener('input', updateGroupProfitPreview);
+
+function updateGroupProfitPreview() {
+    const encodedItems = document.getElementById('sgp-items-json').value;
+    if (!encodedItems) return;
+    const items = JSON.parse(decodeURIComponent(encodedItems));
+    const newSellPrice = parseInt(document.getElementById('sgp-sell-price').value) || 0;
+    const container = document.getElementById('sgp-profit-rows');
+    if (!container) return;
+    
+    if (newSellPrice <= 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    let html = '<div class="d-flex flex-column gap-1 mt-1 p-2 rounded" style="background:var(--surface-2); font-size:0.72rem;">';
+    items.forEach(item => {
+        const base = parseInt(item.seller_price) || 0;
+        if (newSellPrice > base) {
+            const profit = newSellPrice - base;
+            const pct = ((profit / base) * 100).toFixed(1);
+            html += `<div class="d-flex justify-content-between">
+                <span>${item.seller_name || 'Digiflazz'} (Modal ${formatRp(base)}):</span>
+                <strong class="text-success">+${formatRp(profit)} (${pct}%)</strong>
+            </div>`;
+        } else {
+            html += `<div class="d-flex justify-content-between">
+                <span>${item.seller_name || 'Digiflazz'} (Modal ${formatRp(base)}):</span>
+                <strong class="text-danger">Rugi/Seri!</strong>
+            </div>`;
+        }
+    });
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+document.getElementById('btn-save-group-price')?.addEventListener('click', async () => {
+    const encodedItems = document.getElementById('sgp-items-json').value;
+    if (!encodedItems) return;
+    const items = JSON.parse(decodeURIComponent(encodedItems));
+    const sellPrice = document.getElementById('sgp-sell-price').value;
+    
+    const btn = document.getElementById('btn-save-group-price');
+    const ogText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
+    btn.disabled = true;
+    
+    try {
+        if (sellPrice && parseInt(sellPrice) > 0) {
+            await Promise.all(items.map(item => savePpobSellPrice(item.buyer_sku_code, sellPrice)));
+            showToast(`Harga jual ${formatRp(sellPrice)} diterapkan ke ${items.length} seller`, 'success');
+        } else {
+            await Promise.all(items.map(item => deletePpobSellPrice(item.buyer_sku_code)));
+            showToast(`Harga jual ${items.length} seller dikembalikan ke default`, 'info');
+        }
+    } catch(err) {
+        console.error('Group price save error:', err);
+        showToast('Gagal menyimpan harga cluster', 'error');
+    }
+    
+    btn.innerHTML = ogText;
+    btn.disabled = false;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('setGroupPriceModal')).hide();
+    
+    if (typeof currentProducts !== 'undefined') {
+        if (currentCategory === 'pulsa' || currentCategory === 'data' || currentCategory === 'sms_nelpon') {
+            filterProductsByPrefix(document.getElementById('customer-no').value);
+        } else {
+            const activeFilterBtn = document.querySelector('#brand-filter-container button.btn-primary');
+            if (activeFilterBtn) {
+                activeFilterBtn.click();
+            } else {
+                renderProducts(currentProducts);
+            }
+        }
+    }
+});
+
 // Auto-sync existing local prices to server on load
 document.addEventListener('DOMContentLoaded', async () => {
     const prices = getPpobSellPrices();
@@ -2508,10 +2689,20 @@ function renderProducts(products) {
         card.dataset.productGroup = group.name;
 
         // Group Header HTML: Product Title on Line 1, Badges + Price Chip on Line 2
+        // Encode items for group-level price button
+        const encodedGroupItems = encodeURIComponent(JSON.stringify(items.map(p => ({ buyer_sku_code: p.buyer_sku_code, product_name: p.product_name, seller_price: p.seller_price, seller_name: p.seller_name }))));
+        const groupSetPriceBtn = sellerCount > 1
+            ? `<button class="btn-group-set-price" onclick="openSetGroupPriceModal(event, ${JSON.stringify(group.name).replace(/'/g,"&apos;")}, '${encodedGroupItems}')" title="Set harga jual yang sama untuk semua seller dalam kelompok ini sekaligus">
+                <i class="bi bi-tags-fill me-1"></i>Set Harga Semua
+               </button>`
+            : '';
         const headerHtml = `
             <div class="prod-group-header" onclick="toggleProductGroup(this.parentElement)">
                 <div class="d-flex flex-column flex-grow-1 min-w-0">
-                    <div class="prod-group-title">${group.name}</div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <div class="prod-group-title">${group.name}</div>
+                        ${groupSetPriceBtn}
+                    </div>
                     <div class="d-flex flex-wrap align-items-center gap-1.5 mt-1">
                         ${countBadge}
                         ${srBadgeHtml}
