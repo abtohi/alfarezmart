@@ -497,6 +497,33 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
+@media (max-width: 576px) {
+    .prod-group-header {
+        padding: 8px 10px;
+    }
+    .prod-group-title {
+        font-size: 0.8rem !important;
+    }
+    .prod-group-price-chip {
+        font-size: 0.7rem !important;
+        padding: 1px 6px !important;
+    }
+    .btn-group-set-price {
+        font-size: 0.6rem !important;
+        padding: 2px 6px !important;
+    }
+    .badge-seller-count, .badge-group-sr {
+        font-size: 0.6rem !important;
+        padding: 1px 6px !important;
+    }
+    .seller-options-wrapper {
+        padding: 8px 6px;
+    }
+    .seller-option-item {
+        padding: 10px 8px;
+    }
+}
+
 .badge-group-sr {
     font-size: 0.62rem;
     font-weight: 700;
@@ -2768,17 +2795,13 @@ function renderProducts(products) {
 
         const headerHtml = `
             <div class="prod-group-header" onclick="toggleProductGroup(this.parentElement)">
-                <div class="d-flex flex-column flex-grow-1 min-w-0">
-                    <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
-                        <div class="prod-group-title text-truncate">${group.name}</div>
-                        <span class="prod-group-price-chip flex-shrink-0">${groupPriceHtml}</span>
-                    </div>
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-1.5">
-                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                            ${countBadge}
-                            ${srBadgeHtml}
-                            ${groupUnsetBadgeHtml}
-                        </div>
+                <div class="d-flex flex-column flex-grow-1 min-w-0 gap-1">
+                    <div class="prod-group-title mb-0">${group.name}</div>
+                    <div class="d-flex flex-wrap align-items-center gap-1.5 mt-0.5">
+                        <span class="prod-group-price-chip">${groupPriceHtml}</span>
+                        ${countBadge}
+                        ${srBadgeHtml}
+                        ${groupUnsetBadgeHtml}
                         ${groupSetPriceBtn}
                     </div>
                 </div>
