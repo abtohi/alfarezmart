@@ -296,58 +296,73 @@ let lastSearchResultsData = null;
 
 async function lookupBarcode() {
     const input = document.getElementById('barcodeInput');
-    const code = input.value.trim();
+    const code = input?.value?.trim();
     if (!code) return;
 
     lastSearchKeyword = code;
+    if (input) input.select(); // Highlight text so next scan automatically replaces it!
     
     const resultDiv = document.getElementById('scanResult');
-    resultDiv.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><div style="font-size:12px;color:var(--text-muted);margin-top:10px;">Mencari produk...</div></div>';
-    
     const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
 
-    // 1. Instant local IndexedDB pre-lookup (< 15ms)
+    // 1. Check local IndexedDB for EXACT barcode match ONLY (< 10ms)
     let offlineFound = null;
     if (typeof OfflineDB !== 'undefined') {
         try {
             const p = await OfflineDB.findByBarcode(code);
-            if (p) {
-                offlineFound = { type: 'single', data: p };
-            } else {
-                const searchData = await OfflineDB.searchProducts(code);
-                if (searchData && searchData.length > 0) {
-                    offlineFound = { type: 'multi', data: searchData };
-                }
+            if (p && p.id) {
+                offlineFound = p;
             }
         } catch (e) {}
     }
 
-    // 2. Try online barcode lookup via API
+    // IF EXACT MATCH IN LOCAL DB: Render INSTANTLY (0ms delay)
+    if (offlineFound) {
+        if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+        showProductResultOffline(offlineFound);
+        // Refresh authoritative product data from server in background using scanned CODE (not old ID!)
+        syncProductByCodeBackground(code);
+        return;
+    }
+
+    // 2. Not found in local DB: Show spinner and fetch from server API
+    resultDiv.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><div style="font-size:12px;color:var(--text-muted);margin-top:10px;">Mencari produk di server...</div></div>';
+
+    // Try online barcode lookup via API (strict barcode lookup first)
     try {
         let data = null;
-        if (typeof api === 'function') {
-            data = await api(`${baseUrl}api/products/barcode/${encodeURIComponent(code)}`);
-        } else {
-            const res = await fetch(`${baseUrl}api/products/barcode/${encodeURIComponent(code)}`, { credentials: 'same-origin' });
-            if (res.ok) data = await res.json();
-        }
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+        const res = await fetch(`${baseUrl}api/products/barcode/${encodeURIComponent(code)}`, { 
+            credentials: 'same-origin',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) data = await res.json();
 
         if (data && data.id) {
             if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
             showProductResult(data);
+            if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) {
+                OfflineDB.saveProduct(data).catch(() => {});
+            }
             return;
         }
     } catch (e) {}
 
-    // 3. Fallback: try online name search via API
+    // 3. Try online text search via API (for product name/brand/type)
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+        const res = await fetch(`${baseUrl}api/products/search?q=${encodeURIComponent(code)}`, { 
+            credentials: 'same-origin',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
         let searchData = null;
-        if (typeof api === 'function') {
-            searchData = await api(`${baseUrl}api/products/search?q=${encodeURIComponent(code)}`);
-        } else {
-            const res = await fetch(`${baseUrl}api/products/search?q=${encodeURIComponent(code)}`, { credentials: 'same-origin' });
-            if (res.ok) searchData = await res.json();
-        }
+        if (res.ok) searchData = await res.json();
 
         if (Array.isArray(searchData) && searchData.length === 1) {
             if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
@@ -359,21 +374,49 @@ async function lookupBarcode() {
         }
     } catch (searchErr) {}
 
-    // 4. Final offline fallback if server calls failed or returned nothing
-    if (offlineFound) {
-        if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-        if (offlineFound.type === 'single') {
-            showProductResultOffline(offlineFound.data);
-        } else if (offlineFound.data.length === 1) {
-            showProductResultOffline(offlineFound.data[0]);
-        } else {
-            renderMultipleSearchResults(offlineFound.data, true);
-        }
-        return;
+    // 4. Fallback to local IndexedDB text search if server is unreachable / offline
+    if (typeof OfflineDB !== 'undefined') {
+        try {
+            const searchData = await OfflineDB.searchProducts(code);
+            if (searchData && searchData.length > 0) {
+                if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+                if (searchData.length === 1) {
+                    showProductResultOffline(searchData[0]);
+                } else {
+                    renderMultipleSearchResults(searchData, true);
+                }
+                return;
+            }
+        } catch (e) {}
     }
 
     // 5. Not found state
-    resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-search fs-1 text-muted"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Produk Tidak Ditemukan</h4><p style="font-size:12px;color:var(--text-muted);">Tidak ada hasil untuk "'+code+'".</p></div>';
+    resultDiv.innerHTML = '<div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:40px;text-align:center;"><i class="bi bi-search fs-1 text-muted"></i><h4 style="font-size:15px;font-weight:700;margin-top:10px;">Produk Tidak Ditemukan</h4><p style="font-size:12px;color:var(--text-muted);">Tidak ada hasil untuk "'+escapeHtml(code)+'".</p></div>';
+}
+
+async function syncProductByCodeBackground(code) {
+    try {
+        const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+        const res = await fetch(`${baseUrl}api/products/barcode/${encodeURIComponent(code)}`, { 
+            credentials: 'same-origin',
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.id) {
+                showProductResult(data);
+                if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) {
+                    OfflineDB.saveProduct(data).catch(() => {});
+                }
+            }
+        }
+    } catch (e) {
+        // Silently ignore timeout or network errors as local data is already rendered
+    }
 }
 
 function selectSearchResultItem(idx) {
@@ -963,21 +1006,41 @@ function openGlobalScanner() {
 }
 
 let scannerTimer = null;
-document.getElementById('barcodeInput')?.addEventListener('input', (e) => {
-    clearTimeout(scannerTimer);
-    scannerTimer = setTimeout(() => {
-        lookupBarcode();
-    }, 300);
-});
+let lastKeypressTime = 0;
+const barcodeInpEl = document.getElementById('barcodeInput');
 
-// Support Enter key for immediate search
-document.getElementById('barcodeInput')?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
+if (barcodeInpEl) {
+    barcodeInpEl.addEventListener('focus', () => {
+        barcodeInpEl.select();
+    });
+
+    barcodeInpEl.addEventListener('keydown', (e) => {
+        const now = Date.now();
+        if (e.key === 'Enter') {
+            clearTimeout(scannerTimer);
+            lookupBarcode();
+            return;
+        }
+        if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            // If user or scanner starts typing after a pause (>300ms) and text wasn't selected, select it so new barcode replaces old
+            if (lastKeypressTime > 0 && (now - lastKeypressTime > 300)) {
+                if (barcodeInpEl.selectionStart === barcodeInpEl.selectionEnd) {
+                    barcodeInpEl.select();
+                }
+            }
+            lastKeypressTime = now;
+        }
+    });
+
+    barcodeInpEl.addEventListener('input', (e) => {
         clearTimeout(scannerTimer);
-        lookupBarcode();
-    }
-});
+        scannerTimer = setTimeout(() => {
+            lookupBarcode();
+        }, 300);
+    });
 
-// Auto-focus
-document.getElementById('barcodeInput')?.focus();
+    // Auto-focus & select
+    barcodeInpEl.focus();
+    barcodeInpEl.select();
+}
 </script>

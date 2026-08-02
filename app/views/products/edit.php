@@ -396,6 +396,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('referenceResults').style.display = 'none';
         }
     });
+
+    // Prevent form auto-submit when pressing Enter inside form inputs
+    const formProduct = document.getElementById('formProduct');
+    if (formProduct) {
+        formProduct.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                e.preventDefault();
+            }
+        });
+    }
 });
 
 function toggleMultivariant(checked) {
@@ -1293,7 +1303,9 @@ async function updatePackagingWithConflict(pkgId, payload) {
                 submitText: '<i class="bi bi-arrow-repeat"></i> Replace Barcode',
                 cancelText: 'Batal',
                 onSubmit: async () => { resolve(true); return true; },
-            }).then(() => {}).catch(() => resolve(false));
+            }).then((res) => {
+                if (res !== true) resolve(false);
+            }).catch(() => resolve(false));
         });
 
         if (userChoice) {
@@ -1306,7 +1318,7 @@ async function updatePackagingWithConflict(pkgId, payload) {
             });
             return await resp2.json();
         }
-        return data; // Return original conflict
+        return { cancelled: true, error: 'barcode_conflict', message: 'Penyimpanan dibatalkan (Barcode sudah digunakan oleh produk lain).' };
     }
 
     if (!resp.ok && data.error) {
@@ -1543,7 +1555,10 @@ async function submitProduct(e) {
                         discount_mode: discountMode,
                         discount_value: discountValue
                     });
-                    if (upRes.error && upRes.error !== 'barcode_conflict') {
+                    if (upRes.cancelled) {
+                        throw new Error(upRes.message || 'Penyimpanan dibatalkan.');
+                    }
+                    if (upRes.error) {
                         throw new Error(upRes.error || upRes.message);
                     }
                 } else {

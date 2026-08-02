@@ -288,6 +288,8 @@ class SearchBox {
         this._searchInput.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') { this.close(); }
             else if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
                 const highlighted = this._optionsList.querySelector('.highlighted');
                 if (highlighted) highlighted.click();
             } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {

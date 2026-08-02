@@ -173,6 +173,7 @@
         const scannerInput = document.getElementById('barcodeInput');
         if (scannerInput) {
             scannerInput.value = code;
+            scannerInput.select();
             if (typeof window.lookupBarcode === 'function') {
                 window.lookupBarcode();
             }

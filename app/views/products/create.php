@@ -317,6 +317,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('referenceResults').style.display = 'none';
         }
     });
+
+    // Prevent form auto-submit when pressing Enter inside form inputs
+    const formProduct = document.getElementById('formProduct');
+    if (formProduct) {
+        formProduct.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                e.preventDefault();
+            }
+        });
+    }
 });
 
 // ===== Add Master Data via Modal =====
