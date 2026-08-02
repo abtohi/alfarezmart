@@ -2432,10 +2432,70 @@ document.getElementById('btn-save-price')?.addEventListener('click', async () =>
     }
 });
 
+// Bulk Save & Delete Helpers for Cluster Price
+async function savePpobSellPricesBulk(skus, price) {
+    const prices = getPpobSellPrices();
+    const payload = {};
+    const priceInt = parseInt(price, 10);
+    skus.forEach(sku => {
+        prices[sku] = priceInt;
+        payload[sku] = priceInt;
+    });
+    localStorage.setItem('ppob_sell_prices', JSON.stringify(prices));
+
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/ppob/custom-price/bulk', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({prices: payload})
+        });
+        const data = await res.json();
+        if(data.success) {
+            if (typeof currentProducts !== 'undefined') {
+                skus.forEach(sku => {
+                    const p = currentProducts.find(x => x.buyer_sku_code === sku);
+                    if (p) {
+                        p.sell_price = priceInt;
+                        p.is_custom_price = 1;
+                    }
+                });
+            }
+        }
+    } catch(e) { console.error('Bulk save error:', e); }
+}
+
+async function deletePpobSellPricesBulk(skus) {
+    const prices = getPpobSellPrices();
+    skus.forEach(sku => {
+        delete prices[sku];
+    });
+    localStorage.setItem('ppob_sell_prices', JSON.stringify(prices));
+
+    try {
+        await Promise.all(skus.map(sku => 
+            fetch('<?= BASE_URL ?>api/ppob/custom-price/reset', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({sku: sku})
+            })
+        ));
+        if (typeof currentProducts !== 'undefined') {
+            skus.forEach(sku => {
+                const p = currentProducts.find(x => x.buyer_sku_code === sku);
+                if (p) {
+                    p.sell_price = p.seller_price;
+                    p.is_custom_price = 0;
+                }
+            });
+        }
+    } catch(e) { console.error('Bulk delete error:', e); }
+}
+
 // Group Set Price (Cluster Price) Functions
-window.openSetGroupPriceModal = function(e, groupName, encodedItems) {
-    e.stopPropagation(); // Prevent card collapse toggle
-    const items = JSON.parse(decodeURIComponent(encodedItems));
+window.openSetGroupPriceModal = function(e, groupNameEnc, encodedItems) {
+    if (e && e.stopPropagation) e.stopPropagation(); // Prevent card collapse toggle
+    const groupName = decodeURIComponent(groupNameEnc || '');
+    const items = JSON.parse(decodeURIComponent(encodedItems || '[]'));
     
     document.getElementById('sgp-group-name').value = groupName;
     document.getElementById('sgp-items-json').value = encodedItems;
@@ -2465,9 +2525,11 @@ window.openSetGroupPriceModal = function(e, groupName, encodedItems) {
     
     // Pre-fill input if all items currently share the same custom price
     let commonPrice = '';
-    const firstPrice = getPpobSellPrice(items[0].buyer_sku_code);
-    if (firstPrice && items.every(it => getPpobSellPrice(it.buyer_sku_code) === firstPrice)) {
-        commonPrice = firstPrice;
+    if (items.length > 0) {
+        const firstPrice = getPpobSellPrice(items[0].buyer_sku_code);
+        if (firstPrice && items.every(it => getPpobSellPrice(it.buyer_sku_code) === firstPrice)) {
+            commonPrice = firstPrice;
+        }
     }
     document.getElementById('sgp-sell-price').value = commonPrice;
     
@@ -2516,6 +2578,7 @@ document.getElementById('btn-save-group-price')?.addEventListener('click', async
     if (!encodedItems) return;
     const items = JSON.parse(decodeURIComponent(encodedItems));
     const sellPrice = document.getElementById('sgp-sell-price').value;
+    const skus = items.map(it => it.buyer_sku_code);
     
     const btn = document.getElementById('btn-save-group-price');
     const ogText = btn.innerHTML;
@@ -2524,10 +2587,10 @@ document.getElementById('btn-save-group-price')?.addEventListener('click', async
     
     try {
         if (sellPrice && parseInt(sellPrice) > 0) {
-            await Promise.all(items.map(item => savePpobSellPrice(item.buyer_sku_code, sellPrice)));
-            showToast(`Harga jual ${formatRp(sellPrice)} diterapkan ke ${items.length} seller`, 'success');
+            await savePpobSellPricesBulk(skus, sellPrice);
+            showToast(`Harga jual ${formatRp(sellPrice)} berhasil diterapkan ke ${items.length} seller`, 'success');
         } else {
-            await Promise.all(items.map(item => deletePpobSellPrice(item.buyer_sku_code)));
+            await deletePpobSellPricesBulk(skus);
             showToast(`Harga jual ${items.length} seller dikembalikan ke default`, 'info');
         }
     } catch(err) {
@@ -2688,29 +2751,38 @@ function renderProducts(products) {
         card.className = 'prod-group-card';
         card.dataset.productGroup = group.name;
 
-        // Group Header HTML: Product Title on Line 1, Badges + Price Chip on Line 2
-        // Encode items for group-level price button
-        const encodedGroupItems = encodeURIComponent(JSON.stringify(items.map(p => ({ buyer_sku_code: p.buyer_sku_code, product_name: p.product_name, seller_price: p.seller_price, seller_name: p.seller_name }))));
+        // Group Header HTML: Product Title & Price on Line 1, Badges + Cluster Button on Line 2
+        const safeGroupName = encodeURIComponent(group.name);
+        const encodedGroupItems = encodeURIComponent(JSON.stringify(items.map(p => ({
+            buyer_sku_code: p.buyer_sku_code,
+            product_name: p.product_name,
+            seller_price: p.seller_price,
+            seller_name: p.seller_name
+        }))));
+
         const groupSetPriceBtn = sellerCount > 1
-            ? `<button class="btn-group-set-price" onclick="openSetGroupPriceModal(event, ${JSON.stringify(group.name).replace(/'/g,"&apos;")}, '${encodedGroupItems}')" title="Set harga jual yang sama untuk semua seller dalam kelompok ini sekaligus">
+            ? `<button class="btn-group-set-price" onclick="openSetGroupPriceModal(event, '${safeGroupName}', '${encodedGroupItems}')" title="Set harga jual yang sama untuk semua seller dalam kelompok ini sekaligus">
                 <i class="bi bi-tags-fill me-1"></i>Set Harga Semua
                </button>`
             : '';
+
         const headerHtml = `
             <div class="prod-group-header" onclick="toggleProductGroup(this.parentElement)">
                 <div class="d-flex flex-column flex-grow-1 min-w-0">
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <div class="prod-group-title">${group.name}</div>
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
+                        <div class="prod-group-title text-truncate">${group.name}</div>
+                        <span class="prod-group-price-chip flex-shrink-0">${groupPriceHtml}</span>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-1.5">
+                        <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                            ${countBadge}
+                            ${srBadgeHtml}
+                            ${groupUnsetBadgeHtml}
+                        </div>
                         ${groupSetPriceBtn}
                     </div>
-                    <div class="d-flex flex-wrap align-items-center gap-1.5 mt-1">
-                        ${countBadge}
-                        ${srBadgeHtml}
-                        ${groupUnsetBadgeHtml}
-                        <span class="prod-group-price-chip ms-auto me-1">${groupPriceHtml}</span>
-                    </div>
                 </div>
-                <div class="prod-group-chevron flex-shrink-0">
+                <div class="prod-group-chevron flex-shrink-0 ms-1">
                     <i class="bi bi-chevron-down"></i>
                 </div>
             </div>
@@ -2723,6 +2795,20 @@ function renderProducts(products) {
             if (sellA !== sellB) return sellA - sellB;
             return parseFloat(a.seller_price || 0) - parseFloat(b.seller_price || 0);
         });
+
+        let clusterToolbarHtml = '';
+        if (sellerCount > 1) {
+            clusterToolbarHtml = `
+            <div class="d-flex justify-content-between align-items-center p-2 mb-2 rounded" style="background: rgba(var(--primary-rgb, 59, 130, 246), 0.06); border: 1px dashed rgba(var(--primary-rgb, 59, 130, 246), 0.25);">
+                <div class="d-flex align-items-center gap-1.5 min-w-0">
+                    <span class="badge bg-primary text-white fw-bold" style="font-size:0.65rem;"><i class="bi bi-people-fill me-1"></i>${sellerCount} Seller</span>
+                    <span class="text-muted text-truncate" style="font-size:0.72rem;">Atur harga jual sama untuk semua seller</span>
+                </div>
+                <button class="btn btn-sm btn-primary rounded-pill px-2.5 py-1 fw-bold text-xs flex-shrink-0 shadow-sm" onclick="openSetGroupPriceModal(event, '${safeGroupName}', '${encodedGroupItems}')">
+                    <i class="bi bi-tags-fill me-1"></i>Set Harga Semua (${sellerCount})
+                </button>
+            </div>`;
+        }
 
         // Group Body (Expandable Sellers List) HTML
         let sellerItemsHtml = '';
@@ -2911,6 +2997,7 @@ function renderProducts(products) {
             ${headerHtml}
             <div class="prod-group-body">
                 <div class="seller-options-wrapper">
+                    ${clusterToolbarHtml}
                     ${sellerItemsHtml}
                 </div>
             </div>
