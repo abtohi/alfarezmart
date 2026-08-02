@@ -650,7 +650,7 @@ class DigiflazzModel {
         $offset = ($page - 1) * $limit;
         
         $stmt = $this->db->prepare("
-            SELECT customer_no, status, created_at, product_name, seller_name, message, modal_price, sell_price, profit, category
+            SELECT customer_no, status, created_at, updated_at, product_name, seller_name, message, modal_price, sell_price, profit, category
             FROM digi_transactions
             WHERE seller_name = :seller
             ORDER BY created_at DESC
@@ -662,6 +662,26 @@ class DigiflazzModel {
         $stmt->execute();
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
+        foreach ($data as &$row) {
+            $created = !empty($row['created_at']) ? strtotime($row['created_at']) : 0;
+            $updated = !empty($row['updated_at']) ? strtotime($row['updated_at']) : 0;
+            $diff = $updated - $created;
+            $row['duration_seconds'] = ($diff >= 0 && $created > 0 && $updated > 0) ? $diff : null;
+        }
+
+        // Calculate average seller speed across all completed transactions
+        $stmtSpeed = $this->db->prepare("
+            SELECT AVG(CASE WHEN LOWER(status) IN ('success', 'sukses', 'failed', 'gagal') 
+                                AND TIMESTAMPDIFF(SECOND, created_at, updated_at) >= 0 
+                           THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
+                           ELSE NULL END) as avg_speed
+            FROM digi_transactions
+            WHERE seller_name = :seller
+        ");
+        $stmtSpeed->execute(['seller' => $sellerName]);
+        $avgSpdRow = $stmtSpeed->fetch(PDO::FETCH_ASSOC);
+        $avgSpeed = ($avgSpdRow && $avgSpdRow['avg_speed'] !== null) ? round((float)$avgSpdRow['avg_speed'], 1) : null;
+
         // Count total for pagination
         $stmtTotal = $this->db->prepare("SELECT COUNT(*) FROM digi_transactions WHERE seller_name = :seller");
         $stmtTotal->execute(['seller' => $sellerName]);
@@ -673,6 +693,7 @@ class DigiflazzModel {
                 'total' => $totalTrx,
                 'success' => $totalSuccess,
                 'failed' => $totalFailed,
+                'avg_speed' => $avgSpeed,
                 'categories' => $categories
             ],
             'pagination' => [

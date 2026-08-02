@@ -1472,7 +1472,10 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
                             <div class="p-3 rounded-3 h-100" style="background:var(--surface-2); border:1px solid var(--border-color);">
-                                <div class="fw-bold mb-3 small text-uppercase text-muted">Success Rate</div>
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="fw-bold small text-uppercase text-muted">Success Rate &amp; Kecepatan</div>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary fw-bold" id="sh-txt-speed" style="font-size:10px;"><i class="bi bi-lightning-charge-fill me-1"></i>Kecepatan: -</span>
+                                </div>
                                 <div class="d-flex align-items-center mb-2">
                                     <h3 class="m-0 me-2" id="sh-stat-total" style="color:var(--text-primary);">0</h3> 
                                     <span class="text-muted small">Total Transaksi</span>
@@ -1505,6 +1508,7 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
                                 <tr>
                                     <th class="py-2 text-muted">Waktu</th>
                                     <th class="py-2 text-muted">Produk / Tujuan</th>
+                                    <th class="py-2 text-center text-muted">Kecepatan</th>
                                     <th class="py-2 text-end text-muted">Modal</th>
                                     <th class="py-2 text-end text-muted">Jual</th>
                                     <th class="py-2 text-end text-muted">Selisih</th>
@@ -2693,6 +2697,13 @@ async function fetchSellerHistory(page) {
             document.getElementById('sh-txt-success').innerText = `Sukses: ${analytics.success} (${pSuccess}%)`;
             document.getElementById('sh-txt-failed').innerText = `Gagal: ${analytics.failed} (${pFailed}%)`;
             
+            let shAvgSpeedText = '-';
+            if (analytics.avg_speed !== null && analytics.avg_speed !== undefined) {
+                let spVal = Math.round(parseFloat(analytics.avg_speed));
+                shAvgSpeedText = spVal <= 59 ? `${spVal} dtk` : `${Math.floor(spVal / 60)}m, ${spVal % 60}d`;
+            }
+            document.getElementById('sh-txt-speed').innerHTML = `<i class="bi bi-lightning-charge-fill me-1"></i>Kecepatan: ${shAvgSpeedText}`;
+            
             // Category breakdown
             let catHtml = '';
             for (const [catName, count] of Object.entries(analytics.categories)) {
@@ -2732,6 +2743,14 @@ async function fetchSellerHistory(page) {
                     let markupPct = modal > 0 ? ((profit / modal) * 100).toFixed(1) : 0;
                     let markupColor = profit > 0 ? 'var(--success)' : (profit < 0 ? 'var(--danger)' : 'var(--text-muted)');
 
+                    let speedBadge = '<span style="color:var(--text-muted);font-size:10px;">-</span>';
+                    if (trx.duration_seconds !== null && trx.duration_seconds !== undefined) {
+                        let speedVal = Math.round(parseFloat(trx.duration_seconds));
+                        let speedColor = speedVal <= 5 ? 'background:rgba(16,185,129,0.12);color:#10b981;' : (speedVal <= 20 ? 'background:rgba(59,130,246,0.12);color:#3b82f6;' : 'background:rgba(245,158,11,0.12);color:#f59e0b;');
+                        let speedText = speedVal <= 59 ? `${speedVal} dtk` : `${Math.floor(speedVal / 60)}m, ${speedVal % 60}d`;
+                        speedBadge = `<span style="${speedColor}font-size:10px;padding:3px 7px;border-radius:4px;font-weight:700;white-space:nowrap;"><i class="bi bi-stopwatch me-1"></i>${speedText}</span>`;
+                    }
+
                     list.innerHTML += `
                     <tr style="border-bottom: 1px solid var(--border-color);">
                         <td class="py-2 align-middle">${dateStr}</td>
@@ -2742,6 +2761,7 @@ async function fetchSellerHistory(page) {
                             </div>
                             ${failMsg}
                         </td>
+                        <td class="py-2 text-center align-middle">${speedBadge}</td>
                         <td class="py-2 text-end fw-bold align-middle">${formatRp(modal)}</td>
                         <td class="py-2 text-end fw-bold align-middle" style="color:var(--primary);">${formatRp(jual)}</td>
                         <td class="py-2 text-end fw-bold align-middle" style="color:${markupColor};">${formatRp(profit)}</td>
@@ -2752,7 +2772,7 @@ async function fetchSellerHistory(page) {
                     </tr>`;
                 });
             } else {
-                list.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted small">Belum ada riwayat transaksi.</td></tr>';
+                list.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-muted small">Belum ada riwayat transaksi.</td></tr>';
             }
             
             // Pagination config
