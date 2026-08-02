@@ -142,9 +142,6 @@ class InvoiceScanService
                 throw new \Exception('AI gagal memproses gambar atau mengembalikan respons kosong.');
             }
 
-            // Re-verify DB connection after cURL HTTP delay to prevent 'MySQL server has gone away'
-            $this->db = Database::getInstance()->getConnection();
-
             // ================================================================
             // STAGE 5: Run Pipeline (Layout -> Parse -> Validate -> Match -> Score)
             // ================================================================
@@ -169,8 +166,8 @@ class InvoiceScanService
             // STAGE 6: Self-Correction (if needed)
             // ================================================================
             $modelName = $this->getModelName();
-            $isFreeTierModel = str_contains($modelName, ':free') || str_contains($modelName, 'openrouter/free');
-            if (($hasLowConf || !empty($correctionHints)) && !$isFreeTierModel) {
+            $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free'];
+            if (($hasLowConf || !empty($correctionHints)) && !in_array($modelName, $freeTierModels)) {
                 $items = $this->selfCorrection->correct(
                     $items,
                     $hasLowConf,
@@ -360,28 +357,24 @@ class InvoiceScanService
             $imageB64 = substr($imageB64, strpos($imageB64, 'base64,') + 7);
         }
 
-        // Prevent PHP script timeout
+        // Prevent timeout issues
         set_time_limit(120);
 
-        // ----------------------------------------------------------------
         // DIRECT GOOGLE GEMINI API (When API key starts with AIzaSy)
-        // ----------------------------------------------------------------
         if (str_starts_with($apiKey, 'AIzaSy')) {
             return $this->callDirectGeminiAPI($systemPrompt, $userPrompt, $imageB64, $imageFormat, $apiKey);
         }
 
-        // ----------------------------------------------------------------
-        // OPENROUTER API (With rapid 6s failover across vision models)
-        // ----------------------------------------------------------------
+        // Active free vision models on OpenRouter
         $FREE_VISION_FALLBACKS = [
-            'google/gemma-4-26b-a4b-it:free',           // Gemma 4 26B MoE (Free - Fast)
-            'google/gemma-4-31b-it:free',               // Gemma 4 31B (Free)
-            'nvidia/nemotron-nano-12b-v2-vl:free',      // Nemotron 12B Vision (Free)
-            'google/gemini-2.0-flash-001',               // Gemini 2.0 Flash
-            'google/gemini-2.5-flash',                   // Gemini 2.5 Flash
+            'google/gemini-2.0-flash-exp:free',
+            'google/gemma-4-31b-it:free',
+            'google/gemma-4-26b-a4b-it:free',
+            'nvidia/nemotron-nano-12b-v2-vl:free',
+            'google/gemini-2.0-flash-001',
+            'google/gemini-2.5-flash',
         ];
 
-        // Always put user selected model FIRST
         $modelsToTry = [];
         if (!empty($model)) {
             $modelsToTry[] = $model;
@@ -396,18 +389,17 @@ class InvoiceScanService
         $lastError  = null;
 
         foreach ($modelsToTry as $attempt => $tryModel) {
-            $combinedText = "System Context: " . $systemPrompt . "\n\nUser Task: " . $userPrompt;
-
             $payload = [
                 'model'   => $tryModel,
                 'messages' => [
-                    ['role' => 'user', 'content' => [
-                        ['type' => 'text', 'text' => $combinedText],
+                    ['role' => 'system', 'content' => $systemPrompt],
+                    ['role' => 'user',   'content' => [
+                        ['type' => 'text', 'text' => $userPrompt],
                         $imageBlock
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => 2500, // 2500 tokens to ensure all invoice items are parsed without truncation
+                'max_tokens'  => 4000, // High token limit to extract all items without truncation
             ];
 
             if (in_array($tryModel, ['openai/gpt-4o', 'openai/gpt-4o-mini', 'google/gemini-2.0-flash-001', 'google/gemini-2.5-flash'])) {
@@ -425,9 +417,8 @@ class InvoiceScanService
                 'X-Title: AlfarezMart'
             ]);
 
-            // Rapid failover timeout: 6s per model attempt for free models, 14s for paid models
             $isFreeModel = str_contains($tryModel, ':free') || str_contains($tryModel, 'openrouter/free');
-            $timeout = $isFreeModel ? 6 : 14;
+            $timeout = $isFreeModel ? 14 : 35;
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
@@ -435,59 +426,46 @@ class InvoiceScanService
             $err      = curl_error($ch);
             $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-            // Handle HTTP 402 (paid model credit check) by falling back to next free model
             if ($httpCode === 402) {
                 error_log("[AlfarezMart] Model {$tryModel} requires credit balance (402). Trying next fallback model.");
-                $lastError = "Model {$tryModel} membutuhkan saldo kredit. Mencoba model gratis alternatif...";
+                $lastError = "Model {$tryModel} membutuhkan saldo kredit. Mencoba model gratis...";
                 continue;
             }
 
             if ($err) {
                 $lastError = "Koneksi ke AI ({$tryModel}) lambat: " . $err;
-                error_log("[AlfarezMart] Model {$tryModel} curl timeout/error: $err");
-                continue; // Try next model immediately
+                continue; // try next model
             }
 
             if ($httpCode === 429) {
-                error_log("[AlfarezMart] Model {$tryModel} rate-limited (429). Trying next fallback.");
-                $lastError = "Model {$tryModel} sedang sibuk. Mencoba model alternatif...";
+                $nextModel = $modelsToTry[$attempt + 1] ?? null;
+                error_log("[AlfarezMart] Model {$tryModel} rate-limited (429). " . ($nextModel ? "Trying: $nextModel" : "No more fallbacks."));
+                $lastError = "Model {$tryModel} sedang dibatasi (rate limit). Mencoba model lain...";
                 continue;
             }
 
             if ($httpCode !== 200) {
                 $errData = json_decode($response, true);
-                $msg = $errData['error']['message'] ?? ($errData['message'] ?? 'Unknown error');
-                $lastError = "OpenRouter Error ($httpCode): $msg";
-                error_log("[AlfarezMart] Model {$tryModel} failed with HTTP $httpCode: $msg");
-
-                if ($httpCode >= 500 || in_array($httpCode, [400, 402, 404, 429])) {
-                    continue; // Try next fallback model
-                }
-
-                break; // Stop on 401 Unauthorized API key error
+                $msg = $errData['error']['message'] ?? 'Unknown error';
+                $lastError = "OpenRouter API Error ($httpCode): $msg";
+                if ($httpCode >= 500 || in_array($httpCode, [400, 404])) continue; // retry next fallback
+                break; // 401 client error, stop
             }
 
+            // Success
             $resData = json_decode($response, true);
             $content = $resData['choices'][0]['message']['content'] ?? '';
-
-            if (empty($content)) {
-                error_log("[AlfarezMart] Model {$tryModel} returned empty content.");
-                $lastError = "Model {$tryModel} mengembalikan respons kosong.";
-                continue;
-            }
-
             $jsonParsed = $this->parseAndRepairJson($content);
 
             if (is_array($jsonParsed) && !empty($jsonParsed)) {
                 return $jsonParsed;
             }
 
-            error_log("[AlfarezMart] Model {$tryModel} output invalid JSON: " . substr($content, 0, 150));
             $lastError = "Model {$tryModel} mengembalikan format JSON tidak valid.";
             continue;
         }
 
-        throw new \Exception($lastError ?? 'AI gagal memproses gambar invoice.');
+        throw new \Exception($lastError ?? 'AI gagal memproses gambar setelah mencoba semua model.');
     }
 
     /**
@@ -524,7 +502,7 @@ class InvoiceScanService
             ],
             'generationConfig' => [
                 'temperature'     => 0.1,
-                'maxOutputTokens' => 3000,
+                'maxOutputTokens' => 8000,
                 'responseMimeType'=> 'application/json'
             ]
         ];
@@ -536,7 +514,7 @@ class InvoiceScanService
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 45);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
         $response = curl_exec($ch);

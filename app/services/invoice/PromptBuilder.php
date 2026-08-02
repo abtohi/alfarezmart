@@ -89,8 +89,8 @@ class PromptBuilder
 
         $lines[] = '## ATURAN WAJIB:';
         $lines[] = '1. Selalu kembalikan JSON array yang valid — tidak ada markdown, tidak ada penjelasan di luar JSON.';
-        $lines[] = '2. BACA DAN EKSTRAK SEMUA BARIS PRODUK / ITEM DALAM TABEL INVOICE DARI BARIS PERTAMA SAMPAI TERAKHIR. DILARANG HANYA MENGAMBIL 1 ITEM TERATAS!';
-        $lines[] = '   - Jika di invoice terdapat 2, 5, 10, atau 20 item produk, kamu WAJIB memasukkan SELURUH item tersebut ke dalam JSON array.';
+        $lines[] = '2. BACA DAN EKSTRAK SEMUA BARIS PRODUK / ITEM DALAM TABEL INVOICE DARI BARIS PERTAMA SAMPAI TERAKHIR. DILARANG HANYA MENGAMBIL SEBAGIAN ITEM!';
+        $lines[] = '   - Jika di invoice terdapat 5, 11, 20, atau lebih item produk, kamu WAJIB memasukkan SELURUH item tersebut ke dalam JSON array.';
         $lines[] = '3. Jika ada nilai yang tidak terbaca, gunakan null (bukan 0 atau string kosong).';
         $lines[] = '4. Pahami konteks: qty × unit_price HARUS menghasilkan total_price yang masuk akal.';
         $lines[] = '5. Harga dalam format Rupiah Indonesia. Jika tertulis "5.500" artinya Rp 5.500, bukan Rp 5,5.';
@@ -164,13 +164,23 @@ class PromptBuilder
             $lines[] = "Gunakan daftar ini untuk mencocokkan nama/kode barang di invoice:";
             $count   = 0;
             foreach ($supplierProducts as $p) {
-                if ($count >= 15) { // Compact limit to 15 items to stay well below 2603 free prompt token limit
+                if ($count >= 80) { // Limit to avoid token overflow
                     $lines[] = "... dan " . (count($supplierProducts) - $count) . " produk lainnya";
                     break;
                 }
                 $line = "- [{$p['code']}] {$p['full_name']}";
                 if (!empty($p['supplier_product_code'])) {
-                    $line .= " (Kode: {$p['supplier_product_code']})";
+                    $line .= " (Kode Supplier: {$p['supplier_product_code']})";
+                }
+                if (!empty($p['supplier_invoice_name'])) {
+                    $line .= " [Nama Invoice: {$p['supplier_invoice_name']}]";
+                }
+                if (!empty($p['packagings'])) {
+                    $pkgParts = [];
+                    foreach ($p['packagings'] as $pkg) {
+                        $pkgParts[] = "{$pkg['unit_name']}@Rp" . number_format($pkg['buy_price'], 0, ',', '.');
+                    }
+                    $line .= " — Kemasan: " . implode(', ', $pkgParts);
                 }
                 $lines[] = $line;
                 $count++;
