@@ -522,29 +522,6 @@ function initPosSearch() {
         await processBarcodeScan(q, this, sug);
     });
 
-    // Global barcode scanner listener
-    let barcodeBuffer = '';
-    let barcodeTimeout = null;
-
-    document.addEventListener('keypress', function(e) {
-        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
-        
-        if (e.key === 'Enter') {
-            if (barcodeBuffer.length >= 3) {
-                e.preventDefault();
-                processBarcodeScan(barcodeBuffer, inp, sug);
-            }
-            barcodeBuffer = '';
-            return;
-        }
-        
-        if (e.key.length === 1) {
-            barcodeBuffer += e.key;
-            if (barcodeTimeout) clearTimeout(barcodeTimeout);
-            barcodeTimeout = setTimeout(() => { barcodeBuffer = ''; }, 50);
-        }
-    });
-
     // Preload catalog on search focus or init
     preloadPosCatalog();
 }
@@ -561,9 +538,22 @@ function openPosScanner() {
     }
 }
 
+let _lastPosScanCode = '';
+let _lastPosScanTime = 0;
+
 async function processBarcodeScan(q, inpEl, sugEl) {
     if (!q) return;
     q = q.trim();
+    
+    // Prevent duplicate scan of the same code within 350ms
+    const now = Date.now();
+    if (_lastPosScanCode === q && (now - _lastPosScanTime < 350)) {
+        if (inpEl) inpEl.value = '';
+        if (sugEl) sugEl.innerHTML = '';
+        return;
+    }
+    _lastPosScanCode = q;
+    _lastPosScanTime = now;
     
     // 1. Instant 0ms barcode lookup in memory
     let result = null;
