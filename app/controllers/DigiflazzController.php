@@ -114,9 +114,11 @@ class DigiflazzController extends Controller {
             if ($sku && isset($prodRates[$sku]) && $prodRates[$sku]['total'] > 0) {
                 $p['product_success_rate'] = round(($prodRates[$sku]['success'] / $prodRates[$sku]['total']) * 100, 1);
                 $p['product_trx_count'] = (int)$prodRates[$sku]['success'];
+                $p['product_avg_speed'] = $prodRates[$sku]['avg_speed'];
             } else {
                 $p['product_success_rate'] = null;
                 $p['product_trx_count'] = 0;
+                $p['product_avg_speed'] = null;
             }
         }
         
@@ -151,9 +153,11 @@ class DigiflazzController extends Controller {
             if ($sku && isset($prodRates[$sku]) && $prodRates[$sku]['total'] > 0) {
                 $p['product_success_rate'] = round(($prodRates[$sku]['success'] / $prodRates[$sku]['total']) * 100, 1);
                 $p['product_trx_count'] = (int)$prodRates[$sku]['success'];
+                $p['product_avg_speed'] = $prodRates[$sku]['avg_speed'];
             } else {
                 $p['product_success_rate'] = null;
                 $p['product_trx_count'] = 0;
+                $p['product_avg_speed'] = null;
             }
         }
         
@@ -811,13 +815,13 @@ class DigiflazzController extends Controller {
             $t['balance_after'] = $balAfter;
             $t['balance_before'] = $balBefore;
 
-            // Calculate transaction duration (speed) for successful transactions
+            // Calculate transaction duration (speed) for completed transactions (success & failed)
             $durationSeconds = null;
-            if (in_array(strtolower($t['status']), ['success', 'sukses']) && !empty($t['created_at']) && !empty($t['updated_at'])) {
+            if (in_array(strtolower($t['status']), ['success', 'sukses', 'failed', 'gagal']) && !empty($t['created_at']) && !empty($t['updated_at'])) {
                 $created = strtotime($t['created_at']);
                 $updated = strtotime($t['updated_at']);
                 $diff = $updated - $created;
-                if ($diff >= 0 && $diff <= 600) {
+                if ($diff >= 0) {
                     $durationSeconds = $diff;
                 }
             }
@@ -926,14 +930,13 @@ class DigiflazzController extends Controller {
                 $totalPending++;
             }
 
-            // Processing Speed in Seconds (Valid API callback window: 0 to 300 seconds / 5 mins max)
-            // Diffs > 300s indicate batch migration updates or late manual status checks, not real-time API speed
+            // Processing Speed in Seconds (For both success and failed transactions)
             $processTime = null;
-            if ($isSuccess) {
+            if ($isSuccess || $isFailed) {
                 $created = strtotime($trx['created_at']);
                 $updated = strtotime($trx['updated_at']);
                 $diff = $updated - $created;
-                if ($diff >= 0 && $diff <= 300) {
+                if ($diff >= 0) {
                     $processTime = $diff;
                     $totalSpeedSum += $diff;
                     $totalSpeedCount++;

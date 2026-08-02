@@ -48,7 +48,18 @@
         </div>
         <div class="stat-card" style="margin-bottom:0;display:flex;flex-direction:column;justify-content:center;padding:12px;border-radius:12px;">
             <div class="stat-icon cyan" style="width:28px;height:28px;font-size:0.9rem;margin-bottom:8px;background:rgba(6,182,212,0.12);color:#06b6d4;"><i class="bi bi-stopwatch-fill"></i></div>
-            <div class="stat-value" style="font-size:0.95rem;font-weight:700;color:var(--text-primary);"><?= number_format($stats['avg_speed'] ?? 0, 1, ',', '.') ?> <span style="font-size:11px;font-weight:600;">dtk</span></div>
+            <div class="stat-value" style="font-size:0.95rem;font-weight:700;color:var(--text-primary);white-space:nowrap;">
+                <?php
+                $avgSpdVal = round((float)($stats['avg_speed'] ?? 0));
+                if ($avgSpdVal <= 59) {
+                    echo number_format($avgSpdVal, 0, ',', '.') . ' <span style="font-size:11px;font-weight:600;">dtk</span>';
+                } else {
+                    $mVal = floor($avgSpdVal / 60);
+                    $dVal = $avgSpdVal % 60;
+                    echo "{$mVal}m, {$dVal}d";
+                }
+                ?>
+            </div>
             <div class="stat-label" style="font-size:9px;margin-top:2px;text-transform:uppercase;letter-spacing:0.3px;color:var(--text-muted);">Kecepatan Rata-Rata</div>
         </div>
     </div>
@@ -328,9 +339,10 @@
 
             let speedBadge = '<span style="color:var(--text-muted);font-size:10px;">-</span>';
             if (trx.duration_seconds !== null && trx.duration_seconds !== undefined) {
-                let speedVal = parseInt(trx.duration_seconds);
+                let speedVal = Math.round(parseFloat(trx.duration_seconds));
                 let speedColor = speedVal <= 5 ? 'background:rgba(16,185,129,0.12);color:#10b981;' : (speedVal <= 20 ? 'background:rgba(59,130,246,0.12);color:#3b82f6;' : 'background:rgba(245,158,11,0.12);color:#f59e0b;');
-                speedBadge = `<span style="${speedColor}font-size:10px;padding:3px 7px;border-radius:4px;font-weight:700;white-space:nowrap;"><i class="bi bi-stopwatch me-1"></i>${speedVal} dtk</span>`;
+                let speedText = speedVal <= 59 ? `${speedVal} dtk` : `${Math.floor(speedVal / 60)}m, ${speedVal % 60}d`;
+                speedBadge = `<span style="${speedColor}font-size:10px;padding:3px 7px;border-radius:4px;font-weight:700;white-space:nowrap;"><i class="bi bi-stopwatch me-1"></i>${speedText}</span>`;
             }
 
             tbody.innerHTML += `

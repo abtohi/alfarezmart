@@ -486,9 +486,12 @@ async function loadPrices() {
                     }
 
                     let speedSrHtml = '';
-                    if (p.seller_avg_speed !== null && p.seller_avg_speed !== undefined) {
-                        let sColor = p.seller_avg_speed <= 5 ? '#10b981' : (p.seller_avg_speed <= 20 ? '#3b82f6' : '#f59e0b');
-                        speedSrHtml = `<span style="color: ${sColor}; font-weight: 700; font-size: 0.65rem;" title="Kecepatan Seller"><i class="bi bi-stopwatch"></i> ${p.seller_avg_speed}s</span>`;
+                    let rawSpeed = (p.seller_avg_speed !== null && p.seller_avg_speed !== undefined) ? p.seller_avg_speed : ((p.product_avg_speed !== null && p.product_avg_speed !== undefined) ? p.product_avg_speed : null);
+                    if (rawSpeed !== null) {
+                        let speedVal = Math.round(parseFloat(rawSpeed));
+                        let sColor = speedVal <= 5 ? '#10b981' : (speedVal <= 20 ? '#3b82f6' : (speedVal <= 60 ? '#f59e0b' : '#ef4444'));
+                        let speedText = speedVal <= 59 ? `${speedVal}s` : `${Math.floor(speedVal / 60)}m, ${speedVal % 60}d`;
+                        speedSrHtml = `<span style="color: ${sColor}; font-weight: 700; font-size: 0.65rem; white-space: nowrap;" title="Kecepatan Seller/Produk"><i class="bi bi-stopwatch"></i> ${speedText}</span>`;
                     }
 
                     let prodTrxHtml = `<span style="color: #3b82f6; font-weight: 700; font-size: 0.65rem;" title="Total Transaksi Sukses Produk Ini"><i class="bi bi-bag-check-fill"></i> ${(p.product_trx_count || 0).toLocaleString('id-ID')} Trx</span>`;

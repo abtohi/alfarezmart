@@ -394,9 +394,8 @@ class DigiflazzModel {
                 SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN sell_price ELSE 0 END) as total_revenue,
                 SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN modal_price ELSE 0 END) as total_cost,
                 SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN profit ELSE 0 END) as total_profit,
-                AVG(CASE WHEN LOWER(status) IN ('success', 'sukses') 
+                AVG(CASE WHEN LOWER(status) IN ('success', 'sukses', 'failed', 'gagal') 
                              AND TIMESTAMPDIFF(SECOND, created_at, updated_at) >= 0 
-                             AND TIMESTAMPDIFF(SECOND, created_at, updated_at) <= 300 
                         THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
                         ELSE NULL END) as avg_speed
             FROM digi_transactions
@@ -558,9 +557,8 @@ class DigiflazzModel {
                 SELECT seller_name,
                        COUNT(id) as total,
                        SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN 1 ELSE 0 END) as success,
-                        AVG(CASE WHEN LOWER(status) IN ('success', 'sukses') 
+                        AVG(CASE WHEN LOWER(status) IN ('success', 'sukses', 'failed', 'gagal') 
                                       AND TIMESTAMPDIFF(SECOND, created_at, updated_at) >= 0 
-                                      AND TIMESTAMPDIFF(SECOND, created_at, updated_at) <= 300 
                                  THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
                                  ELSE NULL END) as avg_speed
                 FROM digi_transactions
@@ -591,7 +589,11 @@ class DigiflazzModel {
             $stmt = $this->db->query("
                 SELECT buyer_sku_code,
                        COUNT(id) as total,
-                       SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN 1 ELSE 0 END) as success
+                       SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN 1 ELSE 0 END) as success,
+                       AVG(CASE WHEN LOWER(status) IN ('success', 'sukses', 'failed', 'gagal') 
+                                    AND TIMESTAMPDIFF(SECOND, created_at, updated_at) >= 0 
+                               THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
+                               ELSE NULL END) as avg_speed
                 FROM digi_transactions
                 WHERE buyer_sku_code IS NOT NULL AND buyer_sku_code != '' 
                   AND LOWER(status) IN ('success', 'failed', 'sukses', 'gagal')
@@ -601,7 +603,8 @@ class DigiflazzModel {
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 $rates[trim($row['buyer_sku_code'])] = [
                     'total' => (int)$row['total'],
-                    'success' => (int)$row['success']
+                    'success' => (int)$row['success'],
+                    'avg_speed' => $row['avg_speed'] !== null ? round((float)$row['avg_speed'], 1) : null
                 ];
             }
             return $rates;

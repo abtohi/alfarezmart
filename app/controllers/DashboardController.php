@@ -124,9 +124,8 @@ class DashboardController extends Controller
                     SUM(CASE WHEN LOWER(status) IN ('failed', 'gagal') THEN 1 ELSE 0 END) as failed_count,
                     COALESCE(SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN sell_price ELSE 0 END), 0) as revenue,
                     COALESCE(SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN profit ELSE 0 END), 0) as profit,
-                    AVG(CASE WHEN LOWER(status) IN ('success', 'sukses') 
+                    AVG(CASE WHEN LOWER(status) IN ('success', 'sukses', 'failed', 'gagal') 
                                  AND TIMESTAMPDIFF(SECOND, created_at, updated_at) >= 0 
-                                 AND TIMESTAMPDIFF(SECOND, created_at, updated_at) <= 300 
                             THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
                             ELSE NULL END) as avg_speed
                 FROM digi_transactions

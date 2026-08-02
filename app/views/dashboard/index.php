@@ -703,12 +703,21 @@
                     <i class="bi bi-lightning-charge-fill"></i>
                 </div>
             </div>
-            <div class="dash-kpi-value text-primary">
-                <?= $ppobStats['today_avg_speed'] ?? 0 ?> <span style="font-size:0.8rem;font-weight:600;">dtk</span>
+            <div class="dash-kpi-value text-primary" style="white-space:nowrap;">
+                <?php
+                $dashSpd = round((float)($ppobStats['today_avg_speed'] ?? 0));
+                if ($dashSpd <= 59) {
+                    echo $dashSpd . ' <span style="font-size:0.8rem;font-weight:600;">dtk</span>';
+                } else {
+                    $mDash = floor($dashSpd / 60);
+                    $dDash = $dashSpd % 60;
+                    echo "{$mDash}m, {$dDash}d";
+                }
+                ?>
             </div>
             <div class="dash-kpi-sub">
                 <?php 
-                    $spd = $ppobStats['today_avg_speed'] ?? 0;
+                    $spd = $dashSpd;
                     if ($spd > 0 && $spd <= 5) echo '⚡ Kilat';
                     elseif ($spd <= 20) echo '⏱️ Cepat';
                     else echo '⏳ Normal';

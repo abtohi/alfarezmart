@@ -363,10 +363,11 @@
         const c = document.getElementById('metrics-container');
         
         // Speed Badge Status
-        let speedText = `${m.avg_speed} dtk`;
+        let rawAvg = Math.round(parseFloat(m.avg_speed || 0));
+        let speedText = rawAvg <= 59 ? `${rawAvg} dtk` : `${Math.floor(rawAvg / 60)}m, ${rawAvg % 60}d`;
         let speedClass = 'text-success';
-        if (m.avg_speed <= 5) speedText += ' ⚡ (Kilat)';
-        else if (m.avg_speed <= 20) speedText += ' ⏱️ (Cepat)';
+        if (rawAvg <= 5) speedText += ' ⚡ (Kilat)';
+        else if (rawAvg <= 20) speedText += ' ⏱️ (Cepat)';
         else { speedText += ' ⏳ (Normal)'; speedClass = 'text-warning'; }
 
         c.innerHTML = `
@@ -406,8 +407,8 @@
                         <i class="bi bi-lightning-charge-fill"></i>
                     </div>
                 </div>
-                <div class="kpi-value ${speedClass}">
-                    ${m.avg_speed} <span style="font-size: 1rem; font-weight:600;">dtk</span>
+                <div class="kpi-value ${speedClass}" style="white-space: nowrap;">
+                    ${rawAvg <= 59 ? rawAvg + ' <span style="font-size: 1rem; font-weight:600;">dtk</span>' : Math.floor(rawAvg / 60) + 'm, ' + (rawAvg % 60) + 'd'}
                 </div>
                 <div class="kpi-sub">Rata-rata waktu proses</div>
             </div>
@@ -441,12 +442,14 @@
             
             // Format speed
             let speedBadge = '';
-            if (s.avg_process_time <= 5) {
-                speedBadge = `<span class="speed-badge speed-kilat"><i class="bi bi-lightning-charge-fill"></i> ${s.avg_process_time} dtk</span>`;
-            } else if (s.avg_process_time <= 20) {
-                speedBadge = `<span class="speed-badge speed-cepat"><i class="bi bi-stopwatch"></i> ${s.avg_process_time} dtk</span>`;
+            let sSpeedVal = Math.round(parseFloat(s.avg_process_time || 0));
+            let sSpeedText = sSpeedVal <= 59 ? `${sSpeedVal} dtk` : `${Math.floor(sSpeedVal / 60)}m, ${sSpeedVal % 60}d`;
+            if (sSpeedVal <= 5) {
+                speedBadge = `<span class="speed-badge speed-kilat" style="white-space:nowrap;"><i class="bi bi-lightning-charge-fill"></i> ${sSpeedText}</span>`;
+            } else if (sSpeedVal <= 20) {
+                speedBadge = `<span class="speed-badge speed-cepat" style="white-space:nowrap;"><i class="bi bi-stopwatch"></i> ${sSpeedText}</span>`;
             } else {
-                speedBadge = `<span class="speed-badge speed-normal"><i class="bi bi-clock"></i> ${s.avg_process_time} dtk</span>`;
+                speedBadge = `<span class="speed-badge speed-normal" style="white-space:nowrap;"><i class="bi bi-clock"></i> ${sSpeedText}</span>`;
             }
 
             html += `
@@ -625,9 +628,10 @@
 
             let speedBadge = '<span style="color:var(--text-muted);font-size:10px;">-</span>';
             if (t.duration_seconds !== null && t.duration_seconds !== undefined) {
-                let speedVal = parseInt(t.duration_seconds);
+                let speedVal = Math.round(parseFloat(t.duration_seconds));
                 let speedColor = speedVal <= 5 ? 'background:rgba(16,185,129,0.12);color:#10b981;' : (speedVal <= 20 ? 'background:rgba(59,130,246,0.12);color:#3b82f6;' : 'background:rgba(245,158,11,0.12);color:#f59e0b;');
-                speedBadge = `<span style="${speedColor}font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;white-space:nowrap;"><i class="bi bi-stopwatch me-1"></i>${speedVal} dtk</span>`;
+                let speedText = speedVal <= 59 ? `${speedVal} dtk` : `${Math.floor(speedVal / 60)}m, ${speedVal % 60}d`;
+                speedBadge = `<span style="${speedColor}font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;white-space:nowrap;"><i class="bi bi-stopwatch me-1"></i>${speedText}</span>`;
             }
 
             let statusBadge = '';
@@ -704,16 +708,18 @@
                 srBadge = `<span class="badge bg-danger bg-opacity-10 text-danger fw-bold"><i class="bi bi-x-circle-fill me-1"></i>${s.success_rate}%</span>`;
             }
 
-            // Speed Indicator in SECONDS
+            // Speed Indicator in SECONDS & MINUTES
             let speedBadge = '';
-            if (s.avg_process_time <= 5) {
-                speedBadge = `<span class="speed-badge speed-kilat"><i class="bi bi-lightning-charge-fill"></i> ${s.avg_process_time} detik</span>`;
-            } else if (s.avg_process_time <= 20) {
-                speedBadge = `<span class="speed-badge speed-cepat"><i class="bi bi-stopwatch"></i> ${s.avg_process_time} detik</span>`;
-            } else if (s.avg_process_time <= 60) {
-                speedBadge = `<span class="speed-badge speed-normal"><i class="bi bi-clock"></i> ${s.avg_process_time} detik</span>`;
+            let sSpeedVal = Math.round(parseFloat(s.avg_process_time || 0));
+            let sSpeedText = sSpeedVal <= 59 ? `${sSpeedVal} dtk` : `${Math.floor(sSpeedVal / 60)}m, ${sSpeedVal % 60}d`;
+            if (sSpeedVal <= 5) {
+                speedBadge = `<span class="speed-badge speed-kilat" style="white-space:nowrap;"><i class="bi bi-lightning-charge-fill"></i> ${sSpeedText}</span>`;
+            } else if (sSpeedVal <= 20) {
+                speedBadge = `<span class="speed-badge speed-cepat" style="white-space:nowrap;"><i class="bi bi-stopwatch"></i> ${sSpeedText}</span>`;
+            } else if (sSpeedVal <= 60) {
+                speedBadge = `<span class="speed-badge speed-normal" style="white-space:nowrap;"><i class="bi bi-clock"></i> ${sSpeedText}</span>`;
             } else {
-                speedBadge = `<span class="speed-badge speed-lambat"><i class="bi bi-hourglass-bottom"></i> ${s.avg_process_time} detik</span>`;
+                speedBadge = `<span class="speed-badge speed-lambat" style="white-space:nowrap;"><i class="bi bi-hourglass-bottom"></i> ${sSpeedText}</span>`;
             }
 
             const trxCount = s.transactions ? s.transactions.length : 0;
