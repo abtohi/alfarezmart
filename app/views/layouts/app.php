@@ -734,6 +734,8 @@ if ($userLevel === 'staff') {
             _sendLog(null, null);
         }
     })();
+    </script>
+
     <!-- ===== Global Barcode Scan Result Modal ===== -->
     <div id="globalBarcodeScanModal" style="display:none; position:fixed; inset:0; z-index:99990; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:16px;" onclick="closeGlobalBarcodeModal()">
         <div id="globalBarcodeScanSheet" style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:24px; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; padding:24px; box-shadow:0 24px 80px rgba(0,0,0,0.5); animation:popInGlobalModal 0.25s cubic-bezier(0.34,1.56,0.64,1) both;" onclick="event.stopPropagation()">
@@ -766,6 +768,13 @@ if ($userLevel === 'staff') {
     </style>
 
     <script>
+    // Global escapeHtml utility (used in barcode modal on any page)
+    window._safeHtml = function(str) {
+        const d = document.createElement('div');
+        d.textContent = str || '';
+        return d.innerHTML;
+    };
+
     window.closeGlobalBarcodeModal = function() {
         const modal = document.getElementById('globalBarcodeScanModal');
         if (modal) modal.style.display = 'none';
@@ -933,7 +942,7 @@ if ($userLevel === 'staff') {
                     <i class="bi bi-search"></i>
                 </div>
                 <div style="font-weight:800; font-size:15px; color:var(--text-primary);">Produk Tidak Ditemukan</div>
-                <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">Kode barcode: <span style="font-family:monospace; font-weight:600;">${escapeHtml(code)}</span></div>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">Kode barcode: <span style="font-family:monospace; font-weight:600;">${window._safeHtml ? window._safeHtml(code) : code}</span></div>
             </div>`;
     };
     </script>

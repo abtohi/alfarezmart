@@ -102,15 +102,15 @@
     const SCAN_MIN_LENGTH = 4;    // minimum barcode length
 
     document.addEventListener('keypress', function (e) {
-        // Only intercept when no input is focused
+        // Block only genuine text-entry elements (not buttons/divs/body that happen to be focused)
         const active = document.activeElement;
-        const isInput = active && (
-            active.tagName === 'INPUT' ||
+        const isTextInput = active && (
+            (active.tagName === 'INPUT' && active.type !== 'button' && active.type !== 'submit' && active.type !== 'checkbox' && active.type !== 'radio') ||
             active.tagName === 'TEXTAREA' ||
             active.contentEditable === 'true'
         );
 
-        if (isInput) return; // Let natural input handling work
+        if (isTextInput) return; // Let natural input handling work
 
         // Ignore modifier keys
         if (e.ctrlKey || e.altKey || e.metaKey) return;
@@ -127,8 +127,9 @@
                 }));
 
                 _routeBarcodeScan(code);
+            } else {
+                _scanBuffer = '';
             }
-            _scanBuffer = '';
             return;
         }
 
@@ -145,16 +146,14 @@
     function _routeBarcodeScan(code) {
         // Priority:
         // 1. POS page: Direct add to cart without dialog!
+        //    IMPORTANT: do NOT focus/select posInput here — that makes isTextInput=true
+        //    and will block the NEXT scan from being detected by this listener.
         const posInput = document.getElementById('posSearch') || document.getElementById('posBarcode');
         if (posInput) {
             if (typeof window.processBarcodeScan === 'function') {
                 const sug = document.getElementById('posSuggestions');
-                posInput.value = code;
-                posInput.select();
                 window.processBarcodeScan(code, posInput, sug);
             } else {
-                posInput.value = code;
-                posInput.dispatchEvent(new Event('input', { bubbles: true }));
                 if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
             }
             return;
