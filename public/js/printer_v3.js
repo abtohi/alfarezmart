@@ -14,9 +14,11 @@ class ThermalPrinter {
         this._disconnectHandler = this.handleDisconnect.bind(this);
         this.isIOS = this._detectIOS();
         this.hasBluetoothAPI = this._detectBluetoothAPI();
+        this.isNativeApp = this._detectNativeApp();
         this.printerWidth = 58; // Default 58mm thermal printer
         this.connectionRetries = 0;
         this.maxConnectionRetries = 3;
+        this._nativeConnected = false;
     }
 
     _detectIOS() {
@@ -27,18 +29,30 @@ class ThermalPrinter {
         return !!(navigator.bluetooth && navigator.bluetooth.requestDevice);
     }
 
+    _detectNativeApp() {
+        return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) || 
+               typeof window.CapacitorBluetoothSerial !== 'undefined' ||
+               typeof window.bluetoothSerial !== 'undefined';
+    }
+
+    _getNativeBTPlugin() {
+        return window.CapacitorBluetoothSerial || 
+               (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.BluetoothSerial) || 
+               window.bluetoothSerial || null;
+    }
+
     /**
      * Check if platform supports Bluetooth printing
      */
     isBluetoothSupported() {
-        return this.hasBluetoothAPI && !this.isIOS;
+        return this.isNativeApp || (this.hasBluetoothAPI && !this.isIOS);
     }
 
     /**
      * Check if platform should use browser print (iOS/fallback)
      */
     isBrowserPrintSupported() {
-        return this.isIOS || !this.hasBluetoothAPI;
+        return !this.isNativeApp && (this.isIOS || !this.hasBluetoothAPI);
     }
 
     handleDisconnect() {
@@ -46,15 +60,76 @@ class ThermalPrinter {
         this.stopHeartbeat();
         this.characteristic = null;
         this.server = null;
-        // Note: keep this.device so we can reconnect without dialog
+        this._nativeConnected = false;
     }
 
     getDriver() {
         if (this.storeSettings && this.storeSettings.printer_driver) {
             return this.storeSettings.printer_driver;
         }
+        if (this.isNativeApp) return 'native_bluetooth';
         if (this.isIOS) return 'browser';
         return this.hasBluetoothAPI ? 'web_bluetooth' : 'browser';
+    }
+
+    async tryNativeAutoReconnect() {
+        if (!this._detectNativeApp()) return false;
+        const mac = localStorage.getItem('alfarezmart_printer_mac') || (this.lastConnectedDevice && this.lastConnectedDevice.id);
+        if (!mac) return false;
+        try {
+            const bt = this._getNativeBTPlugin();
+            if (!bt) return false;
+            console.log('[ThermalPrinter] Native Auto-connecting to MAC:', mac);
+            if (typeof bt.connect === 'function') {
+                await bt.connect({ address: mac });
+            }
+            this._nativeConnected = true;
+            console.log('[ThermalPrinter] Native Auto-connected successfully to MAC:', mac);
+            return true;
+        } catch (e) {
+            console.warn('[ThermalPrinter] Native Auto-connect exception:', e);
+            this._nativeConnected = false;
+            return false;
+        }
+    }
+
+    async printNativeBT(payloadUint8Array) {
+        const bt = this._getNativeBTPlugin();
+        if (!bt) {
+            throw new Error('Plugin Bluetooth Serial native tidak tersedia di Capacitor.');
+        }
+
+        let binary = '';
+        const len = payloadUint8Array.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(payloadUint8Array[i]);
+        }
+        const base64Data = window.btoa(binary);
+        const mac = localStorage.getItem('alfarezmart_printer_mac') || (this.lastConnectedDevice && this.lastConnectedDevice.id);
+
+        try {
+            if (typeof bt.write === 'function') {
+                await bt.write({ address: mac, value: base64Data });
+            } else if (typeof bt.writeBase64 === 'function') {
+                await bt.writeBase64({ address: mac, value: base64Data });
+            } else {
+                await bt.write(base64Data);
+            }
+            console.log('[ThermalPrinter] Native Bluetooth print write success!');
+            return true;
+        } catch (err) {
+            console.warn('[ThermalPrinter] Native Bluetooth write failed, attempting auto-reconnect...', err);
+            const reconnected = await this.tryNativeAutoReconnect();
+            if (reconnected) {
+                if (typeof bt.write === 'function') {
+                    await bt.write({ address: mac, value: base64Data });
+                } else {
+                    await bt.write(base64Data);
+                }
+                return true;
+            }
+            throw new Error('Gagal mengirim data ke printer Bluetooth Native: ' + err.message);
+        }
     }
 
     startHeartbeat() {
@@ -1063,7 +1138,10 @@ class ThermalPrinter {
             }
         }
 
-        // Send payload via RawBT or Web Bluetooth chunks
+        // Send payload via Native Bluetooth, RawBT, or Web Bluetooth chunks
+        if (driver === 'native_bluetooth' || this.isNativeApp) {
+            return this.printNativeBT(payload);
+        }
         if (driver === 'rawbt') {
             return this.printRawBT(payload);
         }
@@ -1097,7 +1175,7 @@ class ThermalPrinter {
         }
 
         const driver = this.getDriver();
-        if (driver !== 'rawbt' && !this.characteristic) {
+        if (driver !== 'rawbt' && driver !== 'native_bluetooth' && !this.isNativeApp && !this.characteristic) {
             throw new Error('Printer belum terhubung. Hubungkan printer terlebih dahulu.');
         }
 
