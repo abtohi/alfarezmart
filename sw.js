@@ -2,8 +2,8 @@
  * AlfarezMart PWA - Service Worker
  * Cache Strategy: Cache First for assets & images, Network First with 600ms Fast Timeout for API & Navigation
  */
-const CACHE_NAME = 'alfarezmart-cache-v17.6';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v17.6';
+const CACHE_NAME = 'alfarezmart-cache-v17.7';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v17.7';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -34,6 +34,7 @@ const STATIC_ASSETS = [
     BASE_URL + 'public/images/mobile_icon.png',
     BASE_URL + 'public/images/mobile_icon_192.png',
     BASE_URL + 'public/images/mobile_icon_512.png',
+    BASE_URL + 'public/images/splash_logo.png',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/fonts/bootstrap-icons.woff2?856008caa5eb66df68595e734e59580d',
