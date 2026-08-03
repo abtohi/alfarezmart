@@ -1146,6 +1146,15 @@ class ThermalPrinter {
             return this.printRawBT(payload);
         }
 
+        // Safety check to prevent null property access if characteristic is not connected
+        if (!this.characteristic || !this.characteristic.properties) {
+            // Attempt auto-reconnect once before failing
+            const reconnected = await this.tryAutoReconnect();
+            if (!reconnected || !this.characteristic || !this.characteristic.properties) {
+                throw new Error('Printer Bluetooth belum terhubung. Silakan klik "Hubungkan Printer Bluetooth" terlebih dahulu.');
+            }
+        }
+
         const CHUNK_SIZE = 64;
         for (let i = 0; i < payload.length; i += CHUNK_SIZE) {
             const chunk = payload.slice(i, i + CHUNK_SIZE);

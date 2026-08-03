@@ -4,11 +4,13 @@
   "webDir": "public",
   "server": {
     "url": "https://alfarezmart.com",
-    "cleartext": true
+    "cleartext": true,
+    "androidScheme": "https"
   },
   "android": {
     "allowMixedContent": true,
     "captureInput": true,
-    "webContentsDebuggingEnabled": true
+    "webContentsDebuggingEnabled": false,
+    "appendUserAgent": "AlfarezMartApp/1.0"
   }
 }
