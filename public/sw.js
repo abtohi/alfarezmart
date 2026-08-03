@@ -1,8 +1,8 @@
 /**
  * AlfarezMart PWA - Service Worker (public/sw.js)
  */
-const CACHE_NAME = 'alfarezmart-cache-v17.5';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v17.5';
+const CACHE_NAME = 'alfarezmart-cache-v17.6';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v17.6';
 const BASE_URL = self.location.pathname.replace('/public/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -31,6 +31,8 @@ const STATIC_ASSETS = [
     BASE_URL + 'chat',
     BASE_URL + 'manifest.json',
     BASE_URL + 'public/images/mobile_icon.png',
+    BASE_URL + 'public/images/mobile_icon_192.png',
+    BASE_URL + 'public/images/mobile_icon_512.png',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
