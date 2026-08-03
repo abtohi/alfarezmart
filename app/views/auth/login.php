@@ -343,6 +343,8 @@
             background-clip: text;
             -webkit-text-fill-color: transparent;
             font-style: italic;
+            display: inline-block;
+            padding-right: 0.15em;
         }
         .splash-progress-track {
             width: 150px;
