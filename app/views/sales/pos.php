@@ -1597,7 +1597,8 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
                 btnPrint.click();
             }
         }, 200);
-}
+    }
+} // end setupPrinterButtons
 
 function handleEditCheckoutTransaction(saleId, invoiceNo, savedCart, savedCustomer, savedSaleMode) {
     editSaleId = saleId;
@@ -1613,37 +1614,38 @@ function handleEditCheckoutTransaction(saleId, invoiceNo, savedCart, savedCustom
     // 2. Restore selected customer if any
     if (savedCustomer && savedCustomer.id) {
         selectedCustomer = { ...savedCustomer };
-        const custSelect = document.getElementById('customerSelect');
-        if (custSelect) {
-            custSelect.value = savedCustomer.id;
-            custSelect.dispatchEvent(new Event('change'));
-        }
+        // Update customer selector UI
+        const labelEl = document.getElementById('customerSelectorLabel');
+        const iconEl = document.getElementById('customerSelectorIcon');
+        const clearBtn = document.getElementById('btnClearCustomer');
+        if (labelEl) labelEl.textContent = savedCustomer.name || savedCustomer.full_name || 'Pelanggan';
+        if (iconEl) { iconEl.className = 'bi bi-person-check'; iconEl.style.color = 'var(--success)'; }
+        if (clearBtn) clearBtn.style.display = 'flex';
     } else {
         selectedCustomer = null;
-        const custSelect = document.getElementById('customerSelect');
-        if (custSelect) {
-            custSelect.value = '';
-            custSelect.dispatchEvent(new Event('change'));
-        }
+        const labelEl = document.getElementById('customerSelectorLabel');
+        const iconEl = document.getElementById('customerSelectorIcon');
+        const clearBtn = document.getElementById('btnClearCustomer');
+        if (labelEl) labelEl.textContent = 'Umum';
+        if (iconEl) { iconEl.className = 'bi bi-person'; iconEl.style.color = 'var(--primary)'; }
+        if (clearBtn) clearBtn.style.display = 'none';
     }
 
-    // 3. Restore sale mode
-    if (savedSaleMode) {
-        saleMode = savedSaleMode;
-        const modeBtn = document.querySelector(`.sale-mode-btn[data-mode="${saleMode}"]`);
-        if (modeBtn) modeBtn.click();
+    // 3. Restore sale mode using the existing setSaleMode function
+    if (savedSaleMode && typeof setSaleMode === 'function') {
+        setSaleMode(savedSaleMode);
     }
 
     renderCart();
 
-    // 4. Create or update notice banner
+    // 4. Create or update notice banner (insert before #cartItems)
     let banner = document.getElementById('posEditBanner');
     if (!banner) {
         banner = document.createElement('div');
         banner.id = 'posEditBanner';
-        const cartSection = document.getElementById('cartSection') || document.querySelector('.cart-header')?.parentNode || document.getElementById('cartItems')?.parentNode;
-        if (cartSection) {
-            cartSection.insertBefore(banner, cartSection.firstChild);
+        const cartItems = document.getElementById('cartItems');
+        if (cartItems && cartItems.parentNode) {
+            cartItems.parentNode.insertBefore(banner, cartItems);
         }
     }
     if (banner) {
