@@ -538,8 +538,20 @@
     box-shadow: 0 4px 12px rgba(230, 57, 70, 0.3);
     pointer-events: auto;
 }
-.modal-footer .btn-modal-submit:active { transform: scale(0.97); }
 .modal-footer .btn-modal-submit:disabled {
+    opacity: 0.5; cursor: not-allowed; transform: none;
+}
+.modal-footer .btn-modal-extra {
+    flex: 1; padding: 12px;
+    background: var(--warning-bg); border: 1px solid var(--warning);
+    color: var(--warning); border-radius: var(--radius-md);
+    font-weight: 600; font-family: var(--font-family); font-size: var(--font-size-sm);
+    cursor: pointer; transition: all var(--transition-fast);
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    pointer-events: auto;
+}
+.modal-footer .btn-modal-extra:active { transform: scale(0.97); }
+.modal-footer .btn-modal-extra:disabled {
     opacity: 0.5; cursor: not-allowed; transform: none;
 }
 

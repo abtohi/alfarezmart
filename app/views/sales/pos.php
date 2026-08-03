@@ -1301,18 +1301,17 @@ async function proceedCheckout() {
             }
 
             if (isEditMode) {
-                // If editing, just show success and redirect back to sales
-                showToast('Perubahan berhasil disimpan!', 'success');
-                setTimeout(() => {
-                    window.location.href = BASE_URL + 'sales';
-                }, 1000);
-                return;
+                const banner = document.getElementById('posEditBanner');
+                if (banner) banner.remove();
+                editSaleId = null;
+                showToast(`Perubahan transaksi berhasil disimpan!`, 'success');
             }
 
             const printCart = cart.map(i => ({ ...i }));
             const printTotal = calculateTotal();
             const invoiceNo = result.invoice || result.id || ('OFF-' + Date.now());
             const currentSaleMode = saleMode;
+            const currentCustomer = selectedCustomer ? { ...selectedCustomer } : null;
             const mixInfo = getMixDiscountInfo();
 
             cart = [];
@@ -1345,7 +1344,7 @@ async function proceedCheckout() {
             let modalPromise;
             try {
             modalPromise = AppModal.show({
-                title: 'Transaksi Berhasil',
+                title: isEditMode ? 'Transaksi Diperbarui' : 'Transaksi Berhasil',
                 subtitle: `No: ${invoiceNo}`,
                 icon: 'bi-check-circle',
                 iconColor: 'var(--success-bg)',
@@ -1404,8 +1403,17 @@ async function proceedCheckout() {
                     </div>
                 `,
                 submitText: 'Transaksi Baru',
+                extraBtnText: '<i class="bi bi-pencil-square"></i> Edit',
                 cancelText: 'Tutup',
+                onExtra: async () => {
+                    handleEditCheckoutTransaction(result.id || result.invoice, invoiceNo, printCart, currentCustomer, currentSaleMode);
+                    return true;
+                },
                 onSubmit: async () => {
+                    editSaleId = null;
+                    const banner = document.getElementById('posEditBanner');
+                    if (banner) banner.remove();
+                    btnCheckout.innerHTML = 'BAYAR SEKARANG';
                     searchInput?.focus();
                     return true;
                 },
@@ -1589,8 +1597,87 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
                 btnPrint.click();
             }
         }, 200);
-    }
 }
+
+function handleEditCheckoutTransaction(saleId, invoiceNo, savedCart, savedCustomer, savedSaleMode) {
+    editSaleId = saleId;
+
+    // 1. Restore cart items with exact details
+    cart = savedCart.map(item => ({
+        ...item,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total: item.total
+    }));
+
+    // 2. Restore selected customer if any
+    if (savedCustomer && savedCustomer.id) {
+        selectedCustomer = { ...savedCustomer };
+        const custSelect = document.getElementById('customerSelect');
+        if (custSelect) {
+            custSelect.value = savedCustomer.id;
+            custSelect.dispatchEvent(new Event('change'));
+        }
+    } else {
+        selectedCustomer = null;
+        const custSelect = document.getElementById('customerSelect');
+        if (custSelect) {
+            custSelect.value = '';
+            custSelect.dispatchEvent(new Event('change'));
+        }
+    }
+
+    // 3. Restore sale mode
+    if (savedSaleMode) {
+        saleMode = savedSaleMode;
+        const modeBtn = document.querySelector(`.sale-mode-btn[data-mode="${saleMode}"]`);
+        if (modeBtn) modeBtn.click();
+    }
+
+    renderCart();
+
+    // 4. Create or update notice banner
+    let banner = document.getElementById('posEditBanner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'posEditBanner';
+        const cartSection = document.getElementById('cartSection') || document.querySelector('.cart-header')?.parentNode || document.getElementById('cartItems')?.parentNode;
+        if (cartSection) {
+            cartSection.insertBefore(banner, cartSection.firstChild);
+        }
+    }
+    if (banner) {
+        banner.style.cssText = 'background:var(--warning-bg); color:var(--warning); border:1px solid var(--warning); border-radius:var(--radius-md); padding:10px 14px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; font-size:var(--font-size-xs); font-weight:700;';
+        banner.innerHTML = `
+            <div style="display:flex;align-items:center;gap:6px;"><i class="bi bi-pencil-square"></i> <span>MENGEDIT TRANSAKSI: <strong>${escapeHtml(invoiceNo)}</strong></span></div>
+            <button type="button" onclick="cancelEditCheckoutMode()" style="padding:4px 8px; font-size:11px; background:transparent; border:1px solid var(--danger); color:var(--danger); border-radius:4px; cursor:pointer; font-weight:600;">Batal Edit</button>
+        `;
+    }
+
+    // 5. Update checkout button text
+    if (btnCheckout) {
+        btnCheckout.innerHTML = `<i class="bi bi-check2-circle"></i> SIMPAN PERUBAHAN (${escapeHtml(invoiceNo)})`;
+        btnCheckout.disabled = false;
+    }
+
+    showToast(`Data transaksi ${invoiceNo} dimuat kembali ke keranjang`, 'info');
+}
+
+window.cancelEditCheckoutMode = function() {
+    editSaleId = null;
+    cart = [];
+    selectedCustomer = null;
+    const custSelect = document.getElementById('customerSelect');
+    if (custSelect) {
+        custSelect.value = '';
+        custSelect.dispatchEvent(new Event('change'));
+    }
+    const banner = document.getElementById('posEditBanner');
+    if (banner) banner.remove();
+    if (btnCheckout) btnCheckout.innerHTML = 'BAYAR SEKARANG';
+    renderCart();
+    showToast('Mode edit dibatalkan', 'info');
+};
 
 function showHistorySaveConfirmation(invoiceNo, total, cartItems) {
     // Close the checkout modal first, then show history confirmation

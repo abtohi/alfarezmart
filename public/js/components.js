@@ -35,6 +35,7 @@ const AppModal = {
             <div class="modal-body" id="appModalBody"></div>
             <div class="modal-footer" id="appModalFooter">
                 <button class="btn-modal-cancel" id="appModalCancelBtn">Batal</button>
+                <button class="btn-modal-extra" id="appModalExtraBtn" style="display:none;"></button>
                 <button class="btn-modal-submit" id="appModalSubmitBtn">Simpan</button>
             </div>
         </div>`;
@@ -63,6 +64,8 @@ const AppModal = {
      * @param {string} config.bodyHTML — HTML content for modal body
      * @param {string} [config.submitText] — Submit button label (default: 'Simpan')
      * @param {string} [config.cancelText] — Cancel button label (default: 'Batal')
+     * @param {string} [config.extraBtnText] — Extra middle button label (optional)
+     * @param {Function} [config.onExtra] — Called when extra button clicked
      * @param {Function} [config.onSubmit] — Called when submit clicked. Gets formData arg.
      * @param {boolean} [config.hideFooter] — Hide footer buttons
      * @returns {Promise} Resolves when modal closes (with result or null)
@@ -77,6 +80,7 @@ const AppModal = {
         const footer = document.getElementById('appModalFooter');
         const submitBtn = document.getElementById('appModalSubmitBtn');
         const cancelBtn = document.getElementById('appModalCancelBtn');
+        const extraBtn = document.getElementById('appModalExtraBtn');
 
         // Handle centered option
         if (config.centered) {
@@ -102,6 +106,32 @@ const AppModal = {
         body.innerHTML = config.bodyHTML || '';
         submitBtn.innerHTML = config.submitText || 'Simpan';
         cancelBtn.textContent = config.cancelText || 'Batal';
+
+        if (extraBtn) {
+            if (config.extraBtnText) {
+                extraBtn.innerHTML = config.extraBtnText;
+                extraBtn.style.display = 'inline-flex';
+                extraBtn.className = config.extraBtnClass || 'btn-modal-extra';
+                extraBtn.onclick = async () => {
+                    if (config.onExtra) {
+                        extraBtn.disabled = true;
+                        try {
+                            const res = await config.onExtra();
+                            if (res !== false) this.close('extra');
+                        } catch (e) {
+                            console.error('onExtra error:', e);
+                        } finally {
+                            extraBtn.disabled = false;
+                        }
+                    } else {
+                        this.close('extra');
+                    }
+                };
+            } else {
+                extraBtn.style.display = 'none';
+            }
+        }
+
         footer.style.display = config.hideFooter ? 'none' : 'flex';
 
         // Focus first input after animation
