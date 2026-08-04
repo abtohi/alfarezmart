@@ -1,8 +1,8 @@
 /**
  * AlfarezMart PWA - Service Worker (public/sw.js)
  */
-const CACHE_NAME = 'alfarezmart-cache-v18.4';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v18.3';
+const CACHE_NAME = 'alfarezmart-cache-v18.5';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v18.4';
 const BASE_URL = self.location.pathname.replace('/public/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -82,6 +82,7 @@ self.addEventListener('fetch', event => {
         event.respondWith(
             new Promise((resolve) => {
                 let isResolved = false;
+                // 300ms Fast Timeout for weak signal fallback to cache
                 const timeoutId = setTimeout(() => {
                     if (!isResolved) {
                         caches.match(event.request, { ignoreSearch: true }).then(cached => {
@@ -91,7 +92,7 @@ self.addEventListener('fetch', event => {
                             }
                         });
                     }
-                }, 600);
+                }, 300);
 
                 fetch(event.request, { cache: 'no-cache' })
                     .then(response => {
@@ -166,6 +167,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
         new Promise((resolve) => {
             let isResolved = false;
+            // 150ms Fast Timeout: If network RTT > 150ms (weak signal), serve cached page INSTANTLY!
             const timeoutId = setTimeout(() => {
                 if (!isResolved) {
                     caches.match(event.request, { ignoreSearch: true }).then(cached => {
@@ -175,7 +177,7 @@ self.addEventListener('fetch', event => {
                         }
                     });
                 }
-            }, 600);
+            }, 150);
 
             fetch(event.request, { cache: 'no-cache' })
                 .then(response => {

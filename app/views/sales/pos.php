@@ -855,17 +855,28 @@ async function performSearch(q) {
         sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Mencari...</div>';
     }
 
-    // ── STEP 2: Background Server Fetch (Non-blocking with 1.5s Abort Timeout) ──
+    // ── STEP 2: Background Server Fetch (Non-blocking with Signal-Aware Abort Timeout) ──
     if (window.posSearchAbortController) {
         window.posSearchAbortController.abort();
     }
     window.posSearchAbortController = new AbortController();
+
+    const isWeak = (typeof window.getSignalState === 'function' && window.getSignalState() === 'weak');
+    if (isWeak && items.length > 0) {
+        return; // Weak signal + local results present → stop here to keep typing ultra smooth
+    }
     
     try {
+        const fetchTimeout = isWeak ? 400 : 900;
+        const timeoutId = setTimeout(() => {
+            if (window.posSearchAbortController) window.posSearchAbortController.abort();
+        }, fetchTimeout);
+
         const resp = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}&pos=1`, { 
             credentials: 'same-origin',
             signal: window.posSearchAbortController.signal
         });
+        clearTimeout(timeoutId);
         if (resp.ok) {
             const serverItems = await resp.json();
             if (Array.isArray(serverItems) && serverItems.length > 0) {

@@ -2,8 +2,8 @@
  * AlfarezMart PWA - Service Worker
  * Cache Strategy: Cache First for assets & images, Network First with 600ms Fast Timeout for API & Navigation
  */
-const CACHE_NAME = 'alfarezmart-cache-v18.4';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v18.3';
+const CACHE_NAME = 'alfarezmart-cache-v18.5';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v18.4';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -91,7 +91,7 @@ self.addEventListener('fetch', event => {
             new Promise((resolve) => {
                 let isResolved = false;
 
-                // 600ms Fast Timeout for weak signal fallback to cache
+                // 300ms Fast Timeout for weak signal fallback to cache
                 const timeoutId = setTimeout(() => {
                     if (!isResolved) {
                         caches.match(event.request, { ignoreSearch: true }).then(cached => {
@@ -101,7 +101,7 @@ self.addEventListener('fetch', event => {
                             }
                         });
                     }
-                }, 600);
+                }, 300);
 
                 fetch(event.request, { cache: 'no-cache' })
                     .then(response => {
@@ -191,6 +191,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
         new Promise((resolve) => {
             let isResolved = false;
+            // 150ms Fast Timeout: If network RTT > 150ms (weak signal), serve cached page INSTANTLY!
             const timeoutId = setTimeout(() => {
                 if (!isResolved) {
                     caches.match(event.request, { ignoreSearch: true }).then(cached => {
@@ -200,7 +201,7 @@ self.addEventListener('fetch', event => {
                         }
                     });
                 }
-            }, 600); // 600ms fast fallback for weak signal page switching
+            }, 150); // 150ms fast fallback for instant weak signal page switching
 
             fetch(event.request, { cache: 'no-cache' })
                 .then(response => {

@@ -229,33 +229,31 @@ function initSearch() {
                 //           IndexedDB is shown ONLY as instant preview while server fetches.
                 try {
                     const currentQ = q;
+                    const isWeak = (typeof window.getSignalState === 'function' && window.getSignalState() === 'weak');
 
-                    if (navigator.onLine) {
-                        // Show instant offline preview immediately (no wait)
-                        if (typeof OfflineDB !== 'undefined') {
-                            const offlineData = await OfflineDB.searchProducts(currentQ);
-                            if (input.value.trim() !== currentQ) return; // stale
-                            if (offlineData && offlineData.length > 0) {
-                                renderProductSearch(offlineData, results, true); // true = "preview" badge
-                            }
-                        }
-                        // Then fetch accurate server results (handles new products not yet in local cache)
-                        const serverData = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(currentQ)}`);
+                    // Show instant offline preview immediately (0ms delay)
+                    let offlineResultsFound = false;
+                    if (typeof OfflineDB !== 'undefined') {
+                        const offlineData = await OfflineDB.searchProducts(currentQ);
                         if (input.value.trim() !== currentQ) return; // stale
-                        if (input.value.trim().length < 2) { results.innerHTML = ''; return; }
-                        renderProductSearch(serverData, results);
-                    } else {
-                        // Full offline mode — use IndexedDB only
-                        let data = [];
-                        if (typeof OfflineDB !== 'undefined') {
-                            data = await OfflineDB.searchProducts(currentQ);
+                        if (offlineData && offlineData.length > 0) {
+                            offlineResultsFound = true;
+                            renderProductSearch(offlineData, results, true); // true = "preview" badge
                         }
-                        if (input.value.trim() !== currentQ) return;
-                        if (input.value.trim().length < 2) { results.innerHTML = ''; return; }
-                        renderProductSearch(data, results);
                     }
+
+                    // If offline or weak signal with local results found, stop here to avoid freezing UI
+                    if (!navigator.onLine || (isWeak && offlineResultsFound)) {
+                        return;
+                    }
+
+                    // Fetch server results with fast abort controller (handles new items)
+                    const serverData = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(currentQ)}`, { timeout: isWeak ? 400 : 1000 });
+                    if (input.value.trim() !== currentQ) return; // stale
+                    if (input.value.trim().length < 2) { results.innerHTML = ''; return; }
+                    renderProductSearch(serverData, results);
                 } catch (e) {
-                    // Server failed → show offline results as fallback
+                    // Server failed / timed out → show offline results as fallback if not already rendered
                     try {
                         if (typeof OfflineDB !== 'undefined') {
                             const fallback = await OfflineDB.searchProducts(q);

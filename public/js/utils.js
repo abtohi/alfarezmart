@@ -142,9 +142,10 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
         config.headers['X-CSRF-Token'] = csrfToken;
     }
 
-    // Add AbortController timeout — 6000ms for GET, 6000ms for mutations
-    // (Scanner's lookupBarcode uses its own faster 600ms AbortController separately)
-    const timeoutMs = config.timeout || 6000;
+    // Add AbortController timeout — 1500ms for GET, 4000ms for mutations (or 400ms on weak signal)
+    const isWeakSignal = (typeof window.getSignalState === 'function' && window.getSignalState() === 'weak');
+    const defaultTimeout = isWeakSignal ? 400 : (method === 'GET' ? 1500 : 4000);
+    const timeoutMs = config.timeout || defaultTimeout;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     if (!config.signal) config.signal = controller.signal;
