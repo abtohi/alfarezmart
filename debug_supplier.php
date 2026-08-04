@@ -1,15 +1,13 @@
 <?php
 /**
  * Debug script - test supplier query directly
- * Access: https://alfarezmart.com/debug_supplier.php?pid=PRODUCT_ID
+ * Access: https://alfarezmart.com/debug_supplier.php
+ * Or: https://alfarezmart.com/debug_supplier.php?pid=PRODUCT_ID
  * DELETE THIS FILE after debugging!
  */
-require_once __DIR__ . '/app/core/bootstrap.php';
+require_once __DIR__ . '/index.php';
+exit(); // Stop here - we only need the autoloaders
 
-$productId = (int)($_GET['pid'] ?? 0);
-if (!$productId) {
-    die(json_encode(['error' => 'Pass ?pid=PRODUCT_ID'], JSON_PRETTY_PRINT));
-}
 
 $errors = [];
 $results = [];
