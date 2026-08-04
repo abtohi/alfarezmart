@@ -608,6 +608,7 @@ class ApiController extends Controller
 
         // 2. Fetch Suppliers & Purchase History grouped by Supplier
         $suppliers = [];
+        $supplierDebugErrors = [];
         try {
             // Step A: Collect all unique supplier IDs associated with this product
             $supplierIdsMap = [];
@@ -625,7 +626,10 @@ class ApiController extends Controller
                 foreach ($pRows as $sid) {
                     $supplierIdsMap[(int)$sid] = true;
                 }
-            } catch (\Throwable $e1) {}
+            } catch (\Throwable $e1) {
+                $supplierDebugErrors[] = 'step1_purchases: ' . $e1->getMessage();
+                error_log("[enrichProductDetailData] step1_purchases error pid=$productId: " . $e1->getMessage());
+            }
 
             // 2) From supplier_products table
             try {
@@ -639,20 +643,29 @@ class ApiController extends Controller
                 foreach ($spRows as $sid) {
                     $supplierIdsMap[(int)$sid] = true;
                 }
-            } catch (\Throwable $e2) {}
+            } catch (\Throwable $e2) {
+                $supplierDebugErrors[] = 'step2_supplier_products: ' . $e2->getMessage();
+                error_log("[enrichProductDetailData] step2_supplier_products error pid=$productId: " . $e2->getMessage());
+            }
 
             $supplierIds = array_keys($supplierIdsMap);
 
             foreach ($supplierIds as $sid) {
-                // Fetch supplier basic info
-                $stmtSupInfo = $this->db->prepare("
-                    SELECT id as supplier_id, name as supplier_name, address, notes, phone
-                    FROM suppliers
-                    WHERE id = :sid
-                ");
-                $stmtSupInfo->execute([':sid' => $sid]);
-                $sup = $stmtSupInfo->fetch(PDO::FETCH_ASSOC);
-                if (!$sup) continue;
+                // Fetch supplier basic info — intentionally exclude 'phone' column (may not exist in all deployments)
+                try {
+                    $stmtSupInfo = $this->db->prepare("
+                        SELECT id as supplier_id, name as supplier_name, address, notes
+                        FROM suppliers
+                        WHERE id = :sid
+                    ");
+                    $stmtSupInfo->execute([':sid' => $sid]);
+                    $sup = $stmtSupInfo->fetch(PDO::FETCH_ASSOC);
+                    if (!$sup) continue;
+                } catch (\Throwable $si) {
+                    $supplierDebugErrors[] = "supplier_info_sid$sid: " . $si->getMessage();
+                    error_log("[enrichProductDetailData] supplier_info error sid=$sid: " . $si->getMessage());
+                    continue;
+                }
 
                 // Safely fetch active sales reps for this supplier
                 $salesReps = [];
@@ -665,12 +678,14 @@ class ApiController extends Controller
                     ");
                     $stmtSales->execute([':sid' => $sid]);
                     $salesReps = $stmtSales->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                } catch (\Throwable $se) {}
+                } catch (\Throwable $se) {
+                    $supplierDebugErrors[] = "sales_reps_sid$sid: " . $se->getMessage();
+                }
 
                 $sup['sales_reps'] = $salesReps;
                 $primarySales = !empty($salesReps) ? $salesReps[0] : null;
                 $sup['sales_rep_name'] = $primarySales ? $primarySales['name'] : null;
-                $sup['sales_rep_phone'] = $primarySales ? ($primarySales['phone'] ?: ($sup['phone'] ?? null)) : ($sup['phone'] ?? null);
+                $sup['sales_rep_phone'] = $primarySales ? ($primarySales['phone'] ?? null) : null;
 
                 // Fetch purchase history for this product at this supplier (sorted by date DESC)
                 $history = [];
@@ -689,7 +704,10 @@ class ApiController extends Controller
                     ");
                     $stmtHist->execute([':pid' => $productId, ':sid' => $sid]);
                     $history = $stmtHist->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                } catch (\Throwable $he) {}
+                } catch (\Throwable $he) {
+                    $supplierDebugErrors[] = "purchase_history_sid$sid: " . $he->getMessage();
+                    error_log("[enrichProductDetailData] purchase_history error pid=$productId sid=$sid: " . $he->getMessage());
+                }
 
                 // Populate sales rep details for history rows
                 foreach ($history as &$hItem) {
@@ -705,10 +723,18 @@ class ApiController extends Controller
 
                 $suppliers[] = $sup;
             }
+
+            // Attach debug errors to response in development (helps diagnose production issues)
+            if (!empty($supplierDebugErrors)) {
+                $product['_supplier_debug_errors'] = $supplierDebugErrors;
+            }
         } catch (\Throwable $e) {
             error_log("[enrichProductDetailData] Supplier history query error: " . $e->getMessage());
+            $product['_supplier_debug_errors'] = ['outer: ' . $e->getMessage()];
         }
         $product['suppliers'] = $suppliers;
+        $product['_supplier_ids_found'] = array_keys($supplierIdsMap ?? []);
+
 
         // 3. Last Purchase Insight
         $lastPurchase = null;
