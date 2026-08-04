@@ -1470,6 +1470,14 @@ class ThermalPrinter {
         printWin.document.write(html);
         printWin.document.close();
     }
+
+    /**
+     * Alias for printBrowser — used by POS after thermal print completes.
+     * Renders a web/AirPrint popup receipt. Accepts same options as printBrowser.
+     */
+    printBrowserFallback(cart, total, invoiceNumber, options = {}) {
+        return this.printBrowser(cart, total, invoiceNumber, options);
+    }
 }
 
 const thermalPrinter = new ThermalPrinter();

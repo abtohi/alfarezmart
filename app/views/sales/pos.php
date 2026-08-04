@@ -1541,15 +1541,6 @@ async function proceedCheckout() {
                         ` : ''}
                     </div>
 
-                    <!-- Tombol Aksi: Lanjut ke Invoice Berikutnya -->
-                    <div style="margin-bottom:16px;">
-                        <button type="button" onclick="startNextInvoiceChain('${invoiceNo}', ${printTotal})" style="width:100%; padding:12px 14px; font-weight:700; background:linear-gradient(135deg, rgba(79,70,229,0.1) 0%, rgba(99,102,241,0.15) 100%); border:1.5px dashed var(--primary); color:var(--primary); border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; gap:8px; font-size:var(--font-size-sm); cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='var(--primary-bg)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(79,70,229,0.1) 0%, rgba(99,102,241,0.15) 100%)'">
-                            <i class="bi bi-link-45deg" style="font-size:1.3rem;"></i> <span>Lanjut ke Invoice Berikutnya (Pembeli Tambah Barang)</span>
-                        </button>
-                        <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:4px;">
-                            Gunakan ini jika pembeli menambah barang belanjaan untuk menjumlahkan total struk secara akumulatif.
-                        </div>
-                    </div>
 
                     <div id="printerSection" style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:16px;">
                         <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;">
@@ -1752,7 +1743,7 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
                 btnPrint.innerHTML = '<i class="bi bi-printer"></i> Cetak Ulang Struk';
                 btnPrint.disabled = false;
                 showToast('Struk berhasil dicetak ke printer thermal', 'success');
-                showHistorySaveConfirmation(invoiceNo, printTotal, printCart);
+                showHistorySaveConfirmation(invoiceNo, printTotal, printCart, chainInfo);
             } catch (e) {
                 btnPrint.innerHTML = '<i class="bi bi-printer"></i> Cetak Struk';
                 btnPrint.disabled = false;
@@ -1862,9 +1853,14 @@ window.cancelEditCheckoutMode = function() {
     showToast('Mode edit dibatalkan', 'info');
 };
 
-function showHistorySaveConfirmation(invoiceNo, total, cartItems) {
+function showHistorySaveConfirmation(invoiceNo, total, cartItems, chainInfo) {
     // Close the checkout modal first, then show history confirmation
     AppModal.close();
+
+    const savedChainInfo = chainInfo ? { ...chainInfo } : null;
+    const savedInvoiceNo = invoiceNo;
+    const savedTotal = total;
+
     setTimeout(() => {
         AppModal.show({
             title: 'Simpan Riwayat Transaksi',
@@ -1879,6 +1875,10 @@ function showHistorySaveConfirmation(invoiceNo, total, cartItems) {
                     </div>
                     <h3 style="font-size:var(--font-size-md);font-weight:700;color:var(--text-primary);margin:0 0 4px;">Struk Berhasil Dicetak!</h3>
                     <p style="font-size:var(--font-size-sm);color:var(--text-muted);margin:0;">Total: <strong style="color:var(--primary);">${formatRupiah(total)}</strong></p>
+                    ${(savedChainInfo && savedChainInfo.isContinuation) ? `
+                    <div style="margin-top:8px; display:inline-flex; align-items:center; gap:6px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); padding:4px 12px; border-radius:20px; font-size:11px; color:#818cf8; font-weight:600;">
+                        🔗 Grand Total Gabungan: <strong style="color:#a5b4fc;">${formatRupiah(savedChainInfo.grandTotal)}</strong>
+                    </div>` : ''}
                 </div>
                 <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:14px;margin-bottom:12px;">
                     <div style="display:flex;align-items:flex-start;gap:10px;">
@@ -1894,8 +1894,17 @@ function showHistorySaveConfirmation(invoiceNo, total, cartItems) {
                         </div>
                     </div>
                 </div>
-                <div style="background:var(--surface-2);border-radius:var(--radius-sm);padding:10px 12px;font-size:var(--font-size-xs);color:var(--text-muted);">
+                <div style="background:var(--surface-2);border-radius:var(--radius-sm);padding:10px 12px;font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:12px;">
                     <i class="bi bi-info-circle"></i> ${cartItems.length} item · ${new Date().toLocaleString('id-ID', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+                </div>
+
+                <!-- Tombol Lanjut ke Invoice Berikutnya -->
+                <button type="button" onclick="startNextInvoiceChain('${invoiceNo}', ${total})" style="width:100%; padding:12px 14px; font-weight:700; background:linear-gradient(135deg, rgba(79,70,229,0.1) 0%, rgba(99,102,241,0.15) 100%); border:1.5px dashed var(--primary); color:var(--primary); border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; gap:8px; font-size:var(--font-size-sm); cursor:pointer; transition:all 0.2s; margin-bottom:4px;" onmouseover="this.style.background='var(--primary-bg)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(79,70,229,0.1) 0%, rgba(99,102,241,0.15) 100%)'">
+                    <i class="bi bi-link-45deg" style="font-size:1.3rem;"></i>
+                    <span>🧾 Lanjut ke Invoice Berikutnya</span>
+                </button>
+                <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-bottom:4px;">
+                    Gunakan ini jika pembeli menambah barang belanjaan setelah cetak struk.
                 </div>
             `,
             submitText: 'Lihat Riwayat Penjualan',
