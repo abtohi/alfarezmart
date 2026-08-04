@@ -579,7 +579,8 @@ let _posLastCharTime = 0;
 let _posFastCharCount = 0;
 let _posFromScanner = false; // true if current Enter came from scanner
 const _POS_SCANNER_GAP_MS = 50; // chars < 50ms apart = scanner
-const _POS_SCANNER_MIN_FAST = 4; // need ≥4 fast chars to flag as scanner
+const _POS_SCANNER_MIN_FAST = 2; // need ≥2 fast chars to flag as scanner
+let _posScannerAutoScanTimer = null;
 
 function initPosSearch() {
     const inp = document.getElementById('posSearch');
@@ -593,7 +594,8 @@ function initPosSearch() {
         const gap = now - _posLastCharTime;
         _posLastCharTime = now;
 
-        const q = this.value.trim();
+        const val = this.value;
+        const q = val.trim();
 
         // Reset fast-char counter when input is cleared / very first char
         if (q.length <= 1) {
@@ -605,23 +607,44 @@ function initPosSearch() {
             _posFastCharCount = 0;
         }
 
-        if (q.length < 2) {
+        // Auto-reset input when a new fast scanner stream starts while old text was present
+        if (_posFastCharCount === 2 && val.length > 2) {
+            const firstTwo = val.slice(-2);
+            this.value = firstTwo;
+        }
+
+        if (this.value.trim().length < 2) {
             sug.innerHTML = '';
+            clearTimeout(_posSearchDebounceTimer);
+            clearTimeout(_posScannerAutoScanTimer);
             if (window.posSearchAbortController) window.posSearchAbortController.abort();
             return;
         }
 
-        // If scanner is typing fast, skip text-search debounce to avoid flicker
+        // If scanner is typing fast, skip text-search debounce and hide suggestions immediately
         const isScannerTyping = _posFastCharCount >= _POS_SCANNER_MIN_FAST;
+        clearTimeout(_posSearchDebounceTimer);
+        clearTimeout(_posScannerAutoScanTimer);
+
         if (isScannerTyping) {
-            clearTimeout(_posSearchDebounceTimer);
+            sug.innerHTML = '';
+            if (window.posSearchAbortController) window.posSearchAbortController.abort();
+            
+            // Auto-trigger scan 120ms after last digit for scanners without Enter key
+            _posScannerAutoScanTimer = setTimeout(() => {
+                const scanVal = this.value.trim();
+                if (scanVal.length >= 2) {
+                    this.value = '';
+                    sug.innerHTML = '';
+                    processBarcodeScan(scanVal, this, sug, true);
+                }
+            }, 120);
             return;
         }
 
-        // Human typing → normal 80ms debounce text search
-        clearTimeout(_posSearchDebounceTimer);
+        // Human typing → normal 80ms debounce text search (supports multi-keyword)
         _posSearchDebounceTimer = setTimeout(() => {
-            performSearch(q);
+            performSearch(this.value.trim());
         }, 80);
     });
 
@@ -637,17 +660,19 @@ function initPosSearch() {
     inp.addEventListener('keydown', async function(e) {
         if (e.key !== 'Enter') return;
         e.preventDefault();
+        clearTimeout(_posSearchDebounceTimer);
+        clearTimeout(_posScannerAutoScanTimer);
+
         const q = this.value.trim();
         if (!q) return;
 
-        // Determine if Enter came from scanner (many fast chars accumulated)
+        // Determine if Enter came from scanner (fast chars accumulated)
         const fromScanner = _posFastCharCount >= _POS_SCANNER_MIN_FAST;
         _posFromScanner = fromScanner;
 
         // ← KEY FIX: wipe input BEFORE the async call so next scan starts clean
         this.value = '';
         sug.innerHTML = '';
-        clearTimeout(_posSearchDebounceTimer);
         _posFastCharCount = 0;
 
         await processBarcodeScan(q, this, sug, fromScanner);
