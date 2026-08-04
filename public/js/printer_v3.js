@@ -646,6 +646,17 @@ class ThermalPrinter {
         cmds += this.padLine('Tgl:', `${tgl} ${jam}`, width) + LF;
         cmds += this.separator(width) + LF;
 
+        // Print "-- STRUK LANJUTAN N --" label at top of continuation receipt
+        if (options.chainInfo && options.chainInfo.isContinuation) {
+            const chainN = options.chainInfo.chainNumber || 1;
+            cmds += ESC + 'a\x01'; // Center
+            cmds += ESC + 'E\x01'; // Bold
+            cmds += `-- STRUK LANJUTAN ${chainN} --` + LF;
+            cmds += ESC + 'E\x00';
+            cmds += ESC + 'a\x00';
+            cmds += this.separator(width) + LF;
+        }
+
         // Items (compact: name then detail line)
         cart.forEach(item => {
             const name = String(item.print_name || item.name || 'Item').trim();
@@ -704,14 +715,29 @@ class ThermalPrinter {
         // --- CHAINED INVOICE (STRUK LANJUTAN) BREAKDOWN ---
         if (isChain) {
             const chain = options.chainInfo;
-            cmds += this.padLine('STRUK SEBELUMNYA', this._formatPrice(chain.previousTotal), width) + LF;
+            const chainN = chain.chainNumber || 1;
+            const allPrev = chain.allPreviousInvoices || [];
+            const currentInvoiceNo = invoiceNumber; // this struk's invoice number
+
+            cmds += this.separator(width, '-') + LF;
+
+            // List each previous invoice
+            allPrev.forEach((inv, idx) => {
+                const label = `Struk ${idx + 1} (${(inv.invoiceNo || '').slice(-6)})`;
+                cmds += this.padLine(label, this._formatPrice(inv.total || 0), width) + LF;
+            });
+
+            // Current invoice (this struk)
+            const thisLabel = `Struk ${chainN + 1} (${currentInvoiceNo.slice(-6)})`;
+            cmds += this.padLine(thisLabel, this._formatPrice(total), width) + LF;
+
             cmds += this.separator(width, '=') + LF;
             cmds += ESC + 'E\x01';
             cmds += this.padLine('GRAND TOTAL UTAMA', this._formatPrice(chain.grandTotal), width) + LF;
             cmds += ESC + 'E\x00';
             cmds += this.separator(width, '=') + LF;
             cmds += ESC + 'a\x01';
-            cmds += `[STRUK LANJUTAN DARI ${chain.parentInvoiceNo}]` + LF;
+            cmds += `[STRUK LANJUTAN ${chainN} DARI ${chain.parentInvoiceNo}]` + LF;
             cmds += ESC + 'a\x00';
         }
 
@@ -1380,11 +1406,25 @@ class ThermalPrinter {
 
         let totalsHtml = '';
         if (isChain) {
+            const chainN = chain.chainNumber || 1;
+            const allPrev = chain.allPreviousInvoices || [];
+
+            // Build per-invoice rows
+            let invoiceRowsHtml = '';
+            allPrev.forEach((inv, idx) => {
+                const shortNo = (inv.invoiceNo || '').slice(-6);
+                invoiceRowsHtml += `<tr style="font-size:11px;font-weight:normal;"><td>Struk ${idx+1} <span style="font-size:9px;color:#555;">(${shortNo})</span></td><td class="right">${this._formatPrice(inv.total || 0)}</td></tr>`;
+            });
+            // Current struk row
+            const curShortNo = invoiceNumber.slice(-6);
+            invoiceRowsHtml += `<tr style="font-size:11px;font-weight:normal;"><td>Struk ${chainN+1} <span style="font-size:9px;color:#555;">(${curShortNo})</span></td><td class="right">${this._formatPrice(total)}</td></tr>`;
+
             totalsHtml = `
                 <table class="total-row">
-                    <tr style="font-size:11px;font-weight:normal;"><td>Subtotal Struk Ini</td><td class="right">${this._formatPrice(total)}</td></tr>
-                    <tr style="font-size:11px;font-weight:normal;"><td>Struk Sebelumnya</td><td class="right">${this._formatPrice(chain.previousTotal)}</td></tr>
-                    <tr style="border-top:1px dashed #000;font-size:13px;font-weight:bold;color:#e63946;"><td style="padding-top:4px;">GRAND TOTAL GABUNGAN</td><td class="right" style="padding-top:4px;">${this._formatPrice(chain.grandTotal)}</td></tr>
+                    <tr style="font-size:12px;font-weight:bold;"><td>Subtotal Struk Ini</td><td class="right">${this._formatPrice(total)}</td></tr>
+                    <tr><td colspan="2"><hr style="border:none;border-top:1px dashed #000;margin:4px 0;"></td></tr>
+                    ${invoiceRowsHtml}
+                    <tr style="border-top:2px solid #000;font-size:13px;font-weight:bold;color:#e63946;"><td style="padding-top:6px;">GRAND TOTAL GABUNGAN</td><td class="right" style="padding-top:6px;">${this._formatPrice(chain.grandTotal)}</td></tr>
                 </table>
             `;
         } else if (options.saleMode === 'mix' && options.mixInfo && options.mixInfo.totalDiscount > 0) {
@@ -1402,7 +1442,8 @@ class ThermalPrinter {
 
         let footerHtml = store.receipt_footer ? `<hr class="divider"><div class="center" style="font-size:10px;white-space:pre-line;">${this._escapeHtml(store.receipt_footer)}</div>` : '';
         if (isChain) {
-            footerHtml += `<div class="center" style="font-size:10px;font-weight:bold;margin-top:6px;padding:4px;background:#f8f9fa;border:1px solid #ddd;border-radius:4px;">🔗 STRUK LANJUTAN TERHUBUNG DENGAN ${this._escapeHtml(chain.parentInvoiceNo)}</div>`;
+            const chainNFooter = chain.chainNumber || 1;
+            footerHtml += `<div class="center" style="font-size:10px;font-weight:bold;margin-top:6px;padding:4px;background:#f8f9fa;border:1px solid #ddd;border-radius:4px;">🔗 STRUK LANJUTAN ${chainNFooter} — TERHUBUNG DENGAN ${this._escapeHtml(chain.parentInvoiceNo)}</div>`;
         } else if (options.saleMode === 'mix' && options.mixInfo && options.mixInfo.totalDiscount > 0) {
             footerHtml += `<div class="center" style="font-size:11px;font-weight:bold;margin-top:8px;">Terima kasih telah berbelanja di Alfarez Mart, Anda telah menghemat belanjaan sebesar ${this._formatPrice(options.mixInfo.totalDiscount)} 🎉</div>`;
         }
@@ -1432,7 +1473,7 @@ class ThermalPrinter {
                 </style>
             </head>
             <body>
-                <div class="center title">${isChain ? 'STRUK LANJUTAN' : 'FAKTUR BELANJA'}</div>
+                <div class="center title">${isChain ? `-- STRUK LANJUTAN ${chain.chainNumber || 1} --` : 'FAKTUR BELANJA'}</div>
                 ${logoHtml}
                 <div class="center store">${this._escapeHtml(store.store_name || 'AlfarezMart').toUpperCase()}</div>
                 ${store.store_address ? `<div class="center" style="font-size:10px;white-space:pre-line;">${this._escapeHtml(store.store_address)}</div>` : ''}

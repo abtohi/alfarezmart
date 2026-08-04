@@ -183,6 +183,8 @@ function getChainInfo() {
     return {
         isContinuation: true,
         parentInvoiceNo: chainParentInvoiceNo,
+        chainNumber: chainedInvoices.length,          // 1 = Struk Lanjutan 1, 2 = Struk Lanjutan 2, …
+        allPreviousInvoices: [...chainedInvoices],    // [{invoiceNo, total}, …]
         previousInvoices: chainedInvoices.map(i => i.invoiceNo),
         previousTotal: previousTotal,
         currentTotal: currentTotal,
@@ -1554,9 +1556,17 @@ async function proceedCheckout() {
                         </div>
                         ${currentChainInfo.isContinuation ? `
                         <div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-color);">
+                            <div style="font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">
+                                Rekap Semua Struk
+                            </div>
+                            ${currentChainInfo.allPreviousInvoices.map((inv, idx) => `
                             <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-muted);margin-bottom:4px;">
-                                <span>Struk Sebelumnya (${escapeHtml(currentChainInfo.parentInvoiceNo)})</span>
-                                <strong>${formatRupiah(currentChainInfo.previousTotal)}</strong>
+                                <span>Struk ${idx+1} <span style="font-size:10px;font-family:monospace;">(${escapeHtml((inv.invoiceNo||'').slice(-6))})</span></span>
+                                <strong>${formatRupiah(inv.total||0)}</strong>
+                            </div>`).join('')}
+                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-primary);margin-bottom:4px;font-weight:700;">
+                                <span>Struk ${currentChainInfo.chainNumber+1} (Ini) <span style="font-size:10px;font-family:monospace;">(${invoiceNo.slice(-6)})</span></span>
+                                <strong>${formatRupiah(printTotal)}</strong>
                             </div>
                             <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(230,57,70,0.08);border:1px solid rgba(230,57,70,0.2);border-radius:6px;margin-top:6px;">
                                 <span style="font-size:12px;font-weight:800;color:var(--primary);">GRAND TOTAL GABUNGAN</span>
@@ -1901,8 +1911,21 @@ function showHistorySaveConfirmation(invoiceNo, total, cartItems, chainInfo) {
                     <h3 style="font-size:var(--font-size-md);font-weight:700;color:var(--text-primary);margin:0 0 4px;">Struk Berhasil Dicetak!</h3>
                     <p style="font-size:var(--font-size-sm);color:var(--text-muted);margin:0;">Total: <strong style="color:var(--primary);">${formatRupiah(total)}</strong></p>
                     ${(savedChainInfo && savedChainInfo.isContinuation) ? `
-                    <div style="margin-top:8px; display:inline-flex; align-items:center; gap:6px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); padding:4px 12px; border-radius:20px; font-size:11px; color:#818cf8; font-weight:600;">
-                        🔗 Grand Total Gabungan: <strong style="color:#a5b4fc;">${formatRupiah(savedChainInfo.grandTotal)}</strong>
+                    <div style="margin-top:10px;background:rgba(99,102,241,0.07);border:1px solid rgba(99,102,241,0.2);border-radius:8px;padding:10px;font-size:11px;text-align:left;">
+                        <div style="font-weight:700;color:#818cf8;margin-bottom:6px;text-transform:uppercase;font-size:10px;letter-spacing:0.5px;">🔗 Rekap Semua Struk</div>
+                        ${savedChainInfo.allPreviousInvoices.map((inv, idx) => `
+                        <div style="display:flex;justify-content:space-between;color:var(--text-muted);margin-bottom:3px;">
+                            <span>Struk ${idx+1} <span style="font-family:monospace;font-size:9px;">(${(inv.invoiceNo||'').slice(-6)})</span></span>
+                            <strong>${formatRupiah(inv.total||0)}</strong>
+                        </div>`).join('')}
+                        <div style="display:flex;justify-content:space-between;color:var(--text-primary);font-weight:700;margin-bottom:3px;">
+                            <span>Struk ${savedChainInfo.chainNumber+1} (Ini) <span style="font-family:monospace;font-size:9px;">(${invoiceNo.slice(-6)})</span></span>
+                            <strong>${formatRupiah(total)}</strong>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;border-top:1px dashed rgba(99,102,241,0.3);padding-top:6px;margin-top:4px;color:#a5b4fc;font-weight:800;font-size:12px;">
+                            <span>GRAND TOTAL GABUNGAN</span>
+                            <span>${formatRupiah(savedChainInfo.grandTotal)}</span>
+                        </div>
                     </div>` : ''}
                 </div>
                 <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:14px;margin-bottom:12px;">
