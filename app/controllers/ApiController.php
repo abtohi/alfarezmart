@@ -609,93 +609,70 @@ class ApiController extends Controller
         // 2. Fetch Suppliers & Purchase History grouped by Supplier
         $suppliers = [];
         try {
-            // Fetch all unique suppliers for this product directly from purchases + purchase_items
             $stmtSup = $this->db->prepare("
-                SELECT DISTINCT s.id as supplier_id, s.name as supplier_name, s.address, s.notes
-                FROM purchase_items pi
-                JOIN purchases pu ON pi.purchase_id = pu.id
-                JOIN suppliers s ON pu.supplier_id = s.id
-                WHERE pi.product_id = :pid
+                SELECT DISTINCT s.id as supplier_id, s.name as supplier_name, s.address, s.notes,
+                       COALESCE(sp.last_buy_price, 0) as last_buy_price,
+                       sp.last_purchase_date,
+                       COALESCE(sp.purchase_count, 0) as purchase_count
+                FROM suppliers s
+                JOIN supplier_products sp ON sp.supplier_id = s.id
+                WHERE sp.product_id = :pid1
+
+                UNION
+
+                SELECT DISTINCT s.id as supplier_id, s.name as supplier_name, s.address, s.notes,
+                       0 as last_buy_price,
+                       MAX(pu.purchase_date) as last_purchase_date,
+                       COUNT(pu.id) as purchase_count
+                FROM suppliers s
+                JOIN purchases pu ON pu.supplier_id = s.id
+                JOIN purchase_items pi ON pi.purchase_id = pu.id
+                WHERE pi.product_id = :pid2
+                GROUP BY s.id, s.name, s.address, s.notes
             ");
-            $stmtSup->execute([':pid' => $productId]);
-            $supplierRows = $stmtSup->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $stmtSup->execute([':pid1' => $productId, ':pid2' => $productId]);
+            $rawSupplierRows = $stmtSup->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-            // ALSO check supplier_products table if any supplier exists there but not in purchases
-            try {
-                $stmtSP = $this->db->prepare("
-                    SELECT DISTINCT s.id as supplier_id, s.name as supplier_name, s.address, s.notes
-                    FROM supplier_products sp
-                    JOIN suppliers s ON sp.supplier_id = s.id
-                    WHERE sp.product_id = :pid
-                ");
-                $stmtSP->execute([':pid' => $productId]);
-                $spRows = $stmtSP->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                
-                $existingIds = array_column($supplierRows, 'supplier_id');
-                foreach ($spRows as $spRow) {
-                    if (!in_array($spRow['supplier_id'], $existingIds)) {
-                        $supplierRows[] = $spRow;
-                    }
-                }
-            } catch (\Throwable $eSP) {}
-
-            foreach ($supplierRows as &$sup) {
+            // Deduplicate suppliers cleanly by supplier_id
+            $suppliersMap = [];
+            foreach ($rawSupplierRows as $sup) {
                 $sid = (int)$sup['supplier_id'];
-
-                // Safely fetch active sales reps for this supplier
-                $salesReps = [];
-                try {
-                    $stmtSales = $this->db->prepare("
-                        SELECT id, name, phone, visit_day, delivery_day, status
-                        FROM sales_reps
-                        WHERE supplier_id = :sid AND status = 'Aktif'
-                        ORDER BY id ASC
-                    ");
-                    $stmtSales->execute([':sid' => $sid]);
-                    $salesReps = $stmtSales->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                } catch (\Throwable $se) {}
-
-                $sup['sales_reps'] = $salesReps;
-                $primarySales = !empty($salesReps) ? $salesReps[0] : null;
-                $sup['sales_rep_name'] = $primarySales ? $primarySales['name'] : null;
-                $sup['sales_rep_phone'] = $primarySales ? ($primarySales['phone'] ?? null) : null;
-
-                // Fetch purchase history for this product from this supplier
-                $history = [];
-                try {
-                    $stmtHist = $this->db->prepare("
-                        SELECT pu.id as purchase_id, pu.purchase_code, pu.purchase_date, pu.notes,
-                               pi.quantity, pi.buy_price as item_buy_price, pi.total_price as item_subtotal,
-                               u.name as unit_name, pp.level as packaging_level, pp.base_qty,
-                               sr.name as sales_rep_name, sr.phone as sales_rep_phone
-                        FROM purchase_items pi
-                        JOIN purchases pu ON pi.purchase_id = pu.id
-                        LEFT JOIN sales_reps sr ON pu.sales_rep_id = sr.id
-                        LEFT JOIN product_packagings pp ON pi.packaging_id = pp.id
-                        LEFT JOIN units u ON pp.unit_id = u.id
-                        WHERE pi.product_id = :pid AND pu.supplier_id = :sid
-                        ORDER BY pu.purchase_date DESC, pu.id DESC
-                        LIMIT 50
-                    ");
-                    $stmtHist->execute([':pid' => $productId, ':sid' => $sid]);
-                    $history = $stmtHist->fetchAll(PDO::FETCH_ASSOC) ?: [];
-                } catch (\Throwable $he) {}
-
-                // Fallback sales rep details if missing in history row
-                foreach ($history as &$hItem) {
-                    if (empty($hItem['sales_rep_name'])) $hItem['sales_rep_name'] = $sup['sales_rep_name'];
-                    if (empty($hItem['sales_rep_phone'])) $hItem['sales_rep_phone'] = $sup['sales_rep_phone'];
+                if (!isset($suppliersMap[$sid])) {
+                    $suppliersMap[$sid] = $sup;
+                } else {
+                    if (empty($suppliersMap[$sid]['last_buy_price']) && !empty($sup['last_buy_price'])) {
+                        $suppliersMap[$sid]['last_buy_price'] = $sup['last_buy_price'];
+                    }
+                    if (empty($suppliersMap[$sid]['last_purchase_date']) && !empty($sup['last_purchase_date'])) {
+                        $suppliersMap[$sid]['last_purchase_date'] = $sup['last_purchase_date'];
+                    }
+                    $suppliersMap[$sid]['purchase_count'] = max((int)$suppliersMap[$sid]['purchase_count'], (int)$sup['purchase_count']);
                 }
-                unset($hItem);
+            }
+            $supplierRows = array_values($suppliersMap);
+
+            foreach ($supplierRows as $sup) {
+                $sid = (int)$sup['supplier_id'];
+                
+                // Fetch purchase history for this product at this supplier (sorted by date DESC, latest on top)
+                $stmtHist = $this->db->prepare("
+                    SELECT pu.id as purchase_id, pu.purchase_code, pu.purchase_date, pu.notes,
+                           pi.quantity, pi.buy_price as item_buy_price, pi.total_price as item_subtotal,
+                           u.name as unit_name, pp.level as packaging_level, pp.base_qty
+                    FROM purchase_items pi
+                    JOIN purchases pu ON pi.purchase_id = pu.id
+                    LEFT JOIN product_packagings pp ON pi.packaging_id = pp.id
+                    LEFT JOIN units u ON pp.unit_id = u.id
+                    WHERE pi.product_id = :pid AND pu.supplier_id = :sid
+                    ORDER BY pu.purchase_date DESC, pu.id DESC
+                    LIMIT 50
+                ");
+                $stmtHist->execute([':pid' => $productId, ':sid' => $sid]);
+                $history = $stmtHist->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
                 $sup['purchases'] = $history;
-                $sup['purchase_count'] = count($history);
-                $sup['last_purchase_date'] = !empty($history) ? $history[0]['purchase_date'] : null;
-                $sup['last_buy_price'] = !empty($history) ? (float)$history[0]['item_buy_price'] : 0;
+                $suppliers[] = $sup;
             }
-            unset($sup);
-
-            $suppliers = $supplierRows;
         } catch (\Throwable $e) {
             error_log("[enrichProductDetailData] Supplier history query error: " . $e->getMessage());
         }
