@@ -678,13 +678,16 @@ class ThermalPrinter {
         // TOTAL
         cmds += this.separator(width) + LF;
         cmds += ESC + 'E\x01';
+
+        const isChain = options.chainInfo && options.chainInfo.isContinuation;
+
         if (options.saleMode === 'mix' && options.mixInfo && options.mixInfo.totalDiscount > 0) {
             const subtotal = total + options.mixInfo.totalDiscount;
             cmds += ESC + 'E\x00'; // Normal weight for subtotal
             cmds += this.padLine('Subtotal', this._formatPrice(subtotal), width) + LF;
             cmds += this.padLine('Total Diskon', `-${this._formatPrice(options.mixInfo.totalDiscount)}`, width) + LF;
             cmds += ESC + 'E\x01'; // Bold for grand total
-            cmds += this.padLine('TOTAL BAYAR', this._formatPrice(total), width) + LF;
+            cmds += this.padLine('TOTAL STRUK INI', this._formatPrice(total), width) + LF;
             cmds += ESC + 'E\x00';
             
             // Add 'hemat' message immediately below TOTAL BAYAR
@@ -694,8 +697,22 @@ class ThermalPrinter {
             cmds += `Anda menghemat Rp${this._formatPrice(options.mixInfo.totalDiscount)} hari ini!` + LF;
             cmds += ESC + 'a\x00'; // Reset to left align
         } else {
-            cmds += this.padLine('TOTAL', this._formatPrice(total), width) + LF;
+            cmds += this.padLine(isChain ? 'SUBTOTAL STRUK INI' : 'TOTAL', this._formatPrice(total), width) + LF;
             cmds += ESC + 'E\x00';
+        }
+
+        // --- CHAINED INVOICE (STRUK LANJUTAN) BREAKDOWN ---
+        if (isChain) {
+            const chain = options.chainInfo;
+            cmds += this.padLine('STRUK SEBELUMNYA', this._formatPrice(chain.previousTotal), width) + LF;
+            cmds += this.separator(width, '=') + LF;
+            cmds += ESC + 'E\x01';
+            cmds += this.padLine('GRAND TOTAL UTAMA', this._formatPrice(chain.grandTotal), width) + LF;
+            cmds += ESC + 'E\x00';
+            cmds += this.separator(width, '=') + LF;
+            cmds += ESC + 'a\x01';
+            cmds += `[STRUK LANJUTAN DARI ${chain.parentInvoiceNo}]` + LF;
+            cmds += ESC + 'a\x00';
         }
 
         // Footer from settings — use ESC/POS center align command (\x01)
@@ -1358,8 +1375,19 @@ class ThermalPrinter {
             itemsHtml += discountRowHtml;
         });
 
+        const isChain = options.chainInfo && options.chainInfo.isContinuation;
+        const chain = options.chainInfo || {};
+
         let totalsHtml = '';
-        if (options.saleMode === 'mix' && options.mixInfo && options.mixInfo.totalDiscount > 0) {
+        if (isChain) {
+            totalsHtml = `
+                <table class="total-row">
+                    <tr style="font-size:11px;font-weight:normal;"><td>Subtotal Struk Ini</td><td class="right">${this._formatPrice(total)}</td></tr>
+                    <tr style="font-size:11px;font-weight:normal;"><td>Struk Sebelumnya</td><td class="right">${this._formatPrice(chain.previousTotal)}</td></tr>
+                    <tr style="border-top:1px dashed #000;font-size:13px;font-weight:bold;color:#e63946;"><td style="padding-top:4px;">GRAND TOTAL GABUNGAN</td><td class="right" style="padding-top:4px;">${this._formatPrice(chain.grandTotal)}</td></tr>
+                </table>
+            `;
+        } else if (options.saleMode === 'mix' && options.mixInfo && options.mixInfo.totalDiscount > 0) {
             const subtotal = total + options.mixInfo.totalDiscount;
             totalsHtml = `
                 <table class="total-row">
@@ -1373,7 +1401,9 @@ class ThermalPrinter {
         }
 
         let footerHtml = store.receipt_footer ? `<hr class="divider"><div class="center" style="font-size:10px;white-space:pre-line;">${this._escapeHtml(store.receipt_footer)}</div>` : '';
-        if (options.saleMode === 'mix' && options.mixInfo && options.mixInfo.totalDiscount > 0) {
+        if (isChain) {
+            footerHtml += `<div class="center" style="font-size:10px;font-weight:bold;margin-top:6px;padding:4px;background:#f8f9fa;border:1px solid #ddd;border-radius:4px;">🔗 STRUK LANJUTAN TERHUBUNG DENGAN ${this._escapeHtml(chain.parentInvoiceNo)}</div>`;
+        } else if (options.saleMode === 'mix' && options.mixInfo && options.mixInfo.totalDiscount > 0) {
             footerHtml += `<div class="center" style="font-size:11px;font-weight:bold;margin-top:8px;">Terima kasih telah berbelanja di Alfarez Mart, Anda telah menghemat belanjaan sebesar ${this._formatPrice(options.mixInfo.totalDiscount)} 🎉</div>`;
         }
 
@@ -1382,7 +1412,7 @@ class ThermalPrinter {
             <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Struk Penjualan</title>
+                <title>Struk Penjualan ${isChain ? '- Lanjutan' : ''}</title>
                 <style>
                     @page { margin: 0; size: 80mm auto; }
                     body { font-family: 'Courier New', monospace; padding: 6px 8px; width: 76mm; margin: 0 auto; color: black; font-size: 11px; line-height: 1.4; background: white; text-align: center; }
@@ -1402,7 +1432,7 @@ class ThermalPrinter {
                 </style>
             </head>
             <body>
-                <div class="center title">FAKTUR BELANJA</div>
+                <div class="center title">${isChain ? 'STRUK LANJUTAN' : 'FAKTUR BELANJA'}</div>
                 ${logoHtml}
                 <div class="center store">${this._escapeHtml(store.store_name || 'AlfarezMart').toUpperCase()}</div>
                 ${store.store_address ? `<div class="center" style="font-size:10px;white-space:pre-line;">${this._escapeHtml(store.store_address)}</div>` : ''}
@@ -1411,6 +1441,7 @@ class ThermalPrinter {
                 <hr class="divider">
                 <table class="left" style="text-align:left;">
                     <tr><td>No</td><td>:</td><td style="font-family:monospace;font-size:10px;">${this._escapeHtml(invoiceNumber)}</td></tr>
+                    ${isChain ? `<tr><td>Lanjutan Dr</td><td>:</td><td style="font-family:monospace;font-size:10px;font-weight:bold;">${this._escapeHtml(chain.parentInvoiceNo)}</td></tr>` : ''}
                     <tr><td>Tgl</td><td>:</td><td>${dateStr} ${timeStr}</td></tr>
                 </table>
                 <hr class="divider">

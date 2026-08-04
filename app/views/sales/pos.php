@@ -65,6 +65,9 @@
         </div>
     </div>
 
+    <!-- Banner Indicator Struk / Invoice Lanjutan -->
+    <div id="posChainBanner" style="display:none; margin-bottom:12px; background:linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border-radius:var(--radius-md); padding:10px 14px; border:1px solid rgba(129,140,248,0.4); color:white; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+
     <!-- Customer Selector -->
     <div style="margin-bottom:12px; position:relative;">
         <div id="customerSelectorBox"
@@ -164,6 +167,88 @@ let currentDraftId = null;
 let editSaleId = null;
 let searchInput, suggestionsDiv, cartContainer, emptyState, cartTotalEl, cartCountEl, btnCheckout, btnSaveDraft;
 let selectedCustomer = null; // { id, name, phone } or null = Pelanggan Umum
+
+// ── Linked / Continuation Invoice State (Struk Lanjutan) ─────────────────────
+let chainParentInvoiceNo = null;
+let chainedInvoices = []; // Array of { invoiceNo, total }
+
+function getChainInfo() {
+    if (!chainedInvoices || chainedInvoices.length === 0) {
+        return { isContinuation: false };
+    }
+    const previousTotal = chainedInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+    const currentTotal = (typeof cart !== 'undefined' && Array.isArray(cart))
+        ? cart.reduce((sum, i) => sum + (i.total || 0), 0)
+        : 0;
+    return {
+        isContinuation: true,
+        parentInvoiceNo: chainParentInvoiceNo,
+        previousInvoices: chainedInvoices.map(i => i.invoiceNo),
+        previousTotal: previousTotal,
+        currentTotal: currentTotal,
+        grandTotal: previousTotal + currentTotal
+    };
+}
+
+function startNextInvoiceChain(invoiceNo, total) {
+    if (!chainParentInvoiceNo) {
+        chainParentInvoiceNo = invoiceNo;
+    }
+    chainedInvoices.push({ invoiceNo, total });
+    
+    cart = [];
+    currentDraftId = null;
+    clearAutoSave();
+    renderCart();
+    renderChainBanner();
+    
+    AppModal.close();
+    showToast(`Mode Struk Lanjutan Aktif (Lanjutan dari ${chainParentInvoiceNo})`, 'info');
+    const inp = document.getElementById('posSearch');
+    if (inp) inp.focus();
+}
+
+function clearChainSession() {
+    chainParentInvoiceNo = null;
+    chainedInvoices = [];
+    renderChainBanner();
+    calculateTotal();
+}
+
+function renderChainBanner() {
+    const banner = document.getElementById('posChainBanner');
+    if (!banner) return;
+    if (chainedInvoices.length === 0) {
+        banner.style.display = 'none';
+        banner.innerHTML = '';
+        return;
+    }
+    const prevTotal = chainedInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0);
+    banner.style.display = 'flex';
+    banner.style.alignItems = 'center';
+    banner.style.justifyContent = 'space-between';
+    banner.style.gap = '10px';
+    banner.style.flexWrap = 'wrap';
+    
+    banner.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+            <div style="width:34px; height:34px; background:rgba(129,140,248,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="bi bi-link-45deg" style="font-size:1.3rem; color:#818cf8;"></i>
+            </div>
+            <div>
+                <div style="font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#c7d2fe;">
+                    🔗 Struk Lanjutan Aktif (${chainedInvoices.length} Invoice Terhubung)
+                </div>
+                <div style="font-size:12px; font-weight:600; color:#ffffff;">
+                    Rujukan: <span style="font-family:monospace;">${escapeHtml(chainParentInvoiceNo)}</span> &nbsp;|&nbsp; Total Sebelumnya: <strong style="color:#a7f3d0;">${formatRupiah(prevTotal)}</strong>
+                </div>
+            </div>
+        </div>
+        <button type="button" onclick="clearChainSession()" class="btn-outline-custom" style="padding:4px 10px; font-size:11px; border:1px solid rgba(255,255,255,0.3); color:#ffffff; background:rgba(255,255,255,0.12); border-radius:6px; cursor:pointer;" title="Selesaikan sesi rantai invoice ini">
+            <i class="bi bi-x-circle"></i> Selesai Rantai
+        </button>
+    `;
+}
 
 function escapeHtml(str) {
     const d = document.createElement('div');
@@ -924,7 +1009,15 @@ function calculateTotal() {
             mixTotalDiscount += i._retail_total - i.total;
         }
     });
-    cartTotalEl.textContent = formatRupiah(sum);
+
+    if (chainedInvoices && chainedInvoices.length > 0) {
+        const prevTotal = chainedInvoices.reduce((s, inv) => s + (inv.total || 0), 0);
+        const grandTotal = sum + prevTotal;
+        cartTotalEl.innerHTML = `${formatRupiah(sum)} <span style="font-size:0.75rem; font-weight:700; color:var(--primary); display:block; margin-top:2px;">(Grand Total: ${formatRupiah(grandTotal)})</span>`;
+    } else {
+        cartTotalEl.textContent = formatRupiah(sum);
+    }
+
     const cartProfitEl = document.getElementById('cartProfit');
     if (cartProfitEl) {
         if (saleMode === 'mix' && mixTotalDiscount > 0) {
@@ -1375,6 +1468,7 @@ async function proceedCheckout() {
             const currentSaleMode = saleMode;
             const currentCustomer = selectedCustomer ? { ...selectedCustomer } : null;
             const mixInfo = getMixDiscountInfo();
+            const currentChainInfo = getChainInfo();
 
             cart = [];
             currentDraftId = null;
@@ -1406,7 +1500,7 @@ async function proceedCheckout() {
             let modalPromise;
             try {
             modalPromise = AppModal.show({
-                title: isEditMode ? 'Transaksi Diperbarui' : 'Transaksi Berhasil',
+                title: isEditMode ? 'Transaksi Diperbarui' : (currentChainInfo.isContinuation ? 'Struk Lanjutan Berhasil' : 'Transaksi Berhasil'),
                 subtitle: `No: ${invoiceNo}`,
                 icon: 'bi-check-circle',
                 iconColor: 'var(--success-bg)',
@@ -1423,15 +1517,37 @@ async function proceedCheckout() {
                         ${mixInfo.totalDiscount > 0 ? `<div style="margin-top:8px; display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:var(--success); background:var(--success-bg); padding:4px 10px; border-radius:12px;">🎉 Hemat ${formatRupiah(mixInfo.totalDiscount)}</div>` : ''}
                     </div>
 
-                    <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:14px;margin-bottom:16px;max-height:220px;overflow-y:auto;">
+                    <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:14px;margin-bottom:16px;max-height:260px;overflow-y:auto;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border-color);">
                             <span style="font-size:var(--font-size-xs);font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Invoice</span>
                             <span style="font-size:var(--font-size-xs);color:var(--text-muted);font-family:monospace;">${invoiceNo}</span>
                         </div>
                         ${invoiceItemsHTML}
                         <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;margin-top:4px;">
-                            <span style="font-weight:700;font-size:var(--font-size-sm);">Total</span>
+                            <span style="font-weight:700;font-size:var(--font-size-sm);">Total Struk Ini</span>
                             <span style="font-weight:800;font-size:var(--font-size-md);color:var(--primary);">${formatRupiah(printTotal)}</span>
+                        </div>
+                        ${currentChainInfo.isContinuation ? `
+                        <div style="margin-top:10px; padding-top:10px; border-top:1px dashed var(--border-color);">
+                            <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text-muted);margin-bottom:4px;">
+                                <span>Struk Sebelumnya (${escapeHtml(currentChainInfo.parentInvoiceNo)})</span>
+                                <strong>${formatRupiah(currentChainInfo.previousTotal)}</strong>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:rgba(230,57,70,0.08);border:1px solid rgba(230,57,70,0.2);border-radius:6px;margin-top:6px;">
+                                <span style="font-size:12px;font-weight:800;color:var(--primary);">GRAND TOTAL GABUNGAN</span>
+                                <span style="font-size:14px;font-weight:800;color:var(--primary);">${formatRupiah(currentChainInfo.grandTotal)}</span>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Tombol Aksi: Lanjut ke Invoice Berikutnya -->
+                    <div style="margin-bottom:16px;">
+                        <button type="button" onclick="startNextInvoiceChain('${invoiceNo}', ${printTotal})" style="width:100%; padding:12px 14px; font-weight:700; background:linear-gradient(135deg, rgba(79,70,229,0.1) 0%, rgba(99,102,241,0.15) 100%); border:1.5px dashed var(--primary); color:var(--primary); border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; gap:8px; font-size:var(--font-size-sm); cursor:pointer; transition:all 0.2s;" onmouseover="this.style.background='var(--primary-bg)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(79,70,229,0.1) 0%, rgba(99,102,241,0.15) 100%)'">
+                            <i class="bi bi-link-45deg" style="font-size:1.3rem;"></i> <span>Lanjut ke Invoice Berikutnya (Pembeli Tambah Barang)</span>
+                        </button>
+                        <div style="font-size:10.5px; color:var(--text-muted); text-align:center; margin-top:4px;">
+                            Gunakan ini jika pembeli menambah barang belanjaan untuk menjumlahkan total struk secara akumulatif.
                         </div>
                     </div>
 
@@ -1473,6 +1589,7 @@ async function proceedCheckout() {
                 },
                 onSubmit: async () => {
                     editSaleId = null;
+                    clearChainSession();
                     const banner = document.getElementById('posEditBanner');
                     if (banner) banner.remove();
                     btnCheckout.innerHTML = 'BAYAR SEKARANG';
@@ -1481,7 +1598,7 @@ async function proceedCheckout() {
                 },
             });
 
-            setTimeout(() => setupPrinterButtons(printCart, printTotal, invoiceNo, currentSaleMode, mixInfo), 150);
+            setTimeout(() => setupPrinterButtons(printCart, printTotal, invoiceNo, currentSaleMode, mixInfo, currentChainInfo), 150);
             await modalPromise;
             } catch (modalErr) {
                 console.error('Checkout success UI error:', modalErr);
@@ -1500,7 +1617,7 @@ async function proceedCheckout() {
     }
 }
 
-function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mixInfo) {
+function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mixInfo, chainInfo) {
     const btnConnect = document.getElementById('btnConnectPrinter');
     const btnPrint = document.getElementById('btnPrintReceipt');
     const btnBrowser = document.getElementById('btnPrintBrowser');
@@ -1518,6 +1635,7 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
                 paymentMethod: 'Tunai',
                 saleMode: printSaleMode,
                 mixInfo: mixInfo,
+                chainInfo: chainInfo,
             });
         };
     }
@@ -1629,6 +1747,7 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
                     paymentMethod: 'Tunai',
                     saleMode: printSaleMode,
                     mixInfo: mixInfo,
+                    chainInfo: chainInfo,
                 });
                 btnPrint.innerHTML = '<i class="bi bi-printer"></i> Cetak Ulang Struk';
                 btnPrint.disabled = false;
