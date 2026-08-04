@@ -654,44 +654,47 @@ class ApiController extends Controller
             foreach ($supplierRows as $sup) {
                 $sid = (int)$sup['supplier_id'];
 
-                // Fetch active sales reps for this supplier
-                $stmtSales = $this->db->prepare("
-                    SELECT id, name, phone, visit_day, delivery_day, status
-                    FROM sales_reps
-                    WHERE supplier_id = :sid AND status = 'Aktif'
-                    ORDER BY id ASC
-                ");
-                $stmtSales->execute([':sid' => $sid]);
-                $salesReps = $stmtSales->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                // Safely fetch active sales reps for this supplier
+                $salesReps = [];
+                try {
+                    $stmtSales = $this->db->prepare("
+                        SELECT id, name, phone, visit_day, delivery_day, status
+                        FROM sales_reps
+                        WHERE supplier_id = :sid AND status = 'Aktif'
+                        ORDER BY id ASC
+                    ");
+                    $stmtSales->execute([':sid' => $sid]);
+                    $salesReps = $stmtSales->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                } catch (\Throwable $se) {}
+
                 $sup['sales_reps'] = $salesReps;
                 $primarySales = !empty($salesReps) ? $salesReps[0] : null;
                 $sup['sales_rep_name'] = $primarySales ? $primarySales['name'] : null;
                 $sup['sales_rep_phone'] = $primarySales ? $primarySales['phone'] : null;
-                
-                // Fetch purchase history for this product at this supplier (sorted by date DESC, latest on top)
-                $stmtHist = $this->db->prepare("
-                    SELECT pu.id as purchase_id, pu.purchase_code, pu.purchase_date, pu.notes,
-                           pu.sales_rep_id, sr.name as sales_rep_name, sr.phone as sales_rep_phone,
-                           pi.quantity, pi.buy_price as item_buy_price, pi.total_price as item_subtotal,
-                           u.name as unit_name, pp.level as packaging_level, pp.base_qty
-                    FROM purchase_items pi
-                    JOIN purchases pu ON pi.purchase_id = pu.id
-                    LEFT JOIN sales_reps sr ON pu.sales_rep_id = sr.id
-                    LEFT JOIN product_packagings pp ON pi.packaging_id = pp.id
-                    LEFT JOIN units u ON pp.unit_id = u.id
-                    WHERE pi.product_id = :pid AND pu.supplier_id = :sid
-                    ORDER BY pu.purchase_date DESC, pu.id DESC
-                    LIMIT 50
-                ");
-                $stmtHist->execute([':pid' => $productId, ':sid' => $sid]);
-                $history = $stmtHist->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-                // For history items without individual sales rep phone, fallback to supplier's primary sales rep
+                // Fetch purchase history for this product at this supplier (sorted by date DESC, latest on top)
+                $history = [];
+                try {
+                    $stmtHist = $this->db->prepare("
+                        SELECT pu.id as purchase_id, pu.purchase_code, pu.purchase_date, pu.notes,
+                               pi.quantity, pi.buy_price as item_buy_price, pi.total_price as item_subtotal,
+                               u.name as unit_name, pp.level as packaging_level, pp.base_qty
+                        FROM purchase_items pi
+                        JOIN purchases pu ON pi.purchase_id = pu.id
+                        LEFT JOIN product_packagings pp ON pi.packaging_id = pp.id
+                        LEFT JOIN units u ON pp.unit_id = u.id
+                        WHERE pi.product_id = :pid AND pu.supplier_id = :sid
+                        ORDER BY pu.purchase_date DESC, pu.id DESC
+                        LIMIT 50
+                    ");
+                    $stmtHist->execute([':pid' => $productId, ':sid' => $sid]);
+                    $history = $stmtHist->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                } catch (\Throwable $he) {}
+
+                // Populate sales rep details for history rows
                 foreach ($history as &$hItem) {
-                    if (empty($hItem['sales_rep_phone']) && !empty($sup['sales_rep_phone'])) {
-                        $hItem['sales_rep_name'] = $hItem['sales_rep_name'] ?: $sup['sales_rep_name'];
-                        $hItem['sales_rep_phone'] = $sup['sales_rep_phone'];
-                    }
+                    $hItem['sales_rep_name'] = $sup['sales_rep_name'];
+                    $hItem['sales_rep_phone'] = $sup['sales_rep_phone'];
                 }
                 unset($hItem);
 
