@@ -485,20 +485,55 @@ async function preloadPosCatalog() {
 
 let _posSearchDebounceTimer = null;
 
+// ── Barcode Scanner Detection ──────────────────────────────────────────────────
+// Physical barcode scanners send characters in < 30ms bursts.
+// We track the gap between keystrokes: if consistently < 50ms → scanner mode.
+// In scanner mode: skip text-search debounce, and after Enter clear input
+// BEFORE the async lookup to prevent barcodes stacking on next scan.
+let _posLastCharTime = 0;
+let _posFastCharCount = 0;
+let _posFromScanner = false; // true if current Enter came from scanner
+const _POS_SCANNER_GAP_MS = 50; // chars < 50ms apart = scanner
+const _POS_SCANNER_MIN_FAST = 4; // need ≥4 fast chars to flag as scanner
+
 function initPosSearch() {
     const inp = document.getElementById('posSearch');
     const sug = document.getElementById('posSuggestions');
     
     if (!inp || !sug) return;
 
-    // Fast 80ms debounced input listener
+    // Track typing speed & run text search (debounced) for human typing
     inp.addEventListener('input', function() {
+        const now = Date.now();
+        const gap = now - _posLastCharTime;
+        _posLastCharTime = now;
+
         const q = this.value.trim();
+
+        // Reset fast-char counter when input is cleared / very first char
+        if (q.length <= 1) {
+            _posFastCharCount = q.length === 1 ? 1 : 0;
+        } else if (gap < _POS_SCANNER_GAP_MS) {
+            _posFastCharCount++;
+        } else {
+            // Slow gap → human typing; reset scanner counter
+            _posFastCharCount = 0;
+        }
+
         if (q.length < 2) {
             sug.innerHTML = '';
             if (window.posSearchAbortController) window.posSearchAbortController.abort();
             return;
         }
+
+        // If scanner is typing fast, skip text-search debounce to avoid flicker
+        const isScannerTyping = _posFastCharCount >= _POS_SCANNER_MIN_FAST;
+        if (isScannerTyping) {
+            clearTimeout(_posSearchDebounceTimer);
+            return;
+        }
+
+        // Human typing → normal 80ms debounce text search
         clearTimeout(_posSearchDebounceTimer);
         _posSearchDebounceTimer = setTimeout(() => {
             performSearch(q);
@@ -512,14 +547,25 @@ function initPosSearch() {
         }
     });
 
-    // Enter key for barcode inside input
-    inp.addEventListener('keypress', async function(e) {
+    // Enter key: clear input IMMEDIATELY before async processing to prevent
+    // barcode stacking when the scanner starts typing the next code right away.
+    inp.addEventListener('keydown', async function(e) {
         if (e.key !== 'Enter') return;
         e.preventDefault();
         const q = this.value.trim();
         if (!q) return;
-        
-        await processBarcodeScan(q, this, sug);
+
+        // Determine if Enter came from scanner (many fast chars accumulated)
+        const fromScanner = _posFastCharCount >= _POS_SCANNER_MIN_FAST;
+        _posFromScanner = fromScanner;
+
+        // ← KEY FIX: wipe input BEFORE the async call so next scan starts clean
+        this.value = '';
+        sug.innerHTML = '';
+        clearTimeout(_posSearchDebounceTimer);
+        _posFastCharCount = 0;
+
+        await processBarcodeScan(q, this, sug, fromScanner);
     });
 
     // Preload catalog on search focus or init
@@ -541,9 +587,10 @@ function openPosScanner() {
 let _lastPosScanCode = '';
 let _lastPosScanTime = 0;
 
-async function processBarcodeScan(q, inpEl, sugEl) {
+async function processBarcodeScan(q, inpEl, sugEl, fromScanner) {
     if (!q) return;
     q = q.trim();
+    if (fromScanner === undefined) fromScanner = _posFromScanner;
     
     // Prevent duplicate scan of the same code within 350ms
     const now = Date.now();
@@ -576,8 +623,10 @@ async function processBarcodeScan(q, inpEl, sugEl) {
     if (result && result.id) {
         if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
         addProductToCart(result);
+        // Input was already cleared before this async call; ensure clean state
         if (inpEl) inpEl.value = '';
         if (sugEl) sugEl.innerHTML = '';
+        if (inpEl) inpEl.focus();
         return;
     }
 
@@ -592,16 +641,29 @@ async function processBarcodeScan(q, inpEl, sugEl) {
             if (result && result.id) {
                 if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
                 addProductToCart(result);
+                // Input was already cleared before this async call; ensure clean state
                 if (inpEl) inpEl.value = '';
                 if (sugEl) sugEl.innerHTML = '';
+                if (inpEl) inpEl.focus();
                 return;
             }
         }
     } catch(e) {}
 
-    // Fallback to text search if not found
-    if (q.length >= 2 && inpEl) {
+    // ── Barcode not found ─────────────────────────────────────────────────────
+    // fromScanner = Enter came from physical scanner (fast keystrokes)
+    //   → Do NOT restore value (would cause stacking on next scan).
+    //     Show toast so user knows, input stays clear for next scan.
+    // !fromScanner = user typed manually and pressed Enter
+    //   → Restore text and show text-search suggestions as fallback.
+    if (fromScanner) {
+        showToast('Barcode tidak ditemukan', 'warning');
+        if (inpEl) { inpEl.value = ''; inpEl.focus(); }
+        if (sugEl) sugEl.innerHTML = '';
+    } else if (q.length >= 2 && inpEl) {
+        // Manual typing fallback: put text back and run multi-keyword search
         inpEl.value = q;
+        inpEl.focus();
         performSearch(q);
     } else {
         showToast('Barcode tidak ditemukan', 'warning');
