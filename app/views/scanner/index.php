@@ -700,6 +700,18 @@ function changeSupplierPage(page) {
     }
 }
 
+function formatWaNumber(phone) {
+    if (!phone) return null;
+    let clean = String(phone).replace(/\D/g, '');
+    if (!clean) return null;
+    if (clean.startsWith('0')) {
+        clean = '62' + clean.slice(1);
+    } else if (!clean.startsWith('62')) {
+        clean = '62' + clean;
+    }
+    return clean.length >= 9 ? clean : null;
+}
+
 function renderSupplierGroupedSectionHtml(suppliers, page = 1) {
     if (!suppliers || suppliers.length === 0) {
         return `<div class="text-center py-4 text-muted" style="font-size:12px;"><i class="bi bi-inbox fs-3 d-block mb-2 opacity-50"></i> Belum ada riwayat supplier terdaftar untuk produk ini.</div>`;
@@ -716,6 +728,18 @@ function renderSupplierGroupedSectionHtml(suppliers, page = 1) {
         const lastDate = sup.last_purchase_date ? new Date(sup.last_purchase_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-';
         const lastBuyPrice = parseFloat(sup.last_buy_price) || 0;
 
+        const supWaNum = formatWaNumber(sup.sales_rep_phone || sup.phone || null);
+        const supSalesName = sup.sales_rep_name || 'Sales';
+        const supWaBtnHtml = supWaNum ? `
+            <a href="https://wa.me/${supWaNum}?text=${encodeURIComponent(`Halo ${supSalesName}, saya ingin menanyakan produk ${window._currentScannerProductName || 'Produk'}`)}" 
+               target="_blank" rel="noopener noreferrer" 
+               onclick="event.stopPropagation()" 
+               style="display:inline-flex; align-items:center; gap:4px; background:rgba(37,211,102,0.12); color:#15803d; border:1px solid rgba(37,211,102,0.35); border-radius:12px; padding:2px 8px; font-size:10px; font-weight:700; text-decoration:none; margin-left:6px;" 
+               title="Hubungi ${escapeHtml(supSalesName)} via WhatsApp (${escapeHtml(sup.sales_rep_phone || sup.phone)})">
+                <i class="bi bi-whatsapp" style="font-size:10px; color:#25D366;"></i> ${escapeHtml(supSalesName)}
+            </a>
+        ` : '';
+
         let purchasesTableHtml = '';
         if (purchases.length === 0) {
             purchasesTableHtml = `<div class="text-center py-3 text-muted" style="font-size:11px;">Belum ada riwayat faktur pembelian dari supplier ini</div>`;
@@ -726,6 +750,37 @@ function renderSupplierGroupedSectionHtml(suppliers, page = 1) {
                 const subtotal = parseFloat(p.item_subtotal) || 0;
                 const qty = parseFloat(p.quantity) || 0;
 
+                const salesName = p.sales_rep_name || sup.sales_rep_name || 'Sales';
+                const rawPhone = p.sales_rep_phone || sup.sales_rep_phone || sup.phone || null;
+                const waNum = formatWaNumber(rawPhone);
+
+                let salesBtnHtml = '';
+                if (waNum) {
+                    const prodName = window._currentScannerProductName || 'Produk';
+                    const invCode = p.purchase_code || p.purchase_number || '-';
+                    const msg = `Halo ${salesName}, saya dari AlfarezMart ingin menanyakan produk ${prodName} (Faktur: ${invCode})`;
+                    const waUrl = `https://wa.me/${waNum}?text=${encodeURIComponent(msg)}`;
+
+                    salesBtnHtml = `
+                        <a href="${waUrl}" target="_blank" rel="noopener noreferrer" 
+                           onclick="event.stopPropagation()" 
+                           class="btn btn-sm" 
+                           style="background:#25D366; color:#ffffff; padding:3px 9px; font-size:10px; font-weight:700; border-radius:4px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; border:none; line-height:1.2; white-space:nowrap; box-shadow:0 1px 3px rgba(37,211,102,0.3);" 
+                           title="Hubungi ${escapeHtml(salesName)} via WhatsApp (${escapeHtml(rawPhone)})">
+                            <i class="bi bi-whatsapp" style="font-size:11px;"></i> ${escapeHtml(salesName)}
+                        </a>
+                    `;
+                } else {
+                    salesBtnHtml = `
+                        <button type="button" disabled 
+                                class="btn btn-sm" 
+                                style="background:var(--surface-3, #e2e8f0); color:var(--text-muted, #94a3b8); padding:3px 9px; font-size:10px; font-weight:600; border-radius:4px; border:none; opacity:0.6; cursor:not-allowed; line-height:1.2; white-space:nowrap;" 
+                                title="Nomor HP Sales tidak tersedia">
+                            <i class="bi bi-whatsapp" style="font-size:11px;"></i> Sales (-)
+                        </button>
+                    `;
+                }
+
                 return `
                     <tr style="border-bottom:1px solid var(--border-color); font-size:11px;">
                         <td style="padding:6px 8px; color:var(--text-muted); white-space:nowrap;">${pDate}</td>
@@ -733,13 +788,14 @@ function renderSupplierGroupedSectionHtml(suppliers, page = 1) {
                         <td style="padding:6px 8px; white-space:nowrap;">${qty} ${p.unit_name || 'Pcs'}</td>
                         <td style="padding:6px 8px; text-align:right; font-weight:700; white-space:nowrap;">${formatRupiah(itemBuy)}</td>
                         <td style="padding:6px 8px; text-align:right; font-weight:700; color:var(--success); white-space:nowrap;">${formatRupiah(subtotal)}</td>
+                        <td style="padding:6px 8px; text-align:center; white-space:nowrap;">${salesBtnHtml}</td>
                     </tr>
                 `;
             }).join('');
 
             purchasesTableHtml = `
-                <div style="max-height: 220px; overflow-x: auto; overflow-y: auto; max-width: 100%; width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-top:8px; -webkit-overflow-scrolling: touch;">
-                    <table style="width: 100%; min-width: 460px; font-size: 11px; border-collapse: collapse;">
+                <div style="max-height: 240px; overflow-x: auto; overflow-y: auto; max-width: 100%; width: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-top:8px; -webkit-overflow-scrolling: touch;">
+                    <table style="width: 100%; min-width: 560px; font-size: 11px; border-collapse: collapse;">
                         <thead style="background: var(--surface-2); position: sticky; top: 0; z-index: 2;">
                             <tr style="border-bottom: 1px solid var(--border-color); text-transform: uppercase; font-size: 9px; color: var(--text-muted);">
                                 <th style="padding:6px 8px; white-space:nowrap;">Tanggal</th>
@@ -747,6 +803,7 @@ function renderSupplierGroupedSectionHtml(suppliers, page = 1) {
                                 <th style="padding:6px 8px; white-space:nowrap;">Qty</th>
                                 <th style="padding:6px 8px; text-align:right; white-space:nowrap;">Harga Beli</th>
                                 <th style="padding:6px 8px; text-align:right; white-space:nowrap;">Total</th>
+                                <th style="padding:6px 8px; text-align:center; white-space:nowrap;">Hubungi Sales</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -763,7 +820,10 @@ function renderSupplierGroupedSectionHtml(suppliers, page = 1) {
                     <div class="d-flex align-items-center gap-2">
                         <i id="prod-sup-chevron-${globalIdx}" class="bi bi-chevron-right text-muted" style="font-size:11px; transition:transform 0.2s;"></i>
                         <div>
-                            <div class="fw-bold" style="font-size:12px; color:var(--text-primary);">${sup.supplier_name}</div>
+                            <div class="fw-bold" style="font-size:12px; color:var(--text-primary); display:flex; align-items:center; flex-wrap:wrap;">
+                                <span>${sup.supplier_name}</span>
+                                ${supWaBtnHtml}
+                            </div>
                             <div style="font-size:10px; color:var(--text-muted);">
                                 ${sup.address ? `<i class="bi bi-geo-alt me-1"></i>${sup.address} &middot; ` : ''}
                                 ${sup.purchase_count || purchases.length} Pembelian
@@ -815,13 +875,13 @@ function renderSupplierGroupedSectionHtml(suppliers, page = 1) {
     return cardsHtml + paginationHtml;
 }
 
-
 function renderProductScanResult(data, isOffline) {
     const resultDiv = document.getElementById('scanResult');
     const packagings = data.packagings || [];
     const prodName = data.name || data.full_name || 'Tanpa Nama';
     const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
 
+    window._currentScannerProductName = data.short_label || data.full_name || data.name || 'Produk';
     currentSupplierList = data.suppliers || [];
     currentSupplierPage = 1;
 
