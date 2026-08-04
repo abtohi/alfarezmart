@@ -699,6 +699,37 @@ function openPosScanner() {
 let _lastPosScanCode = '';
 let _lastPosScanTime = 0;
 
+function findMatchedLevelForBarcode(product, q) {
+    if (!product || !product.packagings || !Array.isArray(product.packagings) || product.packagings.length === 0) {
+        return 1;
+    }
+    if (!q) {
+        return product.packagings[0].level || 1;
+    }
+    const cleanQ = String(q).replace(/\s+/g, '').toLowerCase();
+    if (!cleanQ) return 1;
+
+    // 1. Direct packaging barcode match
+    const matchedPkg = product.packagings.find(pkg => {
+        if (!pkg.barcode) return false;
+        const b = String(pkg.barcode).replace(/\s+/g, '').toLowerCase();
+        return b === cleanQ || b === '0' + cleanQ || '0' + b === cleanQ || b === '00' + cleanQ || '00' + b === cleanQ;
+    });
+
+    if (matchedPkg && matchedPkg.level != null) {
+        return parseInt(matchedPkg.level, 10);
+    }
+
+    // 2. Fallback if findByBarcode attached level to root product object
+    if (product.level != null) {
+        return parseInt(product.level, 10);
+    }
+
+    // 3. Fallback to level 1 or first packaging level
+    const lvl1 = product.packagings.find(p => p.level == 1);
+    return lvl1 ? 1 : (parseInt(product.packagings[0].level, 10) || 1);
+}
+
 async function processBarcodeScan(q, inpEl, sugEl, fromScanner) {
     if (!q) return;
     q = q.trim();
@@ -734,7 +765,8 @@ async function processBarcodeScan(q, inpEl, sugEl, fromScanner) {
 
     if (result && result.id) {
         if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-        addProductToCart(result);
+        const matchedLevel = findMatchedLevelForBarcode(result, q);
+        addProductToCart(result, matchedLevel);
         // Input was already cleared before this async call; ensure clean state
         if (inpEl) inpEl.value = '';
         if (sugEl) sugEl.innerHTML = '';
@@ -752,7 +784,8 @@ async function processBarcodeScan(q, inpEl, sugEl, fromScanner) {
             result = await resp.json();
             if (result && result.id) {
                 if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                addProductToCart(result);
+                const matchedLevel = findMatchedLevelForBarcode(result, q);
+                addProductToCart(result, matchedLevel);
                 // Input was already cleared before this async call; ensure clean state
                 if (inpEl) inpEl.value = '';
                 if (sugEl) sugEl.innerHTML = '';
@@ -935,8 +968,10 @@ async function selectProduct(id) {
             showToast('Data produk tidak ditemukan', 'error');
             return;
         }
-        addProductToCart(data);
         const inp = document.getElementById('posSearch');
+        const qVal = inp ? inp.value.trim() : '';
+        const matchedLevel = findMatchedLevelForBarcode(data, qVal);
+        addProductToCart(data, matchedLevel);
         const sug = document.getElementById('posSuggestions');
         if (inp) inp.value = '';
         if (sug) sug.innerHTML = '';
@@ -946,14 +981,20 @@ async function selectProduct(id) {
     }
 }
 
-function addProductToCart(product) {
+function addProductToCart(product, preferredLevel = null) {
     if (!product.packagings || product.packagings.length === 0) {
         showToast('Produk belum punya data kemasan/harga', 'warning');
         return;
     }
 
-    const defaultLevel = 1;
-    const selectedPkg = product.packagings.find(p => p.level == defaultLevel) || product.packagings[0];
+    let selectedPkg = null;
+    if (preferredLevel != null) {
+        selectedPkg = product.packagings.find(p => p.level == preferredLevel);
+    }
+    if (!selectedPkg) {
+        const defaultLevel = 1;
+        selectedPkg = product.packagings.find(p => p.level == defaultLevel) || product.packagings[0];
+    }
     const printName = product.short_label || product.invoice_name || product.full_name;
 
     const existingIndex = cart.findIndex(i => i.product_id == product.id && i.level == selectedPkg.level && !i.use_custom_price);
