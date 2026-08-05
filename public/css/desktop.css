@@ -597,10 +597,158 @@
    ============================================ */
 
 @media (min-width: 1024px) {
-    /* POS page section padding bottom so cart items are never hidden behind floating dock */
+    /* POS page section padding bottom on desktop */
     .page-section[style*="padding-bottom:200px"] {
-        padding-bottom: 140px !important;
+        padding-bottom: 24px !important;
         max-width: 100% !important;
+    }
+
+    /* ── POS 2-Column Desktop Grid Layout ── */
+    .desktop-pos-layout {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 20px;
+        align-items: start;
+    }
+    .pos-left-panel {
+        min-width: 0;
+    }
+    .pos-right-panel {
+        position: sticky;
+        top: 72px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        max-height: calc(100vh - 90px);
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-color) transparent;
+    }
+    .pos-right-panel::-webkit-scrollbar { width: 4px; }
+    .pos-right-panel::-webkit-scrollbar-track { background: transparent; }
+    .pos-right-panel::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+
+    /* Desktop Sidebar Checkout Card Override */
+    .desktop-pos-layout .pos-checkout-bar {
+        position: static !important;
+        bottom: auto !important;
+        left: auto !important;
+        right: auto !important;
+        width: 100% !important;
+        max-width: none !important;
+        z-index: auto !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        transform: none !important;
+        background: transparent !important;
+        pointer-events: auto !important;
+    }
+
+    .desktop-pos-layout .pos-checkout-bar__inner {
+        pointer-events: auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+        background: var(--surface-1) !important;
+        border: 1px solid var(--border-color) !important;
+        border-radius: var(--radius-lg) !important;
+        padding: 20px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12) !important;
+        margin: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        color: var(--text-primary) !important;
+        gap: 16px !important;
+    }
+
+    .desktop-pos-layout .pos-checkout-bar__summary {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+        width: 100% !important;
+    }
+
+    .desktop-pos-layout .pos-checkout-bar__summary-label {
+        font-size: 0.75rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.8px !important;
+        color: var(--text-muted) !important;
+        font-weight: 700 !important;
+    }
+
+    .desktop-pos-layout .pos-checkout-bar__total {
+        font-size: 2.2rem !important;
+        font-weight: 800 !important;
+        color: var(--primary) !important;
+        letter-spacing: -0.5px !important;
+        line-height: 1.1 !important;
+    }
+
+    .desktop-pos-layout #cartProfit {
+        font-size: 0.8rem !important;
+        color: var(--success) !important;
+        font-weight: 600 !important;
+        background: rgba(46, 196, 182, 0.12) !important;
+        padding: 4px 10px !important;
+        border-radius: 20px !important;
+        display: inline-block !important;
+        width: fit-content !important;
+    }
+
+    .desktop-pos-layout .pos-checkout-bar__summary > div[style*="font-size:var(--font-size-xs)"] {
+        font-size: 0.85rem !important;
+        color: var(--text-secondary) !important;
+        background: var(--surface-2) !important;
+        padding: 6px 14px !important;
+        border-radius: 20px !important;
+        font-weight: 600 !important;
+        border: 1px solid var(--border-color) !important;
+        width: fit-content !important;
+    }
+
+    .desktop-pos-layout .pos-checkout-bar__actions {
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        width: 100% !important;
+        margin-top: 6px !important;
+    }
+
+    .desktop-pos-layout .pos-checkout-bar__btn-draft {
+        flex: 1 !important;
+        min-width: 0 !important;
+        height: 48px !important;
+        padding: 10px 14px !important;
+        font-size: 0.9rem !important;
+        font-weight: 600 !important;
+        border-radius: var(--radius-md) !important;
+        background: var(--surface-2) !important;
+        border: 1px solid var(--border-color) !important;
+        color: var(--text-primary) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+    }
+
+    .desktop-pos-layout .pos-checkout-bar__btn-pay {
+        flex: 2 !important;
+        min-width: 0 !important;
+        height: 48px !important;
+        padding: 12px 20px !important;
+        font-size: 1.05rem !important;
+        font-weight: 800 !important;
+        border-radius: var(--radius-md) !important;
+        background: linear-gradient(135deg, var(--primary) 0%, #d62828 100%) !important;
+        border: none !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 16px rgba(230, 57, 70, 0.4) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
     }
 
     /* Ultra-Modern Floating POS Checkout Dock (Theme Adaptive) */

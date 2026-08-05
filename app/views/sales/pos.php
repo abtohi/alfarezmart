@@ -27,135 +27,163 @@
             cursor: pointer;
             white-space: nowrap;
         }
-        .pos-segmented button.active {
-            background: var(--primary-bg);
-            color: var(--primary);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        /* ──── Mobile Layout Ordering (<992px) ──── */
+        @media (max-width: 991.98px) {
+            .desktop-pos-layout {
+                display: flex;
+                flex-direction: column;
+            }
+            .pos-left-panel,
+            .pos-right-panel {
+                display: contents;
+            }
+            .pos-header-toolbar { order: 1; }
+            #mixDefaultPriceBox { order: 2; }
+            #posChainBanner    { order: 3; }
+            .pos-customer-block { order: 4; }
+            .pos-search-block   { order: 5; }
+            #cartItems          { order: 6; }
         }
     </style>
 
-    <!-- POS Header: Action Buttons & Sale Mode -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-        <!-- Left: Actions -->
-        <div style="display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap;">
-            <button type="button" class="btn-outline-custom" onclick="clearCartConfirm()" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--danger-bg); border:1px solid rgba(230,57,70,0.3); color:var(--danger); display:flex; align-items:center; gap:4px;" title="Kosongkan Keranjang"><i class="bi bi-trash3"></i> <span class="d-none d-sm-inline">Batal</span></button>
-            <button class="btn-outline-custom" onclick="window.location.href=`${BASE_URL}sales`" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:4px;" title="Lihat Riwayat Penjualan"><i class="bi bi-clock-history"></i> <span class="d-none d-sm-inline">Riwayat</span></button>
-            <button class="btn-outline-custom" onclick="openDrafts()" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:4px;"><i class="bi bi-journal-bookmark"></i> <span class="d-none d-sm-inline">Draft</span></button>
-        </div>
-        
-        <!-- Right: Sale Mode Tabs -->
-        <div class="pos-segmented" style="flex-shrink:0;">
-            <button id="btnRetail" class="active" onclick="setSaleMode('retail')">Ecer</button>
-            <button id="btnWholesale" onclick="setSaleMode('wholesale')">Grosir</button>
-            <button id="btnMix" onclick="setSaleMode('mix')">Mix</button>
-        </div>
-    </div>
-    
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
-    <!-- Mix Default Price Selector (Slim Bar) -->
-    <div id="mixDefaultPriceBox" style="display:none; margin-bottom:8px; background:var(--primary-bg); border-radius:var(--radius-sm); padding:6px 10px; align-items:center; justify-content:flex-start; flex-wrap:wrap; gap:10px; border:1px solid rgba(230,57,70,0.2);">
-        <div style="display:flex; align-items:center; gap:6px;">
-            <i class="bi bi-shuffle" style="color:var(--primary); font-size:0.9rem;"></i>
-            <span style="font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase;">Default Mix:</span>
-        </div>
-        <div class="pos-segmented">
-            <button id="btnMixDefaultRetail" class="active" onclick="setMixDefault('retail')">Ecer</button>
-            <button id="btnMixDefaultWholesale" onclick="setMixDefault('wholesale')">Grosir</button>
-        </div>
-    </div>
+    <!-- ═══ Desktop 2-Column POS Layout / Mobile Stack ═══ -->
+    <div class="desktop-pos-layout">
 
-    <!-- Banner Indicator Struk / Invoice Lanjutan -->
-    <div id="posChainBanner" style="display:none; margin-bottom:12px; background:linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border-radius:var(--radius-md); padding:10px 14px; border:1px solid rgba(129,140,248,0.4); color:white; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+        <!-- ── LEFT PANEL: Toolbar · Customer · Search · Cart ── -->
+        <div class="pos-left-panel">
 
-    <!-- Customer Selector -->
-    <div style="margin-bottom:12px; position:relative;">
-        <div id="customerSelectorBox"
-             onclick="toggleCustomerDropdown()"
-             style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:all 0.2s; user-select:none;"
-             onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor=document.getElementById('customerDropdown').style.display==='none'?'var(--border-color)':'var(--primary)'">
-            <div style="width:32px;height:32px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="bi bi-person" id="customerSelectorIcon" style="color:var(--primary);font-size:1rem;"></i>
-            </div>
-            <div style="flex:1;min-width:0;">
-                <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:1px;">Pelanggan</div>
-                <div id="customerSelectorLabel" style="font-size:var(--font-size-sm);font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Umum</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-                <button type="button" id="btnClearCustomer" onclick="event.stopPropagation();clearCustomer()" title="Hapus pilihan" style="display:none;background:var(--surface-2);border:1px solid var(--border-color);border-radius:50%;width:24px;height:24px;padding:0;cursor:pointer;color:var(--text-muted);font-size:0.75rem;line-height:1;display:flex;align-items:center;justify-content:center;">
-                    <i class="bi bi-x"></i>
-                </button>
-            </div>
-        </div>
-        <!-- Customer Dropdown Panel -->
-        <div id="customerDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:200;background:var(--surface-1);border:1px solid var(--primary);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;">
-            <div style="padding:10px 12px;border-bottom:1px solid var(--border-color);">
-                <div style="display:flex;align-items:center;gap:8px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:0 10px;">
-                    <i class="bi bi-search" style="color:var(--text-muted);font-size:0.9rem;"></i>
-                    <input type="text" id="customerSearchInput"
-                           placeholder="Ketik nama atau nomor HP..."
-                           autocomplete="off" autocorrect="off" spellcheck="false"
-                           style="flex:1;border:none;background:transparent;padding:10px 4px;color:var(--text-primary);font-size:16px;outline:none;font-family:var(--font-family);"
-                           oninput="onCustomerSearch(this.value)">
-                    <i class="bi bi-x-circle" style="color:var(--text-muted);font-size:0.9rem;cursor:pointer;" onclick="document.getElementById('customerSearchInput').value='';onCustomerSearch('');"></i>
+            <!-- POS Header: Action Buttons & Sale Mode -->
+            <div class="pos-header-toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+                <!-- Left: Actions -->
+                <div style="display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap;">
+                    <button type="button" class="btn-outline-custom" onclick="clearCartConfirm()" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--danger-bg); border:1px solid rgba(230,57,70,0.3); color:var(--danger); display:flex; align-items:center; gap:4px;" title="Kosongkan Keranjang"><i class="bi bi-trash3"></i> <span class="d-none d-sm-inline">Batal</span></button>
+                    <button class="btn-outline-custom" onclick="window.location.href=`${BASE_URL}sales`" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:4px;" title="Lihat Riwayat Penjualan"><i class="bi bi-clock-history"></i> <span class="d-none d-sm-inline">Riwayat</span></button>
+                    <button class="btn-outline-custom" onclick="openDrafts()" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:4px;"><i class="bi bi-journal-bookmark"></i> <span class="d-none d-sm-inline">Draft</span></button>
+                </div>
+                
+                <!-- Right: Sale Mode Tabs -->
+                <div class="pos-segmented" style="flex-shrink:0;">
+                    <button id="btnRetail" class="active" onclick="setSaleMode('retail')">Ecer</button>
+                    <button id="btnWholesale" onclick="setSaleMode('wholesale')">Grosir</button>
+                    <button id="btnMix" onclick="setSaleMode('mix')">Mix</button>
                 </div>
             </div>
-            <div id="customerResults" style="max-height:220px;overflow-y:auto;padding:6px 0;">
-                <!-- populated by JS -->
-            </div>
-        </div>
-    </div>
 
-    <!-- Search Product -->
-    <div style="background:var(--surface-1); border-radius:var(--radius-md); padding:12px; margin-bottom:16px; border:1px solid var(--border-color);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <label style="font-size:var(--font-size-xs); font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin:0;">Scan/Cari Produk</label>
-            <button type="button" class="btn-outline-custom" onclick="openCustomProductModal()" style="padding:4px 10px; border-radius:6px; font-size:11px; display:inline-flex; align-items:center; gap:4px; border:1px solid var(--border-color); background:var(--surface-2);">
-                <i class="bi bi-plus-circle"></i> + Barang Custom
-            </button>
-        </div>
-        <div class="search-input-wrapper" style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0 12px; display:flex; align-items:center; gap:8px;">
-            <i class="bi bi-upc-scan" style="color:var(--primary); font-size:1.2rem; cursor:pointer;" onclick="openPosScanner()" title="Scan Barcode Kamera"></i>
-            <input type="text" id="posSearch" placeholder="Scan barcode atau ketik nama produk..." 
-                   style="flex:1;border:none;background:transparent;padding:12px 8px;color:var(--text-primary);font-size:16px;outline:none;font-family:var(--font-family);" autocomplete="off" autofocus>
-            <i class="bi bi-search" style="color:var(--text-muted); font-size:1rem;"></i>
-        </div>
-        <div id="posSuggestions" style="margin-top:8px;"></div>
-    </div>
-
-    <!-- Cart -->
-    <div id="cartItems">
-        <div class="empty-state" id="emptyCartState" style="padding:48px 24px;">
-            <i class="bi bi-basket2" style="font-size:3rem; opacity:0.4; color:var(--text-muted);"></i>
-            <h3 style="margin-top:16px; font-size:var(--font-size-md); color:var(--text-primary);">Keranjang Kosong</h3>
-            <p style="font-size:var(--font-size-sm); color:var(--text-muted); margin-top:8px;">Scan atau ketik nama produk untuk memulai</p>
-        </div>
-    </div>
-
-    <!-- Floating Checkout Bar (lebar = aplikasi, max 480px) -->
-    <div class="pos-checkout-bar" id="posCheckoutBar">
-        <div class="pos-checkout-bar__inner">
-            <div class="pos-checkout-bar__summary">
-                <div style="display:flex;flex-direction:column;gap:4px;">
-                    <span class="pos-checkout-bar__summary-label">Total Belanja</span>
-                    <span id="cartTotal" class="pos-checkout-bar__total">Rp0</span>
-                    <span id="cartProfit" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;"></span>
+            <!-- Customer Selector -->
+            <div class="pos-customer-block" style="margin-bottom:12px; position:relative;">
+                <div id="customerSelectorBox"
+                     onclick="toggleCustomerDropdown()"
+                     style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:all 0.2s; user-select:none;"
+                     onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor=document.getElementById('customerDropdown').style.display==='none'?'var(--border-color)':'var(--primary)'">
+                    <div style="width:32px;height:32px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="bi bi-person" id="customerSelectorIcon" style="color:var(--primary);font-size:1rem;"></i>
+                    </div>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:1px;">Pelanggan</div>
+                        <div id="customerSelectorLabel" style="font-size:var(--font-size-sm);font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Umum</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                        <button type="button" id="btnClearCustomer" onclick="event.stopPropagation();clearCustomer()" title="Hapus pilihan" style="display:none;background:var(--surface-2);border:1px solid var(--border-color);border-radius:50%;width:24px;height:24px;padding:0;cursor:pointer;color:var(--text-muted);font-size:0.75rem;line-height:1;display:flex;align-items:center;justify-content:center;">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
                 </div>
-                <div style="font-size:var(--font-size-xs);color:var(--text-muted);">
-                    <span id="cartCount">0</span> item
+                <!-- Customer Dropdown Panel -->
+                <div id="customerDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:200;background:var(--surface-1);border:1px solid var(--primary);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;">
+                    <div style="padding:10px 12px;border-bottom:1px solid var(--border-color);">
+                        <div style="display:flex;align-items:center;gap:8px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:0 10px;">
+                            <i class="bi bi-search" style="color:var(--text-muted);font-size:0.9rem;"></i>
+                            <input type="text" id="customerSearchInput"
+                                   placeholder="Ketik nama atau nomor HP..."
+                                   autocomplete="off" autocorrect="off" spellcheck="false"
+                                   style="flex:1;border:none;background:transparent;padding:10px 4px;color:var(--text-primary);font-size:16px;outline:none;font-family:var(--font-family);"
+                                   oninput="onCustomerSearch(this.value)">
+                            <i class="bi bi-x-circle" style="color:var(--text-muted);font-size:0.9rem;cursor:pointer;" onclick="document.getElementById('customerSearchInput').value='';onCustomerSearch('');"></i>
+                        </div>
+                    </div>
+                    <div id="customerResults" style="max-height:220px;overflow-y:auto;padding:6px 0;">
+                        <!-- populated by JS -->
+                    </div>
                 </div>
             </div>
-            <div class="pos-checkout-bar__actions">
-                <button id="btnSaveDraft" type="button" class="btn-outline-custom pos-checkout-bar__btn-draft" onclick="saveDraft()" disabled>
-                    <i class="bi bi-save"></i> Draft
-                </button>
-                <button id="btnCheckout" type="button" class="btn-primary-custom pos-checkout-bar__btn-pay" onclick="checkout()" disabled>
-                    <i class="bi bi-check-circle"></i> Bayar
-                </button>
+
+            <!-- Search Product -->
+            <div class="pos-search-block" style="background:var(--surface-1); border-radius:var(--radius-md); padding:12px; margin-bottom:16px; border:1px solid var(--border-color);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                    <label style="font-size:var(--font-size-xs); font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin:0;">Scan/Cari Produk</label>
+                    <button type="button" class="btn-outline-custom" onclick="openCustomProductModal()" style="padding:4px 10px; border-radius:6px; font-size:11px; display:inline-flex; align-items:center; gap:4px; border:1px solid var(--border-color); background:var(--surface-2);">
+                        <i class="bi bi-plus-circle"></i> + Barang Custom
+                    </button>
+                </div>
+                <div class="search-input-wrapper" style="background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:0 12px; display:flex; align-items:center; gap:8px;">
+                    <i class="bi bi-upc-scan" style="color:var(--primary); font-size:1.2rem; cursor:pointer;" onclick="openPosScanner()" title="Scan Barcode Kamera"></i>
+                    <input type="text" id="posSearch" placeholder="Scan barcode atau ketik nama produk..." 
+                           style="flex:1;border:none;background:transparent;padding:12px 8px;color:var(--text-primary);font-size:16px;outline:none;font-family:var(--font-family);" autocomplete="off" autofocus>
+                    <i class="bi bi-search" style="color:var(--text-muted); font-size:1rem;"></i>
+                </div>
+                <div id="posSuggestions" style="margin-top:8px;"></div>
             </div>
-        </div>
-    </div>
-</div>
+
+            <!-- Cart -->
+            <div id="cartItems">
+                <div class="empty-state" id="emptyCartState" style="padding:48px 24px;">
+                    <i class="bi bi-basket2" style="font-size:3rem; opacity:0.4; color:var(--text-muted);"></i>
+                    <h3 style="margin-top:16px; font-size:var(--font-size-md); color:var(--text-primary);">Keranjang Kosong</h3>
+                    <p style="font-size:var(--font-size-sm); color:var(--text-muted); margin-top:8px;">Scan atau ketik nama produk untuk memulai</p>
+                </div>
+            </div>
+
+        </div><!-- /pos-left-panel -->
+
+        <!-- ── RIGHT PANEL: Mix Box · Chain Banner · Checkout Card ── -->
+        <div class="pos-right-panel">
+
+            <!-- Mix Default Price Selector (Slim Bar) -->
+            <div id="mixDefaultPriceBox" style="display:none; margin-bottom:8px; background:var(--primary-bg); border-radius:var(--radius-sm); padding:6px 10px; align-items:center; justify-content:flex-start; flex-wrap:wrap; gap:10px; border:1px solid rgba(230,57,70,0.2);">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <i class="bi bi-shuffle" style="color:var(--primary); font-size:0.9rem;"></i>
+                    <span style="font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase;">Default Mix:</span>
+                </div>
+                <div class="pos-segmented">
+                    <button id="btnMixDefaultRetail" class="active" onclick="setMixDefault('retail')">Ecer</button>
+                    <button id="btnMixDefaultWholesale" onclick="setMixDefault('wholesale')">Grosir</button>
+                </div>
+            </div>
+
+            <!-- Banner Indicator Struk / Invoice Lanjutan -->
+            <div id="posChainBanner" style="display:none; margin-bottom:12px; background:linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border-radius:var(--radius-md); padding:10px 14px; border:1px solid rgba(129,140,248,0.4); color:white; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
+
+            <!-- Checkout Card (Floating on mobile, Sticky Sidebar Panel on desktop) -->
+            <div class="pos-checkout-bar" id="posCheckoutBar">
+                <div class="pos-checkout-bar__inner">
+                    <div class="pos-checkout-bar__summary">
+                        <div style="display:flex;flex-direction:column;gap:4px;">
+                            <span class="pos-checkout-bar__summary-label">Total Belanja</span>
+                            <span id="cartTotal" class="pos-checkout-bar__total">Rp0</span>
+                            <span id="cartProfit" style="font-size:0.75rem; color:var(--text-muted); font-weight:600;"></span>
+                        </div>
+                        <div style="font-size:var(--font-size-xs);color:var(--text-muted);">
+                            <span id="cartCount">0</span> item
+                        </div>
+                    </div>
+                    <div class="pos-checkout-bar__actions">
+                        <button id="btnSaveDraft" type="button" class="btn-outline-custom pos-checkout-bar__btn-draft" onclick="saveDraft()" disabled>
+                            <i class="bi bi-save"></i> Draft
+                        </button>
+                        <button id="btnCheckout" type="button" class="btn-primary-custom pos-checkout-bar__btn-pay" onclick="checkout()" disabled>
+                            <i class="bi bi-check-circle"></i> Bayar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /pos-right-panel -->
+
+    </div><!-- /desktop-pos-layout -->
+</div><!-- /page-section -->
+
 
 <script>
 const STORE_SETTINGS = <?= json_encode($storeSettings ?? [], JSON_UNESCAPED_UNICODE) ?>;
