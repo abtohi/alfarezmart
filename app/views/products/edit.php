@@ -1401,129 +1401,110 @@ async function submitProduct(e) {
     let _shortLabelSafe = document.getElementById('manualLabel').value.trim();
     if (!_shortLabelSafe) _shortLabelSafe = _fullNameSafe.substring(0, 35);
 
-    if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+
+    // ── Build product data payload ───────────────────────────────────────────
+    const productData = {
+        csrf_token: csrfTokenValue,
+        full_name: _fullNameSafe,
+        short_label: _shortLabelSafe,
+        invoice_name: _shortLabelSafe,
+        is_custom_label: document.getElementById('isCustomLabel').checked ? 1 : 0,
+        is_available: parseInt(document.getElementById('toggleIsAvailableEdit').value) || 0,
+        product_type: isMulti ? (document.querySelector('[name="product_type"]')?.value?.trim() || '') : '',
+        variant: isMulti ? (document.querySelector('[name="variant"]')?.value?.trim() || '') : '',
+        brand_id: isMulti ? brandSB.getValue() : '',
+        category_id: categorySB.getValue(),
+        weight_value: document.querySelector('[name="weight_value"]').value,
+        weight_unit: weightUnitSB.getValue(),
+        supplier_product_code: document.getElementById('supplierProductCode').value || '',
+        supplier_invoice_name: collectInvoiceNames(),
+    };
+
+    // ── ALWAYS optimistically update local DB first ──────────────────────────
+    let savedLocally = false;
+    if (typeof OfflineDB !== 'undefined') {
         try {
-            const productData = {
-                csrf_token: csrfTokenValue,
-                full_name: _fullNameSafe,
-                short_label: _shortLabelSafe,
-                invoice_name: _shortLabelSafe,
-                is_custom_label: document.getElementById('isCustomLabel').checked ? 1 : 0,
-                is_available: parseInt(document.getElementById('toggleIsAvailableEdit').value) || 0,
-                product_type: isMulti ? (document.querySelector('[name="product_type"]')?.value?.trim() || '') : '',
-                variant: isMulti ? (document.querySelector('[name="variant"]')?.value?.trim() || '') : '',
-                brand_id: isMulti ? brandSB.getValue() : '',
-                category_id: categorySB.getValue(),
-                weight_value: document.querySelector('[name="weight_value"]').value,
-                weight_unit: weightUnitSB.getValue(),
-                supplier_product_code: document.getElementById('supplierProductCode').value || '',
-                supplier_invoice_name: collectInvoiceNames(),
-            };
-
-            await OfflineDB.addPendingChange(`${BASE_URL}api/products/update/${productId}`, 'POST', productData);
-
-            // Optimistic update in Dexie: update local record immediately
-            try {
-                const localProduct = await OfflineDB.getProductById(productId);
-                if (localProduct) {
-                    localProduct.full_name = productData.full_name;
-                    localProduct.short_label = productData.short_label;
-                    localProduct.brand_name = brandSB ? brandSB.getLabel() : localProduct.brand_name;
-                    localProduct.category_name = categorySB ? categorySB.getLabel() : localProduct.category_name;
-                    localProduct.is_available = parseInt(productData.is_available) || 0;
-                    localProduct.is_pending_update = true;
-                    await OfflineDB.saveProduct(localProduct);
-                }
-            } catch (dexieErr) {
-                console.warn('Dexie optimistic update failed:', dexieErr);
+            const localProduct = await OfflineDB.getProductById(productId);
+            if (localProduct) {
+                localProduct.full_name = productData.full_name;
+                localProduct.short_label = productData.short_label;
+                localProduct.invoice_name = productData.invoice_name;
+                localProduct.brand_name = brandSB ? brandSB.getLabel() : localProduct.brand_name;
+                localProduct.category_name = categorySB ? categorySB.getLabel() : localProduct.category_name;
+                localProduct.is_available = parseInt(productData.is_available) || 0;
+                localProduct.is_pending_update = true;
+                await OfflineDB.saveProduct(localProduct);
+                savedLocally = true;
             }
-
-            for (const pId of deletedPkgIds) {
-                await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pId}/delete`, 'POST', { csrf_token: csrfTokenValue });
-            }
-
-            for (const div of pkgDivs) {
-                let pkgId = div.getAttribute('data-pkg-id');
-                const unitSB = div.querySelector('.unit-searchbox-instance')?._searchbox;
-                const pkgPayload = {
-                    csrf_token: csrfTokenValue,
-                    unit_id: unitSB ? unitSB.getValue() : '',
-                    contained_qty: div.querySelector('.contained-qty')?.value || 1,
-                    buy_price: div.querySelector('.buy-price')?.value || 0,
-                    sell_price_retail: div.querySelector('.retail-price')?.value || 0,
-                    sell_price_wholesale: div.querySelector('.wholesale-price')?.value || 0,
-                    barcode: div.querySelector('.barcode-field')?.value || '',
-                    ppn_pct: div.querySelector('.ppn-input')?.value || 0,
-                    discount_mode: div.querySelector('.discount-mode')?.value || 'rp',
-                    discount_value: div.querySelector('.discount-value')?.value || 0
-                };
-
-                if (pkgId) {
-                    await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pkgId}`, 'POST', pkgPayload);
-                    const tiers = collectQtyTiers(div);
-                    if (tiers.length > 0) {
-                        await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pkgId}/qty-prices`, 'POST', { csrf_token: csrfTokenValue, tiers });
-                    }
-                } else {
-                    await OfflineDB.addPendingChange(`${BASE_URL}api/products/${productId}/packaging/add`, 'POST', pkgPayload);
-                    // Tier prices for NEW packagings won't be saved offline due to missing ID
-                }
-            }
-
-            showToast('Tersimpan offline. Akan disinkronkan saat online.', 'info');
-            if (typeof updateSyncBadge === 'function') updateSyncBadge();
-            setTimeout(() => window.location.href = `${BASE_URL}products/${productId}`, 1500);
-        } catch (err) {
-            showToast('Gagal menyimpan offline: ' + err.message, 'error');
-            btn.innerHTML = prevText;
-            btn.disabled = false;
+        } catch (dexieErr) {
+            console.warn('Dexie optimistic update failed:', dexieErr);
         }
+    }
+
+    // ── If offline, queue pending changes and done ───────────────────────────
+    if (!navigator.onLine) {
+        if (typeof OfflineDB !== 'undefined') {
+            try {
+                await OfflineDB.addPendingChange(`${BASE_URL}api/products/update/${productId}`, 'POST', productData);
+                for (const pId of deletedPkgIds) {
+                    await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pId}/delete`, 'POST', { csrf_token: csrfTokenValue });
+                }
+                for (const div of pkgDivs) {
+                    let pkgId = div.getAttribute('data-pkg-id');
+                    const unitSB = div.querySelector('.unit-searchbox-instance')?._searchbox;
+                    const pkgPayload = {
+                        csrf_token: csrfTokenValue,
+                        unit_id: unitSB ? unitSB.getValue() : '',
+                        contained_qty: div.querySelector('.contained-qty')?.value || 1,
+                        buy_price: div.querySelector('.buy-price')?.value || 0,
+                        sell_price_retail: div.querySelector('.retail-price')?.value || 0,
+                        sell_price_wholesale: div.querySelector('.wholesale-price')?.value || 0,
+                        barcode: div.querySelector('.barcode-field')?.value || '',
+                        ppn_pct: div.querySelector('.ppn-input')?.value || 0,
+                        discount_mode: div.querySelector('.discount-mode')?.value || 'rp',
+                        discount_value: div.querySelector('.discount-value')?.value || 0
+                    };
+                    if (pkgId) {
+                        await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pkgId}`, 'POST', pkgPayload);
+                        const tiers = collectQtyTiers(div);
+                        if (tiers.length > 0) {
+                            await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pkgId}/qty-prices`, 'POST', { csrf_token: csrfTokenValue, tiers });
+                        }
+                    } else {
+                        await OfflineDB.addPendingChange(`${BASE_URL}api/products/${productId}/packaging/add`, 'POST', pkgPayload);
+                    }
+                }
+                if (typeof updateSyncBadge === 'function') updateSyncBadge();
+            } catch (queueErr) {
+                console.warn('Gagal antri offline changes:', queueErr);
+            }
+        }
+        showToast('Offline. Perubahan disimpan di perangkat & akan sinkron saat online.', 'info');
+        setTimeout(() => window.location.href = `${BASE_URL}products/${productId}`, 1500);
         return;
     }
 
+    // ── Online: try server API ────────────────────────────────────────────────
     try {
-        const productData = {
-            csrf_token: csrfTokenValue,
-            full_name: _fullNameSafe,
-            short_label: _shortLabelSafe,
-            invoice_name: _shortLabelSafe,
-            is_custom_label: document.getElementById('isCustomLabel').checked ? 1 : 0,
-            is_available: parseInt(document.getElementById('toggleIsAvailableEdit').value) || 0,
-            product_type: isMulti ? (document.querySelector('[name="product_type"]')?.value?.trim() || '') : '',
-            variant: isMulti ? (document.querySelector('[name="variant"]')?.value?.trim() || '') : '',
-            brand_id: isMulti ? brandSB.getValue() : '',
-            category_id: categorySB.getValue(),
-            weight_value: document.querySelector('[name="weight_value"]').value,
-            weight_unit: weightUnitSB.getValue(),
-            supplier_product_code: document.getElementById('supplierProductCode').value || '',
-            supplier_invoice_name: collectInvoiceNames(),
-        };
-
         const updateRes = await api(`${BASE_URL}api/products/update/${productId}`, 'POST', productData);
         if (!updateRes.success) {
             throw new Error(updateRes.error || 'Gagal mengupdate info produk');
         }
 
+        // Clear pending flag on success
+        if (savedLocally && typeof OfflineDB !== 'undefined') {
+            try {
+                const localProduct = await OfflineDB.getProductById(productId);
+                if (localProduct) {
+                    localProduct.is_pending_update = false;
+                    await OfflineDB.saveProduct(localProduct);
+                }
+            } catch (e) { console.warn('Gagal clear is_pending_update:', e); }
+        }
+
         // 2. Delete removed packagings
         for (const pId of deletedPkgIds) {
             await api(`${BASE_URL}api/products/packaging/${pId}/delete`, 'POST', { csrf_token: csrfTokenValue });
-        }
-
-        // Optimistic update local cache so search doesn't show old data before background sync finishes
-        try {
-            if (typeof OfflineDB !== 'undefined') {
-                const localProduct = await OfflineDB.getProductById(productId);
-                if (localProduct) {
-                    localProduct.full_name = productData.full_name;
-                    localProduct.short_label = productData.short_label;
-                    localProduct.brand_name = brandSB ? brandSB.getLabel() : localProduct.brand_name;
-                    localProduct.category_name = categorySB ? categorySB.getLabel() : localProduct.category_name;
-                    localProduct.is_available = parseInt(productData.is_available) || 0;
-                    await OfflineDB.saveProduct(localProduct);
-                }
-            }
-        } catch (dexieErr) {
-            console.warn('Dexie cache update failed:', dexieErr);
         }
 
         // 3. Upsert packaging levels
@@ -1581,14 +1562,13 @@ async function submitProduct(e) {
                     pkgId = String(addRes.id);
                     div.setAttribute('data-pkg-id', pkgId);
                 }
-                
+
                 // Save special price qty tiers
                 await saveQtyTiersForPackaging(pkgId, div);
             } catch (pkgErr) {
                 throw new Error(`❌ Error pada kemasan: ${pkgErr.message}`);
             }
         }
-
 
         // Handle Photo Upload
         const photoBase64 = document.getElementById('photoBase64')?.value;
@@ -1609,11 +1589,30 @@ async function submitProduct(e) {
         setTimeout(() => window.location.href = `${BASE_URL}products`, 1000);
 
     } catch (err) {
-        showToast('Error: ' + err.message, 'error');
-        btn.innerHTML = prevText;
-        btn.disabled = false;
+        // Network error / timeout on weak signal
+        console.warn('API edit produk gagal, menyimpan ke antrian offline:', err);
+        if (typeof OfflineDB !== 'undefined') {
+            try {
+                await OfflineDB.addPendingChange(`${BASE_URL}api/products/update/${productId}`, 'POST', productData);
+                for (const pId of deletedPkgIds) {
+                    await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pId}/delete`, 'POST', { csrf_token: csrfTokenValue });
+                }
+                if (typeof updateSyncBadge === 'function') updateSyncBadge();
+                showToast('Sinyal lemah. Perubahan disimpan di perangkat & akan sinkron saat koneksi stabil.', 'warning', 4000);
+                setTimeout(() => window.location.href = `${BASE_URL}products/${productId}`, 1800);
+            } catch (queueErr) {
+                showToast('Perubahan tersimpan lokal. Gagal antri sinkron: ' + queueErr.message, 'warning');
+                btn.innerHTML = prevText;
+                btn.disabled = false;
+            }
+        } else {
+            showToast('Error: ' + err.message, 'error');
+            btn.innerHTML = prevText;
+            btn.disabled = false;
+        }
     }
 }
+
 
 function toggleSupplierInfo() {
     const panel = document.getElementById('supplierInfoPanel');

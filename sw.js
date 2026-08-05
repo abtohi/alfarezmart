@@ -2,7 +2,7 @@
  * AlfarezMart PWA - Service Worker
  * Cache Strategy: Cache First for assets & images, Network First with 600ms Fast Timeout for API & Navigation
  */
-const CACHE_NAME = 'alfarezmart-cache-v18.7';
+const CACHE_NAME = 'alfarezmart-cache-v18.8';
 const DYNAMIC_CACHE = 'alfarezmart-dynamic-v18.6';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
@@ -187,25 +187,31 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // ── 5. HTML/Navigation Requests: Network First with 600ms Fast Timeout ──
+    // ── 5. HTML/Navigation Requests: Network First ──
+    const hasSearchParams = url.search && url.search.length > 1;
+
     event.respondWith(
         new Promise((resolve) => {
             let isResolved = false;
-            // 150ms Fast Timeout: If network RTT > 150ms (weak signal), serve cached page INSTANTLY!
-            const timeoutId = setTimeout(() => {
-                if (!isResolved) {
-                    caches.match(event.request, { ignoreSearch: true }).then(cached => {
-                        if (cached && !isResolved) {
-                            isResolved = true;
-                            resolve(cached);
-                        }
-                    });
-                }
-            }, 150); // 150ms fast fallback for instant weak signal page switching
+            let timeoutId = null;
+
+            // Only use fast timeout for static/unfiltered page navigation (without search parameters)
+            if (!hasSearchParams) {
+                timeoutId = setTimeout(() => {
+                    if (!isResolved) {
+                        caches.match(event.request, { ignoreSearch: true }).then(cached => {
+                            if (cached && !isResolved) {
+                                isResolved = true;
+                                resolve(cached);
+                            }
+                        });
+                    }
+                }, 150);
+            }
 
             fetch(event.request, { cache: 'no-cache' })
                 .then(response => {
-                    clearTimeout(timeoutId);
+                    if (timeoutId) clearTimeout(timeoutId);
                     if (response && response.status === 200 && response.type !== 'opaque' && event.request.url.startsWith('http')) {
                         const clone = response.clone();
                         caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone).catch(e => console.warn('Cache error:', e)));
@@ -216,13 +222,17 @@ self.addEventListener('fetch', event => {
                     }
                 })
                 .catch(() => {
-                    clearTimeout(timeoutId);
+                    if (timeoutId) clearTimeout(timeoutId);
                     if (!isResolved) {
                         isResolved = true;
-                        caches.match(event.request, { ignoreSearch: true }).then(cached => {
-                            if (cached) {
-                                resolve(cached);
+                        caches.match(event.request).then(exactCached => {
+                            if (exactCached) {
+                                resolve(exactCached);
                             } else {
+                                caches.match(event.request, { ignoreSearch: true }).then(cached => {
+                                    if (cached) {
+                                        resolve(cached);
+                                    } else {
                                 const urlObj = new URL(event.request.url);
                                 const fallbackToBase = () => {
                                     caches.match(BASE_URL).then(baseCached => {
@@ -247,10 +257,11 @@ self.addEventListener('fetch', event => {
                                         else fallbackToBase();
                                     });
                                 }
-                            }
-                        });
-                    }
-                });
+                            });
+                        }
+                    });
+                }
+            });
         })
     );
 });

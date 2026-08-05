@@ -27,6 +27,16 @@
             cursor: pointer;
             white-space: nowrap;
         }
+        .pos-segmented button:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .pos-segmented button.active {
+            background: var(--primary);
+            color: #ffffff !important;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(230, 57, 70, 0.4);
+        }
         /* ──── Mobile Layout Ordering (<992px) ──── */
         @media (max-width: 991.98px) {
             .desktop-pos-layout {

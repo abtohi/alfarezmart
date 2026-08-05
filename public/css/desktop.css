@@ -902,6 +902,12 @@
         padding: 6px 18px;
         font-size: 12px;
     }
+    .pos-segmented button.active {
+        background: var(--primary) !important;
+        color: #ffffff !important;
+        font-weight: 700;
+        box-shadow: 0 2px 8px rgba(230, 57, 70, 0.4);
+    }
 }
 
 

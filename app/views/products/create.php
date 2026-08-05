@@ -1187,91 +1187,120 @@ async function submitProduct(e) {
         const isAvailableToggle = document.getElementById('toggleIsAvailableCreate');
         updatedData.set('is_available', isAvailableToggle && isAvailableToggle.checked ? 1 : 0);
         
-        if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
-        try {
-            const payload = {};
-            updatedData.forEach((value, key) => {
-                if (payload[key]) {
-                    if (!Array.isArray(payload[key])) payload[key] = [payload[key]];
-                    payload[key].push(value);
-                } else {
-                    payload[key] = value;
-                }
-            });
-            
-            // Optimistic Save to Dexie products table
-            const tempId = parseInt('999' + (Date.now() % 100000));
-            const newProduct = {
-                id: tempId,
-                full_name: payload.full_name,
-                short_label: payload.short_label || payload.full_name,
-                brand_name: brandSB ? brandSB.getLabel() : '',
-                category_name: categorySB ? categorySB.getLabel() : '',
-                code: payload.code || '',
-                is_available: parseInt(payload.is_available) || 0,
-                packagings: [],
-                is_pending: true
-            };
-            
-            if (payload.unit_id) {
-                const units = Array.isArray(payload.unit_id) ? payload.unit_id : [payload.unit_id];
-                const buys = Array.isArray(payload.buy_price) ? payload.buy_price : [payload.buy_price];
-                const retails = Array.isArray(payload.sell_price_retail) ? payload.sell_price_retail : [payload.sell_price_retail];
-                const wholesales = Array.isArray(payload.sell_price_wholesale) ? payload.sell_price_wholesale : [payload.sell_price_wholesale];
-                const cqtys = Array.isArray(payload.contained_qty) ? payload.contained_qty : [payload.contained_qty];
-                
-                units.forEach((u, i) => {
-                    const unitObj = unitsData.find(x => x.value == u);
-                    newProduct.packagings.push({
-                        level: i + 1,
-                        unit_name: unitObj ? unitObj.label : 'Unit',
-                        contained_qty: cqtys[i] || 1,
-                        buy_price: buys[i] || 0,
-                        sell_price_retail: retails[i] || 0,
-                        sell_price_wholesale: wholesales[i] || 0
-                    });
-                });
+        // ── Build local product snapshot for IndexedDB ──────────────────────
+        const payload = {};
+        updatedData.forEach((value, key) => {
+            if (payload[key]) {
+                if (!Array.isArray(payload[key])) payload[key] = [payload[key]];
+                payload[key].push(value);
+            } else {
+                payload[key] = value;
             }
-            await OfflineDB.saveProduct(newProduct);
-            
-            await OfflineDB.addPendingChange(`${BASE_URL}api/products`, 'POST', payload);
-            showToast('Tersimpan offline. Akan disinkronkan saat online.', 'info');
-            if (typeof updateSyncBadge === 'function') updateSyncBadge();
-            setTimeout(() => window.location.href = `${BASE_URL}products`, 1500);
-        } catch (err) {
-            showToast('Gagal menyimpan offline: ' + err.message, 'error');
-            btn.innerHTML = prevText;
-            btn.disabled = false;
-        }
-        return;
-    }
-
-    try {
-        const result = await api(`${BASE_URL}api/products`, {
-            method: 'POST',
-            body: updatedData
         });
-        
-        if (result.success) {
-            showToast('Produk berhasil ditambahkan!', 'success');
-            if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) {
-                // Fetch again to save the complete product with all relations to local DB
-                api(`${BASE_URL}api/products/${result.id}`).then(res => {
-                    if (res && res.id) OfflineDB.saveProduct(res);
-                }).catch(e => console.error(e));
-            }
-            setTimeout(() => window.location.href = `${BASE_URL}products/${result.id}`, 1000);
-        } else {
-            showToast(result.error || 'Gagal menyimpan produk', 'error');
-            btn.innerHTML = prevText;
-            btn.disabled = false;
+
+        const tempId = parseInt('999' + (Date.now() % 100000));
+        const newProduct = {
+            id: tempId,
+            full_name: payload.full_name,
+            short_label: payload.short_label || payload.full_name,
+            invoice_name: payload.invoice_name || payload.short_label || payload.full_name,
+            brand_name: brandSB ? brandSB.getLabel() : '',
+            category_name: categorySB ? categorySB.getLabel() : '',
+            code: payload.code || '',
+            is_available: parseInt(payload.is_available) || 0,
+            packagings: [],
+            is_pending: true // marks as not-yet-synced
+        };
+
+        if (payload.unit_id) {
+            const units = Array.isArray(payload.unit_id) ? payload.unit_id : [payload.unit_id];
+            const buys = Array.isArray(payload.buy_price) ? payload.buy_price : [payload.buy_price];
+            const retails = Array.isArray(payload.sell_price_retail) ? payload.sell_price_retail : [payload.sell_price_retail];
+            const wholesales = Array.isArray(payload.sell_price_wholesale) ? payload.sell_price_wholesale : [payload.sell_price_wholesale];
+            const cqtys = Array.isArray(payload.contained_qty) ? payload.contained_qty : [payload.contained_qty];
+
+            units.forEach((u, i) => {
+                const unitObj = typeof unitsData !== 'undefined' ? unitsData.find(x => x.value == u) : null;
+                newProduct.packagings.push({
+                    level: i + 1,
+                    unit_name: unitObj ? unitObj.label : 'Unit',
+                    contained_qty: cqtys[i] || 1,
+                    buy_price: buys[i] || 0,
+                    sell_price_retail: retails[i] || 0,
+                    sell_price_wholesale: wholesales[i] || 0
+                });
+            });
         }
-    } catch (err) {
-        showToast('Error: ' + err.message, 'error');
-        btn.innerHTML = prevText;
-        btn.disabled = false;
-    }
+
+        // ── ALWAYS save locally first ────────────────────────────────────────
+        let savedLocally = false;
+        if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) {
+            try {
+                await OfflineDB.saveProduct(newProduct);
+                savedLocally = true;
+            } catch (localErr) {
+                console.warn('Tidak bisa simpan ke lokal DB:', localErr);
+            }
+        }
+
+        // ── If offline, queue for sync and done ─────────────────────────────
+        if (!navigator.onLine) {
+            if (savedLocally && typeof OfflineDB !== 'undefined') {
+                await OfflineDB.addPendingChange(`${BASE_URL}api/products`, 'POST', payload);
+                if (typeof updateSyncBadge === 'function') updateSyncBadge();
+            }
+            showToast('Offline. Produk disimpan di perangkat & akan sinkron saat online.', 'info');
+            setTimeout(() => window.location.href = `${BASE_URL}products`, 1500);
+            return;
+        }
+
+        // ── Online: try server API ───────────────────────────────────────────
+        try {
+            const result = await api(`${BASE_URL}api/products`, {
+                method: 'POST',
+                body: updatedData
+            });
+
+            if (result.success) {
+                showToast('Produk berhasil ditambahkan!', 'success');
+                // Update local record with real server data
+                if (savedLocally && typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) {
+                    // Remove temp pending entry and save real record
+                    api(`${BASE_URL}api/products/${result.id}`).then(res => {
+                        if (res && res.id) {
+                            // Remove is_pending flag on the real product
+                            OfflineDB.saveProduct({ ...res, is_pending: false });
+                        }
+                    }).catch(e => console.error(e));
+                }
+                setTimeout(() => window.location.href = `${BASE_URL}products/${result.id}`, 1000);
+            } else {
+                showToast(result.error || 'Gagal menyimpan produk', 'error');
+                btn.innerHTML = prevText;
+                btn.disabled = false;
+            }
+        } catch (err) {
+            // Network error / timeout while navigator.onLine was true (weak signal)
+            console.warn('API gagal, menyimpan ke antrian offline:', err);
+            if (savedLocally && typeof OfflineDB !== 'undefined') {
+                try {
+                    await OfflineDB.addPendingChange(`${BASE_URL}api/products`, 'POST', payload);
+                    if (typeof updateSyncBadge === 'function') updateSyncBadge();
+                    showToast('Sinyal lemah. Produk disimpan di perangkat & akan sinkron saat koneksi stabil.', 'warning', 4000);
+                    setTimeout(() => window.location.href = `${BASE_URL}products`, 1800);
+                } catch (queueErr) {
+                    showToast('Produk tersimpan lokal. Gagal antri sinkron: ' + queueErr.message, 'warning');
+                    btn.innerHTML = prevText;
+                    btn.disabled = false;
+                }
+            } else {
+                showToast('Gagal menyimpan produk: ' + err.message, 'error');
+                btn.innerHTML = prevText;
+                btn.disabled = false;
+            }
+        }
 }
+
 
 function toggleSupplierInfo() {
     const panel = document.getElementById('supplierInfoPanel');

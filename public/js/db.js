@@ -28,8 +28,19 @@ window.OfflineDB = (function() {
         try {
             const data = await api(`${BASE_URL}api/products/sync?_t=` + Date.now());
             if (data && data.products) {
+                // Preserve pending local products before clearing
+                const pendingLocals = await db.products
+                    .filter(p => p.is_pending === true || p.is_pending_update === true)
+                    .toArray();
+                const serverIds = new Set(data.products.map(p => p.id));
+                const trulyPending = pendingLocals.filter(p => !serverIds.has(p.id));
+
                 await db.products.clear();
                 await db.products.bulkPut(data.products);
+                // Re-insert locally-pending products
+                if (trulyPending.length > 0) {
+                    await db.products.bulkPut(trulyPending);
+                }
                 return data.products.length;
             }
             return 0;
@@ -101,8 +112,19 @@ window.OfflineDB = (function() {
         await db.transaction('rw', db.products, db.suppliers, db.categories, db.brands, db.units, db.finance, db.finance_logs, async () => {
             if (data.products && Array.isArray(data.products)) {
                 call('products');
+                // Preserve pending local products before clearing
+                const pendingLocals = await db.products
+                    .filter(p => p.is_pending === true || p.is_pending_update === true)
+                    .toArray();
+                const serverIds = new Set(data.products.map(p => p.id));
+                const trulyPending = pendingLocals.filter(p => !serverIds.has(p.id));
+
                 await db.products.clear();
                 await db.products.bulkPut(data.products);
+                // Re-insert locally-pending products not yet on server
+                if (trulyPending.length > 0) {
+                    await db.products.bulkPut(trulyPending);
+                }
                 cacheProductImages(data.products).catch(e => console.warn('Image pre-cache background error:', e));
             }
             if (data.suppliers && Array.isArray(data.suppliers)) {

@@ -440,18 +440,20 @@ async function syncPendingChanges() {
                     successCount++;
                     updateSyncBadge(); // Update UI badge one by one
                 } else {
-                    // Track retries per change via localStorage
-                    const failKey = `sync_fail_${change.id}`;
-                    const retries = parseInt(localStorage.getItem(failKey) || '0') + 1;
-                    if (retries >= 3) {
-                        // Auto-remove stuck change after 3 failed attempts
+                    const status = response.status;
+                    // For 4xx client errors (bad request/not found), remove the pending change
+                    // as it will never succeed and would just clog the queue
+                    if (status >= 400 && status < 500) {
                         await window.OfflineDB.removePendingChange(change.id);
-                        localStorage.removeItem(failKey);
-                        console.warn("Menghapus antrian gagal permanen, ID:", change.id);
+                        localStorage.removeItem(`sync_fail_${change.id}`);
+                        console.warn(`Menghapus antrian karena error permanen HTTP ${status}, ID:`, change.id);
                     } else {
+                        // 5xx or other temporary errors — keep and retry later
+                        const failKey = `sync_fail_${change.id}`;
+                        const retries = parseInt(localStorage.getItem(failKey) || '0') + 1;
                         localStorage.setItem(failKey, retries);
                         failCount++;
-                        console.error("Gagal sinkron data ID:", change.id, `(percobaan ${retries}/3)`, `HTTP ${response.status}`);
+                        console.error("Gagal sinkron data ID:", change.id, `(percobaan ${retries}) HTTP ${status} — akan dicoba lagi`);
                     }
                 }
             } catch (e) {

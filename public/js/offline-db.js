@@ -4,7 +4,7 @@
 
 window.OfflineDB = (function() {
     const DB_NAME = 'alfarezmart_offline';
-    const DB_VERSION = 5; // Upgraded to ensure all stores exist
+    const DB_VERSION = 6; // v6: preserve pending products on sync
     const STORE_PRODUCTS = 'products';
     const STORE_SALES = 'sales';
     const STORE_SUPPLIERS = 'suppliers';
@@ -161,20 +161,51 @@ window.OfflineDB = (function() {
         }
     }
 
+    /**
+     * Save all items from server into a store.
+     * For STORE_PRODUCTS, items marked is_pending or is_pending_update are
+     * preserved so locally-created / edited products are never wiped.
+     */
     function _saveAll(storeName, items) {
         return new Promise((resolve, reject) => {
             if (!db) return reject("DB not initialized");
-            
-            const transaction = db.transaction([storeName], 'readwrite');
-            const store = transaction.objectStore(storeName);
-            
-            store.clear();
-            items.forEach(item => {
-                store.put(item);
-            });
 
-            transaction.oncomplete = () => resolve();
-            transaction.onerror = (e) => reject(e.target.error);
+            if (storeName !== STORE_PRODUCTS) {
+                // Non-product stores: simple clear + bulkput
+                const tx = db.transaction([storeName], 'readwrite');
+                const st = tx.objectStore(storeName);
+                st.clear();
+                items.forEach(item => st.put(item));
+                tx.oncomplete = () => resolve();
+                tx.onerror = (e) => reject(e.target.error);
+                return;
+            }
+
+            // Products: preserve pending local records
+            const txRead = db.transaction([storeName], 'readonly');
+            const stRead = txRead.objectStore(storeName);
+            const reqAll = stRead.getAll();
+
+            reqAll.onsuccess = () => {
+                const existing = reqAll.result || [];
+                // Collect pending items not in server list
+                const serverIds = new Set(items.map(p => p.id));
+                const pendingLocals = existing.filter(p =>
+                    (p.is_pending === true || p.is_pending_update === true) &&
+                    !serverIds.has(p.id)
+                );
+
+                const txWrite = db.transaction([storeName], 'readwrite');
+                const stWrite = txWrite.objectStore(storeName);
+                stWrite.clear();
+                items.forEach(item => stWrite.put(item));
+                // Re-insert pending local items (new products not yet on server)
+                pendingLocals.forEach(item => stWrite.put(item));
+
+                txWrite.oncomplete = () => resolve();
+                txWrite.onerror = (e) => reject(e.target.error);
+            };
+            reqAll.onerror = (e) => reject(e.target.error);
         });
     }
 
