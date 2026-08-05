@@ -48,28 +48,28 @@
 
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
+    <!-- POS Header: Action Buttons & Sale Mode (Full Width Top Bar) -->
+    <div class="pos-header-toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
+        <!-- Left: Actions -->
+        <div style="display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap;">
+            <button type="button" class="btn-outline-custom" onclick="clearCartConfirm()" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--danger-bg); border:1px solid rgba(230,57,70,0.3); color:var(--danger); display:flex; align-items:center; gap:4px;" title="Kosongkan Keranjang"><i class="bi bi-trash3"></i> <span class="d-none d-sm-inline">Batal</span></button>
+            <button class="btn-outline-custom" onclick="window.location.href=`${BASE_URL}sales`" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:4px;" title="Lihat Riwayat Penjualan"><i class="bi bi-clock-history"></i> <span class="d-none d-sm-inline">Riwayat</span></button>
+            <button class="btn-outline-custom" onclick="openDrafts()" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:4px;"><i class="bi bi-journal-bookmark"></i> <span class="d-none d-sm-inline">Draft</span></button>
+        </div>
+        
+        <!-- Right: Sale Mode Tabs -->
+        <div class="pos-segmented" style="flex-shrink:0;">
+            <button id="btnRetail" class="active" onclick="setSaleMode('retail')">Ecer</button>
+            <button id="btnWholesale" onclick="setSaleMode('wholesale')">Grosir</button>
+            <button id="btnMix" onclick="setSaleMode('mix')">Mix</button>
+        </div>
+    </div>
+
     <!-- ═══ Desktop 2-Column POS Layout / Mobile Stack ═══ -->
     <div class="desktop-pos-layout">
 
-        <!-- ── LEFT PANEL: Toolbar · Customer · Search · Cart ── -->
+        <!-- ── LEFT PANEL: Customer · Search · Cart ── -->
         <div class="pos-left-panel">
-
-            <!-- POS Header: Action Buttons & Sale Mode -->
-            <div class="pos-header-toolbar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-                <!-- Left: Actions -->
-                <div style="display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap;">
-                    <button type="button" class="btn-outline-custom" onclick="clearCartConfirm()" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--danger-bg); border:1px solid rgba(230,57,70,0.3); color:var(--danger); display:flex; align-items:center; gap:4px;" title="Kosongkan Keranjang"><i class="bi bi-trash3"></i> <span class="d-none d-sm-inline">Batal</span></button>
-                    <button class="btn-outline-custom" onclick="window.location.href=`${BASE_URL}sales`" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:4px;" title="Lihat Riwayat Penjualan"><i class="bi bi-clock-history"></i> <span class="d-none d-sm-inline">Riwayat</span></button>
-                    <button class="btn-outline-custom" onclick="openDrafts()" style="padding:4px 8px; border-radius:var(--radius-sm); font-size:11px; background:var(--surface-1); border:1px solid var(--border-color); display:flex; align-items:center; gap:4px;"><i class="bi bi-journal-bookmark"></i> <span class="d-none d-sm-inline">Draft</span></button>
-                </div>
-                
-                <!-- Right: Sale Mode Tabs -->
-                <div class="pos-segmented" style="flex-shrink:0;">
-                    <button id="btnRetail" class="active" onclick="setSaleMode('retail')">Ecer</button>
-                    <button id="btnWholesale" onclick="setSaleMode('wholesale')">Grosir</button>
-                    <button id="btnMix" onclick="setSaleMode('mix')">Mix</button>
-                </div>
-            </div>
 
             <!-- Customer Selector -->
             <div class="pos-customer-block" style="margin-bottom:12px; position:relative;">
