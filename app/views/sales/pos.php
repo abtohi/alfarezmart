@@ -158,6 +158,15 @@
             <!-- Checkout Card (Floating on mobile, Sticky Sidebar Panel on desktop) -->
             <div class="pos-checkout-bar" id="posCheckoutBar">
                 <div class="pos-checkout-bar__inner">
+
+                    <!-- Desktop Sidebar Title Header (Visible on Desktop >=992px) -->
+                    <div class="pos-desktop-sidebar-header">
+                        <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; display:flex; align-items:center; justify-content:space-between; width:100%;">
+                            <span><i class="bi bi-receipt-cutoff" style="color:var(--primary); margin-right:6px;"></i> Ringkasan Kasir</span>
+                            <span id="posModeBadge" class="badge-custom badge-info" style="font-size:10px; padding:3px 8px;">Mode Ecer</span>
+                        </div>
+                    </div>
+
                     <div class="pos-checkout-bar__summary">
                         <div style="display:flex;flex-direction:column;gap:4px;">
                             <span class="pos-checkout-bar__summary-label">Total Belanja</span>
@@ -168,6 +177,15 @@
                             <span id="cartCount">0</span> item
                         </div>
                     </div>
+
+                    <!-- Additional Transaction Summary Breakdown (Desktop Only) -->
+                    <div class="pos-desktop-summary-details" style="border-top:1px dashed var(--border-color); padding-top:12px; margin-top:4px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--text-muted); margin-bottom:4px;">
+                            <span>Status Sesi</span>
+                            <span style="color:var(--success); font-weight:600;"><i class="bi bi-check-circle-fill" style="margin-right:4px;"></i> Siap Transaksi</span>
+                        </div>
+                    </div>
+
                     <div class="pos-checkout-bar__actions">
                         <button id="btnSaveDraft" type="button" class="btn-outline-custom pos-checkout-bar__btn-draft" onclick="saveDraft()" disabled>
                             <i class="bi bi-save"></i> Draft
@@ -529,6 +547,10 @@ function setSaleMode(mode) {
     }
 
     cart.forEach(item => { recalcItemPrice(item); });
+    const modeBadge = document.getElementById('posModeBadge');
+    if (modeBadge) {
+        modeBadge.textContent = mode === 'retail' ? 'Mode Ecer' : (mode === 'wholesale' ? 'Mode Grosir' : 'Mode Mix');
+    }
     renderCart();
 }
 
