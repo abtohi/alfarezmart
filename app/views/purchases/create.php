@@ -2,10 +2,53 @@
 <style>
 /* Prevent pull-to-refresh on mobile devices */
 body { overscroll-behavior-y: none !important; }
+
+/* ──── Purchase Create: Mobile-first item input grid ──── */
+.item-inputs-main-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;   /* Kemasan | Qty */
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.item-field-total  { grid-column: 1 / -1; } /* Full width on mobile */
+.item-ppn-disc-row { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-bottom: 4px; }
+
+/* ──── Desktop 2-Panel Layout (≥992px only) ──── */
+@media (min-width: 992px) {
+    .desktop-purchase-layout {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 20px;
+        align-items: start;
+    }
+    .purchase-left-panel {
+        position: sticky;
+        top: 72px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: calc(100vh - 90px);
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-color) transparent;
+    }
+    .purchase-left-panel::-webkit-scrollbar { width: 4px; }
+    .purchase-left-panel::-webkit-scrollbar-track { background: transparent; }
+    .purchase-left-panel::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
+    .purchase-right-panel { min-width: 0; }
+
+    /* 3-col compact item inputs on desktop: Kemasan | Qty | Total */
+    .item-inputs-main-grid { grid-template-columns: 2fr 90px 1.7fr; }
+    .item-field-total { grid-column: auto; }          /* Override mobile full-width */
+
+    /* Left panel: remove extra margins from child blocks */
+    .purchase-left-panel > div { margin-bottom: 0 !important; margin-top: 0 !important; }
+    .purchase-left-panel #btnSavePurchase { margin-top: 0 !important; }
+}
 </style>
 <?php /** @var string $csrfToken */ ?>
 <div class="page-section">
-    <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;">
+    <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:flex-start;">
         <div>
             <p style="font-size:var(--font-size-sm); color:var(--text-muted); margin-top:4px;">Pilih sales, supplier terisi otomatis, lalu scan/cari produk</p>
         </div>
@@ -13,52 +56,10 @@ body { overscroll-behavior-y: none !important; }
             <i class="bi bi-clock-history"></i> Riwayat
         </a>
     </div>
-    
+
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
-    <!-- Step 1: Supplier Selection -->
-    <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; border:1px solid var(--border-color);">
-        <div class="section-title" style="margin-bottom:8px;">
-            <i class="bi bi-1-circle" style="color:var(--primary);"></i> Sales & Supplier
-        </div>
-        <div style="margin-bottom:12px;">
-            <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Sales *</label>
-            <div id="salesRepSearchBox"></div>
-            <div id="salesRepInfo" style="margin-top:6px; font-size:11px; color:var(--text-muted);"></div>
-        </div>
-
-        <div id="supplierDisplaySection" style="margin-bottom:12px; display:none;">
-            <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Supplier (otomatis)</label>
-            <div id="supplierDisplay" style="padding:10px 12px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); font-size:var(--font-size-sm); font-weight:600; color:var(--text-primary);">—</div>
-        </div>
-
-        <div style="display:flex; gap:12px; flex-direction:column;">
-            <div>
-                <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Tanggal *</label>
-                <input type="date" id="purchaseDate" value="<?= date('Y-m-d') ?>" class="form-control-dark" style="width:100%; height:44px; appearance:none; -webkit-appearance:none;">
-            </div>
-            <div>
-                <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Foto Invoice</label>
-                <input type="file" id="invoicePhotoCam" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event, true)">
-                <input type="file" id="invoicePhotoGal" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event, false)">
-                <div style="display:flex; gap:8px;">
-                    <button type="button" class="btn-outline-custom" id="btnPhotoCam" style="flex:1; padding:10px 4px; font-size:12px; height:44px;" onclick="document.getElementById('invoicePhotoCam').click()">
-                        <i class="bi bi-camera"></i> Kamera
-                    </button>
-                    <button type="button" class="btn-outline-custom" id="btnPhotoGal" style="flex:1; padding:10px 4px; font-size:12px; height:44px;" onclick="document.getElementById('invoicePhotoGal').click()">
-                        <i class="bi bi-image"></i> Galeri
-                    </button>
-                </div>
-                <div style="display:flex; gap:8px; margin-top:8px;">
-                    <button type="button" class="btn-primary-custom" id="btnScanAI" style="flex:1; padding:10px 4px; font-size:12px; display:none; height:44px;" onclick="scanInvoiceWithAI()">
-                        <i class="bi bi-robot"></i> Scan dengan AI (Otomatis)
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Photo Preview Modal -->
+    <!-- Photo Preview Modal (position:fixed — works regardless of DOM order) -->
     <div id="photoPreviewModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">
         <div class="modal-content" style="width:100%; max-width:850px; height:85vh; max-height:800px; padding:0; overflow:hidden; display:flex; flex-direction:column; background:var(--surface-1, #1e1e2d); border-radius:12px; border:1px solid var(--border-color); box-shadow:0 20px 50px rgba(0,0,0,0.6);">
             <div style="padding:14px 20px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; background:var(--surface-2, #252538);">
@@ -71,7 +72,7 @@ body { overscroll-behavior-y: none !important; }
             <div style="padding:16px 20px; background:var(--surface-1); border-top:1px solid var(--border-color); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px;">
                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
                     <input type="checkbox" id="chkEnhancePhoto" checked onchange="applyPhotoFilter()" style="width:18px;height:18px;accent-color:var(--primary);">
-                    <span style="font-size:13px; font-weight:600; color:var(--text-primary);">Mode Dokumen (Perjelas Teks & Auto Sharpen)</span>
+                    <span style="font-size:13px; font-weight:600; color:var(--text-primary);">Mode Dokumen (Perjelas Teks &amp; Auto Sharpen)</span>
                 </label>
                 <div style="display:flex; gap:10px; min-width:240px;">
                     <button type="button" class="btn-outline-custom" style="flex:1; padding:8px 16px;" onclick="closePhotoPreview()">Batal</button>
@@ -81,101 +82,162 @@ body { overscroll-behavior-y: none !important; }
         </div>
     </div>
 
-    <!-- Step 3: Product Search (shown after supplier selected) -->
-    <div id="productSearchSection" style="display:none;">
-        <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; border:1px solid var(--border-color);">
-            <div class="section-title" style="margin-bottom:8px;">
-                <i class="bi bi-2-circle" style="color:var(--primary);"></i> Cari Produk
+    <!-- ═══ Desktop 2-Panel / Mobile Single-Column Layout ═══ -->
+    <div class="desktop-purchase-layout">
+
+        <!-- ── LEFT PANEL: Sales/Supplier · Invoice Summary · Save ── -->
+        <div class="purchase-left-panel">
+
+            <!-- Step 1: Sales & Supplier -->
+            <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; border:1px solid var(--border-color); margin-bottom:12px;">
+                <div class="section-title" style="margin-bottom:8px;">
+                    <i class="bi bi-1-circle" style="color:var(--primary);"></i> Sales &amp; Supplier
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Sales *</label>
+                    <div id="salesRepSearchBox"></div>
+                    <div id="salesRepInfo" style="margin-top:6px; font-size:11px; color:var(--text-muted);"></div>
+                </div>
+
+                <div id="supplierDisplaySection" style="margin-bottom:12px; display:none;">
+                    <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Supplier (otomatis)</label>
+                    <div id="supplierDisplay" style="padding:10px 12px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); font-size:var(--font-size-sm); font-weight:600; color:var(--text-primary);">—</div>
+                </div>
+
+                <div style="display:flex; gap:12px; flex-direction:column;">
+                    <div>
+                        <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Tanggal *</label>
+                        <input type="date" id="purchaseDate" value="<?= date('Y-m-d') ?>" class="form-control-dark" style="width:100%; height:44px; appearance:none; -webkit-appearance:none;">
+                    </div>
+                    <div>
+                        <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Foto Invoice</label>
+                        <input type="file" id="invoicePhotoCam" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event, true)">
+                        <input type="file" id="invoicePhotoGal" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event, false)">
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" class="btn-outline-custom" id="btnPhotoCam" style="flex:1; padding:10px 4px; font-size:12px; height:44px;" onclick="document.getElementById('invoicePhotoCam').click()">
+                                <i class="bi bi-camera"></i> Kamera
+                            </button>
+                            <button type="button" class="btn-outline-custom" id="btnPhotoGal" style="flex:1; padding:10px 4px; font-size:12px; height:44px;" onclick="document.getElementById('invoicePhotoGal').click()">
+                                <i class="bi bi-image"></i> Galeri
+                            </button>
+                        </div>
+                        <div style="display:flex; gap:8px; margin-top:8px;">
+                            <button type="button" class="btn-primary-custom" id="btnScanAI" style="flex:1; padding:10px 4px; font-size:12px; display:none; height:44px;" onclick="scanInvoiceWithAI()">
+                                <i class="bi bi-robot"></i> Scan dengan AI (Otomatis)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div><!-- /Step 1 -->
+
+            <!-- Invoice Adjustments & Total -->
+            <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; border:1px solid var(--border-color); margin-bottom:12px;">
+                <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">
+                    <i class="bi bi-receipt" style="color:var(--primary);"></i> Ringkasan Invoice
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Subtotal Barang</span>
+                    <span id="purchaseSubtotal" style="font-weight:600; font-size:12px;">Rp0</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Diskon Nota (Rp)</span>
+                    <input type="number" id="invoiceDiscount" class="form-control-dark" style="width:100px; font-size:11px; padding:4px 8px; text-align:right;" value="0" min="0" oninput="calculateGrandTotal()">
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Total Sebelum PPN</span>
+                    <span id="purchaseTotalBeforePPN" style="font-weight:600; font-size:12px;">Rp0</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border-color);">
+                    <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Total PPN</span>
+                    <span id="purchaseTotalPPN" style="font-weight:600; font-size:12px;">Rp0</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:700;">Grand Total</span>
+                    <span id="purchaseGrandTotal" style="font-size:var(--font-size-xl); font-weight:800; color:var(--success);">Rp0</span>
+                </div>
+            </div><!-- /Invoice Summary -->
+
+            <button id="btnSavePurchase" class="btn-primary-custom" style="width:100%; padding:14px; cursor:pointer;" onclick="submitPurchase()">
+                <i class="bi bi-check-circle"></i> Simpan Pembelian
+            </button>
+
+        </div><!-- /purchase-left-panel -->
+
+        <!-- ── RIGHT PANEL: Product Search · Item List ── -->
+        <div class="purchase-right-panel">
+
+            <!-- Step 2: Product Search (shown after supplier selected) -->
+            <div id="productSearchSection" style="display:none;">
+                <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; border:1px solid var(--border-color);">
+                    <div class="section-title" style="margin-bottom:8px;">
+                        <i class="bi bi-2-circle" style="color:var(--primary);"></i> Cari Produk
+                    </div>
+                    <div id="supplierBadge" style="display:none; margin-bottom:8px;">
+                        <span class="badge-custom badge-info" style="font-size:11px;"></span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--font-size-xs);">
+                            <input type="checkbox" id="filterBySupplierSales" checked style="width:16px;height:16px;accent-color:var(--primary);">
+                            <span>Filter produk berdasarkan supplier &amp; sales</span>
+                        </label>
+                        <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px;" onclick="openBulkInputModal()">
+                            <i class="bi bi-list-check"></i> Input Bulk (Massal)
+                        </button>
+                    </div>
+                    <p id="filterHint" style="font-size:10px;color:var(--text-muted);margin:-6px 0 10px 24px;">Hanya tampilkan barang terkait supplier/sales terpilih</p>
+                    <div class="search-input-wrapper" style="position:relative;background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0 12px; display:flex; align-items:center;">
+                        <i class="bi bi-upc-scan" style="color:var(--text-muted);cursor:pointer;" onclick="scanProductBarcode()" title="Scan Barcode"></i>
+                        <input type="text" id="productSearch" placeholder="Scan barcode atau ketik nama produk..."
+                               style="flex:1;border:none;background:transparent;padding:12px 10px;color:var(--text-primary);font-size:var(--font-size-base);outline:none;font-family:var(--font-family);" autocomplete="off">
+                    </div>
+
+                    <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text-primary);">
+                            <input type="checkbox" id="chkGlobalPpn" style="width:13px;height:13px;accent-color:var(--primary);" onchange="toggleGlobalPpn()">
+                            PPN (%)
+                        </label>
+                        <input type="number" id="globalPpnInput" placeholder="Misal: 11" class="form-control-dark" style="width:80px; height:26px; font-size:11px; padding:4px 8px;" disabled oninput="applyGlobalPpn()">
+                        <div style="font-size:10px; color:var(--text-muted);">Terapkan PPN ke semua barang di keranjang</div>
+                    </div>
+
+                    <div id="productSuggestions" style="margin-top:8px;"></div>
+                </div>
+            </div><!-- /productSearchSection -->
+
+            <!-- Step 3: Item List -->
+            <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+                <span><i class="bi bi-3-circle" style="color:var(--primary);"></i> Daftar Barang</span>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px; color:var(--danger); border-color:var(--danger);" onclick="clearAllDrafts()" title="Kosongkan Semua Inputan">
+                        <i class="bi bi-trash"></i> Kosongkan
+                    </button>
+                    <span id="itemCountBadge" class="badge-custom badge-info">0 Item</span>
+                </div>
             </div>
-            <div id="supplierBadge" style="display:none; margin-bottom:8px;">
-                <span class="badge-custom badge-info" style="font-size:11px;"></span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--font-size-xs);">
-                    <input type="checkbox" id="filterBySupplierSales" checked style="width:16px;height:16px;accent-color:var(--primary);">
-                    <span>Filter produk berdasarkan supplier & sales</span>
+
+            <div id="massActionToolbar" style="display:none; background:rgba(230,57,70,0.1); border-radius:var(--radius-md); padding:8px 12px; margin-bottom:12px; align-items:center; justify-content:space-between;">
+                <label style="display:flex; align-items:center; gap:8px; font-size:var(--font-size-sm); font-weight:600; color:var(--danger); cursor:pointer;">
+                    <input type="checkbox" id="chkSelectAllItems" style="width:16px; height:16px; accent-color:var(--danger);" onchange="toggleSelectAllItems(this)">
+                    <span id="massSelectCount">0 Terpilih</span>
                 </label>
-                <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px;" onclick="openBulkInputModal()">
-                    <i class="bi bi-list-check"></i> Input Bulk (Massal)
+                <button type="button" class="btn-primary-custom" style="background:var(--danger-bg); color:var(--danger); font-size:10px; padding:4px 8px;" onclick="deleteSelectedItems()">
+                    <i class="bi bi-trash"></i> Hapus Terpilih
                 </button>
             </div>
-            <p id="filterHint" style="font-size:10px;color:var(--text-muted);margin:-6px 0 10px 24px;">Hanya tampilkan barang terkait supplier/sales terpilih</p>
-            <div class="search-input-wrapper" style="position:relative;background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0 12px; display:flex; align-items:center;">
-                <i class="bi bi-upc-scan" style="color:var(--text-muted);cursor:pointer;" onclick="scanProductBarcode()" title="Scan Barcode"></i>
-                <input type="text" id="productSearch" placeholder="Scan barcode atau ketik nama produk..." 
-                       style="flex:1;border:none;background:transparent;padding:12px 10px;color:var(--text-primary);font-size:var(--font-size-base);outline:none;font-family:var(--font-family);" autocomplete="off">
-            </div>
-            
-            <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
-                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text-primary);">
-                    <input type="checkbox" id="chkGlobalPpn" style="width:13px;height:13px;accent-color:var(--primary);" onchange="toggleGlobalPpn()">
-                    PPN (%)
-                </label>
-                <input type="number" id="globalPpnInput" placeholder="Misal: 11" class="form-control-dark" style="width:80px; height:26px; font-size:11px; padding:4px 8px;" disabled oninput="applyGlobalPpn()">
-                <div style="font-size:10px; color:var(--text-muted);">Terapkan PPN ke semua barang di keranjang</div>
+
+            <div id="purchaseItems">
+                <div class="empty-state" id="emptyPurchaseState" style="padding:24px;">
+                    <i class="bi bi-cart-plus" style="font-size:2rem;"></i>
+                    <p style="margin-top:8px;">Pilih sales, lalu cari produk untuk menambahkan ke daftar</p>
+                </div>
             </div>
 
-            <div id="productSuggestions" style="margin-top:8px;"></div>
-        </div>
-    </div>
+        </div><!-- /purchase-right-panel -->
 
-    <!-- Items List -->
-    <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
-        <span><i class="bi bi-3-circle" style="color:var(--primary);"></i> Daftar Barang</span>
-        <div style="display:flex; align-items:center; gap:8px;">
-            <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px; color:var(--danger); border-color:var(--danger);" onclick="clearAllDrafts()" title="Kosongkan Semua Inputan">
-                <i class="bi bi-trash"></i> Kosongkan
-            </button>
-            <span id="itemCountBadge" class="badge-custom badge-info">0 Item</span>
-        </div>
-    </div>
-    
-    <div id="massActionToolbar" style="display:none; background:rgba(230,57,70,0.1); border-radius:var(--radius-md); padding:8px 12px; margin-bottom:12px; align-items:center; justify-content:space-between;">
-        <label style="display:flex; align-items:center; gap:8px; font-size:var(--font-size-sm); font-weight:600; color:var(--danger); cursor:pointer;">
-            <input type="checkbox" id="chkSelectAllItems" style="width:16px; height:16px; accent-color:var(--danger);" onchange="toggleSelectAllItems(this)">
-            <span id="massSelectCount">0 Terpilih</span>
-        </label>
-        <button type="button" class="btn-primary-custom" style="background:var(--danger-bg); color:var(--danger); font-size:10px; padding:4px 8px;" onclick="deleteSelectedItems()">
-            <i class="bi bi-trash"></i> Hapus Terpilih
-        </button>
-    </div>
+    </div><!-- /desktop-purchase-layout -->
 
-    <div id="purchaseItems">
-        <div class="empty-state" id="emptyPurchaseState" style="padding:24px;">
-            <i class="bi bi-cart-plus" style="font-size:2rem;"></i>
-            <p style="margin-top:8px;">Pilih sales, lalu cari produk untuk menambahkan ke daftar</p>
-        </div>
-    </div>
+</div><!-- /page-section -->
 
-    <!-- Invoice Adjustments & Total -->
-    <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; margin-top:16px; border:1px solid var(--border-color);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Subtotal Barang</span>
-            <span id="purchaseSubtotal" style="font-weight:600; font-size:12px;">Rp0</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Diskon Nota (Rp)</span>
-            <input type="number" id="invoiceDiscount" class="form-control-dark" style="width:100px; font-size:11px; padding:4px 8px; text-align:right;" value="0" min="0" oninput="calculateGrandTotal()">
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Total Sebelum PPN</span>
-            <span id="purchaseTotalBeforePPN" style="font-weight:600; font-size:12px;">Rp0</span>
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border-color);">
-            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Total PPN</span>
-            <span id="purchaseTotalPPN" style="font-weight:600; font-size:12px;">Rp0</span>
-        </div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <span style="font-weight:700;">Grand Total</span>
-            <span id="purchaseGrandTotal" style="font-size:var(--font-size-xl); font-weight:800; color:var(--success);">Rp0</span>
-        </div>
-    </div>
-
-    <button id="btnSavePurchase" class="btn-primary-custom" style="width:100%; margin-top:16px; padding:14px; cursor:pointer;" onclick="submitPurchase()">
-        <i class="bi bi-check-circle"></i> Simpan Pembelian
-    </button>
-</div>
 
 <script>
 // ===== Data from PHP =====
@@ -2876,9 +2938,9 @@ function renderCart() {
             </div>
             ${priceSummary ? `<div style="margin-bottom:10px;">${priceSummary}</div>` : ''}
 
-            <!-- ── ROW 1: Kemasan + Qty ── -->
-            <div style="display:flex;gap:8px;margin-bottom:10px;">
-                <div style="flex:2;">
+            <!-- ── INPUTS GRID: 2-col mobile (Kemasan+Qty / Total) → 3-col desktop ── -->
+            <div class="item-inputs-main-grid">
+                <div class="item-field-kemasan">
                     <label style="font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:4px;">
                         <span>Kemasan Beli</span>
                     </label>
@@ -2892,23 +2954,21 @@ function renderCart() {
                         <input type="hidden" value="${item.level}" onchange="changeLevel(${item.id}, this.value)">
                     </div>
                 </div>
-                <div style="flex:1;">
+                <div class="item-field-qty">
                     <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Qty Beli</label>
                     <input type="number" class="form-control-dark" style="width:100%;padding:8px;font-size:12px;text-align:center;" value="${item.quantity}" min="0.01" step="0.01"
                            oninput="onMainInputChange(${item.id}, 'qty', this.value)">
                 </div>
+                <div class="item-field-total">
+                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Total Harga Pembelian</label>
+                    <input type="number" id="main_total_${item.id}" class="form-control-dark" style="width:100%;padding:8px;font-size:13px;font-weight:600;color:var(--info);"
+                           value="${totalVal > 0 ? totalVal : ''}" placeholder="Masukkan total harga..."
+                           oninput="onMainInputChange(${item.id}, 'total', this.value)">
+                </div>
             </div>
 
-            <!-- ── ROW 2: Total Harga ── -->
-            <div style="margin-bottom:10px;">
-                <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Total Harga Pembelian</label>
-                <input type="number" id="main_total_${item.id}" class="form-control-dark" style="width:100%;padding:8px;font-size:13px;font-weight:600;color:var(--info);"
-                       value="${totalVal > 0 ? totalVal : ''}" placeholder="Masukkan total harga..."
-                       oninput="onMainInputChange(${item.id}, 'total', this.value)">
-            </div>
-
-            <!-- ── ROW 3: PPN + Diskon ── -->
-            <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:4px;">
+            <!-- ── PPN + Diskon ── -->
+            <div class="item-ppn-disc-row">
                 <div>
                     <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">PPN (%)</label>
                     <input type="number" class="form-control-dark item-ppn" style="width:100%;padding:8px;font-size:12px;" value="${item.ppn_pct || 0}" min="0" max="100" placeholder="0"
