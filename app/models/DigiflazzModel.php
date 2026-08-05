@@ -741,13 +741,188 @@ class DigiflazzModel {
         $totalRecords = $stmtTotal->fetchColumn();
         $totalPages = ceil($totalRecords / $limit);
 
+        // Standard category definitions for Radar Chart
+        $standardCats = ['PLN', 'Pulsa', 'Paket Data', 'E-Wallet', 'Games', 'TV', 'SMS & Telp'];
+        $categoryMetrics = [];
+        foreach ($standardCats as $sc) {
+            $categoryMetrics[$sc] = [
+                'name' => $sc,
+                'total_trx' => 0,
+                'success_trx' => 0,
+                'failed_trx' => 0,
+                'avg_speed' => null,
+                'speed_text' => '-',
+                'speed_score' => 0,
+                'success_rate' => 0
+            ];
+        }
+
+        // Detailed category query for speed & volume per product category
+        $stmtCatDetail = $this->db->prepare("
+            SELECT 
+                category,
+                COUNT(*) as total_trx,
+                SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN 1 ELSE 0 END) as success_trx,
+                SUM(CASE WHEN LOWER(status) IN ('failed', 'gagal') THEN 1 ELSE 0 END) as failed_trx,
+                AVG(CASE WHEN LOWER(status) IN ('success', 'sukses', 'failed', 'gagal') 
+                             AND TIMESTAMPDIFF(SECOND, created_at, updated_at) BETWEEN 0 AND 900
+                        THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
+                        ELSE NULL END) as avg_speed
+            FROM digi_transactions
+            WHERE seller_name = :seller
+            GROUP BY category
+        ");
+        $stmtCatDetail->execute(['seller' => $sellerName]);
+        $catDetailRows = $stmtCatDetail->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($catDetailRows as $cdr) {
+            $rawCat = strtoupper(trim(str_replace('_', ' ', $cdr['category'] ?? '')));
+            
+            // Map raw category to standard category
+            $stdKey = 'Lainnya';
+            if (strpos($rawCat, 'PLN') !== false || strpos($rawCat, 'LISTRIK') !== false) {
+                $stdKey = 'PLN';
+            } elseif (strpos($rawCat, 'PULSA') !== false) {
+                $stdKey = 'Pulsa';
+            } elseif (strpos($rawCat, 'DATA') !== false || strpos($rawCat, 'INTERNET') !== false || strpos($rawCat, 'PAKET') !== false) {
+                $stdKey = 'Paket Data';
+            } elseif (strpos($rawCat, 'WALLET') !== false || strpos($rawCat, 'MONEY') !== false || strpos($rawCat, 'E-') !== false || strpos($rawCat, 'E ') !== false) {
+                $stdKey = 'E-Wallet';
+            } elseif (strpos($rawCat, 'GAME') !== false) {
+                $stdKey = 'Games';
+            } elseif (strpos($rawCat, 'TV') !== false) {
+                $stdKey = 'TV';
+            } elseif (strpos($rawCat, 'SMS') !== false || strpos($rawCat, 'TELP') !== false || strpos($rawCat, 'NELEPON') !== false) {
+                $stdKey = 'SMS & Telp';
+            } else {
+                $stdKey = !empty($rawCat) ? ucfirst(strtolower($rawCat)) : 'Lainnya';
+            }
+
+            if (!isset($categoryMetrics[$stdKey])) {
+                $categoryMetrics[$stdKey] = [
+                    'name' => $stdKey,
+                    'total_trx' => 0,
+                    'success_trx' => 0,
+                    'failed_trx' => 0,
+                    'avg_speed' => null,
+                    'speed_text' => '-',
+                    'speed_score' => 0,
+                    'success_rate' => 0
+                ];
+            }
+
+            $tTrx = (int)$cdr['total_trx'];
+            $sTrx = (int)$cdr['success_trx'];
+            $fTrx = (int)$cdr['failed_trx'];
+            $spVal = ($cdr['avg_speed'] !== null) ? (float)$cdr['avg_speed'] : null;
+
+            $categoryMetrics[$stdKey]['total_trx'] += $tTrx;
+            $categoryMetrics[$stdKey]['success_trx'] += $sTrx;
+            $categoryMetrics[$stdKey]['failed_trx'] += $fTrx;
+
+            if ($spVal !== null) {
+                // If multiple raw cats map to same stdKey, keep weighted average or simpler average
+                if ($categoryMetrics[$stdKey]['avg_speed'] === null) {
+                    $categoryMetrics[$stdKey]['avg_speed'] = $spVal;
+                } else {
+                    $categoryMetrics[$stdKey]['avg_speed'] = ($categoryMetrics[$stdKey]['avg_speed'] + $spVal) / 2;
+                }
+            }
+        }
+
+        // Format speed text, score, and success rate for category metrics
+        foreach ($categoryMetrics as $key => &$m) {
+            $tot = $m['total_trx'];
+            $m['success_rate'] = $tot > 0 ? round(($m['success_trx'] / $tot) * 100) : 0;
+            if ($m['avg_speed'] !== null) {
+                $sp = round($m['avg_speed']);
+                $m['speed_text'] = $sp > 900 ? '>15m' : ($sp <= 59 ? "{$sp} dtk" : floor($sp / 60) . "m " . ($sp % 60) . "d");
+                
+                // Speed score mapping (0-100) for Radar Chart visualization
+                if ($sp <= 5) $m['speed_score'] = 100;
+                elseif ($sp <= 15) $m['speed_score'] = 90;
+                elseif ($sp <= 30) $m['speed_score'] = 75;
+                elseif ($sp <= 60) $m['speed_score'] = 60;
+                elseif ($sp <= 180) $m['speed_score'] = 45;
+                else $m['speed_score'] = 25;
+            } else {
+                // No timing data available
+                if ($tot > 0) {
+                    // Has transactions but no speed data — derive partial score from success_rate
+                    // Max 55 (below "good speed" threshold) to signal data gap to user
+                    $m['speed_score'] = (int) round($m['success_rate'] * 0.55);
+                    $m['speed_text']  = 'Data N/A';
+                } else {
+                    $m['speed_text']  = '-';
+                    $m['speed_score'] = 0;
+                }
+            }
+        }
+        unset($m);
+
+        // Compute Strength & Weakness Analysis
+        $strengths = [];
+        $weaknesses = [];
+
+        // Overall SR Analysis
+        $overallSr = $totalTrx > 0 ? round(($totalSuccess / $totalTrx) * 100) : 0;
+        if ($totalTrx >= 5 && $overallSr >= 95) {
+            $strengths[] = "Success Rate Keseluruhan Sangat Tinggi ({$overallSr}%)";
+        } elseif ($totalTrx >= 5 && $overallSr < 80) {
+            $weaknesses[] = "Tingkat Keberhasilan Global Perlu Perhatian ({$overallSr}%)";
+        }
+
+        // Category specific speed & volume strengths/weaknesses
+        foreach ($categoryMetrics as $catName => $cm) {
+            if ($cm['total_trx'] > 0) {
+                // Strength by speed
+                if ($cm['avg_speed'] !== null && $cm['avg_speed'] <= 15) {
+                    $strengths[] = "Sangat Cepat pada transaksi {$catName} (Rata-rata {$cm['speed_text']}, {$cm['total_trx']} Trx)";
+                }
+                // Strength by volume
+                if ($cm['total_trx'] >= 20 && $cm['success_rate'] >= 90) {
+                    $strengths[] = "Volume & Keandalan tinggi pada {$catName} ({$cm['total_trx']} Trx, SR {$cm['success_rate']}%)";
+                }
+                // Weakness by speed
+                if ($cm['avg_speed'] !== null && $cm['avg_speed'] > 45) {
+                    $weaknesses[] = "Respon lebih lambat pada {$catName} (Rata-rata {$cm['speed_text']})";
+                }
+                // Weakness by failure rate
+                if ($cm['total_trx'] >= 3 && $cm['success_rate'] < 80) {
+                    $weaknesses[] = "Tingkat Gagal Cukup Tinggi pada {$catName} (Gagal {$cm['failed_trx']} dari {$cm['total_trx']} Trx)";
+                }
+            } else {
+                $weaknesses[] = "Belum memiliki riwayat transaksi untuk kategori {$catName}";
+            }
+        }
+
+        // Fallback default messages if empty
+        if (empty($strengths)) {
+            if ($avgSpeed !== null && $avgSpeed <= 20) {
+                $strengths[] = "Kecepatan rata-rata respon seller tergolong cepat ({$avgSpeed} dtk)";
+            } else {
+                $strengths[] = "Seller aktif memproses pesanan PPOB";
+            }
+        }
+
+        if (empty($weaknesses)) {
+            $weaknesses[] = "Tidak ditemukan kendala signifikan pada riwayat seller ini";
+        }
+
+        // Limit strengths and weaknesses to max top 4 items each for clean UI layout
+        $strengths = array_slice($strengths, 0, 4);
+        $weaknesses = array_slice($weaknesses, 0, 4);
+
         return [
             'analytics' => [
                 'total' => $totalTrx,
                 'success' => $totalSuccess,
                 'failed' => $totalFailed,
                 'avg_speed' => $avgSpeed,
-                'categories' => $categories
+                'categories' => $categories,
+                'category_metrics' => $categoryMetrics,
+                'strengths' => $strengths,
+                'weaknesses' => $weaknesses
             ],
             'pagination' => [
                 'total_records' => $totalRecords,
@@ -759,3 +934,4 @@ class DigiflazzModel {
         ];
     }
 }
+

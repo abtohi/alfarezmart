@@ -1,6 +1,466 @@
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const csrfToken = '<?= $csrfToken ?? "" ?>';
 </script>
+<style>
+/* =========================================================
+   Seller History Modal - Clean Premium Design
+   ========================================================= */
+#sellerHistoryModal .modal-dialog {
+    max-width: 960px;
+    width: calc(100vw - 32px);
+    margin: 16px auto;
+    height: calc(100vh - 32px);
+    max-height: calc(100vh - 32px);
+}
+#sellerHistoryModal .modal-content {
+    border-radius: 20px;
+    border: none;
+    background: var(--surface-1);
+    box-shadow: 0 32px 64px -12px rgba(0,0,0,0.6);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+#sellerHistoryModal .modal-header {
+    flex-shrink: 0;
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border-color);
+    padding: 18px 24px 16px;
+    border-radius: 20px 20px 0 0;
+    z-index: 2;
+}
+#sellerHistoryModal .modal-body {
+    flex: 1 1 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px 24px;
+    scroll-behavior: smooth;
+}
+#sellerHistoryModal .modal-body::-webkit-scrollbar { width: 5px; }
+#sellerHistoryModal .modal-body::-webkit-scrollbar-track { background: transparent; }
+#sellerHistoryModal .modal-body::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+
+/* Stats Summary Strip */
+.sh-stats-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+}
+.sh-stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.sh-stat-item + .sh-stat-item {
+    padding-left: 16px;
+    border-left: 1px solid var(--border-color);
+}
+.sh-stat-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted, #94a3b8);
+}
+.sh-stat-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+.sh-stat-value.speed-badge {
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(59,130,246,0.12);
+    color: #3b82f6;
+    border-radius: 8px;
+    padding: 4px 12px;
+    width: fit-content;
+    font-weight: 700;
+}
+.sh-progress-bar {
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: rgba(239,68,68,0.15);
+    display: flex;
+}
+.sh-progress-bar .bar-success { background: #10b981; border-radius: 4px 0 0 4px; transition: width 0.4s ease; }
+.sh-progress-bar .bar-failed  { background: #ef4444; border-radius: 0 4px 4px 0; transition: width 0.4s ease; }
+.sh-sr-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10.5px;
+    font-weight: 700;
+    margin-top: 4px;
+}
+
+/* Strength Weakness Row */
+.sh-sw-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.sh-sw-card {
+    border-radius: 14px;
+    padding: 16px;
+    min-height: 100px;
+}
+.sh-sw-card.strength {
+    background: rgba(16,185,129,0.06);
+    border: 1px solid rgba(16,185,129,0.22);
+}
+.sh-sw-card.weakness {
+    background: rgba(245,158,11,0.06);
+    border: 1px solid rgba(245,158,11,0.22);
+}
+.sh-sw-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.sh-sw-card.strength .sh-sw-title { color: #10b981; border-color: rgba(16,185,129,0.2); }
+.sh-sw-card.weakness .sh-sw-title { color: #f59e0b; border-color: rgba(245,158,11,0.2); }
+.sh-sw-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 11.5px;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin-bottom: 6px;
+}
+.sh-sw-item:last-child { margin-bottom: 0; }
+.sh-sw-item i { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+.sh-sw-card.strength .sh-sw-item i { color: #10b981; }
+.sh-sw-card.weakness .sh-sw-item i { color: #f59e0b; }
+
+/* Radar + Category Grid Row */
+.sh-radar-row {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: stretch;
+}
+.sh-radar-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.sh-radar-card .canvas-wrap {
+    width: 100%;
+    flex: 1;
+    min-height: 200px;
+    position: relative;
+}
+.sh-catgrid-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 16px;
+}
+.sh-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-muted, #94a3b8);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.sh-section-title i { font-size: 12px; color: var(--primary, #3b82f6); }
+
+/* Category product grid items */
+.sh-cat-items-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+.sh-cat-item {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: border-color 0.2s;
+}
+.sh-cat-item:hover { border-color: var(--primary, #3b82f6); }
+.sh-cat-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+.sh-cat-item-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-primary);
+    min-width: 0;
+    flex: 1;
+}
+.sh-cat-item-name i { font-size: 13px; flex-shrink: 0; }
+.sh-cat-item-name span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sh-cat-speed-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.sh-cat-item-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-muted, #94a3b8);
+}
+.sh-cat-item-footer .sr-text { font-weight: 700; }
+
+/* Transaction Table */
+.sh-table-section {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+.sh-table-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--surface-2);
+}
+.sh-table-wrap {
+    overflow-x: auto;
+}
+.sh-table-wrap table {
+    min-width: 600px;
+    width: 100%;
+    font-size: 11.5px;
+    color: var(--text-primary);
+}
+.sh-table-wrap table th {
+    padding: 10px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-muted, #94a3b8);
+    background: var(--surface-3, #1e293b);
+    white-space: nowrap;
+    border: none;
+}
+.sh-table-wrap table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+    border-top: none;
+}
+.sh-table-wrap table tbody tr:last-child td { border-bottom: none; }
+.sh-table-wrap table tbody tr:hover td { background: rgba(59,130,246,0.04); }
+
+/* Pagination */
+.sh-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* ---- Mobile overrides ---- */
+@media (max-width: 767.98px) {
+    #sellerHistoryModal .modal-dialog {
+        margin: 8px auto;
+        height: calc(100dvh - 16px);
+        max-height: calc(100dvh - 16px);
+        width: calc(100vw - 16px);
+    }
+    #sellerHistoryModal .modal-content { border-radius: 16px; }
+    #sellerHistoryModal .modal-header { padding: 14px 16px 12px; }
+    #sellerHistoryModal .modal-body { padding: 14px 16px; }
+
+    .sh-stats-strip {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 14px 16px;
+    }
+    .sh-stat-item + .sh-stat-item { padding-left: 0; border-left: none; border-top: 1px solid var(--border-color); padding-top: 12px; }
+
+    .sh-sw-grid { grid-template-columns: 1fr; }
+
+    .sh-radar-row { grid-template-columns: 1fr; }
+    .sh-radar-card .canvas-wrap { min-height: 260px; }
+
+    .sh-cat-items-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 400px) {
+    .sh-cat-items-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="modal fade" id="sellerHistoryModal" tabindex="-1" aria-modal="true" role="dialog" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <!-- Header -->
+            <div class="modal-header">
+                <div class="d-flex align-items-center gap-3 flex-grow-1 min-w-0">
+                    <div style="width:40px; height:40px; border-radius:12px; background:rgba(59,130,246,0.15); color:var(--primary,#3b82f6); display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0;">
+                        <i class="bi bi-shop"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="fw-bold" style="font-size:1rem; color:var(--text-primary); line-height:1.3;">Riwayat &amp; Analisis Seller</div>
+                        <div id="sh-seller-name" class="fw-semibold text-truncate" style="color:var(--primary,#3b82f6); font-size:0.82rem; max-width:260px;"></div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close ms-3 flex-shrink-0" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body">
+                <!-- Loading -->
+                <div id="sh-loading" class="text-center py-5">
+                    <span class="spinner-border text-primary" style="width:36px; height:36px;"></span>
+                    <div class="text-muted small mt-3">Memuat riwayat &amp; analitik seller...</div>
+                </div>
+
+                <!-- Content -->
+                <div id="sh-content" style="display:none;">
+
+                    <!-- 1. Stats Strip -->
+                    <div class="sh-stats-strip">
+                        <div class="sh-stat-item">
+                            <div class="sh-stat-label">Total Transaksi</div>
+                            <div class="sh-stat-value" id="sh-stat-total">0</div>
+                            <div style="font-size:10px; color:var(--text-muted,#94a3b8);">Semua status</div>
+                        </div>
+                        <div class="sh-stat-item">
+                            <div class="sh-stat-label">Success Rate Global</div>
+                            <div class="sh-progress-bar mb-1" style="margin-top:6px;">
+                                <div class="bar-success" id="sh-bar-success" style="width:0%"></div>
+                                <div class="bar-failed"  id="sh-bar-failed"  style="width:0%"></div>
+                            </div>
+                            <div class="sh-sr-labels">
+                                <span class="text-success" id="sh-txt-success">Sukses: 0</span>
+                                <span class="text-danger"  id="sh-txt-failed">Gagal: 0</span>
+                            </div>
+                        </div>
+                        <div class="sh-stat-item">
+                            <div class="sh-stat-label">Kecepatan Rata-Rata</div>
+                            <div style="margin-top:6px;">
+                                <span class="sh-stat-value speed-badge" id="sh-txt-speed">
+                                    <i class="bi bi-lightning-charge-fill"></i> -
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Strength & Weakness -->
+                    <div class="sh-sw-grid">
+                        <div class="sh-sw-card strength">
+                            <div class="sh-sw-title">
+                                <i class="bi bi-shield-check-fill"></i> Keunggulan Seller
+                            </div>
+                            <div id="sh-strengths-list"></div>
+                        </div>
+                        <div class="sh-sw-card weakness">
+                            <div class="sh-sw-title">
+                                <i class="bi bi-exclamation-triangle-fill"></i> Kelemahan &amp; Catatan
+                            </div>
+                            <div id="sh-weaknesses-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Radar Chart + Category Grid -->
+                    <div class="sh-radar-row">
+                        <!-- Radar Chart -->
+                        <div class="sh-radar-card">
+                            <div class="sh-section-title w-100">
+                                <i class="bi bi-bar-chart-horizontal-fill"></i> Performa per Jenis Produk
+                            </div>
+                            <div class="canvas-wrap w-100" style="min-height:240px;">
+                                <canvas id="sh-radar-chart" style="display:block; width:100%; height:100%;"></canvas>
+                            </div>
+                        </div>
+                        <!-- Category Speed Grid -->
+                        <div class="sh-catgrid-card">
+                            <div class="sh-section-title">
+                                <i class="bi bi-grid-3x3-gap-fill"></i> Kecepatan &amp; Volume per Jenis Produk
+                            </div>
+                            <div id="sh-category-grid" class="sh-cat-items-grid">
+                                <!-- Dynamic via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Transaction History Table -->
+                    <div class="sh-table-section">
+                        <div class="sh-table-header sh-section-title mb-0">
+                            <i class="bi bi-journal-text"></i> Riwayat Transaksi Terakhir
+                        </div>
+                        <div class="sh-table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Waktu</th>
+                                        <th>Produk / Tujuan</th>
+                                        <th class="text-center">Kecepatan</th>
+                                        <th class="text-end">Modal</th>
+                                        <th class="text-end">Jual</th>
+                                        <th class="text-end">Selisih</th>
+                                        <th class="text-end">Markup</th>
+                                        <th class="text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sh-list">
+                                    <!-- JS injected -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 5. Pagination -->
+                    <div class="sh-pagination">
+                        <div class="small text-muted" id="sh-page-info" style="font-size:11px;">Halaman 1 dari 1</div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold" id="sh-btn-prev" onclick="changeSellerHistoryPage(-1)">&#8592; Sebelumnya</button>
+                            <button class="btn btn-sm btn-outline-primary  rounded-pill px-3 fw-bold" id="sh-btn-next" onclick="changeSellerHistoryPage(1)">Berikutnya &#8594;</button>
+                        </div>
+                    </div>
+
+                </div><!-- /sh-content -->
+            </div><!-- /modal-body -->
+        </div>
+    </div>
+</div>
+
 <style>
 /* =========================================================
    PPOB Premium Design System
@@ -1124,11 +1584,8 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
                     <!-- Brand Filter Tabs (For E-Wallet, Game, etc) -->
                     <div id="brand-filter-container" class="mb-3 gap-2 overflow-auto pb-2" style="display:none; white-space:nowrap; scrollbar-width: none;"></div>
 
-                    <!-- Search Product Input (Useful for huge lists) -->
-                    <div class="mb-3 position-relative" id="product-search-container" style="display:none;">
-                        <input type="text" class="form-control glass-input" id="search-product" placeholder="Cari paket / nominal..." style="padding-left:35px; border-radius:12px;">
-                        <i class="bi bi-search position-absolute text-muted" style="left:12px; top:50%; transform:translateY(-50%);"></i>
-                    </div>
+                    <!-- Top 3 Seller Recommendations & Seller Filter Container -->
+                    <div id="seller-recommendation-container" class="mb-3" style="display:none;"></div>
 
                     <label class="form-label fw-bold text-muted small text-uppercase mt-3 mb-0" id="label-product">Pilih Produk</label>
                     <div id="product-loading" class="text-center py-4" style="display:none;">
@@ -1555,65 +2012,128 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 
 <!-- Seller History Modal -->
 <div class="modal fade" id="sellerHistoryModal" tabindex="-1" style="z-index: 1060;">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content" style="border-radius: 20px; border: none; background: var(--surface-1);">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Riwayat & Analisis Seller: <span id="sh-seller-name" class="text-primary"></span></h5>
+    <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius: 24px; border: none; background: var(--surface-1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+            <div class="modal-header border-0 pb-1 pt-4 px-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="avatar-icon-bg" style="width:42px; height:42px; border-radius:14px; background:rgba(59,130,246,0.15); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:20px;">
+                        <i class="bi bi-shop"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold m-0" style="font-size:1.15rem; color:var(--text-primary);">Riwayat & Analisis Seller</h5>
+                        <div class="small fw-semibold" id="sh-seller-name" style="color:var(--primary)!important; font-size:0.85rem;"></div>
+                    </div>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
             </div>
             <div class="modal-body p-4 pt-3">
                 <div id="sh-loading" class="text-center py-5">
                     <span class="spinner-border text-primary"></span>
-                    <div class="text-muted small mt-2">Memuat riwayat & analitik...</div>
+                    <div class="text-muted small mt-2">Memuat riwayat & analitik seller...</div>
                 </div>
                 
                 <div id="sh-content" style="display:none;">
-                    <!-- Analytics -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-6">
-                            <div class="p-3 rounded-3 h-100" style="background:var(--surface-2); border:1px solid var(--border-color);">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <div class="fw-bold small text-uppercase text-muted">Success Rate &amp; Kecepatan</div>
-                                    <span class="badge bg-primary bg-opacity-10 text-primary fw-bold" id="sh-txt-speed" style="font-size:10px;"><i class="bi bi-lightning-charge-fill me-1"></i>Kecepatan: -</span>
+                    <!-- Overall Stats Summary Header Card -->
+                    <div class="p-3.5 rounded-4 mb-4" style="background:var(--surface-2); border:1px solid var(--border-color);">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-md-4 border-end border-opacity-10">
+                                <div class="small text-uppercase fw-bold text-muted mb-1" style="font-size:10px; letter-spacing:0.5px;">Total Transaksi</div>
+                                <div class="d-flex align-items-baseline gap-2">
+                                    <h3 class="m-0 fw-bold" id="sh-stat-total" style="color:var(--text-primary);">0</h3>
+                                    <span class="text-muted small">Transaksi</span>
                                 </div>
-                                <div class="d-flex align-items-center mb-2">
-                                    <h3 class="m-0 me-2" id="sh-stat-total" style="color:var(--text-primary);">0</h3> 
-                                    <span class="text-muted small">Total Transaksi</span>
-                                </div>
-                                <div class="progress mb-2" style="height: 12px; background:var(--danger-bg); border-radius: 6px; overflow: hidden;">
+                            </div>
+                            <div class="col-md-4 border-end border-opacity-10">
+                                <div class="small text-uppercase fw-bold text-muted mb-1" style="font-size:10px; letter-spacing:0.5px;">Success Rate Global</div>
+                                <div class="progress mb-1.5" style="height: 10px; background:var(--danger-bg); border-radius: 6px; overflow: hidden;">
                                     <div class="progress-bar bg-success" id="sh-bar-success" role="progressbar" style="width: 0%"></div>
                                     <div class="progress-bar bg-danger" id="sh-bar-failed" role="progressbar" style="width: 0%"></div>
                                 </div>
-                                <div class="d-flex justify-content-between small fw-bold">
-                                    <span class="text-success" id="sh-txt-success">Sukses: 0 (0%)</span>
-                                    <span class="text-danger" id="sh-txt-failed">Gagal: 0 (0%)</span>
+                                <div class="d-flex justify-content-between text-xs fw-bold" style="font-size:11px;">
+                                    <span class="text-success" id="sh-txt-success">Sukses: 0</span>
+                                    <span class="text-danger" id="sh-txt-failed">Gagal: 0</span>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="p-3 rounded-3 h-100" style="background:var(--surface-2); border:1px solid var(--border-color);">
-                                <div class="fw-bold mb-3 small text-uppercase text-muted">Kategori Transaksi</div>
-                                <div id="sh-cat-bars" class="d-flex flex-column gap-2">
-                                    <!-- Rendered via JS -->
+                            <div class="col-md-4">
+                                <div class="small text-uppercase fw-bold text-muted mb-1" style="font-size:10px; letter-spacing:0.5px;">Kecepatan Rata-Rata Global</div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-primary bg-opacity-15 text-primary fs-6 px-3 py-2 rounded-pill fw-bold" id="sh-txt-speed">
+                                        <i class="bi bi-lightning-charge-fill me-1"></i>-
+                                    </span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Table -->
-                    <div class="fw-bold mb-2 small text-uppercase text-muted">Detail Transaksi</div>
-                    <div class="table-responsive" style="border:1px solid var(--border-color); border-radius:12px;">
+
+                    <!-- Strength & Weakness Cards -->
+                    <div class="row g-3 mb-4">
+                        <!-- Strengths -->
+                        <div class="col-md-6">
+                            <div class="p-3.5 rounded-4 h-100" style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.25);">
+                                <div class="d-flex align-items-center gap-2 mb-2.5 pb-2 border-bottom border-success border-opacity-25 text-success fw-bold small text-uppercase" style="letter-spacing:0.5px;">
+                                    <i class="bi bi-shield-check-fill fs-5"></i> Keunggulan Seller (Strength)
+                                </div>
+                                <div id="sh-strengths-list" class="d-flex flex-column gap-2" style="font-size:12px; color:var(--text-primary);">
+                                    <!-- Dynamic -->
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Weaknesses -->
+                        <div class="col-md-6">
+                            <div class="p-3.5 rounded-4 h-100" style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.25);">
+                                <div class="d-flex align-items-center gap-2 mb-2.5 pb-2 border-bottom border-warning border-opacity-25 text-warning fw-bold small text-uppercase" style="letter-spacing:0.5px;">
+                                    <i class="bi bi-exclamation-triangle-fill fs-5"></i> Kelemahan & Catatan (Weakness)
+                                </div>
+                                <div id="sh-weaknesses-list" class="d-flex flex-column gap-2" style="font-size:12px; color:var(--text-primary);">
+                                    <!-- Dynamic -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Radar Chart & Category Speed Breakdown -->
+                    <div class="row g-3 mb-4">
+                        <!-- Radar Chart -->
+                        <div class="col-lg-5">
+                            <div class="p-3.5 rounded-4 h-100 d-flex flex-column justify-content-center align-items-center" style="background:var(--surface-2); border:1px solid var(--border-color); min-height: 310px;">
+                                <div class="fw-bold small text-uppercase text-muted mb-2 w-100 text-center" style="font-size:11px; letter-spacing:0.5px;">
+                                    <i class="bi bi-radar me-1 text-primary"></i>Grafik Radar Performa Seller
+                                </div>
+                                <div class="w-100 flex-grow-1 position-relative" style="max-height: 260px; height: 250px;">
+                                    <canvas id="sh-radar-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Product Category Cards Grid -->
+                        <div class="col-lg-7">
+                            <div class="p-3.5 rounded-4 h-100" style="background:var(--surface-2); border:1px solid var(--border-color);">
+                                <div class="fw-bold small text-uppercase text-muted mb-3 d-flex justify-content-between align-items-center" style="font-size:11px; letter-spacing:0.5px;">
+                                    <span><i class="bi bi-grid-fill me-1 text-primary"></i>Kecepatan & Trx Per Jenis Produk</span>
+                                    <span class="badge bg-secondary bg-opacity-10 text-muted" style="font-size:9.5px; font-weight:600;">PLN, Pulsa, Data, Games, TV, dll</span>
+                                </div>
+                                <div id="sh-category-grid" class="row g-2">
+                                    <!-- Dynamic injected JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transaction Table -->
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="fw-bold small text-uppercase text-muted" style="font-size:11px; letter-spacing:0.5px;"><i class="bi bi-journal-text me-1 text-primary"></i>Riwayat Transaksi Terakhir</div>
+                    </div>
+                    <div class="table-responsive mb-2" style="border:1px solid var(--border-color); border-radius:14px; overflow:hidden;">
                         <table class="table table-borderless table-hover mb-0" style="font-size:12px; color:var(--text-primary); --bs-table-bg: transparent; --bs-table-color: var(--text-primary);">
                             <thead style="background:var(--surface-3); border-bottom:1px solid var(--border-color);">
                                 <tr>
-                                    <th class="py-2 text-muted">Waktu</th>
-                                    <th class="py-2 text-muted">Produk / Tujuan</th>
-                                    <th class="py-2 text-center text-muted">Kecepatan</th>
-                                    <th class="py-2 text-end text-muted">Modal</th>
-                                    <th class="py-2 text-end text-muted">Jual</th>
-                                    <th class="py-2 text-end text-muted">Selisih</th>
-                                    <th class="py-2 text-end text-muted">Markup(%)</th>
-                                    <th class="py-2 text-center text-muted">Status</th>
+                                    <th class="py-2.5 text-muted">Waktu</th>
+                                    <th class="py-2.5 text-muted">Produk / Tujuan</th>
+                                    <th class="py-2.5 text-center text-muted">Kecepatan</th>
+                                    <th class="py-2.5 text-end text-muted">Modal</th>
+                                    <th class="py-2.5 text-end text-muted">Jual</th>
+                                    <th class="py-2.5 text-end text-muted">Selisih</th>
+                                    <th class="py-2.5 text-end text-muted">Markup(%)</th>
+                                    <th class="py-2.5 text-center text-muted">Status</th>
                                 </tr>
                             </thead>
                             <tbody id="sh-list">
@@ -1624,7 +2144,7 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
                     
                     <!-- Pagination -->
                     <div class="d-flex justify-content-between align-items-center mt-3">
-                        <div class="small text-muted" id="sh-page-info">Halaman 1 dari 1</div>
+                        <div class="small text-muted" id="sh-page-info" style="font-size:11px;">Halaman 1 dari 1</div>
                         <div class="d-flex gap-2">
                             <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold" id="sh-btn-prev" onclick="changeSellerHistoryPage(-1)">Sebelumnya</button>
                             <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold" id="sh-btn-next" onclick="changeSellerHistoryPage(1)">Berikutnya</button>
@@ -2011,8 +2531,9 @@ function openTrxModal(title, category, type) {
     document.getElementById('provider-badge').style.display = 'none';
     document.getElementById('brand-filter-container').innerHTML = '';
     document.getElementById('brand-filter-container').style.display = 'none';
-    document.getElementById('product-search-container').style.display = 'none';
-    document.getElementById('search-product').value = '';
+    const recCont = document.getElementById('seller-recommendation-container');
+    if (recCont) recCont.style.display = 'none';
+    currentSelectedSellerFilter = '';
     document.getElementById('btn-pay-postpaid').style.display = 'none';
     document.getElementById('product-list-container').style.display = 'block';
     document.getElementById('product-grid').innerHTML = '';
@@ -2150,9 +2671,12 @@ function selectContact(no) {
 // 5. Load Product Categories based on Tab (Prepaid/Postpaid)
 
 // 5. Load Products
+let currentSelectedSellerFilter = '';
+
 async function loadProducts(category, type) {
     document.getElementById('product-loading').style.display = 'block';
     document.getElementById('product-grid').innerHTML = '';
+    currentSelectedSellerFilter = '';
     try {
         const res = await fetch(`<?= BASE_URL ?>api/ppob/products/${category}?type=${type}`);
         const data = await res.json();
@@ -2168,14 +2692,19 @@ async function loadProducts(category, type) {
             if(type === 'prepaid') {
                 if (category === 'pulsa' || category === 'data' || category === 'sms_nelpon') {
                     document.getElementById('brand-filter-container').style.display = 'none';
+                    const recCont = document.getElementById('seller-recommendation-container');
+                    if (recCont) recCont.style.display = 'none';
                     document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3" style="grid-column: 1 / -1;">Silakan masukkan nomor HP untuk melihat produk.</div>`;
                     filterProductsByPrefix(document.getElementById('customer-no').value);
                 } else {
                     renderFilters(data.data, 'brand');
+                    renderSellerRecommendations(data.data);
                     renderProducts(data.data);
                 }
             }
         } else {
+            const recCont = document.getElementById('seller-recommendation-container');
+            if (recCont) recCont.style.display = 'none';
             document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3" style="grid-column: 1 / -1;">Produk tidak tersedia/belum disync.</div>`;
         }
     } catch(e) { console.error(e); }
@@ -2214,16 +2743,22 @@ function filterProductsByPrefix(phone) {
         
         if (filtered.length > 0) {
             renderFilters(filtered, 'sub_category');
-            renderProducts(filtered);
-            document.getElementById('product-search-container').style.display = filtered.length > 5 ? 'block' : 'none';
+            renderSellerRecommendations(filtered);
+            if (currentSelectedSellerFilter) {
+                renderProducts(filtered.filter(p => p.seller_name === currentSelectedSellerFilter));
+            } else {
+                renderProducts(filtered);
+            }
         } else {
             document.getElementById('brand-filter-container').style.display = 'none';
-            document.getElementById('product-search-container').style.display = 'none';
+            const recCont = document.getElementById('seller-recommendation-container');
+            if (recCont) recCont.style.display = 'none';
             document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-4" style="grid-column: 1 / -1;"><i class="bi bi-inbox fs-1 mb-2 d-block opacity-50"></i>Produk ${provider} sedang tidak tersedia.</div>`;
         }
     } else {
         badge.style.display = 'none';
-        document.getElementById('product-search-container').style.display = 'none';
+        const recCont = document.getElementById('seller-recommendation-container');
+        if (recCont) recCont.style.display = 'none';
         document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-4" style="grid-column: 1 / -1;"><i class="bi bi-search fs-1 mb-2 d-block opacity-50"></i>Masukkan awalan nomor HP yang valid untuk melihat produk.</div>`;
     }
 }
@@ -2234,14 +2769,166 @@ document.getElementById('customer-no').addEventListener('input', (e) => {
     }
 });
 
-document.getElementById('search-product').addEventListener('input', (e) => {
-    const keyword = e.target.value.toLowerCase();
-    const cards = document.querySelectorAll('.prod-card');
-    cards.forEach(card => {
-        const text = card.innerText.toLowerCase();
-        card.style.display = text.includes(keyword) ? 'flex' : 'none';
+function renderSellerRecommendations(products) {
+    const container = document.getElementById('seller-recommendation-container');
+    if (!container) return;
+
+    if (!products || products.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    const sellerMap = {};
+    products.forEach(p => {
+        const sName = p.seller_name || 'Digiflazz';
+        if (!sellerMap[sName]) {
+            sellerMap[sName] = {
+                name: sName,
+                count: 0,
+                srSum: 0,
+                srCount: 0,
+                speedSum: 0,
+                speedCount: 0
+            };
+        }
+        sellerMap[sName].count++;
+        const sr = (p.success_rate !== null && p.success_rate !== undefined) ? parseFloat(p.success_rate) : null;
+        if (sr !== null) {
+            sellerMap[sName].srSum += sr;
+            sellerMap[sName].srCount++;
+        }
+        const spd = (p.seller_avg_speed !== null && p.seller_avg_speed !== undefined) ? parseFloat(p.seller_avg_speed) : null;
+        if (spd !== null) {
+            sellerMap[sName].speedSum += spd;
+            sellerMap[sName].speedCount++;
+        }
     });
-});
+
+    const sellerList = Object.values(sellerMap).map(s => {
+        const avgSr = s.srCount > 0 ? (s.srSum / s.srCount) : 0;
+        const avgSpeed = s.speedCount > 0 ? (s.speedSum / s.speedCount) : 9999;
+        
+        let speedScore = 20;
+        if (avgSpeed <= 5) speedScore = 100;
+        else if (avgSpeed <= 15) speedScore = 90;
+        else if (avgSpeed <= 30) speedScore = 75;
+        else if (avgSpeed <= 60) speedScore = 60;
+        else if (avgSpeed <= 180) speedScore = 40;
+
+        const score = (avgSr * 0.7) + (speedScore * 0.3);
+
+        return {
+            name: s.name,
+            count: s.count,
+            avgSr: Math.round(avgSr),
+            avgSpeed: Math.round(avgSpeed),
+            score: score
+        };
+    });
+
+    if (sellerList.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
+
+    sellerList.sort((a, b) => b.score - a.score);
+    const top3 = sellerList.slice(0, 3);
+
+    container.style.display = 'block';
+
+    const top3Html = top3.map((s, idx) => {
+        const medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : '🥉');
+        const badgeBg = idx === 0 ? 'rgba(234, 179, 8, 0.12)' : (idx === 1 ? 'rgba(148, 163, 184, 0.15)' : 'rgba(217, 119, 6, 0.12)');
+        const badgeBorder = idx === 0 ? 'rgba(234, 179, 8, 0.35)' : (idx === 1 ? 'rgba(148, 163, 184, 0.35)' : 'rgba(217, 119, 6, 0.35)');
+        const isActive = currentSelectedSellerFilter === s.name;
+        const spdText = s.avgSpeed <= 59 ? `${s.avgSpeed}d` : `${Math.floor(s.avgSpeed/60)}m`;
+
+        return `
+        <div class="seller-rec-badge ${isActive ? 'active' : ''}" 
+             onclick="applySellerFilter('${encodeURIComponent(s.name)}')"
+             title="Klik untuk memfilter produk dari seller ini"
+             style="background: ${isActive ? 'rgba(59, 130, 246, 0.18)' : badgeBg}; border: 1px solid ${isActive ? 'var(--primary)' : badgeBorder}; border-radius: 10px; padding: 5px 10px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; box-shadow: ${isActive ? '0 0 0 2px var(--primary)' : 'none'};">
+            <span style="font-size: 0.9rem;">${medal}</span>
+            <div style="display: flex; flex-direction: column; min-width: 0;">
+                <span class="fw-bold text-truncate" style="font-size: 11px; color: ${isActive ? 'var(--primary)' : 'var(--text-primary)'}; max-width: 110px;">${s.name}</span>
+                <span style="font-size: 9.5px; color: var(--text-muted); white-space: nowrap;">
+                    <strong style="color: #10b981;">${s.avgSr}% SR</strong> &bull; <i class="bi bi-lightning-charge-fill" style="color: #3b82f6;"></i> ${s.avgSpeed < 900 ? spdText : '-'}
+                </span>
+            </div>
+        </div>`;
+    }).join('');
+
+    let optionsHtml = `<option value="">Semua Seller (${sellerList.length})</option>`;
+    sellerList.forEach(s => {
+        const sel = currentSelectedSellerFilter === s.name ? 'selected' : '';
+        optionsHtml += `<option value="${encodeURIComponent(s.name)}" ${sel}>${s.name} (${s.avgSr}% SR - ${s.count} produk)</option>`;
+    });
+
+    container.innerHTML = `
+    <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 14px; padding: 10px 14px; margin-bottom: 12px;">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+            <div class="fw-bold text-uppercase text-muted d-flex align-items-center gap-1.5" style="font-size: 10px; letter-spacing: 0.5px;">
+                <i class="bi bi-award-fill" style="color: #eab308; font-size: 12px;"></i>
+                <span>Top 3 Rekomendasi Seller</span>
+            </div>
+            ${currentSelectedSellerFilter ? `
+                <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 fw-bold" style="font-size: 10.5px; color: var(--danger);" onclick="applySellerFilter('')">
+                    <i class="bi bi-x-circle-fill me-1"></i>Reset Filter Seller
+                </button>
+            ` : ''}
+        </div>
+        <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center justify-content-between gap-2">
+            <!-- Left: Top 3 Recommended Seller Badges -->
+            <div class="d-flex flex-wrap align-items-center gap-1.5 flex-grow-1 min-w-0">
+                ${top3Html}
+            </div>
+            <!-- Right: Filter Select Dropdown -->
+            <div class="flex-shrink-0" style="min-width: 170px;">
+                <select class="form-select form-select-sm" id="seller-filter-select" onchange="applySellerFilter(this.value)" style="border-radius: 10px; font-size: 11px; font-weight: 600; background-color: var(--surface-1); color: var(--text-primary); border-color: var(--border-color);">
+                    ${optionsHtml}
+                </select>
+            </div>
+        </div>
+    </div>`;
+}
+
+function applySellerFilter(sellerNameEnc) {
+    const sellerName = sellerNameEnc ? decodeURIComponent(sellerNameEnc) : '';
+    if (currentSelectedSellerFilter === sellerName && sellerName !== '') {
+        currentSelectedSellerFilter = '';
+    } else {
+        currentSelectedSellerFilter = sellerName;
+    }
+
+    if (typeof currentProducts !== 'undefined') {
+        const phone = document.getElementById('customer-no')?.value || '';
+        const provider = detectProvider(phone);
+        let productsToFilter = currentProducts;
+        
+        if ((currentCategory === 'pulsa' || currentCategory === 'data' || currentCategory === 'sms_nelpon') && provider) {
+            let digiBrand = provider === 'THREE' ? 'TRI' : provider;
+            productsToFilter = currentProducts.filter(p => (p.brand || '').toUpperCase().includes(digiBrand));
+        }
+
+        const activeBrandBtn = document.querySelector('#brand-filter-container button.btn-primary');
+        const activeBrandVal = activeBrandBtn ? activeBrandBtn.innerText : '';
+        if (activeBrandVal && !activeBrandVal.includes('Semua')) {
+            if (activeBrandVal.includes('Belum Set')) {
+                productsToFilter = productsToFilter.filter(p => !isCustomPriceSet(p));
+            } else {
+                productsToFilter = productsToFilter.filter(p => p.brand === activeBrandVal || p.sub_category === activeBrandVal);
+            }
+        }
+
+        renderSellerRecommendations(productsToFilter);
+
+        if (currentSelectedSellerFilter) {
+            renderProducts(productsToFilter.filter(p => p.seller_name === currentSelectedSellerFilter));
+        } else {
+            renderProducts(productsToFilter);
+        }
+    }
+}
 
 function renderFilters(products, filterKey = 'brand') {
     const container = document.getElementById('brand-filter-container');
@@ -2299,13 +2986,17 @@ function filterList(val, filterKey, clickedBtn, originalProducts) {
         clickedBtn.className = 'btn btn-sm btn-primary rounded-pill fw-bold px-3';
     }
     
+    let filtered = originalProducts;
     if (val === '__UNSET__') {
-        const filtered = originalProducts.filter(p => !isCustomPriceSet(p));
-        renderProducts(filtered);
-    } else if (!val) {
-        renderProducts(originalProducts);
+        filtered = originalProducts.filter(p => !isCustomPriceSet(p));
+    } else if (val) {
+        filtered = originalProducts.filter(p => p[filterKey] === val);
+    }
+    
+    renderSellerRecommendations(filtered);
+    if (currentSelectedSellerFilter) {
+        renderProducts(filtered.filter(p => p.seller_name === currentSelectedSellerFilter));
     } else {
-        const filtered = originalProducts.filter(p => p[filterKey] === val);
         renderProducts(filtered);
     }
 }
@@ -2700,10 +3391,6 @@ function renderProducts(products) {
         return;
     }
 
-    if (currentCategory !== 'pulsa' && currentCategory !== 'data') {
-        const searchCont = document.getElementById('product-search-container');
-        if (searchCont) searchCont.style.display = products.length > 5 ? 'block' : 'none';
-    }
 
     // 1. Group products by product_name
     const groups = {};
@@ -3038,6 +3725,171 @@ function toggleProductGroup(cardEl) {
 // Open Seller History Modal
 let currentSellerPage = 1;
 let currentSellerName = '';
+let sellerRadarChartInstance = null;
+
+function getCatIconClass(catName) {
+    const name = (catName || '').toLowerCase();
+    if (name.includes('pln') || name.includes('listrik')) return { icon: 'bi-lightning-charge-fill', color: '#eab308' };
+    if (name.includes('pulsa')) return { icon: 'bi-phone-fill', color: '#3b82f6' };
+    if (name.includes('data') || name.includes('internet')) return { icon: 'bi-wifi', color: '#06b6d4' };
+    if (name.includes('wallet') || name.includes('money') || name.includes('e-')) return { icon: 'bi-wallet2', color: '#10b981' };
+    if (name.includes('game')) return { icon: 'bi-controller', color: '#ef4444' };
+    if (name.includes('tv')) return { icon: 'bi-tv-fill', color: '#8b5cf6' };
+    if (name.includes('sms') || name.includes('telp')) return { icon: 'bi-chat-dots-fill', color: '#14b8a6' };
+    return { icon: 'bi-bag-check-fill', color: '#6b7280' };
+}
+
+function renderSellerPerformChart(categoryMetrics) {
+    const ctx = document.getElementById('sh-radar-chart');
+    if (!ctx) return;
+
+    if (sellerRadarChartInstance) {
+        sellerRadarChartInstance.destroy();
+        sellerRadarChartInstance = null;
+    }
+
+    if (!categoryMetrics || Object.keys(categoryMetrics).length === 0) return;
+
+    const labels      = [];
+    const speedScores = [];
+    const srScores    = [];
+    const speedTexts  = [];
+    const totalTrxs   = [];
+    const successRates = [];
+    const barColors    = [];
+    const srColors     = [];
+
+    // Speed tier color mapping
+    function speedColor(score, alpha) {
+        if (score === 0) return `rgba(107,114,128,${alpha})`;      // grey — no data
+        if (score >= 90) return `rgba(16,185,129,${alpha})`;       // emerald — very fast
+        if (score >= 75) return `rgba(34,197,94,${alpha})`;        // green — fast
+        if (score >= 60) return `rgba(59,130,246,${alpha})`;       // blue — moderate
+        if (score >= 45) return `rgba(245,158,11,${alpha})`;       // amber — slow
+        if (score >= 25) return `rgba(239,68,68,${alpha})`;        // red — very slow
+        return `rgba(139,92,246,${alpha})`;                        // violet — estimated (N/A)
+    }
+
+    for (const [catKey, m] of Object.entries(categoryMetrics)) {
+        labels.push(m.name || catKey);
+        speedScores.push(m.speed_score  || 0);
+        srScores.push(m.success_rate    || 0);
+        speedTexts.push(m.speed_text    || '-');
+        totalTrxs.push(m.total_trx      || 0);
+        successRates.push(m.success_rate || 0);
+
+        const sc = m.speed_score || 0;
+        barColors.push(speedColor(sc, 0.85));
+        srColors.push(speedColor(sc, 0.25));
+    }
+
+    // Filter out categories with 0 trx for cleaner chart
+    const hasAnyTrx = totalTrxs.some(t => t > 0);
+
+    sellerRadarChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Skor Kecepatan',
+                    data: speedScores,
+                    backgroundColor: barColors,
+                    borderColor: barColors.map(c => c.replace(/[\d.]+\)$/, '1)')),
+                    borderWidth: 0,
+                    borderRadius: 5,
+                    borderSkipped: false,
+                    barPercentage: 0.55,
+                    categoryPercentage: 0.8,
+                    order: 1
+                },
+                {
+                    label: 'Success Rate',
+                    data: srScores,
+                    backgroundColor: srColors,
+                    borderColor: 'transparent',
+                    borderWidth: 0,
+                    borderRadius: 5,
+                    borderSkipped: false,
+                    barPercentage: 0.55,
+                    categoryPercentage: 0.8,
+                    order: 2
+                }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { right: 8 } },
+            scales: {
+                x: {
+                    min: 0,
+                    max: 100,
+                    grid: { color: 'rgba(255,255,255,0.06)', drawBorder: false },
+                    border: { display: false },
+                    ticks: {
+                        color: '#64748b',
+                        font: { size: 9 },
+                        stepSize: 25,
+                        callback: v => v + '%'
+                    }
+                },
+                y: {
+                    grid: { display: false, drawBorder: false },
+                    border: { display: false },
+                    ticks: {
+                        color: '#94a3b8',
+                        font: { size: 10, weight: '600' },
+                        padding: 4
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        color: '#94a3b8',
+                        font: { size: 9.5 },
+                        boxWidth: 10,
+                        boxHeight: 10,
+                        borderRadius: 3,
+                        padding: 12,
+                        usePointStyle: true,
+                        pointStyle: 'rectRounded'
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(15,23,42,0.92)',
+                    titleColor: '#f1f5f9',
+                    bodyColor: '#94a3b8',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderWidth: 1,
+                    padding: 10,
+                    callbacks: {
+                        title: function(items) {
+                            const idx = items[0].dataIndex;
+                            return `${labels[idx]}  (${totalTrxs[idx]} Trx)`;
+                        },
+                        label: function(context) {
+                            const idx = context.dataIndex;
+                            if (context.datasetIndex === 0) {
+                                const spd = speedTexts[idx];
+                                const note = spd === 'Data N/A' ? ' ⚠ estimasi dari SR' : '';
+                                return ` Kecepatan: ${spd}  (skor ${speedScores[idx]}/100)${note}`;
+                            }
+                            return ` Success Rate: ${successRates[idx]}%`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
 
 async function openSellerHistory(e, sellerName) {
     if(e) e.stopPropagation(); // prevent confirming purchase
@@ -3076,9 +3928,9 @@ async function fetchSellerHistory(page) {
         content.style.display = 'block';
         
         if (data.success && data.data) {
-            // Render Analytics
+            // Render Analytics Summary
             const analytics = data.data.analytics;
-            document.getElementById('sh-stat-total').innerText = formatRp(analytics.total).replace('Rp', '');
+            document.getElementById('sh-stat-total').innerText = analytics.total.toLocaleString('id-ID');
             
             const total = analytics.total || 1; // prevent div zero
             const pSuccess = Math.round((analytics.success / total) * 100);
@@ -3095,27 +3947,68 @@ async function fetchSellerHistory(page) {
                 let spVal = Math.round(parseFloat(analytics.avg_speed));
                 shAvgSpeedText = spVal > 900 ? '>15m' : (spVal <= 59 ? `${spVal} dtk` : `${Math.floor(spVal / 60)}m, ${spVal % 60}d`);
             }
-            document.getElementById('sh-txt-speed').innerHTML = `<i class="bi bi-lightning-charge-fill me-1"></i>Kecepatan: ${shAvgSpeedText}`;
-            
-            // Category breakdown
-            let catHtml = '';
-            for (const [catName, count] of Object.entries(analytics.categories)) {
-                if(count > 0) {
-                    const pCat = Math.round((count / total) * 100);
-                    catHtml += `
-                    <div class="d-flex align-items-center mb-1" style="font-size:11px;">
-                        <div style="width:60px;" class="fw-bold">${catName}</div>
-                        <div class="flex-grow-1 mx-2">
-                            <div class="progress" style="height:6px; background:var(--surface-3); border-radius:3px;">
-                                <div class="progress-bar bg-primary" style="width:${pCat}%; border-radius:3px;"></div>
+            document.getElementById('sh-txt-speed').innerHTML = `<i class="bi bi-lightning-charge-fill"></i> ${shAvgSpeedText}`;
+
+            // Render Strengths using sh-sw-item class
+            let strengthsHtml = '';
+            if (analytics.strengths && analytics.strengths.length > 0) {
+                analytics.strengths.forEach(s => {
+                    strengthsHtml += `<div class="sh-sw-item"><i class="bi bi-check-circle-fill"></i><span>${s}</span></div>`;
+                });
+            } else {
+                strengthsHtml = '<div style="font-size:11px; color:var(--text-muted,#94a3b8);">Belum ada data keunggulan seller.</div>';
+            }
+            document.getElementById('sh-strengths-list').innerHTML = strengthsHtml;
+
+            // Render Weaknesses using sh-sw-item class
+            let weaknessesHtml = '';
+            if (analytics.weaknesses && analytics.weaknesses.length > 0) {
+                analytics.weaknesses.forEach(w => {
+                    weaknessesHtml += `<div class="sh-sw-item"><i class="bi bi-exclamation-triangle-fill"></i><span>${w}</span></div>`;
+                });
+            } else {
+                weaknessesHtml = '<div style="font-size:11px; color:var(--text-muted,#94a3b8);">Tidak ada kendala terdeteksi.</div>';
+            }
+            document.getElementById('sh-weaknesses-list').innerHTML = weaknessesHtml;
+
+            // Render Performance Bar Chart
+            if (analytics.category_metrics) {
+                renderSellerPerformChart(analytics.category_metrics);
+            }
+
+            // Render Category Grid Cards using sh-cat-item classes
+            let catGridHtml = '';
+            if (analytics.category_metrics) {
+                for (const [catName, cm] of Object.entries(analytics.category_metrics)) {
+                    const iconInfo = getCatIconClass(catName);
+                    const spd = cm.avg_speed;
+                    const isNoData = cm.speed_text === 'Data N/A';
+                    const badgeColor = spd === null
+                        ? (isNoData ? '#8b5cf6' : '#6b7280')
+                        : (spd <= 15 ? '#10b981' : (spd <= 45 ? '#3b82f6' : '#f59e0b'));
+                    const badgeBg = spd === null
+                        ? (isNoData ? 'rgba(139,92,246,0.12)' : 'rgba(107,114,128,0.1)')
+                        : (spd <= 15 ? 'rgba(16,185,129,0.12)' : (spd <= 45 ? 'rgba(59,130,246,0.12)' : 'rgba(245,158,11,0.12)'));
+                    const srClass = cm.total_trx > 0 ? (cm.success_rate >= 90 ? 'color:#10b981; font-weight:700;' : 'color:var(--primary,#3b82f6);') : '';
+                    const badgeTitle = isNoData ? 'Ada transaksi tapi data kecepatan belum tercatat. Skor radar dihitung dari success rate.' : '';
+                    catGridHtml += `
+                    <div class="sh-cat-item">
+                        <div class="sh-cat-item-header">
+                            <div class="sh-cat-item-name">
+                                <i class="bi ${iconInfo.icon}" style="color:${iconInfo.color};"></i>
+                                <span>${cm.name}</span>
                             </div>
+                            <span class="sh-cat-speed-badge" style="background:${badgeBg}; color:${badgeColor};" title="${badgeTitle}">${cm.speed_text}</span>
                         </div>
-                        <div style="width:30px; text-align:right;" class="text-muted">${count}</div>
+                        <div class="sh-cat-item-footer">
+                            <span><i class="bi bi-box-seam"></i> ${cm.total_trx} Trx</span>
+                            <span class="sr-text" style="${srClass}">${cm.total_trx > 0 ? cm.success_rate + '% SR' : '—'}</span>
+                        </div>
                     </div>`;
                 }
             }
-            if(!catHtml) catHtml = '<div class="text-muted small">Belum ada kategori.</div>';
-            document.getElementById('sh-cat-bars').innerHTML = catHtml;
+            if (!catGridHtml) catGridHtml = '<div style="color:var(--text-muted,#94a3b8); font-size:11px; grid-column: 1/-1;">Belum ada data kategori.</div>';
+            document.getElementById('sh-category-grid').innerHTML = catGridHtml;
             
             // Render Table
             list.innerHTML = '';

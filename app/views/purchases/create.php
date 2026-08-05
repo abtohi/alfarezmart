@@ -1077,6 +1077,9 @@ async function selectProduct(productSummary) {
 }
 
 function addProductToCart(product, defaultLevel = 1) {
+    if (product && product.level) {
+        defaultLevel = parseInt(product.level, 10);
+    }
     let selectedPkg = product.packagings.find(p => p.level == defaultLevel) || product.packagings.find(p => p.level == 1) || product.packagings[0];
     
     const existingIndex = purchaseItems.findIndex(i => i.product_id == product.id && i.level == selectedPkg.level);
