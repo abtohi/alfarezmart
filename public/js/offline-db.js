@@ -280,28 +280,39 @@ window.OfflineDB = (function() {
 
     async function findByBarcode(barcode, isPos = false) {
         if (!barcode) return null;
-        barcode = barcode.replace(/\s+/g, '').toLowerCase();
+        const cleanCode = barcode.replace(/\s+/g, '').toLowerCase();
         
         try {
             const all = await getAllProducts();
-            return all.find(p => {
-                if (isPos && p.is_available !== undefined && p.is_available != 1) return false;
-                
-                let match = false;
+            for (const p of all) {
+                if (isPos && (p.is_available == 0 || p.is_available === '0' || p.is_available === false)) continue;
+
+                let matchedLevel = null;
                 if (p.code) {
                     let pCode = p.code.replace(/\s+/g, '').toLowerCase();
-                    if (pCode === barcode) match = true;
+                    if (pCode === cleanCode) matchedLevel = 1;
                 }
                 
-                if (!match && p.packagings && Array.isArray(p.packagings)) {
-                    match = p.packagings.some(pkg => {
+                if (!matchedLevel && p.packagings && Array.isArray(p.packagings)) {
+                    const matchedPkg = p.packagings.find(pkg => {
                         if (!pkg.barcode) return false;
                         let b = pkg.barcode.replace(/\s+/g, '').toLowerCase();
-                        return b === barcode || b === '0' + barcode || '0' + b === barcode || b === '00' + barcode || '00' + b === barcode;
+                        return b === cleanCode || b === '0' + cleanCode || '0' + b === cleanCode || b === '00' + cleanCode || '00' + b === cleanCode;
                     });
+                    if (matchedPkg && matchedPkg.level) {
+                        matchedLevel = parseInt(matchedPkg.level, 10);
+                    }
                 }
-                return match;
-            });
+
+                if (matchedLevel) {
+                    return {
+                        ...p,
+                        level: matchedLevel,
+                        scanned_barcode: barcode
+                    };
+                }
+            }
+            return null;
         } catch (e) {
             console.error("Offline barcode lookup failed", e);
             return null;

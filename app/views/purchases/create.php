@@ -854,7 +854,7 @@ async function _doPurchaseBarcodeSearch(code) {
             const localProduct = await OfflineDB.findByBarcode(code);
             if (localProduct && localProduct.id) {
                 if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                addProductToCart(localProduct);
+                addProductToCart(localProduct, 1, code);
                 if (searchInput) searchInput.value = '';
                 if (suggestionsDiv) suggestionsDiv.innerHTML = '';
                 // Background: refresh product cache from server
@@ -885,7 +885,7 @@ async function _doPurchaseBarcodeSearch(code) {
             const data = await resp.json();
             if (data && data.id) {
                 if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                addProductToCart(data);
+                addProductToCart(data, 1, code);
                 if (searchInput) searchInput.value = '';
                 if (suggestionsDiv) suggestionsDiv.innerHTML = '';
                 if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) OfflineDB.saveProduct(data).catch(() => {});
@@ -906,7 +906,7 @@ async function _doPurchaseBarcodeSearch(code) {
             const results = await sResp.json();
             if (Array.isArray(results) && results.length === 1) {
                 if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                addProductToCart(results[0]);
+                addProductToCart(results[0], 1, code);
                 if (searchInput) searchInput.value = '';
                 if (suggestionsDiv) suggestionsDiv.innerHTML = '';
                 return;
@@ -950,7 +950,7 @@ async function performProductSearch() {
                 const data = await resp.json();
                 if (data && data.id) {
                     if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                    addProductToCart(data);
+                    addProductToCart(data, 1, q);
                     searchInput.value = '';
                     suggestionsDiv.innerHTML = '';
                     return;
@@ -1076,10 +1076,30 @@ async function selectProduct(productSummary) {
     }
 }
 
-function addProductToCart(product, defaultLevel = 1) {
-    if (product && product.level) {
-        defaultLevel = parseInt(product.level, 10);
+function addProductToCart(product, defaultLevel = 1, scannedCode = null) {
+    let targetLevel = null;
+    if (product) {
+        if (product.level) {
+            targetLevel = parseInt(product.level, 10);
+        }
+        const codeToMatch = scannedCode || product.scanned_barcode;
+        if (!targetLevel && codeToMatch && Array.isArray(product.packagings)) {
+            const cleanCode = String(codeToMatch).replace(/\s+/g, '').toLowerCase();
+            const matchedPkg = product.packagings.find(pkg => {
+                if (!pkg.barcode) return false;
+                const b = String(pkg.barcode).replace(/\s+/g, '').toLowerCase();
+                return b === cleanCode || b === '0' + cleanCode || '0' + b === cleanCode || b === '00' + cleanCode || '00' + b === cleanCode;
+            });
+            if (matchedPkg && matchedPkg.level) {
+                targetLevel = parseInt(matchedPkg.level, 10);
+            }
+        }
     }
+
+    if (targetLevel) {
+        defaultLevel = targetLevel;
+    }
+
     let selectedPkg = product.packagings.find(p => p.level == defaultLevel) || product.packagings.find(p => p.level == 1) || product.packagings[0];
     
     const existingIndex = purchaseItems.findIndex(i => i.product_id == product.id && i.level == selectedPkg.level);
