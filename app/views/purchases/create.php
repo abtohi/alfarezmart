@@ -13,6 +13,42 @@ body { overscroll-behavior-y: none !important; }
 .item-field-total  { grid-column: 1 / -1; } /* Full width on mobile */
 .item-ppn-disc-row { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-bottom: 4px; }
 
+/* ──── Mobile Layout Ordering (<992px) ──── */
+@media (max-width: 991.98px) {
+    .desktop-purchase-layout {
+        display: flex;
+        flex-direction: column;
+    }
+    .purchase-left-panel,
+    .purchase-right-panel {
+        display: contents;
+    }
+    .purchase-step1-block {
+        order: 1;
+        margin-bottom: 12px;
+    }
+    #productSearchSection {
+        order: 2;
+    }
+    .purchase-items-header {
+        order: 3;
+    }
+    #massActionToolbar {
+        order: 4;
+    }
+    #purchaseItems {
+        order: 5;
+    }
+    .purchase-summary-block {
+        order: 6;
+        margin-top: 16px;
+    }
+    #btnSavePurchase {
+        order: 7;
+        margin-top: 16px !important;
+    }
+}
+
 /* ──── Desktop 2-Panel Layout (≥992px only) ──── */
 @media (min-width: 992px) {
     .desktop-purchase-layout {
@@ -89,7 +125,7 @@ body { overscroll-behavior-y: none !important; }
         <div class="purchase-left-panel">
 
             <!-- Step 1: Sales & Supplier -->
-            <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; border:1px solid var(--border-color); margin-bottom:12px;">
+            <div class="purchase-step1-block" style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; border:1px solid var(--border-color); margin-bottom:12px;">
                 <div class="section-title" style="margin-bottom:8px;">
                     <i class="bi bi-1-circle" style="color:var(--primary);"></i> Sales &amp; Supplier
                 </div>
@@ -131,7 +167,7 @@ body { overscroll-behavior-y: none !important; }
             </div><!-- /Step 1 -->
 
             <!-- Invoice Adjustments & Total -->
-            <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; border:1px solid var(--border-color); margin-bottom:12px;">
+            <div class="purchase-summary-block" style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; border:1px solid var(--border-color); margin-bottom:12px;">
                 <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">
                     <i class="bi bi-receipt" style="color:var(--primary);"></i> Ringkasan Invoice
                 </div>
@@ -205,7 +241,7 @@ body { overscroll-behavior-y: none !important; }
             </div><!-- /productSearchSection -->
 
             <!-- Step 3: Item List -->
-            <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="section-title purchase-items-header" style="display:flex; justify-content:space-between; align-items:center;">
                 <span><i class="bi bi-3-circle" style="color:var(--primary);"></i> Daftar Barang</span>
                 <div style="display:flex; align-items:center; gap:8px;">
                     <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px; color:var(--danger); border-color:var(--danger);" onclick="clearAllDrafts()" title="Kosongkan Semua Inputan">
