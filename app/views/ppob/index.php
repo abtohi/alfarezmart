@@ -894,12 +894,13 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     padding: 10px 12px;
     cursor: pointer;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
     user-select: none;
     background: var(--surface-1);
     transition: background-color 0.15s ease;
+    min-height: 0;
 }
 
 .prod-group-header:hover {
@@ -937,7 +938,7 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 .btn-group-set-price {
     font-size: 0.65rem;
     font-weight: 700;
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 12px;
     background: rgba(var(--primary-rgb, 59, 130, 246), 0.1);
     color: var(--primary);
@@ -947,6 +948,10 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     display: inline-flex;
     align-items: center;
     white-space: nowrap;
+    flex-shrink: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .btn-group-set-price:hover {
@@ -1214,7 +1219,7 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     gap: 8px;
     padding-top: 6px;
     border-top: 1px dashed var(--border-color);
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
 }
 
 .price-info-group {
@@ -1382,6 +1387,59 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 :root[data-theme="light"] .alert-info { background: var(--info-bg); border-color: rgba(37,99,235,0.3); color: var(--info); }
 :root[data-theme="light"] .prod-card { background: var(--surface-2); }
 :root[data-theme="light"] .prod-card:hover { background: var(--surface-3); }
+
+/* ── trxModal Desktop Sizing ── */
+@media (min-width: 992px) {
+    #trxModal .modal-xl {
+        max-width: min(1100px, calc(100vw - 64px));
+    }
+    #trxModal .modal-body {
+        max-height: calc(100vh - 140px);
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--border-color) transparent;
+    }
+    #trxModal .modal-body::-webkit-scrollbar { width: 5px; }
+    #trxModal .modal-body::-webkit-scrollbar-track { background: transparent; }
+    #trxModal .modal-body::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+}
+
+/* ── Product grid inside trxModal: 2 columns on wide desktop ── */
+@media (min-width: 1024px) {
+    #trxModal .product-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* ── Seller price bar: never overflow on any screen ── */
+.seller-price-bar {
+    flex-wrap: nowrap !important;
+    overflow: hidden;
+}
+.price-info-group {
+    min-width: 0;
+    overflow: hidden;
+}
+.modal-price-val, .sell-price-val {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* ── seller-option-item: ensure chips wrap cleanly ── */
+.seller-option-item .d-flex.align-items-center.gap-1 {
+    row-gap: 4px;
+}
+
+/* ── prod-group-header: prevent badge overflow on very narrow screens ── */
+.prod-group-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: normal;
+    word-break: break-word;
+}
 </style>
 
 <div class="container-fluid py-4 ppob-wrapper">
@@ -1536,7 +1594,7 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 
 <!-- Universal Transaction Modal -->
 <div class="modal fade" id="trxModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content" style="border-radius: 20px; border: none; overflow: hidden;">
             <div class="modal-header border-0" style="background: var(--surface-2);">
                 <h5 class="modal-title fw-bold" id="trxModalTitle">Transaksi</h5>
@@ -3482,17 +3540,17 @@ function renderProducts(products) {
 
         const headerHtml = `
             <div class="prod-group-header" onclick="toggleProductGroup(this.parentElement)">
-                <div class="d-flex flex-column flex-grow-1 min-w-0 gap-1">
+                <div class="d-flex flex-column flex-grow-1 min-w-0" style="gap:4px;">
                     <div class="prod-group-title mb-0">${group.name}</div>
-                    <div class="d-flex flex-wrap align-items-center gap-1.5 mt-0.5">
+                    <div class="d-flex flex-wrap align-items-center" style="gap:4px; row-gap:4px;">
                         <span class="prod-group-price-chip">${groupPriceHtml}</span>
                         ${countBadge}
                         ${srBadgeHtml}
                         ${groupUnsetBadgeHtml}
-                        ${groupSetPriceBtn}
                     </div>
+                    ${groupSetPriceBtn ? `<div style="margin-top:2px;">${groupSetPriceBtn}</div>` : ''}
                 </div>
-                <div class="prod-group-chevron flex-shrink-0 ms-1">
+                <div class="prod-group-chevron flex-shrink-0" style="margin-top:2px; margin-left:8px;">
                     <i class="bi bi-chevron-down"></i>
                 </div>
             </div>
@@ -3509,12 +3567,12 @@ function renderProducts(products) {
         let clusterToolbarHtml = '';
         if (sellerCount > 1) {
             clusterToolbarHtml = `
-            <div class="d-flex justify-content-between align-items-center p-2 mb-2 rounded" style="background: rgba(var(--primary-rgb, 59, 130, 246), 0.06); border: 1px dashed rgba(var(--primary-rgb, 59, 130, 246), 0.25);">
-                <div class="d-flex align-items-center gap-1.5 min-w-0">
-                    <span class="badge bg-primary text-white fw-bold" style="font-size:0.65rem;"><i class="bi bi-people-fill me-1"></i>${sellerCount} Seller</span>
-                    <span class="text-muted text-truncate" style="font-size:0.72rem;">Atur harga jual sama untuk semua seller</span>
+            <div class="d-flex flex-wrap align-items-center justify-content-between p-2 mb-2 rounded" style="background: rgba(var(--primary-rgb, 59, 130, 246), 0.06); border: 1px dashed rgba(var(--primary-rgb, 59, 130, 246), 0.25); gap:8px;">
+                <div class="d-flex align-items-center flex-wrap" style="gap:6px; min-width:0;">
+                    <span class="badge bg-primary text-white fw-bold flex-shrink-0" style="font-size:0.65rem;"><i class="bi bi-people-fill me-1"></i>${sellerCount} Seller</span>
+                    <span class="text-muted" style="font-size:0.72rem; min-width:0;">Atur harga jual sama untuk semua seller</span>
                 </div>
-                <button class="btn btn-sm btn-primary rounded-pill px-2.5 py-1 fw-bold text-xs flex-shrink-0 shadow-sm" onclick="openSetGroupPriceModal(event, '${safeGroupName}', '${encodedGroupItems}')">
+                <button class="btn btn-sm btn-primary rounded-pill fw-bold flex-shrink-0 shadow-sm" style="font-size:0.72rem; padding:4px 12px; white-space:nowrap;" onclick="openSetGroupPriceModal(event, '${safeGroupName}', '${encodedGroupItems}')">
                     <i class="bi bi-tags-fill me-1"></i>Set Harga Semua (${sellerCount})
                 </button>
             </div>`;
