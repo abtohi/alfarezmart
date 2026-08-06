@@ -743,6 +743,10 @@ if ($userLevel === 'staff') {
     })();
     </script>
 
+    <!-- Global CSRF token for inline barcode editing -->
+    <?php $__globalCsrf = (new Security())->getCSRFToken(); ?>
+    <input type="hidden" id="globalCsrfToken" value="<?= $__globalCsrf ?>">
+
     <!-- ===== Global Barcode Scan Result Modal ===== -->
     <div id="globalBarcodeScanModal" style="display:none; position:fixed; inset:0; z-index:99990; background:rgba(0,0,0,0.65); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:16px;" onclick="closeGlobalBarcodeModal()">
         <div id="globalBarcodeScanSheet" style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:24px; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; padding:24px; box-shadow:0 24px 80px rgba(0,0,0,0.5); animation:popInGlobalModal 0.25s cubic-bezier(0.34,1.56,0.64,1) both;" onclick="event.stopPropagation()">
@@ -815,23 +819,61 @@ if ($userLevel === 'staff') {
 
         const localBadge = isLocal ? `<span style="font-size:10px; background:rgba(234,179,8,0.15); color:#ca8a04; border:1px solid rgba(234,179,8,0.3); border-radius:6px; padding:2px 7px; font-weight:700;">Lokal</span>` : '';
 
-        // Packaging & Prices breakdown
+        // Packaging & Prices breakdown with expand/collapse + barcode edit
         let packagingsHtml = '';
         if (p.packagings && Array.isArray(p.packagings) && p.packagings.length > 0) {
             packagingsHtml = p.packagings.map((pkg, idx) => {
                 const priceRetail = parseFloat(pkg.sell_price_retail) || 0;
                 const priceWholesale = parseFloat(pkg.sell_price_wholesale) || 0;
                 const unitName = pkg.unit_name || pkg.unit_abbr || 'Unit';
+                const barcode = pkg.barcode || '';
+                const hasBarcode = barcode.length > 0;
+                const qty = pkg.base_qty || pkg.contained_qty || 1;
+                const uid = `gmodal_pkg_${p.id}_${pkg.id}`;
+                
+                const barcodeIndicator = hasBarcode
+                    ? `<span style="font-size:10px; font-family:'JetBrains Mono','Fira Code',monospace; color:var(--text-muted); background:var(--surface-1); border:1px solid var(--border-color); padding:2px 8px; border-radius:5px; max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:inline-block; vertical-align:middle;" title="${window._safeHtml(barcode)}"><i class="bi bi-upc" style="margin-right:3px;"></i>${window._safeHtml(barcode)}</span>`
+                    : `<span style="font-size:10px; color:var(--warning); font-weight:700; display:inline-flex; align-items:center; gap:3px;"><i class="bi bi-exclamation-triangle-fill"></i> Belum ada barcode</span>`;
                 
                 return `
-                    <div style="background:var(--surface-2); border:1px solid var(--border-color); border-radius:12px; padding:10px 14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <div style="width:26px; height:26px; border-radius:7px; background:var(--primary-bg); color:var(--primary); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;">L${pkg.level || (idx+1)}</div>
-                            <span style="font-weight:700; font-size:13px; color:var(--text-primary);">${unitName}</span>
+                    <div style="background:var(--surface-2); border:1px solid var(--border-color); border-radius:12px; margin-bottom:8px; overflow:hidden; transition:border-color 0.2s;" id="${uid}_wrap">
+                        <!-- Clickable Header (Collapsed View) -->
+                        <div onclick="toggleGlobalPkgRow('${uid}')" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:8px; cursor:pointer; transition:background 0.15s; user-select:none;" onmouseover="this.style.background='var(--surface-1)'" onmouseout="this.style.background='transparent'">
+                            <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+                                <div style="width:26px; height:26px; border-radius:7px; background:var(--primary-bg); color:var(--primary); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0;">L${pkg.level || (idx+1)}</div>
+                                <div style="min-width:0;">
+                                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                        <span style="font-weight:700; font-size:13px; color:var(--text-primary);">${unitName}</span>
+                                        <span style="font-size:10px; color:var(--text-muted); background:var(--surface-1); border:1px solid var(--border-color); padding:1px 6px; border-radius:4px;">Isi ${qty} pcs</span>
+                                    </div>
+                                    <div style="margin-top:3px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">${barcodeIndicator}</div>
+                                </div>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                                <div style="text-align:right;">
+                                    <div style="font-weight:800; font-size:13px; color:var(--success);">Rp${priceRetail.toLocaleString('id-ID')}</div>
+                                    ${priceWholesale > 0 ? `<div style="font-size:10px; color:var(--warning); font-weight:600;">Grosir: Rp${priceWholesale.toLocaleString('id-ID')}</div>` : ''}
+                                </div>
+                                <i class="bi bi-chevron-down" id="${uid}_chevron" style="font-size:14px; color:var(--text-muted); transition:transform 0.25s;"></i>
+                            </div>
                         </div>
-                        <div style="text-align:right;">
-                            <div style="font-weight:800; font-size:14px; color:var(--success);">Rp${priceRetail.toLocaleString('id-ID')}</div>
-                            ${priceWholesale > 0 ? `<div style="font-size:10px; color:var(--warning); font-weight:600;">Grosir: Rp${priceWholesale.toLocaleString('id-ID')}</div>` : ''}
+                        <!-- Expandable Barcode Edit Section (Hidden by default) -->
+                        <div id="${uid}_body" style="display:none; padding:0 14px 12px; border-top:1px solid var(--border-color);">
+                            <div style="margin-top:10px;">
+                                <label style="font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:5px; display:block;">Barcode ${unitName}</label>
+                                <div style="display:flex; gap:6px; align-items:center;">
+                                    <div style="flex:1; position:relative;">
+                                        <input type="text" id="${uid}_input" value="${window._safeHtml(barcode)}" placeholder="Scan atau ketik barcode..." autocomplete="off"
+                                            style="width:100%; height:40px; background:var(--bg-input); border:1.5px solid var(--border-color); border-radius:8px; padding:0 36px 0 12px; font-family:'JetBrains Mono','Fira Code',monospace; font-size:13px; color:var(--text-primary); outline:none; transition:border-color 0.2s, box-shadow 0.2s;"
+                                            onfocus="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'"
+                                            onblur="this.style.borderColor='var(--border-color)';this.style.boxShadow='none'">
+                                        <i class="bi bi-upc" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--text-muted); opacity:0.4; pointer-events:none;"></i>
+                                    </div>
+                                    <button type="button" onclick="document.getElementById('${uid}_input').value='';document.getElementById('${uid}_input').focus();" style="width:40px; height:40px; min-width:40px; display:flex; align-items:center; justify-content:center; background:transparent; border:1.5px solid var(--border-color); border-radius:8px; color:var(--text-muted); cursor:pointer; transition:all 0.15s; font-size:14px;" onmouseover="this.style.borderColor='var(--danger)';this.style.color='var(--danger)';this.style.background='var(--danger-bg)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-muted)';this.style.background='transparent'">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>`;
             }).join('');
@@ -843,6 +885,12 @@ if ($userLevel === 'staff') {
                     <span style="font-weight:800; font-size:15px; color:var(--success);">Rp${price.toLocaleString('id-ID')}</span>
                 </div>`;
         }
+
+        // Save button (only if product has packagings)
+        const saveBarcodeBtn = (p.packagings && p.packagings.length > 0) ? `
+            <button type="button" id="gmodal_save_bc_${p.id}" onclick="saveGlobalModalBarcodes(${p.id})" style="width:100%; padding:10px; font-size:12px; font-weight:700; border:none; border-radius:10px; background:var(--primary); color:white; display:none; align-items:center; justify-content:center; gap:6px; cursor:pointer; margin-top:4px; transition:opacity 0.15s, transform 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                <i class="bi bi-check-circle-fill"></i> Simpan Barcode
+            </button>` : '';
 
         return `
             <div style="display:flex; gap:16px; align-items:flex-start; margin-bottom:16px;">
@@ -865,8 +913,12 @@ if ($userLevel === 'staff') {
 
             <!-- Price Breakdown Section -->
             <div style="margin-bottom:20px;">
-                <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Daftar Harga & Level Kemasan</div>
+                <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                    <i class="bi bi-box-seam" style="font-size:12px;"></i> Daftar Harga & Level Kemasan
+                    <span style="font-size:9px; font-weight:600; color:var(--primary); background:var(--primary-bg); padding:2px 6px; border-radius:4px;">Klik untuk edit barcode</span>
+                </div>
                 ${packagingsHtml || '<div style="font-size:12px; color:var(--text-muted); padding:10px; text-align:center;">Belum ada tingkat harga</div>'}
+                ${saveBarcodeBtn}
             </div>
 
             <!-- Action Buttons Footer -->
@@ -879,6 +931,100 @@ if ($userLevel === 'staff') {
                 </a>
             </div>`;
     }
+
+    // Track current product data shown in the modal for barcode save
+    window._currentGlobalModalProduct = null;
+
+    // Toggle expand/collapse for a packaging row in the scan result modal
+    window.toggleGlobalPkgRow = function(uid) {
+        const body = document.getElementById(uid + '_body');
+        const chevron = document.getElementById(uid + '_chevron');
+        const wrap = document.getElementById(uid + '_wrap');
+        if (!body) return;
+
+        const isOpen = body.style.display !== 'none';
+        body.style.display = isOpen ? 'none' : 'block';
+        if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        if (wrap) wrap.style.borderColor = isOpen ? 'var(--border-color)' : 'rgba(99,102,241,0.4)';
+
+        // Show save button when any row is expanded
+        if (!isOpen) {
+            const product = window._currentGlobalModalProduct;
+            if (product) {
+                const saveBtn = document.getElementById('gmodal_save_bc_' + product.id);
+                if (saveBtn) saveBtn.style.display = 'flex';
+            }
+            // Auto focus the barcode input
+            const input = document.getElementById(uid + '_input');
+            if (input) setTimeout(() => input.focus(), 80);
+        }
+    };
+
+    // Save barcodes inline from global scan result modal
+    window.saveGlobalModalBarcodes = async function(productId) {
+        const product = window._currentGlobalModalProduct;
+        if (!product || !product.packagings) return;
+
+        const btn = document.getElementById('gmodal_save_bc_' + productId);
+        if (!btn) return;
+        const origHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Menyimpan...';
+
+        try {
+            const barcodes = {};
+            product.packagings.forEach(pkg => {
+                const input = document.getElementById(`gmodal_pkg_${productId}_${pkg.id}_input`);
+                if (input) barcodes[pkg.id] = input.value.trim();
+            });
+
+            // Get CSRF token from page
+            let csrf = '';
+            const csrfEl = document.getElementById('csrfToken') || document.getElementById('globalCsrfToken');
+            if (csrfEl) csrf = csrfEl.value;
+
+            const resp = await fetch(`${BASE_URL}api/products/${productId}/update-barcodes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+                credentials: 'same-origin',
+                body: JSON.stringify({ barcodes, csrf_token: csrf })
+            });
+            const res = await resp.json();
+
+            if (resp.status === 409 || res.error === 'barcode_conflict') {
+                if (typeof showToast === 'function') showToast(res.message || 'Barcode sudah digunakan produk lain!', 'error');
+                return;
+            }
+            if (!resp.ok || res.error) throw new Error(res.error || res.message || 'Gagal');
+
+            if (typeof showToast === 'function') showToast('Barcode berhasil disimpan!', 'success');
+
+            // Update local product data
+            product.packagings.forEach(pkg => {
+                const input = document.getElementById(`gmodal_pkg_${productId}_${pkg.id}_input`);
+                if (input) pkg.barcode = input.value.trim();
+            });
+
+            // Refresh OfflineDB cache
+            if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) {
+                OfflineDB.saveProduct(product).catch(() => {});
+            }
+
+            // Briefly flash success
+            btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Tersimpan!';
+            btn.style.background = 'var(--success)';
+            setTimeout(() => {
+                btn.innerHTML = origHTML;
+                btn.style.background = 'var(--primary)';
+            }, 2000);
+
+        } catch(err) {
+            if (typeof showToast === 'function') showToast(err.message || 'Gagal menyimpan barcode', 'error');
+            btn.innerHTML = origHTML;
+        } finally {
+            btn.disabled = false;
+        }
+    };
 
     window.showGlobalBarcodeModal = async function(code) {
         const modal = document.getElementById('globalBarcodeScanModal');
@@ -899,6 +1045,7 @@ if ($userLevel === 'staff') {
         }
 
         if (localProduct && localProduct.id) {
+            window._currentGlobalModalProduct = localProduct;
             content.innerHTML = renderGlobalProductCard(localProduct, true);
 
             // Background server refresh
@@ -911,6 +1058,7 @@ if ($userLevel === 'staff') {
                 if (res.ok) {
                     const fresh = await res.json();
                     if (fresh && fresh.id) {
+                        window._currentGlobalModalProduct = fresh;
                         content.innerHTML = renderGlobalProductCard(fresh, false);
                         if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) {
                             OfflineDB.saveProduct(fresh).catch(() => {});
@@ -933,6 +1081,7 @@ if ($userLevel === 'staff') {
             if (res.ok) {
                 const data = await res.json();
                 if (data && data.id) {
+                    window._currentGlobalModalProduct = data;
                     content.innerHTML = renderGlobalProductCard(data, false);
                     if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) {
                         OfflineDB.saveProduct(data).catch(() => {});
