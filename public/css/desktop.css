@@ -666,7 +666,8 @@
         box-sizing: border-box !important;
     }
 
-    .desktop-pos-layout .pos-desktop-customer-header {
+    .desktop-pos-layout .pos-desktop-customer-header,
+    .desktop-pos-layout .pos-desktop-sidebar-header {
         display: flex !important;
         align-items: center !important;
         justify-content: space-between !important;
@@ -674,6 +675,7 @@
         border-bottom: 1px solid var(--border-color) !important;
         margin-bottom: 14px !important;
         width: 100% !important;
+        box-sizing: border-box !important;
     }
 
     .desktop-pos-layout #customerSelectorBox {
@@ -700,8 +702,9 @@
         box-sizing: border-box !important;
     }
 
-    /* Desktop Sticky Sidebar Checkout Card */
+    /* Right Column: Structured Sticky Ringkasan Kasir Card (LOCKED AT TOP) */
     .desktop-pos-layout .pos-checkout-bar {
+        order: 1 !important;
         position: static !important;
         bottom: auto !important;
         left: auto !important;
@@ -718,6 +721,18 @@
         display: flex !important;
         flex-direction: column !important;
         box-sizing: border-box !important;
+    }
+
+    .desktop-pos-layout #mixDefaultPriceBox {
+        order: 2 !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    .desktop-pos-layout #posChainBanner {
+        order: 3 !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
     }
 
     .desktop-pos-layout .pos-checkout-bar__inner {
@@ -737,17 +752,6 @@
         box-sizing: border-box !important;
         color: var(--text-primary) !important;
         gap: 16px !important;
-    }
-
-    /* Desktop sidebar title header */
-    .pos-desktop-sidebar-header {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        padding-bottom: 12px !important;
-        border-bottom: 1px solid var(--border-color) !important;
-        margin-bottom: 2px !important;
-        width: 100% !important;
     }
 
     .desktop-pos-layout .pos-checkout-bar__summary {
