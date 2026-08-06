@@ -943,8 +943,15 @@ async function processPurchaseBarcodeOrSearch(rawQuery) {
         try {
             const data = await api(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}`);
             if (data && data.id) {
-                addProductToCart(data);
-                showToast(`Produk "${data.short_label || data.full_name || data.name}" ditambahkan`, 'success');
+                let targetLevel = data.level;
+                if (data.packagings && Array.isArray(data.packagings)) {
+                    const matchedPkg = data.packagings.find(p => p.barcode && String(p.barcode).replace(/\s+/g, '') === q.replace(/\s+/g, ''));
+                    if (matchedPkg) targetLevel = matchedPkg.level;
+                }
+                data.scanned_barcode = q;
+                addProductToCart(data, targetLevel);
+                const pkgObj = (data.packagings && data.packagings.find(p => p.level == targetLevel)) || {};
+                showToast(`Produk "${data.short_label || data.full_name || data.name}" (${pkgObj.unit_name || ''}) ditambahkan`, 'success');
                 if (suggestionsDiv) suggestionsDiv.innerHTML = '';
                 return true;
             }
@@ -975,8 +982,15 @@ async function processPurchaseBarcodeOrSearch(rawQuery) {
                         fullProduct = await api(`${BASE_URL}api/products/${match.id}`);
                     }
                     if (fullProduct) {
-                        addProductToCart(fullProduct);
-                        showToast(`Produk "${fullProduct.short_label || fullProduct.full_name}" ditambahkan`, 'success');
+                        let targetLevel = match.level;
+                        if (fullProduct.packagings && Array.isArray(fullProduct.packagings)) {
+                            const matchedPkg = fullProduct.packagings.find(p => p.barcode && String(p.barcode).replace(/\s+/g, '') === q.replace(/\s+/g, ''));
+                            if (matchedPkg) targetLevel = matchedPkg.level;
+                        }
+                        fullProduct.scanned_barcode = q;
+                        addProductToCart(fullProduct, targetLevel);
+                        const pkgObj = (fullProduct.packagings && fullProduct.packagings.find(p => p.level == targetLevel)) || {};
+                        showToast(`Produk "${fullProduct.short_label || fullProduct.full_name}" (${pkgObj.unit_name || ''}) ditambahkan`, 'success');
                         if (suggestionsDiv) suggestionsDiv.innerHTML = '';
                         return true;
                     }
@@ -1058,8 +1072,10 @@ async function performProductSearch() {
                     ? '<span style="font-size:9px;background:var(--success-bg);color:var(--success);padding:2px 6px;border-radius:10px;margin-left:4px;">Supplier</span>'
                     : '<span style="font-size:9px;background:var(--warning-bg);color:var(--warning);padding:2px 6px;border-radius:10px;margin-left:4px;">Lainnya</span>');
             
+            const pStr = JSON.stringify(p).replace(/'/g, "&#39;");
+
             return `
-                <div class="search-result-item" onclick='selectProduct(${JSON.stringify(p).replace(/'/g, "&#39;")})' 
+                <div class="search-result-item" onclick='selectProduct(${pStr})' 
                      style="padding:10px;background:var(--surface-2);border-radius:var(--radius-sm);margin-bottom:4px;cursor:pointer;${isSupplierProduct ? 'border-left:3px solid var(--success);' : ''}">
                     <div style="font-size:0.85rem;font-weight:600;">${p.full_name || p.short_label}${badge}</div>
                     <div style="font-size:0.7rem;color:var(--text-muted);">${p.brand_name || ''} · ${p.category_name || ''}${p.last_buy_price ? ' · Beli: ' + formatRupiah(p.last_buy_price) : ''}</div>
@@ -1072,7 +1088,7 @@ async function performProductSearch() {
     }
 }
 
-async function selectProduct(productSummary) {
+async function selectProduct(productSummary, defaultLevel = null) {
     searchInput.value = '';
     suggestionsDiv.innerHTML = '';
     try {
@@ -1083,15 +1099,39 @@ async function selectProduct(productSummary) {
         if (!data && navigator.onLine) {
             data = await api(`${BASE_URL}api/products/${productSummary.id}`);
         }
-        if (data) addProductToCart(data);
-        else showToast('Produk tidak ditemukan', 'warning');
+        if (data) {
+            const targetLevel = defaultLevel || productSummary.level || null;
+            addProductToCart(data, targetLevel);
+        } else {
+            showToast('Produk tidak ditemukan', 'warning');
+        }
     } catch (e) {
         showToast('Gagal mengambil data produk', 'error');
     }
 }
 
-function addProductToCart(product, defaultLevel = 1) {
-    let selectedPkg = product.packagings.find(p => p.level == defaultLevel) || product.packagings.find(p => p.level == 1) || product.packagings[0];
+function addProductToCart(product, defaultLevel = null) {
+    if (!product || !Array.isArray(product.packagings) || product.packagings.length === 0) {
+        showToast('Data kemasan produk tidak lengkap', 'error');
+        return;
+    }
+
+    let targetLevel = defaultLevel;
+    if (!targetLevel && product.scanned_barcode) {
+        const cleanScanned = String(product.scanned_barcode).replace(/\s+/g, '');
+        const matched = product.packagings.find(p => p.barcode && String(p.barcode).replace(/\s+/g, '') === cleanScanned);
+        if (matched) targetLevel = matched.level;
+    }
+    if (!targetLevel && product.level) {
+        targetLevel = product.level;
+    }
+    if (!targetLevel) {
+        targetLevel = 1;
+    }
+
+    let selectedPkg = product.packagings.find(p => p.level == targetLevel) 
+        || product.packagings.find(p => p.level == 1) 
+        || product.packagings[0];
     
     // Ensure all packagings have PPN/diskon initialized and auto-detect custom pricing
     const lv1 = product.packagings.find(p => p.level == 1) || product.packagings[0];
