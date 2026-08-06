@@ -303,7 +303,7 @@ function applyPhotoFilter() {
     
     let width = originalPhotoImg.width;
     let height = originalPhotoImg.height;
-    const max_size = 900; // Optimized to 900px to keep vision token count under OpenRouter free limits (< 2603 tokens)!
+    const max_size = 1400; // Increased from 900 to 1400 for better OCR on large invoice tables
     
     if (width > height) {
         if (width > max_size) { height *= max_size / width; width = max_size; }
@@ -324,7 +324,7 @@ function applyPhotoFilter() {
         ctx.drawImage(originalPhotoImg, 0, 0, width, height);
         ctx.filter = 'none';
         // Apply 3x3 Unsharp Mask convolution filter to sharpen blurry text edges
-        sharpenCanvas(ctx, width, height, 0.45);
+        sharpenCanvas(ctx, width, height, 0.40);
     } else {
         ctx.filter = 'none';
         ctx.drawImage(originalPhotoImg, 0, 0, width, height);
@@ -333,7 +333,7 @@ function applyPhotoFilter() {
 
 function savePhotoPreview() {
     const canvas = document.getElementById('photoPreviewCanvas');
-    invoicePhotoBase64 = canvas.toDataURL('image/webp', 0.7);
+    invoicePhotoBase64 = canvas.toDataURL('image/webp', 0.82);
     
     const btnCam = document.getElementById('btnPhotoCam');
     const btnGal = document.getElementById('btnPhotoGal');
@@ -395,7 +395,7 @@ async function scanInvoiceWithAI() {
         };
         
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 90000); // 90 sec timeout
+        const timeout = setTimeout(() => controller.abort(), 120000); // 120 sec timeout
         
         let result;
         try {
@@ -418,13 +418,13 @@ async function scanInvoiceWithAI() {
                 result = JSON.parse(text);
             } catch(pe) {
                 console.error('AI scan response not JSON:', text.substring(0, 500));
-                throw new Error('Respons AI tidak valid. Coba lagi atau gunakan gambar lebih kecil.');
+                throw new Error('Respons AI tidak valid. Coba lagi atau gunakan gambar lebih jelas.');
             }
             if (result.error) throw new Error(result.error);
         } catch(fetchErr) {
             clearTimeout(timeout);
             if (fetchErr.name === 'AbortError') {
-                throw new Error('Request timeout (90 detik). Jaringan lambat atau AI sibuk, silakan coba lagi.');
+                throw new Error('Request timeout (120 detik). AI membutuhkan waktu lebih lama, silakan coba lagi.');
             }
             throw fetchErr;
         }

@@ -16,8 +16,8 @@
  */
 class ConfidenceScorer
 {
-    /** Minimum confidence below which self-correction is triggered */
-    const CORRECTION_THRESHOLD = 0.70;
+    /** Minimum confidence below which self-correction is triggered (lowered to reduce double API calls) */
+    const CORRECTION_THRESHOLD = 0.50;
 
     /** Max score ProductMatcher can produce (for normalization) */
     const MAX_MATCH_SCORE = 200.0;

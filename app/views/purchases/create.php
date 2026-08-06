@@ -390,7 +390,7 @@ function applyPhotoFilter() {
     
     let width = originalPhotoImg.width;
     let height = originalPhotoImg.height;
-    const max_size = 900; // Optimized to 900px to keep vision token count under OpenRouter free limits (< 2603 tokens)!
+    const max_size = 1400; // Increased from 900 to 1400 for better OCR on large invoice tables
     
     if (width > height) {
         if (width > max_size) { height *= max_size / width; width = max_size; }
@@ -406,12 +406,12 @@ function applyPhotoFilter() {
     const ctx = canvas.getContext('2d');
     
     if (isEnhanced) {
-        // Document Mode: Grayscale + 160% High Contrast + 115% Brightness
-        ctx.filter = 'grayscale(100%) contrast(160%) brightness(115%)';
+        // Document Mode: Grayscale + High Contrast + Brightness
+        ctx.filter = 'grayscale(100%) contrast(155%) brightness(112%)';
         ctx.drawImage(originalPhotoImg, 0, 0, width, height);
         ctx.filter = 'none';
         // Apply 3x3 Unsharp Mask convolution filter to sharpen blurry text edges
-        sharpenCanvas(ctx, width, height, 0.45);
+        sharpenCanvas(ctx, width, height, 0.40);
     } else {
         ctx.filter = 'none';
         ctx.drawImage(originalPhotoImg, 0, 0, width, height);
@@ -420,7 +420,7 @@ function applyPhotoFilter() {
 
 function savePhotoPreview() {
     const canvas = document.getElementById('photoPreviewCanvas');
-    invoicePhotoBase64 = canvas.toDataURL('image/webp', 0.7);
+    invoicePhotoBase64 = canvas.toDataURL('image/webp', 0.82); // Raised from 0.7 for better OCR readability
     
     const btnCam = document.getElementById('btnPhotoCam');
     const btnGal = document.getElementById('btnPhotoGal');
@@ -438,7 +438,7 @@ function savePhotoPreview() {
     showToast('Foto berhasil disiapkan', 'success');
 }
 
-async function scanInvoiceWithAI() {
+async function scanInvoiceWithAI(retryCount = 0) {
     if (!invoicePhotoBase64) {
         showToast('Pilih atau ambil foto invoice terlebih dahulu', 'error');
         return;
@@ -446,12 +446,14 @@ async function scanInvoiceWithAI() {
     
     const btn = document.getElementById('btnScanAI');
     const originalText = btn.innerHTML;
+    const MAX_RETRIES = 1; // Auto-retry once on failure
     
     // Progress steps to display during AI processing
     const progressSteps = [
         '<i class="bi bi-cloud-upload"></i> Mengirim gambar...',
-        '<i class="spinner-border spinner-border-sm"></i> AI sedang membaca...',
-        '<i class="spinner-border spinner-border-sm"></i> Menganalisa items...',
+        '<i class="spinner-border spinner-border-sm"></i> AI sedang membaca invoice...',
+        '<i class="spinner-border spinner-border-sm"></i> Mengekstrak semua item...',
+        '<i class="spinner-border spinner-border-sm"></i> Mencocokkan dengan database...',
         '<i class="spinner-border spinner-border-sm"></i> Hampir selesai...'
     ];
     let stepIdx = 0;
@@ -466,7 +468,7 @@ async function scanInvoiceWithAI() {
                 btn.innerHTML = progressSteps[stepIdx];
                 stepIdx++;
             }
-        }, 8000); // advance step every 8 seconds
+        }, 6000); // advance step every 6 seconds
     }
     
     function stopProgressAnimation() {
@@ -476,7 +478,7 @@ async function scanInvoiceWithAI() {
     }
     
     try {
-        startProgressAnimation();
+        if (retryCount === 0) startProgressAnimation();
         
         const data = {
             csrf_token: csrfVal,
@@ -484,9 +486,9 @@ async function scanInvoiceWithAI() {
             supplier_id: currentSupplierId || null
         };
         
-        // Use custom fetch with 65s timeout (backend free model timeout = 55s)
+        // 120s frontend timeout to match generous backend timeout
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 90000); // 90 sec timeout
+        const timeout = setTimeout(() => controller.abort(), 120000);
         
         let result;
         try {
@@ -509,92 +511,111 @@ async function scanInvoiceWithAI() {
                 result = JSON.parse(text);
             } catch(pe) {
                 console.error('AI scan response not JSON:', text.substring(0, 500));
-                throw new Error('Respons AI tidak valid. Coba lagi atau gunakan gambar lebih kecil.');
+                throw new Error('Respons AI tidak valid. Coba lagi atau gunakan gambar lebih jelas.');
             }
             if (result.error) throw new Error(result.error);
         } catch(fetchErr) {
             clearTimeout(timeout);
             if (fetchErr.name === 'AbortError') {
-                throw new Error('Request timeout (90 detik). Jaringan lambat atau AI sibuk, silakan coba lagi.');
+                throw new Error('Request timeout (120 detik). AI membutuhkan waktu lebih lama, silakan coba lagi.');
             }
             throw fetchErr;
         }
         
         if (result.success && result.data && result.data.length > 0) {
-            showToast('AI berhasil memparsing ' + result.data.length + ' item', 'success');
+            const itemCount = result.data.length;
+            const avgConf = result.metadata?.avg_confidence ? Math.round(result.metadata.avg_confidence * 100) : '?';
+            showToast(`AI berhasil memparsing ${itemCount} item (akurasi: ${avgConf}%)`, 'success');
             
-            // Loop through results and add to bulk items
-            for (const item of result.data) {
-                if (item.is_matched && item.product_id) {
-                    try {
-                        const productData = await api(`${BASE_URL}api/products/${item.product_id}`);
-                        // Set quantity and price based on AI output
-                        if (productData && productData.packagings && productData.packagings.length > 0) {
-                            let bestPkg = null;
-                            let targetUnit = (item.unit || '').toLowerCase().trim();
-                            
-                            // 1. First, try to match by unit name (if AI extracted 'Karton', match 'Karton')
-                            if (targetUnit) {
-                                bestPkg = productData.packagings.find(p => p.unit_name && p.unit_name.toLowerCase().includes(targetUnit));
-                            }
-                            
-                            // 2. If no name match, try to match by closest price (unit_price)
-                            if (!bestPkg) {
-                                let closestDiff = Infinity;
-                                for (const p of productData.packagings) {
-                                    const diff = Math.abs((parseFloat(p.buy_price) || 0) - item.unit_price);
-                                    // If difference is within 20% of the price, consider it a possible match
-                                    if (diff < closestDiff && item.unit_price > 0 && (diff / item.unit_price) < 0.3) {
-                                        closestDiff = diff;
-                                        bestPkg = p;
-                                    }
-                                }
-                            }
-                            
-                            // 3. Fallback to base packaging (level 1)
-                            if (!bestPkg) {
-                                bestPkg = productData.packagings.find(p => p.level == 1) || productData.packagings[0];
-                            }
-                            
-                            // Set the selected packaging level's buy_price to the AI's unit_price
-                            // We do NOT modify sell_price_retail or sell_price_wholesale (they remain from DB)
-                            if (bestPkg) {
-                                bestPkg.buy_price = item.unit_price;
-                            }
-                            
-                            // Add to cart with the specific level pre-selected
-                            addProductToCart(productData, bestPkg ? bestPkg.level : 1);
-                            
-                            // Immediately update the added item's quantity, buy_price, and total
-                            const addedItem = purchaseItems[0]; // addProductToCart unshifts to the front
-                            if (addedItem && addedItem.product_id == item.product_id) {
-                                addedItem.quantity  = item.qty;
-                                addedItem.buy_price = item.unit_price;
-                                addedItem.total     = item.qty * item.unit_price;
-
-                                // Propagate AI buy_price to ALL packaging levels (so drawer/panel
-                                // kemasan juga menampilkan Harga Modal yang benar, bukan harga lama DB)
-                                propagateFromMainInputs(addedItem);
-
-                                // Also sync sell prices based on new buy price (maintain margin)
-                                syncSellPricesWhenBuyPriceChanges(addedItem);
-
-                                // Recalculate nett price for the selected level
-                                addedItem.harga_nett = calcItemNett(
-                                    addedItem.buy_price,
-                                    addedItem.ppn_pct || 0,
-                                    addedItem.diskon_mode || 'rp',
-                                    addedItem.diskon_value || 0
-                                );
+            // Collect all matched product IDs for batch fetching
+            const matchedItems = result.data.filter(item => item.is_matched && item.product_id);
+            const unmatchedItems = result.data.filter(item => !item.is_matched || !item.product_id);
+            
+            // Batch fetch all product details at once (parallel)
+            const productPromises = matchedItems.map(item => 
+                api(`${BASE_URL}api/products/${item.product_id}`).catch(e => {
+                    console.error('Failed to fetch product', item.product_id, e);
+                    return null;
+                })
+            );
+            const productResults = await Promise.all(productPromises);
+            
+            // Process matched items with pre-fetched product data
+            for (let i = 0; i < matchedItems.length; i++) {
+                const item = matchedItems[i];
+                const productData = productResults[i];
+                if (!productData || !productData.packagings || productData.packagings.length === 0) continue;
+                
+                try {
+                    let bestPkg = null;
+                    let targetUnit = (item.unit || '').toLowerCase().trim();
+                    
+                    // 1. Use AI's packaging_level directly if provided
+                    if (item.packaging_level && item.packaging_level > 0) {
+                        bestPkg = productData.packagings.find(p => parseInt(p.level) === item.packaging_level);
+                    }
+                    
+                    // 2. Try to match by unit name
+                    if (!bestPkg && targetUnit) {
+                        bestPkg = productData.packagings.find(p => p.unit_name && p.unit_name.toLowerCase().includes(targetUnit));
+                    }
+                    
+                    // 3. Match by closest price (unit_price)
+                    if (!bestPkg && item.unit_price > 0) {
+                        let closestDiff = Infinity;
+                        for (const p of productData.packagings) {
+                            const diff = Math.abs((parseFloat(p.buy_price) || 0) - item.unit_price);
+                            if (diff < closestDiff && (diff / Math.max(item.unit_price, 1)) < 0.3) {
+                                closestDiff = diff;
+                                bestPkg = p;
                             }
                         }
-                    } catch(e) {
-                        console.error('Failed to add AI mapped item', e);
                     }
-                } else {
-                    showToast('Item "' + item.original_name + '" tidak dikenali di database, silakan input manual.', 'warning');
+                    
+                    // 4. Fallback to base packaging (level 1)
+                    if (!bestPkg) {
+                        bestPkg = productData.packagings.find(p => p.level == 1) || productData.packagings[0];
+                    }
+                    
+                    // Set the selected packaging level's buy_price to the AI's unit_price
+                    if (bestPkg && item.unit_price > 0) {
+                        bestPkg.buy_price = item.unit_price;
+                    }
+                    
+                    // Add to cart with the specific level pre-selected
+                    addProductToCart(productData, bestPkg ? bestPkg.level : 1);
+                    
+                    // Immediately update the added item's quantity, buy_price, and total
+                    const addedItem = purchaseItems[0]; // addProductToCart unshifts to the front
+                    if (addedItem && addedItem.product_id == item.product_id) {
+                        addedItem.quantity  = item.qty;
+                        addedItem.buy_price = item.unit_price;
+                        addedItem.total     = item.qty * item.unit_price;
+
+                        // Propagate AI buy_price to ALL packaging levels
+                        propagateFromMainInputs(addedItem);
+
+                        // Also sync sell prices based on new buy price (maintain margin)
+                        syncSellPricesWhenBuyPriceChanges(addedItem);
+
+                        // Recalculate nett price for the selected level
+                        addedItem.harga_nett = calcItemNett(
+                            addedItem.buy_price,
+                            addedItem.ppn_pct || 0,
+                            addedItem.diskon_mode || 'rp',
+                            addedItem.diskon_value || 0
+                        );
+                    }
+                } catch(e) {
+                    console.error('Failed to add AI mapped item', e);
                 }
             }
+            
+            // Show warnings for unmatched items
+            for (const item of unmatchedItems) {
+                showToast('Item "' + item.original_name + '" tidak dikenali di database, silakan input manual.', 'warning');
+            }
+            
             renderCart();
             calculateTotal();
         } else {
@@ -602,9 +623,18 @@ async function scanInvoiceWithAI() {
         }
     } catch (err) {
         console.error('Error scanning invoice:', err);
+        
+        // Auto-retry once on failure
+        if (retryCount < MAX_RETRIES) {
+            showToast('Scan gagal, mencoba ulang...', 'warning');
+            return scanInvoiceWithAI(retryCount + 1);
+        }
+        
         showToast(err.message || 'Gagal memindai invoice dengan AI', 'error');
     } finally {
-        stopProgressAnimation();
+        if (retryCount === 0 || retryCount >= MAX_RETRIES) {
+            stopProgressAnimation();
+        }
     }
 }
 

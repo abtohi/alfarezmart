@@ -119,9 +119,8 @@ class InvoiceScanService
                 $supplierName = $stmt->fetchColumn() ?: 'Unknown Supplier';
             }
 
-            // TEMPORARY: Bypass old templates to force the AI to read the new BSR/TGH rules
-            // $template = $this->templateLearner->findTemplate($supplierId);
-            $template = null;
+            // Load supplier template for context (re-enabled after prompt optimization)
+            $template = $this->templateLearner->findTemplate($supplierId);
 
             // ================================================================
             // STAGE 3: Prompt Building
@@ -163,11 +162,11 @@ class InvoiceScanService
             }
 
             // ================================================================
-            // STAGE 6: Self-Correction (if needed)
+            // STAGE 6: Self-Correction (SKIP for free-tier models to save quota & prevent timeout)
             // ================================================================
             $modelName = $this->getModelName();
-            $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free'];
-            if (($hasLowConf || !empty($correctionHints)) && !in_array($modelName, $freeTierModels)) {
+            $isFreeModel = str_contains($modelName, ':free') || str_contains($modelName, 'openrouter/free');
+            if (($hasLowConf || !empty($correctionHints)) && !$isFreeModel) {
                 $items = $this->selfCorrection->correct(
                     $items,
                     $hasLowConf,
@@ -288,16 +287,30 @@ class InvoiceScanService
 
     private function getAllProductsWithPackagings(): array
     {
-        // Use a cached or lightweight fetch if possible
+        // Optimized: Only fetch fields needed for matching (no JOIN subquery)
         $stmt = $this->db->query("
             SELECT p.id, p.full_name, p.code, p.supplier_invoice_name, p.short_label, 
-                   p.variant, p.weight_value, p.weight_unit, b.name as brand_name,
-                   (SELECT supplier_product_code FROM supplier_products sp WHERE sp.product_id = p.id LIMIT 1) as supplier_product_code
+                   p.variant, p.weight_value, p.weight_unit, b.name as brand_name
             FROM products p
             LEFT JOIN brands b ON p.brand_id = b.id
             WHERE p.is_active = 1
         ");
         $products = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        // Attach supplier_product_code via separate lightweight query
+        try {
+            $spStmt = $this->db->query("SELECT product_id, supplier_product_code FROM supplier_products WHERE supplier_product_code IS NOT NULL AND supplier_product_code != ''");
+            $spCodes = [];
+            while ($row = $spStmt->fetch(\PDO::FETCH_ASSOC)) {
+                $spCodes[$row['product_id']] = $row['supplier_product_code'];
+            }
+            foreach ($products as &$p) {
+                $p['supplier_product_code'] = $spCodes[$p['id']] ?? '';
+            }
+            unset($p);
+        } catch (\Throwable $e) {
+            // supplier_product_code column may not exist yet
+        }
 
         // Attach packagings
         $this->productModel->attachPackagingsForProductList($products);
@@ -398,8 +411,8 @@ class InvoiceScanService
                         $imageBlock
                     ]]
                 ],
-                'temperature' => 0.1,
-                'max_tokens'  => 4000, // High token limit to extract all items without truncation
+                'temperature' => 0.05,
+                'max_tokens'  => 8192, // Restored from stable dff3332: must be high to extract all items without truncation
             ];
 
             if (in_array($tryModel, ['openai/gpt-4o', 'openai/gpt-4o-mini', 'google/gemini-2.0-flash-001', 'google/gemini-2.5-flash'])) {
@@ -417,9 +430,11 @@ class InvoiceScanService
                 'X-Title: AlfarezMart'
             ]);
 
+            // Generous timeouts to prevent truncation on large invoices
             $isFreeModel = str_contains($tryModel, ':free') || str_contains($tryModel, 'openrouter/free');
-            $timeout = $isFreeModel ? 14 : 35;
+            $timeout = $isFreeModel ? 45 : 60;
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);

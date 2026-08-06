@@ -183,7 +183,7 @@ class ProductMatcher
                     }
                 }
 
-                // -- STRATEGY 5: Fuzzy match via similar_text --
+                // -- STRATEGY 5: Fuzzy match via similar_text + Jaccard token similarity --
                 if ($score < self::SCORE_EXACT_NAME) {
                     $similarities = [];
 
@@ -209,9 +209,25 @@ class ProductMatcher
                     }
 
                     $bestSim = !empty($similarities) ? max($similarities) : 0;
-                    // Apply only if no strong exact match
+
+                    // Jaccard token-based similarity (better for short names with reordered words)
+                    $jaccardScore = $this->jaccardTokenSimilarity($name, $p['full_name'] ?? '');
+                    if (!empty($p['short_label'])) {
+                        $jaccardScore = max($jaccardScore, $this->jaccardTokenSimilarity($name, $p['short_label']));
+                    }
+                    if (!empty($p['supplier_invoice_name'])) {
+                        $entries = preg_split('/[\n\r,]+/', $p['supplier_invoice_name']);
+                        foreach ($entries as $entry) {
+                            if (!empty(trim($entry))) {
+                                $jaccardScore = max($jaccardScore, $this->jaccardTokenSimilarity($name, trim($entry)));
+                            }
+                        }
+                    }
+
+                    // Combine: use whichever method gives better result
+                    $combinedFuzzy = max($bestSim * 0.65, $jaccardScore * 75);
                     if ($score < self::SCORE_EXACT_NAME) {
-                        $score += $bestSim * 0.65;
+                        $score += $combinedFuzzy;
                     }
                 }
 
@@ -367,6 +383,31 @@ class ProductMatcher
     {
         if (empty($a) || empty($b)) return false;
         return stripos($a, $b) !== false || stripos($b, $a) !== false;
+    }
+
+    /**
+     * Jaccard token similarity: measures word overlap between two strings.
+     * Better than similar_text() for short, reordered product names.
+     *
+     * @return float 0.0 – 1.0
+     */
+    private function jaccardTokenSimilarity(string $a, string $b): float
+    {
+        $tokensA = array_unique(preg_split('/[\s\-_\/\.]+/', mb_strtolower(trim($a))));
+        $tokensB = array_unique(preg_split('/[\s\-_\/\.]+/', mb_strtolower(trim($b))));
+
+        // Remove empty tokens and very short tokens (< 2 chars)
+        $tokensA = array_filter($tokensA, fn($t) => mb_strlen($t) >= 2);
+        $tokensB = array_filter($tokensB, fn($t) => mb_strlen($t) >= 2);
+
+        if (empty($tokensA) || empty($tokensB)) return 0.0;
+
+        $intersection = count(array_intersect($tokensA, $tokensB));
+        $union        = count(array_unique(array_merge($tokensA, $tokensB)));
+
+        if ($union === 0) return 0.0;
+
+        return $intersection / $union;
     }
 
     /**
