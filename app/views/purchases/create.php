@@ -979,8 +979,10 @@ async function processPurchaseBarcodeOrSearch(rawQuery) {
     performProductSearch();
 }
 
+async function performProductSearch() {
+    const q = searchInput ? searchInput.value.trim() : '';
     if (q.length < 2) {
-        suggestionsDiv.innerHTML = '';
+        if (suggestionsDiv) suggestionsDiv.innerHTML = '';
         return;
     }
 
