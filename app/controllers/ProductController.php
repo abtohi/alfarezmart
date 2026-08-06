@@ -58,7 +58,7 @@ class ProductController extends Controller
         $this->view('products.barcode_editor', [
             'title' => 'Edit Barcode Kemasan',
             'activeNav' => 'barcode_editor',
-            'csrfToken' => Security::generateCSRFToken()
+            'csrfToken' => (new Security())->getCSRFToken()
         ]);
     }
 
