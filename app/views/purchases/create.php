@@ -762,15 +762,36 @@ const totalEl = document.getElementById('purchaseTotal');
 const emptyState = document.getElementById('emptyPurchaseState');
 const countBadge = document.getElementById('itemCountBadge');
 
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function ensureSearchSectionVisible() {
+    const searchSection = document.getElementById('productSearchSection');
+    if (searchSection && (searchSection.style.display === 'none' || getComputedStyle(searchSection).display === 'none')) {
+        if (typeof onSalesRepPicked === 'function') {
+            if (typeof salesRepSB !== 'undefined' && salesRepSB) {
+                try { salesRepSB.setValue('other'); } catch(e){}
+            }
+            onSalesRepPicked('other', '📦 Other — belum tahu supplier/sales');
+        } else {
+            searchSection.style.display = 'block';
+        }
+    }
+}
+
 // ===== Global Hardware Barcode Scanner Listener =====
 let _purchaseBarcodeBuffer = '';
 let _purchaseLastKeyTime = 0;
 let _purchaseBarcodeTimer = null;
 
 document.addEventListener('keydown', function(e) {
-    const searchSection = document.getElementById('productSearchSection');
-    if (!searchSection || searchSection.style.display === 'none') return;
-
     const activeEl = document.activeElement;
     
     // Check if another input (e.g. qty, price, discount input in cart or form) is active
@@ -875,6 +896,9 @@ function scanProductBarcode() {
 async function processPurchaseBarcodeOrSearch(rawQuery) {
     const q = String(rawQuery || '').trim();
     if (!q) return;
+
+    // Auto-reveal search section & default sales if not selected yet
+    ensureSearchSectionVisible();
 
     // 1. ALWAYS RESET search input field IMMEDIATELY to prevent barcode accumulation
     if (searchInput) searchInput.value = '';
