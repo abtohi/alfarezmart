@@ -4555,11 +4555,9 @@ async function executeTransactionAPI(payload) {
                 document.getElementById('result-pln-details').style.display = 'none';
             }
             
-            // Auto prompt save contact if PLN or E-Wallet
-            if (isSuccess && currentCategory === 'pln') {
-                promptSavePlnContact(payload.customer_no, payload.customer_name || '');
-            } else if (isSuccess && currentCategory === 'ewallet' && payload.brand) {
-                promptSaveEwalletContact(payload.customer_no, payload.customer_name || '', payload.brand);
+            // Auto prompt save contact for ALL PPOB transactions if not already saved
+            if (isSuccess && payload.customer_no) {
+                promptSavePpobContact(payload.customer_no, payload.customer_name || '', currentCategory, payload.brand);
             }
 
             // Listen to modal close to stop polling and trigger real-time rate refresh
@@ -4672,10 +4670,8 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
                     document.getElementById('custom-price-container').style.display = 'none';
                 }
                 
-                if (isSuccess && currentCategory === 'pln') {
-                    promptSavePlnContact(customerNo, lastTrxData ? lastTrxData.customer_name : '');
-                } else if (isSuccess && currentCategory === 'ewallet' && lastTrxData && lastTrxData.brand) {
-                    promptSaveEwalletContact(customerNo, lastTrxData.customer_name || '', lastTrxData.brand);
+                if (isSuccess && customerNo) {
+                    promptSavePpobContact(customerNo, lastTrxData ? lastTrxData.customer_name : '', currentCategory, lastTrxData ? lastTrxData.brand : '');
                 }
 
                 reloadCurrentProductsSilent();
@@ -4942,26 +4938,101 @@ ${hasSN ? `<div class="sn-box"><div class="sn-title">${snTitle}</div><div class=
     w.document.close();
 }
 
-async function promptSavePlnContact(customerNo, defaultName) {
+async function promptSavePpobContact(customerNo, defaultName = '', category = '', brand = '') {
+    if (!customerNo) return;
+    const cleanNo = String(customerNo).trim();
+    if (cleanNo.length < 3) return;
+
     try {
-        const res = await fetch('<?= BASE_URL ?>api/ppob/customers?type=pln');
+        // Fetch all saved PPOB customers to check if cleanNo already exists
+        const res = await fetch('<?= BASE_URL ?>api/ppob/customers?type=all');
         const data = await res.json();
-        if (data.success && data.data) {
-            const exists = data.data.some(c => c.customer_no === customerNo);
-            if (exists) return; // Don't show if already saved
+        
+        if (data.success && Array.isArray(data.data)) {
+            const exists = data.data.some(c => String(c.customer_no).trim() === cleanNo);
+            if (exists) return; // Already saved! Do not show prompt.
         }
+
+        // Map PPOB category to customer type
+        const cat = (category || (typeof currentCategory !== 'undefined' ? currentCategory : '') || '').toLowerCase();
+        let targetType = 'hp';
         
-        let plnNameStr = document.getElementById('result-pln-name')?.innerText || defaultName;
-        if(plnNameStr === '-') plnNameStr = defaultName;
-        const plnPowerStr = document.getElementById('result-pln-power')?.innerText || '';
-        
+        if (cat === 'pln') {
+            targetType = 'pln';
+        } else if (cat === 'game' || cat === 'games' || cat === 'voucher-game') {
+            targetType = 'game';
+        } else if (cat === 'tv' || cat === 'tv-kabel') {
+            targetType = 'tv';
+        } else if (cat === 'pdam' || cat === 'air') {
+            targetType = 'pdam';
+        } else if (cat === 'bpjs') {
+            targetType = 'bpjs';
+        } else if (cat === 'internet' || cat === 'wifi' || cat === 'indihome' || cat === 'telkom') {
+            targetType = 'internet';
+        } else if (cat === 'ewallet' || cat === 'pulsa' || cat === 'data' || cat === 'sms_nelpon' || cat === 'phone') {
+            targetType = 'hp';
+        } else {
+            if (/^08\d{8,13}$/.test(cleanNo)) {
+                targetType = 'hp';
+            } else {
+                targetType = 'other';
+            }
+        }
+
+        // Determine default customer name
+        let nameStr = defaultName || '';
+        if (!nameStr && typeof selectedInqData !== 'undefined' && selectedInqData && selectedInqData.customer_name) {
+            nameStr = selectedInqData.customer_name;
+        }
+
+        // If PLN, check if PLN name is available in UI
+        if (targetType === 'pln') {
+            let plnNameStr = document.getElementById('result-pln-name')?.innerText || nameStr;
+            if (!plnNameStr || plnNameStr === '-') plnNameStr = nameStr;
+            const plnPowerStr = document.getElementById('result-pln-power')?.innerText || '';
+            
+            setTimeout(() => {
+                const tempCustomer = {
+                    type: 'pln',
+                    customer_name: plnNameStr !== '-' ? plnNameStr : '',
+                    customer_no: cleanNo,
+                    pln_name: (plnNameStr && plnNameStr !== '-') ? plnNameStr : '',
+                    pln_power: (plnPowerStr && plnPowerStr !== '-') ? plnPowerStr : ''
+                };
+                openUnifiedContactModal(tempCustomer, 'pln', cleanNo);
+            }, 600);
+            return;
+        }
+
+        // If E-Wallet, pre-populate e-wallet accounts json
+        let ewalletJson = null;
+        if (cat === 'ewallet' && brand) {
+            let ew = {};
+            let validBrand = brand;
+            ['Dana', 'GoPay', 'OVO', 'ShopeePay', 'LinkAja'].forEach(b => {
+                if (b.toLowerCase() === brand.toLowerCase()) validBrand = b;
+            });
+            ew[validBrand] = nameStr || '';
+            ewalletJson = JSON.stringify(ew);
+        }
+
         setTimeout(() => {
-            const tempCustomer = { type: 'pln', customer_name: plnNameStr, customer_no: customerNo, pln_name: plnNameStr, pln_power: plnPowerStr !== '-' ? plnPowerStr : '' };
-            openUnifiedContactModal(tempCustomer, 'pln', customerNo);
-        }, 500);
+            const tempCustomer = {
+                type: targetType,
+                customer_name: nameStr,
+                customer_no: cleanNo,
+                ewallet_accounts: ewalletJson
+            };
+            openUnifiedContactModal(tempCustomer, targetType, cleanNo);
+        }, 600);
+
     } catch (e) {
-        console.error('Error checking pln contact:', e);
+        console.error('Error checking PPOB contact save prompt:', e);
     }
+}
+
+async function promptSavePlnContact(customerNo, defaultName) {
+    return promptSavePpobContact(customerNo, defaultName, 'pln');
 }
 
 // Helper: show non-blocking alert
@@ -5012,33 +5083,7 @@ if(!document.getElementById('toast-animations-ppob')) {
 }
 
 async function promptSaveEwalletContact(customerNo, defaultName, brand) {
-    if(!customerNo) return;
-    
-    try {
-        const res = await fetch('<?= BASE_URL ?>api/ppob/customers?type=hp');
-        const data = await res.json();
-        
-        if (data.success && data.data) {
-            const exists = data.data.find(c => c.customer_no === customerNo);
-            if (exists) {
-                return; // Don't show modal if already saved
-            }
-        }
-        
-        setTimeout(() => {
-            let ew = {};
-            // find the right case
-            let validBrand = brand;
-            ['Dana', 'GoPay', 'OVO', 'ShopeePay', 'LinkAja'].forEach(b => {
-                if(b.toLowerCase() === brand.toLowerCase()) validBrand = b;
-            });
-            ew[validBrand] = defaultName || '';
-            const tempCustomer = { type: 'hp', customer_name: defaultName, customer_no: customerNo, ewallet_accounts: JSON.stringify(ew) };
-            openUnifiedContactModal(tempCustomer, 'hp', customerNo);
-        }, 500);
-    } catch (e) {
-        console.error('Error checking ewallet contact:', e);
-    }
+    return promptSavePpobContact(customerNo, defaultName, 'ewallet', brand);
 }
 
 // Helper: Custom Confirm Modal

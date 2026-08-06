@@ -58,6 +58,10 @@ $csrfToken = $csrfToken ?? '';
 .icon-hp { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
 .icon-game { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
 .icon-tv { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+.icon-pdam { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
+.icon-bpjs { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.icon-internet { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+.icon-other { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
 
 .customer-info {
     flex-grow: 1;
@@ -213,7 +217,16 @@ $csrfToken = $csrfToken ?? '';
             <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-game" type="button" role="tab" onclick="filterCustomers('game')">Game</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-tv" type="button" role="tab" onclick="filterCustomers('tv')">TV Voucher</button>
+            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-tv" type="button" role="tab" onclick="filterCustomers('tv')">TV</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-pdam" type="button" role="tab" onclick="filterCustomers('pdam')">PDAM</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-bpjs" type="button" role="tab" onclick="filterCustomers('bpjs')">BPJS</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-internet" type="button" role="tab" onclick="filterCustomers('internet')">Internet</button>
         </li>
     </ul>
 
@@ -237,6 +250,10 @@ $csrfToken = $csrfToken ?? '';
                 if($c['type'] == 'pln') { $iconClass = 'icon-pln'; $iconBi = 'bi-lightning-charge'; }
                 else if($c['type'] == 'game') { $iconClass = 'icon-game'; $iconBi = 'bi-controller'; }
                 else if($c['type'] == 'tv') { $iconClass = 'icon-tv'; $iconBi = 'bi-tv'; }
+                else if($c['type'] == 'pdam') { $iconClass = 'icon-pdam'; $iconBi = 'bi-droplet'; }
+                else if($c['type'] == 'bpjs') { $iconClass = 'icon-bpjs'; $iconBi = 'bi-shield-check'; }
+                else if($c['type'] == 'internet') { $iconClass = 'icon-internet'; $iconBi = 'bi-wifi'; }
+                else if($c['type'] == 'other') { $iconClass = 'icon-other'; $iconBi = 'bi-person'; }
             ?>
             <div class="customer-card customer-item" 
                  data-type="<?= $c['type'] ?>"

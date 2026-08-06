@@ -47,8 +47,12 @@ function openUnifiedContactModal(customer = null, defaultType = 'hp', defaultNo 
                 <select class="form-select glass-input fw-bold" id="uc_type" onchange="toggleUnifiedContactType()" ${isEdit ? 'disabled' : ''}>
                     <option value="hp" ${(customer ? customer.type : defaultType) === 'hp' ? 'selected' : ''}>Nomor HP (Pulsa/Data/E-Wallet)</option>
                     <option value="pln" ${(customer ? customer.type : defaultType) === 'pln' ? 'selected' : ''}>PLN (Token/Tagihan)</option>
-                    <option value="game" ${(customer ? customer.type : defaultType) === 'game' ? 'selected' : ''}>Voucher Game</option>
-                    <option value="tv" ${(customer ? customer.type : defaultType) === 'tv' ? 'selected' : ''}>TV Voucher</option>
+                    <option value="game" ${(customer ? customer.type : defaultType) === 'game' ? 'selected' : ''}>Voucher Game / ID Game</option>
+                    <option value="tv" ${(customer ? customer.type : defaultType) === 'tv' ? 'selected' : ''}>TV Voucher / Kabel</option>
+                    <option value="pdam" ${(customer ? customer.type : defaultType) === 'pdam' ? 'selected' : ''}>PDAM (Air Minum)</option>
+                    <option value="bpjs" ${(customer ? customer.type : defaultType) === 'bpjs' ? 'selected' : ''}>BPJS Kesehatan/Ketenagakerjaan</option>
+                    <option value="internet" ${(customer ? customer.type : defaultType) === 'internet' ? 'selected' : ''}>Internet & Telkom</option>
+                    <option value="other" ${(customer ? customer.type : defaultType) === 'other' ? 'selected' : ''}>Lainnya / Tagihan Pasca</option>
                 </select>
             </div>
             <div class="mb-3">
