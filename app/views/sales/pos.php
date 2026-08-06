@@ -154,23 +154,8 @@
 
         </div><!-- /pos-left-panel -->
 
-        <!-- ── RIGHT PANEL: Mix Box · Chain Banner · Checkout Card ── -->
+        <!-- ── RIGHT PANEL: Checkout Card · Mix Box · Chain Banner ── -->
         <div class="pos-right-panel">
-
-            <!-- Mix Default Price Selector (Slim Bar) -->
-            <div id="mixDefaultPriceBox" style="display:none; margin-bottom:8px; background:var(--primary-bg); border-radius:var(--radius-sm); padding:6px 10px; align-items:center; justify-content:flex-start; flex-wrap:wrap; gap:10px; border:1px solid rgba(230,57,70,0.2);">
-                <div style="display:flex; align-items:center; gap:6px;">
-                    <i class="bi bi-shuffle" style="color:var(--primary); font-size:0.9rem;"></i>
-                    <span style="font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase;">Default Mix:</span>
-                </div>
-                <div class="pos-segmented">
-                    <button id="btnMixDefaultRetail" class="active" onclick="setMixDefault('retail')">Ecer</button>
-                    <button id="btnMixDefaultWholesale" onclick="setMixDefault('wholesale')">Grosir</button>
-                </div>
-            </div>
-
-            <!-- Banner Indicator Struk / Invoice Lanjutan -->
-            <div id="posChainBanner" style="display:none; margin-bottom:12px; background:linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border-radius:var(--radius-md); padding:10px 14px; border:1px solid rgba(129,140,248,0.4); color:white; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
 
             <!-- Checkout Card (Floating on mobile, Sticky Sidebar Panel on desktop) -->
             <div class="pos-checkout-bar" id="posCheckoutBar">
@@ -213,6 +198,21 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Mix Default Price Selector (Slim Bar) -->
+            <div id="mixDefaultPriceBox" style="display:none; margin-bottom:8px; background:var(--primary-bg); border-radius:var(--radius-sm); padding:6px 10px; align-items:center; justify-content:flex-start; flex-wrap:wrap; gap:10px; border:1px solid rgba(230,57,70,0.2);">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <i class="bi bi-shuffle" style="color:var(--primary); font-size:0.9rem;"></i>
+                    <span style="font-size:11px; font-weight:700; color:var(--primary); text-transform:uppercase;">Default Mix:</span>
+                </div>
+                <div class="pos-segmented">
+                    <button id="btnMixDefaultRetail" class="active" onclick="setMixDefault('retail')">Ecer</button>
+                    <button id="btnMixDefaultWholesale" onclick="setMixDefault('wholesale')">Grosir</button>
+                </div>
+            </div>
+
+            <!-- Banner Indicator Struk / Invoice Lanjutan -->
+            <div id="posChainBanner" style="display:none; margin-bottom:12px; background:linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border-radius:var(--radius-md); padding:10px 14px; border:1px solid rgba(129,140,248,0.4); color:white; box-shadow:0 4px 12px rgba(0,0,0,0.15);"></div>
 
         </div><!-- /pos-right-panel -->
 

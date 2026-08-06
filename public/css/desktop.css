@@ -593,10 +593,10 @@
 
 
 /* ============================================
-   SECTION 4: POS — Desktop Redesign (≥1024px)
+   SECTION 4: POS — Desktop Redesign (≥992px)
    ============================================ */
 
-@media (min-width: 1024px) {
+@media (min-width: 992px) {
     /* POS page section padding & width */
     .page-section[style*="padding-bottom:200px"] {
         padding-bottom: 32px !important;
@@ -704,7 +704,6 @@
 
     /* Right Column: Structured Sticky Ringkasan Kasir Card (LOCKED AT TOP) */
     .desktop-pos-layout .pos-checkout-bar {
-        order: 1 !important;
         position: static !important;
         bottom: auto !important;
         left: auto !important;
@@ -723,14 +722,8 @@
         box-sizing: border-box !important;
     }
 
-    .desktop-pos-layout #mixDefaultPriceBox {
-        order: 2 !important;
-        margin-top: 0 !important;
-        margin-bottom: 0 !important;
-    }
-
+    .desktop-pos-layout #mixDefaultPriceBox,
     .desktop-pos-layout #posChainBanner {
-        order: 3 !important;
         margin-top: 0 !important;
         margin-bottom: 0 !important;
     }
