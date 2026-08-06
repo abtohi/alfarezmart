@@ -59,7 +59,6 @@ class TableParser
     /**
      * Merge "continuation" rows (rows with only a name, no qty/price)
      * into the preceding row's name.
-     * Also handles cases where total_price appears on a separate line below the item.
      */
     private function mergeContinuationRows(array $items): array
     {
@@ -67,7 +66,6 @@ class TableParser
         $prev   = null;
 
         foreach ($items as $item) {
-            // Pure continuation: has name but no numeric data at all
             $isContinuation = (
                 !empty($item['name']) &&
                 $item['qty'] <= 0 &&
@@ -75,30 +73,9 @@ class TableParser
                 $item['total_price'] <= 0
             );
 
-            // Price-only continuation: no name (or very short) but has total_price
-            // This handles invoice formats where price is on a separate line below the item
-            $isPriceOnlyCont = (
-                $prev !== null &&
-                (empty(trim($item['name'] ?? '')) || strlen(trim($item['name'] ?? '')) <= 2) &&
-                $item['total_price'] > 0 &&
-                ($prev['total_price'] ?? 0) <= 0
-            );
-
             if ($isContinuation && $prev !== null) {
                 // Append name to previous row
                 $result[count($result) - 1]['name'] .= ' ' . $item['name'];
-                continue;
-            }
-
-            if ($isPriceOnlyCont) {
-                // Merge price into previous row
-                $result[count($result) - 1]['total_price'] = $item['total_price'];
-                if ($item['unit_price'] > 0) {
-                    $result[count($result) - 1]['unit_price'] = $item['unit_price'];
-                }
-                if ($item['qty'] > 0) {
-                    $result[count($result) - 1]['qty'] = $item['qty'];
-                }
                 continue;
             }
 
@@ -178,29 +155,29 @@ class TableParser
             $unitPrice = $item['unit_price'];
             $total     = $item['total_price'];
 
-            // Case 1: qty looks extremely large (> 5000) and has no unit_price
+            // Case 1: qty looks extremely large (> 10000) but total is small
             // Probably OCR confused qty with price
-            if ($qty > 5000 && $total > 0 && $unitPrice <= 0) {
+            if ($qty > 10000 && $total > 0 && $unitPrice <= 0) {
                 // Assume qty is actually unit_price
                 $item['unit_price'] = $qty;
-                $item['qty']        = ($total > 0) ? max(1, round($total / $qty)) : 1;
+                $item['qty']        = ($total > 0) ? round($total / $qty) : 1;
+                if ($item['qty'] <= 0) $item['qty'] = 1;
             }
 
-            // Case 2: unit_price very small (< 50) but total is clearly a Rupiah value
-            // Maybe the unit_price was read wrong
-            if ($unitPrice > 0 && $unitPrice < 50 && $total > 1000 && $qty > 0) {
+            // Case 2: unit_price is very small (< 10) but total is large
+            // Maybe unit_price and total are swapped
+            if ($unitPrice > 0 && $unitPrice < 10 && $total > 1000 && $qty > 0) {
                 $derivedPrice = $total / $qty;
-                if ($derivedPrice >= 100) { // Minimum meaningful Indonesian price
+                if ($derivedPrice > 1000) {
                     $item['unit_price'] = $derivedPrice;
                 }
             }
 
             // Case 3: total < unit_price (impossible: total should be >= unit_price if qty >= 1)
             if ($total > 0 && $unitPrice > 0 && $total < $unitPrice && $qty >= 1) {
-                // Check if swapping makes the math work better
-                $diffOriginal = abs($total - $unitPrice * $qty);
-                $diffSwapped  = abs($unitPrice - $total * $qty);
-                if ($diffSwapped < $diffOriginal) {
+                // Maybe total and unit_price are swapped
+                if (abs($unitPrice - $total * $qty) < abs($total - $unitPrice * $qty)) {
+                    // Swap them
                     [$item['unit_price'], $item['total_price']] = [$total, $unitPrice];
                 }
             }

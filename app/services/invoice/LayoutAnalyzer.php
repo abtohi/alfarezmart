@@ -226,25 +226,22 @@ class LayoutAnalyzer
         $unitRaw = $get('unit', ['satuan', 'kemasan', 'uom']);
         $unit    = is_string($unitRaw) ? trim($unitRaw) : '';
 
-        // --- Extract explicit BSR/TGH/KCL quantities ---
+        // --- Extract explicit BSR/TGH/KCL quantities (Overriding unit and qty if found) ---
         $qtyBsr = $this->parseQty($get('qty_bsr', ['bsr']), 0);
         $qtyTgh = $this->parseQty($get('qty_tgh', ['tgh']), 0);
         $qtyKcl = $this->parseQty($get('qty_kcl', ['kcl']), 0);
 
-        // Smart BSR/TGH/KCL resolution:
-        // If multiple sub-qty columns have values, pick the one with the highest packaging level
-        // that has qty > 0 (BSR=3 > TGH=2 > KCL=1)
-        if ($qtyBsr > 0 || $qtyTgh > 0 || $qtyKcl > 0) {
-            if ($qtyBsr > 0) {
-                $qty  = $qtyBsr;
-                $unit = 'Karton';
-            } elseif ($qtyTgh > 0) {
-                $qty  = $qtyTgh;
-                $unit = 'Renceng';
-            } elseif ($qtyKcl > 0) {
-                $qty  = $qtyKcl;
-                $unit = 'Pcs';
-            }
+        // Only override if they actually have a valid number > 0
+        // And if the AI outputs exactly the number, we trust it more than the generic unit column
+        if ($qtyBsr > 0) {
+            $qty  = $qtyBsr;
+            $unit = 'bsr';
+        } elseif ($qtyTgh > 0) {
+            $qty  = $qtyTgh;
+            $unit = 'tgh';
+        } elseif ($qtyKcl > 0) {
+            $qty  = $qtyKcl;
+            $unit = 'kcl';
         }
 
         // --- Extract prices ---
@@ -363,10 +360,9 @@ class LayoutAnalyzer
     }
 
     /**
-     * Auto-scale abbreviated Rupiah values — CONSERVATIVE approach.
-     * Only scales if value has a clear fractional pattern like 5.5 (→ 5500)
-     * and context confirms scaling makes sense.
-     * Values that are legitimately < 1000 (e.g., Rp500 for candy) are NOT scaled.
+     * Auto-scale abbreviated Rupiah values.
+     * If unit_price looks like "5.5" (< 1000), scale to 5500.
+     * Uses optional context (expected ≈ qty × price) for smarter decision.
      */
     private function autoScaleRupiah(float $value, float $contextExpected = 0): float
     {
@@ -375,9 +371,10 @@ class LayoutAnalyzer
         // If value >= 1000, assume already correct
         if ($value >= 1000) return $value;
 
-        // Only scale if value has a fractional component (e.g., 5.5, 12.3)
-        // AND the fractional part suggests thousand-abbreviation
-        if ($value != floor($value) && $value < 1000) {
+        // If value has decimal part and < 1000, it's likely abbreviated (e.g. 5.5 → 5500)
+        if ($value < 1000) {
+            // Only scale if it looks like a meaningful abbreviation
+            // 5.5 → 5500, 12 → 12000, 0.5 → 500
             $scaled = $value * 1000;
 
             // Sanity check: if context is given, pick the one closer to it
@@ -388,20 +385,9 @@ class LayoutAnalyzer
                 return $value;
             }
 
-            // Only scale fractional values (5.5 → 5500 is common in invoices)
             return $scaled;
         }
 
-        // Integer values < 1000: could be legitimate low prices
-        // Only scale if context strongly suggests it
-        if ($contextExpected >= 1000 && $value < 100) {
-            $scaled = $value * 1000;
-            if (abs($scaled - $contextExpected) < abs($value - $contextExpected)) {
-                return $scaled;
-            }
-        }
-
-        // Default: don't scale — respect the original value
         return $value;
     }
 

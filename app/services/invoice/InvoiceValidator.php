@@ -19,11 +19,11 @@
  */
 class InvoiceValidator
 {
-    /** Tolerance ratio for per-item validation (15% — invoices frequently have rounding/discounts) */
-    const ITEM_TOLERANCE = 0.15;
+    /** Tolerance ratio for per-item validation (5%) */
+    const ITEM_TOLERANCE = 0.05;
 
-    /** Tolerance ratio for invoice cross-validation (8%) */
-    const INVOICE_TOLERANCE = 0.08;
+    /** Tolerance ratio for invoice cross-validation (3%) */
+    const INVOICE_TOLERANCE = 0.03;
 
     /** Minimum price to be considered real (avoid rounding noise) */
     const MIN_MEANINGFUL_PRICE = 100;
@@ -57,6 +57,7 @@ class InvoiceValidator
             $validatedItems[] = $result;
 
             if ($result['validation_failed'] ?? false) {
+                $allValid = true; // Still continue, don't abort
                 $allValid = false;
                 $correctionNeeded[] = [
                     'name'   => $result['name'],
