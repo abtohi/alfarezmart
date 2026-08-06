@@ -1994,11 +1994,11 @@ function handleEditCheckoutTransaction(saleId, invoiceNo, savedCart, savedCustom
 window.cancelEditCheckoutMode = function() {
     editSaleId = null;
     cart = [];
-    selectedCustomer = null;
-    const custSelect = document.getElementById('customerSelect');
-    if (custSelect) {
-        custSelect.value = '';
-        custSelect.dispatchEvent(new Event('change'));
+    if (typeof clearCustomer === 'function') {
+        clearCustomer();
+    } else {
+        selectedCustomer = null;
+        if (typeof updateCustomerUI === 'function') updateCustomerUI();
     }
     const banner = document.getElementById('posEditBanner');
     if (banner) banner.remove();
@@ -2360,10 +2360,34 @@ async function loadSaleForEdit(id) {
         if (data.success && data.transaction) {
             const sale = data.transaction;
             const targetMode = sale.sale_mode || 'retail'; // 'retail', 'wholesale', or 'mix'
+
+            // 1. Restore Customer selection
+            if (sale.customer_id) {
+                let custObj = null;
+                if (typeof _allCustomers !== 'undefined' && Array.isArray(_allCustomers)) {
+                    custObj = _allCustomers.find(c => c.id == sale.customer_id);
+                }
+                if (!custObj) {
+                    try {
+                        const custRes = await fetch(`${BASE_URL}api/customers/${sale.customer_id}`, { credentials: 'same-origin' });
+                        if (custRes.ok) {
+                            const cData = await custRes.json();
+                            custObj = cData.data || cData;
+                        }
+                    } catch(e) {}
+                }
+                if (custObj && custObj.name) {
+                    selectCustomer({ id: custObj.id, name: custObj.name, phone: custObj.phone || '' });
+                } else {
+                    selectCustomer({ id: sale.customer_id, name: sale.customer_name || ('Pelanggan #' + sale.customer_id), phone: '' });
+                }
+            } else {
+                selectCustomer(null);
+            }
             
-            // Build cart items first, BEFORE setting sale mode
+            // 2. Build cart items first, BEFORE setting sale mode
             cart = await Promise.all(sale.items.map(async item => {
-                const isCustom = item.custom_name !== null;
+                const isCustom = item.custom_name !== null || item.product_id === 'CUSTOM' || String(item.product_id).toUpperCase() === 'CUSTOM';
                 const printName = item.invoice_name || item.full_name || item.custom_name;
                 
                 let packagings = [];
@@ -2390,21 +2414,22 @@ async function loadSaleForEdit(id) {
                 // Fallback packagings if fetch fails or is custom
                 if (isCustom || !isItemValid || packagings.length === 0) {
                     packagings = [{
-                        level: item.packaging_level || 1,
-                        unit_name: item.unit_name,
-                        unit_abbr: item.unit_name ? item.unit_name.substring(0, 5) : '',
-                        sell_price_retail: item.unit_price,
-                        sell_price_wholesale: item.unit_price,
-                        buy_price: item.buy_price || 0,
+                        level: item.packaging_level || item.level || 1,
+                        unit_name: item.unit_name || 'Pcs',
+                        unit_abbr: item.unit_abbr || (item.unit_name ? item.unit_name.substring(0, 5) : 'Pcs'),
+                        sell_price_retail: parseFloat(item.unit_price) || 0,
+                        sell_price_wholesale: parseFloat(item.unit_price) || 0,
+                        buy_price: parseFloat(item.buy_price) || 0,
                         ppn_pct: 0,
                         discount_value: 0
                     }];
                 }
 
-                // Detect if price is custom or matches catalog
+                // Detect if price is custom or matches catalog for the target sale mode
                 const savedLevel = parseInt(item.level) || 1;
-                const savedQuantity = parseFloat(item.quantity);
-                const savedUnitPrice = parseFloat(item.unit_price);
+                const savedQuantity = parseFloat(item.quantity) || 1;
+                const savedTotalPrice = parseFloat(item.total_price);
+                const savedUnitPrice = parseFloat(item.unit_price) || (savedQuantity > 0 ? savedTotalPrice / savedQuantity : 0);
                 
                 let isCustomPrice = isCustom;
                 let detectedOverrideMode = undefined;
@@ -2413,26 +2438,37 @@ async function loadSaleForEdit(id) {
                     // Find the matching packaging
                     const curPkg = packagings.find(p => parseInt(p.level) === savedLevel) || packagings[0];
                     if (curPkg) {
-                        // Calculate expected prices for retail and wholesale using the same logic as recalcItemPrice
+                        // Calculate expected prices for retail and wholesale
                         const expectedRetail = _calcExpectedUnitPrice(curPkg, 'retail', savedQuantity, packagings);
                         const expectedWholesale = _calcExpectedUnitPrice(curPkg, 'wholesale', savedQuantity, packagings);
                         
                         const eps = 1; // Allow Rp 1 tolerance due to rounding
-                        if (Math.abs(savedUnitPrice - expectedRetail) < eps) {
-                            isCustomPrice = false;
-                            detectedOverrideMode = 'retail';
-                        } else if (Math.abs(savedUnitPrice - expectedWholesale) < eps) {
-                            isCustomPrice = false;
-                            detectedOverrideMode = 'wholesale';
+                        
+                        if (targetMode === 'mix') {
+                            if (Math.abs(savedUnitPrice - expectedRetail) < eps) {
+                                isCustomPrice = false;
+                                detectedOverrideMode = 'retail';
+                            } else if (Math.abs(savedUnitPrice - expectedWholesale) < eps) {
+                                isCustomPrice = false;
+                                detectedOverrideMode = 'wholesale';
+                            } else {
+                                isCustomPrice = true;
+                            }
+                        } else if (targetMode === 'wholesale') {
+                            if (Math.abs(savedUnitPrice - expectedWholesale) < eps) {
+                                isCustomPrice = false;
+                            } else {
+                                isCustomPrice = true;
+                            }
                         } else {
-                            isCustomPrice = true;
+                            // targetMode === 'retail' (or default)
+                            if (Math.abs(savedUnitPrice - expectedRetail) < eps) {
+                                isCustomPrice = false;
+                            } else {
+                                isCustomPrice = true;
+                            }
                         }
                     }
-                }
-
-                // For non-mix modes, set the override to match the sale mode
-                if (targetMode !== 'mix') {
-                    detectedOverrideMode = undefined;
                 }
 
                 return {
@@ -2444,14 +2480,14 @@ async function loadSaleForEdit(id) {
                     product_name: printName,
                     packagings: packagings,
                     level: isCustom ? 1 : savedLevel,
-                    unit_name: item.unit_name,
-                    unit_abbr: item.unit_abbr || (item.unit_name ? item.unit_name.substring(0, 5) : ''),
+                    unit_name: item.unit_name || 'Pcs',
+                    unit_abbr: item.unit_abbr || (item.unit_name ? item.unit_name.substring(0, 5) : 'Pcs'),
                     quantity: savedQuantity,
                     use_custom_price: isCustomPrice,
-                    custom_line_total: isCustomPrice ? parseFloat(item.total_price) : null,
-                    custom_price_draft: isCustomPrice ? String(item.total_price) : undefined,
+                    custom_line_total: isCustomPrice ? savedTotalPrice : null,
+                    custom_price_draft: isCustomPrice ? String(savedTotalPrice) : undefined,
                     unit_price: savedUnitPrice,
-                    total: parseFloat(item.total_price),
+                    total: savedTotalPrice,
                     price_note: isCustom ? 'Barang Custom' : (isCustomPrice ? 'Harga Custom (Edit)' : ''),
                     mix_override_mode: detectedOverrideMode
                 };
@@ -2462,6 +2498,7 @@ async function loadSaleForEdit(id) {
 
             // Insert edit banner
             const banner = document.createElement('div');
+            banner.id = 'posEditBanner';
             banner.innerHTML = `
                 <div style="background:var(--warning-bg); border-left:4px solid var(--warning); padding:12px; margin-bottom:16px; border-radius:4px; display:flex; justify-content:space-between; align-items:center;">
                     <div>
