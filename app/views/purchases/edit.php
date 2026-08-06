@@ -793,49 +793,198 @@ const totalEl = document.getElementById('purchaseTotal');
 const emptyState = document.getElementById('emptyPurchaseState');
 const countBadge = document.getElementById('itemCountBadge');
 
+// ===== Global Hardware Barcode Scanner Listener =====
+let _purchaseBarcodeBuffer = '';
+let _purchaseLastKeyTime = 0;
+let _purchaseBarcodeTimer = null;
+
+document.addEventListener('keydown', function(e) {
+    const searchSection = document.getElementById('productSearchSection');
+    if (!searchSection || searchSection.style.display === 'none') return;
+
+    const activeEl = document.activeElement;
+    
+    // Check if another input (e.g. qty, price, discount input in cart or form) is active
+    const isOtherInputFocused = activeEl && activeEl !== searchInput && (
+        activeEl.tagName === 'INPUT' || 
+        activeEl.tagName === 'TEXTAREA' || 
+        activeEl.tagName === 'SELECT' || 
+        activeEl.isContentEditable
+    );
+
+    const now = Date.now();
+    const timeDiff = now - _purchaseLastKeyTime;
+    _purchaseLastKeyTime = now;
+
+    const isFastScannerSpeed = timeDiff < 50;
+
+    // Normal typing inside another input field -> don't intercept
+    if (isOtherInputFocused && !isFastScannerSpeed && _purchaseBarcodeBuffer.length === 0) {
+        return;
+    }
+
+    if (e.key === 'Enter') {
+        if (_purchaseBarcodeBuffer.length >= 6) {
+            e.preventDefault();
+            const code = _purchaseBarcodeBuffer.trim();
+            _purchaseBarcodeBuffer = '';
+            if (searchInput) searchInput.value = '';
+            processPurchaseBarcodeOrSearch(code);
+        } else if (activeEl === searchInput) {
+            // Handled by searchInput keydown listener
+        }
+        _purchaseBarcodeBuffer = '';
+        return;
+    }
+
+    // Accumulate printable characters
+    if (e.key && e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        if (timeDiff > 60) {
+            _purchaseBarcodeBuffer = e.key;
+        } else {
+            _purchaseBarcodeBuffer += e.key;
+        }
+
+        clearTimeout(_purchaseBarcodeTimer);
+        _purchaseBarcodeTimer = setTimeout(() => {
+            if (_purchaseBarcodeBuffer.length >= 8 && /^\d{8,16}$/.test(_purchaseBarcodeBuffer)) {
+                const code = _purchaseBarcodeBuffer.trim();
+                _purchaseBarcodeBuffer = '';
+                if (searchInput) searchInput.value = '';
+                processPurchaseBarcodeOrSearch(code);
+            } else if (!isOtherInputFocused && activeEl !== searchInput && _purchaseBarcodeBuffer.length > 0) {
+                if (searchInput) {
+                    searchInput.focus();
+                    searchInput.value = _purchaseBarcodeBuffer;
+                    searchInput.dispatchEvent(new Event('input'));
+                }
+            }
+        }, 120);
+    }
+});
+
 function initPurchaseProductSearch() {
     if (!searchInput || !suggestionsDiv) return;
     const runSearch = typeof debounce === 'function'
         ? debounce(performProductSearch, 300)
         : performProductSearch;
-    searchInput.addEventListener('input', () => runSearch());
+
+    // Live typing for text keyword search
+    searchInput.addEventListener('input', function() {
+        runSearch();
+    });
+
+    // Enter key: IMMEDIATELY clear searchInput so barcodes never stack or concatenate
+    searchInput.addEventListener('keydown', async function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const q = this.value.trim();
+            this.value = ''; // IMMEDIATELY reset input
+            suggestionsDiv.innerHTML = '';
+            if (!q) return;
+
+            await processPurchaseBarcodeOrSearch(q);
+        }
+    });
 }
 
 function scanProductBarcode() {
     if (typeof BarcodeUtil !== 'undefined' && BarcodeUtil.scanBarcode) {
-        const fakeInput = document.createElement('input');
-        fakeInput.type = 'text';
-        document.body.appendChild(fakeInput);
-        BarcodeUtil.scanBarcode(fakeInput, (code) => {
-            document.body.removeChild(fakeInput);
-            searchInput.value = code;
-            searchInput.dispatchEvent(new Event('input'));
+        BarcodeUtil.scanBarcode(searchInput, (code) => {
+            if (code) {
+                processPurchaseBarcodeOrSearch(code);
+            }
         });
     } else {
         const code = prompt('Masukkan kode barcode:');
         if (code) {
-            searchInput.value = code;
-            searchInput.dispatchEvent(new Event('input'));
+            processPurchaseBarcodeOrSearch(code);
         }
     }
 }
 
-async function performProductSearch() {
-    const q = searchInput.value.trim();
-    if (q.length === 0) { suggestionsDiv.innerHTML = ''; return; }
-    
-    // Barcode check
-    if (/^\d{8,14}$/.test(q)) {
+async function processPurchaseBarcodeOrSearch(rawQuery) {
+    const q = String(rawQuery || '').trim();
+    if (!q) return;
+
+    // 1. ALWAYS RESET search input field IMMEDIATELY to prevent barcode accumulation
+    if (searchInput) searchInput.value = '';
+    if (suggestionsDiv) suggestionsDiv.innerHTML = '';
+
+    // Check if query is numeric barcode (6-16 digits)
+    const isBarcode = /^\d{6,16}$/.test(q);
+
+    if (isBarcode) {
+        // Try direct barcode API lookup
         try {
-            const data = await api(`${BASE_URL}api/products/barcode/${q}`);
+            const data = await api(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}`);
             if (data && data.id) {
                 addProductToCart(data);
-                searchInput.value = '';
-                suggestionsDiv.innerHTML = '';
-                return;
+                showToast(`Produk "${data.short_label || data.full_name || data.name}" ditambahkan`, 'success');
+                if (suggestionsDiv) suggestionsDiv.innerHTML = '';
+                return true;
             }
-        } catch (e) { /* fallback to text search */ }
+        } catch (e) {
+            /* fallback to purchase search endpoint */
+        }
+
+        // Try purchase product search API by barcode
+        try {
+            let searchUrl;
+            if (filterBySupplierSales && !isOtherMode && currentSupplierId) {
+                searchUrl = `${BASE_URL}api/purchases/search-products?q=${encodeURIComponent(q)}&supplier_id=${currentSupplierId}`;
+                if (currentSalesRepId) searchUrl += `&sales_rep_id=${currentSalesRepId}`;
+            } else {
+                searchUrl = `${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`;
+            }
+
+            const results = await api(searchUrl);
+            if (Array.isArray(results) && results.length > 0) {
+                // Find exact barcode match or first match
+                const match = results.find(p => p.barcode === q) || results[0];
+                if (match && match.id) {
+                    let fullProduct = null;
+                    if (typeof OfflineDB !== 'undefined') {
+                        fullProduct = await OfflineDB.getProductById(match.id);
+                    }
+                    if (!fullProduct && navigator.onLine) {
+                        fullProduct = await api(`${BASE_URL}api/products/${match.id}`);
+                    }
+                    if (fullProduct) {
+                        addProductToCart(fullProduct);
+                        showToast(`Produk "${fullProduct.short_label || fullProduct.full_name}" ditambahkan`, 'success');
+                        if (suggestionsDiv) suggestionsDiv.innerHTML = '';
+                        return true;
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Barcode lookup error:", err);
+        }
+
+        // Barcode NOT found: Show clear feedback, BUT searchInput remains 100% empty!
+        if (suggestionsDiv) {
+            suggestionsDiv.innerHTML = `
+                <div style="padding:14px 16px; text-align:center; background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-md); margin-top:8px; box-shadow:var(--shadow-sm);">
+                    <div style="font-size:13px; font-weight:600; color:var(--danger); margin-bottom:4px;">
+                        <i class="bi bi-exclamation-triangle-fill" style="margin-right:6px;"></i> Produk Tidak Ditemukan
+                    </div>
+                    <div style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">
+                        Barcode: <strong style="color:var(--text-primary); font-family:monospace; font-size:12px;">${escapeHtml(q)}</strong>
+                    </div>
+                    <a href="${BASE_URL}products/create" class="btn-outline-custom" style="padding:6px 16px; font-size:12px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+                        <i class="bi bi-plus-circle"></i> Tambah Produk Baru
+                    </a>
+                </div>`;
+        }
+        showToast(`Barcode ${q} tidak ditemukan`, 'warning');
+        return false;
     }
+
+    // Text Keyword Search
+    if (searchInput) searchInput.value = q;
+    performProductSearch();
+}
 
     if (q.length < 2) {
         suggestionsDiv.innerHTML = '';
