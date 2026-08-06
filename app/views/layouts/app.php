@@ -206,8 +206,12 @@ if ($userLevel === 'staff') {
                 <i class="bi <?= ($activeNav ?? '') === 'products' ? 'bi-box-seam-fill' : 'bi-box-seam' ?>"></i>
                 <span>Produk</span>
             </a>
-            <a href="<?= BASE_URL ?>scanner" class="sidebar-item <?= ($activeNav ?? '') === 'scan' ? 'active' : '' ?>">
+            <a href="<?= BASE_URL ?>products/barcode-editor" class="sidebar-item <?= ($activeNav ?? '') === 'barcode_editor' ? 'active' : '' ?>">
                 <i class="bi bi-upc-scan"></i>
+                <span>Edit Barcode Kemasan</span>
+            </a>
+            <a href="<?= BASE_URL ?>scanner" class="sidebar-item <?= ($activeNav ?? '') === 'scan' ? 'active' : '' ?>">
+                <i class="bi bi-search-heart"></i>
                 <span>Cek Harga / Scan</span>
             </a>
             <a href="<?= BASE_URL ?>purchases/create" class="sidebar-item <?= ($activeNav ?? '') === 'purchase' ? 'active' : '' ?>">

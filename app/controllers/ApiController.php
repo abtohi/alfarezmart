@@ -1510,6 +1510,62 @@ class ApiController extends Controller
         }
     }
 
+    public function updateBarcodes(int $id)
+    {
+        $this->validateCSRF();
+        try {
+            $id = (int)$id;
+            $db = Database::getInstance()->getConnection();
+
+            // Read JSON body or form inputs
+            $rawInput = file_get_contents('php://input');
+            $jsonData = json_decode($rawInput, true) ?: [];
+            
+            $barcodes = $jsonData['barcodes'] ?? $this->input('barcodes', []);
+            if (!is_array($barcodes)) {
+                $this->json(['error' => 'Data barcode tidak valid'], 400);
+                return;
+            }
+
+            // Check for duplicate barcode conflicts
+            foreach ($barcodes as $pkgId => $code) {
+                $code = trim((string)$code);
+                $pkgId = (int)$pkgId;
+                if (!empty($code)) {
+                    $owner = Helper::barcodeOwner($code, $pkgId);
+                    if ($owner && (int)$owner['product_id'] !== $id) {
+                        $this->json([
+                            'error' => 'barcode_conflict',
+                            'message' => "Barcode \"{$code}\" sudah digunakan oleh produk " . ($owner['short_label'] ?: $owner['full_name']) . " (" . ($owner['unit_name'] ?? ('Level ' . $owner['level'])) . ")"
+                        ], 409);
+                        return;
+                    }
+                }
+            }
+
+            // Execute barcode updates
+            $stmt = $db->prepare("UPDATE product_packagings SET barcode = :barcode WHERE id = :pkg_id AND product_id = :pid");
+            foreach ($barcodes as $pkgId => $code) {
+                $code = trim((string)$code);
+                $pkgId = (int)$pkgId;
+                $stmt->execute([
+                    ':barcode' => !empty($code) ? $code : null,
+                    ':pkg_id'  => $pkgId,
+                    ':pid'     => $id
+                ]);
+            }
+
+            $db->prepare("UPDATE products SET updated_at = NOW() WHERE id = :pid")->execute([':pid' => $id]);
+
+            $this->json([
+                'success' => true,
+                'message' => 'Barcode kemasan berhasil diperbarui'
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Gagal memperbarui barcode: ' . $e->getMessage()], 500);
+        }
+    }
+
     public function updateProductStock(int $id)
     {
         $this->validateCSRF();

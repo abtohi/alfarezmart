@@ -491,6 +491,10 @@
             <div class="action-icon" style="background: rgba(156, 39, 176, 0.1); color: #9c27b0;"><i class="bi bi-diagram-3-fill"></i></div>
             <span class="action-label">Harga Multivarian</span>
         </a>
+        <a href="<?= BASE_URL ?>products/barcode-editor" class="quick-action">
+            <div class="action-icon" style="background: rgba(255, 152, 0, 0.15); color: #ff9800;"><i class="bi bi-upc-scan"></i></div>
+            <span class="action-label">Edit Barcode Kemasan</span>
+        </a>
         <?php if ($userLevel === 'superadmin'): ?>
         <a href="<?= BASE_URL ?>dashboard/summary" class="quick-action">
             <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-graph-up-arrow"></i></div>

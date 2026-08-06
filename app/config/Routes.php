@@ -25,6 +25,7 @@ $router->get('/dashboard', 'DashboardController@index');
 $router->get('/products', 'ProductController@index');
 $router->get('/products/create', 'ProductController@create');
 $router->get('/products/multivariant', 'ProductController@multivariant');
+$router->get('/products/barcode-editor', 'ProductController@barcodeEditor');
 $router->get('/products/{id}', 'ProductController@show');
 $router->get('/products/{id}/edit', 'ProductController@edit');
 
@@ -97,6 +98,7 @@ $router->get('/api/barcode/generate', 'ApiController@generateBarcode');
 $router->get('/api/products/{id}', 'ApiController@getById');
 $router->post('/api/products', 'ApiController@createProduct');
 $router->post('/api/products/update/{id}', 'ApiController@updateProduct');
+$router->post('/api/products/{id}/update-barcodes', 'ApiController@updateBarcodes');
 $router->post('/api/products/{id}/availability', 'ApiController@updateProductAvailability');
 $router->post('/api/products/{id}/delete', 'ApiController@deleteProduct');
 $router->post('/api/products/bulk-delete', 'ApiController@bulkDeleteProducts');
