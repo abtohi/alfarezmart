@@ -362,14 +362,14 @@ class InvoiceScanService
             return $this->callDirectGeminiAPI($systemPrompt, $userPrompt, $imageB64, $imageFormat, $apiKey);
         }
 
-        // Active free vision models on OpenRouter
+        // Active 100% FREE vision models on OpenRouter
         $FREE_VISION_FALLBACKS = [
-            'google/gemini-2.0-flash-exp:free',
             'google/gemma-4-31b-it:free',
             'google/gemma-4-26b-a4b-it:free',
             'nvidia/nemotron-nano-12b-v2-vl:free',
-            'google/gemini-2.0-flash-001',
-            'google/gemini-2.5-flash',
+            'meta-llama/llama-3.2-11b-vision-instruct:free',
+            'qwen/qwen-2-vl-7b-instruct:free',
+            'openrouter/free'
         ];
 
         $modelsToTry = [];
@@ -416,7 +416,7 @@ class InvoiceScanService
             ]);
 
             $isFreeModel = str_contains($tryModel, ':free') || str_contains($tryModel, 'openrouter/free');
-            $timeout = $isFreeModel ? 45 : 60;
+            $timeout = $isFreeModel ? 30 : 60;
             curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
@@ -426,19 +426,18 @@ class InvoiceScanService
 
             if ($httpCode === 402) {
                 error_log("[AlfarezMart] Model {$tryModel} requires credit balance (402). Trying next fallback model.");
-                $lastError = "Model {$tryModel} membutuhkan saldo kredit. Mencoba model gratis...";
+                $lastError = "Model {$tryModel} membutuhkan saldo kredit.";
                 continue;
             }
 
             if ($err) {
-                $lastError = "Koneksi ke AI ({$tryModel}) lambat: " . $err;
+                $lastError = "Koneksi ke AI ({$tryModel}) lambat atau timeout.";
                 continue; // try next model
             }
 
             if ($httpCode === 429) {
-                $nextModel = $modelsToTry[$attempt + 1] ?? null;
-                error_log("[AlfarezMart] Model {$tryModel} rate-limited (429). " . ($nextModel ? "Trying: $nextModel" : "No more fallbacks."));
-                $lastError = "Model {$tryModel} sedang dibatasi (rate limit). Mencoba model lain...";
+                error_log("[AlfarezMart] Model {$tryModel} rate-limited (429). Trying next fallback model.");
+                $lastError = "Model {$tryModel} sedang dibatasi kuota (rate limit).";
                 continue;
             }
 
@@ -463,7 +462,7 @@ class InvoiceScanService
             continue;
         }
 
-        throw new \Exception($lastError ?? 'AI gagal memproses gambar setelah mencoba semua model.');
+        throw new \Exception("Gagal scan invoice dengan AI: Model gratisan OpenRouter sedang sibuk/habis kuota. Silakan coba lagi atau gunakan API Key Google Gemini gratis (AIzaSy...). Error detail: " . ($lastError ?? 'Unknown error'));
     }
 
     /**
