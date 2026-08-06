@@ -568,7 +568,7 @@ class ApiController extends Controller
             $this->json(['error' => 'Produk tidak ditemukan'], 404);
             return;
         }
-        $product['packagings'] = $model->getPackagings($product['id']);
+        $product = $this->enrichProductDetailData($product);
         $this->json($product);
     }
 
@@ -580,8 +580,126 @@ class ApiController extends Controller
             $this->json(['error' => 'Produk tidak ditemukan'], 404);
             return;
         }
-        $product['packagings'] = $model->getPackagings($product['id']);
+        $product = $this->enrichProductDetailData($product);
         $this->json($product);
+    }
+
+    private function enrichProductDetailData(array $product): array
+    {
+        $model = new ProductModel();
+        $productId = (int)$product['id'];
+
+        // 1. Packagings with Markup % calculation
+        $packagings = $model->getPackagings($productId);
+        foreach ($packagings as &$p) {
+            $buyPrice = (float)($p['buy_price'] ?? 0);
+            $retailPrice = (float)($p['sell_price_retail'] ?? 0);
+            $wholesalePrice = (float)($p['sell_price_wholesale'] ?? 0);
+
+            // Calculate Markup % = ((Sell - Buy) / Buy) * 100
+            $p['markup_retail_percent'] = ($buyPrice > 0) ? round((($retailPrice - $buyPrice) / $buyPrice) * 100, 1) : 0;
+            $p['profit_retail_nominal'] = $retailPrice - $buyPrice;
+
+            $p['markup_wholesale_percent'] = ($buyPrice > 0 && $wholesalePrice > 0) ? round((($wholesalePrice - $buyPrice) / $buyPrice) * 100, 1) : 0;
+            $p['profit_wholesale_nominal'] = ($wholesalePrice > 0) ? ($wholesalePrice - $buyPrice) : 0;
+        }
+        unset($p);
+        $product['packagings'] = $packagings;
+
+        // 2. Fetch Suppliers & Purchase History grouped by Supplier
+        $suppliers = [];
+        try {
+            $stmtSup = $this->db->prepare("
+                SELECT DISTINCT s.id as supplier_id, s.name as supplier_name, s.address, s.notes,
+                       COALESCE(sp.last_buy_price, 0) as last_buy_price,
+                       sp.last_purchase_date,
+                       COALESCE(sp.purchase_count, 0) as purchase_count
+                FROM suppliers s
+                JOIN supplier_products sp ON sp.supplier_id = s.id
+                WHERE sp.product_id = :pid1
+
+                UNION
+
+                SELECT DISTINCT s.id as supplier_id, s.name as supplier_name, s.address, s.notes,
+                       0 as last_buy_price,
+                       MAX(pu.purchase_date) as last_purchase_date,
+                       COUNT(pu.id) as purchase_count
+                FROM suppliers s
+                JOIN purchases pu ON pu.supplier_id = s.id
+                JOIN purchase_items pi ON pi.purchase_id = pu.id
+                WHERE pi.product_id = :pid2
+                GROUP BY s.id, s.name, s.address, s.notes
+            ");
+            $stmtSup->execute([':pid1' => $productId, ':pid2' => $productId]);
+            $rawSupplierRows = $stmtSup->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            // Deduplicate suppliers cleanly by supplier_id
+            $suppliersMap = [];
+            foreach ($rawSupplierRows as $sup) {
+                $sid = (int)$sup['supplier_id'];
+                if (!isset($suppliersMap[$sid])) {
+                    $suppliersMap[$sid] = $sup;
+                } else {
+                    if (empty($suppliersMap[$sid]['last_buy_price']) && !empty($sup['last_buy_price'])) {
+                        $suppliersMap[$sid]['last_buy_price'] = $sup['last_buy_price'];
+                    }
+                    if (empty($suppliersMap[$sid]['last_purchase_date']) && !empty($sup['last_purchase_date'])) {
+                        $suppliersMap[$sid]['last_purchase_date'] = $sup['last_purchase_date'];
+                    }
+                    $suppliersMap[$sid]['purchase_count'] = max((int)$suppliersMap[$sid]['purchase_count'], (int)$sup['purchase_count']);
+                }
+            }
+            $supplierRows = array_values($suppliersMap);
+
+            foreach ($supplierRows as $sup) {
+                $sid = (int)$sup['supplier_id'];
+                
+                // Fetch purchase history for this product at this supplier (sorted by date DESC, latest on top)
+                $stmtHist = $this->db->prepare("
+                    SELECT pu.id as purchase_id, pu.purchase_code, pu.purchase_date, pu.notes,
+                           pi.quantity, pi.buy_price as item_buy_price, pi.total_price as item_subtotal,
+                           u.name as unit_name, pp.level as packaging_level, pp.base_qty
+                    FROM purchase_items pi
+                    JOIN purchases pu ON pi.purchase_id = pu.id
+                    LEFT JOIN product_packagings pp ON pi.packaging_id = pp.id
+                    LEFT JOIN units u ON pp.unit_id = u.id
+                    WHERE pi.product_id = :pid AND pu.supplier_id = :sid
+                    ORDER BY pu.purchase_date DESC, pu.id DESC
+                    LIMIT 50
+                ");
+                $stmtHist->execute([':pid' => $productId, ':sid' => $sid]);
+                $history = $stmtHist->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+                $sup['purchases'] = $history;
+                $suppliers[] = $sup;
+            }
+        } catch (\Throwable $e) {
+            error_log("[enrichProductDetailData] Supplier history query error: " . $e->getMessage());
+        }
+        $product['suppliers'] = $suppliers;
+
+        // 3. Last Purchase Insight
+        $lastPurchase = null;
+        try {
+            $stmtLast = $this->db->prepare("
+                SELECT pu.purchase_date, pu.purchase_code, s.name as supplier_name, pi.buy_price, u.name as unit_name
+                FROM purchase_items pi
+                JOIN purchases pu ON pi.purchase_id = pu.id
+                LEFT JOIN suppliers s ON pu.supplier_id = s.id
+                LEFT JOIN product_packagings pp ON pi.packaging_id = pp.id
+                LEFT JOIN units u ON pp.unit_id = u.id
+                WHERE pi.product_id = :pid
+                ORDER BY pu.purchase_date DESC, pu.id DESC
+                LIMIT 1
+            ");
+            $stmtLast->execute([':pid' => $productId]);
+            $lastPurchase = $stmtLast->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (\Throwable $e) {
+            error_log("[enrichProductDetailData] Last purchase query error: " . $e->getMessage());
+        }
+        $product['last_purchase'] = $lastPurchase;
+
+        return $product;
     }
 
     public function getProductVariants(int $id)
@@ -593,48 +711,53 @@ class ApiController extends Controller
             return;
         }
 
-        $brandId = $ref['brand_id'];
-        $categoryId = $ref['category_id'];
-        $name = $ref['full_name'] ?: $ref['short_label'];
+        $brandId     = $ref['brand_id'];
+        $productType = trim((string)($ref['product_type'] ?? ''));
+        $weightValue = trim((string)($ref['weight_value'] ?? ''));
+        $weightUnit  = trim((string)($ref['weight_unit'] ?? ''));
 
-        if (!$brandId || !$categoryId) {
+        // Jika brand kosong, jangan tebak-tebak otomatis
+        if (!$brandId) {
             $this->json(['success' => true, 'variants' => []]);
             return;
         }
 
-        // Try to extract weight/volume pattern e.g., 50g, 250ml, 30btr, 12pcs
-        $pattern = '/\b(\d+(?:\.\d+)?)\s*(g|gr|gram|kg|ml|l|btr|pcs|lembar|pack)\b/i';
-        preg_match($pattern, $name, $matches);
-        
-        $sql = "SELECT p.id, p.full_name, p.short_label, p.code, b.name as brand_name, c.name as category_name
+        $whereSql = "p.id != :id AND p.is_active = 1 AND p.brand_id = :bid";
+        $params   = [
+            ':id'  => $id,
+            ':bid' => $brandId
+        ];
+
+        // Filter Jenis Produk:
+        // Jika referensi punya jenis, maka target harus berjenis SAMA atau BLANK.
+        // Jika referensi TIDAK punya jenis (blank), maka kita cari target hanya berdasarkan Brand & Volume.
+        if ($productType !== '') {
+            $whereSql .= " AND (p.product_type = :ptype OR p.product_type IS NULL OR p.product_type = '')";
+            $params[':ptype'] = $productType;
+        }
+
+        if ($weightValue !== '' && $weightUnit !== '') {
+            $whereSql .= " AND p.weight_value = :wv AND p.weight_unit = :wu";
+            $params[':wv'] = $weightValue;
+            $params[':wu'] = $weightUnit;
+        } else {
+            $whereSql .= " AND (p.weight_value IS NULL OR p.weight_value = '')";
+        }
+
+        $sql = "SELECT p.id, p.full_name, p.short_label, p.code, p.photo,
+                       b.name as brand_name, c.name as category_name
                 FROM products p
-                LEFT JOIN brands b ON p.brand_id = b.id
+                LEFT JOIN brands b ON p.brand_id  = b.id
                 LEFT JOIN categories c ON p.category_id = c.id
-                WHERE p.brand_id = :bid AND p.category_id = :cid AND p.id != :id AND p.is_active = 1";
-        
-        $params = [':bid' => $brandId, ':cid' => $categoryId, ':id' => $id];
-        
+                WHERE $whereSql
+                ORDER BY p.full_name ASC";
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        $allCandidates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $variants = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $variants = [];
-        if (!empty($matches)) {
-            $weightStr = strtolower(preg_replace('/\s+/', '', $matches[0])); // e.g. "30btr"
-            foreach ($allCandidates as $c) {
-                $cName = $c['full_name'] ?: $c['short_label'];
-                // Check if candidate also contains the exact same weight string
-                $cNameClean = strtolower(preg_replace('/\s+/', '', $cName));
-                if (strpos($cNameClean, $weightStr) !== false) {
-                    $variants[] = $c;
-                }
-            }
-            // Fallback: if strict extraction yields no result, return all
-            if (empty($variants)) {
-                $variants = $allCandidates;
-            }
-        } else {
-            $variants = $allCandidates;
+        if (!empty($variants)) {
+            $model->attachPackagingsForProductList($variants);
         }
 
         $this->json(['success' => true, 'variants' => array_values($variants)]);
@@ -646,12 +769,12 @@ class ApiController extends Controller
             $this->json(['success' => false, 'message' => 'Method not allowed'], 405);
             return;
         }
-        
-        $refId = isset($_POST['reference_id']) ? (int)$_POST['reference_id'] : 0;
+
+        $refId     = isset($_POST['reference_id']) ? (int)$_POST['reference_id'] : 0;
         $targetIds = isset($_POST['target_ids']) && is_array($_POST['target_ids']) ? $_POST['target_ids'] : [];
 
         if (!$refId || empty($targetIds)) {
-            $this->json(['success' => false, 'message' => 'Data tidak lengkap']);
+            $this->json(['success' => false, 'message' => 'Data tidak lengkap: reference_id=' . $refId . ', target_ids count=' . count($targetIds)]);
             return;
         }
 
@@ -659,75 +782,150 @@ class ApiController extends Controller
         $refPackagings = $model->getPackagings($refId);
 
         if (empty($refPackagings)) {
-            $this->json(['success' => false, 'message' => 'Produk referensi tidak memiliki kemasan']);
+            $this->json(['success' => false, 'message' => 'Produk referensi tidak memiliki kemasan (id=' . $refId . ')']);
             return;
         }
+
+        $errors  = [];
+        $success = 0;
 
         try {
             $this->db->beginTransaction();
 
-            foreach ($targetIds as $tId) {
-                $tId = (int)$tId;
-                if ($tId === $refId) continue;
+            foreach ($targetIds as $rawId) {
+                $tId = (int)$rawId;
+                if ($tId <= 0 || $tId === $refId) continue;
 
-                // Delete existing packagings for target
-                $stmt = $this->db->prepare("DELETE FROM product_packagings WHERE product_id = ?");
-                $stmt->execute([$tId]);
+                // ── 1. Ambil kemasan lama dari produk target ──
+                $stmtOld = $this->db->prepare("SELECT id, level FROM product_packagings WHERE product_id = ?");
+                $stmtOld->execute([$tId]);
+                $oldPkgs = [];
+                $level1PkgId = null;
+                foreach ($stmtOld->fetchAll() as $row) {
+                    $lvl = (int)$row['level'];
+                    $oldPkgs[$lvl] = (int)$row['id'];
+                    if ($lvl === 1) {
+                        $level1PkgId = (int)$row['id'];
+                    }
+                }
 
-                // Insert new packagings matching reference
+                // ── 2. Loop referensi, Update atau Insert kemasan target ──
                 foreach ($refPackagings as $pkg) {
-                    $stmtPkg = $this->db->prepare("
-                        INSERT INTO product_packagings 
-                        (product_id, unit_id, level, base_qty, buy_price, sell_price_retail, sell_price_wholesale, barcode)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    ");
-                    // Important: Keep original target's barcode or generate new? 
-                    // Safest is to just leave it blank or copy? 
-                    // If we copy, barcodes collide. Better to leave target's barcode blank/NULL if we are recreating, OR 
-                    // ideally, we should map them by level instead of deleting. 
-                    // Since the plan said "ditimpa (di-replace) sepenuhnya", we'll just set barcode to NULL for now or generate.
-                    // Actually, let's just leave barcode empty so user can scan it later.
-                    $stmtPkg->execute([
-                        $tId,
-                        $pkg['unit_id'],
-                        $pkg['level'],
-                        $pkg['base_qty'],
-                        $pkg['buy_price'],
-                        $pkg['sell_price_retail'],
-                        $pkg['sell_price_wholesale'],
-                        null // blank barcode
-                    ]);
-                    $newPkgId = $this->db->lastInsertId();
+                    $lvl = (int)$pkg['level'];
 
-                    // Copy tier prices
+                    if (isset($oldPkgs[$lvl])) {
+                        // UPDATE kemasan lama yang ada di level ini
+                        $pkgId = $oldPkgs[$lvl];
+                        $stmtUpdatePkg = $this->db->prepare("
+                            UPDATE product_packagings SET
+                                unit_id = ?, contained_qty = ?, base_qty = ?,
+                                buy_price = ?, sell_price_retail = ?, margin_retail = ?,
+                                sell_price_wholesale = ?, margin_wholesale = ?
+                            WHERE id = ?
+                        ");
+                        $stmtUpdatePkg->execute([
+                            $pkg['unit_id'],
+                            $pkg['contained_qty'] ?? 1,
+                            $pkg['base_qty'] ?? 1,
+                            $pkg['buy_price'] ?? 0,
+                            $pkg['sell_price_retail'] ?? 0,
+                            $pkg['margin_retail'] ?? 0,
+                            $pkg['sell_price_wholesale'] ?? 0,
+                            $pkg['margin_wholesale'] ?? 0,
+                            $pkgId
+                        ]);
+
+                        // Hapus harga tier lama
+                        $this->db->prepare("DELETE FROM product_qty_prices WHERE packaging_id = ?")->execute([$pkgId]);
+
+                        unset($oldPkgs[$lvl]); // Hapus dari daftar sisa
+                    } else {
+                        // INSERT kemasan baru
+                        $stmtInsertPkg = $this->db->prepare("
+                            INSERT INTO product_packagings
+                                (product_id, unit_id, level, contained_qty, base_qty,
+                                 buy_price, sell_price_retail, margin_retail,
+                                 sell_price_wholesale, margin_wholesale, barcode)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ");
+                        $stmtInsertPkg->execute([
+                            $tId,
+                            $pkg['unit_id'],
+                            $lvl,
+                            $pkg['contained_qty'] ?? 1,
+                            $pkg['base_qty'] ?? 1,
+                            $pkg['buy_price'] ?? 0,
+                            $pkg['sell_price_retail'] ?? 0,
+                            $pkg['margin_retail'] ?? 0,
+                            $pkg['sell_price_wholesale'] ?? 0,
+                            $pkg['margin_wholesale'] ?? 0,
+                            null
+                        ]);
+                        $pkgId = (int)$this->db->lastInsertId();
+                    }
+
+                    if ($lvl === 1) {
+                        $level1PkgId = $pkgId; // Simpan level 1 id untuk fallback
+                    }
+
+                    // Insert harga tier baru
                     if (!empty($pkg['qty_prices'])) {
-                        foreach ($pkg['qty_prices'] as $t) {
-                            $stmtT = $this->db->prepare("
-                                INSERT INTO product_qty_prices 
+                        $stmtT = $this->db->prepare("
+                            INSERT INTO product_qty_prices
                                 (packaging_id, min_qty, unit_price, sale_mode, label, sort_order)
-                                VALUES (?, ?, ?, ?, ?, ?)
-                            ");
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        ");
+                        foreach ($pkg['qty_prices'] as $tier) {
                             $stmtT->execute([
-                                $newPkgId,
-                                $t['min_qty'],
-                                $t['unit_price'],
-                                $t['sale_mode'],
-                                $t['label'],
-                                $t['sort_order']
+                                $pkgId,
+                                $tier['min_qty'] ?? 1,
+                                $tier['unit_price'] ?? 0,
+                                $tier['sale_mode'] ?? 'both',
+                                $tier['label'] ?? null,
+                                $tier['sort_order'] ?? 0,
                             ]);
                         }
                     }
                 }
+
+                // ── 3. Hapus sisa kemasan target yang levelnya tidak ada di referensi ──
+                if (!empty($oldPkgs)) {
+                    $in = implode(',', array_map('intval', $oldPkgs));
+
+                    // Pindahkan referensi FK (purchase_items, sale_items) ke Level 1
+                    // agar tidak error ON DELETE RESTRICT
+                    if ($level1PkgId) {
+                        $this->db->exec("UPDATE purchase_items SET packaging_id = {$level1PkgId} WHERE packaging_id IN ($in)");
+                        $this->db->exec("UPDATE sale_items SET packaging_id = {$level1PkgId} WHERE packaging_id IN ($in)");
+                    }
+
+                    // Hapus tier prices sisa
+                    $this->db->exec("DELETE FROM product_qty_prices WHERE packaging_id IN ($in)");
+
+                    // Baru hapus kemasan sisanya
+                    $this->db->exec("DELETE FROM product_packagings WHERE id IN ($in)");
+                }
+
+                // Bump updated_at so product rises to top of list
+                $this->db->prepare("UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                         ->execute([$tId]);
+
+                $success++;
             }
 
             $this->db->commit();
-            $this->json(['success' => true, 'message' => 'Harga berhasil diaplikasikan ke ' . count($targetIds) . ' produk']);
+            $this->json([
+                'success' => true,
+                'message' => "Harga berhasil diaplikasikan ke {$success} produk" . (!empty($errors) ? '. Gagal: ' . implode(', ', $errors) : ''),
+            ]);
 
         } catch (Exception $e) {
             $this->db->rollBack();
+            error_log('[AlfarezMart][applyMultivariantPricing] ' . $e->getMessage());
             $this->json(['success' => false, 'message' => 'Gagal: ' . $e->getMessage()]);
         }
     }
+
 
     /**
      * Simpan tier harga spesial per kuantitas untuk satu kemasan
@@ -1097,6 +1295,8 @@ class ApiController extends Controller
             'receipt_header' => $settings->get('receipt_header', ''),
             'receipt_footer' => $settings->get('receipt_footer', ''),
             'store_logo' => $settings->get('store_logo', ''),
+            'printer_driver' => $settings->get('printer_driver', 'web_bluetooth'),
+            'auto_print_checkout' => $settings->get('auto_print_checkout', '1'),
         ]);
     }
 
@@ -1108,7 +1308,7 @@ class ApiController extends Controller
             // Read all from JSON body
             $data = json_decode(file_get_contents('php://input'), true) ?? [];
             
-            $fields = ['store_name','store_address','store_phone','thermal_printer_width','receipt_header','receipt_footer'];
+            $fields = ['store_name','store_address','store_phone','thermal_printer_width','receipt_header','receipt_footer','printer_driver','auto_print_checkout'];
             foreach ($fields as $f) {
                 $val = $data[$f] ?? $this->input($f, '');
                 $settings->set($f, $val);
