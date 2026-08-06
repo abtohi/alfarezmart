@@ -256,6 +256,7 @@ self.addEventListener('fetch', event => {
                                         if (cachedWithSlash) resolve(cachedWithSlash);
                                         else fallbackToBase();
                                     });
+                                    }
                                 }
                             });
                         }
