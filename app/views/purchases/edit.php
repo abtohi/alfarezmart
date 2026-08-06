@@ -61,23 +61,23 @@
     </div>
 
     <!-- Photo Preview Modal -->
-    <div id="photoPreviewModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">
-        <div class="modal-content" style="width:100%; max-width:850px; height:85vh; max-height:800px; padding:0; overflow:hidden; display:flex; flex-direction:column; background:var(--surface-1, #1e1e2d); border-radius:12px; border:1px solid var(--border-color); box-shadow:0 20px 50px rgba(0,0,0,0.6);">
-            <div style="padding:14px 20px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; background:var(--surface-2, #252538);">
-                <h3 style="font-size:16px; font-weight:700; margin:0; color:var(--text-primary);"><i class="bi bi-image" style="color:var(--primary); margin-right:8px;"></i>Pratinjau Foto Invoice</h3>
-                <button class="btn-close-custom" onclick="closePhotoPreview()" style="background:none; border:none; color:var(--text-muted); font-size:18px; cursor:pointer; padding:4px 8px;"><i class="bi bi-x-lg"></i></button>
+    <div id="photoPreviewModal" class="modal-backdrop" style="display:none; z-index:2000;">
+        <div class="modal-content" style="max-width:400px; padding:0; overflow:hidden; display:flex; flex-direction:column; height:90vh;">
+            <div style="padding:16px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="font-size:var(--font-size-md); margin:0;">Pratinjau Foto</h3>
+                <button class="btn-close-custom" onclick="closePhotoPreview()"><i class="bi bi-x-lg"></i></button>
             </div>
-            <div style="flex:1; overflow:hidden; background:#0a0a0f; position:relative; display:flex; align-items:center; justify-content:center; padding:16px;">
-                <canvas id="photoPreviewCanvas" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:6px; box-shadow:0 4px 20px rgba(0,0,0,0.5);"></canvas>
+            <div style="flex:1; overflow:hidden; background:#111; position:relative; display:flex; align-items:center; justify-content:center;">
+                <canvas id="photoPreviewCanvas" style="max-width:100%; max-height:100%; object-fit:contain;"></canvas>
             </div>
-            <div style="padding:16px 20px; background:var(--surface-1); border-top:1px solid var(--border-color); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px;">
-                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
+            <div style="padding:16px; background:var(--surface-1);">
+                <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; cursor:pointer;">
                     <input type="checkbox" id="chkEnhancePhoto" checked onchange="applyPhotoFilter()" style="width:18px;height:18px;accent-color:var(--primary);">
-                    <span style="font-size:13px; font-weight:600; color:var(--text-primary);">Mode Dokumen (Perjelas Teks & Auto Sharpen)</span>
+                    <span style="font-size:13px; font-weight:600; color:var(--text-primary);">Mode Dokumen (Perjelas Teks)</span>
                 </label>
-                <div style="display:flex; gap:10px; min-width:240px;">
-                    <button type="button" class="btn-outline-custom" style="flex:1; padding:8px 16px;" onclick="closePhotoPreview()">Batal</button>
-                    <button type="button" class="btn-primary-custom" style="flex:1; padding:8px 16px;" onclick="savePhotoPreview()"><i class="bi bi-check2-circle"></i> Gunakan Foto</button>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn-outline-custom" style="flex:1;" onclick="closePhotoPreview()">Batal</button>
+                    <button type="button" class="btn-primary-custom" style="flex:1;" onclick="savePhotoPreview()">Gunakan Foto</button>
                 </div>
             </div>
         </div>
@@ -257,45 +257,6 @@ function closePhotoPreview() {
     document.getElementById('photoPreviewModal').style.display = 'none';
 }
 
-function sharpenCanvas(ctx, width, height, mix = 0.45) {
-    try {
-        const weights = [
-             0, -1,  0,
-            -1,  5, -1,
-             0, -1,  0
-        ];
-        const imageData = ctx.getImageData(0, 0, width, height);
-        const data = imageData.data;
-        const copyData = new Uint8ClampedArray(data);
-        const side = 3, halfSide = 1;
-        const w = width, h = height;
-
-        for (let y = 0; y < h; y++) {
-            for (let x = 0; x < w; x++) {
-                const dstOff = (y * w + x) * 4;
-                let r = 0, g = 0, b = 0;
-                for (let cy = 0; cy < side; cy++) {
-                    for (let cx = 0; cx < side; cx++) {
-                        const scx = Math.min(w - 1, Math.max(0, x + cx - halfSide));
-                        const scy = Math.min(h - 1, Math.max(0, y + cy - halfSide));
-                        const srcOff = (scy * w + scx) * 4;
-                        const wt = weights[cy * side + cx];
-                        r += copyData[srcOff] * wt;
-                        g += copyData[srcOff + 1] * wt;
-                        b += copyData[srcOff + 2] * wt;
-                    }
-                }
-                data[dstOff]     = Math.min(255, Math.max(0, copyData[dstOff] * (1 - mix) + r * mix));
-                data[dstOff + 1] = Math.min(255, Math.max(0, copyData[dstOff + 1] * (1 - mix) + g * mix));
-                data[dstOff + 2] = Math.min(255, Math.max(0, copyData[dstOff + 2] * (1 - mix) + b * mix));
-            }
-        }
-        ctx.putImageData(imageData, 0, 0);
-    } catch (e) {
-        console.warn('Canvas sharpen error:', e);
-    }
-}
-
 function applyPhotoFilter() {
     if (!originalPhotoImg) return;
     const canvas = document.getElementById('photoPreviewCanvas');
@@ -303,7 +264,7 @@ function applyPhotoFilter() {
     
     let width = originalPhotoImg.width;
     let height = originalPhotoImg.height;
-    const max_size = 1400; // Increased from 900 to 1400 for better OCR on large invoice tables
+    const max_size = 1200;
     
     if (width > height) {
         if (width > max_size) { height *= max_size / width; width = max_size; }
@@ -311,29 +272,23 @@ function applyPhotoFilter() {
         if (height > max_size) { width *= max_size / height; height = max_size; }
     }
     
-    width = Math.round(width);
-    height = Math.round(height);
-    
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
     
     if (isEnhanced) {
-        // Document Mode: Grayscale + 160% High Contrast + 115% Brightness
-        ctx.filter = 'grayscale(100%) contrast(160%) brightness(115%)';
-        ctx.drawImage(originalPhotoImg, 0, 0, width, height);
-        ctx.filter = 'none';
-        // Apply 3x3 Unsharp Mask convolution filter to sharpen blurry text edges
-        sharpenCanvas(ctx, width, height, 0.40);
+        // Document mode: Grayscale, high contrast, slightly increased brightness
+        ctx.filter = 'grayscale(100%) contrast(150%) brightness(110%)';
     } else {
         ctx.filter = 'none';
-        ctx.drawImage(originalPhotoImg, 0, 0, width, height);
     }
+    
+    ctx.drawImage(originalPhotoImg, 0, 0, width, height);
 }
 
 function savePhotoPreview() {
     const canvas = document.getElementById('photoPreviewCanvas');
-    invoicePhotoBase64 = canvas.toDataURL('image/webp', 0.82);
+    invoicePhotoBase64 = canvas.toDataURL('image/webp', 0.7);
     
     const btnCam = document.getElementById('btnPhotoCam');
     const btnGal = document.getElementById('btnPhotoGal');
@@ -360,33 +315,9 @@ async function scanInvoiceWithAI() {
     const btn = document.getElementById('btnScanAI');
     const originalText = btn.innerHTML;
     
-    const progressSteps = [
-        '<i class="bi bi-cloud-upload"></i> Mengirim gambar...',
-        '<i class="spinner-border spinner-border-sm"></i> AI sedang membaca...',
-        '<i class="spinner-border spinner-border-sm"></i> Menganalisa items...',
-        '<i class="spinner-border spinner-border-sm"></i> Hampir selesai...'
-    ];
-    let stepIdx = 0;
-    let progressInterval = null;
-    function startProgressAnimation() {
-        btn.disabled = true;
-        btn.innerHTML = progressSteps[0];
-        stepIdx = 1;
-        progressInterval = setInterval(() => {
-            if (stepIdx < progressSteps.length) {
-                btn.innerHTML = progressSteps[stepIdx];
-                stepIdx++;
-            }
-        }, 8000);
-    }
-    function stopProgressAnimation() {
-        if (progressInterval) clearInterval(progressInterval);
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-    }
-    
     try {
-        startProgressAnimation();
+        btn.disabled = true;
+        btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Memproses AI...';
         
         const data = {
             csrf_token: csrfVal,
@@ -394,8 +325,9 @@ async function scanInvoiceWithAI() {
             supplier_id: currentSupplierId || null
         };
         
+        // Use custom fetch with 2-minute timeout instead of api() helper
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 120000); // 120 sec timeout
+        const timeout = setTimeout(() => controller.abort(), 120000); // 2 min
         
         let result;
         try {
@@ -418,13 +350,13 @@ async function scanInvoiceWithAI() {
                 result = JSON.parse(text);
             } catch(pe) {
                 console.error('AI scan response not JSON:', text.substring(0, 500));
-                throw new Error('Respons AI tidak valid. Coba lagi atau gunakan gambar lebih jelas.');
+                throw new Error('Respons AI tidak valid. Coba lagi atau gunakan gambar lebih kecil.');
             }
             if (result.error) throw new Error(result.error);
         } catch(fetchErr) {
             clearTimeout(timeout);
             if (fetchErr.name === 'AbortError') {
-                throw new Error('Request timeout (120 detik). AI membutuhkan waktu lebih lama, silakan coba lagi.');
+                throw new Error('Request timeout (2 menit). Coba gunakan gambar dengan resolusi lebih rendah.');
             }
             throw fetchErr;
         }
@@ -497,7 +429,8 @@ async function scanInvoiceWithAI() {
         console.error('Error scanning invoice:', err);
         showToast(err.message || 'Gagal memindai invoice dengan AI', 'error');
     } finally {
-        stopProgressAnimation();
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }
 

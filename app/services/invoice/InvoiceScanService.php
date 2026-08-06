@@ -349,261 +349,73 @@ class InvoiceScanService
             throw new \Exception('API Key AI Scanner belum diatur di Pengaturan Aplikasi.');
         }
 
-        // Clean base64 data prefix if present
-        if (strpos($imageB64, 'base64,') !== false) {
-            $imageB64 = substr($imageB64, strpos($imageB64, 'base64,') + 7);
-        }
-
-        // Prevent timeout issues
+        // Prevent infinite loops / memory exhaustion
         set_time_limit(120);
 
-        // DIRECT GOOGLE GEMINI API (When API key starts with AIzaSy)
-        if (str_starts_with($apiKey, 'AIzaSy')) {
-            return $this->callDirectGeminiAPI($systemPrompt, $userPrompt, $imageB64, $imageFormat, $apiKey);
-        }
-
-        // Active 100% FREE vision models on OpenRouter
-        $FREE_VISION_FALLBACKS = [
-            'google/gemma-4-31b-it:free',
-            'google/gemma-4-26b-a4b-it:free',
-            'nvidia/nemotron-nano-12b-v2-vl:free',
-            'meta-llama/llama-3.2-11b-vision-instruct:free',
-            'qwen/qwen-2-vl-7b-instruct:free',
-            'openrouter/free'
-        ];
-
-        $modelsToTry = [];
-        if (!empty($model)) {
-            $modelsToTry[] = $model;
-        }
-        foreach ($FREE_VISION_FALLBACKS as $fb) {
-            if (!in_array($fb, $modelsToTry)) {
-                $modelsToTry[] = $fb;
-            }
-        }
-
         $imageBlock = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
-        $lastError  = null;
-
-        foreach ($modelsToTry as $attempt => $tryModel) {
-            $payload = [
-                'model'   => $tryModel,
-                'messages' => [
-                    ['role' => 'system', 'content' => $systemPrompt],
-                    ['role' => 'user',   'content' => [
-                        ['type' => 'text', 'text' => $userPrompt],
-                        $imageBlock
-                    ]]
-                ],
-                'temperature' => 0.1,
-                'max_tokens'  => 8000,
-            ];
-
-            // Only set response_format for OpenAI/Gemini models that explicitly support it
-            if (in_array($tryModel, ['openai/gpt-4o', 'openai/gpt-4o-mini', 'google/gemini-2.0-flash-001', 'google/gemini-2.5-flash'])) {
-                $payload['response_format'] = ['type' => 'json_object'];
-            }
-
-            $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Authorization: Bearer ' . $apiKey,
-                'Content-Type: application/json',
-                'HTTP-Referer: ' . BASE_URL,
-                'X-Title: AlfarezMart'
-            ]);
-
-            $isFreeModel = str_contains($tryModel, ':free') || str_contains($tryModel, 'openrouter/free');
-            $timeout = $isFreeModel ? 30 : 60;
-            curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-
-            $response = curl_exec($ch);
-            $err      = curl_error($ch);
-            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-            if ($httpCode === 402) {
-                error_log("[AlfarezMart] Model {$tryModel} requires credit balance (402). Trying next fallback model.");
-                $lastError = "Model {$tryModel} membutuhkan saldo kredit.";
-                continue;
-            }
-
-            if ($err) {
-                $lastError = "Koneksi ke AI ({$tryModel}) lambat atau timeout.";
-                continue; // try next model
-            }
-
-            if ($httpCode === 429) {
-                error_log("[AlfarezMart] Model {$tryModel} rate-limited (429). Trying next fallback model.");
-                $lastError = "Model {$tryModel} sedang dibatasi kuota (rate limit).";
-                continue;
-            }
-
-            if ($httpCode !== 200) {
-                $errData = json_decode($response, true);
-                $msg = $errData['error']['message'] ?? 'Unknown error';
-                $lastError = "OpenRouter API Error ($httpCode): $msg";
-                if ($httpCode >= 500 || in_array($httpCode, [400, 404])) continue; // retry next fallback
-                break; // 401 client error, stop
-            }
-
-            // Success
-            $resData = json_decode($response, true);
-            $content = $resData['choices'][0]['message']['content'] ?? '';
-            $jsonParsed = $this->parseAndRepairJson($content);
-
-            if (is_array($jsonParsed) && !empty($jsonParsed)) {
-                return $jsonParsed;
-            }
-
-            $lastError = "Model {$tryModel} mengembalikan format JSON tidak valid.";
-            continue;
-        }
-
-        throw new \Exception("Gagal scan invoice dengan AI: Model gratisan OpenRouter sedang sibuk/habis kuota. Silakan coba lagi atau gunakan API Key Google Gemini gratis (AIzaSy...). Error detail: " . ($lastError ?? 'Unknown error'));
-    }
-
-    /**
-     * Direct call to Google Gemini REST API (when key starts with AIzaSy)
-     */
-    private function callDirectGeminiAPI(
-        string $systemPrompt,
-        string $userPrompt,
-        string $imageB64,
-        string $imageFormat,
-        string $apiKey
-    ): array {
-        $mimeType = match (strtolower($imageFormat)) {
-            'png' => 'image/png',
-            'webp' => 'image/webp',
-            default => 'image/jpeg',
-        };
-
-        $combinedPrompt = "System Instructions:\n" . $systemPrompt . "\n\nUser Prompt:\n" . $userPrompt;
 
         $payload = [
-            'contents' => [
+            'model' => $model,
+            'messages' => [
                 [
-                    'parts' => [
-                        ['text' => $combinedPrompt],
+                    'role' => 'system',
+                    'content' => $systemPrompt
+                ],
+                [
+                    'role' => 'user',
+                    'content' => [
                         [
-                            'inline_data' => [
-                                'mime_type' => $mimeType,
-                                'data'      => $imageB64
-                            ]
-                        ]
+                            'type' => 'text',
+                            'text' => $userPrompt
+                        ],
+                        $imageBlock
                     ]
                 ]
             ],
-            'generationConfig' => [
-                'temperature'     => 0.1,
-                'maxOutputTokens' => 8000,
-                'responseMimeType'=> 'application/json'
-            ]
+            // Request JSON object
+            'response_format' => ['type' => 'json_object'],
+            'temperature' => 0.1, // Low temp for more deterministic extraction
+            'max_tokens'  => 3000 // Limit output to prevent OpenRouter from reserving too many credits
         ];
 
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" . $apiKey;
-
-        $ch = curl_init($url);
+        $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 45);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Bearer ' . $apiKey,
+            'Content-Type: application/json',
+            'HTTP-Referer: ' . BASE_URL,
+            'X-Title: AlfarezMart'
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 110);
+        // SSL verification bypassed for local dev only if needed, but best left on
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
         $response = curl_exec($ch);
         $err      = curl_error($ch);
-        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        
+
 
         if ($err) {
-            throw new \Exception("Koneksi ke Gemini API gagal: " . $err);
+            throw new \Exception("Koneksi ke OpenRouter gagal: " . $err);
         }
 
         if ($httpCode !== 200) {
             $errData = json_decode($response, true);
-            $msg = $errData['error']['message'] ?? ('Gemini API Error (' . $httpCode . ')');
-            throw new \Exception("Gemini API Error: " . $msg);
+            $msg = $errData['error']['message'] ?? 'Unknown error';
+            throw new \Exception("OpenRouter API Error ($httpCode): $msg");
         }
 
         $resData = json_decode($response, true);
-        $content = $resData['candidates'][0]['content']['parts'][0]['text'] ?? '';
+        $content = $resData['choices'][0]['message']['content'] ?? '';
 
-        $jsonParsed = $this->parseAndRepairJson($content);
-
-        if (is_array($jsonParsed) && !empty($jsonParsed)) {
-            return $jsonParsed;
-        }
-
-        throw new \Exception("Gemini API mengembalikan format JSON tidak valid.");
-    }
-
-    /**
-     * Robust JSON parser and repair engine for AI outputs.
-     * Extracts array of item objects even if output is partially formatted or truncated.
-     */
-    private function parseAndRepairJson(string $content): array
-    {
-        if (empty($content)) {
-            return [];
-        }
-
-        // Clean markdown backticks
-        $content = preg_replace('/```json\s*/i', '', $content);
+        // Clean up markdown code blocks if any (though response_format=json_object should prevent it)
+        $content = preg_replace('/```json\s*/', '', $content);
         $content = preg_replace('/```\s*/', '', $content);
-        $content = trim($content);
 
-        // 1. Direct JSON decode
-        $decoded = json_decode($content, true);
-        if (is_array($decoded) && !empty($decoded)) {
-            return $decoded;
-        }
-
-        // 2. Regex extract array [...]
-        if (preg_match('/\[[\s\S]*\]/', $content, $matches)) {
-            $arrayDecoded = json_decode($matches[0], true);
-            if (is_array($arrayDecoded) && !empty($arrayDecoded)) {
-                return $arrayDecoded;
-            }
-        }
-
-        // 3. Repair unclosed JSON array (starts with [ but cut off)
-        if (str_starts_with($content, '[') || preg_match('/^\s*\[/', $content)) {
-            $lastBrace = strrpos($content, '}');
-            if ($lastBrace !== false) {
-                $repaired = substr($content, 0, $lastBrace + 1) . ']';
-                $repairedDecoded = json_decode($repaired, true);
-                if (is_array($repairedDecoded) && !empty($repairedDecoded)) {
-                    return $repairedDecoded;
-                }
-            }
-        }
-
-        // 4. Regex extract ALL complete item objects {...} anywhere in $content
-        if (preg_match_all('/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/s', $content, $allMatches)) {
-            $extractedItems = [];
-            foreach ($allMatches[0] as $jsonObjStr) {
-                $itemObj = json_decode($jsonObjStr, true);
-                if (is_array($itemObj) && (isset($itemObj['name']) || isset($itemObj['item']) || isset($itemObj['product_name']) || isset($itemObj['nama']))) {
-                    $extractedItems[] = $itemObj;
-                }
-            }
-            if (!empty($extractedItems)) {
-                return $extractedItems;
-            }
-        }
-
-        // 5. Fallback single object {...}
-        if (preg_match('/\{[\s\S]*\}/', $content, $matches)) {
-            $objDecoded = json_decode($matches[0], true);
-            if (is_array($objDecoded) && !empty($objDecoded)) {
-                return $objDecoded;
-            }
-        }
-
-        return [];
+        return json_decode(trim($content), true);
     }
 
     // ----------------------------------------------------------------

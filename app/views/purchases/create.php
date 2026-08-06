@@ -1,90 +1,7 @@
 <!-- Purchases Create View — Sales → Supplier (auto) → Product -->
-<style>
-/* Prevent pull-to-refresh on mobile devices */
-body { overscroll-behavior-y: none !important; }
-
-/* ──── Purchase Create: Mobile-first item input grid ──── */
-.item-inputs-main-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;   /* Kemasan | Qty */
-    gap: 8px;
-    margin-bottom: 10px;
-}
-.item-field-total  { grid-column: 1 / -1; } /* Full width on mobile */
-.item-ppn-disc-row { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-bottom: 4px; }
-
-/* ──── Mobile Layout Ordering (<992px) ──── */
-@media (max-width: 991.98px) {
-    .desktop-purchase-layout {
-        display: flex;
-        flex-direction: column;
-    }
-    .purchase-left-panel,
-    .purchase-right-panel {
-        display: contents;
-    }
-    .purchase-step1-block {
-        order: 1;
-        margin-bottom: 12px;
-    }
-    #productSearchSection {
-        order: 2;
-    }
-    .purchase-items-header {
-        order: 3;
-    }
-    #massActionToolbar {
-        order: 4;
-    }
-    #purchaseItems {
-        order: 5;
-    }
-    .purchase-summary-block {
-        order: 6;
-        margin-top: 16px;
-    }
-    #btnSavePurchase {
-        order: 7;
-        margin-top: 16px !important;
-    }
-}
-
-/* ──── Desktop 2-Panel Layout (≥992px only) ──── */
-@media (min-width: 992px) {
-    .desktop-purchase-layout {
-        display: grid;
-        grid-template-columns: 360px 1fr;
-        gap: 20px;
-        align-items: start;
-    }
-    .purchase-left-panel {
-        position: sticky;
-        top: 72px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        max-height: calc(100vh - 90px);
-        overflow-y: auto;
-        scrollbar-width: thin;
-        scrollbar-color: var(--border-color) transparent;
-    }
-    .purchase-left-panel::-webkit-scrollbar { width: 4px; }
-    .purchase-left-panel::-webkit-scrollbar-track { background: transparent; }
-    .purchase-left-panel::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 2px; }
-    .purchase-right-panel { min-width: 0; }
-
-    /* 3-col compact item inputs on desktop: Kemasan | Qty | Total */
-    .item-inputs-main-grid { grid-template-columns: 2fr 90px 1.7fr; }
-    .item-field-total { grid-column: auto; }          /* Override mobile full-width */
-
-    /* Left panel: remove extra margins from child blocks */
-    .purchase-left-panel > div { margin-bottom: 0 !important; margin-top: 0 !important; }
-    .purchase-left-panel #btnSavePurchase { margin-top: 0 !important; }
-}
-</style>
 <?php /** @var string $csrfToken */ ?>
 <div class="page-section">
-    <div style="margin-bottom:16px; display:flex; justify-content:space-between; align-items:flex-start;">
+    <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:flex-start;">
         <div>
             <p style="font-size:var(--font-size-sm); color:var(--text-muted); margin-top:4px;">Pilih sales, supplier terisi otomatis, lalu scan/cari produk</p>
         </div>
@@ -92,188 +9,169 @@ body { overscroll-behavior-y: none !important; }
             <i class="bi bi-clock-history"></i> Riwayat
         </a>
     </div>
-
+    
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
-    <!-- Photo Preview Modal (position:fixed — works regardless of DOM order) -->
-    <div id="photoPreviewModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); backdrop-filter:blur(4px); z-index:9999; align-items:center; justify-content:center; padding:16px; box-sizing:border-box;">
-        <div class="modal-content" style="width:100%; max-width:850px; height:85vh; max-height:800px; padding:0; overflow:hidden; display:flex; flex-direction:column; background:var(--surface-1, #1e1e2d); border-radius:12px; border:1px solid var(--border-color); box-shadow:0 20px 50px rgba(0,0,0,0.6);">
-            <div style="padding:14px 20px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; background:var(--surface-2, #252538);">
-                <h3 style="font-size:16px; font-weight:700; margin:0; color:var(--text-primary);"><i class="bi bi-image" style="color:var(--primary); margin-right:8px;"></i>Pratinjau Foto Invoice</h3>
-                <button class="btn-close-custom" onclick="closePhotoPreview()" style="background:none; border:none; color:var(--text-muted); font-size:18px; cursor:pointer; padding:4px 8px;"><i class="bi bi-x-lg"></i></button>
+    <!-- Step 1: Supplier Selection -->
+    <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; border:1px solid var(--border-color);">
+        <div class="section-title" style="margin-bottom:8px;">
+            <i class="bi bi-1-circle" style="color:var(--primary);"></i> Sales & Supplier
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Sales *</label>
+            <div id="salesRepSearchBox"></div>
+            <div id="salesRepInfo" style="margin-top:6px; font-size:11px; color:var(--text-muted);"></div>
+        </div>
+
+        <div id="supplierDisplaySection" style="margin-bottom:12px; display:none;">
+            <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Supplier (otomatis)</label>
+            <div id="supplierDisplay" style="padding:10px 12px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); font-size:var(--font-size-sm); font-weight:600; color:var(--text-primary);">—</div>
+        </div>
+
+        <div style="display:flex; gap:12px; flex-direction:column;">
+            <div>
+                <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Tanggal *</label>
+                <input type="date" id="purchaseDate" value="<?= date('Y-m-d') ?>" class="form-control-dark" style="width:100%; height:44px; appearance:none; -webkit-appearance:none;">
             </div>
-            <div style="flex:1; overflow:hidden; background:#0a0a0f; position:relative; display:flex; align-items:center; justify-content:center; padding:16px;">
-                <canvas id="photoPreviewCanvas" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:6px; box-shadow:0 4px 20px rgba(0,0,0,0.5);"></canvas>
-            </div>
-            <div style="padding:16px 20px; background:var(--surface-1); border-top:1px solid var(--border-color); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px;">
-                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
-                    <input type="checkbox" id="chkEnhancePhoto" checked onchange="applyPhotoFilter()" style="width:18px;height:18px;accent-color:var(--primary);">
-                    <span style="font-size:13px; font-weight:600; color:var(--text-primary);">Mode Dokumen (Perjelas Teks &amp; Auto Sharpen)</span>
-                </label>
-                <div style="display:flex; gap:10px; min-width:240px;">
-                    <button type="button" class="btn-outline-custom" style="flex:1; padding:8px 16px;" onclick="closePhotoPreview()">Batal</button>
-                    <button type="button" class="btn-primary-custom" style="flex:1; padding:8px 16px;" onclick="savePhotoPreview()"><i class="bi bi-check2-circle"></i> Gunakan Foto</button>
+            <div>
+                <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Foto Invoice</label>
+                <input type="file" id="invoicePhotoCam" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event, true)">
+                <input type="file" id="invoicePhotoGal" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event, false)">
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn-outline-custom" id="btnPhotoCam" style="flex:1; padding:10px 4px; font-size:12px; height:44px;" onclick="document.getElementById('invoicePhotoCam').click()">
+                        <i class="bi bi-camera"></i> Kamera
+                    </button>
+                    <button type="button" class="btn-outline-custom" id="btnPhotoGal" style="flex:1; padding:10px 4px; font-size:12px; height:44px;" onclick="document.getElementById('invoicePhotoGal').click()">
+                        <i class="bi bi-image"></i> Galeri
+                    </button>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:8px;">
+                    <button type="button" class="btn-primary-custom" id="btnScanAI" style="flex:1; padding:10px 4px; font-size:12px; display:none; height:44px;" onclick="scanInvoiceWithAI()">
+                        <i class="bi bi-robot"></i> Scan dengan AI (Otomatis)
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ═══ Desktop 2-Panel / Mobile Single-Column Layout ═══ -->
-    <div class="desktop-purchase-layout">
-
-        <!-- ── LEFT PANEL: Sales/Supplier · Invoice Summary · Save ── -->
-        <div class="purchase-left-panel">
-
-            <!-- Step 1: Sales & Supplier -->
-            <div class="purchase-step1-block" style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; border:1px solid var(--border-color); margin-bottom:12px;">
-                <div class="section-title" style="margin-bottom:8px;">
-                    <i class="bi bi-1-circle" style="color:var(--primary);"></i> Sales &amp; Supplier
-                </div>
-                <div style="margin-bottom:12px;">
-                    <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Sales *</label>
-                    <div id="salesRepSearchBox"></div>
-                    <div id="salesRepInfo" style="margin-top:6px; font-size:11px; color:var(--text-muted);"></div>
-                </div>
-
-                <div id="supplierDisplaySection" style="margin-bottom:12px; display:none;">
-                    <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Supplier (otomatis)</label>
-                    <div id="supplierDisplay" style="padding:10px 12px; background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); font-size:var(--font-size-sm); font-weight:600; color:var(--text-primary);">—</div>
-                </div>
-
-                <div style="display:flex; gap:12px; flex-direction:column;">
-                    <div>
-                        <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Tanggal *</label>
-                        <input type="date" id="purchaseDate" value="<?= date('Y-m-d') ?>" class="form-control-dark" style="width:100%; height:44px; appearance:none; -webkit-appearance:none;">
-                    </div>
-                    <div>
-                        <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Foto Invoice</label>
-                        <input type="file" id="invoicePhotoCam" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event, true)">
-                        <input type="file" id="invoicePhotoGal" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event, false)">
-                        <div style="display:flex; gap:8px;">
-                            <button type="button" class="btn-outline-custom" id="btnPhotoCam" style="flex:1; padding:10px 4px; font-size:12px; height:44px;" onclick="document.getElementById('invoicePhotoCam').click()">
-                                <i class="bi bi-camera"></i> Kamera
-                            </button>
-                            <button type="button" class="btn-outline-custom" id="btnPhotoGal" style="flex:1; padding:10px 4px; font-size:12px; height:44px;" onclick="document.getElementById('invoicePhotoGal').click()">
-                                <i class="bi bi-image"></i> Galeri
-                            </button>
-                        </div>
-                        <div style="display:flex; gap:8px; margin-top:8px;">
-                            <button type="button" class="btn-primary-custom" id="btnScanAI" style="flex:1; padding:10px 4px; font-size:12px; display:none; height:44px;" onclick="scanInvoiceWithAI()">
-                                <i class="bi bi-robot"></i> Scan dengan AI (Otomatis)
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div><!-- /Step 1 -->
-
-            <!-- Invoice Adjustments & Total -->
-            <div class="purchase-summary-block" style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; border:1px solid var(--border-color); margin-bottom:12px;">
-                <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">
-                    <i class="bi bi-receipt" style="color:var(--primary);"></i> Ringkasan Invoice
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Subtotal Barang</span>
-                    <span id="purchaseSubtotal" style="font-weight:600; font-size:12px;">Rp0</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Diskon Nota (Rp)</span>
-                    <input type="number" id="invoiceDiscount" class="form-control-dark" style="width:100px; font-size:11px; padding:4px 8px; text-align:right;" value="0" min="0" oninput="calculateGrandTotal()">
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Total Sebelum PPN</span>
-                    <span id="purchaseTotalBeforePPN" style="font-weight:600; font-size:12px;">Rp0</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border-color);">
-                    <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Total PPN</span>
-                    <span id="purchaseTotalPPN" style="font-weight:600; font-size:12px;">Rp0</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:700;">Grand Total</span>
-                    <span id="purchaseGrandTotal" style="font-size:var(--font-size-xl); font-weight:800; color:var(--success);">Rp0</span>
-                </div>
-            </div><!-- /Invoice Summary -->
-
-            <button id="btnSavePurchase" class="btn-primary-custom" style="width:100%; padding:14px; cursor:pointer;" onclick="submitPurchase()">
-                <i class="bi bi-check-circle"></i> Simpan Pembelian
-            </button>
-
-        </div><!-- /purchase-left-panel -->
-
-        <!-- ── RIGHT PANEL: Product Search · Item List ── -->
-        <div class="purchase-right-panel">
-
-            <!-- Step 2: Product Search (shown after supplier selected) -->
-            <div id="productSearchSection" style="display:none;">
-                <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; border:1px solid var(--border-color);">
-                    <div class="section-title" style="margin-bottom:8px;">
-                        <i class="bi bi-2-circle" style="color:var(--primary);"></i> Cari Produk
-                    </div>
-                    <div id="supplierBadge" style="display:none; margin-bottom:8px;">
-                        <span class="badge-custom badge-info" style="font-size:11px;"></span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--font-size-xs);">
-                            <input type="checkbox" id="filterBySupplierSales" checked style="width:16px;height:16px;accent-color:var(--primary);">
-                            <span>Filter produk berdasarkan supplier &amp; sales</span>
-                        </label>
-                        <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px;" onclick="openBulkInputModal()">
-                            <i class="bi bi-list-check"></i> Input Bulk (Massal)
-                        </button>
-                    </div>
-                    <p id="filterHint" style="font-size:10px;color:var(--text-muted);margin:-6px 0 10px 24px;">Hanya tampilkan barang terkait supplier/sales terpilih</p>
-                    <div class="search-input-wrapper" style="position:relative;background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0 12px; display:flex; align-items:center;">
-                        <i class="bi bi-upc-scan" style="color:var(--text-muted);cursor:pointer;" onclick="scanProductBarcode()" title="Scan Barcode"></i>
-                        <input type="text" id="productSearch" placeholder="Scan barcode atau ketik nama produk..."
-                               style="flex:1;border:none;background:transparent;padding:12px 10px;color:var(--text-primary);font-size:var(--font-size-base);outline:none;font-family:var(--font-family);" autocomplete="off">
-                    </div>
-
-                    <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
-                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text-primary);">
-                            <input type="checkbox" id="chkGlobalPpn" style="width:13px;height:13px;accent-color:var(--primary);" onchange="toggleGlobalPpn()">
-                            PPN (%)
-                        </label>
-                        <input type="number" id="globalPpnInput" placeholder="Misal: 11" class="form-control-dark" style="width:80px; height:26px; font-size:11px; padding:4px 8px;" disabled oninput="applyGlobalPpn()">
-                        <div style="font-size:10px; color:var(--text-muted);">Terapkan PPN ke semua barang di keranjang</div>
-                    </div>
-
-                    <div id="productSuggestions" style="margin-top:8px;"></div>
-                </div>
-            </div><!-- /productSearchSection -->
-
-            <!-- Step 3: Item List -->
-            <div class="section-title purchase-items-header" style="display:flex; justify-content:space-between; align-items:center;">
-                <span><i class="bi bi-3-circle" style="color:var(--primary);"></i> Daftar Barang</span>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px; color:var(--danger); border-color:var(--danger);" onclick="clearAllDrafts()" title="Kosongkan Semua Inputan">
-                        <i class="bi bi-trash"></i> Kosongkan
-                    </button>
-                    <span id="itemCountBadge" class="badge-custom badge-info">0 Item</span>
+    <!-- Photo Preview Modal -->
+    <div id="photoPreviewModal" class="modal-backdrop" style="display:none; z-index:2000;">
+        <div class="modal-content" style="max-width:400px; padding:0; overflow:hidden; display:flex; flex-direction:column; height:90vh;">
+            <div style="padding:16px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="font-size:var(--font-size-md); margin:0;">Pratinjau Foto</h3>
+                <button class="btn-close-custom" onclick="closePhotoPreview()"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div style="flex:1; overflow:hidden; background:#111; position:relative; display:flex; align-items:center; justify-content:center;">
+                <canvas id="photoPreviewCanvas" style="max-width:100%; max-height:100%; object-fit:contain;"></canvas>
+            </div>
+            <div style="padding:16px; background:var(--surface-1);">
+                <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; cursor:pointer;">
+                    <input type="checkbox" id="chkEnhancePhoto" checked onchange="applyPhotoFilter()" style="width:18px;height:18px;accent-color:var(--primary);">
+                    <span style="font-size:13px; font-weight:600; color:var(--text-primary);">Mode Dokumen (Perjelas Teks)</span>
+                </label>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn-outline-custom" style="flex:1;" onclick="closePhotoPreview()">Batal</button>
+                    <button type="button" class="btn-primary-custom" style="flex:1;" onclick="savePhotoPreview()">Gunakan Foto</button>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <div id="massActionToolbar" style="display:none; background:rgba(230,57,70,0.1); border-radius:var(--radius-md); padding:8px 12px; margin-bottom:12px; align-items:center; justify-content:space-between;">
-                <label style="display:flex; align-items:center; gap:8px; font-size:var(--font-size-sm); font-weight:600; color:var(--danger); cursor:pointer;">
-                    <input type="checkbox" id="chkSelectAllItems" style="width:16px; height:16px; accent-color:var(--danger);" onchange="toggleSelectAllItems(this)">
-                    <span id="massSelectCount">0 Terpilih</span>
+    <!-- Step 3: Product Search (shown after supplier selected) -->
+    <div id="productSearchSection" style="display:none;">
+        <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; border:1px solid var(--border-color);">
+            <div class="section-title" style="margin-bottom:8px;">
+                <i class="bi bi-2-circle" style="color:var(--primary);"></i> Cari Produk
+            </div>
+            <div id="supplierBadge" style="display:none; margin-bottom:8px;">
+                <span class="badge-custom badge-info" style="font-size:11px;"></span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:var(--font-size-xs);">
+                    <input type="checkbox" id="filterBySupplierSales" checked style="width:16px;height:16px;accent-color:var(--primary);">
+                    <span>Filter produk berdasarkan supplier & sales</span>
                 </label>
-                <button type="button" class="btn-primary-custom" style="background:var(--danger-bg); color:var(--danger); font-size:10px; padding:4px 8px;" onclick="deleteSelectedItems()">
-                    <i class="bi bi-trash"></i> Hapus Terpilih
+                <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px;" onclick="openBulkInputModal()">
+                    <i class="bi bi-list-check"></i> Input Bulk (Massal)
                 </button>
             </div>
-
-            <div id="purchaseItems">
-                <div class="empty-state" id="emptyPurchaseState" style="padding:24px;">
-                    <i class="bi bi-cart-plus" style="font-size:2rem;"></i>
-                    <p style="margin-top:8px;">Pilih sales, lalu cari produk untuk menambahkan ke daftar</p>
-                </div>
+            <p id="filterHint" style="font-size:10px;color:var(--text-muted);margin:-6px 0 10px 24px;">Hanya tampilkan barang terkait supplier/sales terpilih</p>
+            <div class="search-input-wrapper" style="position:relative;background:var(--bg-input); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:0 12px; display:flex; align-items:center;">
+                <i class="bi bi-upc-scan" style="color:var(--text-muted);cursor:pointer;" onclick="scanProductBarcode()" title="Scan Barcode"></i>
+                <input type="text" id="productSearch" placeholder="Scan barcode atau ketik nama produk..." 
+                       style="flex:1;border:none;background:transparent;padding:12px 10px;color:var(--text-primary);font-size:var(--font-size-base);outline:none;font-family:var(--font-family);" autocomplete="off">
+            </div>
+            
+            <div style="margin-top:12px; display:flex; align-items:center; gap:8px;">
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-weight:600;color:var(--text-primary);">
+                    <input type="checkbox" id="chkGlobalPpn" style="width:13px;height:13px;accent-color:var(--primary);" onchange="toggleGlobalPpn()">
+                    PPN (%)
+                </label>
+                <input type="number" id="globalPpnInput" placeholder="Misal: 11" class="form-control-dark" style="width:80px; height:26px; font-size:11px; padding:4px 8px;" disabled oninput="applyGlobalPpn()">
+                <div style="font-size:10px; color:var(--text-muted);">Terapkan PPN ke semua barang di keranjang</div>
             </div>
 
-        </div><!-- /purchase-right-panel -->
+            <div id="productSuggestions" style="margin-top:8px;"></div>
+        </div>
+    </div>
 
-    </div><!-- /desktop-purchase-layout -->
+    <!-- Items List -->
+    <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+        <span><i class="bi bi-3-circle" style="color:var(--primary);"></i> Daftar Barang</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+            <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px; color:var(--danger); border-color:var(--danger);" onclick="clearAllDrafts()" title="Kosongkan Semua Inputan">
+                <i class="bi bi-trash"></i> Kosongkan
+            </button>
+            <span id="itemCountBadge" class="badge-custom badge-info">0 Item</span>
+        </div>
+    </div>
+    
+    <div id="massActionToolbar" style="display:none; background:rgba(230,57,70,0.1); border-radius:var(--radius-md); padding:8px 12px; margin-bottom:12px; align-items:center; justify-content:space-between;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:var(--font-size-sm); font-weight:600; color:var(--danger); cursor:pointer;">
+            <input type="checkbox" id="chkSelectAllItems" style="width:16px; height:16px; accent-color:var(--danger);" onchange="toggleSelectAllItems(this)">
+            <span id="massSelectCount">0 Terpilih</span>
+        </label>
+        <button type="button" class="btn-primary-custom" style="background:var(--danger-bg); color:var(--danger); font-size:10px; padding:4px 8px;" onclick="deleteSelectedItems()">
+            <i class="bi bi-trash"></i> Hapus Terpilih
+        </button>
+    </div>
 
-</div><!-- /page-section -->
+    <div id="purchaseItems">
+        <div class="empty-state" id="emptyPurchaseState" style="padding:24px;">
+            <i class="bi bi-cart-plus" style="font-size:2rem;"></i>
+            <p style="margin-top:8px;">Pilih sales, lalu cari produk untuk menambahkan ke daftar</p>
+        </div>
+    </div>
 
+    <!-- Invoice Adjustments & Total -->
+    <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; margin-top:16px; border:1px solid var(--border-color);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Subtotal Barang</span>
+            <span id="purchaseSubtotal" style="font-weight:600; font-size:12px;">Rp0</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Diskon Nota (Rp)</span>
+            <input type="number" id="invoiceDiscount" class="form-control-dark" style="width:100px; font-size:11px; padding:4px 8px; text-align:right;" value="0" min="0" oninput="calculateGrandTotal()">
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Total Sebelum PPN</span>
+            <span id="purchaseTotalBeforePPN" style="font-weight:600; font-size:12px;">Rp0</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border-color);">
+            <span style="font-weight:500; font-size:11px; color:var(--text-muted);">Total PPN</span>
+            <span id="purchaseTotalPPN" style="font-weight:600; font-size:12px;">Rp0</span>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <span style="font-weight:700;">Grand Total</span>
+            <span id="purchaseGrandTotal" style="font-size:var(--font-size-xl); font-weight:800; color:var(--success);">Rp0</span>
+        </div>
+    </div>
+
+    <button id="btnSavePurchase" class="btn-primary-custom" style="width:100%; margin-top:16px; padding:14px; cursor:pointer;" onclick="submitPurchase()">
+        <i class="bi bi-check-circle"></i> Simpan Pembelian
+    </button>
+</div>
 
 <script>
 // ===== Data from PHP =====
@@ -344,45 +242,6 @@ function closePhotoPreview() {
     document.getElementById('photoPreviewModal').style.display = 'none';
 }
 
-function sharpenCanvas(ctx, width, height, mix = 0.45) {
-    try {
-        const weights = [
-             0, -1,  0,
-            -1,  5, -1,
-             0, -1,  0
-        ];
-        const imageData = ctx.getImageData(0, 0, width, height);
-        const data = imageData.data;
-        const copyData = new Uint8ClampedArray(data);
-        const side = 3, halfSide = 1;
-        const w = width, h = height;
-
-        for (let y = 0; y < h; y++) {
-            for (let x = 0; x < w; x++) {
-                const dstOff = (y * w + x) * 4;
-                let r = 0, g = 0, b = 0;
-                for (let cy = 0; cy < side; cy++) {
-                    for (let cx = 0; cx < side; cx++) {
-                        const scx = Math.min(w - 1, Math.max(0, x + cx - halfSide));
-                        const scy = Math.min(h - 1, Math.max(0, y + cy - halfSide));
-                        const srcOff = (scy * w + scx) * 4;
-                        const wt = weights[cy * side + cx];
-                        r += copyData[srcOff] * wt;
-                        g += copyData[srcOff + 1] * wt;
-                        b += copyData[srcOff + 2] * wt;
-                    }
-                }
-                data[dstOff]     = Math.min(255, Math.max(0, copyData[dstOff] * (1 - mix) + r * mix));
-                data[dstOff + 1] = Math.min(255, Math.max(0, copyData[dstOff + 1] * (1 - mix) + g * mix));
-                data[dstOff + 2] = Math.min(255, Math.max(0, copyData[dstOff + 2] * (1 - mix) + b * mix));
-            }
-        }
-        ctx.putImageData(imageData, 0, 0);
-    } catch (e) {
-        console.warn('Canvas sharpen error:', e);
-    }
-}
-
 function applyPhotoFilter() {
     if (!originalPhotoImg) return;
     const canvas = document.getElementById('photoPreviewCanvas');
@@ -390,7 +249,7 @@ function applyPhotoFilter() {
     
     let width = originalPhotoImg.width;
     let height = originalPhotoImg.height;
-    const max_size = 1400; // Increased from 900 to 1400 for better OCR on large invoice tables
+    const max_size = 1200;
     
     if (width > height) {
         if (width > max_size) { height *= max_size / width; width = max_size; }
@@ -398,29 +257,23 @@ function applyPhotoFilter() {
         if (height > max_size) { width *= max_size / height; height = max_size; }
     }
     
-    width = Math.round(width);
-    height = Math.round(height);
-    
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
     
     if (isEnhanced) {
-        // Document Mode: Grayscale + High Contrast + Brightness
-        ctx.filter = 'grayscale(100%) contrast(155%) brightness(112%)';
-        ctx.drawImage(originalPhotoImg, 0, 0, width, height);
-        ctx.filter = 'none';
-        // Apply 3x3 Unsharp Mask convolution filter to sharpen blurry text edges
-        sharpenCanvas(ctx, width, height, 0.40);
+        // Document mode: Grayscale, high contrast, slightly increased brightness
+        ctx.filter = 'grayscale(100%) contrast(150%) brightness(110%)';
     } else {
         ctx.filter = 'none';
-        ctx.drawImage(originalPhotoImg, 0, 0, width, height);
     }
+    
+    ctx.drawImage(originalPhotoImg, 0, 0, width, height);
 }
 
 function savePhotoPreview() {
     const canvas = document.getElementById('photoPreviewCanvas');
-    invoicePhotoBase64 = canvas.toDataURL('image/webp', 0.82); // Raised from 0.7 for better OCR readability
+    invoicePhotoBase64 = canvas.toDataURL('image/webp', 0.7);
     
     const btnCam = document.getElementById('btnPhotoCam');
     const btnGal = document.getElementById('btnPhotoGal');
@@ -438,7 +291,7 @@ function savePhotoPreview() {
     showToast('Foto berhasil disiapkan', 'success');
 }
 
-async function scanInvoiceWithAI(retryCount = 0) {
+async function scanInvoiceWithAI() {
     if (!invoicePhotoBase64) {
         showToast('Pilih atau ambil foto invoice terlebih dahulu', 'error');
         return;
@@ -446,39 +299,10 @@ async function scanInvoiceWithAI(retryCount = 0) {
     
     const btn = document.getElementById('btnScanAI');
     const originalText = btn.innerHTML;
-    const MAX_RETRIES = 1; // Auto-retry once on failure
-    
-    // Progress steps to display during AI processing
-    const progressSteps = [
-        '<i class="bi bi-cloud-upload"></i> Mengirim gambar...',
-        '<i class="spinner-border spinner-border-sm"></i> AI sedang membaca invoice...',
-        '<i class="spinner-border spinner-border-sm"></i> Mengekstrak semua item...',
-        '<i class="spinner-border spinner-border-sm"></i> Mencocokkan dengan database...',
-        '<i class="spinner-border spinner-border-sm"></i> Hampir selesai...'
-    ];
-    let stepIdx = 0;
-    let progressInterval = null;
-    
-    function startProgressAnimation() {
-        btn.disabled = true;
-        btn.innerHTML = progressSteps[0];
-        stepIdx = 1;
-        progressInterval = setInterval(() => {
-            if (stepIdx < progressSteps.length) {
-                btn.innerHTML = progressSteps[stepIdx];
-                stepIdx++;
-            }
-        }, 6000); // advance step every 6 seconds
-    }
-    
-    function stopProgressAnimation() {
-        if (progressInterval) clearInterval(progressInterval);
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-    }
     
     try {
-        if (retryCount === 0) startProgressAnimation();
+        btn.disabled = true;
+        btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Memproses AI...';
         
         const data = {
             csrf_token: csrfVal,
@@ -486,9 +310,9 @@ async function scanInvoiceWithAI(retryCount = 0) {
             supplier_id: currentSupplierId || null
         };
         
-        // 120s frontend timeout to match generous backend timeout
+        // Use custom fetch with 2-minute timeout instead of api() helper
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 120000);
+        const timeout = setTimeout(() => controller.abort(), 120000); // 2 min
         
         let result;
         try {
@@ -511,111 +335,92 @@ async function scanInvoiceWithAI(retryCount = 0) {
                 result = JSON.parse(text);
             } catch(pe) {
                 console.error('AI scan response not JSON:', text.substring(0, 500));
-                throw new Error('Respons AI tidak valid. Coba lagi atau gunakan gambar lebih jelas.');
+                throw new Error('Respons AI tidak valid. Coba lagi atau gunakan gambar lebih kecil.');
             }
             if (result.error) throw new Error(result.error);
         } catch(fetchErr) {
             clearTimeout(timeout);
             if (fetchErr.name === 'AbortError') {
-                throw new Error('Request timeout (120 detik). AI membutuhkan waktu lebih lama, silakan coba lagi.');
+                throw new Error('Request timeout (2 menit). Coba gunakan gambar dengan resolusi lebih rendah.');
             }
             throw fetchErr;
         }
         
         if (result.success && result.data && result.data.length > 0) {
-            const itemCount = result.data.length;
-            const avgConf = result.metadata?.avg_confidence ? Math.round(result.metadata.avg_confidence * 100) : '?';
-            showToast(`AI berhasil memparsing ${itemCount} item (akurasi: ${avgConf}%)`, 'success');
+            showToast('AI berhasil memparsing ' + result.data.length + ' item', 'success');
             
-            // Collect all matched product IDs for batch fetching
-            const matchedItems = result.data.filter(item => item.is_matched && item.product_id);
-            const unmatchedItems = result.data.filter(item => !item.is_matched || !item.product_id);
-            
-            // Batch fetch all product details at once (parallel)
-            const productPromises = matchedItems.map(item => 
-                api(`${BASE_URL}api/products/${item.product_id}`).catch(e => {
-                    console.error('Failed to fetch product', item.product_id, e);
-                    return null;
-                })
-            );
-            const productResults = await Promise.all(productPromises);
-            
-            // Process matched items with pre-fetched product data
-            for (let i = 0; i < matchedItems.length; i++) {
-                const item = matchedItems[i];
-                const productData = productResults[i];
-                if (!productData || !productData.packagings || productData.packagings.length === 0) continue;
-                
-                try {
-                    let bestPkg = null;
-                    let targetUnit = (item.unit || '').toLowerCase().trim();
-                    
-                    // 1. Use AI's packaging_level directly if provided
-                    if (item.packaging_level && item.packaging_level > 0) {
-                        bestPkg = productData.packagings.find(p => parseInt(p.level) === item.packaging_level);
-                    }
-                    
-                    // 2. Try to match by unit name
-                    if (!bestPkg && targetUnit) {
-                        bestPkg = productData.packagings.find(p => p.unit_name && p.unit_name.toLowerCase().includes(targetUnit));
-                    }
-                    
-                    // 3. Match by closest price (unit_price)
-                    if (!bestPkg && item.unit_price > 0) {
-                        let closestDiff = Infinity;
-                        for (const p of productData.packagings) {
-                            const diff = Math.abs((parseFloat(p.buy_price) || 0) - item.unit_price);
-                            if (diff < closestDiff && (diff / Math.max(item.unit_price, 1)) < 0.3) {
-                                closestDiff = diff;
-                                bestPkg = p;
+            // Loop through results and add to bulk items
+            for (const item of result.data) {
+                if (item.is_matched && item.product_id) {
+                    try {
+                        const productData = await api(`${BASE_URL}api/products/${item.product_id}`);
+                        // Set quantity and price based on AI output
+                        if (productData && productData.packagings && productData.packagings.length > 0) {
+                            let bestPkg = null;
+                            let targetUnit = (item.unit || '').toLowerCase().trim();
+                            
+                            // 1. First, try to match by unit name (if AI extracted 'Karton', match 'Karton')
+                            if (targetUnit) {
+                                bestPkg = productData.packagings.find(p => p.unit_name && p.unit_name.toLowerCase().includes(targetUnit));
+                            }
+                            
+                            // 2. If no name match, try to match by closest price (unit_price)
+                            if (!bestPkg) {
+                                let closestDiff = Infinity;
+                                for (const p of productData.packagings) {
+                                    const diff = Math.abs((parseFloat(p.buy_price) || 0) - item.unit_price);
+                                    // If difference is within 20% of the price, consider it a possible match
+                                    if (diff < closestDiff && item.unit_price > 0 && (diff / item.unit_price) < 0.3) {
+                                        closestDiff = diff;
+                                        bestPkg = p;
+                                    }
+                                }
+                            }
+                            
+                            // 3. Fallback to base packaging (level 1)
+                            if (!bestPkg) {
+                                bestPkg = productData.packagings.find(p => p.level == 1) || productData.packagings[0];
+                            }
+                            
+                            // Set the selected packaging level's buy_price to the AI's unit_price
+                            // We do NOT modify sell_price_retail or sell_price_wholesale (they remain from DB)
+                            if (bestPkg) {
+                                bestPkg.buy_price = item.unit_price;
+                            }
+                            
+                            // Add to cart with the specific level pre-selected
+                            addProductToCart(productData, bestPkg ? bestPkg.level : 1);
+                            
+                            // Immediately update the added item's quantity, buy_price, and total
+                            const addedItem = purchaseItems[0]; // addProductToCart unshifts to the front
+                            if (addedItem && addedItem.product_id == item.product_id) {
+                                addedItem.quantity  = item.qty;
+                                addedItem.buy_price = item.unit_price;
+                                addedItem.total     = item.qty * item.unit_price;
+
+                                // Propagate AI buy_price to ALL packaging levels (so drawer/panel
+                                // kemasan juga menampilkan Harga Modal yang benar, bukan harga lama DB)
+                                propagateFromMainInputs(addedItem);
+
+                                // Also sync sell prices based on new buy price (maintain margin)
+                                syncSellPricesWhenBuyPriceChanges(addedItem);
+
+                                // Recalculate nett price for the selected level
+                                addedItem.harga_nett = calcItemNett(
+                                    addedItem.buy_price,
+                                    addedItem.ppn_pct || 0,
+                                    addedItem.diskon_mode || 'rp',
+                                    addedItem.diskon_value || 0
+                                );
                             }
                         }
+                    } catch(e) {
+                        console.error('Failed to add AI mapped item', e);
                     }
-                    
-                    // 4. Fallback to base packaging (level 1)
-                    if (!bestPkg) {
-                        bestPkg = productData.packagings.find(p => p.level == 1) || productData.packagings[0];
-                    }
-                    
-                    // Set the selected packaging level's buy_price to the AI's unit_price
-                    if (bestPkg && item.unit_price > 0) {
-                        bestPkg.buy_price = item.unit_price;
-                    }
-                    
-                    // Add to cart with the specific level pre-selected
-                    addProductToCart(productData, bestPkg ? bestPkg.level : 1);
-                    
-                    // Immediately update the added item's quantity, buy_price, and total
-                    const addedItem = purchaseItems[0]; // addProductToCart unshifts to the front
-                    if (addedItem && addedItem.product_id == item.product_id) {
-                        addedItem.quantity  = item.qty;
-                        addedItem.buy_price = item.unit_price;
-                        addedItem.total     = item.qty * item.unit_price;
-
-                        // Propagate AI buy_price to ALL packaging levels
-                        propagateFromMainInputs(addedItem);
-
-                        // Also sync sell prices based on new buy price (maintain margin)
-                        syncSellPricesWhenBuyPriceChanges(addedItem);
-
-                        // Recalculate nett price for the selected level
-                        addedItem.harga_nett = calcItemNett(
-                            addedItem.buy_price,
-                            addedItem.ppn_pct || 0,
-                            addedItem.diskon_mode || 'rp',
-                            addedItem.diskon_value || 0
-                        );
-                    }
-                } catch(e) {
-                    console.error('Failed to add AI mapped item', e);
+                } else {
+                    showToast('Item "' + item.original_name + '" tidak dikenali di database, silakan input manual.', 'warning');
                 }
             }
-            
-            // Show warnings for unmatched items
-            for (const item of unmatchedItems) {
-                showToast('Item "' + item.original_name + '" tidak dikenali di database, silakan input manual.', 'warning');
-            }
-            
             renderCart();
             calculateTotal();
         } else {
@@ -623,18 +428,10 @@ async function scanInvoiceWithAI(retryCount = 0) {
         }
     } catch (err) {
         console.error('Error scanning invoice:', err);
-        
-        // Auto-retry once on failure
-        if (retryCount < MAX_RETRIES) {
-            showToast('Scan gagal, mencoba ulang...', 'warning');
-            return scanInvoiceWithAI(retryCount + 1);
-        }
-        
         showToast(err.message || 'Gagal memindai invoice dengan AI', 'error');
     } finally {
-        if (retryCount === 0 || retryCount >= MAX_RETRIES) {
-            stopProgressAnimation();
-        }
+        btn.disabled = false;
+        btn.innerHTML = originalText;
     }
 }
 
@@ -903,18 +700,6 @@ async function addSalesRepModal() {
             </div>
         `,
         submitText: 'Simpan',
-        onShown: () => {
-            new SearchBox(document.getElementById('modalSalesSupplierContainer'), {
-                options: suppliersData,
-                placeholder: 'Cari atau pilih supplier...',
-                icon: 'bi-truck',
-                name: 'modalSalesSupplierDummy',
-                required: true,
-                clearable: true,
-                onChange: (val) => { document.getElementById('modalSalesSupplier').value = val; },
-                onClear: () => { document.getElementById('modalSalesSupplier').value = ''; }
-            });
-        },
         onSubmit: async () => {
             const name = document.getElementById('modalSalesName').value.trim();
             const supplierId = document.getElementById('modalSalesSupplier').value;
@@ -952,6 +737,19 @@ async function addSalesRepModal() {
             return false;
         }
     });
+
+    setTimeout(() => {
+        const container = document.getElementById('modalSalesSupplierContainer');
+        if (container) {
+            new SearchBox(container, {
+                options: suppliersData,
+                placeholder: 'Pilih supplier...',
+                name: 'modal_sales_supplier_id',
+                required: true,
+                onChange: (val) => { document.getElementById('modalSalesSupplier').value = val; }
+            });
+        }
+    }, 50);
 }
 
 // ===== Product Search with Supplier Filter =====
@@ -972,119 +770,40 @@ function initPurchaseProductSearch() {
     searchInput.addEventListener('input', () => runSearch());
 }
 
-async function _doPurchaseBarcodeSearch(code) {
-    if (!code) return;
-    code = code.trim();
-
-    // ── Step 0: Instant local IndexedDB exact barcode match (<10ms) ──
-    if (typeof OfflineDB !== 'undefined') {
-        try {
-            const localProduct = await OfflineDB.findByBarcode(code);
-            if (localProduct && localProduct.id) {
-                if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                addProductToCart(localProduct, 1, code);
-                if (searchInput) searchInput.value = '';
-                if (suggestionsDiv) suggestionsDiv.innerHTML = '';
-                // Background: refresh product cache from server
-                try {
-                    const ctrl = new AbortController();
-                    setTimeout(() => ctrl.abort(), 4000);
-                    const res = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(code)}`, {
-                        credentials: 'same-origin', signal: ctrl.signal
-                    });
-                    if (res.ok) {
-                        const fresh = await res.json();
-                        if (fresh && fresh.id) OfflineDB.saveProduct(fresh).catch(() => {});
-                    }
-                } catch(e) {}
-                return;
-            }
-        } catch(e) {}
-    }
-
-    // ── Step 1: Try exact barcode API (with 4s timeout) ──
-    try {
-        const ctrl = new AbortController();
-        setTimeout(() => ctrl.abort(), 4000);
-        const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(code)}`, {
-            credentials: 'same-origin', signal: ctrl.signal
-        });
-        if (resp.ok) {
-            const data = await resp.json();
-            if (data && data.id) {
-                if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                addProductToCart(data, 1, code);
-                if (searchInput) searchInput.value = '';
-                if (suggestionsDiv) suggestionsDiv.innerHTML = '';
-                if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) OfflineDB.saveProduct(data).catch(() => {});
-                return;
-            }
-        }
-    } catch (e) { /* network error, try text search */ }
-
-    // ── Step 2: Fallback to text search with the barcode string ──
-    try {
-        const url = filterBySupplierSales && !isOtherMode && currentSupplierId
-            ? `${BASE_URL}api/purchases/search-products?q=${encodeURIComponent(code)}&supplier_id=${currentSupplierId}${currentSalesRepId ? '&sales_rep_id='+currentSalesRepId : ''}`
-            : `${BASE_URL}api/products/search?q=${encodeURIComponent(code)}`;
-        const ctrl2 = new AbortController();
-        setTimeout(() => ctrl2.abort(), 4000);
-        const sResp = await fetch(url, { credentials: 'same-origin', signal: ctrl2.signal });
-        if (sResp.ok) {
-            const results = await sResp.json();
-            if (Array.isArray(results) && results.length === 1) {
-                if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                addProductToCart(results[0], 1, code);
-                if (searchInput) searchInput.value = '';
-                if (suggestionsDiv) suggestionsDiv.innerHTML = '';
-                return;
-            } else if (Array.isArray(results) && results.length > 1) {
-                if (searchInput) { searchInput.value = code; performProductSearch(); }
-                return;
-            }
-        }
-    } catch (e) {}
-
-    // ── Step 3: Nothing found anywhere ──
-    showToast(`Barcode tidak ditemukan: ${code}`, 'warning');
-    if (searchInput) searchInput.value = code;
-}
-
 function scanProductBarcode() {
     if (typeof BarcodeUtil !== 'undefined' && BarcodeUtil.scanBarcode) {
-        BarcodeUtil.scanBarcode(null, (code) => _doPurchaseBarcodeSearch(code));
+        const fakeInput = document.createElement('input');
+        fakeInput.type = 'text';
+        document.body.appendChild(fakeInput);
+        BarcodeUtil.scanBarcode(fakeInput, (code) => {
+            document.body.removeChild(fakeInput);
+            searchInput.value = code;
+            searchInput.dispatchEvent(new Event('input'));
+        });
     } else {
         const code = prompt('Masukkan kode barcode:');
-        if (code) _doPurchaseBarcodeSearch(code);
+        if (code) {
+            searchInput.value = code;
+            searchInput.dispatchEvent(new Event('input'));
+        }
     }
 }
-
-// Hardware scanner (desktop.js) routes here via 'hardware-barcode-scanned-purchase' event
-document.addEventListener('hardware-barcode-scanned-purchase', (e) => {
-    _doPurchaseBarcodeSearch(e.detail.code);
-});
-
-
 
 async function performProductSearch() {
     const q = searchInput.value.trim();
     if (q.length === 0) { suggestionsDiv.innerHTML = ''; return; }
     
-    // Barcode check — use raw fetch to avoid throwing error toast on 404
+    // Barcode check
     if (/^\d{8,14}$/.test(q)) {
         try {
-            const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}`);
-            if (resp.ok) {
-                const data = await resp.json();
-                if (data && data.id) {
-                    if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                    addProductToCart(data, 1, q);
-                    searchInput.value = '';
-                    suggestionsDiv.innerHTML = '';
-                    return;
-                }
+            const data = await api(`${BASE_URL}api/products/barcode/${q}`);
+            if (data && data.id) {
+                addProductToCart(data);
+                searchInput.value = '';
+                suggestionsDiv.innerHTML = '';
+                return;
             }
-        } catch (e) { /* network error, fall through to text search */ }
+        } catch (e) { /* fallback to text search */ }
     }
 
     if (q.length < 2) {
@@ -1204,30 +923,7 @@ async function selectProduct(productSummary) {
     }
 }
 
-function addProductToCart(product, defaultLevel = 1, scannedCode = null) {
-    let targetLevel = null;
-    if (product) {
-        if (product.level) {
-            targetLevel = parseInt(product.level, 10);
-        }
-        const codeToMatch = scannedCode || product.scanned_barcode;
-        if (!targetLevel && codeToMatch && Array.isArray(product.packagings)) {
-            const cleanCode = String(codeToMatch).replace(/\s+/g, '').toLowerCase();
-            const matchedPkg = product.packagings.find(pkg => {
-                if (!pkg.barcode) return false;
-                const b = String(pkg.barcode).replace(/\s+/g, '').toLowerCase();
-                return b === cleanCode || b === '0' + cleanCode || '0' + b === cleanCode || b === '00' + cleanCode || '00' + b === cleanCode;
-            });
-            if (matchedPkg && matchedPkg.level) {
-                targetLevel = parseInt(matchedPkg.level, 10);
-            }
-        }
-    }
-
-    if (targetLevel) {
-        defaultLevel = targetLevel;
-    }
-
+function addProductToCart(product, defaultLevel = 1) {
     let selectedPkg = product.packagings.find(p => p.level == defaultLevel) || product.packagings.find(p => p.level == 1) || product.packagings[0];
     
     const existingIndex = purchaseItems.findIndex(i => i.product_id == product.id && i.level == selectedPkg.level);
@@ -1275,7 +971,6 @@ function addProductToCart(product, defaultLevel = 1, scannedCode = null) {
         id: Date.now(),
         product_id: product.id,
         name: product.full_name || product.short_label,
-        photo: product.photo,
         is_manual_price: false,
         packagings: product.packagings,
         level: selectedPkg.level,
@@ -2987,26 +2682,16 @@ function renderCart() {
                 <input type="checkbox" class="item-select-chk" value="${item.id}" style="width:18px;height:18px;accent-color:var(--danger);cursor:pointer;" onchange="updateMassSelect()">
             </div>
 
-            <!-- Product Name & Photo -->
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px; padding-right:28px;">
-                ${item.photo 
-                    ? `<div style="width:48px;height:48px;border-radius:var(--radius-sm);overflow:hidden;background:transparent;flex-shrink:0;border:1px solid var(--border-color);">
-                           <img src="${BASE_URL}${item.photo.replace(/"/g, '&quot;')}" style="width:100%;height:100%;object-fit:contain;" loading="lazy">
-                       </div>`
-                    : `<div style="width:48px;height:48px;background:var(--primary-bg);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--primary);flex-shrink:0;border:1px solid var(--border-color);">
-                           <i class="bi bi-box-seam" style="font-size:1.4rem;"></i>
-                       </div>`
-                }
-                <div style="font-weight:700;font-size:var(--font-size-sm);color:var(--text-primary);display:flex;flex-direction:column;gap:4px;">
-                    ${item.name}
-                    ${hasPkgs ? `<span style="font-size:9px;background:var(--info-bg);color:var(--info);padding:2px 6px;border-radius:8px;white-space:nowrap;width:fit-content;">${item.packagings.length} kemasan</span>` : ''}
-                </div>
+            <!-- Product Name -->
+            <div style="font-weight:700;font-size:var(--font-size-sm);margin-bottom:12px;padding-right:28px;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                ${item.name}
+                ${hasPkgs ? `<span style="font-size:9px;background:var(--info-bg);color:var(--info);padding:2px 6px;border-radius:8px;white-space:nowrap;">${item.packagings.length} kemasan</span>` : ''}
             </div>
             ${priceSummary ? `<div style="margin-bottom:10px;">${priceSummary}</div>` : ''}
 
-            <!-- ── INPUTS GRID: 2-col mobile (Kemasan+Qty / Total) → 3-col desktop ── -->
-            <div class="item-inputs-main-grid">
-                <div class="item-field-kemasan">
+            <!-- ── ROW 1: Kemasan + Qty ── -->
+            <div style="display:flex;gap:8px;margin-bottom:10px;">
+                <div style="flex:2;">
                     <label style="font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:4px;">
                         <span>Kemasan Beli</span>
                     </label>
@@ -3020,21 +2705,23 @@ function renderCart() {
                         <input type="hidden" value="${item.level}" onchange="changeLevel(${item.id}, this.value)">
                     </div>
                 </div>
-                <div class="item-field-qty">
+                <div style="flex:1;">
                     <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Qty Beli</label>
                     <input type="number" class="form-control-dark" style="width:100%;padding:8px;font-size:12px;text-align:center;" value="${item.quantity}" min="0.01" step="0.01"
                            oninput="onMainInputChange(${item.id}, 'qty', this.value)">
                 </div>
-                <div class="item-field-total">
-                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Total Harga Pembelian</label>
-                    <input type="number" id="main_total_${item.id}" class="form-control-dark" style="width:100%;padding:8px;font-size:13px;font-weight:600;color:var(--info);"
-                           value="${totalVal > 0 ? totalVal : ''}" placeholder="Masukkan total harga..."
-                           oninput="onMainInputChange(${item.id}, 'total', this.value)">
-                </div>
             </div>
 
-            <!-- ── PPN + Diskon ── -->
-            <div class="item-ppn-disc-row">
+            <!-- ── ROW 2: Total Harga ── -->
+            <div style="margin-bottom:10px;">
+                <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Total Harga Pembelian</label>
+                <input type="number" id="main_total_${item.id}" class="form-control-dark" style="width:100%;padding:8px;font-size:13px;font-weight:600;color:var(--info);"
+                       value="${totalVal > 0 ? totalVal : ''}" placeholder="Masukkan total harga..."
+                       oninput="onMainInputChange(${item.id}, 'total', this.value)">
+            </div>
+
+            <!-- ── ROW 3: PPN + Diskon ── -->
+            <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:4px;">
                 <div>
                     <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">PPN (%)</label>
                     <input type="number" class="form-control-dark item-ppn" style="width:100%;padding:8px;font-size:12px;" value="${item.ppn_pct || 0}" min="0" max="100" placeholder="0"
