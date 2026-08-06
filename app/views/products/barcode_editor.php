@@ -291,10 +291,16 @@
     right: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--text-muted);
-    font-size: 1.1rem;
-    pointer-events: none;
-    opacity: 0.5;
+    color: var(--primary);
+    font-size: 1.15rem;
+    cursor: pointer;
+    pointer-events: auto;
+    opacity: 0.85;
+    transition: all 0.15s ease;
+}
+.bce-barcode-field .barcode-icon:hover {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.18);
 }
 .bce-clear-btn {
     height: 44px;
@@ -626,7 +632,9 @@ async function loadProductToEditor(productId) {
                                    value="${escapeHtml(pkg.barcode || '')}" 
                                    placeholder="Scan atau ketik barcode ${escapeHtml(pkg.unit_name)}..." 
                                    autocomplete="off">
-                            <i class="bi bi-upc barcode-icon"></i>
+                            <i class="bi bi-camera-fill barcode-icon" 
+                               onclick="if (typeof BarcodeUtil !== 'undefined' && BarcodeUtil.scanBarcode) { BarcodeUtil.scanBarcode(document.getElementById('pkg_barcode_${pkg.id}')); } else if (typeof showToast === 'function') { showToast('Kamera tidak tersedia', 'error'); }"
+                               title="Klik untuk pindai barcode dengan Kamera HP"></i>
                         </div>
                         <button type="button" class="bce-clear-btn" onclick="clearPkgBarcode(${pkg.id})" title="Kosongkan">
                             <i class="bi bi-x-lg"></i>

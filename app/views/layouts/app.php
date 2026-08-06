@@ -867,7 +867,12 @@ if ($userLevel === 'staff') {
                                             style="width:100%; height:40px; background:var(--bg-input); border:1.5px solid var(--border-color); border-radius:8px; padding:0 36px 0 12px; font-family:'JetBrains Mono','Fira Code',monospace; font-size:13px; color:var(--text-primary); outline:none; transition:border-color 0.2s, box-shadow 0.2s;"
                                             onfocus="this.style.borderColor='var(--primary)';this.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'"
                                             onblur="this.style.borderColor='var(--border-color)';this.style.boxShadow='none'">
-                                        <i class="bi bi-upc" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--text-muted); opacity:0.4; pointer-events:none;"></i>
+                                        <i class="bi bi-camera-fill" 
+                                           onclick="if (typeof BarcodeUtil !== 'undefined' && BarcodeUtil.scanBarcode) { BarcodeUtil.scanBarcode(document.getElementById('${uid}_input')); } else if (typeof showToast === 'function') { showToast('Kamera tidak tersedia', 'error'); }" 
+                                           style="position:absolute; right:10px; top:50%; transform:translateY(-50%); color:var(--primary); font-size:1.15rem; cursor:pointer; padding:4px; opacity:0.9; transition:all 0.15s;" 
+                                           onmouseover="this.style.opacity='1';this.style.transform='translateY(-50%) scale(1.18)';" 
+                                           onmouseout="this.style.opacity='0.9';this.style.transform='translateY(-50%) scale(1)';" 
+                                           title="Klik ikon ini untuk pindai barcode dengan kamera HP"></i>
                                     </div>
                                     <button type="button" onclick="document.getElementById('${uid}_input').value='';document.getElementById('${uid}_input').focus();" style="width:40px; height:40px; min-width:40px; display:flex; align-items:center; justify-content:center; background:transparent; border:1.5px solid var(--border-color); border-radius:8px; color:var(--text-muted); cursor:pointer; transition:all 0.15s; font-size:14px;" onmouseover="this.style.borderColor='var(--danger)';this.style.color='var(--danger)';this.style.background='var(--danger-bg)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-muted)';this.style.background='transparent'">
                                         <i class="bi bi-x-lg"></i>

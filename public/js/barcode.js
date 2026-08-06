@@ -321,6 +321,10 @@ ${labelsHtml}
         try {
             const modalPromise = this._showScannerModal(inputEl, onScanned);
 
+            // Ensure scanner modal stays on top of any active global modal
+            const overlay = document.getElementById('appModalOverlay');
+            if (overlay) overlay.style.zIndex = '100000';
+
             // Let the browser paint the modal + spinner before doing anything heavy
             await new Promise(r => requestAnimationFrame(() => setTimeout(r, 16)));
 
