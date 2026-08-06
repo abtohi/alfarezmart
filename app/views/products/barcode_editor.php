@@ -446,7 +446,16 @@ let _barEditorTimer = null;
 document.addEventListener('keydown', function(e) {
     const activeEl = document.activeElement;
     const isBarInput = activeEl && activeEl.dataset && activeEl.dataset.barcodeInput === '1';
-    const isOtherInput = activeEl && activeEl !== searchInput && !isBarInput && (
+
+    // *** KEY FIX: If user is focused on a barcode edit field, DO NOTHING. ***
+    // Let the scanner type directly into that field naturally.
+    if (isBarInput) {
+        // Only reset the buffer so it doesn't accumulate stale chars
+        _barEditorBuffer = '';
+        return;
+    }
+
+    const isOtherInput = activeEl && activeEl !== searchInput && (
         activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT'
     );
 
