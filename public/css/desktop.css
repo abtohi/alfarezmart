@@ -932,6 +932,7 @@
         height: 2.7em !important;
         overflow: hidden !important;
         display: -webkit-box !important;
+        line-clamp: 2 !important;
         -webkit-line-clamp: 2 !important;
         -webkit-box-orient: vertical !important;
     }
