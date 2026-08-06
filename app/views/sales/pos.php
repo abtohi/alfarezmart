@@ -53,6 +53,7 @@
             .pos-customer-block { order: 4; }
             .pos-search-block   { order: 5; }
             #cartItems          { order: 6; }
+            .pos-desktop-customer-header { display: none !important; }
         }
     </style>
 
@@ -81,8 +82,14 @@
         <!-- ── LEFT PANEL: Customer · Search · Cart ── -->
         <div class="pos-left-panel">
 
-            <!-- Customer Selector -->
+            <!-- Customer Selector (Sectioned Card on Desktop) -->
             <div class="pos-customer-block" style="margin-bottom:12px; position:relative;">
+                <div class="pos-desktop-customer-header">
+                    <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px; display:flex; align-items:center; justify-content:space-between; width:100%;">
+                        <span><i class="bi bi-person-vcard" style="color:var(--primary); margin-right:6px;"></i> Pelanggan</span>
+                        <span id="customerBadge" class="badge-custom badge-secondary" style="font-size:10px; padding:3px 8px;">Umum</span>
+                    </div>
+                </div>
                 <div id="customerSelectorBox"
                      onclick="toggleCustomerDropdown()"
                      style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; display:flex; align-items:center; gap:10px; cursor:pointer; transition:all 0.2s; user-select:none;"
@@ -92,7 +99,7 @@
                     </div>
                     <div style="flex:1;min-width:0;">
                         <div style="font-size:10px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:1px;">Pelanggan</div>
-                        <div id="customerSelectorLabel" style="font-size:var(--font-size-sm);font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Umum</div>
+                        <div id="customerSelectorLabel" style="font-size:var(--font-size-sm);font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Pelanggan Umum</div>
                     </div>
                     <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
                         <button type="button" id="btnClearCustomer" onclick="event.stopPropagation();clearCustomer()" title="Hapus pilihan" style="display:none;background:var(--surface-2);border:1px solid var(--border-color);border-radius:50%;width:24px;height:24px;padding:0;cursor:pointer;color:var(--text-muted);font-size:0.75rem;line-height:1;display:flex;align-items:center;justify-content:center;">
