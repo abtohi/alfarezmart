@@ -201,6 +201,9 @@
             <button type="button" onclick="selectAllSales()" style="padding:8px 14px;border-radius:var(--radius-md);border:1px solid var(--border-color);background:var(--surface-2);color:var(--text-primary);cursor:pointer;font-size:var(--font-size-xs);display:flex;align-items:center;gap:4px;">
                 <i class="bi bi-check-all"></i> Semua
             </button>
+            <button type="button" id="btnMergeSales" onclick="mergeSelectedInvoices()" style="display:none;padding:8px 14px;border-radius:var(--radius-md);border:none;background:var(--primary);color:white;cursor:pointer;font-size:var(--font-size-xs);align-items:center;gap:4px;font-weight:600;" title="Gabungkan Invoice Pilihan ke Kasir POS">
+                <i class="bi bi-sign-merge-left-fill"></i> Gabung Invoice
+            </button>
             <button type="button" id="btnBulkDelete" onclick="bulkDeleteSelected()" style="padding:8px 14px;border-radius:var(--radius-md);border:none;background:var(--danger);color:white;cursor:pointer;font-size:var(--font-size-xs);display:flex;align-items:center;gap:4px;font-weight:600;">
                 <i class="bi bi-trash"></i> Hapus
             </button>
@@ -884,6 +887,8 @@ function enterSelectionMode() {
     document.querySelectorAll('.sale-card .product-icon').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.sale-card').forEach(el => el.style.paddingLeft = '44px');
     document.getElementById('bulkActionBar').style.display = 'block';
+    const btnMerge = document.getElementById('btnMergeSales');
+    if (btnMerge) btnMerge.style.display = selectedIds.size >= 2 ? 'inline-flex' : 'none';
 }
 
 function exitSelectionMode() {
@@ -899,37 +904,153 @@ function exitSelectionMode() {
         el.style.paddingLeft = '';
         el.style.background = '';
     });
+    document.querySelectorAll('.sale-row-desktop').forEach(el => el.style.background = '');
     document.getElementById('bulkActionBar').style.display = 'none';
 }
 
 function toggleSelect(id) {
     const card = document.querySelector(`.sale-card[data-sale-id="${id}"]`);
-    if (!card) return;
-    const check = card.querySelector('.sale-check');
-    const checkDiv = check.querySelector('div');
-    const checkIcon = check.querySelector('i');
+    const rowDesktop = document.querySelector(`.sale-row-desktop[data-sale-id="${id}"]`);
 
     if (selectedIds.has(id)) {
         selectedIds.delete(id);
-        checkDiv.style.background = 'var(--surface-1)';
-        checkIcon.style.display = 'none';
-        card.style.background = '';
+        if (card) {
+            const check = card.querySelector('.sale-check');
+            if (check) {
+                check.querySelector('div').style.background = 'var(--surface-1)';
+                check.querySelector('i').style.display = 'none';
+            }
+            card.style.background = '';
+        }
+        if (rowDesktop) rowDesktop.style.background = '';
     } else {
         selectedIds.add(id);
-        checkDiv.style.background = 'var(--primary)';
-        checkIcon.style.display = 'block';
-        checkIcon.style.color = 'white';
-        card.style.background = 'var(--primary-bg)';
+        if (card) {
+            const check = card.querySelector('.sale-check');
+            if (check) {
+                check.querySelector('div').style.background = 'var(--primary)';
+                const checkIcon = check.querySelector('i');
+                checkIcon.style.display = 'block';
+                checkIcon.style.color = 'white';
+            }
+            card.style.background = 'var(--primary-bg)';
+        }
+        if (rowDesktop) rowDesktop.style.background = 'var(--primary-bg)';
     }
+
     document.getElementById('bulkSelectedCount').textContent = `${selectedIds.size} dipilih`;
+    const btnMerge = document.getElementById('btnMergeSales');
+    if (btnMerge) btnMerge.style.display = selectedIds.size >= 2 ? 'inline-flex' : 'none';
+
     if (selectedIds.size === 0) exitSelectionMode();
 }
 
 function selectAllSales() {
-    document.querySelectorAll('.sale-card').forEach(card => {
+    document.querySelectorAll('.sale-card, .sale-row-desktop').forEach(card => {
         const id = card.dataset.saleId;
-        if (!selectedIds.has(id)) toggleSelect(id);
+        if (id && !selectedIds.has(id)) toggleSelect(id);
     });
+}
+
+/**
+ * Merge selected invoices and load into POS cashier
+ */
+async function mergeSelectedInvoices() {
+    if (selectedIds.size < 2) {
+        showToast('Pilih minimal 2 invoice untuk digabungkan', 'warning');
+        return;
+    }
+
+    const ids = Array.from(selectedIds).map(Number);
+    showToast('Memuat data invoice yang dipilih...', 'info');
+
+    try {
+        const responses = await Promise.all(ids.map(id => 
+            fetch(`${BASE_URL}api/sales/invoice/${id}`).then(r => r.json())
+        ));
+
+        const validTransactions = responses
+            .filter(r => r && r.success && r.transaction)
+            .map(r => r.transaction);
+
+        if (validTransactions.length < 2) {
+            throw new Error('Gagal mengambil data transaksi yang dipilih.');
+        }
+
+        // 1. Determine target sale mode:
+        // - All retail -> retail
+        // - All wholesale -> wholesale
+        // - Mix -> wholesale (grosir)
+        const modes = validTransactions.map(t => t.sale_mode || 'retail');
+        const allRetail = modes.every(m => m === 'retail');
+        const allWholesale = modes.every(m => m === 'wholesale');
+        let targetMode = 'wholesale';
+        if (allRetail) targetMode = 'retail';
+        else if (allWholesale) targetMode = 'wholesale';
+        else targetMode = 'wholesale'; // Mix default to grosir
+
+        // 2. Customer determination:
+        // If all selected transactions have the same customer_id (> 0), use that customer
+        const custIds = validTransactions.map(t => t.customer_id).filter(Boolean);
+        let targetCustomer = null;
+        if (custIds.length === validTransactions.length && custIds.every(c => c == custIds[0])) {
+            const firstTx = validTransactions[0];
+            targetCustomer = {
+                id: firstTx.customer_id,
+                name: firstTx.customer_name || ('Pelanggan #' + firstTx.customer_id)
+            };
+        }
+
+        // 3. Process & Merge Items across all invoices
+        const rawItems = [];
+        const invoiceNumbers = validTransactions.map(t => t.invoice_number);
+
+        for (const tx of validTransactions) {
+            for (const item of (tx.items || [])) {
+                const isCustom = item.custom_name !== null || item.product_id === 'CUSTOM' || String(item.product_id).toUpperCase() === 'CUSTOM';
+                const printName = item.invoice_name || item.full_name || item.custom_name || 'Barang Custom';
+                
+                const qty = parseFloat(item.quantity) || 1;
+                const totPrice = parseFloat(item.total_price) || 0;
+                const uPrice = parseFloat(item.unit_price) || (qty > 0 ? totPrice / qty : 0);
+
+                rawItems.push({
+                    product_id: isCustom ? 'CUSTOM' : item.product_id,
+                    is_custom: isCustom,
+                    name: printName,
+                    print_name: printName,
+                    product_name: printName,
+                    level: parseInt(item.packaging_level || item.level) || 1,
+                    unit_name: item.unit_name || 'Pcs',
+                    unit_abbr: item.unit_abbr || (item.unit_name ? item.unit_name.substring(0, 5) : 'Pcs'),
+                    quantity: qty,
+                    unit_price: uPrice,
+                    total: totPrice,
+                    buy_price: parseFloat(item.buy_price) || 0
+                });
+            }
+        }
+
+        // 4. Save payload to localStorage
+        const payload = {
+            merged_invoices: invoiceNumbers,
+            target_mode: targetMode,
+            customer: targetCustomer,
+            raw_items: rawItems,
+            timestamp: Date.now()
+        };
+
+        localStorage.setItem('pos_merged_invoice_draft', JSON.stringify(payload));
+        
+        showToast('Berhasil menggabungkan! Mengalihkan ke Kasir POS...', 'success');
+        setTimeout(() => {
+            window.location.href = `${BASE_URL}sales/pos?merged=1`;
+        }, 400);
+
+    } catch (err) {
+        console.error('Merge error:', err);
+        showToast('Gagal menggabungkan invoice: ' + err.message, 'error');
+    }
 }
 
 async function bulkDeleteSelected() {

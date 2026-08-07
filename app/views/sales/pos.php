@@ -2297,10 +2297,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const urlParams = new URLSearchParams(window.location.search);
         const editId = urlParams.get('edit');
+        const isMerged = urlParams.get('merged') || localStorage.getItem('pos_merged_invoice_draft');
 
         if (editId) {
             editSaleId = editId;
             loadSaleForEdit(editId);
+        } else if (isMerged) {
+            loadMergedInvoiceDraft();
         } else {
             autoRestoreCart();
         }
@@ -2535,6 +2538,188 @@ async function loadSaleForEdit(id) {
         console.error(e);
         showToast('Error memuat transaksi', 'error');
         editSaleId = null;
+    }
+}
+
+/**
+ * Load merged invoices draft payload into POS cart
+ */
+async function loadMergedInvoiceDraft() {
+    try {
+        const jsonStr = localStorage.getItem('pos_merged_invoice_draft');
+        if (!jsonStr) return;
+        localStorage.removeItem('pos_merged_invoice_draft'); // Clear once read
+
+        const draft = JSON.parse(jsonStr);
+        if (!draft || !draft.raw_items || draft.raw_items.length === 0) return;
+
+        showToast('Memproses invoice gabungan...', 'info');
+
+        const targetMode = draft.target_mode || 'wholesale';
+        const invoiceNumbers = draft.merged_invoices || [];
+
+        // 1. Restore Customer selection if applicable
+        if (draft.customer && draft.customer.id) {
+            selectCustomer(draft.customer);
+        } else {
+            selectCustomer(null);
+        }
+
+        // 2. Reconstruct items for POS cart with full packagings
+        const reconstructedItems = await Promise.all(draft.raw_items.map(async item => {
+            const isCustom = item.is_custom || item.product_id === 'CUSTOM' || String(item.product_id).toUpperCase() === 'CUSTOM';
+            const printName = item.print_name || item.name || item.product_name || 'Barang Custom';
+
+            let packagings = [];
+            let isItemValid = true;
+
+            if (!isCustom) {
+                try {
+                    let product = null;
+                    if (window._posProductsCatalog && window._posProductsCatalog.length > 0) {
+                        product = window._posProductsCatalog.find(p => p.id == item.product_id);
+                    }
+                    if (!product) {
+                        const pRes = await fetch(`${BASE_URL}api/products/${item.product_id}?pos=1`);
+                        if (pRes.ok) product = await pRes.json();
+                    }
+                    if (product && product.packagings && product.packagings.length > 0) {
+                        packagings = product.packagings;
+                    } else {
+                        isItemValid = false;
+                    }
+                } catch(e) {
+                    isItemValid = false;
+                }
+            }
+
+            if (isCustom || !isItemValid || packagings.length === 0) {
+                packagings = [{
+                    level: item.level || 1,
+                    unit_name: item.unit_name || 'Pcs',
+                    unit_abbr: item.unit_abbr || (item.unit_name ? item.unit_name.substring(0, 5) : 'Pcs'),
+                    sell_price_retail: item.unit_price || 0,
+                    sell_price_wholesale: item.unit_price || 0,
+                    buy_price: item.buy_price || 0,
+                    ppn_pct: 0,
+                    discount_value: 0
+                }];
+            }
+
+            const savedLevel = parseInt(item.level) || 1;
+            const savedQuantity = parseFloat(item.quantity) || 1;
+            const savedTotalPrice = parseFloat(item.total);
+            const savedUnitPrice = parseFloat(item.unit_price) || (savedQuantity > 0 ? savedTotalPrice / savedQuantity : 0);
+
+            let isCustomPrice = isCustom;
+
+            if (!isCustom && isItemValid) {
+                const curPkg = packagings.find(p => parseInt(p.level) === savedLevel) || packagings[0];
+                if (curPkg) {
+                    const expectedPrice = _calcExpectedUnitPrice(curPkg, targetMode, savedQuantity, packagings);
+                    const eps = 1;
+                    if (Math.abs(savedUnitPrice - expectedPrice) >= eps) {
+                        isCustomPrice = true;
+                    } else {
+                        isCustomPrice = false;
+                    }
+                }
+            }
+
+            return {
+                id: Date.now() + Math.random(),
+                product_id: isCustom ? 'CUSTOM' : item.product_id,
+                is_custom: isCustom,
+                name: printName,
+                print_name: printName,
+                product_name: printName,
+                packagings: packagings,
+                level: isCustom ? 1 : savedLevel,
+                unit_name: item.unit_name || 'Pcs',
+                unit_abbr: item.unit_abbr || (item.unit_name ? item.unit_name.substring(0, 5) : 'Pcs'),
+                quantity: savedQuantity,
+                use_custom_price: isCustomPrice,
+                custom_line_total: isCustomPrice ? savedTotalPrice : null,
+                custom_price_draft: isCustomPrice ? String(savedTotalPrice) : undefined,
+                unit_price: savedUnitPrice,
+                total: savedTotalPrice,
+                price_note: isCustom ? 'Barang Custom' : (isCustomPrice ? 'Harga Custom (Gabungan)' : '')
+            };
+        }));
+
+        // 3. Aggregate items (same catalog product + same level + non-custom price)
+        const finalCart = [];
+        for (const item of reconstructedItems) {
+            if (item.is_custom || item.use_custom_price) {
+                const existingCustom = finalCart.find(f => 
+                    f.is_custom && 
+                    f.name === item.name && 
+                    f.unit_name === item.unit_name && 
+                    Math.abs(f.unit_price - item.unit_price) < 0.5
+                );
+                if (existingCustom) {
+                    existingCustom.quantity += item.quantity;
+                    existingCustom.total = existingCustom.quantity * existingCustom.unit_price;
+                    existingCustom.custom_line_total = existingCustom.total;
+                    existingCustom.custom_price_draft = String(existingCustom.total);
+                } else {
+                    finalCart.push(item);
+                }
+            } else {
+                const existingCatalog = finalCart.find(f => 
+                    !f.is_custom && 
+                    !f.use_custom_price && 
+                    f.product_id == item.product_id && 
+                    f.level == item.level
+                );
+                if (existingCatalog) {
+                    existingCatalog.quantity += item.quantity;
+                    recalcItemPrice(existingCatalog);
+                } else {
+                    finalCart.push(item);
+                }
+            }
+        }
+
+        cart = finalCart;
+
+        // 4. Set Sale Mode (retail / wholesale)
+        setSaleMode(targetMode);
+
+        // 5. Display Merged Banner Top Indicator
+        const oldBanner = document.getElementById('posMergedBanner');
+        if (oldBanner) oldBanner.remove();
+
+        const banner = document.createElement('div');
+        banner.id = 'posMergedBanner';
+        banner.innerHTML = `
+            <div style="background:linear-gradient(135deg, #15803d 0%, #166534 100%); border-radius:var(--radius-lg); padding:12px 16px; margin-bottom:14px; border:1px solid rgba(74,222,128,0.4); color:white; display:flex; justify-content:space-between; align-items:center; box-shadow:0 8px 24px rgba(0,0,0,0.15);">
+                <div>
+                    <div style="font-weight:700; font-size:14px; display:flex; align-items:center; gap:6px;"><i class="bi bi-layers-fill" style="font-size:1.1rem; color:#86efac;"></i> Invoice Gabungan POS</div>
+                    <div style="font-size:12px; color:rgba(255,255,255,0.9); margin-top:3px;">
+                        Menggabungkan ${invoiceNumbers.length} Invoice: <strong style="color:#fef08a;">${invoiceNumbers.join(', ')}</strong> &middot; Default Mode: <span class="badge-custom badge-${targetMode === 'retail' ? 'info' : 'warning'}" style="font-size:10px; padding:2px 6px;">${targetMode === 'retail' ? 'Ecer' : 'Grosir'}</span>
+                    </div>
+                </div>
+                <button type="button" onclick="this.parentElement.parentElement.remove()" style="background:none; border:none; color:white; cursor:pointer; font-size:1.2rem; padding:4px;" title="Tutup"><i class="bi bi-x-lg"></i></button>
+            </div>
+        `;
+        const pageSection = document.querySelector('.page-section');
+        const posHeader = pageSection?.children[0];
+        if (pageSection) {
+            if (posHeader && posHeader.nextSibling) {
+                pageSection.insertBefore(banner, posHeader.nextSibling);
+            } else {
+                pageSection.prepend(banner);
+            }
+        }
+
+        cart.forEach(it => recalcItemPrice(it));
+        renderCart();
+        showToast(`✅ ${invoiceNumbers.length} Invoice berhasil digabungkan ke Kasir POS!`, 'success');
+
+    } catch (e) {
+        console.error('loadMergedInvoiceDraft error:', e);
+        showToast('Gagal memuat invoice gabungan', 'error');
     }
 }
 
