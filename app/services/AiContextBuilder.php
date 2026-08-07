@@ -146,6 +146,11 @@ class AiContextBuilder
             $prompt .= $this->getFeatureGuide() . "\n";
         }
 
+        // --- 6.5 Business Analytics Context (real-time KPI snapshot for business questions) ---
+        if ($this->isBusinessAnalyticsQuestion($q)) {
+            $prompt .= $this->getBusinessSnapshot();
+        }
+
         // --- 7. Dynamic Database Schema (auto-introspected) ---
         $prompt .= $this->getDynamicSchema();
 
@@ -416,6 +421,9 @@ class AiContextBuilder
     public function categorizeQuestion(string $message): string
     {
         $q = mb_strtolower($message);
+        if ($this->isBusinessAnalyticsQuestion($q)) {
+            return 'business';
+        }
         if ($this->contains($q, ['omzet', 'revenue', 'pendapatan', 'keuangan', 'pemasukan', 'pengeluaran', 'laba', 'profit', 'rugi', 'saldo', 'kas'])) {
             return 'finance';
         }
@@ -432,5 +440,135 @@ class AiContextBuilder
             return 'tutorial';
         }
         return 'general';
+    }
+
+    // ================================================================
+    // BUSINESS ANALYTICS HELPERS
+    // ================================================================
+
+    /**
+     * Detect if the user is asking a business analytics / strategy question.
+     */
+    private function isBusinessAnalyticsQuestion(string $q): bool
+    {
+        return $this->contains($q, [
+            'analisis', 'analisa', 'tren', 'trend', 'insight', 'strategi',
+            'marketing', 'promosi', 'promo', 'bundling', 'cross sell',
+            'fast moving', 'slow moving', 'dead stock',
+            'rekomendasi', 'saran', 'tingkatkan', 'naikkan',
+            'pelanggan', 'customer', 'tarik pelanggan',
+            'produk terlaris', 'paling laku', 'kurang laku',
+            'performa', 'performance', 'growth', 'pertumbuhan',
+            'margin', 'profitabilitas', 'profitable',
+            'kategori terbaik', 'brand terbaik',
+            'bantu jualan', 'bantu jual', 'cara jualan',
+            'health check', 'evaluasi bisnis', 'kondisi bisnis',
+            'optimasi', 'optimalisasi', 'peluang',
+            'bundling', 'paket', 'diskon', 'flash sale',
+            'abc analysis', 'pareto', 'segmentasi',
+            'turnover', 'perputaran', 'velocity',
+        ]);
+    }
+
+    /**
+     * Inject a real-time business KPI snapshot so the AI has baseline data
+     * to reason about without needing a first SQL pass.
+     */
+    private function getBusinessSnapshot(): string
+    {
+        try {
+            $snapshot = "\n## SNAPSHOT BISNIS REAL-TIME (Data Pendukung Analisis)\n";
+
+            // --- Today's KPIs ---
+            $today = $this->db->query("
+                SELECT
+                    COUNT(*) AS trx_count,
+                    COALESCE(SUM(total_amount), 0) AS omzet,
+                    COALESCE(SUM(total_profit), 0) AS profit,
+                    COALESCE(ROUND(AVG(total_amount), 0), 0) AS avg_trx
+                FROM sale_transactions
+                WHERE DATE(created_at) = CURDATE()
+            ")->fetch(PDO::FETCH_ASSOC);
+
+            if ($today) {
+                $snapshot .= "### Hari Ini\n";
+                $snapshot .= "- Transaksi: {$today['trx_count']} struk | Omzet: Rp" . number_format((float)$today['omzet'], 0, ',', '.') . " | Profit: Rp" . number_format((float)$today['profit'], 0, ',', '.') . " | Rata-rata/struk: Rp" . number_format((float)$today['avg_trx'], 0, ',', '.') . "\n";
+            }
+
+            // --- This month vs last month ---
+            $monthly = $this->db->query("
+                SELECT
+                    SUM(CASE WHEN MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) THEN total_amount ELSE 0 END) AS omzet_bulan_ini,
+                    SUM(CASE WHEN MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) THEN total_profit ELSE 0 END) AS profit_bulan_ini,
+                    COUNT(CASE WHEN MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) THEN 1 END) AS trx_bulan_ini,
+                    SUM(CASE WHEN MONTH(created_at) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND YEAR(created_at) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) THEN total_amount ELSE 0 END) AS omzet_bulan_lalu,
+                    SUM(CASE WHEN MONTH(created_at) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND YEAR(created_at) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) THEN total_profit ELSE 0 END) AS profit_bulan_lalu,
+                    COUNT(CASE WHEN MONTH(created_at) = MONTH(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) AND YEAR(created_at) = YEAR(DATE_SUB(CURDATE(), INTERVAL 1 MONTH)) THEN 1 END) AS trx_bulan_lalu
+                FROM sale_transactions
+                WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 2 MONTH)
+            ")->fetch(PDO::FETCH_ASSOC);
+
+            if ($monthly) {
+                $omzetIni  = (float)($monthly['omzet_bulan_ini'] ?? 0);
+                $omzetLalu = (float)($monthly['omzet_bulan_lalu'] ?? 0);
+                $growthPct = $omzetLalu > 0 ? round(($omzetIni - $omzetLalu) / $omzetLalu * 100, 1) : 0;
+                $growthEmoji = $growthPct >= 0 ? '📈' : '📉';
+
+                $snapshot .= "### Perbandingan Bulanan\n";
+                $snapshot .= "- Bulan Ini: Omzet Rp" . number_format($omzetIni, 0, ',', '.') . " | Profit Rp" . number_format((float)($monthly['profit_bulan_ini'] ?? 0), 0, ',', '.') . " | {$monthly['trx_bulan_ini']} transaksi\n";
+                $snapshot .= "- Bulan Lalu: Omzet Rp" . number_format($omzetLalu, 0, ',', '.') . " | Profit Rp" . number_format((float)($monthly['profit_bulan_lalu'] ?? 0), 0, ',', '.') . " | {$monthly['trx_bulan_lalu']} transaksi\n";
+                $snapshot .= "- Growth Rate: {$growthEmoji} {$growthPct}%\n";
+            }
+
+            // --- Top 5 products this month ---
+            $topProducts = $this->db->query("
+                SELECT p.full_name, SUM(si.quantity) AS qty, SUM(si.total_price) AS revenue, SUM(si.profit) AS profit
+                FROM sale_items si
+                JOIN sale_transactions st ON si.transaction_id = st.id
+                JOIN products p ON si.product_id = p.id
+                WHERE MONTH(st.created_at) = MONTH(CURDATE()) AND YEAR(st.created_at) = YEAR(CURDATE())
+                GROUP BY si.product_id ORDER BY qty DESC LIMIT 5
+            ")->fetchAll(PDO::FETCH_ASSOC);
+
+            if (!empty($topProducts)) {
+                $snapshot .= "### Top 5 Produk Terlaris Bulan Ini\n";
+                foreach ($topProducts as $i => $tp) {
+                    $rank = $i + 1;
+                    $snapshot .= "- #{$rank} {$tp['full_name']}: {$tp['qty']} terjual, Omzet Rp" . number_format((float)$tp['revenue'], 0, ',', '.') . ", Profit Rp" . number_format((float)$tp['profit'], 0, ',', '.') . "\n";
+                }
+            }
+
+            // --- Stock alerts ---
+            $lowStock = $this->db->query("
+                SELECT COUNT(*) AS cnt FROM products p
+                JOIN stock s ON p.id = s.product_id
+                WHERE p.is_active = 1 AND s.current_qty_base <= p.min_stock AND s.current_qty_base > 0
+            ")->fetch(PDO::FETCH_ASSOC);
+            $outOfStock = $this->db->query("
+                SELECT COUNT(*) AS cnt FROM products p
+                JOIN stock s ON p.id = s.product_id
+                WHERE p.is_active = 1 AND s.current_qty_base <= 0
+            ")->fetch(PDO::FETCH_ASSOC);
+
+            $snapshot .= "### Kondisi Stok\n";
+            $snapshot .= "- Stok Rendah (perlu restock): " . ($lowStock['cnt'] ?? 0) . " produk\n";
+            $snapshot .= "- Stok Habis: " . ($outOfStock['cnt'] ?? 0) . " produk\n";
+
+            // --- Total active products & categories ---
+            $catStats = $this->db->query("
+                SELECT COUNT(DISTINCT p.id) AS total_produk, COUNT(DISTINCT p.category_id) AS total_kategori, COUNT(DISTINCT p.brand_id) AS total_brand
+                FROM products p WHERE p.is_active = 1
+            ")->fetch(PDO::FETCH_ASSOC);
+            if ($catStats) {
+                $snapshot .= "### Katalog\n";
+                $snapshot .= "- Produk Aktif: {$catStats['total_produk']} | Kategori: {$catStats['total_kategori']} | Brand: {$catStats['total_brand']}\n";
+            }
+
+            $snapshot .= "\nGunakan data snapshot di atas sebagai baseline. Untuk analisis lebih dalam, lakukan [SQL_QUERY] tambahan sesuai kebutuhan.\n\n";
+            return $snapshot;
+
+        } catch (Throwable $e) {
+            return '';
+        }
     }
 }

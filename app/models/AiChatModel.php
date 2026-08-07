@@ -296,6 +296,7 @@ class AiChatModel extends Model
                 'product'  => '+24 hours',
                 'stock'    => '+2 hours',
                 'sales'    => '+1 hour',
+                'business' => '+2 hours',
                 'tutorial' => null, // Tidak expire
                 'general'  => '+6 hours',
             ];

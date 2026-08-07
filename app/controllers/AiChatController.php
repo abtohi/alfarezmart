@@ -153,7 +153,7 @@ class AiChatController extends Controller
                         'model'       => $currentModel,
                         'messages'    => $messages,
                         'temperature' => 0.15,
-                        'max_tokens'  => 1500,
+                        'max_tokens'  => 2500,
                     ];
 
                     $ch = curl_init($url);

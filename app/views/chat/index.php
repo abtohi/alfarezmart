@@ -40,6 +40,18 @@
         <div class="suggestion-chip" onclick="sendSuggested('Berapa total hutang toko dan piutang pelanggan saat ini?')">
             💳 Rekap Hutang & Piutang
         </div>
+        <div class="suggestion-chip" style="background:linear-gradient(135deg, rgba(139,92,246,0.15), rgba(236,72,153,0.15));border-color:rgba(139,92,246,0.4);color:#a78bfa;" onclick="sendSuggested('Analisis performa penjualan bulan ini: produk terlaris, kategori paling menguntungkan, tren omzet, dan rekomendasi strategi untuk meningkatkan penjualan')">
+            🧠 Analisis Bisnis & Strategi
+        </div>
+        <div class="suggestion-chip" style="background:linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.15));border-color:rgba(34,197,94,0.4);color:#4ade80;" onclick="sendSuggested('Identifikasi produk fast moving, slow moving, dan dead stock di toko saya. Berikan rekomendasi mana yang perlu dipromosikan dan mana yang perlu di-restok segera')">
+            🔥 Fast/Slow Moving Analysis
+        </div>
+        <div class="suggestion-chip" style="background:linear-gradient(135deg, rgba(251,191,36,0.15), rgba(245,158,11,0.15));border-color:rgba(251,191,36,0.4);color:#fbbf24;" onclick="sendSuggested('Berikan strategi marketing dan ide promosi kreatif untuk menarik pelanggan baru dan meningkatkan penjualan, berdasarkan data produk dan transaksi toko saya saat ini')">
+            💡 Ide Promosi & Marketing
+        </div>
+        <div class="suggestion-chip" style="background:linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.15));border-color:rgba(59,130,246,0.4);color:#60a5fa;" onclick="sendSuggested('Lakukan health check bisnis toko saya: evaluasi omzet, profit margin, growth rate, kondisi stok, dan hutang piutang. Berikan skor kesehatan bisnis dan rekomendasi perbaikan')">
+            🏥 Health Check Bisnis
+        </div>
     </div>
 
     <!-- Chat Messages -->
@@ -49,6 +61,7 @@
             <div class="message-bubble">
                 Halo! Saya <strong>AlfarezMart AI</strong> 👋<br>
                 Saya memiliki akses langsung ke seluruh data toko: <strong>produk, harga, stok, keuangan, hutang, supplier, penjualan,</strong> dan lainnya.<br><br>
+                🧠 <strong>NEW!</strong> Saya juga bisa menjadi <strong>Konsultan Bisnis & Marketing</strong> Anda — analisis tren penjualan, identifikasi produk fast/slow moving, rekomendasi strategi promosi, dan health check bisnis berdasarkan data real toko.<br><br>
                 Tanya apa saja — saya akan mencari jawabannya langsung dari database! 🔍<br>
                 <em style="font-size:11px;opacity:0.7;">💡 Klik ✏️ pada jawaban saya jika kurang tepat — saya akan belajar dari koreksi Anda.</em>
             </div>
