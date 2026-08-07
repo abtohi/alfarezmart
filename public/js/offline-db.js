@@ -471,6 +471,18 @@ window.OfflineDB = (function() {
         return true;
     }
 
+    function clearPending() {
+        return new Promise((resolve, reject) => {
+            if (!db) return reject("DB not initialized");
+            const transaction = db.transaction([STORE_PENDING], 'readwrite');
+            const store = transaction.objectStore(STORE_PENDING);
+            const request = store.clear();
+
+            request.onsuccess = () => resolve();
+            request.onerror = (e) => reject(e.target.error);
+        });
+    }
+
     return {
         init,
         syncProductsFromServer,
@@ -491,6 +503,7 @@ window.OfflineDB = (function() {
         addPendingChange,
         getPendingChanges,
         removePendingChange,
+        clearPending,
         countPending,
         saveAuth,
         getAuth

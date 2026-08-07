@@ -387,6 +387,8 @@ async function updateSyncBadge() {
                     if(icon) icon.style.color = '';
                 }
             }
+            const modalCount = document.getElementById('syncPendingCount');
+            if (modalCount) modalCount.textContent = count;
         } catch (e) {
             console.error(e);
         }
@@ -399,14 +401,17 @@ async function syncPendingChanges() {
 
     try {
         const changes = await window.OfflineDB.getPendingChanges();
-        if (changes.length === 0) return;
+        if (changes.length === 0) {
+            updateSyncBadge();
+            return;
+        }
 
         showToast('Menyinkronkan data offline...', 'info');
         
         // Show spinning icon
         const syncIcon = document.getElementById('syncIcon');
         if (syncIcon) {
-            syncIcon.classList.add('bi-arrow-repeat'); // Ensure icon type
+            syncIcon.classList.add('bi-arrow-repeat');
             syncIcon.style.animation = 'spin 1s linear infinite';
         }
 
@@ -414,10 +419,23 @@ async function syncPendingChanges() {
         let failCount = 0;
 
         for (const change of changes) {
+            const failKey = `sync_fail_${change.id}`;
+            let retries = parseInt(localStorage.getItem(failKey) || '0');
+
             try {
-                // Use standard fetch to bypass api() offline interception
+                // Ensure endpoint is normalized using BASE_URL if relative
+                let endpoint = change.endpoint;
+                if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+                    const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
+                    if (endpoint.startsWith('/')) {
+                        endpoint = baseUrl.replace(/\/+$/, '') + endpoint;
+                    } else {
+                        endpoint = baseUrl + endpoint;
+                    }
+                }
+
                 const config = {
-                    method: change.method,
+                    method: change.method || 'POST',
                     headers: {}
                 };
                 
@@ -432,34 +450,57 @@ async function syncPendingChanges() {
                     config.body = JSON.stringify(change.payload);
                 }
 
-                const response = await fetch(change.endpoint, config);
-                if (response.ok) {
+                const response = await fetch(endpoint, config);
+                const status = response.status;
+
+                let isSuccess = response.ok;
+                let errorMsg = '';
+
+                try {
+                    const resText = await response.text();
+                    if (resText && resText.trim().length > 0) {
+                        const json = JSON.parse(resText);
+                        if (json && json.success === false) {
+                            isSuccess = false;
+                            errorMsg = json.error || 'Server error';
+                        }
+                    }
+                } catch(pe) {
+                    // Ignored JSON parse error
+                }
+
+                if (isSuccess) {
                     await window.OfflineDB.removePendingChange(change.id);
-                    // Clear retry counter on success
-                    localStorage.removeItem(`sync_fail_${change.id}`);
+                    localStorage.removeItem(failKey);
                     successCount++;
-                    updateSyncBadge(); // Update UI badge one by one
                 } else {
-                    const status = response.status;
-                    // For 4xx client errors (bad request/not found), remove the pending change
-                    // as it will never succeed and would just clog the queue
-                    if (status >= 400 && status < 500) {
+                    retries += 1;
+                    localStorage.setItem(failKey, retries);
+
+                    // Client errors (4xx) OR items failed >= 3 times: drop permanently to prevent clog
+                    if ((status >= 400 && status < 500) || retries >= 3) {
                         await window.OfflineDB.removePendingChange(change.id);
-                        localStorage.removeItem(`sync_fail_${change.id}`);
-                        console.warn(`Menghapus antrian karena error permanen HTTP ${status}, ID:`, change.id);
+                        localStorage.removeItem(failKey);
+                        console.warn(`Menghapus antrian ID ${change.id} (${status >= 400 && status < 500 ? 'Client Error HTTP ' + status : 'Gagal 3x (' + errorMsg + ')'})`);
                     } else {
-                        // 5xx or other temporary errors — keep and retry later
-                        const failKey = `sync_fail_${change.id}`;
-                        const retries = parseInt(localStorage.getItem(failKey) || '0') + 1;
-                        localStorage.setItem(failKey, retries);
                         failCount++;
-                        console.error("Gagal sinkron data ID:", change.id, `(percobaan ${retries}) HTTP ${status} — akan dicoba lagi`);
+                        console.error(`Gagal sinkron data ID: ${change.id} (percobaan ${retries}) HTTP ${status} — akan dicoba lagi`);
                     }
                 }
             } catch (e) {
                 console.error("Error saat sinkron data ID:", change.id, e);
-                failCount++;
+                retries += 1;
+                localStorage.setItem(failKey, retries);
+
+                if (retries >= 3) {
+                    await window.OfflineDB.removePendingChange(change.id);
+                    localStorage.removeItem(failKey);
+                    console.warn(`Menghapus antrian ID ${change.id} setelah ${retries}x percobaan exception`);
+                } else {
+                    failCount++;
+                }
             }
+            updateSyncBadge(); // Update UI badge live
         }
 
         updateSyncBadge();
@@ -467,19 +508,17 @@ async function syncPendingChanges() {
 
         if (failCount === 0) {
             showToast(`Sinkronisasi selesai (${successCount} data)`, 'success');
-            // Jika ada fungsi syncProductsFromServer (master data produk), panggil juga
             if (typeof OfflineDB.syncAllDataFromServer === 'function') {
                 OfflineDB.syncAllDataFromServer().catch(e => console.log('Gagal update cache master', e));
             } else if (typeof OfflineDB.syncProductsFromServer === 'function') {
                 OfflineDB.syncProductsFromServer().catch(e => console.log('Gagal update cache produk', e));
             }
-            // Refresh data on current page if applicable
-            setTimeout(() => { window.location.reload(); }, 1500);
         } else {
             showToast(`Sinkronisasi selesai dengan ${failCount} gagal`, 'warning');
         }
     } catch (e) {
         console.error("Sync process failed", e);
+        updateSyncBadge();
     }
 }
 
@@ -539,6 +578,29 @@ function forceManualSync() {
     if (modal) modal.hide();
     
     triggerSync();
+}
+
+async function clearPendingQueue() {
+    if (typeof OfflineDB === 'undefined') return;
+    try {
+        await OfflineDB.clearPending();
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('sync_fail_')) localStorage.removeItem(key);
+        });
+        await updateSyncBadge();
+        const pendingEl = document.getElementById('syncPendingCount');
+        if (pendingEl) pendingEl.textContent = '0';
+        
+        const modalEl = document.getElementById('syncSettingsModal');
+        if (modalEl) {
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        }
+        showToast('Antrian offline berhasil dibersihkan & badge di-reset', 'success');
+    } catch(e) {
+        console.error('Gagal membersihkan antrian offline:', e);
+        showToast('Gagal membersihkan antrian offline', 'error');
+    }
 }
 
 // ==========================================

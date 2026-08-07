@@ -500,9 +500,12 @@ if ($userLevel === 'staff') {
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top:1px solid var(--border-color);">
+                <div class="modal-footer" style="border-top:1px solid var(--border-color);display:flex;flex-direction:column;gap:8px;">
                     <button type="button" class="btn-primary-custom w-100" onclick="forceManualSync()" style="padding:10px;font-weight:600;">
                         <i class="bi bi-arrow-repeat"></i> Mulai Sinkronisasi Sekarang
+                    </button>
+                    <button type="button" class="btn-outline-custom w-100" onclick="clearPendingQueue()" style="padding:8px;font-size:0.85rem;color:var(--danger);border-color:rgba(239,68,68,0.3);background:var(--danger-bg);">
+                        <i class="bi bi-trash"></i> Bersihkan Antrian Offline (Reset Badge)
                     </button>
                 </div>
             </div>
@@ -587,7 +590,7 @@ if ($userLevel === 'staff') {
     
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '15.54'; // Update this to force client reloads
+    const APP_VERSION = '15.55'; // Update this to force client reloads
     
     // Self-healing cache buster
     if (localStorage.getItem('app_version') !== APP_VERSION) {
