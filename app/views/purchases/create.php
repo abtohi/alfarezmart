@@ -1307,7 +1307,7 @@ function updateItemTotal(tempId, totalValue) {
     // STEP 1: Update Level 1 packaging dengan harga per pcs baru
     const level1Pkg = item.packagings.find(p => p.level == 1);
     if (level1Pkg) {
-        level1Pkg.buy_price = Math.round(newBaseBuyPrice);
+        level1Pkg.buy_price = newBaseBuyPrice;
     }
     
     // STEP 2: Sync semua packaging levels dari level 1
@@ -1317,8 +1317,10 @@ function updateItemTotal(tempId, totalValue) {
     syncSellPricesWhenBuyPriceChanges(item);
     
     // STEP 3: Update item.buy_price untuk display
-    const newLevelBuyPrice = Math.round(newBaseBuyPrice * baseQty);
+    const newLevelBuyPrice = newBaseBuyPrice * baseQty;
     item.buy_price = newLevelBuyPrice;
+    item.total = total;
+    item.is_manual_price = true;
     
     // Update packaging di current level juga
     if (pkg) {
@@ -2101,13 +2103,15 @@ function calculateGrandTotal() {
 
 // ===== Draft and Mass Actions =====
 function saveDraft() {
-    // Collect draft data
+    if (typeof purchaseItems !== 'undefined' && Array.isArray(purchaseItems)) {
+        purchaseItems.forEach(item => collectDrawerDataForItem(item.id));
+    }
     const draft = {
         salesRepId: currentSalesRepId,
         supplierId: currentSupplierId,
         isOtherMode: isOtherMode,
-        purchaseDate: document.getElementById('purchaseDate').value,
-        invoiceDiscount: document.getElementById('invoiceDiscount').value,
+        purchaseDate: document.getElementById('purchaseDate')?.value || '',
+        invoiceDiscount: document.getElementById('invoiceDiscount')?.value || '',
         items: purchaseItems
     };
     try {
@@ -2123,8 +2127,8 @@ function loadDraft() {
         if (!draftJson) return;
         const draft = JSON.parse(draftJson);
         
-        if (draft.purchaseDate) document.getElementById('purchaseDate').value = draft.purchaseDate;
-        if (draft.invoiceDiscount) document.getElementById('invoiceDiscount').value = draft.invoiceDiscount;
+        if (draft.purchaseDate && document.getElementById('purchaseDate')) document.getElementById('purchaseDate').value = draft.purchaseDate;
+        if (draft.invoiceDiscount && document.getElementById('invoiceDiscount')) document.getElementById('invoiceDiscount').value = draft.invoiceDiscount;
         
         if (draft.isOtherMode) {
             salesRepSB.setValue('other', '📦 Other — belum tahu supplier/sales');
@@ -2279,7 +2283,7 @@ function propagateFromMainInputs(item) {
 
         // --- Buy Price ---
         if (!pkg.buy_custom) {
-            pkg.buy_price = Math.round(buyPerPcs * bq);
+            pkg.buy_price = buyPerPcs * bq;
         }
 
         // --- PPN (uniform) ---
@@ -2292,7 +2296,7 @@ function propagateFromMainInputs(item) {
         } else {
             // Rupiah: scale proportionally by base_qty ratio
             pkg.diskon_mode  = 'rp';
-            pkg.diskon_value = Math.round((item.diskon_value || 0) * (bq / selBaseQty));
+            pkg.diskon_value = (item.diskon_value || 0) * (bq / selBaseQty);
         }
 
         // --- Nett ---
@@ -2658,6 +2662,7 @@ function onDrawerBuyInput(prefix, uid, level, newVal) {
     const pkg = item.packagings.find(p => p.level == level);
     if (!pkg) return;
     pkg.buy_price  = parseFloat(newVal) || 0;
+    pkg.buy_custom = true;
     pkg.harga_nett = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
     
     // Propagate if level 1
@@ -2665,7 +2670,7 @@ function onDrawerBuyInput(prefix, uid, level, newVal) {
         item.packagings.forEach(p => {
             if (p.level === 1 || p.buy_custom) return;
             const ratio = (parseFloat(p.base_qty) || 1) / (parseFloat(pkg.base_qty) || 1);
-            p.buy_price = Math.round(pkg.buy_price * ratio);
+            p.buy_price = pkg.buy_price * ratio;
             p.harga_nett = calcItemNett(p.buy_price, p.ppn_pct, p.diskon_mode, p.diskon_value);
         });
         
@@ -2673,12 +2678,12 @@ function onDrawerBuyInput(prefix, uid, level, newVal) {
             item.buy_price = pkg.buy_price;
             item.total = item.quantity * item.buy_price;
             const totalInp = document.getElementById(prefix === 'bulk' ? '' : `main_total_${uid}`);
-            if (totalInp && prefix !== 'bulk') totalInp.value = Math.round(item.total);
+            if (totalInp && prefix !== 'bulk') totalInp.value = item.total;
             else if (prefix === 'bulk') {
                 const rowEl = document.querySelector(`.bulk-item[data-bulk-id="${uid}"]`);
                 if (rowEl) {
                     const blkTot = rowEl.querySelector('.bulk-total');
-                    if (blkTot) blkTot.value = Math.round(item.total);
+                    if (blkTot) blkTot.value = item.total;
                 }
             }
         }
@@ -2694,6 +2699,7 @@ function onDrawerBuyInput(prefix, uid, level, newVal) {
         ? document.querySelector(`.bulk-item[data-bulk-id="${uid}"] .drawer-pkg-row[data-level="${level}"]`)
         : document.querySelector(`#drawer_${uid} .drawer-pkg-row[data-level="${level}"]`);
     if (rowEl) refreshDrawerRowMargin(rowEl);
+    saveDraft();
 }
 
 function onDrawerSellInput(prefix, uid, level, type, newVal) {
@@ -2704,6 +2710,7 @@ function onDrawerSellInput(prefix, uid, level, type, newVal) {
     if (!pkg) return;
     if (type === 'retail')    pkg.sell_price_retail    = parseFloat(newVal) || 0;
     if (type === 'wholesale') pkg.sell_price_wholesale = parseFloat(newVal) || 0;
+    pkg.sell_custom = true; // Lock custom sale price
     
     // Propagate if level 1
     if (level === 1) {
@@ -2711,8 +2718,8 @@ function onDrawerSellInput(prefix, uid, level, type, newVal) {
         item.packagings.forEach(p => {
             if (p.level === 1 || p.sell_custom) return;
             const ratio = (parseFloat(p.base_qty) || 1) / (parseFloat(pkg.base_qty) || 1);
-            if (type === 'retail') p.sell_price_retail = Math.round(baseVal * ratio);
-            if (type === 'wholesale') p.sell_price_wholesale = Math.round(baseVal * ratio);
+            if (type === 'retail') p.sell_price_retail = baseVal * ratio;
+            if (type === 'wholesale') p.sell_price_wholesale = baseVal * ratio;
         });
         refreshOpenDrawer(uid);
     }
@@ -2723,6 +2730,7 @@ function onDrawerSellInput(prefix, uid, level, type, newVal) {
         ? document.querySelector(`.bulk-item[data-bulk-id="${uid}"] .drawer-pkg-row[data-level="${level}"]`)
         : document.querySelector(`#drawer_${uid} .drawer-pkg-row[data-level="${level}"]`);
     if (rowEl) refreshDrawerRowMargin(rowEl);
+    saveDraft();
 }
 
 function onDrawerCustomToggle(prefix, uid, level, priceType, isCustom) {
@@ -2747,7 +2755,7 @@ function onDrawerCustomToggle(prefix, uid, level, priceType, isCustom) {
             // Re-sync buy from main
             const selPkg = item.packagings.find(p => p.level == item.level);
             const buyPcs = (parseFloat(item.buy_price) || 0) / (parseFloat(selPkg?.base_qty) || 1);
-            pkg.buy_price = Math.round(buyPcs * (parseFloat(pkg.base_qty) || 1));
+            pkg.buy_price = buyPcs * (parseFloat(pkg.base_qty) || 1);
             const inp = rowEl.querySelector('.drawer-pkg-buy');
             if (inp) inp.value = pkg.buy_price;
         }
@@ -2760,8 +2768,8 @@ function onDrawerCustomToggle(prefix, uid, level, priceType, isCustom) {
             const selPkg = item.packagings.find(p => p.level == item.level);
             const bqSel  = parseFloat(selPkg?.base_qty) || 1;
             const bqThis = parseFloat(pkg.base_qty) || 1;
-            pkg.sell_price_retail    = Math.round((parseFloat(selPkg.sell_price_retail)||0) / bqSel * bqThis);
-            pkg.sell_price_wholesale = Math.round((parseFloat(selPkg.sell_price_wholesale)||0) / bqSel * bqThis);
+            pkg.sell_price_retail    = (parseFloat(selPkg.sell_price_retail)||0) / bqSel * bqThis;
+            pkg.sell_price_wholesale = (parseFloat(selPkg.sell_price_wholesale)||0) / bqSel * bqThis;
             const retInp = rowEl.querySelector('.drawer-pkg-ret');
             const whoInp = rowEl.querySelector('.drawer-pkg-who');
             if (retInp) retInp.value = pkg.sell_price_retail;
@@ -2771,6 +2779,7 @@ function onDrawerCustomToggle(prefix, uid, level, priceType, isCustom) {
     refreshMiniTableForItem(uid);
     // Refresh drawer row margin using the rowEl already obtained above
     if (rowEl) refreshDrawerRowMargin(rowEl);
+    saveDraft();
 }
 
 /**
@@ -2870,7 +2879,7 @@ function renderCart() {
 
         const selPkg    = item.packagings.find(p => p.level == item.level) || item.packagings[0];
         const selBaseQty = parseFloat(selPkg?.base_qty) || 1;
-        const totalVal  = Math.round((item.quantity || 1) * (item.buy_price || 0));
+        const totalVal  = (item.total !== undefined && item.total !== null && item.total > 0) ? item.total : ((item.quantity || 1) * (item.buy_price || 0));
         const hasPkgs   = item.packagings.length > 1;
         const drawerHtml  = buildDrawerRowHtml(item, 'item');
 
@@ -2928,7 +2937,7 @@ function renderCart() {
             <!-- ── ROW 2: Total Harga ── -->
             <div style="margin-bottom:10px;">
                 <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Total Harga Pembelian</label>
-                <input type="number" id="main_total_${item.id}" class="form-control-dark" style="width:100%;padding:8px;font-size:13px;font-weight:600;color:var(--info);"
+                <input type="number" id="main_total_${item.id}" step="any" class="form-control-dark" style="width:100%;padding:8px;font-size:13px;font-weight:600;color:var(--info);"
                        value="${totalVal > 0 ? totalVal : ''}" placeholder="Masukkan total harga..."
                        oninput="onMainInputChange(${item.id}, 'total', this.value)">
             </div>
@@ -3001,20 +3010,18 @@ function onMainInputChange(uid, field, val) {
         // Recalculate total from qty × buy_price
         item.total = item.quantity * (item.buy_price || 0);
         const totalInp = document.getElementById(`main_total_${uid}`);
-        if (totalInp && item.buy_price > 0) totalInp.value = Math.round(item.total);
+        if (totalInp && item.buy_price > 0) totalInp.value = item.total;
     }
 
     if (field === 'total') {
         const total = parseFloat(val) || 0;
         const qty   = item.quantity || 1;
         const selPkg = item.packagings.find(p => p.level == item.level);
-        const bq    = parseFloat(selPkg?.base_qty) || 1;
         if (total > 0 && qty > 0) {
             // Total Harga = qty × buy_price_per_pkg → buy_price_per_pkg = total / qty
-            item.buy_price = Math.round(total / qty);
+            item.buy_price = total / qty;
             item.total     = total;
-            item.is_manual_price = true; // Fix: Mark as manual price so it doesn't revert during distribute
-            // Update the current level packaging too
+            item.is_manual_price = true;
             if (selPkg) selPkg.buy_price = item.buy_price;
         }
     }
@@ -3034,6 +3041,7 @@ function onMainInputChange(uid, field, val) {
     refreshMiniTableForItem(uid);
     // If drawer is open, refresh drawer rows
     refreshOpenDrawer(uid);
+    saveDraft();
 }
 
 /** Refresh drawer content if it is currently open */

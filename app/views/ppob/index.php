@@ -42,6 +42,18 @@
 #sellerHistoryModal .modal-body::-webkit-scrollbar-track { background: transparent; }
 #sellerHistoryModal .modal-body::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
 
+/* Seller Recommendation Top 10 Compact Scrollable Strip */
+.seller-rec-scroll::-webkit-scrollbar { height: 4px; }
+.seller-rec-scroll::-webkit-scrollbar-track { background: transparent; }
+.seller-rec-scroll::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+.seller-rec-badge {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.seller-rec-badge:hover {
+    transform: translateY(-1px);
+    border-color: var(--primary) !important;
+}
+
 /* Stats Summary Strip */
 .sh-stats-strip {
     display: grid;
@@ -2846,7 +2858,8 @@ function renderSellerRecommendations(products) {
                 srSum: 0,
                 srCount: 0,
                 speedSum: 0,
-                speedCount: 0
+                speedCount: 0,
+                trxCountMax: 0
             };
         }
         sellerMap[sName].count++;
@@ -2860,26 +2873,46 @@ function renderSellerRecommendations(products) {
             sellerMap[sName].speedSum += spd;
             sellerMap[sName].speedCount++;
         }
+        const trx = (p.seller_trx_count !== null && p.seller_trx_count !== undefined) ? parseInt(p.seller_trx_count) : 0;
+        if (trx > sellerMap[sName].trxCountMax) {
+            sellerMap[sName].trxCountMax = trx;
+        }
+    });
+
+    let maxTrxCount = 0;
+    Object.values(sellerMap).forEach(s => {
+        if (s.trxCountMax > maxTrxCount) maxTrxCount = s.trxCountMax;
     });
 
     const sellerList = Object.values(sellerMap).map(s => {
         const avgSr = s.srCount > 0 ? (s.srSum / s.srCount) : 0;
         const avgSpeed = s.speedCount > 0 ? (s.speedSum / s.speedCount) : 9999;
+        const trxCount = s.trxCountMax;
         
-        let speedScore = 20;
+        let speedScore = 10;
         if (avgSpeed <= 5) speedScore = 100;
         else if (avgSpeed <= 15) speedScore = 90;
-        else if (avgSpeed <= 30) speedScore = 75;
-        else if (avgSpeed <= 60) speedScore = 60;
-        else if (avgSpeed <= 180) speedScore = 40;
+        else if (avgSpeed <= 30) speedScore = 80;
+        else if (avgSpeed <= 60) speedScore = 65;
+        else if (avgSpeed <= 180) speedScore = 45;
+        else if (avgSpeed < 9999) speedScore = 25;
 
-        const score = (avgSr * 0.7) + (speedScore * 0.3);
+        let trxScore = 0;
+        if (maxTrxCount > 0 && trxCount > 0) {
+            trxScore = (trxCount / maxTrxCount) * 100;
+        } else if (s.count > 0) {
+            trxScore = Math.min(50, s.count * 5);
+        }
+
+        // Weighted score: 45% Transaction Speed, 35% Transaction History Volume, 20% Success Rate
+        const score = (speedScore * 0.45) + (trxScore * 0.35) + (avgSr * 0.20);
 
         return {
             name: s.name,
             count: s.count,
             avgSr: Math.round(avgSr),
             avgSpeed: Math.round(avgSpeed),
+            trxCount: trxCount,
             score: score
         };
     });
@@ -2889,28 +2922,47 @@ function renderSellerRecommendations(products) {
         return;
     }
 
-    sellerList.sort((a, b) => b.score - a.score);
-    const top3 = sellerList.slice(0, 3);
+    // Sort sellers: Highest score first, tiebreak by fastest avgSpeed, then highest trxCount
+    sellerList.sort((a, b) => b.score - a.score || a.avgSpeed - b.avgSpeed || b.trxCount - a.trxCount);
+    const top10 = sellerList.slice(0, 10);
 
     container.style.display = 'block';
 
-    const top3Html = top3.map((s, idx) => {
-        const medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : '🥉');
-        const badgeBg = idx === 0 ? 'rgba(234, 179, 8, 0.12)' : (idx === 1 ? 'rgba(148, 163, 184, 0.15)' : 'rgba(217, 119, 6, 0.12)');
-        const badgeBorder = idx === 0 ? 'rgba(234, 179, 8, 0.35)' : (idx === 1 ? 'rgba(148, 163, 184, 0.35)' : 'rgba(217, 119, 6, 0.35)');
+    const top10Html = top10.map((s, idx) => {
+        let rankBadge = '';
+        let badgeBg = 'var(--surface-1)';
+        let badgeBorder = 'var(--border-color)';
+
+        if (idx === 0) {
+            rankBadge = '🥇';
+            badgeBg = 'rgba(234, 179, 8, 0.12)';
+            badgeBorder = 'rgba(234, 179, 8, 0.35)';
+        } else if (idx === 1) {
+            rankBadge = '🥈';
+            badgeBg = 'rgba(148, 163, 184, 0.15)';
+            badgeBorder = 'rgba(148, 163, 184, 0.35)';
+        } else if (idx === 2) {
+            rankBadge = '🥉';
+            badgeBg = 'rgba(217, 119, 6, 0.12)';
+            badgeBorder = 'rgba(217, 119, 6, 0.35)';
+        } else {
+            rankBadge = `<span style="font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 4px; background: rgba(59, 130, 246, 0.12); color: #3b82f6;">#${idx + 1}</span>`;
+        }
+
         const isActive = currentSelectedSellerFilter === s.name;
         const spdText = s.avgSpeed <= 59 ? `${s.avgSpeed}d` : `${Math.floor(s.avgSpeed/60)}m`;
+        const trxText = s.trxCount > 0 ? (s.trxCount >= 1000 ? `${(s.trxCount/1000).toFixed(1)}k` : s.trxCount) : null;
 
         return `
         <div class="seller-rec-badge ${isActive ? 'active' : ''}" 
              onclick="applySellerFilter('${encodeURIComponent(s.name)}')"
-             title="Klik untuk memfilter produk dari seller ini"
-             style="background: ${isActive ? 'rgba(59, 130, 246, 0.18)' : badgeBg}; border: 1px solid ${isActive ? 'var(--primary)' : badgeBorder}; border-radius: 10px; padding: 5px 10px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s; box-shadow: ${isActive ? '0 0 0 2px var(--primary)' : 'none'};">
-            <span style="font-size: 0.9rem;">${medal}</span>
+             title="Top #${idx + 1} Seller: ${s.name} (${s.avgSr}% SR, Speed: ${s.avgSpeed < 900 ? spdText : 'N/A'}, Trx: ${s.trxCount}). Klik untuk filter produk seller ini."
+             style="background: ${isActive ? 'rgba(59, 130, 246, 0.18)' : badgeBg}; border: 1px solid ${isActive ? 'var(--primary)' : badgeBorder}; border-radius: 9px; padding: 4px 8px; cursor: pointer; display: flex; align-items: center; gap: 5px; transition: all 0.2s; box-shadow: ${isActive ? '0 0 0 2px var(--primary)' : 'none'}; flex-shrink: 0;">
+            <span style="font-size: 0.85rem; line-height: 1;">${rankBadge}</span>
             <div style="display: flex; flex-direction: column; min-width: 0;">
-                <span class="fw-bold text-truncate" style="font-size: 11px; color: ${isActive ? 'var(--primary)' : 'var(--text-primary)'}; max-width: 110px;">${s.name}</span>
-                <span style="font-size: 9.5px; color: var(--text-muted); white-space: nowrap;">
-                    <strong style="color: #10b981;">${s.avgSr}% SR</strong> &bull; <i class="bi bi-lightning-charge-fill" style="color: #3b82f6;"></i> ${s.avgSpeed < 900 ? spdText : '-'}
+                <span class="fw-bold text-truncate" style="font-size: 10.5px; color: ${isActive ? 'var(--primary)' : 'var(--text-primary)'}; max-width: 95px;">${s.name}</span>
+                <span style="font-size: 9px; color: var(--text-muted); white-space: nowrap;">
+                    <strong style="color: #10b981;">${s.avgSr}%</strong> &bull; <i class="bi bi-lightning-charge-fill" style="color: #3b82f6;"></i> ${s.avgSpeed < 900 ? spdText : '-'} ${trxText ? `&bull; <i class="bi bi-box-seam" style="color: #8b5cf6;"></i> ${trxText}` : ''}
                 </span>
             </div>
         </div>`;
@@ -2927,18 +2979,18 @@ function renderSellerRecommendations(products) {
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
             <div class="fw-bold text-uppercase text-muted d-flex align-items-center gap-1.5" style="font-size: 10px; letter-spacing: 0.5px;">
                 <i class="bi bi-award-fill" style="color: #eab308; font-size: 12px;"></i>
-                <span>Top 3 Rekomendasi Seller</span>
+                <span>Top 10 Rekomendasi Seller</span>
             </div>
             ${currentSelectedSellerFilter ? `
                 <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 fw-bold" style="font-size: 10.5px; color: var(--danger);" onclick="applySellerFilter('')">
-                    <i class="bi bi-x-circle-fill me-1"></i>Reset Filter Seller
+                    <i class="bi bi-x-circle-fill me-1"></i>Reset Filter Seller (${currentSelectedSellerFilter})
                 </button>
             ` : ''}
         </div>
-        <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center justify-content-between gap-2">
-            <!-- Left: Top 3 Recommended Seller Badges -->
-            <div class="d-flex flex-wrap align-items-center gap-1.5 flex-grow-1 min-w-0">
-                ${top3Html}
+        <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">
+            <!-- Left: Top 10 Recommended Seller Badges in Scrollable Row -->
+            <div class="d-flex align-items-center gap-1.5 flex-grow-1 min-w-0 overflow-x-auto py-1 seller-rec-scroll" style="max-width: 100%;">
+                ${top10Html}
             </div>
             <!-- Right: Filter Select Dropdown -->
             <div class="flex-shrink-0" style="min-width: 170px;">
