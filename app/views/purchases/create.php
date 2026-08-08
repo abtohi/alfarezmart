@@ -37,15 +37,15 @@
                     </div>
                     <div>
                         <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Foto Invoice</label>
-                        <input type="file" id="invoicePhotoCam" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event, true)">
-                        <input type="file" id="invoicePhotoGal" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event, false)">
+                        <input type="file" id="invoicePhotoCam" accept="image/*" capture="environment" style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; z-index:-1;" onchange="handlePhotoSelect(event, true)">
+                        <input type="file" id="invoicePhotoGal" accept="image/*" style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; z-index:-1;" onchange="handlePhotoSelect(event, false)">
                         <div style="display:flex; gap:8px;">
-                            <button type="button" class="btn-outline-custom" id="btnPhotoCam" style="flex:1; padding:10px 4px; font-size:12px; height:44px;" onclick="document.getElementById('invoicePhotoCam').click()">
+                            <label for="invoicePhotoCam" class="btn-outline-custom" id="btnPhotoCam" style="flex:1; padding:10px 4px; font-size:12px; height:44px; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; margin:0;">
                                 <i class="bi bi-camera"></i> Kamera
-                            </button>
-                            <button type="button" class="btn-outline-custom" id="btnPhotoGal" style="flex:1; padding:10px 4px; font-size:12px; height:44px;" onclick="document.getElementById('invoicePhotoGal').click()">
+                            </label>
+                            <label for="invoicePhotoGal" class="btn-outline-custom" id="btnPhotoGal" style="flex:1; padding:10px 4px; font-size:12px; height:44px; display:inline-flex; align-items:center; justify-content:center; gap:6px; cursor:pointer; margin:0;">
                                 <i class="bi bi-image"></i> Galeri
-                            </button>
+                            </label>
                         </div>
                         <div style="display:flex; gap:8px; margin-top:8px;">
                             <button type="button" class="btn-primary-custom" id="btnScanAI" style="flex:1; padding:10px 4px; font-size:12px; display:none; height:44px;" onclick="scanInvoiceWithAI()">
@@ -204,12 +204,8 @@ let invoicePhotoBase64 = null;
 let originalPhotoImg = null;
 
 function handlePhotoSelect(e, isCamera) {
-    const file = e.target.files[0];
+    const file = e.target.files && e.target.files[0];
     if (!file) return;
-    
-    // Reset file inputs so same file can be selected again
-    document.getElementById('invoicePhotoCam').value = '';
-    document.getElementById('invoicePhotoGal').value = '';
 
     const reader = new FileReader();
     reader.onload = function(event) {
@@ -218,6 +214,12 @@ function handlePhotoSelect(e, isCamera) {
             document.getElementById('photoPreviewModal').style.display = 'flex';
             document.getElementById('chkEnhancePhoto').checked = true; // Default to document mode
             applyPhotoFilter();
+
+            // Reset input values ONLY after image has loaded to prevent Safari/Chrome Blob cancellation
+            const cam = document.getElementById('invoicePhotoCam');
+            const gal = document.getElementById('invoicePhotoGal');
+            if (cam) cam.value = '';
+            if (gal) gal.value = '';
         };
         originalPhotoImg.src = event.target.result;
     };
