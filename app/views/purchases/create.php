@@ -855,8 +855,9 @@ document.addEventListener('keydown', function(e) {
 
 function initPurchaseProductSearch() {
     if (!searchInput || !suggestionsDiv) return;
+    // Lower debounce to 150ms since offline search is instant (~5ms)
     const runSearch = typeof debounce === 'function'
-        ? debounce(performProductSearch, 300)
+        ? debounce(performProductSearch, 150)
         : performProductSearch;
 
     // Live typing for text keyword search
@@ -993,6 +994,9 @@ async function processPurchaseBarcodeOrSearch(rawQuery) {
     performProductSearch();
 }
 
+// Version counter to prevent stale API results from overwriting newer local results
+let _searchVersion = 0;
+
 async function performProductSearch() {
     const q = searchInput ? searchInput.value.trim() : '';
     if (q.length < 2) {
@@ -1000,98 +1004,136 @@ async function performProductSearch() {
         return;
     }
 
+    // Increment search version to prevent stale results
+    const thisSearchVersion = ++_searchVersion;
+
     try {
+        // ========== STEP 1: OFFLINE-FIRST — Show local results INSTANTLY ==========
         let data = [];
-        if (!filterBySupplierSales && typeof OfflineDB !== 'undefined') {
-            data = await OfflineDB.searchProducts(q);
-        }
-        
-        if ((!data || data.length === 0) || filterBySupplierSales) {
-            let url;
+        if (typeof OfflineDB !== 'undefined') {
             if (filterBySupplierSales && !isOtherMode && currentSupplierId) {
-                url = `${BASE_URL}api/purchases/search-products?q=${encodeURIComponent(q)}`;
-                url += `&supplier_id=${currentSupplierId}`;
-                if (currentSalesRepId) url += `&sales_rep_id=${currentSalesRepId}`;
+                // Use supplier-aware search with relevance scoring
+                data = await OfflineDB.searchProductsBySupplier(q, currentSupplierId, currentSalesRepId);
             } else {
-                url = `${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`;
+                data = await OfflineDB.searchProducts(q);
             }
+        }
+
+        // Render local results immediately (no waiting for network!)
+        if (thisSearchVersion === _searchVersion && Array.isArray(data) && data.length > 0) {
+            renderSearchResults(data);
+        }
+
+        // ========== STEP 2: BACKGROUND API — Supplement with server results ==========
+        if (navigator.onLine) {
             try {
-                data = await api(url);
+                let url;
+                if (filterBySupplierSales && !isOtherMode && currentSupplierId) {
+                    url = `${BASE_URL}api/purchases/search-products?q=${encodeURIComponent(q)}`;
+                    url += `&supplier_id=${currentSupplierId}`;
+                    if (currentSalesRepId) url += `&sales_rep_id=${currentSalesRepId}`;
+                } else {
+                    url = `${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`;
+                }
+                const apiData = await api(url);
+
+                // Only update if this is still the latest search
+                if (thisSearchVersion === _searchVersion && Array.isArray(apiData) && apiData.length > 0) {
+                    // Merge: add API results that weren't in local results
+                    const localIds = new Set((data || []).map(p => p.id));
+                    const newFromApi = apiData.filter(p => !localIds.has(p.id));
+
+                    if (newFromApi.length > 0) {
+                        // Combine: local results first (better scored), then new API results
+                        const merged = [...(data || []), ...newFromApi].slice(0, 30);
+                        renderSearchResults(merged);
+                    } else if (!data || data.length === 0) {
+                        // No local results but API has results
+                        renderSearchResults(apiData);
+                    }
+                }
             } catch (e) {
-                if (typeof OfflineDB !== 'undefined') data = await OfflineDB.searchProducts(q);
+                // API failed — local results already displayed, so this is fine
+                console.log('API search supplement failed (offline results shown):', e.message);
             }
         }
-        
-        if (!Array.isArray(data) || data.length === 0) {
-            suggestionsDiv.innerHTML = `
-                <div style="padding:12px;text-align:center;">
-                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Produk tidak ditemukan</div>
-                    <a href="${BASE_URL}products/create" class="btn-outline-custom" style="padding:6px 16px;font-size:12px;text-decoration:none;">
-                        <i class="bi bi-plus"></i> Tambah Produk Baru
-                    </a>
-                </div>`;
-            return;
-        }
-        
-        suggestionsDiv.innerHTML = data.map(p => {
-            const isSupplierProduct = filterBySupplierSales && p.is_supplier_product ? 1 : 0;
-            const badge = !filterBySupplierSales
-                ? ''
-                : (isSupplierProduct 
-                    ? '<span style="font-size:9px;background:var(--success-bg);color:var(--success);padding:2px 6px;border-radius:10px;white-space:nowrap;">Supplier</span>'
-                    : '<span style="font-size:9px;background:var(--warning-bg);color:var(--warning);padding:2px 6px;border-radius:10px;white-space:nowrap;">Lainnya</span>');
-            
-            // Photo or icon
-            const thumbHtml = p.photo 
-                ? `<div style="width:44px;height:44px;border-radius:var(--radius-sm);overflow:hidden;display:flex;align-items:center;justify-content:center;background:transparent;flex-shrink:0;">
-                       <img src="${BASE_URL}${p.photo.replace(/"/g, '&quot;')}" style="width:100%;height:100%;object-fit:contain;" loading="lazy">
-                   </div>`
-                : `<div style="width:44px;height:44px;background:var(--primary-bg);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--primary);flex-shrink:0;">
-                       <i class="bi bi-box-seam" style="font-size:1.2rem;"></i>
-                   </div>`;
-                   
-            // Note: need to stringify p safely for onclick
-            const pStr = JSON.stringify(p).replace(/'/g, "&#39;");
 
-            // Packaging info compact horizontal badges
-            let pkgHtml = '';
-            if (p.packagings && p.packagings.length > 0) {
-                const pkgItems = p.packagings.map(pkg => {
-                    const ret = parseFloat(pkg.sell_price_retail) || 0;
-                    return `
-                    <div onclick="event.stopPropagation(); selectProduct(${pStr}, ${pkg.level});" style="display:inline-flex; align-items:center; background:var(--surface-2); border:1px solid var(--border-color); border-radius:4px; padding:3px 6px; font-size:0.65rem; white-space:nowrap; flex-shrink:0; cursor:pointer;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'" title="Pilih kemasan ${pkg.unit_name}">
-                        <span style="color:var(--text-primary); font-weight:600; margin-right:3px;">${pkg.unit_name || ''}</span>
-                        <span style="color:var(--text-muted); margin-right:5px; font-size:0.55rem;">(x${pkg.base_qty})</span>
-                        <span style="color:var(--success); font-weight:700;">${formatRupiah(ret)}</span>
+        // ========== STEP 3: Show empty state if nothing found ==========
+        if (thisSearchVersion === _searchVersion && (!data || data.length === 0)) {
+            // Check if we already rendered from API above
+            if (!suggestionsDiv.querySelector('.search-result-item')) {
+                suggestionsDiv.innerHTML = `
+                    <div style="padding:12px;text-align:center;">
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Produk tidak ditemukan</div>
+                        <a href="${BASE_URL}products/create" class="btn-outline-custom" style="padding:6px 16px;font-size:12px;text-decoration:none;">
+                            <i class="bi bi-plus"></i> Tambah Produk Baru
+                        </a>
                     </div>`;
-                }).join('');
-                pkgHtml = `
-                <style>.hide-scroll::-webkit-scrollbar { display: none; }</style>
-                <div class="hide-scroll" style="display:flex; overflow-x:auto; gap:4px; margin-top:6px; padding-bottom:2px; scrollbar-width:none; -ms-overflow-style:none; width:100%;">
-                    ${pkgItems}
-                </div>`;
             }
-
-            return `
-            <div data-id="${p.id}" class="search-result-item" style="padding:10px 12px; background:var(--surface-1); margin-bottom:6px; cursor:pointer; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; align-items:flex-start; gap:10px; transition:all 0.2s; box-shadow:var(--shadow-sm); ${isSupplierProduct ? 'border-left:3px solid var(--success);' : ''}" onclick='selectProduct(${pStr})' onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
-                ${thumbHtml}
-                <div style="flex:1; min-width:0;">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:4px;">
-                        <div style="font-weight:600; font-size:0.85rem; color:var(--text-primary); line-height:1.3; word-break:break-word; white-space:normal;">${p.short_label || p.full_name}</div>
-                        ${badge}
-                    </div>
-                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
-                        <span>${p.brand_name ? p.brand_name : 'Tanpa Merek'}</span>
-                        ${p.last_buy_price ? `<span>&middot; Beli: <strong style="color:var(--text-primary);">${formatRupiah(p.last_buy_price)}</strong></span>` : ''}
-                    </div>
-                    ${pkgHtml}
-                </div>
-            </div>`;
-        }).join('');
+        }
     } catch (e) {
         console.error("Product Search Error:", e);
         suggestionsDiv.innerHTML = `<div style="padding:12px;text-align:center;color:var(--danger);font-size:12px;">Pencarian gagal: ${e.message}</div>`;
     }
+}
+
+function renderSearchResults(data) {
+    if (!Array.isArray(data) || data.length === 0) return;
+    suggestionsDiv.innerHTML = data.map(p => {
+        const isSupplierProduct = filterBySupplierSales && p.is_supplier_product ? 1 : 0;
+        const badge = !filterBySupplierSales
+            ? ''
+            : (isSupplierProduct 
+                ? '<span style="font-size:9px;background:var(--success-bg);color:var(--success);padding:2px 6px;border-radius:10px;white-space:nowrap;">Supplier</span>'
+                : '<span style="font-size:9px;background:var(--warning-bg);color:var(--warning);padding:2px 6px;border-radius:10px;white-space:nowrap;">Lainnya</span>');
+        
+        // Photo or icon
+        const thumbHtml = p.photo 
+            ? `<div style="width:44px;height:44px;border-radius:var(--radius-sm);overflow:hidden;display:flex;align-items:center;justify-content:center;background:transparent;flex-shrink:0;">
+                   <img src="${BASE_URL}${p.photo.replace(/"/g, '&quot;')}" style="width:100%;height:100%;object-fit:contain;" loading="lazy">
+               </div>`
+            : `<div style="width:44px;height:44px;background:var(--primary-bg);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--primary);flex-shrink:0;">
+                   <i class="bi bi-box-seam" style="font-size:1.2rem;"></i>
+               </div>`;
+                   
+        // Note: need to stringify p safely for onclick
+        const pStr = JSON.stringify(p).replace(/'/g, "&#39;");
+
+        // Packaging info compact horizontal badges
+        let pkgHtml = '';
+        if (p.packagings && p.packagings.length > 0) {
+            const pkgItems = p.packagings.map(pkg => {
+                const ret = parseFloat(pkg.sell_price_retail) || 0;
+                return `
+                <div onclick="event.stopPropagation(); selectProduct(${pStr}, ${pkg.level});" style="display:inline-flex; align-items:center; background:var(--surface-2); border:1px solid var(--border-color); border-radius:4px; padding:3px 6px; font-size:0.65rem; white-space:nowrap; flex-shrink:0; cursor:pointer;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-color)'" title="Pilih kemasan ${pkg.unit_name}">
+                    <span style="color:var(--text-primary); font-weight:600; margin-right:3px;">${pkg.unit_name || ''}</span>
+                    <span style="color:var(--text-muted); margin-right:5px; font-size:0.55rem;">(x${pkg.base_qty})</span>
+                    <span style="color:var(--success); font-weight:700;">${formatRupiah(ret)}</span>
+                </div>`;
+            }).join('');
+            pkgHtml = `
+            <style>.hide-scroll::-webkit-scrollbar { display: none; }</style>
+            <div class="hide-scroll" style="display:flex; overflow-x:auto; gap:4px; margin-top:6px; padding-bottom:2px; scrollbar-width:none; -ms-overflow-style:none; width:100%;">
+                ${pkgItems}
+            </div>`;
+        }
+
+        return `
+        <div data-id="${p.id}" class="search-result-item" style="padding:10px 12px; background:var(--surface-1); margin-bottom:6px; cursor:pointer; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; align-items:flex-start; gap:10px; transition:all 0.2s; box-shadow:var(--shadow-sm); ${isSupplierProduct ? 'border-left:3px solid var(--success);' : ''}" onclick='selectProduct(${pStr})' onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface-1)'">
+            ${thumbHtml}
+            <div style="flex:1; min-width:0;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:4px;">
+                    <div style="font-weight:600; font-size:0.85rem; color:var(--text-primary); line-height:1.3; word-break:break-word; white-space:normal;">${p.short_label || p.full_name}</div>
+                    ${badge}
+                </div>
+                <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px; display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                    <span>${p.brand_name ? p.brand_name : 'Tanpa Merek'}</span>
+                    ${p.last_buy_price ? `<span>&middot; Beli: <strong style="color:var(--text-primary);">${formatRupiah(p.last_buy_price)}</strong></span>` : ''}
+                </div>
+                ${pkgHtml}
+            </div>
+        </div>`;
+    }).join('');
 }
 
 async function selectProduct(productSummary, defaultLevel = null) {

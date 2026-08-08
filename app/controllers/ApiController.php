@@ -195,6 +195,26 @@ class ApiController extends Controller
         $stmt->execute();
         $financeLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Supplier-Product mappings for offline supplier-aware search
+        require_once __DIR__ . '/../models/SupplierProductModel.php';
+        $spModel = new SupplierProductModel();
+        $spStmt = $db->prepare("
+            SELECT id, supplier_id, product_id, sales_rep_id, last_buy_price, purchase_count
+            FROM supplier_products
+            ORDER BY supplier_id, product_id
+        ");
+        $spStmt->execute();
+        $supplierProducts = $spStmt->fetchAll(PDO::FETCH_ASSOC);
+        // Cast to int for compact JSON
+        foreach ($supplierProducts as &$sp) {
+            $sp['id'] = (int)$sp['id'];
+            $sp['supplier_id'] = (int)$sp['supplier_id'];
+            $sp['product_id'] = (int)$sp['product_id'];
+            $sp['sales_rep_id'] = $sp['sales_rep_id'] ? (int)$sp['sales_rep_id'] : null;
+            $sp['purchase_count'] = (int)($sp['purchase_count'] ?? 0);
+        }
+        unset($sp);
+
         $this->json([
             'success'   => true,
             'products'  => $products,
@@ -209,7 +229,8 @@ class ApiController extends Controller
                 'accounts'   => $financeAccounts,
                 'categories' => $financeCategories,
             ],
-            'finance_logs' => $financeLogs
+            'finance_logs' => $financeLogs,
+            'supplier_products' => $supplierProducts
         ]);
     }
 
