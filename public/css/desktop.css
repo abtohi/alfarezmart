@@ -1274,6 +1274,33 @@
     .purchases-index__header {
         max-width: none;
     }
+
+    /* Desktop 2-Column Grid for Input Barang Masuk */
+    .purchases-create-grid {
+        display: grid !important;
+        grid-template-columns: 1fr 360px !important;
+        gap: 20px !important;
+        align-items: start !important;
+    }
+
+    .purchases-create-main {
+        min-width: 0;
+    }
+
+    .purchases-create-sidebar {
+        position: sticky;
+        top: calc(var(--header-height, 64px) + 20px);
+    }
+
+    .purchases-create-step1-row {
+        display: flex !important;
+        gap: 16px !important;
+        flex-direction: row !important;
+    }
+
+    .purchases-create-step1-row > div {
+        flex: 1;
+    }
 }
 
 
