@@ -94,12 +94,15 @@
         background: var(--surface-2);
         border: 1px solid var(--border-color);
         border-radius: var(--radius-md);
-        padding: 12px 16px;
+        padding: 12px 14px;
         margin-bottom: 10px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
+        gap: 10px;
+        width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
         transition: transform 0.15s ease;
     }
     .top-seller-item:hover {
@@ -454,13 +457,13 @@
 
             html += `
                 <div class="top-seller-item">
-                    <div class="d-flex align-items-center gap-3 min-w-0">
+                    <div class="d-flex align-items-center gap-2 gap-sm-3" style="flex: 1; min-width: 0;">
                         <div class="rank-badge ${rankClass}">${medalIcon}</div>
-                        <div class="min-w-0">
+                        <div style="flex: 1; min-width: 0;">
                             <div class="fw-bold text-truncate" style="font-size: 13px; color: var(--text-primary);" title="${s.name}">
                                 ${s.name}
                             </div>
-                            <div style="font-size: 11px; color: var(--text-muted);">
+                            <div class="text-truncate" style="font-size: 11px; color: var(--text-muted);">
                                 ${s.handle ? `<span class="text-info me-1">${s.handle}</span> &middot; ` : ''}
                                 <span>${s.total} Trx</span> &middot; 
                                 <strong style="color:var(--success);">Profit Rp ${s.profit.toLocaleString('id-ID')}</strong>
@@ -468,8 +471,8 @@
                         </div>
                     </div>
 
-                    <div class="text-end flex-shrink-0 d-flex flex-column align-items-end gap-1">
-                        <span class="badge bg-success bg-opacity-10 text-success fw-bold" style="font-size: 11px;">
+                    <div class="text-end flex-shrink-0 d-flex flex-column align-items-end gap-1 ms-2">
+                        <span class="badge bg-success bg-opacity-10 text-success fw-bold" style="font-size: 10px; white-space: nowrap;">
                             <i class="bi bi-check-circle-fill me-1"></i>${s.success_rate}% SR
                         </span>
                         ${speedBadge}
