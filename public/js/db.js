@@ -56,14 +56,14 @@ window.OfflineDB = (function() {
 
     async function syncAllDataFromServer() {
         try {
-            const data = await api(`${BASE_URL}api/sync/all?_t=` + Date.now());
+            const data = await api(`${BASE_URL}api/sync/all?_t=` + Date.now(), { timeout: 60000, silent: true });
             if (data) {
                 return await saveFromPayload(data);
             }
             return false;
         } catch (e) {
-            console.error("Failed to sync all data from server:", e);
-            throw e;
+            console.warn("Background sync warning:", e.message || e);
+            return false;
         }
     }
 

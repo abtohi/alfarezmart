@@ -142,9 +142,12 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
         config.headers['X-CSRF-Token'] = csrfToken;
     }
 
-    // Add AbortController timeout — 1500ms for GET, 4000ms for mutations (or 400ms on weak signal)
-    const isWeakSignal = (typeof window.getSignalState === 'function' && window.getSignalState() === 'weak');
-    const defaultTimeout = isWeakSignal ? 400 : (method === 'GET' ? 1500 : 4000);
+    // Set appropriate timeout: 60s for heavy endpoints (sync/scan-ai/import/export), 15s default
+    const isHeavyEndpoint = endpoint.includes('/sync') || endpoint.includes('/scan-ai') || endpoint.includes('/export') || endpoint.includes('/import');
+    let defaultTimeout = isHeavyEndpoint ? 60000 : 15000;
+    if (typeof window.getSignalState === 'function' && window.getSignalState() === 'weak' && !isHeavyEndpoint) {
+        defaultTimeout = 3000;
+    }
     const timeoutMs = config.timeout || defaultTimeout;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -183,8 +186,14 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
             if (offlineRes) return offlineRes;
         }
 
+        if (error.name === 'AbortError') {
+            error.message = 'Permintaan waktu habis (timeout server).';
+        }
+
         console.error('API Error:', error);
-        showToast(error.message || 'Koneksi terputus', 'error');
+        if (!options.silent && !config.silent) {
+            showToast(error.message || 'Koneksi terputus', 'error');
+        }
         throw error;
     }
 }
