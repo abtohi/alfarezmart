@@ -1011,10 +1011,10 @@ async function performProductSearch() {
         // ========== STEP 1: OFFLINE-FIRST — Show local results INSTANTLY ==========
         let data = [];
         if (typeof OfflineDB !== 'undefined') {
-            if (filterBySupplierSales && !isOtherMode && currentSupplierId) {
+            if (filterBySupplierSales && !isOtherMode && currentSupplierId && typeof OfflineDB.searchProductsBySupplier === 'function') {
                 // Use supplier-aware search with relevance scoring
                 data = await OfflineDB.searchProductsBySupplier(q, currentSupplierId, currentSalesRepId);
-            } else {
+            } else if (typeof OfflineDB.searchProducts === 'function') {
                 data = await OfflineDB.searchProducts(q);
             }
         }
