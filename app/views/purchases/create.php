@@ -12,6 +12,29 @@
     
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
+    <!-- Photo Preview Modal -->
+    <div id="photoPreviewModal" class="modal-backdrop" style="display:none; z-index:2000;">
+        <div class="modal-content" style="max-width:400px; padding:0; overflow:hidden; display:flex; flex-direction:column; height:90vh;">
+            <div style="padding:16px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="font-size:var(--font-size-md); margin:0;">Pratinjau Foto</h3>
+                <button class="btn-close-custom" onclick="closePhotoPreview()"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div style="flex:1; overflow:hidden; background:#111; position:relative; display:flex; align-items:center; justify-content:center;">
+                <canvas id="photoPreviewCanvas" style="max-width:100%; max-height:100%; object-fit:contain;"></canvas>
+            </div>
+            <div style="padding:16px; background:var(--surface-1);">
+                <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; cursor:pointer;">
+                    <input type="checkbox" id="chkEnhancePhoto" checked onchange="applyPhotoFilter()" style="width:18px;height:18px;accent-color:var(--primary);">
+                    <span style="font-size:13px; font-weight:600; color:var(--text-primary);">Mode Dokumen (Perjelas Teks)</span>
+                </label>
+                <div style="display:flex; gap:8px;">
+                    <button type="button" class="btn-outline-custom" style="flex:1;" onclick="closePhotoPreview()">Batal</button>
+                    <button type="button" class="btn-primary-custom" style="flex:1;" onclick="savePhotoPreview()">Gunakan Foto</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="purchases-create-grid">
         <div class="purchases-create-main">
             <!-- Step 1: Supplier Selection -->
@@ -211,8 +234,10 @@ function handlePhotoSelect(e, isCamera) {
     reader.onload = function(event) {
         originalPhotoImg = new Image();
         originalPhotoImg.onload = function() {
-            document.getElementById('photoPreviewModal').style.display = 'flex';
-            document.getElementById('chkEnhancePhoto').checked = true; // Default to document mode
+            const modal = document.getElementById('photoPreviewModal');
+            if (modal) modal.style.display = 'flex';
+            const chk = document.getElementById('chkEnhancePhoto');
+            if (chk) chk.checked = true; // Default to document mode
             applyPhotoFilter();
 
             // Reset input values ONLY after image has loaded to prevent Safari/Chrome Blob cancellation
@@ -227,13 +252,16 @@ function handlePhotoSelect(e, isCamera) {
 }
 
 function closePhotoPreview() {
-    document.getElementById('photoPreviewModal').style.display = 'none';
+    const modal = document.getElementById('photoPreviewModal');
+    if (modal) modal.style.display = 'none';
 }
 
 function applyPhotoFilter() {
     if (!originalPhotoImg) return;
     const canvas = document.getElementById('photoPreviewCanvas');
-    const isEnhanced = document.getElementById('chkEnhancePhoto').checked;
+    if (!canvas) return;
+    const chk = document.getElementById('chkEnhancePhoto');
+    const isEnhanced = chk ? chk.checked : true;
     
     let width = originalPhotoImg.width;
     let height = originalPhotoImg.height;
@@ -261,19 +289,28 @@ function applyPhotoFilter() {
 
 function savePhotoPreview() {
     const canvas = document.getElementById('photoPreviewCanvas');
+    if (!canvas) return;
     invoicePhotoBase64 = canvas.toDataURL('image/webp', 0.7);
     
     const btnCam = document.getElementById('btnPhotoCam');
     const btnGal = document.getElementById('btnPhotoGal');
-    btnCam.className = 'btn-success-custom';
-    btnGal.className = 'btn-success-custom';
-    btnCam.style.flex = '1'; btnGal.style.flex = '1';
-    btnCam.style.padding = '8px 4px'; btnGal.style.padding = '8px 4px';
-    btnCam.style.fontSize = '11px'; btnGal.style.fontSize = '11px';
-    btnCam.innerHTML = '<i class="bi bi-check2-circle"></i> OK';
-    btnGal.innerHTML = '<i class="bi bi-check2-circle"></i> OK';
+    if (btnCam) {
+        btnCam.className = 'btn-success-custom';
+        btnCam.style.flex = '1';
+        btnCam.style.padding = '8px 4px';
+        btnCam.style.fontSize = '11px';
+        btnCam.innerHTML = '<i class="bi bi-check2-circle"></i> OK';
+    }
+    if (btnGal) {
+        btnGal.className = 'btn-success-custom';
+        btnGal.style.flex = '1';
+        btnGal.style.padding = '8px 4px';
+        btnGal.style.fontSize = '11px';
+        btnGal.innerHTML = '<i class="bi bi-check2-circle"></i> OK';
+    }
     
-    document.getElementById('btnScanAI').style.display = 'block';
+    const btnScan = document.getElementById('btnScanAI');
+    if (btnScan) btnScan.style.display = 'block';
     
     closePhotoPreview();
     showToast('Foto berhasil disiapkan', 'success');
