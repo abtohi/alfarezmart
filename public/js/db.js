@@ -19,6 +19,10 @@ db.version(1).stores({
     auth_cache: 'key'
 });
 
+db.version(2).stores({
+    supplier_products: 'id, supplier_id, product_id'
+});
+
 window.OfflineDB = (function() {
     async function init() {
         return db.open();
@@ -109,7 +113,7 @@ window.OfflineDB = (function() {
     async function saveFromPayload(data, onStep) {
         const call = (key) => { if (typeof onStep === 'function') onStep(key); };
 
-        await db.transaction('rw', db.products, db.suppliers, db.categories, db.brands, db.units, db.finance, db.finance_logs, async () => {
+        await db.transaction('rw', db.products, db.suppliers, db.categories, db.brands, db.units, db.finance, db.finance_logs, db.supplier_products, async () => {
             if (data.products && Array.isArray(data.products)) {
                 call('products');
                 // Preserve pending local products before clearing
@@ -147,6 +151,11 @@ window.OfflineDB = (function() {
                 await db.units.clear();
                 await db.units.bulkPut(data.units);
             }
+            if (data.supplier_products && Array.isArray(data.supplier_products)) {
+                call('supplier_products');
+                await db.supplier_products.clear();
+                await db.supplier_products.bulkPut(data.supplier_products);
+            }
             if (data.finance) {
                 call('finance');
                 const financeItems = [];
@@ -173,6 +182,113 @@ window.OfflineDB = (function() {
     // Read methods
     function getAllProducts() { return db.products.toArray(); }
     function getAllSales() { return db.sales.toArray(); }
+    function getAllSupplierProducts() { return db.supplier_products.toArray(); }
+
+    /**
+     * Offline-first supplier-aware product search with multi-keyword relevance scoring.
+     * Returns products sorted by: supplier match first, then relevance score.
+     */
+    async function searchProductsBySupplier(query, supplierId, salesRepId) {
+        if (!query) return [];
+        query = query.toLowerCase().trim();
+        const words = query.split(/\s+/).filter(w => w.length > 0);
+        if (words.length === 0) return [];
+
+        try {
+            const [allProducts, allSP] = await Promise.all([
+                db.products.toArray(),
+                db.supplier_products.toArray()
+            ]);
+
+            // Build a set of product IDs that belong to the given supplier
+            const supplierProductIds = new Set();
+            const supplierProductMap = new Map(); // productId -> {last_buy_price, purchase_count}
+            if (supplierId) {
+                allSP.forEach(sp => {
+                    if (sp.supplier_id == supplierId) {
+                        supplierProductIds.add(sp.product_id);
+                        supplierProductMap.set(sp.product_id, {
+                            last_buy_price: sp.last_buy_price,
+                            purchase_count: sp.purchase_count || 0
+                        });
+                    }
+                });
+            }
+
+            // Score and filter products
+            const scored = [];
+            for (const p of allProducts) {
+                // Multi-keyword AND match: every word must match at least one field
+                const searchText = [
+                    p.full_name || '',
+                    p.short_label || '',
+                    p.invoice_name || '',
+                    p.supplier_invoice_name || '',
+                    p.brand_name || '',
+                    p.code || '',
+                    p.supplier_product_code || ''
+                ].join(' ').toLowerCase();
+
+                // Also check barcodes
+                let barcodeText = '';
+                if (p.packagings && Array.isArray(p.packagings)) {
+                    barcodeText = p.packagings.map(pkg => pkg.barcode || '').join(' ').toLowerCase();
+                }
+
+                const allText = searchText + ' ' + barcodeText;
+
+                // Every word must match somewhere
+                const allMatch = words.every(w => allText.includes(w));
+                if (!allMatch) continue;
+
+                // Calculate relevance score (higher = better)
+                let score = 0;
+                const label = (p.short_label || p.full_name || '').toLowerCase();
+                const fullName = (p.full_name || '').toLowerCase();
+
+                // Bonus: exact full query match in label
+                if (label.includes(query)) score += 100;
+                if (fullName.includes(query)) score += 80;
+
+                // Bonus per word: where does it match?
+                for (const w of words) {
+                    if (label.startsWith(w)) score += 30;
+                    else if (label.includes(w)) score += 20;
+                    else if (fullName.includes(w)) score += 15;
+                    else score += 5; // matched in brand/code/barcode
+                }
+
+                // Bonus for supplier product
+                const isSupplier = supplierProductIds.has(p.id);
+                if (isSupplier) {
+                    score += 200; // Strong priority for supplier products
+                    const spData = supplierProductMap.get(p.id);
+                    if (spData) {
+                        score += Math.min(spData.purchase_count, 50); // Frequency bonus (capped)
+                        p.last_buy_price = spData.last_buy_price;
+                    }
+                }
+
+                scored.push({
+                    ...p,
+                    is_supplier_product: isSupplier ? 1 : 0,
+                    _score: score
+                });
+            }
+
+            // Sort by score descending
+            scored.sort((a, b) => b._score - a._score);
+
+            // Clean up internal score before returning
+            return scored.slice(0, 30).map(p => {
+                const { _score, ...rest } = p;
+                return rest;
+            });
+        } catch (e) {
+            console.error("Offline supplier search failed", e);
+            return [];
+        }
+    }
     function getAllSuppliers() { return db.suppliers.toArray(); }
     function getAllCategories() { return db.categories.toArray(); }
     function getAllBrands() { return db.brands.toArray(); }
@@ -317,10 +433,12 @@ window.OfflineDB = (function() {
         getAllDebts,
         getAllFinance,
         getAllFinanceLogs,
+        getAllSupplierProducts,
         saveFinanceLog,
         saveProduct,
         getProductById,
         searchProducts,
+        searchProductsBySupplier,
         findByBarcode,
         addPendingChange,
         getPendingChanges,
