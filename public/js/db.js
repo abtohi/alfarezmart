@@ -23,6 +23,10 @@ db.version(2).stores({
     supplier_products: 'id, supplier_id, product_id'
 });
 
+db.version(3).stores({
+    sales_reps: 'id, supplier_id, name, supplier_name'
+});
+
 window.OfflineDB = (function() {
     async function init() {
         return db.open();
@@ -113,7 +117,7 @@ window.OfflineDB = (function() {
     async function saveFromPayload(data, onStep) {
         const call = (key) => { if (typeof onStep === 'function') onStep(key); };
 
-        await db.transaction('rw', db.products, db.suppliers, db.categories, db.brands, db.units, db.finance, db.finance_logs, db.supplier_products, async () => {
+        await db.transaction('rw', db.products, db.suppliers, db.sales_reps, db.categories, db.brands, db.units, db.finance, db.finance_logs, db.supplier_products, async () => {
             if (data.products && Array.isArray(data.products)) {
                 call('products');
                 // Preserve pending local products before clearing
@@ -135,6 +139,11 @@ window.OfflineDB = (function() {
                 call('suppliers');
                 await db.suppliers.clear();
                 await db.suppliers.bulkPut(data.suppliers);
+            }
+            if (data.sales_reps && Array.isArray(data.sales_reps)) {
+                call('sales_reps');
+                await db.sales_reps.clear();
+                await db.sales_reps.bulkPut(data.sales_reps);
             }
             if (data.categories && Array.isArray(data.categories)) {
                 call('categories');
@@ -290,6 +299,7 @@ window.OfflineDB = (function() {
         }
     }
     function getAllSuppliers() { return db.suppliers.toArray(); }
+    function getAllSalesReps() { return db.sales_reps.toArray(); }
     function getAllCategories() { return db.categories.toArray(); }
     function getAllBrands() { return db.brands.toArray(); }
     function getAllUnits() { return db.units.toArray(); }
@@ -426,6 +436,7 @@ window.OfflineDB = (function() {
         getAllProducts,
         getAllSales,
         getAllSuppliers,
+        getAllSalesReps,
         getAllCategories,
         getAllBrands,
         getAllUnits,

@@ -209,6 +209,103 @@ class DigiflazzController extends Controller {
         exit;
     }
 
+    public function apiGetTargetHistory() {
+        AuthController::requireAuth();
+        $number = isset($_GET['number']) ? trim(Security::sanitize($_GET['number'])) : '';
+        if (empty($number) || strlen($number) < 3) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'history' => []]);
+            exit;
+        }
+
+        $db = Database::getInstance()->getConnection();
+        
+        $stmt = $db->prepare("
+            SELECT t.id, t.ref_id, t.buyer_sku_code, t.customer_no, t.customer_name, 
+                   t.product_name, t.category, t.brand, t.type, t.sell_price, t.status, 
+                   t.seller_name, t.created_at, t.user_id, u.name as user_name
+            FROM digi_transactions t
+            LEFT JOIN users u ON t.user_id = u.id
+            WHERE t.customer_no = :number
+            ORDER BY t.created_at DESC
+            LIMIT 10
+        ");
+        $stmt->execute(['number' => $number]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($rows)) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'history' => []]);
+            exit;
+        }
+
+        // Fetch products availability & current price
+        $skus = array_unique(array_column($rows, 'buyer_sku_code'));
+        $productsMap = [];
+        if (!empty($skus)) {
+            $in  = str_repeat('?,', count($skus) - 1) . '?';
+            $stmtProd = $db->prepare("
+                SELECT buyer_sku_code, product_name, category, brand, type, 
+                       price as seller_price, sell_price, buyer_product_status, 
+                       seller_product_status, is_active, seller_name,
+                       unlimited_stock, stock
+                FROM digi_products 
+                WHERE buyer_sku_code IN ($in)
+            ");
+            $stmtProd->execute(array_values($skus));
+            $prods = $stmtProd->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($prods as $p) {
+                $productsMap[$p['buyer_sku_code']] = $p;
+            }
+        }
+
+        $history = [];
+        foreach ($rows as $r) {
+            $sku = $r['buyer_sku_code'];
+            $prodInfo = $productsMap[$sku] ?? null;
+
+            $isAvailable = false;
+            if ($prodInfo) {
+                $isAvailable = ((int)($prodInfo['is_active'] ?? 0) === 1) &&
+                               ((int)($prodInfo['buyer_product_status'] ?? 0) === 1) &&
+                               ((int)($prodInfo['seller_product_status'] ?? 0) === 1);
+            }
+
+            $seller = !empty($r['seller_name']) ? $r['seller_name'] : (!empty($r['user_name']) ? $r['user_name'] : 'Kasir');
+
+            $history[] = [
+                'id' => (int)$r['id'],
+                'buyer_sku_code' => $r['buyer_sku_code'],
+                'product_name' => $r['product_name'] ?: ($prodInfo['product_name'] ?? $r['buyer_sku_code']),
+                'category' => $r['category'] ?: ($prodInfo['category'] ?? ''),
+                'brand' => $r['brand'] ?: ($prodInfo['brand'] ?? ''),
+                'type' => $r['type'] ?: ($prodInfo['type'] ?? 'prepaid'),
+                'sell_price' => (float)$r['sell_price'],
+                'status' => $r['status'],
+                'seller_name' => $seller,
+                'created_at' => $r['created_at'],
+                'is_available' => $isAvailable,
+                'product' => $prodInfo ? [
+                    'buyer_sku_code' => $prodInfo['buyer_sku_code'],
+                    'product_name' => $prodInfo['product_name'],
+                    'category' => $prodInfo['category'],
+                    'brand' => $prodInfo['brand'],
+                    'type' => $prodInfo['type'],
+                    'seller_price' => (float)$prodInfo['seller_price'],
+                    'sell_price' => (float)($prodInfo['sell_price'] ?: $r['sell_price']),
+                    'seller_name' => $prodInfo['seller_name'] ?: $seller,
+                    'buyer_product_status' => (int)$prodInfo['buyer_product_status'],
+                    'seller_product_status' => (int)$prodInfo['seller_product_status'],
+                    'is_active' => (int)$prodInfo['is_active']
+                ] : null
+            ];
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true, 'history' => $history]);
+        exit;
+    }
+
 
 
     public function apiSearchProducts() {

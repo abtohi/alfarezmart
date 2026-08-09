@@ -1657,6 +1657,23 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
                     <!-- Top 3 Seller Recommendations & Seller Filter Container -->
                     <div id="seller-recommendation-container" class="mb-3" style="display:none;"></div>
 
+                    <!-- Riwayat Pembelian Sebelumnya Container -->
+                    <div id="target-history-container" class="mb-3" style="display:none;">
+                        <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 16px; background: var(--surface-2, #f8fafc); border: 1px solid var(--border-color, #e2e8f0) !important;">
+                            <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between px-3 pt-3 pb-2">
+                                <h6 class="fw-bold mb-0 text-primary d-flex align-items-center" style="font-size: 13px; letter-spacing: 0.3px;">
+                                    <i class="bi bi-clock-history me-2 fs-6"></i>Riwayat Pembelian Sebelumnya
+                                </h6>
+                                <span id="target-history-badge" class="badge bg-primary bg-opacity-10 text-primary px-2 py-1" style="font-size: 10px; border-radius: 6px;">0 Transaksi</span>
+                            </div>
+                            <div class="card-body p-3 pt-1">
+                                <div id="target-history-list" class="d-flex flex-column gap-2">
+                                    <!-- History items injected here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <label class="form-label fw-bold text-muted small text-uppercase mt-3 mb-0" id="label-product">Pilih Produk</label>
                     <div id="product-loading" class="text-center py-4" style="display:none;">
                         <span class="spinner-border text-primary"></span>
@@ -2603,6 +2620,8 @@ function openTrxModal(title, category, type) {
     document.getElementById('brand-filter-container').style.display = 'none';
     const recCont = document.getElementById('seller-recommendation-container');
     if (recCont) recCont.style.display = 'none';
+    const targetHistCont = document.getElementById('target-history-container');
+    if (targetHistCont) targetHistCont.style.display = 'none';
     currentSelectedSellerFilter = '';
     document.getElementById('btn-pay-postpaid').style.display = 'none';
     document.getElementById('product-list-container').style.display = 'block';
@@ -2833,10 +2852,147 @@ function filterProductsByPrefix(phone) {
     }
 }
 
+// ── Target Purchase History ──────────────────────────────────────────────────
+let targetHistoryDebounceTimer = null;
+
+function debouncedCheckTargetHistory(val) {
+    if (targetHistoryDebounceTimer) clearTimeout(targetHistoryDebounceTimer);
+    targetHistoryDebounceTimer = setTimeout(() => {
+        checkAndRenderTargetHistory(val);
+    }, 400);
+}
+
+async function checkAndRenderTargetHistory(customerNo) {
+    const container = document.getElementById('target-history-container');
+    const listEl = document.getElementById('target-history-list');
+    const badgeEl = document.getElementById('target-history-badge');
+    if (!container || !listEl) return;
+
+    const trimmed = (customerNo || '').trim();
+    if (trimmed.length < 3) {
+        container.style.display = 'none';
+        listEl.innerHTML = '';
+        return;
+    }
+
+    try {
+        const res = await fetch(`<?= BASE_URL ?>api/ppob/target-history?number=${encodeURIComponent(trimmed)}`);
+        const data = await res.json();
+
+        if (!data.success || !data.history || data.history.length === 0) {
+            container.style.display = 'none';
+            listEl.innerHTML = '';
+            return;
+        }
+
+        const history = data.history;
+        if (badgeEl) badgeEl.innerText = `${history.length} Transaksi`;
+
+        let html = '';
+        history.forEach(item => {
+            const isAvail = item.is_available && item.product;
+            const statusClass = item.status === 'success' ? 'success' : (item.status === 'pending' || item.status === 'processing' ? 'warning' : 'danger');
+            const statusText = item.status === 'success' ? 'Sukses' : (item.status === 'pending' || item.status === 'processing' ? 'Proses' : 'Gagal');
+            const formattedPrice = typeof formatRp === 'function' ? formatRp(item.sell_price) : `Rp${Number(item.sell_price).toLocaleString('id-ID')}`;
+            const sellerName = item.seller_name || 'Kasir';
+            const dateStr = item.created_at ? item.created_at.substring(0, 16) : '-';
+            const jsonProd = isAvail ? encodeURIComponent(JSON.stringify(item.product)) : '';
+
+            let actionBtn = '';
+            if (isAvail) {
+                actionBtn = `<button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-1.5 rounded-pill d-inline-flex align-items-center shadow-sm" style="font-size: 11px; transition: all 0.2s;" onclick="reorderPpobProduct('${item.buyer_sku_code}', '${jsonProd}')">
+                    <i class="bi bi-arrow-repeat me-1 fs-6"></i>Beli Lagi
+                </button>`;
+            } else {
+                actionBtn = `<span class="badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-25 px-2.5 py-1.5 rounded-pill fw-bold" style="font-size: 10px;">
+                    <i class="bi bi-x-circle me-1"></i>Tidak Tersedia Lagi
+                </span>`;
+            }
+
+            html += `
+                <div class="d-flex align-items-center justify-content-between p-2.5 rounded-3 border" style="background: var(--surface-1, #ffffff); border-color: var(--border-color, #e2e8f0) !important; gap: 10px;">
+                    <div class="d-flex flex-column min-w-0 flex-grow-1" style="gap: 2px;">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="fw-bold text-dark text-truncate" style="font-size: 12px; color: var(--text-primary) !important;">${item.product_name}</span>
+                            <span class="badge bg-${statusClass} bg-opacity-10 text-${statusClass}" style="font-size: 9px; padding: 2px 6px;">${statusText}</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 text-muted flex-wrap" style="font-size: 11px;">
+                            <span><i class="bi bi-tag-fill me-1 text-primary opacity-75"></i>${formattedPrice}</span>
+                            <span>•</span>
+                            <span><i class="bi bi-shop me-1 text-info opacity-75"></i>Seller: <strong style="color: var(--text-primary);">${sellerName}</strong></span>
+                            <span>•</span>
+                            <span style="font-size: 10px;"><i class="bi bi-calendar3 me-1"></i>${dateStr}</span>
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0">
+                        ${actionBtn}
+                    </div>
+                </div>
+            `;
+        });
+
+        listEl.innerHTML = html;
+        container.style.display = 'block';
+
+    } catch (err) {
+        console.error('Error fetching target history:', err);
+        container.style.display = 'none';
+    }
+}
+
+async function reorderPpobProduct(sku, encodedProduct) {
+    const customerNo = document.getElementById('customer-no').value;
+    if (!customerNo) {
+        showAlert('⚠️ Masukkan nomor HP/Tujuan terlebih dahulu!', 'warning');
+        return;
+    }
+
+    let product = null;
+    if (encodedProduct) {
+        try {
+            product = JSON.parse(decodeURIComponent(encodedProduct));
+        } catch(e) {}
+    }
+
+    if (!product) {
+        if (typeof currentProducts !== 'undefined' && Array.isArray(currentProducts)) {
+            product = currentProducts.find(p => p.buyer_sku_code === sku);
+        }
+    }
+
+    if (!product) {
+        try {
+            const res = await fetch(`<?= BASE_URL ?>api/ppob/products/search?q=${encodeURIComponent(sku)}`);
+            const data = await res.json();
+            if (data.success && data.data && data.data.length > 0) {
+                product = data.data.find(p => p.buyer_sku_code === sku) || data.data[0];
+            }
+        } catch(e) {}
+    }
+
+    if (product) {
+        if (typeof confirmPurchase === 'function') {
+            confirmPurchase(product);
+        } else if (typeof processTransaction === 'function') {
+            processTransaction({
+                sku: product.buyer_sku_code,
+                customer_no: customerNo,
+                sell_price: product.sell_price || product.seller_price,
+                product_name: product.product_name,
+                brand: product.brand,
+                customer_name: ''
+            });
+        }
+    } else {
+        showAlert('❌ Produk tidak ditemukan atau sudah tidak aktif', 'error');
+    }
+}
+
 document.getElementById('customer-no').addEventListener('input', (e) => {
     if (currentCategory === 'pulsa' || currentCategory === 'data' || currentCategory === 'sms_nelpon') {
         filterProductsByPrefix(e.target.value);
     }
+    debouncedCheckTargetHistory(e.target.value);
 });
 
 function renderSellerRecommendations(products) {

@@ -195,6 +195,11 @@ class ApiController extends Controller
         $stmt->execute();
         $financeLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Sales Reps
+        require_once __DIR__ . '/../models/SalesRepModel.php';
+        $salesRepModel = new SalesRepModel();
+        $salesReps = $salesRepModel->getAllWithSupplier();
+
         // Supplier-Product mappings for offline supplier-aware search
         require_once __DIR__ . '/../models/SupplierProductModel.php';
         $spModel = new SupplierProductModel();
@@ -220,6 +225,7 @@ class ApiController extends Controller
             'products'  => $products,
             'sales'     => $sales,
             'suppliers' => $suppliers,
+            'sales_reps'=> $salesReps,
             'purchases' => $purchases,
             'categories' => $categories,
             'brands'    => $brands,

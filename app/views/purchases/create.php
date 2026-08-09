@@ -480,34 +480,63 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // API Fallback: If PHP failed to inject salesReps (e.g., production DB issue),
-    // fetch them from the API and repopulate the SearchBox.
-    if (salesRepsOptions.length <= 1) {
+    // Fallback: load sales reps and suppliers from IndexedDB or API if empty or offline
+    if (salesRepsOptions.length <= 1 || suppliersData.length === 0) {
         (async () => {
-            try {
-                const res = await fetch(BASE_URL + 'api/sales-reps');
-                // API returns a plain array
-                const data = await res.json();
-                const arr = Array.isArray(data) ? data : (data.data || []);
-                if (arr.length > 0) {
-                    const freshOpts = [{ value: 'other', label: '📦 Other — belum tahu supplier/sales' }];
-                    arr.forEach(sr => {
-                        const label = (sr.name || '') + (sr.supplier_name ? ' · ' + sr.supplier_name : '');
-                        freshOpts.push({ value: String(sr.id), label: label });
-                        salesRepsLookup[String(sr.id)] = {
-                            supplier_id: String(sr.supplier_id || ''),
-                            supplier_name: sr.supplier_name || '',
-                            name: sr.name || '',
-                            phone: sr.phone || '',
-                            visit_day: sr.visit_day || ''
-                        };
-                    });
-                    if (salesRepSB) {
-                        salesRepSB.setOptions(freshOpts);
+            // First: load from local IndexedDB for instant offline access
+            if (typeof OfflineDB !== 'undefined') {
+                try {
+                    const [cachedReps, cachedSups] = await Promise.all([
+                        OfflineDB.getAllSalesReps ? OfflineDB.getAllSalesReps() : [],
+                        OfflineDB.getAllSuppliers ? OfflineDB.getAllSuppliers() : []
+                    ]);
+                    if (cachedSups && cachedSups.length > 0 && suppliersData.length === 0) {
+                        cachedSups.forEach(s => suppliersData.push({ value: String(s.id), label: s.name }));
                     }
+                    if (cachedReps && cachedReps.length > 0 && salesRepsOptions.length <= 1) {
+                        const freshOpts = [{ value: 'other', label: '📦 Other — belum tahu supplier/sales' }];
+                        cachedReps.forEach(sr => {
+                            const label = (sr.name || '') + (sr.supplier_name ? ' · ' + sr.supplier_name : '');
+                            freshOpts.push({ value: String(sr.id), label: label });
+                            salesRepsLookup[String(sr.id)] = {
+                                supplier_id: String(sr.supplier_id || ''),
+                                supplier_name: sr.supplier_name || '',
+                                name: sr.name || '',
+                                phone: sr.phone || '',
+                                visit_day: sr.visit_day || ''
+                            };
+                        });
+                        if (salesRepSB) salesRepSB.setOptions(freshOpts);
+                    }
+                } catch(e) {
+                    console.warn('Offline DB sales reps load warning:', e);
                 }
-            } catch(e) {
-                console.warn('Sales reps API fallback failed:', e);
+            }
+
+            // Second: try API if online
+            if (navigator.onLine) {
+                try {
+                    const res = await fetch(BASE_URL + 'api/sales-reps');
+                    const data = await res.json();
+                    const arr = Array.isArray(data) ? data : (data.data || []);
+                    if (arr.length > 0) {
+                        const freshOpts = [{ value: 'other', label: '📦 Other — belum tahu supplier/sales' }];
+                        arr.forEach(sr => {
+                            const label = (sr.name || '') + (sr.supplier_name ? ' · ' + sr.supplier_name : '');
+                            freshOpts.push({ value: String(sr.id), label: label });
+                            salesRepsLookup[String(sr.id)] = {
+                                supplier_id: String(sr.supplier_id || ''),
+                                supplier_name: sr.supplier_name || '',
+                                name: sr.name || '',
+                                phone: sr.phone || '',
+                                visit_day: sr.visit_day || ''
+                            };
+                        });
+                        if (salesRepSB) salesRepSB.setOptions(freshOpts);
+                    }
+                } catch(e) {
+                    console.warn('Sales reps API fallback failed:', e);
+                }
             }
         })();
     }
@@ -3298,8 +3327,20 @@ async function submitPurchase() {
             btn.disabled = false;
         }
     } catch (err) {
+        console.error('Purchase network/submit error:', err);
+        if (typeof OfflineDB !== 'undefined') {
+            try {
+                await OfflineDB.addPendingChange(`${BASE_URL}api/purchases`, 'POST', payload);
+                localStorage.removeItem('alfarezmart_purchase_draft');
+                showToast('📦 Sinyal lemah. Pembelian disimpan di perangkat & akan sinkron saat online!', 'info', 5000);
+                if (typeof updateSyncBadge === 'function') updateSyncBadge();
+                setTimeout(() => window.location.reload(), 1800);
+                return;
+            } catch (queueErr) {
+                console.error('Failed to queue purchase offline:', queueErr);
+            }
+        }
         showToast('❌ Error: ' + (err.message || 'Terjadi kesalahan saat menyimpan'), 'error');
-        console.error('Purchase error:', err);
         btn.innerHTML = prevText;
         btn.disabled = false;
     }

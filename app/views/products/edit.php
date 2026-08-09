@@ -1420,22 +1420,88 @@ async function submitProduct(e) {
         supplier_invoice_name: collectInvoiceNames(),
     };
 
+    // Helper to queue offline changes for product and packagings
+    const queueOfflineProductChanges = async () => {
+        if (typeof OfflineDB === 'undefined') return;
+        await OfflineDB.addPendingChange(`${BASE_URL}api/products/update/${productId}`, 'POST', productData);
+        for (const pId of deletedPkgIds) {
+            await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pId}/delete`, 'POST', { csrf_token: csrfTokenValue });
+        }
+        for (const div of pkgDivs) {
+            let pkgId = div.getAttribute('data-pkg-id');
+            const unitSB = div.querySelector('.unit-searchbox-instance')?._searchbox;
+            const pkgPayload = {
+                csrf_token: csrfTokenValue,
+                unit_id: unitSB ? unitSB.getValue() : '',
+                contained_qty: div.querySelector('.contained-qty')?.value || 1,
+                buy_price: div.querySelector('.buy-price')?.value || 0,
+                sell_price_retail: div.querySelector('.retail-price')?.value || 0,
+                sell_price_wholesale: div.querySelector('.wholesale-price')?.value || 0,
+                barcode: div.querySelector('.barcode-field')?.value || '',
+                ppn_pct: div.querySelector('.ppn-input')?.value || 0,
+                discount_mode: div.querySelector('.discount-mode')?.value || 'rp',
+                discount_value: div.querySelector('.discount-value')?.value || 0
+            };
+            if (pkgId) {
+                await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pkgId}`, 'POST', pkgPayload);
+                const tiers = collectQtyTiers(div);
+                if (tiers.length > 0) {
+                    await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pkgId}/qty-prices`, 'POST', { csrf_token: csrfTokenValue, tiers });
+                }
+            } else {
+                await OfflineDB.addPendingChange(`${BASE_URL}api/products/${productId}/packaging/add`, 'POST', pkgPayload);
+            }
+        }
+        if (typeof updateSyncBadge === 'function') updateSyncBadge();
+    };
+
     // ── ALWAYS optimistically update local DB first ──────────────────────────
     let savedLocally = false;
     if (typeof OfflineDB !== 'undefined') {
         try {
-            const localProduct = await OfflineDB.getProductById(productId);
-            if (localProduct) {
-                localProduct.full_name = productData.full_name;
-                localProduct.short_label = productData.short_label;
-                localProduct.invoice_name = productData.invoice_name;
-                localProduct.brand_name = brandSB ? brandSB.getLabel() : localProduct.brand_name;
-                localProduct.category_name = categorySB ? categorySB.getLabel() : localProduct.category_name;
-                localProduct.is_available = parseInt(productData.is_available) || 0;
-                localProduct.is_pending_update = true;
-                await OfflineDB.saveProduct(localProduct);
-                savedLocally = true;
+            let localProduct = await OfflineDB.getProductById(productId);
+            if (!localProduct) {
+                localProduct = { id: parseInt(productId) };
             }
+            localProduct.full_name = productData.full_name;
+            localProduct.short_label = productData.short_label;
+            localProduct.invoice_name = productData.invoice_name;
+            localProduct.brand_name = brandSB ? brandSB.getLabel() : (localProduct.brand_name || '');
+            localProduct.category_name = categorySB ? categorySB.getLabel() : (localProduct.category_name || '');
+            localProduct.is_available = parseInt(productData.is_available) || 0;
+            localProduct.weight_value = productData.weight_value;
+            localProduct.weight_unit = productData.weight_unit;
+            localProduct.supplier_product_code = productData.supplier_product_code;
+            localProduct.supplier_invoice_name = productData.supplier_invoice_name;
+            localProduct.is_pending_update = true;
+
+            // Build updated packagings array for local display
+            const updatedPackagings = [];
+            pkgDivs.forEach((div, idx) => {
+                const unitSB = div.querySelector('.unit-searchbox-instance')?._searchbox;
+                const unitId = unitSB ? unitSB.getValue() : '';
+                const unitName = unitSB ? unitSB.getLabel() : '';
+                const pkgId = div.getAttribute('data-pkg-id');
+                updatedPackagings.push({
+                    id: pkgId ? parseInt(pkgId) : (Date.now() + idx),
+                    product_id: parseInt(productId),
+                    level: idx + 1,
+                    unit_id: unitId ? parseInt(unitId) : null,
+                    unit_name: unitName,
+                    contained_qty: parseFloat(div.querySelector('.contained-qty')?.value) || 1,
+                    buy_price: parseFloat(div.querySelector('.buy-price')?.value) || 0,
+                    sell_price_retail: parseFloat(div.querySelector('.retail-price')?.value) || 0,
+                    sell_price_wholesale: parseFloat(div.querySelector('.wholesale-price')?.value) || 0,
+                    barcode: div.querySelector('.barcode-field')?.value || '',
+                    ppn_pct: parseFloat(div.querySelector('.ppn-input')?.value) || 0,
+                    discount_mode: div.querySelector('.discount-mode')?.value || 'rp',
+                    discount_value: parseFloat(div.querySelector('.discount-value')?.value) || 0
+                });
+            });
+            localProduct.packagings = updatedPackagings;
+
+            await OfflineDB.saveProduct(localProduct);
+            savedLocally = true;
         } catch (dexieErr) {
             console.warn('Dexie optimistic update failed:', dexieErr);
         }
@@ -1443,41 +1509,10 @@ async function submitProduct(e) {
 
     // ── If offline, queue pending changes and done ───────────────────────────
     if (!navigator.onLine) {
-        if (typeof OfflineDB !== 'undefined') {
-            try {
-                await OfflineDB.addPendingChange(`${BASE_URL}api/products/update/${productId}`, 'POST', productData);
-                for (const pId of deletedPkgIds) {
-                    await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pId}/delete`, 'POST', { csrf_token: csrfTokenValue });
-                }
-                for (const div of pkgDivs) {
-                    let pkgId = div.getAttribute('data-pkg-id');
-                    const unitSB = div.querySelector('.unit-searchbox-instance')?._searchbox;
-                    const pkgPayload = {
-                        csrf_token: csrfTokenValue,
-                        unit_id: unitSB ? unitSB.getValue() : '',
-                        contained_qty: div.querySelector('.contained-qty')?.value || 1,
-                        buy_price: div.querySelector('.buy-price')?.value || 0,
-                        sell_price_retail: div.querySelector('.retail-price')?.value || 0,
-                        sell_price_wholesale: div.querySelector('.wholesale-price')?.value || 0,
-                        barcode: div.querySelector('.barcode-field')?.value || '',
-                        ppn_pct: div.querySelector('.ppn-input')?.value || 0,
-                        discount_mode: div.querySelector('.discount-mode')?.value || 'rp',
-                        discount_value: div.querySelector('.discount-value')?.value || 0
-                    };
-                    if (pkgId) {
-                        await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pkgId}`, 'POST', pkgPayload);
-                        const tiers = collectQtyTiers(div);
-                        if (tiers.length > 0) {
-                            await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pkgId}/qty-prices`, 'POST', { csrf_token: csrfTokenValue, tiers });
-                        }
-                    } else {
-                        await OfflineDB.addPendingChange(`${BASE_URL}api/products/${productId}/packaging/add`, 'POST', pkgPayload);
-                    }
-                }
-                if (typeof updateSyncBadge === 'function') updateSyncBadge();
-            } catch (queueErr) {
-                console.warn('Gagal antri offline changes:', queueErr);
-            }
+        try {
+            await queueOfflineProductChanges();
+        } catch (queueErr) {
+            console.warn('Gagal antri offline changes:', queueErr);
         }
         showToast('Offline. Perubahan disimpan di perangkat & akan sinkron saat online.', 'info');
         setTimeout(() => window.location.href = `${BASE_URL}products/${productId}`, 1500);
@@ -1593,11 +1628,7 @@ async function submitProduct(e) {
         console.warn('API edit produk gagal, menyimpan ke antrian offline:', err);
         if (typeof OfflineDB !== 'undefined') {
             try {
-                await OfflineDB.addPendingChange(`${BASE_URL}api/products/update/${productId}`, 'POST', productData);
-                for (const pId of deletedPkgIds) {
-                    await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pId}/delete`, 'POST', { csrf_token: csrfTokenValue });
-                }
-                if (typeof updateSyncBadge === 'function') updateSyncBadge();
+                await queueOfflineProductChanges();
                 showToast('Sinyal lemah. Perubahan disimpan di perangkat & akan sinkron saat koneksi stabil.', 'warning', 4000);
                 setTimeout(() => window.location.href = `${BASE_URL}products/${productId}`, 1800);
             } catch (queueErr) {

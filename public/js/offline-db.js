@@ -8,6 +8,7 @@ window.OfflineDB = (function() {
     const STORE_PRODUCTS = 'products';
     const STORE_SALES = 'sales';
     const STORE_SUPPLIERS = 'suppliers';
+    const STORE_SALES_REPS = 'sales_reps';
     const STORE_PURCHASES = 'purchases';
     const STORE_DEBTS = 'debts';
     const STORE_FINANCE = 'finance';
@@ -45,7 +46,7 @@ window.OfflineDB = (function() {
                 }
 
                 // New stores for full offline mode
-                [STORE_SALES, STORE_SUPPLIERS, STORE_PURCHASES, STORE_DEBTS, STORE_FINANCE, STORE_FINANCE_LOGS, STORE_CATEGORIES].forEach(storeName => {
+                [STORE_SALES, STORE_SUPPLIERS, STORE_SALES_REPS, STORE_PURCHASES, STORE_DEBTS, STORE_FINANCE, STORE_FINANCE_LOGS, STORE_CATEGORIES].forEach(storeName => {
                     if (!db.objectStoreNames.contains(storeName)) {
                         db.createObjectStore(storeName, { keyPath: 'id' });
                     }
@@ -133,6 +134,10 @@ window.OfflineDB = (function() {
                 // Suppliers
                 if (data.suppliers && Array.isArray(data.suppliers)) {
                     await _saveAll(STORE_SUPPLIERS, data.suppliers);
+                }
+                // Sales Reps
+                if (data.sales_reps && Array.isArray(data.sales_reps)) {
+                    await _saveAll(STORE_SALES_REPS, data.sales_reps);
                 }
                 // Categories
                 if (data.categories && Array.isArray(data.categories)) {
@@ -252,6 +257,7 @@ window.OfflineDB = (function() {
 
     function getAllSales() { return _getAll(STORE_SALES); }
     function getAllSuppliers() { return _getAll(STORE_SUPPLIERS); }
+    function getAllSalesReps() { return _getAll(STORE_SALES_REPS); }
     function getAllPurchases() { return _getAll(STORE_PURCHASES); }
     function getAllDebts() { return _getAll(STORE_DEBTS); }
     function getAllFinance() { return _getAll(STORE_FINANCE); }
@@ -574,6 +580,10 @@ window.OfflineDB = (function() {
             call('suppliers');
             await _saveAll(STORE_SUPPLIERS, data.suppliers);
         }
+        if (data.sales_reps && Array.isArray(data.sales_reps)) {
+            call('sales_reps');
+            await _saveAll(STORE_SALES_REPS, data.sales_reps);
+        }
         if (data.categories && Array.isArray(data.categories)) {
             call('categories');
             await _saveAll(STORE_CATEGORIES, data.categories);
@@ -618,6 +628,7 @@ window.OfflineDB = (function() {
         getAllProducts,
         getAllSales,
         getAllSuppliers,
+        getAllSalesReps,
         getAllPurchases,
         getAllDebts,
         getAllFinance,

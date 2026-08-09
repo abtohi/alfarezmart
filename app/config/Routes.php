@@ -142,6 +142,7 @@ $router->post('/api/ppob/custom-price', 'DigiflazzController@apiSaveCustomPrice'
 $router->post('/api/ppob/custom-price/bulk', 'DigiflazzController@apiSaveCustomPricesBulk');
 $router->post('/api/ppob/custom-price/reset', 'DigiflazzController@apiResetCustomPrice');
 $router->get('/api/ppob/seller-history', 'DigiflazzController@apiSellerHistory');
+$router->get('/api/ppob/target-history', 'DigiflazzController@apiGetTargetHistory');
 
 // PPOB Customers API
 $router->get('/api/ppob/customers', 'PpobCustomerController@getByType');

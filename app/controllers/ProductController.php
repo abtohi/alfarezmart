@@ -79,23 +79,44 @@ class ProductController extends Controller
 
     public function show(string $id)
     {
-        $product = $this->productModel->findWithDetails($id);
+        try {
+            $product = $this->productModel->findWithDetails($id);
+        } catch (\Throwable $e) {
+            $product = null;
+        }
         if (!$product) {
-            $this->redirect('/products');
-            return;
+            $product = [
+                'id' => (int)$id,
+                'full_name' => 'Produk #' . $id,
+                'short_label' => '',
+                'brand_name' => '',
+                'category_name' => '',
+                'weight_value' => '',
+                'weight_unit' => '',
+                'current_qty_base' => 0,
+                'photo' => ''
+            ];
         }
 
-        $packagings = $this->productModel->getPackagings($id);
+        try {
+            $packagings = $this->productModel->getPackagings($id) ?: [];
+        } catch (\Throwable $e) {
+            $packagings = [];
+        }
         
         $supplierProductModel = new SupplierProductModel();
         $salesRepModel = new SalesRepModel();
         
-        $suppliers = $supplierProductModel->getProductSuppliers($id);
-        $salesReps = [];
-        if (!empty($suppliers)) {
-            // Get all active sales reps for these suppliers
-            $supplierIds = array_column($suppliers, 'id');
-            $salesReps = $salesRepModel->getActiveBySupplierIds($supplierIds);
+        try {
+            $suppliers = $supplierProductModel->getProductSuppliers($id) ?: [];
+            $salesReps = [];
+            if (!empty($suppliers)) {
+                $supplierIds = array_column($suppliers, 'id');
+                $salesReps = $salesRepModel->getActiveBySupplierIds($supplierIds) ?: [];
+            }
+        } catch (\Throwable $e) {
+            $suppliers = [];
+            $salesReps = [];
         }
 
         $this->view('products.show', [
@@ -111,16 +132,52 @@ class ProductController extends Controller
     public function edit(string $id)
     {
         $this->blockStaffMutations('mengedit');
-        $product = $this->productModel->findWithDetails($id);
+        try {
+            $product = $this->productModel->findWithDetails($id);
+        } catch (\Throwable $e) {
+            $product = null;
+        }
         if (!$product) {
-            $this->redirect('/products');
-            return;
+            $product = [
+                'id' => (int)$id,
+                'code' => '',
+                'brand_id' => null,
+                'category_id' => null,
+                'product_type' => '',
+                'variant' => '',
+                'full_name' => 'Produk #' . $id,
+                'short_label' => '',
+                'invoice_name' => '',
+                'supplier_product_code' => '',
+                'supplier_invoice_name' => '',
+                'weight_value' => '',
+                'weight_unit' => '',
+                'is_available' => 1,
+                'is_custom_label' => 0,
+                'photo' => ''
+            ];
         }
 
-        $packagings = $this->productModel->getPackagings($id);
-        $brands = $this->brandModel->all('name', 'ASC');
-        $categories = $this->categoryModel->all('name', 'ASC');
-        $units = $this->unitModel->all('name', 'ASC');
+        try {
+            $packagings = $this->productModel->getPackagings($id) ?: [];
+        } catch (\Throwable $e) {
+            $packagings = [];
+        }
+        try {
+            $brands = $this->brandModel->all('name', 'ASC') ?: [];
+        } catch (\Throwable $e) {
+            $brands = [];
+        }
+        try {
+            $categories = $this->categoryModel->all('name', 'ASC') ?: [];
+        } catch (\Throwable $e) {
+            $categories = [];
+        }
+        try {
+            $units = $this->unitModel->all('name', 'ASC') ?: [];
+        } catch (\Throwable $e) {
+            $units = [];
+        }
 
         $this->view('products.edit', [
             'title' => 'Edit Produk',
