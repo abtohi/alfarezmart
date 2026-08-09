@@ -1644,6 +1644,9 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
                             <div id="target-history-list" class="d-flex flex-column gap-2">
                                 <!-- History items injected here -->
                             </div>
+                            <div id="target-history-pagination" class="d-flex align-items-center justify-content-between mt-3 pt-2 border-top" style="display:none; border-color: var(--border-color, #e2e8f0) !important;">
+                                <!-- Pagination controls injected here -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2863,16 +2866,26 @@ function debouncedCheckTargetHistory(val) {
     }, 400);
 }
 
+let currentTargetHistory = [];
+let currentTargetHistoryPage = 1;
+const TARGET_HIST_PER_PAGE = 3;
+
 async function checkAndRenderTargetHistory(customerNo) {
     const container = document.getElementById('target-history-container');
     const listEl = document.getElementById('target-history-list');
     const badgeEl = document.getElementById('target-history-badge');
+    const paginationEl = document.getElementById('target-history-pagination');
     if (!container || !listEl) return;
 
     const trimmed = (customerNo || '').trim();
     if (trimmed.length < 3) {
         container.style.display = 'none';
         listEl.innerHTML = '';
+        if (paginationEl) {
+            paginationEl.style.display = 'none';
+            paginationEl.innerHTML = '';
+        }
+        currentTargetHistory = [];
         return;
     }
 
@@ -2887,62 +2900,116 @@ async function checkAndRenderTargetHistory(customerNo) {
                     <i class="bi bi-info-circle me-1 opacity-75 text-primary"></i>Belum ada riwayat transaksi sebelumnya untuk nomor <strong>${trimmed}</strong>
                 </div>
             `;
+            if (paginationEl) {
+                paginationEl.style.display = 'none';
+                paginationEl.innerHTML = '';
+            }
+            currentTargetHistory = [];
             container.style.display = 'block';
             return;
         }
 
-        const history = data.history;
-        if (badgeEl) badgeEl.innerText = `${history.length} Transaksi`;
+        currentTargetHistory = data.history;
+        if (badgeEl) badgeEl.innerText = `${currentTargetHistory.length} Transaksi`;
 
-        let html = '';
-        history.forEach(item => {
-            const isAvail = item.is_available && item.product;
-            const statusClass = item.status === 'success' ? 'success' : (item.status === 'pending' || item.status === 'processing' ? 'warning' : 'danger');
-            const statusText = item.status === 'success' ? 'Sukses' : (item.status === 'pending' || item.status === 'processing' ? 'Proses' : 'Gagal');
-            const formattedPrice = typeof formatRp === 'function' ? formatRp(item.sell_price) : `Rp${Number(item.sell_price).toLocaleString('id-ID')}`;
-            const sellerName = item.seller_name || 'Kasir';
-            const dateStr = item.created_at ? item.created_at.substring(0, 16) : '-';
-            const jsonProd = isAvail ? encodeURIComponent(JSON.stringify(item.product)) : '';
-
-            let actionBtn = '';
-            if (isAvail) {
-                actionBtn = `<button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-1.5 rounded-pill d-inline-flex align-items-center shadow-sm" style="font-size: 11px; transition: all 0.2s;" onclick="reorderPpobProduct('${item.buyer_sku_code}', '${jsonProd}')">
-                    <i class="bi bi-arrow-repeat me-1 fs-6"></i>Beli Lagi
-                </button>`;
-            } else {
-                actionBtn = `<span class="badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-25 px-2.5 py-1.5 rounded-pill fw-bold" style="font-size: 10px;">
-                    <i class="bi bi-x-circle me-1"></i>Tidak Tersedia Lagi
-                </span>`;
-            }
-
-            html += `
-                <div class="d-flex align-items-center justify-content-between p-2.5 rounded-3 border" style="background: var(--surface-1, #ffffff); border-color: var(--border-color, #e2e8f0) !important; gap: 10px;">
-                    <div class="d-flex flex-column min-w-0 flex-grow-1" style="gap: 2px;">
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <span class="fw-bold text-dark text-truncate" style="font-size: 12px; color: var(--text-primary) !important;">${item.product_name}</span>
-                            <span class="badge bg-${statusClass} bg-opacity-10 text-${statusClass}" style="font-size: 9px; padding: 2px 6px;">${statusText}</span>
-                        </div>
-                        <div class="d-flex align-items-center gap-2 text-muted flex-wrap" style="font-size: 11px;">
-                            <span><i class="bi bi-tag-fill me-1 text-primary opacity-75"></i>${formattedPrice}</span>
-                            <span>•</span>
-                            <span><i class="bi bi-shop me-1 text-info opacity-75"></i>Seller: <strong style="color: var(--text-primary);">${sellerName}</strong></span>
-                            <span>•</span>
-                            <span style="font-size: 10px;"><i class="bi bi-calendar3 me-1"></i>${dateStr}</span>
-                        </div>
-                    </div>
-                    <div class="flex-shrink-0">
-                        ${actionBtn}
-                    </div>
-                </div>
-            `;
-        });
-
-        listEl.innerHTML = html;
+        renderTargetHistoryPage(1);
         container.style.display = 'block';
 
     } catch (err) {
         console.error('Error fetching target history:', err);
         container.style.display = 'none';
+    }
+}
+
+function renderTargetHistoryPage(page) {
+    const listEl = document.getElementById('target-history-list');
+    const paginationEl = document.getElementById('target-history-pagination');
+    if (!listEl || !currentTargetHistory || currentTargetHistory.length === 0) return;
+
+    currentTargetHistoryPage = page;
+    const totalItems = currentTargetHistory.length;
+    const totalPages = Math.ceil(totalItems / TARGET_HIST_PER_PAGE);
+
+    if (page < 1) page = 1;
+    if (page > totalPages) page = totalPages;
+
+    const startIndex = (page - 1) * TARGET_HIST_PER_PAGE;
+    const endIndex = Math.min(startIndex + TARGET_HIST_PER_PAGE, totalItems);
+    const pageItems = currentTargetHistory.slice(startIndex, endIndex);
+
+    let html = '';
+    pageItems.forEach(item => {
+        const isAvail = item.is_available && item.product;
+        const statusClass = item.status === 'success' ? 'success' : (item.status === 'pending' || item.status === 'processing' ? 'warning' : 'danger');
+        const statusText = item.status === 'success' ? 'Sukses' : (item.status === 'pending' || item.status === 'processing' ? 'Proses' : 'Gagal');
+        const formattedPrice = typeof formatRp === 'function' ? formatRp(item.sell_price) : `Rp${Number(item.sell_price).toLocaleString('id-ID')}`;
+        const sellerName = item.seller_name || 'Kasir';
+        const dateStr = item.created_at ? item.created_at.substring(0, 16) : '-';
+        const jsonProd = isAvail ? encodeURIComponent(JSON.stringify(item.product)) : '';
+
+        let actionBtn = '';
+        if (isAvail) {
+            actionBtn = `<button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-1.5 rounded-pill d-inline-flex align-items-center shadow-sm" style="font-size: 11px; transition: all 0.2s;" onclick="reorderPpobProduct('${item.buyer_sku_code}', '${jsonProd}')">
+                <i class="bi bi-arrow-repeat me-1 fs-6"></i>Beli Lagi
+            </button>`;
+        } else {
+            actionBtn = `<span class="badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-25 px-2.5 py-1.5 rounded-pill fw-bold" style="font-size: 10px;">
+                <i class="bi bi-x-circle me-1"></i>Tidak Tersedia Lagi
+            </span>`;
+        }
+
+        html += `
+            <div class="d-flex align-items-center justify-content-between p-2.5 rounded-3 border" style="background: var(--surface-1, #ffffff); border-color: var(--border-color, #e2e8f0) !important; gap: 10px;">
+                <div class="d-flex flex-column min-w-0 flex-grow-1" style="gap: 2px;">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="fw-bold text-dark text-truncate" style="font-size: 12px; color: var(--text-primary) !important;">${item.product_name}</span>
+                        <span class="badge bg-${statusClass} bg-opacity-10 text-${statusClass}" style="font-size: 9px; padding: 2px 6px;">${statusText}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 text-muted flex-wrap" style="font-size: 11px;">
+                        <span><i class="bi bi-tag-fill me-1 text-primary opacity-75"></i>${formattedPrice}</span>
+                        <span>•</span>
+                        <span><i class="bi bi-shop me-1 text-info opacity-75"></i>Seller: <strong style="color: var(--text-primary);">${sellerName}</strong></span>
+                        <span>•</span>
+                        <span style="font-size: 10px;"><i class="bi bi-calendar3 me-1"></i>${dateStr}</span>
+                    </div>
+                </div>
+                <div class="flex-shrink-0">
+                    ${actionBtn}
+                </div>
+            </div>
+        `;
+    });
+
+    listEl.innerHTML = html;
+
+    if (paginationEl) {
+        if (totalPages > 1) {
+            let pageBtns = `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill ${page === 1 ? 'disabled' : ''}" style="font-size: 11px;" ${page === 1 ? 'disabled' : ''} onclick="renderTargetHistoryPage(${page - 1})">
+                <i class="bi bi-chevron-left"></i> Prev
+            </button>`;
+
+            pageBtns += `<div class="d-flex align-items-center gap-1">`;
+            for (let i = 1; i <= totalPages; i++) {
+                const activeClass = i === page ? 'btn-primary' : 'btn-outline-secondary';
+                pageBtns += `<button type="button" class="btn btn-sm ${activeClass} py-0 px-2 rounded-pill fw-bold" style="font-size: 11px; min-width: 24px;" onclick="renderTargetHistoryPage(${i})">${i}</button>`;
+            }
+            pageBtns += `</div>`;
+
+            pageBtns += `<button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 rounded-pill ${page === totalPages ? 'disabled' : ''}" style="font-size: 11px;" ${page === totalPages ? 'disabled' : ''} onclick="renderTargetHistoryPage(${page + 1})">
+                Next <i class="bi bi-chevron-right"></i>
+            </button>`;
+
+            paginationEl.innerHTML = `
+                <span class="text-muted" style="font-size: 10.5px;">Hal <strong>${page}</strong> dari <strong>${totalPages}</strong></span>
+                <div class="d-flex align-items-center gap-1">
+                    ${pageBtns}
+                </div>
+            `;
+            paginationEl.style.display = 'flex';
+        } else {
+            paginationEl.style.display = 'none';
+            paginationEl.innerHTML = '';
+        }
     }
 }
 

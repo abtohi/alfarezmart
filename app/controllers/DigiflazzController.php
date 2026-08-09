@@ -252,7 +252,7 @@ class DigiflazzController extends Controller {
             $params[] = $lastDigits;
             $params[] = $lastDigits;
         }
-        $sql .= ") ORDER BY t.created_at DESC LIMIT 10";
+        $sql .= ") ORDER BY t.created_at DESC LIMIT 30";
 
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
