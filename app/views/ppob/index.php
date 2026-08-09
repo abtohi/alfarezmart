@@ -1631,6 +1631,23 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
                     </div>
                 </div>
 
+                <!-- Riwayat Pembelian Sebelumnya Container -->
+                <div id="target-history-container" class="mb-3 mt-3" style="display:none;">
+                    <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 16px; background: var(--surface-2, #f8fafc); border: 1px solid var(--border-color, #e2e8f0) !important;">
+                        <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between px-3 pt-3 pb-2">
+                            <h6 class="fw-bold mb-0 text-primary d-flex align-items-center" style="font-size: 13px; letter-spacing: 0.3px;">
+                                <i class="bi bi-clock-history me-2 fs-6"></i>Riwayat Pembelian Sebelumnya
+                            </h6>
+                            <span id="target-history-badge" class="badge bg-primary bg-opacity-10 text-primary px-2 py-1" style="font-size: 10px; border-radius: 6px;">0 Transaksi</span>
+                        </div>
+                        <div class="card-body p-3 pt-1">
+                            <div id="target-history-list" class="d-flex flex-column gap-2">
+                                <!-- History items injected here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Box Hasil Inquiry (Nama Pelanggan, Detail Tagihan) -->
                 <div id="inquiry-box" class="inquiry-box">
                     <div class="row">
@@ -1656,23 +1673,6 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 
                     <!-- Top 3 Seller Recommendations & Seller Filter Container -->
                     <div id="seller-recommendation-container" class="mb-3" style="display:none;"></div>
-
-                    <!-- Riwayat Pembelian Sebelumnya Container -->
-                    <div id="target-history-container" class="mb-3" style="display:none;">
-                        <div class="card border-0 shadow-sm overflow-hidden" style="border-radius: 16px; background: var(--surface-2, #f8fafc); border: 1px solid var(--border-color, #e2e8f0) !important;">
-                            <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between px-3 pt-3 pb-2">
-                                <h6 class="fw-bold mb-0 text-primary d-flex align-items-center" style="font-size: 13px; letter-spacing: 0.3px;">
-                                    <i class="bi bi-clock-history me-2 fs-6"></i>Riwayat Pembelian Sebelumnya
-                                </h6>
-                                <span id="target-history-badge" class="badge bg-primary bg-opacity-10 text-primary px-2 py-1" style="font-size: 10px; border-radius: 6px;">0 Transaksi</span>
-                            </div>
-                            <div class="card-body p-3 pt-1">
-                                <div id="target-history-list" class="d-flex flex-column gap-2">
-                                    <!-- History items injected here -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
                     <label class="form-label fw-bold text-muted small text-uppercase mt-3 mb-0" id="label-product">Pilih Produk</label>
                     <div id="product-loading" class="text-center py-4" style="display:none;">

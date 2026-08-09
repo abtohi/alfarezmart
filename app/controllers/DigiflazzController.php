@@ -247,11 +247,18 @@ class DigiflazzController extends Controller {
         ";
 
         $params = array_merge($variants, $variants);
-        if (strlen($cleanNumber) >= 6) {
-            $lastDigits = '%' . substr($cleanNumber, -7);
+        if (!empty($cleanNumber) && strlen($cleanNumber) >= 3) {
+            $wildcard = '%' . $cleanNumber . '%';
             $sql .= " OR t.customer_no LIKE ? OR REPLACE(REPLACE(t.customer_no, '-', ''), ' ', '') LIKE ?";
-            $params[] = $lastDigits;
-            $params[] = $lastDigits;
+            $params[] = $wildcard;
+            $params[] = $wildcard;
+            
+            if (strlen($cleanNumber) >= 7) {
+                $lastDigits = '%' . substr($cleanNumber, -7);
+                $sql .= " OR t.customer_no LIKE ? OR REPLACE(REPLACE(t.customer_no, '-', ''), ' ', '') LIKE ?";
+                $params[] = $lastDigits;
+                $params[] = $lastDigits;
+            }
         }
 
         $sql .= " ORDER BY t.created_at DESC LIMIT 10";
