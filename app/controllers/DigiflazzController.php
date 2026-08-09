@@ -212,7 +212,9 @@ class DigiflazzController extends Controller {
     public function apiGetTargetHistory() {
         AuthController::requireAuth();
         $number = isset($_GET['number']) ? trim(Security::sanitize($_GET['number'])) : '';
-        if (empty($number) || strlen($number) < 3) {
+        $cleanNumber = preg_replace('/[^0-9]/', '', $number);
+        
+        if (empty($cleanNumber) && empty($number)) {
             header('Content-Type: application/json');
             echo json_encode(['success' => true, 'history' => []]);
             exit;
@@ -220,15 +222,14 @@ class DigiflazzController extends Controller {
 
         $db = Database::getInstance()->getConnection();
         
-        $cleanNumber = preg_replace('/[^0-9]/', '', $number);
-        $variants = [$number, $cleanNumber];
+        $variants = array_filter([$number, $cleanNumber]);
         if (strpos($cleanNumber, '08') === 0) {
             $variants[] = '62' . substr($cleanNumber, 1);
             $variants[] = substr($cleanNumber, 1);
         } elseif (strpos($cleanNumber, '628') === 0) {
             $variants[] = '0' . substr($cleanNumber, 2);
             $variants[] = substr($cleanNumber, 2);
-        } elseif (strpos($cleanNumber, '8') === 0 && strlen($cleanNumber) >= 9) {
+        } elseif (strpos($cleanNumber, '8') === 0 && strlen($cleanNumber) >= 8) {
             $variants[] = '0' . $cleanNumber;
             $variants[] = '62' . $cleanNumber;
         }
@@ -237,7 +238,7 @@ class DigiflazzController extends Controller {
         $inClause = implode(',', array_fill(0, count($variants), '?'));
         $sql = "
             SELECT t.id, t.ref_id, t.buyer_sku_code, t.customer_no, t.customer_name, 
-                   t.product_name, t.category, t.brand, t.type, t.sell_price, t.status, 
+                   t.product_name, t.category, t.brand, t.type, t.sell_price, t.modal_price, t.status, 
                    t.seller_name, t.created_at, t.user_id, u.name as user_name
             FROM digi_transactions t
             LEFT JOIN users u ON t.user_id = u.id
@@ -246,9 +247,10 @@ class DigiflazzController extends Controller {
         ";
 
         $params = array_merge($variants, $variants);
-        if (strlen($cleanNumber) >= 8) {
-            $lastDigits = '%' . substr($cleanNumber, -8);
-            $sql .= " OR t.customer_no LIKE ?";
+        if (strlen($cleanNumber) >= 6) {
+            $lastDigits = '%' . substr($cleanNumber, -7);
+            $sql .= " OR t.customer_no LIKE ? OR REPLACE(REPLACE(t.customer_no, '-', ''), ' ', '') LIKE ?";
+            $params[] = $lastDigits;
             $params[] = $lastDigits;
         }
 
@@ -264,7 +266,7 @@ class DigiflazzController extends Controller {
             exit;
         }
 
-        // Fetch products availability & current price
+        // Fetch products availability & current price from digi_products
         $skus = array_unique(array_column($rows, 'buyer_sku_code'));
         $productsMap = [];
         if (!empty($skus)) {
@@ -289,14 +291,40 @@ class DigiflazzController extends Controller {
             $sku = $r['buyer_sku_code'];
             $prodInfo = $productsMap[$sku] ?? null;
 
-            $isAvailable = false;
+            $isAvailable = true;
             if ($prodInfo) {
-                $isAvailable = ((int)($prodInfo['is_active'] ?? 0) === 1) &&
-                               ((int)($prodInfo['buyer_product_status'] ?? 0) === 1) &&
-                               ((int)($prodInfo['seller_product_status'] ?? 0) === 1);
+                $isAvailable = ((int)($prodInfo['is_active'] ?? 1) === 1) &&
+                               ((int)($prodInfo['buyer_product_status'] ?? 1) === 1) &&
+                               ((int)($prodInfo['seller_product_status'] ?? 1) === 1);
             }
 
             $seller = !empty($r['seller_name']) ? $r['seller_name'] : (!empty($r['user_name']) ? $r['user_name'] : 'Kasir');
+
+            $productPayload = $prodInfo ? [
+                'buyer_sku_code' => $prodInfo['buyer_sku_code'],
+                'product_name' => $prodInfo['product_name'],
+                'category' => $prodInfo['category'],
+                'brand' => $prodInfo['brand'],
+                'type' => $prodInfo['type'],
+                'seller_price' => (float)$prodInfo['seller_price'],
+                'sell_price' => (float)($prodInfo['sell_price'] ?: $r['sell_price']),
+                'seller_name' => $prodInfo['seller_name'] ?: $seller,
+                'buyer_product_status' => (int)$prodInfo['buyer_product_status'],
+                'seller_product_status' => (int)$prodInfo['seller_product_status'],
+                'is_active' => (int)$prodInfo['is_active']
+            ] : [
+                'buyer_sku_code' => $r['buyer_sku_code'],
+                'product_name' => $r['product_name'] ?: $r['buyer_sku_code'],
+                'category' => $r['category'] ?: '',
+                'brand' => $r['brand'] ?: '',
+                'type' => $r['type'] ?: 'prepaid',
+                'seller_price' => (float)($r['modal_price'] ?? $r['sell_price']),
+                'sell_price' => (float)$r['sell_price'],
+                'seller_name' => $seller,
+                'buyer_product_status' => 1,
+                'seller_product_status' => 1,
+                'is_active' => 1
+            ];
 
             $history[] = [
                 'id' => (int)$r['id'],
@@ -310,19 +338,7 @@ class DigiflazzController extends Controller {
                 'seller_name' => $seller,
                 'created_at' => $r['created_at'],
                 'is_available' => $isAvailable,
-                'product' => $prodInfo ? [
-                    'buyer_sku_code' => $prodInfo['buyer_sku_code'],
-                    'product_name' => $prodInfo['product_name'],
-                    'category' => $prodInfo['category'],
-                    'brand' => $prodInfo['brand'],
-                    'type' => $prodInfo['type'],
-                    'seller_price' => (float)$prodInfo['seller_price'],
-                    'sell_price' => (float)($prodInfo['sell_price'] ?: $r['sell_price']),
-                    'seller_name' => $prodInfo['seller_name'] ?: $seller,
-                    'buyer_product_status' => (int)$prodInfo['buyer_product_status'],
-                    'seller_product_status' => (int)$prodInfo['seller_product_status'],
-                    'is_active' => (int)$prodInfo['is_active']
-                ] : null
+                'product' => $productPayload
             ];
         }
 
