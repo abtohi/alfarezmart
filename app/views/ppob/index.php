@@ -1723,13 +1723,13 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 
 <!-- Set Harga Semua Seller (Group) Modal -->
 <div class="modal fade" id="setGroupPriceModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-height: 90vh;">
-        <div class="modal-content" style="border-radius: 20px; border: none; background: var(--surface-1); max-height: 90vh; display: flex; flex-direction: column;">
+    <div class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down">
+        <div class="modal-content" style="border-radius: 20px; border: none; background: var(--surface-1);">
             <div class="modal-header border-0" style="background: var(--surface-2); border-radius: 20px 20px 0 0;">
                 <h5 class="modal-title fw-bold" style="color: var(--text-primary);"><i class="bi bi-tags-fill me-2" style="color: var(--primary);"></i>Set Harga Semua Seller</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
             </div>
-            <div class="modal-body p-4" style="color: var(--text-primary); overflow-y: auto; flex: 1 1 auto; max-height: calc(85vh - 120px);">
+            <div class="modal-body p-4" style="color: var(--text-primary);">
                 <input type="hidden" id="sgp-group-name">
                 <input type="hidden" id="sgp-items-json">
                 <div class="mb-3 text-center">
@@ -1744,13 +1744,13 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
                         <div class="d-flex align-items-center justify-content-center px-3 fw-bold text-muted" style="background: rgba(0,0,0,0.03); border-right: 1px solid var(--border-color);">Rp</div>
                         <input type="number" class="form-control border-0 bg-transparent ps-2 fw-bold shadow-none" id="sgp-sell-price" placeholder="Masukkan harga jual" style="font-size: 16px; color: var(--text-primary); padding: 12px 15px;">
                     </div>
-                    <div class="mt-2" id="sgp-profit-rows"></div>
+                    <div class="mt-2" id="sgp-profit-rows" style="max-height: 35vh; overflow-y: auto; padding-right: 5px; scrollbar-width: thin;"></div>
                 </div>
                 <div class="alert alert-info rounded-3 py-2 px-3 mb-0" style="font-size:12px;">
                     <i class="bi bi-info-circle-fill me-1"></i> Harga ini akan disimpan untuk semua seller pada produk <strong id="sgp-product-name-note"></strong>. Anda masih bisa ubah per-seller lewat tombol gerigi masing-masing.
                 </div>
             </div>
-            <div class="modal-footer border-0 p-3 px-4" style="background: var(--surface-1); border-top: 1px solid var(--border-color) !important; position: sticky; bottom: 0; z-index: 10;">
+            <div class="modal-footer border-0 p-3 px-4" style="background: var(--surface-1); border-top: 1px solid var(--border-color) !important;">
                 <button type="button" class="btn btn-secondary rounded-pill fw-bold px-4" data-bs-dismiss="modal">Batal</button>
                 <button type="button" class="btn btn-primary flex-grow-1 rounded-pill fw-bold" id="btn-save-group-price"><i class="bi bi-check-circle me-2"></i>Simpan ke Semua Seller</button>
             </div>
@@ -2767,7 +2767,8 @@ async function loadProducts(category, type) {
     document.getElementById('product-grid').innerHTML = '';
     currentSelectedSellerFilter = '';
     try {
-        const res = await fetch(`<?= BASE_URL ?>api/ppob/products/${category}?type=${type}`);
+        const cacheBuster = new Date().getTime();
+        const res = await fetch(`<?= BASE_URL ?>api/ppob/products/${category}?type=${type}&_t=${cacheBuster}`);
         const data = await res.json();
         
         // Race condition check: Only proceed if this is still the active category/type
@@ -3628,7 +3629,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function reloadCurrentProductsSilent() {
     if (!currentCategory || !currentType) return;
     try {
-        const res = await fetch(`<?= BASE_URL ?>api/ppob/products/${currentCategory}?type=${currentType}`);
+        const cacheBuster = new Date().getTime();
+        const res = await fetch(`<?= BASE_URL ?>api/ppob/products/${currentCategory}?type=${currentType}&_t=${cacheBuster}`);
         const data = await res.json();
         if (data.success && data.data && data.data.length > 0) {
             currentProducts = data.data;

@@ -784,8 +784,8 @@ async function doOfflineSearch(query) {
                 ${!ROLE_IS_STAFF ? `<input type="checkbox" class="product-checkbox" value="${p.id}" style="display:none;position:absolute;top:16px;left:16px;width:20px;height:20px;accent-color:var(--primary);z-index:2;">` : ''}
                 <a href="${BASE_URL}products/${p.id}" class="product-card-link" style="display:flex;text-decoration:none;color:inherit;width:100%;">
                     ${photoHtml}
-                    <div class="product-info" style="width:calc(100% - 76px);">
-                        <div class="product-name" style="padding-right:36px;">${name}</div>
+                    <div class="product-info" style="width:calc(100% - 110px);">
+                        <div class="product-name" style="padding-right:0;">${name}</div>
                         <div class="product-category">${brandCat}</div>`;
 
             let baseMarginHtml = '';
@@ -845,7 +845,13 @@ async function doOfflineSearch(query) {
             html += `
                     </div>
                 </a>
-                ${!ROLE_IS_STAFF ? `<button type="button" class="avail-toggle-btn" title="${availTitle}" onclick="event.stopPropagation(); quickToggleAvailability(this, ${p.id}, ${availVal})" style="position:absolute;top:10px;right:10px;width:34px;height:20px;border-radius:10px;border:none;cursor:pointer;padding:2px;transition:background 0.25s;background:${availBg};display:flex;align-items:center;z-index:3;"><span style="display:block;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);transition:transform 0.25s;transform:translateX(${availTx});"></span></button>` : ''}
+                ${!ROLE_IS_STAFF ? `
+                <button class="btn-offline-edit" onclick="openOfflineEdit(${p.id}, event)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); width:36px; height:36px; border-radius:50%; background:var(--primary-light); color:var(--primary); border:none; display:flex; align-items:center; justify-content:center; z-index:5;">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                ` : ''}
+                ${_isUnavail ? `<div style="position:absolute;top:0;right:0;background:var(--danger);color:white;font-size:9px;padding:2px 8px;border-bottom-left-radius:var(--radius-sm);z-index:2;font-weight:600;">UNAVAILABLE</div>` : ''}
+                ${!ROLE_IS_STAFF ? `<button type="button" class="avail-toggle-btn" title="${availTitle}" onclick="event.stopPropagation(); quickToggleAvailability(this, ${p.id}, ${availVal})" style="position:absolute;top:10px;right:60px;width:34px;height:20px;border-radius:10px;border:none;cursor:pointer;padding:2px;transition:background 0.25s;background:${availBg};display:flex;align-items:center;z-index:3;"><span style="display:block;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);transition:transform 0.25s;transform:translateX(${availTx});"></span></button>` : ''}
             </div>`;
         });
         
@@ -854,6 +860,17 @@ async function doOfflineSearch(query) {
         const totalText = document.getElementById('totalProductsText');
         if (totalText) totalText.textContent = `${items.length} produk (Offline)`;
         
+        // Intercept link clicks if offline
+        const links = container.querySelectorAll('.product-card-link');
+        links.forEach(link => {
+            link.addEventListener('click', function(e) {
+                if (!navigator.onLine) {
+                    e.preventDefault();
+                    showToast('Detail produk penuh tidak tersedia offline. Gunakan tombol Pensil untuk Edit Cepat.', 'info');
+                }
+            });
+        });
+
         // Re-attach long press listeners for newly rendered items
         if (typeof attachProductCardListeners === 'function') attachProductCardListeners();
         
@@ -1014,5 +1031,126 @@ function filterProductsClientSide(query) {
             window.showGlobalBarcodeModal(e.detail.code);
         }
     });
+
+    // --- OFFLINE QUICK EDIT ---
+    async function openOfflineEdit(productId, e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (typeof OfflineDB === 'undefined') {
+            showToast('Offline Database belum siap.', 'error');
+            return;
+        }
+        
+        try {
+            const product = await OfflineDB.getProductById(productId);
+            if (!product) {
+                showToast('Produk tidak ditemukan di cache offline.', 'error');
+                return;
+            }
+            
+            // Build modal HTML dynamically
+            let modalHtml = `
+            <div id="offlineEditModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;">
+                <div style="background:var(--surface);width:100%;max-width:400px;border-radius:var(--radius-lg);padding:24px;box-shadow:var(--shadow-lg);">
+                    <h4 style="margin-top:0;margin-bottom:16px;">Edit Cepat (Offline)</h4>
+                    
+                    <div style="margin-bottom:16px;">
+                        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;">Nama Produk</label>
+                        <input type="text" id="offlineEditName" value="${(product.full_name || '').replace(/"/g, '&quot;')}" class="form-control" style="width:100%;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border-color);">
+                    </div>
+            `;
+            
+            if (product.packagings && product.packagings.length > 0) {
+                const pkg = product.packagings[0];
+                modalHtml += `
+                    <div style="margin-bottom:16px;">
+                        <label style="display:block;font-size:12px;color:var(--text-muted);margin-bottom:6px;">Harga Jual Eceran (${pkg.unit_name || 'Satuan'})</label>
+                        <input type="number" id="offlineEditPrice" value="${pkg.sell_price_retail || 0}" class="form-control" style="width:100%;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border-color);">
+                    </div>
+                `;
+            } else {
+                modalHtml += `<input type="hidden" id="offlineEditPrice" value="0">`;
+            }
+            
+            modalHtml += `
+                    <div style="display:flex;gap:12px;margin-top:24px;">
+                        <button type="button" onclick="document.getElementById('offlineEditModal').remove()" style="flex:1;padding:12px;border:none;background:var(--surface-2);border-radius:var(--radius-md);cursor:pointer;">Batal</button>
+                        <button type="button" onclick="saveOfflineEdit(${productId})" style="flex:1;padding:12px;border:none;background:var(--primary);color:white;border-radius:var(--radius-md);cursor:pointer;">Simpan Offline</button>
+                    </div>
+                </div>
+            </div>`;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+        } catch (err) {
+            console.error('Failed to open offline edit:', err);
+            showToast('Gagal memuat produk.', 'error');
+        }
+    }
+    
+    async function saveOfflineEdit(productId) {
+        const nameVal = document.getElementById('offlineEditName').value.trim();
+        const priceVal = parseFloat(document.getElementById('offlineEditPrice').value) || 0;
+        
+        if (!nameVal) {
+            showToast('Nama produk tidak boleh kosong', 'warning');
+            return;
+        }
+        
+        try {
+            const product = await OfflineDB.getProductById(productId);
+            if (product) {
+                // Update local object
+                product.full_name = nameVal;
+                product.is_pending_update = true;
+                
+                let pkgId = null;
+                if (product.packagings && product.packagings.length > 0) {
+                    product.packagings[0].sell_price_retail = priceVal;
+                    pkgId = product.packagings[0].id;
+                }
+                
+                // Save to local cache
+                await OfflineDB.saveProduct(product);
+                
+                // Queue API calls
+                const csrfToken = '<?= $_SESSION["csrf_token"] ?? "" ?>';
+                
+                // 1. Update main product info
+                await OfflineDB.addPendingChange(`${BASE_URL}api/products/update/${productId}`, 'POST', {
+                    csrf_token: csrfToken,
+                    full_name: nameVal,
+                    short_label: nameVal.substring(0, 35),
+                    category_id: product.category_id || '',
+                    is_available: product.is_available || 1,
+                    weight_value: product.weight_value || 0
+                });
+                
+                // 2. Update packaging price if exists
+                if (pkgId) {
+                    await OfflineDB.addPendingChange(`${BASE_URL}api/products/packaging/${pkgId}`, 'POST', {
+                        csrf_token: csrfToken,
+                        unit_id: product.packagings[0].unit_id || '',
+                        contained_qty: product.packagings[0].contained_qty || 1,
+                        sell_price_retail: priceVal,
+                        sell_price_wholesale: product.packagings[0].sell_price_wholesale || 0,
+                        buy_price: product.packagings[0].buy_price || 0
+                    });
+                }
+                
+                document.getElementById('offlineEditModal').remove();
+                showToast('✅ Tersimpan offline. Akan otomatis sinkron.', 'success');
+                if (typeof updateSyncBadge === 'function') updateSyncBadge();
+                
+                // Refresh list
+                const searchInput = document.getElementById('productSearch');
+                doOfflineSearch(searchInput ? searchInput.value : '');
+            }
+        } catch (e) {
+            console.error('Failed to save offline edit:', e);
+            showToast('Gagal menyimpan perubahan offline', 'error');
+        }
+    }
 </script>
 

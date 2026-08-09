@@ -14,7 +14,7 @@ if (!function_exists('invoicePhotoUrl')) {
 if (!class_exists('Controller')) {
     class Controller
     {
-        protected $security;
+        protected ?Security $security = null;
 
         public function __construct()
         {
@@ -23,8 +23,10 @@ if (!class_exists('Controller')) {
 
     /**
      * Render a view with layout
+     * @param string $viewPath
+     * @param array $data
      */
-    protected function view($viewPath, $data = [])
+    protected function view(string $viewPath, array $data = [])
     {
         // Make data available as variables
         // Inject current user into all views
@@ -54,8 +56,10 @@ if (!class_exists('Controller')) {
 
     /**
      * Return JSON response (for API/AJAX)
+     * @param mixed $data
+     * @param int $statusCode
      */
-    protected function json($data, $statusCode = 200)
+    protected function json($data, int $statusCode = 200)
     {
         http_response_code($statusCode);
         header('Content-Type: application/json; charset=utf-8');
@@ -71,14 +75,15 @@ if (!class_exists('Controller')) {
 
     /**
      * Redirect to URL
+     * @param string $url
      */
-    protected function redirect($url)
+    protected function redirect(string $url)
     {
         header("Location: $url");
         exit;
     }
 
-    private $_jsonData = null;
+    private ?array $_jsonData = null;
 
     /**
      * Get sanitized POST data
@@ -186,9 +191,11 @@ if (!class_exists('Controller')) {
      * Check if a specific service/feature is allowed for the user's role.
      * Superadmin always has full access.
      */
-    public function hasServiceAccess(string $serviceKey, ?string $userLevel = null): bool
+    public function hasServiceAccess(string $serviceKey): bool
     {
-        $level = strtolower((string)($userLevel ?? $this->userLevel()));
+        $level = $_SESSION['role'] ?? 'cashier';
+
+        // Superadmin always has access
         if ($level === 'superadmin') {
             return true;
         }

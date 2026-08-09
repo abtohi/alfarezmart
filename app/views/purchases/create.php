@@ -202,7 +202,7 @@ const salesRepsLookup = {
     <?php endforeach; ?>
 };
 
-const salesRepsOptions = [
+let salesRepsOptions = [
     { value: 'other', label: '📦 Other — belum tahu supplier/sales' },
     <?php foreach ($salesReps ?? [] as $sr): ?>
     {
@@ -480,24 +480,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Fallback: load sales reps and suppliers from IndexedDB or API if empty or offline
-    if (salesRepsOptions.length <= 1 || suppliersData.length === 0) {
-        (async () => {
-            // First: load from local IndexedDB for instant offline access
-            if (typeof OfflineDB !== 'undefined') {
-                try {
-                    const [cachedReps, cachedSups] = await Promise.all([
-                        OfflineDB.getAllSalesReps ? OfflineDB.getAllSalesReps() : [],
-                        OfflineDB.getAllSuppliers ? OfflineDB.getAllSuppliers() : []
-                    ]);
-                    if (cachedSups && cachedSups.length > 0 && suppliersData.length === 0) {
-                        cachedSups.forEach(s => suppliersData.push({ value: String(s.id), label: s.name }));
-                    }
-                    if (cachedReps && cachedReps.length > 0 && salesRepsOptions.length <= 1) {
-                        const freshOpts = [{ value: 'other', label: '📦 Other — belum tahu supplier/sales' }];
-                        cachedReps.forEach(sr => {
+    // Load sales reps and suppliers from IndexedDB or API to ensure freshness
+    (async () => {
+        // First: load from local IndexedDB for instant offline access (and fresher than stale HTML cache)
+        if (typeof OfflineDB !== 'undefined') {
+            try {
+                const [cachedReps, cachedSups] = await Promise.all([
+                    OfflineDB.getAllSalesReps ? OfflineDB.getAllSalesReps() : [],
+                    OfflineDB.getAllSuppliers ? OfflineDB.getAllSuppliers() : []
+                ]);
+                
+                // Update Suppliers if IndexedDB has more/newer data
+                if (cachedSups && cachedSups.length > 0) {
+                    const existingSupIds = new Set(suppliersData.map(s => String(s.value)));
+                    cachedSups.forEach(s => {
+                        if (!existingSupIds.has(String(s.id))) {
+                            suppliersData.push({ value: String(s.id), label: s.name });
+                            existingSupIds.add(String(s.id));
+                        }
+                    });
+                }
+                
+                // Update Sales Reps if IndexedDB has data
+                if (cachedReps && cachedReps.length > 0) {
+                    const existingRepIds = new Set(salesRepsOptions.map(s => String(s.value)));
+                    let changed = false;
+                    
+                    cachedReps.forEach(sr => {
+                        if (!existingRepIds.has(String(sr.id))) {
                             const label = (sr.name || '') + (sr.supplier_name ? ' · ' + sr.supplier_name : '');
-                            freshOpts.push({ value: String(sr.id), label: label });
+                            salesRepsOptions.push({ value: String(sr.id), label: label });
                             salesRepsLookup[String(sr.id)] = {
                                 supplier_id: String(sr.supplier_id || ''),
                                 supplier_name: sr.supplier_name || '',
@@ -505,19 +517,24 @@ document.addEventListener('DOMContentLoaded', () => {
                                 phone: sr.phone || '',
                                 visit_day: sr.visit_day || ''
                             };
-                        });
-                        if (salesRepSB) salesRepSB.setOptions(freshOpts);
+                            changed = true;
+                        }
+                    });
+                    
+                    if (changed && salesRepSB) {
+                        salesRepSB.setOptions(salesRepsOptions);
                     }
-                } catch(e) {
-                    console.warn('Offline DB sales reps load warning:', e);
                 }
+            } catch(e) {
+                console.warn('Offline DB load warning:', e);
             }
+        }
 
-            // Second: try API if online
-            if (navigator.onLine) {
-                try {
-                    const res = await fetch(BASE_URL + 'api/sales-reps');
-                    const data = await res.json();
+        // Second: try API if online to get absolute latest
+        if (navigator.onLine) {
+            try {
+                const res = await fetch(BASE_URL + 'api/sales-reps');
+                const data = await res.json();
                     const arr = Array.isArray(data) ? data : (data.data || []);
                     if (arr.length > 0) {
                         const freshOpts = [{ value: 'other', label: '📦 Other — belum tahu supplier/sales' }];
@@ -539,9 +556,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         })();
-    }
-
-
     document.getElementById('filterBySupplierSales')?.addEventListener('change', (e) => {
         if (isOtherMode) {
             e.target.checked = false;

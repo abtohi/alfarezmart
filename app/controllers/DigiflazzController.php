@@ -134,9 +134,7 @@ class DigiflazzController extends Controller {
             $p['is_custom_price'] = isset($p['is_custom_price']) ? (int)$p['is_custom_price'] : 0;
         }
         
-        header('Content-Type: application/json');
-        echo json_encode(['success' => true, 'data' => $products]);
-        exit;
+        $this->json(['success' => true, 'data' => $products]);
     }
 
     public function apiGetAllProducts() {
@@ -242,26 +240,19 @@ class DigiflazzController extends Controller {
                    t.seller_name, t.created_at, t.user_id, u.name as user_name
             FROM digi_transactions t
             LEFT JOIN users u ON t.user_id = u.id
-            WHERE (t.customer_no IN ($inClause)
-               OR REPLACE(REPLACE(REPLACE(t.customer_no, '-', ''), ' ', ''), '+', '') IN ($inClause))
+            WHERE (
+                t.customer_no IN ($inClause)
+                OR REPLACE(REPLACE(REPLACE(t.customer_no, '-', ''), ' ', ''), '+', '') IN ($inClause)
         ";
 
         $params = array_merge($variants, $variants);
-        if (!empty($cleanNumber) && strlen($cleanNumber) >= 3) {
-            $wildcard = '%' . $cleanNumber . '%';
+        if (!empty($cleanNumber) && strlen($cleanNumber) >= 6) {
+            $lastDigits = '%' . substr($cleanNumber, -6);
             $sql .= " OR t.customer_no LIKE ? OR REPLACE(REPLACE(t.customer_no, '-', ''), ' ', '') LIKE ?";
-            $params[] = $wildcard;
-            $params[] = $wildcard;
-            
-            if (strlen($cleanNumber) >= 7) {
-                $lastDigits = '%' . substr($cleanNumber, -7);
-                $sql .= " OR t.customer_no LIKE ? OR REPLACE(REPLACE(t.customer_no, '-', ''), ' ', '') LIKE ?";
-                $params[] = $lastDigits;
-                $params[] = $lastDigits;
-            }
+            $params[] = $lastDigits;
+            $params[] = $lastDigits;
         }
-
-        $sql .= " ORDER BY t.created_at DESC LIMIT 10";
+        $sql .= ") ORDER BY t.created_at DESC LIMIT 10";
 
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
@@ -280,9 +271,8 @@ class DigiflazzController extends Controller {
             $in  = str_repeat('?,', count($skus) - 1) . '?';
             $stmtProd = $db->prepare("
                 SELECT buyer_sku_code, product_name, category, brand, type, 
-                       price as seller_price, sell_price, buyer_product_status, 
-                       seller_product_status, is_active, seller_name,
-                       unlimited_stock, stock
+                       seller_price, sell_price, buyer_product_status, 
+                       seller_product_status, is_active, seller_name
                 FROM digi_products 
                 WHERE buyer_sku_code IN ($in)
             ");
