@@ -220,17 +220,42 @@ class DigiflazzController extends Controller {
 
         $db = Database::getInstance()->getConnection();
         
-        $stmt = $db->prepare("
+        $cleanNumber = preg_replace('/[^0-9]/', '', $number);
+        $variants = [$number, $cleanNumber];
+        if (strpos($cleanNumber, '08') === 0) {
+            $variants[] = '62' . substr($cleanNumber, 1);
+            $variants[] = substr($cleanNumber, 1);
+        } elseif (strpos($cleanNumber, '628') === 0) {
+            $variants[] = '0' . substr($cleanNumber, 2);
+            $variants[] = substr($cleanNumber, 2);
+        } elseif (strpos($cleanNumber, '8') === 0 && strlen($cleanNumber) >= 9) {
+            $variants[] = '0' . $cleanNumber;
+            $variants[] = '62' . $cleanNumber;
+        }
+        $variants = array_values(array_unique(array_filter($variants)));
+
+        $inClause = implode(',', array_fill(0, count($variants), '?'));
+        $sql = "
             SELECT t.id, t.ref_id, t.buyer_sku_code, t.customer_no, t.customer_name, 
                    t.product_name, t.category, t.brand, t.type, t.sell_price, t.status, 
                    t.seller_name, t.created_at, t.user_id, u.name as user_name
             FROM digi_transactions t
             LEFT JOIN users u ON t.user_id = u.id
-            WHERE t.customer_no = :number
-            ORDER BY t.created_at DESC
-            LIMIT 10
-        ");
-        $stmt->execute(['number' => $number]);
+            WHERE (t.customer_no IN ($inClause)
+               OR REPLACE(REPLACE(REPLACE(t.customer_no, '-', ''), ' ', ''), '+', '') IN ($inClause))
+        ";
+
+        $params = array_merge($variants, $variants);
+        if (strlen($cleanNumber) >= 8) {
+            $lastDigits = '%' . substr($cleanNumber, -8);
+            $sql .= " OR t.customer_no LIKE ?";
+            $params[] = $lastDigits;
+        }
+
+        $sql .= " ORDER BY t.created_at DESC LIMIT 10";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         if (empty($rows)) {

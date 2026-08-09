@@ -2880,8 +2880,13 @@ async function checkAndRenderTargetHistory(customerNo) {
         const data = await res.json();
 
         if (!data.success || !data.history || data.history.length === 0) {
-            container.style.display = 'none';
-            listEl.innerHTML = '';
+            if (badgeEl) badgeEl.innerText = `0 Transaksi`;
+            listEl.innerHTML = `
+                <div class="p-2.5 text-center text-muted rounded-3 border" style="background: var(--surface-1, #ffffff); border-color: var(--border-color, #e2e8f0) !important; font-size: 11.5px;">
+                    <i class="bi bi-info-circle me-1 opacity-75 text-primary"></i>Belum ada riwayat transaksi sebelumnya untuk nomor <strong>${trimmed}</strong>
+                </div>
+            `;
+            container.style.display = 'block';
             return;
         }
 
