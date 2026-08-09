@@ -191,11 +191,9 @@ if (!class_exists('Controller')) {
      * Check if a specific service/feature is allowed for the user's role.
      * Superadmin always has full access.
      */
-    public function hasServiceAccess(string $serviceKey): bool
+    public function hasServiceAccess(string $serviceKey, ?string $userLevel = null): bool
     {
-        $level = $_SESSION['role'] ?? 'cashier';
-
-        // Superadmin always has access
+        $level = strtolower((string)($userLevel ?? $this->userLevel()));
         if ($level === 'superadmin') {
             return true;
         }
