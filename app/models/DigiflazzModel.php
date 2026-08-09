@@ -11,9 +11,11 @@ class DigiflazzModel {
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
         try {
-            $check = $this->db->query("SHOW COLUMNS FROM digi_products LIKE 'is_custom_price'");
-            if ($check && $check->rowCount() === 0) {
-                $this->db->exec("ALTER TABLE digi_products ADD COLUMN is_custom_price TINYINT(1) NOT NULL DEFAULT 0 AFTER sell_price");
+            if ($this->db->getAttribute(PDO::ATTR_DRIVER_NAME) !== 'sqlite') {
+                $check = $this->db->query("SHOW COLUMNS FROM digi_products LIKE 'is_custom_price'");
+                if ($check && $check->rowCount() === 0) {
+                    $this->db->exec("ALTER TABLE digi_products ADD COLUMN is_custom_price TINYINT(1) NOT NULL DEFAULT 0 AFTER sell_price");
+                }
             }
         } catch (\Exception $e) {
             error_log("[DigiflazzModel] is_custom_price migration error: " . $e->getMessage());
@@ -24,41 +26,73 @@ class DigiflazzModel {
      * Sync Price List from Digiflazz API response
      */
     public function syncPriceList(array $productsData, string $type = 'prepaid') {
-        // Auto-migrate: ensure seller_name column exists
         try {
-            $check = $this->db->query("SHOW COLUMNS FROM digi_products LIKE 'seller_name'");
-            if ($check->rowCount() === 0) {
-                $this->db->exec("ALTER TABLE digi_products ADD COLUMN seller_name VARCHAR(100) NULL AFTER brand");
+            $isSqlite = ($this->db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite');
+            if (!$isSqlite) {
+                $check = $this->db->query("SHOW COLUMNS FROM digi_products LIKE 'seller_name'");
+                if ($check && $check->rowCount() === 0) {
+                    $this->db->exec("ALTER TABLE digi_products ADD COLUMN seller_name VARCHAR(100) NULL AFTER brand");
+                }
             }
         } catch (\Exception $e) {
-            error_log("[DigiflazzModel] seller_name migration error: " . $e->getMessage());
+            // Migration check silent fallback
         }
+
+        $isSqlite = ($this->db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite');
 
         $this->db->beginTransaction();
         try {
-            $stmt = $this->db->prepare("
-                INSERT INTO digi_products (
-                    buyer_sku_code, product_name, category, sub_category, brand, type, 
-                    seller_price, buyer_product_status, seller_product_status, 
-                    description, start_cut_off, end_cut_off, last_synced_at, seller_name
-                ) VALUES (
-                    :sku, :name, :category, :sub_cat, :brand, :type, 
-                    :price, :buyer_status, :seller_status, 
-                    :desc, :start_cut, :end_cut, NOW(), :seller_name
-                ) ON DUPLICATE KEY UPDATE 
-                    product_name = VALUES(product_name),
-                    category = VALUES(category),
-                    sub_category = VALUES(sub_category),
-                    brand = VALUES(brand),
-                    seller_price = VALUES(seller_price),
-                    buyer_product_status = VALUES(buyer_product_status),
-                    seller_product_status = VALUES(seller_product_status),
-                    description = VALUES(description),
-                    start_cut_off = VALUES(start_cut_off),
-                    end_cut_off = VALUES(end_cut_off),
-                    last_synced_at = NOW(),
-                    seller_name = VALUES(seller_name)
-            ");
+            if ($isSqlite) {
+                $stmt = $this->db->prepare("
+                    INSERT INTO digi_products (
+                        buyer_sku_code, product_name, category, sub_category, brand, type, 
+                        seller_price, buyer_product_status, seller_product_status, 
+                        description, start_cut_off, end_cut_off, last_synced_at, seller_name, is_active
+                    ) VALUES (
+                        :sku, :name, :category, :sub_cat, :brand, :type, 
+                        :price, :buyer_status, :seller_status, 
+                        :desc, :start_cut, :end_cut, CURRENT_TIMESTAMP, :seller_name, 1
+                    ) ON CONFLICT(buyer_sku_code) DO UPDATE SET 
+                        product_name = excluded.product_name,
+                        category = excluded.category,
+                        sub_category = excluded.sub_category,
+                        brand = excluded.brand,
+                        seller_price = excluded.seller_price,
+                        buyer_product_status = excluded.buyer_product_status,
+                        seller_product_status = excluded.seller_product_status,
+                        description = excluded.description,
+                        start_cut_off = excluded.start_cut_off,
+                        end_cut_off = excluded.end_cut_off,
+                        last_synced_at = CURRENT_TIMESTAMP,
+                        seller_name = excluded.seller_name,
+                        is_active = 1
+                ");
+            } else {
+                $stmt = $this->db->prepare("
+                    INSERT INTO digi_products (
+                        buyer_sku_code, product_name, category, sub_category, brand, type, 
+                        seller_price, buyer_product_status, seller_product_status, 
+                        description, start_cut_off, end_cut_off, last_synced_at, seller_name, is_active
+                    ) VALUES (
+                        :sku, :name, :category, :sub_cat, :brand, :type, 
+                        :price, :buyer_status, :seller_status, 
+                        :desc, :start_cut, :end_cut, NOW(), :seller_name, 1
+                    ) ON DUPLICATE KEY UPDATE 
+                        product_name = VALUES(product_name),
+                        category = VALUES(category),
+                        sub_category = VALUES(sub_category),
+                        brand = VALUES(brand),
+                        seller_price = VALUES(seller_price),
+                        buyer_product_status = VALUES(buyer_product_status),
+                        seller_product_status = VALUES(seller_product_status),
+                        description = VALUES(description),
+                        start_cut_off = VALUES(start_cut_off),
+                        end_cut_off = VALUES(end_cut_off),
+                        last_synced_at = NOW(),
+                        seller_name = VALUES(seller_name),
+                        is_active = 1
+                ");
+            }
 
             foreach ($productsData as $item) {
                 // Determine normalized category
@@ -81,6 +115,33 @@ class DigiflazzModel {
                     'end_cut' => $item['end_cut_off'] ?? '',
                     'seller_name' => $item['seller_name'] ?? null
                 ]);
+            }
+
+            // Deactivate products of this type that are no longer returned in Digiflazz API payload (e.g. deleted sellers/SKUs)
+            $syncedSkus = array_filter(array_map(function($item) {
+                return trim($item['buyer_sku_code'] ?? '');
+            }, $productsData));
+
+            if (!empty($syncedSkus)) {
+                $stmtExisting = $this->db->prepare("SELECT buyer_sku_code FROM digi_products WHERE type = :type AND is_active = 1");
+                $stmtExisting->execute(['type' => $type]);
+                $existingSkus = $stmtExisting->fetchAll(PDO::FETCH_COLUMN);
+
+                $missingSkus = array_diff($existingSkus, $syncedSkus);
+
+                if (!empty($missingSkus)) {
+                    $nowFunc = $isSqlite ? 'CURRENT_TIMESTAMP' : 'NOW()';
+                    foreach (array_chunk(array_values($missingSkus), 300) as $chunk) {
+                        $inClause = str_repeat('?,', count($chunk) - 1) . '?';
+                        $params = array_merge([$type], $chunk);
+                        $stmtDeactivate = $this->db->prepare("
+                            UPDATE digi_products 
+                            SET is_active = 0, buyer_product_status = 0, seller_product_status = 0, last_synced_at = $nowFunc 
+                            WHERE type = ? AND buyer_sku_code IN ($inClause)
+                        ");
+                        $stmtDeactivate->execute($params);
+                    }
+                }
             }
 
             // Apply markup rules to recalculate sell_price
@@ -155,21 +216,23 @@ class DigiflazzModel {
      * Apply markups and update sell_price in products table
      */
     public function applyAllMarkups() {
-        // Apply category-specific markup from digi_markup_rules table
-        $this->db->exec("
-            UPDATE digi_products p
-            LEFT JOIN digi_markup_rules r ON r.category = p.category AND r.brand IS NULL AND r.is_active = 1
-            SET p.markup = COALESCE(
-                CASE 
-                    WHEN r.markup_type = 'percentage' THEN (p.seller_price * (r.markup_value / 100))
-                    ELSE r.markup_value
-                END,
-                2000
-            )
-        ");
-
-        // Update sell_price = seller_price + markup, rounded to nearest 100, ONLY for non-custom prices
-        $this->db->exec("UPDATE digi_products SET sell_price = CEIL((seller_price + markup) / 100) * 100 WHERE is_custom_price = 0");
+        $isSqlite = ($this->db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite');
+        if (!$isSqlite) {
+            $this->db->exec("
+                UPDATE digi_products p
+                LEFT JOIN digi_markup_rules r ON r.category = p.category AND r.brand IS NULL AND r.is_active = 1
+                SET p.markup = COALESCE(
+                    CASE 
+                        WHEN r.markup_type = 'percentage' THEN (p.seller_price * (r.markup_value / 100))
+                        ELSE r.markup_value
+                    END,
+                    2000
+                )
+            ");
+            $this->db->exec("UPDATE digi_products SET sell_price = CEIL((seller_price + markup) / 100) * 100 WHERE is_custom_price = 0");
+        } else {
+            $this->db->exec("UPDATE digi_products SET sell_price = (seller_price + 2000) WHERE is_custom_price = 0");
+        }
     }
 
     /**
@@ -227,8 +290,8 @@ class DigiflazzModel {
      */
     public function getProducts(string $category, ?string $brand = null, string $type = 'prepaid') {
         $sql = "SELECT * FROM digi_products 
-                WHERE category = :cat AND is_active = 1 AND buyer_product_status = 1";
-        $params = ['cat' => $category];
+                WHERE category = :cat AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
+        $params = ['cat' => $category, 'type' => $type];
         
         if ($brand) {
             $sql .= " AND brand = :brand";
@@ -241,18 +304,17 @@ class DigiflazzModel {
         $stmt->execute($params);
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Deduplicate products by product_name and seller_price, and ignore empty sellers
+        // Filter out products with no seller name and deduplicate by buyer_sku_code
         $unique = [];
         $result = [];
         foreach ($products as $p) {
-            // Filter out products with no seller name
             if (empty(trim($p['seller_name'] ?? ''))) {
                 continue;
             }
             
-            $key = trim($p['product_name']) . '|' . $p['seller_price'];
-            if (!isset($unique[$key])) {
-                $unique[$key] = true;
+            $sku = trim($p['buyer_sku_code'] ?? '');
+            if ($sku !== '' && !isset($unique[$sku])) {
+                $unique[$sku] = true;
                 $result[] = $p;
             }
         }

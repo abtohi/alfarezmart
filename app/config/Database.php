@@ -339,6 +339,7 @@ class Database
                     buyer_sku_code TEXT UNIQUE NOT NULL,
                     product_name TEXT NOT NULL,
                     category TEXT,
+                    sub_category TEXT,
                     brand TEXT,
                     seller_name TEXT,
                     type TEXT DEFAULT 'prepaid',
@@ -353,8 +354,10 @@ class Database
                     start_cut_off TEXT,
                     end_cut_off TEXT,
                     desc TEXT,
+                    description TEXT,
                     is_active INTEGER DEFAULT 1,
                     is_custom_price INTEGER DEFAULT 0,
+                    last_synced_at DATETIME,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )",
@@ -441,7 +444,10 @@ class Database
             foreach ($sqls as $sql) {
                 $this->pdo->exec($sql);
             }
-        } catch (\Throwable $e) {
+            try { $this->pdo->exec("ALTER TABLE digi_products ADD COLUMN sub_category TEXT"); } catch (\Throwable $e) {}
+            try { $this->pdo->exec("ALTER TABLE digi_products ADD COLUMN description TEXT"); } catch (\Throwable $e) {}
+            try { $this->pdo->exec("ALTER TABLE digi_products ADD COLUMN last_synced_at TEXT"); } catch (\Throwable $e) {}
+        } catch (\Exception $e) {
             error_log('[AlfarezMart] ensureSQLiteSchema warning: ' . $e->getMessage());
         }
     }
