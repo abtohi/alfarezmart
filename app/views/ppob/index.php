@@ -1723,13 +1723,13 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 
 <!-- Set Harga Semua Seller (Group) Modal -->
 <div class="modal fade" id="setGroupPriceModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 20px; border: none; background: var(--surface-1);">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-height: 90vh;">
+        <div class="modal-content" style="border-radius: 20px; border: none; background: var(--surface-1); max-height: 90vh; display: flex; flex-direction: column;">
             <div class="modal-header border-0" style="background: var(--surface-2); border-radius: 20px 20px 0 0;">
                 <h5 class="modal-title fw-bold" style="color: var(--text-primary);"><i class="bi bi-tags-fill me-2" style="color: var(--primary);"></i>Set Harga Semua Seller</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
             </div>
-            <div class="modal-body p-4" style="color: var(--text-primary);">
+            <div class="modal-body p-4" style="color: var(--text-primary); overflow-y: auto; flex: 1 1 auto; max-height: calc(85vh - 120px);">
                 <input type="hidden" id="sgp-group-name">
                 <input type="hidden" id="sgp-items-json">
                 <div class="mb-3 text-center">
@@ -1737,7 +1737,7 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
                     <div class="text-muted small">Harga akan diterapkan ke <span id="sgp-seller-count" class="fw-bold" style="color:var(--text-primary);">0</span> seller sekaligus</div>
                 </div>
                 <!-- Seller list preview -->
-                <div id="sgp-seller-list" class="mb-3" style="background:var(--surface-2); border-radius:12px; padding:10px 14px; max-height:160px; overflow-y:auto;"></div>
+                <div id="sgp-seller-list" class="mb-3" style="background:var(--surface-2); border-radius:12px; padding:10px 14px; max-height:130px; overflow-y:auto; scrollbar-width:thin;"></div>
                 <div class="mb-3">
                     <label class="form-label small text-muted mb-1 fw-bold">Harga Jual Baru (untuk semua seller)</label>
                     <div class="d-flex align-items-stretch" style="border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--surface-2);">
@@ -1750,7 +1750,7 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
                     <i class="bi bi-info-circle-fill me-1"></i> Harga ini akan disimpan untuk semua seller pada produk <strong id="sgp-product-name-note"></strong>. Anda masih bisa ubah per-seller lewat tombol gerigi masing-masing.
                 </div>
             </div>
-            <div class="modal-footer border-0 pt-0 pb-4 px-4">
+            <div class="modal-footer border-0 p-3 px-4" style="background: var(--surface-1); border-top: 1px solid var(--border-color) !important; position: sticky; bottom: 0; z-index: 10;">
                 <button type="button" class="btn btn-secondary rounded-pill fw-bold px-4" data-bs-dismiss="modal">Batal</button>
                 <button type="button" class="btn btn-primary flex-grow-1 rounded-pill fw-bold" id="btn-save-group-price"><i class="bi bi-check-circle me-2"></i>Simpan ke Semua Seller</button>
             </div>
@@ -3541,7 +3541,7 @@ function updateGroupProfitPreview() {
         return;
     }
     
-    let html = '<div class="d-flex flex-column gap-1 mt-1 p-2 rounded" style="background:var(--surface-2); font-size:0.72rem;">';
+    let html = '<div class="d-flex flex-column gap-1 mt-1 p-2 rounded" style="background:var(--surface-2); font-size:0.72rem; max-height: 130px; overflow-y: auto; scrollbar-width: thin;">';
     items.forEach(item => {
         const base = parseInt(item.seller_price) || 0;
         if (newSellPrice > base) {
