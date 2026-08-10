@@ -419,8 +419,11 @@ function compressImage(file, maxSize) {
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, width, height);
                 ctx.drawImage(img, 0, 0, width, height);
-                resolve(canvas.toDataURL('image/webp', 0.8));
+                const isTransparent = file.type === 'image/png' || file.type === 'image/webp' || file.type === 'image/gif' || file.type === 'image/svg+xml' || (file.name && /\.png$/i.test(file.name));
+                const outputType = isTransparent ? 'image/png' : 'image/jpeg';
+                resolve(canvas.toDataURL(outputType, 0.9));
             };
             img.src = e.target.result;
         };
