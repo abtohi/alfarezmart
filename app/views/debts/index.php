@@ -1618,38 +1618,73 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
 
-                let html = '';
+                let html = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; font-size:12px; color:var(--text-muted);">
+                        <span>Total <strong>${res.data.length} Pelanggan Terdaftar</strong></span>
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:12px;">
+                `;
+
                 res.data.forEach(c => {
                     const phone = c.phone || 'Tidak ada HP';
                     const addr = c.address || 'Tidak ada alamat';
-                    const notes = c.notes || ''; // ciri fisik
+                    const notes = c.notes || ''; 
                     const isAnon = c.name.toLowerCase().includes('tanpa nama');
 
+                    let typeBadge = '';
+                    if (c.type_id) {
+                        const t = customerTypes.find(x => x.id == c.type_id);
+                        if (t) {
+                            typeBadge = `<span class="badge-custom badge-info" style="font-size:9px;"><i class="bi bi-tag-fill me-1"></i>${t.name}</span>`;
+                        }
+                    }
+
                     html += `
-                        <div class="product-card" style="margin-bottom:12px; cursor:default;">
-                            <div class="product-icon" style="background:var(--success-bg); color:var(--success); flex-shrink:0;">
-                                <i class="bi bi-person-fill"></i>
-                            </div>
-                            <div style="flex:1; min-width:0; margin-left:12px;">
-                                <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <div style="font-weight:700; font-size:var(--font-size-sm); color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
-                                        ${c.name}
-                                        ${isAnon ? '<span class="badge-custom badge-danger" style="font-size:9px; margin-left:4px;">Tanpa Nama</span>' : ''}
+                        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px; display:flex; flex-direction:column; justify-content:space-between; gap:10px; transition:border-color 0.2s ease, box-shadow 0.2s ease;" onmouseover="this.style.borderColor='var(--border-active)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                            <div>
+                                <!-- Header: Avatar, Name & Actions -->
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:8px;">
+                                    <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                                        <div style="width:38px; height:38px; border-radius:10px; background:var(--primary-bg); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0;">
+                                            <i class="bi bi-person-fill"></i>
+                                        </div>
+                                        <div style="min-width:0;">
+                                            <div style="font-weight:700; font-size:14px; color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+                                                ${escapeHtml(c.name)}
+                                            </div>
+                                            <div style="display:flex; gap:4px; margin-top:2px; flex-wrap:wrap;">
+                                                ${isAnon ? '<span class="badge-custom badge-danger" style="font-size:9px;">Tanpa Nama</span>' : ''}
+                                                ${typeBadge}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div style="display:flex; gap:6px;">
-                                        ${c.phone ? `<a href="https://wa.me/${c.phone.replace(/^0/, '62').replace(/\D/g, '')}" target="_blank" class="btn-icon" style="color:#25D366; text-decoration:none; display:flex; align-items:center; justify-content:center;" title="Hubungi via WhatsApp"><i class="bi bi-whatsapp"></i></a>` : ''}
-                                        <button onclick="showEditCustomerModal(${JSON.stringify(c).replace(/"/g, '&quot;')})" class="btn-icon" style="color:var(--text-primary);" title="Edit Pelanggan"><i class="bi bi-pencil-square"></i></button>
-                                        <button onclick="deleteCustomer(${c.id}, '${c.name.replace(/'/g, "\\'")}')" class="btn-icon" style="color:var(--danger);" title="Hapus Pelanggan"><i class="bi bi-trash"></i></button>
+                                    <!-- Action Buttons -->
+                                    <div style="display:flex; gap:4px; flex-shrink:0;">
+                                        ${c.phone ? `<a href="https://wa.me/${c.phone.replace(/^0/, '62').replace(/\D/g, '')}" target="_blank" class="btn-subtle" style="width:30px; height:30px; border-radius:6px; color:#25D366; text-decoration:none; display:flex; align-items:center; justify-content:center;" title="Hubungi via WhatsApp"><i class="bi bi-whatsapp"></i></a>` : ''}
+                                        <button onclick="showEditCustomerModal(${JSON.stringify(c).replace(/"/g, '&quot;')})" class="btn-subtle" style="width:30px; height:30px; border-radius:6px; color:var(--text-primary); cursor:pointer;" title="Edit Pelanggan"><i class="bi bi-pencil-square"></i></button>
+                                        <button onclick="deleteCustomer(${c.id}, '${c.name.replace(/'/g, "\\'")}')" class="btn-subtle" style="width:30px; height:30px; border-radius:6px; color:var(--danger); cursor:pointer;" title="Hapus Pelanggan"><i class="bi bi-trash"></i></button>
                                     </div>
                                 </div>
-                                <div style="font-size:var(--font-size-xs); color:var(--text-muted); margin-top:4px;">
-                                    <i class="bi bi-telephone"></i> ${phone} · <i class="bi bi-geo-alt"></i> ${addr}
+
+                                <!-- Contact Info -->
+                                <div style="font-size:12px; color:var(--text-muted); display:flex; flex-direction:column; gap:4px; margin-top:6px;">
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <i class="bi bi-telephone text-primary" style="font-size:11px;"></i>
+                                        <span>${escapeHtml(phone)}</span>
+                                    </div>
+                                    <div style="display:flex; align-items:center; gap:6px;">
+                                        <i class="bi bi-geo-alt text-primary" style="font-size:11px;"></i>
+                                        <span style="text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${escapeHtml(addr)}</span>
+                                    </div>
                                 </div>
-                                ${notes ? `<div style="font-size:11px; color:var(--text-muted); margin-top:4px; font-style:italic;">Ciri/Keterangan: ${notes}</div>` : ''}
+
+                                ${notes ? `<div style="font-size:11px; color:var(--text-muted); margin-top:8px; font-style:italic; background:var(--surface-2); padding:6px 10px; border-radius:6px; border:1px solid var(--border-color);">Ciri / Catatan: ${escapeHtml(notes)}</div>` : ''}
                             </div>
                         </div>
                     `;
                 });
+
+                html += `</div>`;
                 container.innerHTML = html;
             }
         } catch (e) {
