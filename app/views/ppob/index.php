@@ -2398,7 +2398,7 @@ async function requestDeposit() {
                           || notes.match(/(BCA|MANDIRI|BRI|BNI|FLIP|SHOPEEPAY|GOPAY)\s+(\d{8,})\s*a\.?\/?n\.?\s+(.*)/i);
             const parsedContainer = document.getElementById('dr-parsed-dest');
             
-            if (bank === 'SHOPEEPAY' || bank === 'FLIP') {
+            if (bank === 'SHOPEEPAY' || bank === 'FLIP' || bank === 'GOPAY') {
                 document.getElementById('dr-bank-name').innerText = 'BCA';
                 document.getElementById('dr-acc-no').innerText = '6042888890';
                 document.getElementById('dr-acc-name').innerText = 'PT DIGIFLAZZ INTERKONEKSI INDONESIA';
@@ -2507,7 +2507,7 @@ async function fetchDepositHistory() {
                 if(item.notes) {
                     const match = item.notes.match(/ke\s+(?:rekening\s+)?([a-zA-Z\s]+?)\s+(\d{8,})\s*a\.?\/?n\.?\s+(.*)/i) 
                                 || item.notes.match(/(BCA|MANDIRI|BRI|BNI|BSI|FLIP|SHOPEEPAY|GOPAY)\s+(\d{8,})\s*a\.?\/?n\.?\s+(.*)/i);
-                    if(item.bank === 'SHOPEEPAY' || item.bank === 'FLIP') {
+                    if(item.bank === 'SHOPEEPAY' || item.bank === 'FLIP' || item.bank === 'GOPAY') {
                         targetRek = 'BCA - 6042888890';
                         targetName = 'PT DIGIFLAZZ INTERKONEKSI';
                     } else if(match) {
