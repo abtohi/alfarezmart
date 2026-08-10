@@ -816,9 +816,24 @@ if ($userLevel === 'staff') {
         const category  = (p.category_name || '').replace(/</g,'&lt;');
         const stockQty  = p.current_qty_base !== undefined ? parseInt(p.current_qty_base) : 0;
         
-        const photoHtml = p.photo 
-            ? `<img src="${BASE_URL}${p.photo}" style="width:72px; height:72px; object-fit:contain; border-radius:14px; background:var(--surface-2); padding:4px; flex-shrink:0; border:1px solid var(--border-color);">`
-            : `<div style="width:72px; height:72px; border-radius:14px; background:var(--primary-bg); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:2rem; flex-shrink:0; border:1px solid var(--border-color);"><i class="bi bi-box-seam"></i></div>`;
+        const photoContent = p.photo 
+            ? `<img id="gmodal_photo_img_${p.id}" src="${BASE_URL}${p.photo}" style="width:100%; height:100%; object-fit:contain; border-radius:12px; background:var(--surface-2); padding:4px;">`
+            : `<div id="gmodal_photo_placeholder_${p.id}" style="width:100%; height:100%; border-radius:12px; background:var(--primary-bg); color:var(--primary); display:flex; align-items:center; justify-content:center; font-size:2rem;"><i class="bi bi-box-seam"></i></div>`;
+
+        const photoHtml = `
+            <div style="position:relative; width:76px; height:76px; flex-shrink:0;">
+                <div id="gmodal_photo_wrap_${p.id}" onclick="triggerGlobalPhotoUpload(${p.id})" 
+                     style="width:76px; height:76px; border-radius:14px; border:1.5px dashed var(--border-color); display:flex; align-items:center; justify-content:center; cursor:pointer; overflow:hidden; position:relative; transition:all 0.2s ease;" 
+                     onmouseover="this.style.borderColor='var(--primary)';this.style.transform='scale(1.03)'" 
+                     onmouseout="this.style.borderColor='var(--border-color)';this.style.transform='scale(1)'" 
+                     title="Klik untuk mengganti foto produk">
+                    ${photoContent}
+                    <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(15,23,42,0.75); color:white; font-size:9.5px; font-weight:700; text-align:center; padding:3px 0; backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center; gap:3px;">
+                        <i class="bi bi-camera-fill" style="font-size:10px;"></i> Ganti
+                    </div>
+                </div>
+                <input type="file" id="gmodal_photo_input_${p.id}" accept="image/*" style="display:none;" onchange="handleGlobalProductPhotoSelect(event, ${p.id})">
+            </div>`;
 
         const localBadge = isLocal ? `<span style="font-size:10px; background:rgba(234,179,8,0.15); color:#ca8a04; border:1px solid rgba(234,179,8,0.3); border-radius:6px; padding:2px 7px; font-weight:700;">Lokal</span>` : '';
 
@@ -942,6 +957,98 @@ if ($userLevel === 'staff') {
 
     // Track current product data shown in the modal for barcode save
     window._currentGlobalModalProduct = null;
+
+    // Trigger photo input file picker
+    window.triggerGlobalPhotoUpload = function(productId) {
+        const input = document.getElementById('gmodal_photo_input_' + productId);
+        if (input) input.click();
+    };
+
+    // Handle photo file selection, compression, and saving
+    window.handleGlobalProductPhotoSelect = async function(event, productId) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const product = window._currentGlobalModalProduct;
+        const wrap = document.getElementById('gmodal_photo_wrap_' + productId);
+        if (!wrap) return;
+
+        const origContent = wrap.innerHTML;
+        wrap.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:10px; color:var(--primary); font-weight:700;"><span class="spinner-border spinner-border-sm"></span>Simpan...</div>`;
+
+        try {
+            // Compress Image helper using Canvas (max 800px)
+            const compressedDataUrl = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const maxDim = 800;
+                        if (width > maxDim || height > maxDim) {
+                            if (width > height) {
+                                height = Math.round((height * maxDim) / width);
+                                width = maxDim;
+                            } else {
+                                width = Math.round((width * maxDim) / height);
+                                height = maxDim;
+                            }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.85));
+                    };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
+            // Get CSRF token
+            let csrf = '';
+            const csrfEl = document.getElementById('csrfToken') || document.getElementById('globalCsrfToken') || document.querySelector('input[name="csrf_token"]');
+            if (csrfEl) csrf = csrfEl.value;
+
+            const resp = await fetch(`${BASE_URL}api/products/${productId}/photo`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+                credentials: 'same-origin',
+                body: JSON.stringify({ photo_base64: compressedDataUrl, csrf_token: csrf })
+            });
+
+            const res = await resp.json();
+            if (!resp.ok || !res.success) throw new Error(res.message || 'Gagal menyimpan foto');
+
+            const photoPath = res.photo;
+
+            // Update in-memory product photo
+            if (product) product.photo = photoPath;
+
+            // Update wrap HTML with new photo
+            wrap.innerHTML = `
+                <img id="gmodal_photo_img_${productId}" src="${BASE_URL}${photoPath}?t=${Date.now()}" style="width:100%; height:100%; object-fit:contain; border-radius:12px; background:var(--surface-2); padding:4px;">
+                <div style="position:absolute; bottom:0; left:0; right:0; background:rgba(15,23,42,0.75); color:white; font-size:9.5px; font-weight:700; text-align:center; padding:3px 0; backdrop-filter:blur(2px); display:flex; align-items:center; justify-content:center; gap:3px;">
+                    <i class="bi bi-camera-fill" style="font-size:10px;"></i> Ganti
+                </div>
+            `;
+
+            if (typeof showToast === 'function') showToast('Foto produk berhasil diperbarui!', 'success');
+
+            // Save to IndexedDB offline cache
+            if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct && product) {
+                OfflineDB.saveProduct(product).catch(() => {});
+            }
+
+        } catch (err) {
+            wrap.innerHTML = origContent;
+            if (typeof showToast === 'function') showToast(err.message || 'Gagal mengganti foto produk', 'error');
+        }
+    };
 
     // Toggle expand/collapse for a packaging row in the scan result modal
     window.toggleGlobalPkgRow = function(uid) {
