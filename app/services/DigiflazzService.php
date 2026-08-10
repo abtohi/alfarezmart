@@ -42,18 +42,10 @@ class DigiflazzService {
         $sign = md5($this->username . $this->apiKey . "deposit");
         $bankUpper = strtoupper(trim($bank));
 
-        // Digiflazz API server only recognizes: BCA, MANDIRI, BRI, BNI, SHOPEEPAY, FLIP.
-        // Sending 'GOPAY' causes Digiflazz server error: "Coba pilihan bank lainnya: Flip, ShopeePay".
-        // Map GOPAY to SHOPEEPAY so Digiflazz server issues a valid deposit ticket with unique nominal.
-        $apiBank = $bankUpper;
-        if (in_array($bankUpper, ['GOPAY', 'DANA', 'OVO'])) {
-            $apiBank = 'SHOPEEPAY';
-        }
-
         $payload = [
             'username' => $this->username,
             'amount' => $amount,
-            'Bank' => $apiBank,
+            'Bank' => $bankUpper,
             'owner_name' => $ownerName,
             'sign' => $sign
         ];
