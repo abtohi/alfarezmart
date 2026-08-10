@@ -41,9 +41,12 @@ class DigiflazzService {
     public function createDeposit(float $amount, string $bank, string $ownerName) {
         $sign = md5($this->username . $this->apiKey . "deposit");
         $bankUpper = strtoupper(trim($bank));
-        // Digiflazz API requires standard bank codes (BCA, MANDIRI, BRI, BNI).
-        // For GoPay, ShopeePay, Flip, etc., map to BCA so Digiflazz generates an automated BCA deposit ticket with unique 3-digit nominal.
-        $apiBank = in_array($bankUpper, ['GOPAY', 'SHOPEEPAY', 'FLIP', 'DANA', 'OVO']) ? 'BCA' : $bankUpper;
+        // Digiflazz API natively accepts: BCA, MANDIRI, BRI, BNI, SHOPEEPAY, FLIP.
+        // For GoPay, Dana, and Ovo, map to SHOPEEPAY so Digiflazz API generates a valid BCA transfer deposit ticket.
+        $apiBank = $bankUpper;
+        if (in_array($bankUpper, ['GOPAY', 'DANA', 'OVO'])) {
+            $apiBank = 'SHOPEEPAY';
+        }
 
         $payload = [
             'username' => $this->username,
