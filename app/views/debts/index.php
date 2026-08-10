@@ -281,33 +281,55 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     };
 
-    // Delete confirm helpers
+    // Delete confirm helpers (Elegant AppModal)
     window.deleteCustomerDebtConfirm = async function(id) {
-        if (confirm('Apakah Anda yakin ingin menghapus catatan piutang ini?')) {
-            try {
-                const res = await api(`${BASE_URL}api/debts/customer/${id}/delete`, 'POST', { csrf_token: csrfVal });
-                if (res.success) {
-                    showToast(res.message || 'Catatan piutang dihapus', 'success');
-                    loadCustomerDebts();
+        await AppModal.show({
+            title: 'Hapus Piutang Pelanggan',
+            subtitle: 'Konfirmasi Penghapusan Data',
+            icon: 'bi-trash3-fill',
+            iconColor: 'var(--danger-bg)',
+            iconAccent: 'var(--danger)',
+            bodyHTML: `<p style="font-size:var(--font-size-sm); color:var(--text-secondary); margin:0; text-align:center;">Apakah Anda yakin ingin menghapus catatan piutang ini?<br><small class="text-muted">Data yang dihapus tidak dapat dikembalikan lagi.</small></p>`,
+            submitText: 'Ya, Hapus',
+            onSubmit: async () => {
+                try {
+                    const res = await api(`${BASE_URL}api/debts/customer/${id}/delete`, 'POST', { csrf_token: csrfVal });
+                    if (res.success) {
+                        showToast(res.message || 'Catatan piutang berhasil dihapus', 'success');
+                        loadCustomerDebts();
+                        return true;
+                    }
+                } catch (e) {
+                    showToast(e.message, 'error');
                 }
-            } catch (e) {
-                showToast(e.message, 'error');
+                return false;
             }
-        }
+        });
     };
 
     window.deleteShopDebtConfirm = async function(id) {
-        if (confirm('Apakah Anda yakin ingin menghapus catatan hutang toko ini?')) {
-            try {
-                const res = await api(`${BASE_URL}api/debts/shop/${id}/delete`, 'POST', { csrf_token: csrfVal });
-                if (res.success) {
-                    showToast(res.message || 'Catatan hutang toko dihapus', 'success');
-                    loadShopDebts();
+        await AppModal.show({
+            title: 'Hapus Hutang Toko',
+            subtitle: 'Konfirmasi Penghapusan Data',
+            icon: 'bi-trash3-fill',
+            iconColor: 'var(--danger-bg)',
+            iconAccent: 'var(--danger)',
+            bodyHTML: `<p style="font-size:var(--font-size-sm); color:var(--text-secondary); margin:0; text-align:center;">Apakah Anda yakin ingin menghapus catatan hutang toko ini?<br><small class="text-muted">Data yang dihapus tidak dapat dikembalikan lagi.</small></p>`,
+            submitText: 'Ya, Hapus',
+            onSubmit: async () => {
+                try {
+                    const res = await api(`${BASE_URL}api/debts/shop/${id}/delete`, 'POST', { csrf_token: csrfVal });
+                    if (res.success) {
+                        showToast(res.message || 'Catatan hutang toko berhasil dihapus', 'success');
+                        loadShopDebts();
+                        return true;
+                    }
+                } catch (e) {
+                    showToast(e.message, 'error');
                 }
-            } catch (e) {
-                showToast(e.message, 'error');
+                return false;
             }
-        }
+        });
     };
 
     // ==========================================
@@ -1568,30 +1590,60 @@ document.addEventListener('DOMContentLoaded', function() {
     };
     
     window.editDebtSource = async function(id, oldName) {
-        const newName = prompt('Ubah Nama Sumber Hutang:', oldName);
-        if (!newName || newName.trim() === '' || newName === oldName) return;
-        try {
-            const res = await api(`${BASE_URL}api/debts/sources/${id}`, 'POST', { csrf_token: csrfVal, name: newName.trim() });
-            if (res.success) {
-                showToast(res.message, 'success');
-                const idx = debtSources.findIndex(d => d.id == id);
-                if (idx > -1) debtSources[idx].name = newName.trim();
-                manageDebtSources();
+        AppModal.show({
+            title: 'Edit Sumber Hutang',
+            subtitle: 'Ubah Nama Kreditur / Sumber',
+            icon: 'bi-pencil-square',
+            iconColor: 'var(--warning-bg)',
+            iconAccent: 'var(--warning)',
+            bodyHTML: `
+                <div class="modal-form-group">
+                    <label>Nama Sumber Hutang / Kreditur *</label>
+                    <input type="text" id="editDebtSourceName" class="form-control-dark" value="${escapeHtml(oldName)}" required>
+                </div>
+            `,
+            submitText: 'Simpan',
+            onSubmit: async () => {
+                const newName = document.getElementById('editDebtSourceName').value.trim();
+                if (!newName || newName === oldName) return true;
+                try {
+                    const res = await api(`${BASE_URL}api/debts/sources/${id}`, 'POST', { csrf_token: csrfVal, name: newName });
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                        const idx = debtSources.findIndex(d => d.id == id);
+                        if (idx > -1) debtSources[idx].name = newName;
+                        manageDebtSources();
+                        return true;
+                    }
+                } catch (e) { showToast(e.message, 'error'); }
+                return false;
             }
-        } catch (e) { showToast(e.message, 'error'); }
+        });
     };
     
     window.deleteDebtSource = async function(id, name) {
-        if (!confirm(`Hapus sumber hutang '${name}'?`)) return;
-        try {
-            const res = await api(`${BASE_URL}api/debts/sources/${id}/delete`, 'POST', { csrf_token: csrfVal });
-            if (res.success) {
-                showToast(res.message, 'success');
-                const idx = debtSources.findIndex(d => d.id == id);
-                if (idx > -1) debtSources.splice(idx, 1);
-                manageDebtSources();
+        await AppModal.show({
+            title: 'Hapus Sumber Hutang',
+            subtitle: 'Konfirmasi Penghapusan Opsi',
+            icon: 'bi-trash3-fill',
+            iconColor: 'var(--danger-bg)',
+            iconAccent: 'var(--danger)',
+            bodyHTML: `<p style="font-size:var(--font-size-sm); color:var(--text-secondary); margin:0; text-align:center;">Apakah Anda yakin ingin menghapus sumber hutang <strong>"${escapeHtml(name)}"</strong>?</p>`,
+            submitText: 'Ya, Hapus',
+            onSubmit: async () => {
+                try {
+                    const res = await api(`${BASE_URL}api/debts/sources/${id}/delete`, 'POST', { csrf_token: csrfVal });
+                    if (res.success) {
+                        showToast(res.message, 'success');
+                        const idx = debtSources.findIndex(d => d.id == id);
+                        if (idx > -1) debtSources.splice(idx, 1);
+                        manageDebtSources();
+                        return true;
+                    }
+                } catch (e) { showToast(e.message, 'error'); }
+                return false;
             }
-        } catch (e) { showToast(e.message, 'error'); }
+        });
     };
 
 
