@@ -389,6 +389,9 @@ table.dataTable tbody td {
         <button class="cat-pill-btn" onclick="filterCategory('game', this)">
             <i class="bi bi-controller"></i> Voucher Game
         </button>
+        <button class="cat-pill-btn" onclick="filterCategory('voucher', this)">
+            <i class="bi bi-ticket-perforated-fill"></i> Voucher
+        </button>
         <button class="cat-pill-btn" onclick="filterCategory('tv', this)">
             <i class="bi bi-tv-fill"></i> TV & Tagihan
         </button>

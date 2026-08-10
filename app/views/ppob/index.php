@@ -831,6 +831,7 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 .cat-icon.purple { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
 .cat-icon.orange { background: rgba(249, 115, 22, 0.1); color: #f97316; }
 .cat-icon.green { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+.cat-icon.yellow { background: rgba(234, 179, 8, 0.15); color: #eab308; }
 .cat-name {
     font-size: 11px;
     font-weight: 600;
@@ -1531,6 +1532,10 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
         <div class="cat-card" onclick="openTrxModal('Voucher Game', 'game', 'prepaid')">
             <div class="cat-icon purple"><i class="bi bi-controller"></i></div>
             <div class="cat-name">Games</div>
+        </div>
+        <div class="cat-card" onclick="openTrxModal('Voucher Belanja & Digital', 'voucher', 'prepaid')">
+            <div class="cat-icon yellow"><i class="bi bi-ticket-perforated"></i></div>
+            <div class="cat-name">Voucher</div>
         </div>
         <div class="cat-card" onclick="openTrxModal('TV Voucher', 'tv', 'prepaid')">
             <div class="cat-icon blue"><i class="bi bi-tv"></i></div>

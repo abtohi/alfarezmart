@@ -183,6 +183,8 @@ class DigiflazzModel {
         if (strpos($cat, 'pln') !== false) return 'pln';
         if (strpos($cat, 'e-money') !== false || strpos($cat, 'ewallet') !== false) return 'ewallet';
         if (strpos($cat, 'game') !== false) return 'game';
+        if (strpos($cat, 'tv') !== false) return 'tv';
+        if (strpos($cat, 'voucher') !== false) return 'voucher';
         if (strpos($cat, 'bpjs') !== false) return 'bpjs';
         if (strpos($cat, 'multifinance') !== false || strpos($cat, 'finance') !== false) return 'multifinance';
         if (strpos($cat, 'bank') !== false || strpos($cat, 'transfer') !== false) return 'bank';
@@ -302,9 +304,15 @@ class DigiflazzModel {
      * Get products for frontend by category and brand
      */
     public function getProducts(string $category, ?string $brand = null, string $type = 'prepaid') {
-        $sql = "SELECT * FROM digi_products 
-                WHERE category = :cat AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
-        $params = ['cat' => $category, 'type' => $type];
+        if ($category === 'voucher') {
+            $sql = "SELECT * FROM digi_products 
+                    WHERE (category = 'voucher' OR category = 'aktivasi voucher') AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
+            $params = ['type' => $type];
+        } else {
+            $sql = "SELECT * FROM digi_products 
+                    WHERE category = :cat AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
+            $params = ['cat' => $category, 'type' => $type];
+        }
         
         if ($brand) {
             $sql .= " AND brand = :brand";
