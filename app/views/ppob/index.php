@@ -1831,12 +1831,12 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
                                 </div>
                             </label>
                         </div>
-                        <div class="col-12 mt-2">
-                            <label class="w-100 mb-0">
+                        <div class="col-4">
+                            <label class="w-100 mb-0 h-100">
                                 <input type="radio" name="depo_bank" value="GOPAY" class="bank-option">
-                                <div class="bank-card flex-row justify-content-center align-items-center py-3">
-                                    <div class="bank-logo me-2" style="color:#00A5CF;">GOPAY</div>
-                                    <div class="bank-desc mt-0">Bebas Admin</div>
+                                <div class="bank-card">
+                                    <div class="bank-logo" style="color:#00A5CF;">GOPAY</div>
+                                    <div class="bank-desc">Bebas Admin</div>
                                 </div>
                             </label>
                         </div>
