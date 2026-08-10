@@ -259,11 +259,13 @@ $router->post('/api/customers/{id}/delete', 'ApiController@deleteCustomer');
 
 $router->get('/api/debts/customer', 'ApiController@getCustomerDebts');
 $router->post('/api/debts/customer', 'ApiController@createCustomerDebt');
+$router->post('/api/debts/customer/{id}/update', 'ApiController@updateCustomerDebt');
 $router->post('/api/debts/customer/{id}/pay', 'ApiController@payCustomerDebt');
 $router->post('/api/debts/customer/{id}/delete', 'ApiController@deleteCustomerDebt');
 
 $router->get('/api/debts/shop', 'ApiController@getShopDebts');
 $router->post('/api/debts/shop', 'ApiController@createShopDebt');
+$router->post('/api/debts/shop/{id}/update', 'ApiController@updateShopDebt');
 $router->post('/api/debts/shop/{id}/pay', 'ApiController@payShopDebt');
 $router->post('/api/debts/shop/{id}/delete', 'ApiController@deleteShopDebt');
 

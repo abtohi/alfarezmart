@@ -154,6 +154,25 @@
     margin-bottom: 4px;
     display: block;
 }
+.debt-group-card {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.debt-group-card:hover {
+    border-color: var(--border-active) !important;
+}
+.debt-group-header:hover {
+    background: var(--surface-2) !important;
+}
+.btn-subtle {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+.btn-subtle:hover {
+    background: var(--surface-3);
+    border-color: var(--border-active);
+}
 </style>
 
 <script>
@@ -229,6 +248,68 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Helper function to escape HTML strings safely
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // Global toggle helpers for collapse & expand
+    window.toggleDebtGroup = function(groupId) {
+        const body = document.getElementById('body-' + groupId);
+        const chevron = document.getElementById('chevron-' + groupId);
+        if (!body) return;
+        
+        if (body.style.display === 'none' || !body.style.display) {
+            body.style.display = 'block';
+            if (chevron) chevron.style.transform = 'rotate(180deg)';
+        } else {
+            body.style.display = 'none';
+            if (chevron) chevron.style.transform = 'rotate(0deg)';
+        }
+    };
+
+    window.toggleAllGroups = function(type, expand) {
+        const prefix = type === 'customer' ? 'body-cg_' : 'body-sg_';
+        const chevronPrefix = type === 'customer' ? 'chevron-cg_' : 'chevron-sg_';
+        
+        document.querySelectorAll(`[id^="${prefix}"]`).forEach(body => {
+            body.style.display = expand ? 'block' : 'none';
+        });
+        document.querySelectorAll(`[id^="${chevronPrefix}"]`).forEach(chevron => {
+            chevron.style.transform = expand ? 'rotate(180deg)' : 'rotate(0deg)';
+        });
+    };
+
+    // Delete confirm helpers
+    window.deleteCustomerDebtConfirm = async function(id) {
+        if (confirm('Apakah Anda yakin ingin menghapus catatan piutang ini?')) {
+            try {
+                const res = await api(`${BASE_URL}api/debts/customer/${id}/delete`, 'POST', { csrf_token: csrfVal });
+                if (res.success) {
+                    showToast(res.message || 'Catatan piutang dihapus', 'success');
+                    loadCustomerDebts();
+                }
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+    };
+
+    window.deleteShopDebtConfirm = async function(id) {
+        if (confirm('Apakah Anda yakin ingin menghapus catatan hutang toko ini?')) {
+            try {
+                const res = await api(`${BASE_URL}api/debts/shop/${id}/delete`, 'POST', { csrf_token: csrfVal });
+                if (res.success) {
+                    showToast(res.message || 'Catatan hutang toko dihapus', 'success');
+                    loadShopDebts();
+                }
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+    };
+
     // ==========================================
     // 1. PIUTANG PELANGGAN (CUSTOMER DEBTS)
     // ==========================================
@@ -261,60 +342,305 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
 
-                let html = '';
+                // Group debts by customer
+                const groups = {};
                 res.data.forEach(d => {
-                    const isLunas = d.status === 'lunas';
-                    const amount = parseFloat(d.amount);
-                    const remaining = parseFloat(d.remaining_amount);
-                    const paid = amount - remaining;
-                    const pct = amount > 0 ? (paid / amount) * 100 : 0;
+                    let groupKey = '';
+                    let name = '';
+                    let subInfo = '';
                     
-                    const name = d.customer_name || d.customer_name_fallback || 'Pelanggan';
-                    const ciri = d.customer_notes || d.notes || '';
-                    const isAnonymous = !d.customer_name && ciri;
+                    if (d.customer_id) {
+                        groupKey = 'cid_' + d.customer_id;
+                        name = d.customer_name || 'Pelanggan #' + d.customer_id;
+                        subInfo = (d.customer_phone ? d.customer_phone + ' · ' : '') + (d.customer_address || '');
+                    } else if (d.customer_name_fallback) {
+                        groupKey = 'fallback_' + d.customer_name_fallback.toLowerCase().trim();
+                        name = d.customer_name_fallback;
+                        subInfo = 'Tanpa Akun Terdaftar';
+                    } else {
+                        groupKey = 'anon_' + (d.notes ? d.notes.substring(0, 20).toLowerCase().trim() : 'tanpa_nama');
+                        name = d.notes ? 'Catatan: ' + d.notes : 'Pelanggan Tanpa Nama';
+                        subInfo = 'Tanpa Akun Terdaftar';
+                    }
+
+                    if (!groups[groupKey]) {
+                        groups[groupKey] = {
+                            key: groupKey,
+                            name: name,
+                            subInfo: subInfo,
+                            customer_id: d.customer_id,
+                            customer_phone: d.customer_phone,
+                            items: [],
+                            totalAmount: 0,
+                            totalRemaining: 0,
+                            unpaidCount: 0
+                        };
+                    }
+
+                    const amt = parseFloat(d.amount);
+                    const rem = parseFloat(d.remaining_amount);
+                    groups[groupKey].items.push(d);
+                    groups[groupKey].totalAmount += amt;
+                    groups[groupKey].totalRemaining += rem;
+                    if (d.status !== 'lunas') {
+                        groups[groupKey].unpaidCount++;
+                    }
+                });
+
+                const groupList = Object.values(groups);
+
+                let html = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; font-size:12px; color:var(--text-muted);">
+                        <span>Terdiri dari <strong>${groupList.length} Pelanggan</strong> (${res.data.length} Transaksi)</span>
+                        <div style="display:flex; gap:8px;">
+                            <button onclick="toggleAllGroups('customer', true)" class="btn-subtle" style="font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer;"><i class="bi bi-arrows-expand me-1"></i> Buka Semua</button>
+                            <button onclick="toggleAllGroups('customer', false)" class="btn-subtle" style="font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer;"><i class="bi bi-arrows-collapse me-1"></i> Tutup Semua</button>
+                        </div>
+                    </div>
+                `;
+
+                groupList.forEach((g, idx) => {
+                    const isGroupLunas = g.unpaidCount === 0;
+                    const groupId = 'cg_' + idx;
 
                     html += `
-                        <div class="product-card" style="margin-bottom:12px; cursor:pointer;" onclick="viewCustomerDebtDetail(${JSON.stringify(d).replace(/"/g, '&quot;')})">
-                            <div class="product-icon" style="background:${isLunas ? 'var(--success-bg)' : 'var(--info-bg)'}; color:${isLunas ? 'var(--success)' : 'var(--info)'}; flex-shrink:0;">
-                                <i class="bi bi-person-fill"></i>
-                            </div>
-                            <div style="flex:1; min-width:0; margin-left:12px;">
-                                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-                                    <div style="font-weight:700; font-size:var(--font-size-sm); color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
-                                        ${name}
-                                        ${isAnonymous ? '<span class="badge-custom badge-danger" style="font-size:10px; margin-left:4px; padding:2px 6px;">Tanpa Nama</span>' : ''}
+                        <div class="debt-group-card" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-md); margin-bottom:12px; overflow:hidden;">
+                            <!-- Group Header -->
+                            <div class="debt-group-header" onclick="toggleDebtGroup('${groupId}')" style="padding:14px 18px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:var(--surface-1); user-select:none; gap:12px;">
+                                <div style="display:flex; align-items:center; gap:12px; min-width:0; flex:1;">
+                                    <div style="width:40px; height:40px; border-radius:10px; background:${isGroupLunas ? 'var(--success-bg)' : 'var(--info-bg)'}; color:${isGroupLunas ? 'var(--success)' : 'var(--info)'}; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0;">
+                                        <i class="bi bi-person-fill"></i>
                                     </div>
-                                    <span class="badge-custom ${isLunas ? 'badge-success' : 'badge-warning'}" style="font-size:10px; padding:2px 6px;">
-                                        ${isLunas ? 'Lunas' : 'Belum Lunas'}
-                                    </span>
-                                </div>
-                                
-                                ${ciri ? `<div style="font-size:11px; color:var(--text-muted); margin-top:2px; font-style:italic;">Ciri: ${ciri}</div>` : ''}
-                                
-                                <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:var(--font-size-xs);">
-                                    <span style="color:var(--text-muted);">Sisa: <strong style="color:var(--info);">${formatRupiah(remaining)}</strong></span>
-                                    <span style="color:var(--text-muted);">Total: ${formatRupiah(amount)}</span>
-                                </div>
-
-                                <!-- Progress Bar -->
-                                <div style="height:4px; background:var(--surface-2); border-radius:2px; margin-top:6px; overflow:hidden;">
-                                    <div style="height:100%; width:${pct}%; background:${isLunas ? 'var(--success)' : 'var(--info)'}; border-radius:2px;"></div>
+                                    <div style="min-width:0;">
+                                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                            <span style="font-weight:700; font-size:15px; color:var(--text-primary);">${escapeHtml(g.name)}</span>
+                                            <span class="badge-custom ${isGroupLunas ? 'badge-success' : 'badge-warning'}" style="font-size:10px; padding:2px 8px;">
+                                                ${isGroupLunas ? 'Lunas' : `Belum Lunas (${g.unpaidCount})`}
+                                            </span>
+                                            <span style="font-size:11px; color:var(--text-muted); background:var(--surface-2); padding:2px 8px; border-radius:12px;">
+                                                ${g.items.length} Catatan
+                                            </span>
+                                        </div>
+                                        ${g.subInfo ? `<div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${escapeHtml(g.subInfo)}</div>` : ''}
+                                    </div>
                                 </div>
 
-                                <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:10px; color:var(--text-muted);">
-                                    <span>Tgl: ${d.debt_date}</span>
-                                    ${d.due_date ? `<span style="color:${new Date(d.due_date) < new Date() && !isLunas ? 'var(--primary)' : 'var(--text-muted)'}">Jatuh Tempo: ${d.due_date}</span>` : ''}
+                                <div style="display:flex; align-items:center; gap:14px; flex-shrink:0;">
+                                    <div style="text-align:right;">
+                                        <div style="font-size:10px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Total Sisa Piutang</div>
+                                        <div style="font-weight:800; font-size:15px; color:${g.totalRemaining > 0 ? 'var(--info)' : 'var(--success)'};">
+                                            ${formatRupiah(g.totalRemaining)}
+                                        </div>
+                                    </div>
+                                    <div id="chevron-${groupId}" style="width:26px; height:26px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; color:var(--text-muted); transition:transform 0.25s; transform:${g.unpaidCount > 0 ? 'rotate(180deg)' : 'rotate(0deg)'};">
+                                        <i class="bi bi-chevron-down" style="font-size:12px;"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Group Body Items -->
+                            <div id="body-${groupId}" style="display:${g.unpaidCount > 0 ? 'block' : 'none'}; border-top:1px solid var(--border-color); background:var(--bg-primary); padding:12px 16px;">
+                                <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:10px;">
+                    `;
+
+                    g.items.forEach(d => {
+                        const isLunas = d.status === 'lunas';
+                        const amount = parseFloat(d.amount);
+                        const remaining = parseFloat(d.remaining_amount);
+                        const paid = amount - remaining;
+                        const pct = amount > 0 ? (paid / amount) * 100 : 0;
+                        const isOverdue = d.due_date && new Date(d.due_date) < new Date() && !isLunas;
+
+                        html += `
+                            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:8px; position:relative;">
+                                <div>
+                                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px; margin-bottom:4px;">
+                                        <div style="font-size:12px; font-weight:700; color:var(--text-primary);">
+                                            ${d.invoice_number ? `<i class="bi bi-receipt me-1 text-muted"></i>Nota: ${d.invoice_number}` : `<i class="bi bi-journal-text me-1 text-muted"></i>Piutang #${d.id}`}
+                                        </div>
+                                        <span class="badge-custom ${isLunas ? 'badge-success' : 'badge-warning'}" style="font-size:9px; padding:1px 6px;">
+                                            ${isLunas ? 'Lunas' : 'Belum Lunas'}
+                                        </span>
+                                    </div>
+
+                                    ${d.notes ? `<div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; font-style:italic;">"${escapeHtml(d.notes)}"</div>` : ''}
+
+                                    <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:4px;">
+                                        <span style="color:var(--text-muted);">Sisa: <strong style="color:var(--info); font-weight:700;">${formatRupiah(remaining)}</strong></span>
+                                        <span style="color:var(--text-muted);">Total: ${formatRupiah(amount)}</span>
+                                    </div>
+
+                                    <div style="height:4px; background:var(--surface-2); border-radius:2px; margin-top:6px; overflow:hidden;">
+                                        <div style="height:100%; width:${pct}%; background:${isLunas ? 'var(--success)' : 'var(--info)'}; border-radius:2px;"></div>
+                                    </div>
+
+                                    <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:10px; color:var(--text-muted);">
+                                        <span>Tgl: ${d.debt_date}</span>
+                                        ${d.due_date ? `<span style="color:${isOverdue ? 'var(--primary)' : 'var(--text-muted)'}; font-weight:${isOverdue ? '700' : '400'};">${isOverdue ? '⚠️ Overdue: ' : 'Jatuh Tempo: '}${d.due_date}</span>` : ''}
+                                    </div>
+                                </div>
+
+                                <!-- Actions -->
+                                <div style="display:flex; gap:6px; justify-content:flex-end; border-top:1px dashed var(--border-color); padding-top:8px; margin-top:4px;">
+                                    <button class="btn-subtle" style="font-size:11px; padding:4px 8px; border-radius:4px; color:var(--info); cursor:pointer;" onclick="event.stopPropagation(); viewCustomerDebtDetail(${JSON.stringify(d).replace(/"/g, '&quot;')})">
+                                        <i class="bi bi-wallet2 me-1"></i> ${isLunas ? 'Detail' : 'Bayar'}
+                                    </button>
+                                    <button class="btn-subtle" style="font-size:11px; padding:4px 8px; border-radius:4px; color:var(--warning); cursor:pointer;" onclick="event.stopPropagation(); editCustomerDebt(${JSON.stringify(d).replace(/"/g, '&quot;')})">
+                                        <i class="bi bi-pencil me-1"></i> Edit
+                                    </button>
+                                    <button class="btn-subtle" style="font-size:11px; padding:4px 8px; border-radius:4px; color:var(--primary); cursor:pointer;" onclick="event.stopPropagation(); deleteCustomerDebtConfirm(${d.id})">
+                                        <i class="bi bi-trash me-1"></i> Hapus
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += `
                                 </div>
                             </div>
                         </div>
                     `;
                 });
+
                 container.innerHTML = html;
             }
         } catch (e) {
             showToast(e.message, 'error');
         }
     }
+
+    window.editCustomerDebt = async function(d) {
+        let customerOptionsData = [];
+        try {
+            const custRes = await api(`${BASE_URL}api/customers`);
+            if (custRes.success) {
+                custRes.data.forEach(c => {
+                    const ciri = c.notes ? ` (${c.notes})` : '';
+                    customerOptionsData.push({ value: String(c.id), label: `${c.name}${ciri}` });
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        customerOptionsData.push({ value: 'NEW_ANON', label: '-- input manual / tanpa nama --' });
+
+        const selectedCustVal = d.customer_id ? String(d.customer_id) : 'NEW_ANON';
+
+        const html = `
+            <div class="modal-form-group">
+                <label>Pelanggan *</label>
+                <div id="editDebtCustomerIdContainer"></div>
+                <input type="hidden" id="editDebtCustomerId" value="${selectedCustVal}">
+            </div>
+            
+            <div class="modal-form-group" id="editManualCustomerGroup" style="display:${selectedCustVal === 'NEW_ANON' ? 'block' : 'none'};">
+                <label>Keterangan/Nama Pelanggan Manual *</label>
+                <input type="text" id="editDebtCustomerFallback" class="form-control-dark" value="${escapeHtml(d.customer_name_fallback || '')}" placeholder="Cth: Ibu jilbab merah">
+            </div>
+
+            <div class="modal-form-group">
+                <label>Nominal Hutang Awal (Rp) *</label>
+                <input type="number" id="editDebtAmount" class="form-control-dark" value="${d.amount}">
+            </div>
+
+            <div class="modal-form-group">
+                <label>Tanggal Hutang *</label>
+                <input type="date" id="editDebtDate" class="form-control-dark" value="${d.debt_date}">
+            </div>
+
+            <div class="modal-form-group">
+                <label>Tanggal Jatuh Tempo (Opsional)</label>
+                <input type="date" id="editDebtDueDate" class="form-control-dark" value="${d.due_date || ''}">
+            </div>
+
+            <div class="modal-form-group">
+                <label>Catatan / Keterangan</label>
+                <input type="text" id="editDebtNotes" class="form-control-dark" value="${escapeHtml(d.notes || '')}">
+            </div>
+        `;
+
+        AppModal.show({
+            title: 'Edit Piutang Pelanggan',
+            subtitle: 'Ubah rincian data piutang pelanggan',
+            icon: 'bi-pencil-square',
+            iconColor: 'var(--warning-bg)',
+            iconAccent: 'var(--warning)',
+            bodyHTML: html,
+            submitText: 'Simpan Perubahan',
+            onSubmit: async () => {
+                const custId = document.getElementById('editDebtCustomerId').value;
+                const fallback = document.getElementById('editDebtCustomerFallback').value.trim();
+                const amt = parseFloat(document.getElementById('editDebtAmount').value);
+                const date = document.getElementById('editDebtDate').value;
+                const dueDate = document.getElementById('editDebtDueDate').value;
+                const notes = document.getElementById('editDebtNotes').value.trim();
+
+                if (!custId) {
+                    showToast('Harap pilih pelanggan atau input manual', 'warning');
+                    return false;
+                }
+                if (custId === 'NEW_ANON' && !fallback) {
+                    showToast('Harap isi nama manual atau ciri ciri pelanggan', 'warning');
+                    return false;
+                }
+                if (isNaN(amt) || amt <= 0) {
+                    showToast('Nominal hutang wajib diisi dan valid', 'warning');
+                    return false;
+                }
+                if (!date) {
+                    showToast('Tanggal hutang wajib diisi', 'warning');
+                    return false;
+                }
+
+                try {
+                    const res = await api(`${BASE_URL}api/debts/customer/${d.id}/update`, 'POST', {
+                        csrf_token: csrfVal,
+                        customer_id: custId !== 'NEW_ANON' ? custId : '',
+                        customer_name_fallback: custId === 'NEW_ANON' ? fallback : '',
+                        amount: amt,
+                        debt_date: date,
+                        due_date: dueDate,
+                        notes: notes
+                    });
+
+                    if (res.success) {
+                        showToast(res.message || 'Catatan piutang berhasil diperbarui', 'success');
+                        loadCustomerDebts();
+                        return true;
+                    }
+                } catch (e) {
+                    showToast(e.message, 'error');
+                }
+                return false;
+            }
+        });
+
+        setTimeout(() => {
+            const container = document.getElementById('editDebtCustomerIdContainer');
+            if (container) {
+                new SearchBox(container, {
+                    options: customerOptionsData,
+                    placeholder: 'Cari pelanggan...',
+                    icon: 'bi-person',
+                    value: selectedCustVal,
+                    clearable: true,
+                    onChange: (val) => {
+                        const idEl = document.getElementById('editDebtCustomerId');
+                        if (idEl) idEl.value = val;
+                        const manualGroup = document.getElementById('editManualCustomerGroup');
+                        if (manualGroup) manualGroup.style.display = (val === 'NEW_ANON') ? 'block' : 'none';
+                    },
+                    onClear: () => {
+                        const idEl = document.getElementById('editDebtCustomerId');
+                        if (idEl) idEl.value = '';
+                        const manualGroup = document.getElementById('editManualCustomerGroup');
+                        if (manualGroup) manualGroup.style.display = 'none';
+                    }
+                });
+            }
+        }, 100);
+    };
 
     window.viewCustomerDebtDetail = async function(d) {
         let historyHTML = '';
@@ -606,58 +932,313 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
 
-                let html = '';
+                // Group debts by Supplier / Debt Source / Fallback
+                const groups = {};
                 res.data.forEach(d => {
-                    const isLunas = d.status === 'lunas';
-                    const amount = parseFloat(d.amount);
-                    const remaining = parseFloat(d.remaining_amount);
-                    const paid = amount - remaining;
-                    const pct = amount > 0 ? (paid / amount) * 100 : 0;
-                    
-                    const name = d.supplier_name || d.supplier_name_fallback || 'Pihak Lain';
+                    let groupKey = '';
+                    let name = '';
+                    let subInfo = '';
+
+                    if (d.supplier_id) {
+                        groupKey = 'sup_' + d.supplier_id;
+                        name = d.supplier_name || 'Supplier #' + d.supplier_id;
+                        subInfo = 'Supplier Resmi Toko';
+                    } else if (d.debt_source_id) {
+                        groupKey = 'src_' + d.debt_source_id;
+                        name = d.source_name || 'Sumber #' + d.debt_source_id;
+                        subInfo = 'Kreditur / Sumber Lain';
+                    } else if (d.supplier_name_fallback) {
+                        groupKey = 'fallback_' + d.supplier_name_fallback.toLowerCase().trim();
+                        name = d.supplier_name_fallback;
+                        subInfo = 'Kreditur Manual';
+                    } else {
+                        groupKey = 'anon_shop_' + (d.notes ? d.notes.substring(0, 20).toLowerCase().trim() : 'manual');
+                        name = d.notes ? 'Catatan: ' + d.notes : 'Hutang Toko Manual';
+                        subInfo = 'Tanpa Nama Kreditur';
+                    }
+
+                    if (!groups[groupKey]) {
+                        groups[groupKey] = {
+                            key: groupKey,
+                            name: name,
+                            subInfo: subInfo,
+                            items: [],
+                            totalAmount: 0,
+                            totalRemaining: 0,
+                            unpaidCount: 0
+                        };
+                    }
+
+                    const amt = parseFloat(d.amount);
+                    const rem = parseFloat(d.remaining_amount);
+                    groups[groupKey].items.push(d);
+                    groups[groupKey].totalAmount += amt;
+                    groups[groupKey].totalRemaining += rem;
+                    if (d.status !== 'lunas') {
+                        groups[groupKey].unpaidCount++;
+                    }
+                });
+
+                const groupList = Object.values(groups);
+
+                let html = `
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; font-size:12px; color:var(--text-muted);">
+                        <span>Terdiri dari <strong>${groupList.length} Supplier/Sumber</strong> (${res.data.length} Catatan)</span>
+                        <div style="display:flex; gap:8px;">
+                            <button onclick="toggleAllGroups('shop', true)" class="btn-subtle" style="font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer;"><i class="bi bi-arrows-expand me-1"></i> Buka Semua</button>
+                            <button onclick="toggleAllGroups('shop', false)" class="btn-subtle" style="font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer;"><i class="bi bi-arrows-collapse me-1"></i> Tutup Semua</button>
+                        </div>
+                    </div>
+                `;
+
+                groupList.forEach((g, idx) => {
+                    const isGroupLunas = g.unpaidCount === 0;
+                    const groupId = 'sg_' + idx;
 
                     html += `
-                        <div class="product-card" style="margin-bottom:12px; cursor:pointer;" onclick="viewShopDebtDetail(${JSON.stringify(d).replace(/"/g, '&quot;')})">
-                            <div class="product-icon" style="background:${isLunas ? 'var(--success-bg)' : 'var(--warning-bg)'}; color:${isLunas ? 'var(--success)' : 'var(--warning)'}; flex-shrink:0;">
-                                <i class="bi bi-shop-window"></i>
-                            </div>
-                            <div style="flex:1; min-width:0; margin-left:12px;">
-                                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
-                                    <div style="font-weight:700; font-size:var(--font-size-sm); color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
-                                        ${name}
-                                        ${d.source_name ? `<span class="badge-custom badge-info" style="font-size:9px; margin-left:4px;">${d.source_name}</span>` : ''}
+                        <div class="debt-group-card" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-md); margin-bottom:12px; overflow:hidden;">
+                            <!-- Group Header -->
+                            <div class="debt-group-header" onclick="toggleDebtGroup('${groupId}')" style="padding:14px 18px; display:flex; align-items:center; justify-content:space-between; cursor:pointer; background:var(--surface-1); user-select:none; gap:12px;">
+                                <div style="display:flex; align-items:center; gap:12px; min-width:0; flex:1;">
+                                    <div style="width:40px; height:40px; border-radius:10px; background:${isGroupLunas ? 'var(--success-bg)' : 'var(--warning-bg)'}; color:${isGroupLunas ? 'var(--success)' : 'var(--warning)'}; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0;">
+                                        <i class="bi bi-shop-window"></i>
                                     </div>
-                                    <span class="badge-custom ${isLunas ? 'badge-success' : 'badge-warning'}" style="font-size:10px; padding:2px 6px;">
-                                        ${isLunas ? 'Lunas' : 'Belum Lunas'}
-                                    </span>
-                                </div>
-                                
-                                ${d.notes ? `<div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Catatan: ${d.notes}</div>` : ''}
-                                
-                                <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:var(--font-size-xs);">
-                                    <span style="color:var(--text-muted);">Sisa: <strong style="color:var(--warning);">${formatRupiah(remaining)}</strong></span>
-                                    <span style="color:var(--text-muted);">Total: ${formatRupiah(amount)}</span>
-                                </div>
-
-                                <!-- Progress Bar -->
-                                <div style="height:4px; background:var(--surface-2); border-radius:2px; margin-top:6px; overflow:hidden;">
-                                    <div style="height:100%; width:${pct}%; background:${isLunas ? 'var(--success)' : 'var(--warning)'}; border-radius:2px;"></div>
+                                    <div style="min-width:0;">
+                                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                            <span style="font-weight:700; font-size:15px; color:var(--text-primary);">${escapeHtml(g.name)}</span>
+                                            <span class="badge-custom ${isGroupLunas ? 'badge-success' : 'badge-warning'}" style="font-size:10px; padding:2px 8px;">
+                                                ${isGroupLunas ? 'Lunas' : `Belum Lunas (${g.unpaidCount})`}
+                                            </span>
+                                            <span style="font-size:11px; color:var(--text-muted); background:var(--surface-2); padding:2px 8px; border-radius:12px;">
+                                                ${g.items.length} Nota/Catatan
+                                            </span>
+                                        </div>
+                                        ${g.subInfo ? `<div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${escapeHtml(g.subInfo)}</div>` : ''}
+                                    </div>
                                 </div>
 
-                                <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:10px; color:var(--text-muted);">
-                                    <span>Tgl: ${d.debt_date}</span>
-                                    ${d.due_date ? `<span style="color:${new Date(d.due_date) < new Date() && !isLunas ? 'var(--primary)' : 'var(--text-muted)'}">Jatuh Tempo: ${d.due_date}</span>` : ''}
+                                <div style="display:flex; align-items:center; gap:14px; flex-shrink:0;">
+                                    <div style="text-align:right;">
+                                        <div style="font-size:10px; color:var(--text-muted); font-weight:600; text-transform:uppercase;">Total Sisa Hutang</div>
+                                        <div style="font-weight:800; font-size:15px; color:${g.totalRemaining > 0 ? 'var(--warning)' : 'var(--success)'};">
+                                            ${formatRupiah(g.totalRemaining)}
+                                        </div>
+                                    </div>
+                                    <div id="chevron-${groupId}" style="width:26px; height:26px; border-radius:50%; background:var(--surface-2); display:flex; align-items:center; justify-content:center; color:var(--text-muted); transition:transform 0.25s; transform:${g.unpaidCount > 0 ? 'rotate(180deg)' : 'rotate(0deg)'};">
+                                        <i class="bi bi-chevron-down" style="font-size:12px;"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Group Body Items -->
+                            <div id="body-${groupId}" style="display:${g.unpaidCount > 0 ? 'block' : 'none'}; border-top:1px solid var(--border-color); background:var(--bg-primary); padding:12px 16px;">
+                                <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:10px;">
+                    `;
+
+                    g.items.forEach(d => {
+                        const isLunas = d.status === 'lunas';
+                        const amount = parseFloat(d.amount);
+                        const remaining = parseFloat(d.remaining_amount);
+                        const paid = amount - remaining;
+                        const pct = amount > 0 ? (paid / amount) * 100 : 0;
+                        const isOverdue = d.due_date && new Date(d.due_date) < new Date() && !isLunas;
+
+                        html += `
+                            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:12px; display:flex; flex-direction:column; justify-content:space-between; gap:8px; position:relative;">
+                                <div>
+                                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px; margin-bottom:4px;">
+                                        <div style="font-size:12px; font-weight:700; color:var(--text-primary);">
+                                            ${d.purchase_code ? `<i class="bi bi-cart-check me-1 text-muted"></i>Faktur: ${d.purchase_code}` : `<i class="bi bi-file-earmark-text me-1 text-muted"></i>Hutang #${d.id}`}
+                                        </div>
+                                        <span class="badge-custom ${isLunas ? 'badge-success' : 'badge-warning'}" style="font-size:9px; padding:1px 6px;">
+                                            ${isLunas ? 'Lunas' : 'Belum Lunas'}
+                                        </span>
+                                    </div>
+
+                                    ${d.notes ? `<div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; font-style:italic;">"${escapeHtml(d.notes)}"</div>` : ''}
+
+                                    <div style="display:flex; justify-content:space-between; font-size:12px; margin-top:4px;">
+                                        <span style="color:var(--text-muted);">Sisa: <strong style="color:var(--warning); font-weight:700;">${formatRupiah(remaining)}</strong></span>
+                                        <span style="color:var(--text-muted);">Total: ${formatRupiah(amount)}</span>
+                                    </div>
+
+                                    <div style="height:4px; background:var(--surface-2); border-radius:2px; margin-top:6px; overflow:hidden;">
+                                        <div style="height:100%; width:${pct}%; background:${isLunas ? 'var(--success)' : 'var(--warning)'}; border-radius:2px;"></div>
+                                    </div>
+
+                                    <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:10px; color:var(--text-muted);">
+                                        <span>Tgl: ${d.debt_date}</span>
+                                        ${d.due_date ? `<span style="color:${isOverdue ? 'var(--primary)' : 'var(--text-muted)'}; font-weight:${isOverdue ? '700' : '400'};">${isOverdue ? '⚠️ Overdue: ' : 'Jatuh Tempo: '}${d.due_date}</span>` : ''}
+                                    </div>
+                                </div>
+
+                                <!-- Actions -->
+                                <div style="display:flex; gap:6px; justify-content:flex-end; border-top:1px dashed var(--border-color); padding-top:8px; margin-top:4px;">
+                                    <button class="btn-subtle" style="font-size:11px; padding:4px 8px; border-radius:4px; color:var(--info); cursor:pointer;" onclick="event.stopPropagation(); viewShopDebtDetail(${JSON.stringify(d).replace(/"/g, '&quot;')})">
+                                        <i class="bi bi-wallet2 me-1"></i> ${isLunas ? 'Detail' : 'Bayar'}
+                                    </button>
+                                    <button class="btn-subtle" style="font-size:11px; padding:4px 8px; border-radius:4px; color:var(--warning); cursor:pointer;" onclick="event.stopPropagation(); editShopDebt(${JSON.stringify(d).replace(/"/g, '&quot;')})">
+                                        <i class="bi bi-pencil me-1"></i> Edit
+                                    </button>
+                                    <button class="btn-subtle" style="font-size:11px; padding:4px 8px; border-radius:4px; color:var(--primary); cursor:pointer;" onclick="event.stopPropagation(); deleteShopDebtConfirm(${d.id})">
+                                        <i class="bi bi-trash me-1"></i> Hapus
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += `
                                 </div>
                             </div>
                         </div>
                     `;
                 });
+
                 container.innerHTML = html;
             }
         } catch (e) {
             showToast(e.message, 'error');
         }
     }
+
+    window.editShopDebt = async function(d) {
+        const selectedVal = d.supplier_id ? 'SUP_' + d.supplier_id : (d.debt_source_id ? 'SRC_' + d.debt_source_id : 'NEW_MANUAL');
+
+        const html = `
+            <div class="modal-form-group">
+                <label>Sumber Hutang / Kreditur *</label>
+                <div id="editShopDebtSourceSearch" class="search-box-component"></div>
+                <input type="hidden" id="editShopSupplierId" value="${d.supplier_id || ''}">
+                <input type="hidden" id="editShopDebtSourceId" value="${d.debt_source_id || ''}">
+            </div>
+            
+            <div class="modal-form-group" id="editManualSupplierGroup" style="display:${selectedVal === 'NEW_MANUAL' ? 'block' : 'none'};">
+                <label>Nama Kreditur/Pihak Lain *</label>
+                <input type="text" id="editShopSupplierFallback" class="form-control-dark" value="${escapeHtml(d.supplier_name_fallback || '')}" placeholder="Cth: Bank, Teman, dll">
+            </div>
+
+            <div class="modal-form-group">
+                <label>Nominal Hutang Toko (Rp) *</label>
+                <input type="number" id="editShopAmount" class="form-control-dark" value="${d.amount}">
+            </div>
+
+            <div class="modal-form-group">
+                <label>Tanggal Hutang *</label>
+                <input type="date" id="editShopDate" class="form-control-dark" value="${d.debt_date}">
+            </div>
+
+            <div class="modal-form-group">
+                <label>Tanggal Jatuh Tempo (Opsional)</label>
+                <input type="date" id="editShopDueDate" class="form-control-dark" value="${d.due_date || ''}">
+            </div>
+
+            <div class="modal-form-group">
+                <label>Catatan / Keterangan</label>
+                <input type="text" id="editShopNotes" class="form-control-dark" value="${escapeHtml(d.notes || '')}">
+            </div>
+        `;
+
+        AppModal.show({
+            title: 'Edit Hutang Toko',
+            subtitle: 'Ubah data hutang toko ke supplier/kreditur',
+            icon: 'bi-pencil-square',
+            iconColor: 'var(--warning-bg)',
+            iconAccent: 'var(--warning)',
+            bodyHTML: html,
+            submitText: 'Simpan Perubahan',
+            onSubmit: async () => {
+                const supId = document.getElementById('editShopSupplierId').value;
+                const sourceId = document.getElementById('editShopDebtSourceId').value;
+                const fallback = document.getElementById('editShopSupplierFallback').value.trim();
+                const amt = parseFloat(document.getElementById('editShopAmount').value);
+                const date = document.getElementById('editShopDate').value;
+                const dueDate = document.getElementById('editShopDueDate').value;
+                const notes = document.getElementById('editShopNotes').value.trim();
+
+                if (!supId && !sourceId && !fallback) {
+                    showToast('Harap pilih sumber hutang atau input manual', 'warning');
+                    return false;
+                }
+                if (isNaN(amt) || amt <= 0) {
+                    showToast('Nominal hutang wajib diisi dan valid', 'warning');
+                    return false;
+                }
+                if (!date) {
+                    showToast('Tanggal hutang wajib diisi', 'warning');
+                    return false;
+                }
+
+                try {
+                    const payload = {
+                        csrf_token: csrfVal,
+                        amount: amt,
+                        debt_date: date,
+                        due_date: dueDate,
+                        notes: notes
+                    };
+                    
+                    if (supId) payload.supplier_id = supId;
+                    if (sourceId) payload.debt_source_id = sourceId;
+                    if (fallback) payload.supplier_name_fallback = fallback;
+
+                    const res = await api(`${BASE_URL}api/debts/shop/${d.id}/update`, 'POST', payload);
+
+                    if (res.success) {
+                        showToast(res.message || 'Hutang toko berhasil diperbarui', 'success');
+                        loadShopDebts();
+                        return true;
+                    }
+                } catch (e) {
+                    showToast(e.message, 'error');
+                }
+                return false;
+            }
+        });
+
+        setTimeout(() => {
+            const searchContainer = document.getElementById('editShopDebtSourceSearch');
+            if (!searchContainer) return;
+            
+            const optionsList = [];
+            suppliers.forEach(s => optionsList.push({ value: 'SUP_' + s.id, label: s.name }));
+            debtSources.forEach(ds => optionsList.push({ value: 'SRC_' + ds.id, label: ds.name }));
+            optionsList.push({ value: 'NEW_MANUAL', label: '+ Input Manual' });
+            
+            new SearchBox(searchContainer, {
+                options: optionsList,
+                placeholder: 'Ketik / pilih sumber hutang...',
+                icon: 'bi-building',
+                value: selectedVal,
+                clearable: true,
+                onChange: (val) => {
+                    const supEl = document.getElementById('editShopSupplierId');
+                    const srcEl = document.getElementById('editShopDebtSourceId');
+                    const manualGroup = document.getElementById('editManualSupplierGroup');
+
+                    supEl.value = '';
+                    srcEl.value = '';
+
+                    if (val.startsWith('SUP_')) {
+                        supEl.value = val.replace('SUP_', '');
+                        manualGroup.style.display = 'none';
+                    } else if (val.startsWith('SRC_')) {
+                        srcEl.value = val.replace('SRC_', '');
+                        manualGroup.style.display = 'none';
+                    } else if (val === 'NEW_MANUAL') {
+                        manualGroup.style.display = 'block';
+                    } else {
+                        manualGroup.style.display = 'none';
+                    }
+                },
+                onClear: () => {
+                    document.getElementById('editShopSupplierId').value = '';
+                    document.getElementById('editShopDebtSourceId').value = '';
+                    document.getElementById('editManualSupplierGroup').style.display = 'none';
+                }
+            });
+        }, 100);
+    };
 
     window.viewShopDebtDetail = async function(d) {
         let historyHTML = '';
@@ -883,7 +1464,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Initialize SearchBox Component for Debt Sources (using correct new SearchBox() API)
+        // Initialize SearchBox Component for Debt Sources
         setTimeout(() => {
             const searchContainer = document.getElementById('shopDebtSourceSearch');
             if (!searchContainer) return;

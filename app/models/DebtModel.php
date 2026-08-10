@@ -130,11 +130,48 @@ class DebtModel extends Model
         }
     }
 
+    public function updateCustomerDebt($id, $data)
+    {
+        $stmt = $this->db->prepare("SELECT COALESCE(SUM(amount), 0) as total_paid FROM customer_debt_payments WHERE debt_id = :id");
+        $stmt->execute([':id' => $id]);
+        $paidRes = $stmt->fetch(PDO::FETCH_ASSOC);
+        $totalPaid = (float)($paidRes['total_paid'] ?? 0);
+
+        $amount = (float)($data['amount'] ?? 0);
+        $newRemaining = max(0, $amount - $totalPaid);
+        $status = ($newRemaining <= 0) ? 'lunas' : 'belum_lunas';
+
+        $sql = "UPDATE customer_debts SET 
+                    customer_id = :customer_id,
+                    customer_name_fallback = :customer_name_fallback,
+                    amount = :amount,
+                    remaining_amount = :remaining_amount,
+                    status = :status,
+                    debt_date = :debt_date,
+                    due_date = :due_date,
+                    notes = :notes
+                WHERE id = :id";
+
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            ':customer_id' => !empty($data['customer_id']) ? (int)$data['customer_id'] : null,
+            ':customer_name_fallback' => !empty($data['customer_name_fallback']) ? $data['customer_name_fallback'] : null,
+            ':amount' => $amount,
+            ':remaining_amount' => $newRemaining,
+            ':status' => $status,
+            ':debt_date' => $data['debt_date'] ?? date('Y-m-d'),
+            ':due_date' => !empty($data['due_date']) ? $data['due_date'] : null,
+            ':notes' => $data['notes'] ?? '',
+            ':id' => (int)$id
+        ]);
+    }
+
     public function deleteCustomerDebt($id)
     {
         $stmt = $this->db->prepare("DELETE FROM customer_debts WHERE id = :id");
         return $stmt->execute([':id' => $id]);
     }
+
 
 
     // ==========================================
@@ -259,6 +296,44 @@ class DebtModel extends Model
             $this->rollback();
             throw $e;
         }
+    }
+
+    public function updateShopDebt($id, $data)
+    {
+        $stmt = $this->db->prepare("SELECT COALESCE(SUM(amount), 0) as total_paid FROM shop_debt_payments WHERE debt_id = :id");
+        $stmt->execute([':id' => $id]);
+        $paidRes = $stmt->fetch(PDO::FETCH_ASSOC);
+        $totalPaid = (float)($paidRes['total_paid'] ?? 0);
+
+        $amount = (float)($data['amount'] ?? 0);
+        $newRemaining = max(0, $amount - $totalPaid);
+        $status = ($newRemaining <= 0) ? 'lunas' : 'belum_lunas';
+
+        $sql = "UPDATE shop_debts SET 
+                    supplier_id = :supplier_id,
+                    debt_source_id = :debt_source_id,
+                    supplier_name_fallback = :supplier_name_fallback,
+                    amount = :amount,
+                    remaining_amount = :remaining_amount,
+                    status = :status,
+                    debt_date = :debt_date,
+                    due_date = :due_date,
+                    notes = :notes
+                WHERE id = :id";
+
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            ':supplier_id' => !empty($data['supplier_id']) ? (int)$data['supplier_id'] : null,
+            ':debt_source_id' => !empty($data['debt_source_id']) ? (int)$data['debt_source_id'] : null,
+            ':supplier_name_fallback' => !empty($data['supplier_name_fallback']) ? $data['supplier_name_fallback'] : null,
+            ':amount' => $amount,
+            ':remaining_amount' => $newRemaining,
+            ':status' => $status,
+            ':debt_date' => $data['debt_date'] ?? date('Y-m-d'),
+            ':due_date' => !empty($data['due_date']) ? $data['due_date'] : null,
+            ':notes' => $data['notes'] ?? '',
+            ':id' => (int)$id
+        ]);
     }
 
     public function deleteShopDebt($id)

@@ -3018,6 +3018,44 @@ class ApiController extends Controller
         }
     }
 
+    public function updateCustomerDebt(int $id)
+    {
+        $this->requireSuperadmin();
+        $this->validateCSRF();
+        try {
+            $model = new DebtModel();
+            $customerId = $this->input('customer_id');
+            $fallbackName = $this->input('customer_name_fallback');
+            $amount = (float)$this->input('amount');
+            $date = $this->input('debt_date');
+            $dueDate = $this->input('due_date');
+            $notes = $this->input('notes');
+
+            if (empty($customerId) && empty($fallbackName)) {
+                throw new Exception("Pelanggan harus dipilih atau diisi nama manual");
+            }
+            if ($amount <= 0) {
+                throw new Exception("Jumlah hutang harus lebih dari 0");
+            }
+            if (empty($date)) {
+                throw new Exception("Tanggal hutang wajib diisi");
+            }
+
+            $model->updateCustomerDebt((int)$id, [
+                'customer_id' => !empty($customerId) ? (int)$customerId : null,
+                'customer_name_fallback' => !empty($fallbackName) ? $fallbackName : null,
+                'amount' => $amount,
+                'debt_date' => $date,
+                'due_date' => !empty($dueDate) ? $dueDate : null,
+                'notes' => $notes
+            ]);
+
+            $this->json(['success' => true, 'message' => 'Catatan piutang berhasil diperbarui']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function deleteCustomerDebt(int $id)
     {
         $this->requireSuperadmin();
@@ -3130,6 +3168,46 @@ class ApiController extends Controller
 
             $model->addShopPayment((int)$id, $amount, $date, $notes);
             $this->json(['success' => true, 'message' => 'Pembayaran berhasil dicatat']);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function updateShopDebt(int $id)
+    {
+        $this->requireSuperadmin();
+        $this->validateCSRF();
+        try {
+            $model = new DebtModel();
+            $supplierId = $this->input('supplier_id');
+            $debtSourceId = $this->input('debt_source_id');
+            $fallbackName = $this->input('supplier_name_fallback');
+            $amount = (float)$this->input('amount');
+            $date = $this->input('debt_date');
+            $dueDate = $this->input('due_date');
+            $notes = $this->input('notes');
+
+            if (empty($supplierId) && empty($debtSourceId) && empty($fallbackName)) {
+                throw new Exception("Supplier/Sumber harus dipilih atau diisi nama manual");
+            }
+            if ($amount <= 0) {
+                throw new Exception("Jumlah hutang harus lebih dari 0");
+            }
+            if (empty($date)) {
+                throw new Exception("Tanggal hutang wajib diisi");
+            }
+
+            $model->updateShopDebt((int)$id, [
+                'supplier_id' => !empty($supplierId) ? (int)$supplierId : null,
+                'debt_source_id' => !empty($debtSourceId) ? (int)$debtSourceId : null,
+                'supplier_name_fallback' => !empty($fallbackName) ? $fallbackName : null,
+                'amount' => $amount,
+                'debt_date' => $date,
+                'due_date' => !empty($dueDate) ? $dueDate : null,
+                'notes' => $notes
+            ]);
+
+            $this->json(['success' => true, 'message' => 'Catatan hutang toko berhasil diperbarui']);
         } catch (Exception $e) {
             $this->json(['error' => $e->getMessage()], 500);
         }
