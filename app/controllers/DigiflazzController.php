@@ -291,8 +291,7 @@ class DigiflazzController extends Controller {
             $isAvailable = true;
             if ($prodInfo) {
                 $isAvailable = ((int)($prodInfo['is_active'] ?? 1) === 1) &&
-                               ((int)($prodInfo['buyer_product_status'] ?? 1) === 1) &&
-                               ((int)($prodInfo['seller_product_status'] ?? 1) === 1);
+                               ((int)($prodInfo['buyer_product_status'] ?? 1) === 1);
             }
 
             $seller = !empty($r['seller_name']) ? $r['seller_name'] : (!empty($r['user_name']) ? $r['user_name'] : 'Kasir');

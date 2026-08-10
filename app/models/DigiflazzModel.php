@@ -95,31 +95,44 @@ class DigiflazzModel {
             }
 
             foreach ($productsData as $item) {
+                $sku = trim($item['buyer_sku_code'] ?? $item['sku_code'] ?? $item['pasca_code'] ?? '');
+                if (empty($sku)) {
+                    continue;
+                }
+                
                 // Determine normalized category
                 $category = $this->normalizeCategory($item['category'] ?? '');
                 $subCat = $this->determineSubCategory($category, $item['product_name'] ?? '');
                 $price = $item['price'] ?? $item['admin'] ?? 0;
                 
+                $buyerStatus = filter_var($item['buyer_product_status'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+                $sellerStatus = filter_var($item['seller_product_status'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+                
+                $sellerName = trim($item['seller_name'] ?? '');
+                if (empty($sellerName)) {
+                    $sellerName = 'Digiflazz';
+                }
+                
                 $stmt->execute([
-                    'sku' => $item['buyer_sku_code'],
-                    'name' => $item['product_name'],
+                    'sku' => $sku,
+                    'name' => $item['product_name'] ?? '',
                     'category' => $category,
                     'sub_cat' => $subCat,
-                    'brand' => $item['brand'],
+                    'brand' => $item['brand'] ?? '',
                     'type' => $type,
                     'price' => $price,
-                    'buyer_status' => $item['buyer_product_status'] ? 1 : 0,
-                    'seller_status' => $item['seller_product_status'] ? 1 : 0,
+                    'buyer_status' => $buyerStatus,
+                    'seller_status' => $sellerStatus,
                     'desc' => $item['desc'] ?? '',
                     'start_cut' => $item['start_cut_off'] ?? '',
                     'end_cut' => $item['end_cut_off'] ?? '',
-                    'seller_name' => $item['seller_name'] ?? null
+                    'seller_name' => $sellerName
                 ]);
             }
 
             // Deactivate products of this type that are no longer returned in Digiflazz API payload (e.g. deleted sellers/SKUs)
             $syncedSkus = array_filter(array_map(function($item) {
-                return trim($item['buyer_sku_code'] ?? '');
+                return trim($item['buyer_sku_code'] ?? $item['sku_code'] ?? $item['pasca_code'] ?? '');
             }, $productsData));
 
             if (!empty($syncedSkus)) {
@@ -304,12 +317,12 @@ class DigiflazzModel {
         $stmt->execute($params);
         $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Filter out products with no seller name and deduplicate by buyer_sku_code
+        // Fallback empty seller name to Digiflazz and deduplicate by buyer_sku_code
         $unique = [];
         $result = [];
         foreach ($products as $p) {
             if (empty(trim($p['seller_name'] ?? ''))) {
-                continue;
+                $p['seller_name'] = 'Digiflazz';
             }
             
             $sku = trim($p['buyer_sku_code'] ?? '');

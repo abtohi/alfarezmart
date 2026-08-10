@@ -2805,8 +2805,13 @@ async function loadProducts(category, type) {
 
 // Provider Prefix Detection
 function detectProvider(phone) {
-    if (!phone || phone.length < 4) return null;
-    const prefix = phone.substring(0, 4);
+    if (!phone) return null;
+    let clean = phone.replace(/[^0-9]/g, '');
+    if (clean.startsWith('62')) {
+        clean = '0' + clean.substring(2);
+    }
+    if (clean.length < 4) return null;
+    const prefix = clean.substring(0, 4);
     const prefixes = {
         '0811': 'TELKOMSEL', '0812': 'TELKOMSEL', '0813': 'TELKOMSEL', '0821': 'TELKOMSEL', '0822': 'TELKOMSEL', '0823': 'TELKOMSEL', '0852': 'TELKOMSEL', '0853': 'TELKOMSEL', '0851': 'TELKOMSEL',
         '0814': 'INDOSAT', '0815': 'INDOSAT', '0816': 'INDOSAT', '0855': 'INDOSAT', '0856': 'INDOSAT', '0857': 'INDOSAT', '0858': 'INDOSAT',
@@ -2827,12 +2832,14 @@ function filterProductsByPrefix(phone) {
         badge.innerText = provider;
         badge.style.display = 'block';
         
-        // Brand logic map for Digiflazz (which might use slightly different naming)
         let digiBrand = provider;
         if(provider === 'THREE') digiBrand = 'TRI';
         
-        // Filter case-insensitive and partial match
-        const filtered = currentProducts.filter(p => (p.brand || '').toUpperCase().includes(digiBrand));
+        const filtered = currentProducts.filter(p => {
+            const b = (p.brand || '').toUpperCase();
+            if (digiBrand === 'TELKOMSEL') return b.includes('TELKOMSEL') || b.includes('BY.U');
+            return b.includes(digiBrand);
+        });
         
         if (filtered.length > 0) {
             renderFilters(filtered, 'sub_category');
@@ -2945,18 +2952,11 @@ function renderTargetHistoryPage(page) {
         const formattedPrice = typeof formatRp === 'function' ? formatRp(item.sell_price) : `Rp${Number(item.sell_price).toLocaleString('id-ID')}`;
         const sellerName = item.seller_name || 'Kasir';
         const dateStr = item.created_at ? item.created_at.substring(0, 16) : '-';
-        const jsonProd = isAvail ? encodeURIComponent(JSON.stringify(item.product)) : '';
+        const jsonProd = item.product ? encodeURIComponent(JSON.stringify(item.product)) : '';
 
-        let actionBtn = '';
-        if (isAvail) {
-            actionBtn = `<button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-1.5 rounded-pill d-inline-flex align-items-center shadow-sm" style="font-size: 11px; transition: all 0.2s;" onclick="reorderPpobProduct('${item.buyer_sku_code}', '${jsonProd}')">
-                <i class="bi bi-arrow-repeat me-1 fs-6"></i>Beli Lagi
-            </button>`;
-        } else {
-            actionBtn = `<span class="badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-25 px-2.5 py-1.5 rounded-pill fw-bold" style="font-size: 10px;">
-                <i class="bi bi-x-circle me-1"></i>Tidak Tersedia Lagi
-            </span>`;
-        }
+        let actionBtn = `<button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-1.5 rounded-pill d-inline-flex align-items-center shadow-sm" style="font-size: 11px; transition: all 0.2s;" onclick="reorderPpobProduct('${item.buyer_sku_code}', '${jsonProd}')">
+            <i class="bi bi-arrow-repeat me-1 fs-6"></i>Beli Lagi
+        </button>`;
 
         html += `
             <div class="d-flex align-items-center justify-content-between p-2.5 rounded-3 border" style="background: var(--surface-1, #ffffff); border-color: var(--border-color, #e2e8f0) !important; gap: 10px;">
