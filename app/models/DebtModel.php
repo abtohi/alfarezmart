@@ -8,7 +8,14 @@ class DebtModel extends Model
     // CUSTOMER DEBTS (PIUTANG PELANGGAN)
     // ==========================================
 
-    public function getCustomerDebts($filterStatus = null, $search = '')
+    /**
+     * Get customer debts with optional status filter and search term.
+     *
+     * @param string|null $filterStatus
+     * @param string $search
+     * @return array
+     */
+    public function getCustomerDebts(?string $filterStatus = null, string $search = '')
     {
         $sql = "SELECT cd.*, 
                        c.name as customer_name, 
@@ -47,7 +54,13 @@ class DebtModel extends Model
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getCustomerDebtById($id)
+    /**
+     * Get customer debt detail by ID.
+     *
+     * @param int|string $id
+     * @return array|false
+     */
+    public function getCustomerDebtById(int|string $id)
     {
         $sql = "SELECT cd.*, 
                        c.name as customer_name, 
@@ -64,7 +77,13 @@ class DebtModel extends Model
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function createCustomerDebt($data)
+    /**
+     * Create a new customer debt record.
+     *
+     * @param array $data
+     * @return string|false
+     */
+    public function createCustomerDebt(array $data)
     {
         $data['remaining_amount'] = $data['amount'];
         $data['status'] = 'belum_lunas';
@@ -80,14 +99,30 @@ class DebtModel extends Model
         return $this->db->lastInsertId();
     }
 
-    public function getCustomerDebtPayments($debtId)
+    /**
+     * Get payment history for a customer debt.
+     *
+     * @param int|string $debtId
+     * @return array
+     */
+    public function getCustomerDebtPayments(int|string $debtId)
     {
         $stmt = $this->db->prepare("SELECT * FROM customer_debt_payments WHERE debt_id = :debt_id ORDER BY payment_date DESC, id DESC");
         $stmt->execute([':debt_id' => $debtId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function addCustomerPayment($debtId, $amount, $date, $notes = '')
+    /**
+     * Add a payment installment for a customer debt.
+     *
+     * @param int|string $debtId
+     * @param float|int $amount
+     * @param string $date
+     * @param string $notes
+     * @return bool
+     * @throws Exception
+     */
+    public function addCustomerPayment(int|string $debtId, float|int $amount, string $date, string $notes = '')
     {
         try {
             $this->beginTransaction();
@@ -130,7 +165,14 @@ class DebtModel extends Model
         }
     }
 
-    public function updateCustomerDebt($id, $data)
+    /**
+     * Update an existing customer debt.
+     *
+     * @param int|string $id
+     * @param array $data
+     * @return bool
+     */
+    public function updateCustomerDebt(int|string $id, array $data)
     {
         $stmt = $this->db->prepare("SELECT COALESCE(SUM(amount), 0) as total_paid FROM customer_debt_payments WHERE debt_id = :id");
         $stmt->execute([':id' => $id]);
@@ -166,7 +208,13 @@ class DebtModel extends Model
         ]);
     }
 
-    public function deleteCustomerDebt($id)
+    /**
+     * Delete a customer debt record.
+     *
+     * @param int|string $id
+     * @return bool
+     */
+    public function deleteCustomerDebt(int|string $id)
     {
         $stmt = $this->db->prepare("DELETE FROM customer_debts WHERE id = :id");
         return $stmt->execute([':id' => $id]);
@@ -178,7 +226,14 @@ class DebtModel extends Model
     // SHOP DEBTS (HUTANG TOKO)
     // ==========================================
 
-    public function getShopDebts($filterStatus = null, $search = '')
+    /**
+     * Get shop debts with optional status filter and search term.
+     *
+     * @param string|null $filterStatus
+     * @param string $search
+     * @return array
+     */
+    public function getShopDebts(?string $filterStatus = null, string $search = '')
     {
         $sql = "SELECT sd.*, 
                        s.name as supplier_name, 
@@ -216,7 +271,13 @@ class DebtModel extends Model
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getShopDebtById($id)
+    /**
+     * Get shop debt detail by ID.
+     *
+     * @param int|string $id
+     * @return array|false
+     */
+    public function getShopDebtById(int|string $id)
     {
         $sql = "SELECT sd.*, 
                        s.name as supplier_name, 
@@ -232,7 +293,13 @@ class DebtModel extends Model
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public function createShopDebt($data)
+    /**
+     * Create a new shop debt record.
+     *
+     * @param array $data
+     * @return string|false
+     */
+    public function createShopDebt(array $data)
     {
         $data['remaining_amount'] = $data['amount'];
         $data['status'] = 'belum_lunas';
@@ -248,14 +315,30 @@ class DebtModel extends Model
         return $this->db->lastInsertId();
     }
 
-    public function getShopDebtPayments($debtId)
+    /**
+     * Get payment history for a shop debt.
+     *
+     * @param int|string $debtId
+     * @return array
+     */
+    public function getShopDebtPayments(int|string $debtId)
     {
         $stmt = $this->db->prepare("SELECT * FROM shop_debt_payments WHERE debt_id = :debt_id ORDER BY payment_date DESC, id DESC");
         $stmt->execute([':debt_id' => $debtId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function addShopPayment($debtId, $amount, $date, $notes = '')
+    /**
+     * Add a payment installment for a shop debt.
+     *
+     * @param int|string $debtId
+     * @param float|int $amount
+     * @param string $date
+     * @param string $notes
+     * @return bool
+     * @throws Exception
+     */
+    public function addShopPayment(int|string $debtId, float|int $amount, string $date, string $notes = '')
     {
         try {
             $this->beginTransaction();
@@ -298,7 +381,14 @@ class DebtModel extends Model
         }
     }
 
-    public function updateShopDebt($id, $data)
+    /**
+     * Update an existing shop debt.
+     *
+     * @param int|string $id
+     * @param array $data
+     * @return bool
+     */
+    public function updateShopDebt(int|string $id, array $data)
     {
         $stmt = $this->db->prepare("SELECT COALESCE(SUM(amount), 0) as total_paid FROM shop_debt_payments WHERE debt_id = :id");
         $stmt->execute([':id' => $id]);
@@ -336,7 +426,13 @@ class DebtModel extends Model
         ]);
     }
 
-    public function deleteShopDebt($id)
+    /**
+     * Delete a shop debt record.
+     *
+     * @param int|string $id
+     * @return bool
+     */
+    public function deleteShopDebt(int|string $id)
     {
         $stmt = $this->db->prepare("DELETE FROM shop_debts WHERE id = :id");
         return $stmt->execute([':id' => $id]);
@@ -347,7 +443,13 @@ class DebtModel extends Model
     // CUSTOMER MANAGEMENT (PELANGGAN)
     // ==========================================
 
-    public function getCustomers($search = '')
+    /**
+     * Get customers list with optional search term.
+     *
+     * @param string $search
+     * @return array
+     */
+    public function getCustomers(string $search = '')
     {
         $sql = "SELECT c.*, ct.name as type_name, ct.price_tier 
                 FROM customers c
@@ -370,7 +472,13 @@ class DebtModel extends Model
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function createCustomer($data)
+    /**
+     * Create a new customer record.
+     *
+     * @param array $data
+     * @return string|false
+     */
+    public function createCustomer(array $data)
     {
         $columns = implode(', ', array_keys($data));
         $placeholders = ':' . implode(', :', array_keys($data));
@@ -383,7 +491,14 @@ class DebtModel extends Model
         return $this->db->lastInsertId();
     }
 
-    public function updateCustomer($id, $data)
+    /**
+     * Update customer details.
+     *
+     * @param int|string $id
+     * @param array $data
+     * @return bool
+     */
+    public function updateCustomer(int|string $id, array $data)
     {
         $setParts = [];
         foreach (array_keys($data) as $key) {
@@ -399,12 +514,23 @@ class DebtModel extends Model
         return $stmt->execute();
     }
 
-    public function deleteCustomer($id)
+    /**
+     * Delete a customer record.
+     *
+     * @param int|string $id
+     * @return bool
+     */
+    public function deleteCustomer(int|string $id)
     {
         $stmt = $this->db->prepare("DELETE FROM customers WHERE id = :id");
         return $stmt->execute([':id' => $id]);
     }
 
+    /**
+     * Get list of customer types.
+     *
+     * @return array
+     */
     public function getCustomerTypes()
     {
         $stmt = $this->db->prepare("SELECT * FROM customer_types ORDER BY name ASC");
@@ -416,6 +542,11 @@ class DebtModel extends Model
     // DEBT SOURCES (SUMBER HUTANG)
     // ==========================================
 
+    /**
+     * Get list of debt sources.
+     *
+     * @return array
+     */
     public function getDebtSources()
     {
         $stmt = $this->db->prepare("SELECT * FROM debt_sources ORDER BY name ASC");
@@ -423,20 +554,39 @@ class DebtModel extends Model
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function createDebtSource($name)
+    /**
+     * Create a new debt source.
+     *
+     * @param string $name
+     * @return string|false
+     */
+    public function createDebtSource(string $name)
     {
         $stmt = $this->db->prepare("INSERT INTO debt_sources (name) VALUES (:name)");
         $stmt->execute([':name' => $name]);
         return $this->db->lastInsertId();
     }
 
-    public function updateDebtSource($id, $name)
+    /**
+     * Update a debt source name.
+     *
+     * @param int|string $id
+     * @param string $name
+     * @return bool
+     */
+    public function updateDebtSource(int|string $id, string $name)
     {
         $stmt = $this->db->prepare("UPDATE debt_sources SET name = :name WHERE id = :id");
         return $stmt->execute([':name' => $name, ':id' => $id]);
     }
 
-    public function deleteDebtSource($id)
+    /**
+     * Delete a debt source.
+     *
+     * @param int|string $id
+     * @return bool
+     */
+    public function deleteDebtSource(int|string $id)
     {
         $stmt = $this->db->prepare("DELETE FROM debt_sources WHERE id = :id");
         return $stmt->execute([':id' => $id]);
