@@ -945,16 +945,22 @@ async function performSearch(q) {
         });
         clearTimeout(timeoutId);
         if (resp.ok) {
-            const serverItems = await resp.json();
-            if (Array.isArray(serverItems) && serverItems.length > 0) {
-                renderPosSearchSuggestions(sug, serverItems, q);
-            } else if (items.length === 0) {
-                sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Tidak ada produk ditemukan</div>';
+            const currentInput = document.getElementById('posSearch');
+            if (currentInput && currentInput.value.trim().toLowerCase() === q.toLowerCase()) {
+                const serverItems = await resp.json();
+                if (currentInput.value.trim().toLowerCase() === q.toLowerCase()) {
+                    if (Array.isArray(serverItems) && serverItems.length > 0) {
+                        renderPosSearchSuggestions(sug, serverItems, q);
+                    } else if (items.length === 0) {
+                        sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Tidak ada produk ditemukan</div>';
+                    }
+                }
             }
         }
     } catch (e) {
         if (e.name === 'AbortError') return;
-        if (items.length === 0) {
+        const currentInput = document.getElementById('posSearch');
+        if (items.length === 0 && currentInput && currentInput.value.trim().toLowerCase() === q.toLowerCase()) {
             sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Tidak ada produk ditemukan (Offline)</div>';
         }
     }
@@ -965,6 +971,9 @@ function renderPosSearchSuggestions(sug, items, q) {
     if (!currentInput || currentInput.value.trim().length < 2) {
         sug.innerHTML = '';
         return;
+    }
+    if (q && currentInput.value.trim().toLowerCase() !== q.toLowerCase()) {
+        return; // Stale check
     }
 
     if (!Array.isArray(items) || items.length === 0) {

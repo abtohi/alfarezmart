@@ -251,16 +251,16 @@ function initSearch() {
                     const serverData = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(currentQ)}`, { timeout: isWeak ? 400 : 1000 });
                     if (input.value.trim() !== currentQ) return; // stale
                     if (input.value.trim().length < 2) { results.innerHTML = ''; return; }
-                    renderProductSearch(serverData, results);
+                    renderProductSearch(serverData, results, currentQ);
                 } catch (e) {
                     // Server failed / timed out → show offline results as fallback if not already rendered
                     try {
-                        if (typeof OfflineDB !== 'undefined') {
+                        if (typeof OfflineDB !== 'undefined' && input.value.trim() === q) {
                             const fallback = await OfflineDB.searchProducts(q);
-                            if (input.value.trim().length >= 2) renderProductSearch(fallback, results);
+                            if (input.value.trim().length >= 2) renderProductSearch(fallback, results, q);
                         }
                     } catch (e2) {
-                        results.innerHTML = '<div class="empty-state" style="padding:24px"><p>Gagal mencari produk</p></div>';
+                        if (input.value.trim() === q) results.innerHTML = '<div class="empty-state" style="padding:24px"><p>Gagal mencari produk</p></div>';
                     }
                 }
             }
@@ -271,7 +271,11 @@ function initSearch() {
 }
 
 
-function renderProductSearch(data, results) {
+function renderProductSearch(data, results, querySent = '') {
+    const input = document.getElementById('globalSearch');
+    if (querySent && input && input.value.trim().toLowerCase() !== querySent.toLowerCase()) {
+        return; // Stale check
+    }
     if (!data || data.length === 0) {
         results.innerHTML = '<div class="empty-state" style="padding:24px"><i class="bi bi-search"></i><p>Produk tidak ditemukan</p></div>';
         return;
@@ -282,7 +286,7 @@ function renderProductSearch(data, results) {
                 <i class="bi bi-box-seam" style="color:var(--primary)"></i>
             </div>
             <div style="flex:1;min-width:0">
-                <div style="font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.full_name || p.short_label}</div>
+                <div style="font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.short_label || p.full_name}</div>
                 <div style="font-size:0.7rem;color:var(--text-muted)">${p.brand_name || ''} · ${p.category_name || ''}</div>
             </div>
         </a>

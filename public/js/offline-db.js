@@ -288,39 +288,83 @@ window.OfflineDB = (function() {
 
     async function searchProducts(query, isPos = false) {
         if (!query) return [];
-        query = query.toLowerCase().trim();
-        const words = query.split(/\s+/).filter(w => w.length > 0);
+        const rawQuery = query.toLowerCase().trim();
+        const words = rawQuery.split(/\s+/).filter(w => w.length > 0);
         if (words.length === 0) return [];
         
         try {
             const all = await getAllProducts();
-            return all.filter(p => {
-                if (isPos && p.is_available !== undefined && p.is_available != 1) return false;
+            const results = [];
+            
+            for (const p of all) {
+                if (isPos && p.is_available !== undefined && p.is_available != 1) continue;
                 
-                return words.every(word => {
-                    const nameMatch = (p.full_name && p.full_name.toLowerCase().includes(word)) ||
-                                      (p.short_label && p.short_label.toLowerCase().includes(word)) ||
-                                      (p.invoice_name && p.invoice_name.toLowerCase().includes(word)) ||
-                                      (p.supplier_invoice_name && p.supplier_invoice_name.toLowerCase().includes(word));
-                    const brandMatch = p.brand_name && p.brand_name.toLowerCase().includes(word);
-                    const codeMatch = p.code && p.code.toLowerCase().includes(word);
-                    const supplierCodeMatch = p.supplier_product_code && p.supplier_product_code.toLowerCase().includes(word);
+                let matchesAllWords = true;
+                let score = 0;
+
+                const fullName = (p.full_name || '').toLowerCase();
+                const shortLabel = (p.short_label || '').toLowerCase();
+                const invName = (p.invoice_name || '').toLowerCase();
+                const suppInvName = (p.supplier_invoice_name || '').toLowerCase();
+                const brandName = (p.brand_name || '').toLowerCase();
+                const categoryName = (p.category_name || '').toLowerCase();
+                const code = (p.code || '').toLowerCase();
+                const suppCode = (p.supplier_product_code || '').toLowerCase();
+
+                // Exact match bonuses
+                if (code === rawQuery || suppCode === rawQuery) score += 80;
+                if (shortLabel.startsWith(rawQuery) || fullName.startsWith(rawQuery)) score += 60;
+                
+                for (const word of words) {
+                    const isNumWord = !isNaN(word);
+                    const nameMatch = fullName.includes(word) || shortLabel.includes(word) || invName.includes(word) || suppInvName.includes(word);
+                    const brandMatch = brandName.includes(word);
+                    const catMatch = categoryName.includes(word);
+                    const codeMatch = code.includes(word) || suppCode.includes(word);
                     
                     let barcodeMatch = false;
+                    let priceMatch = false;
+
                     if (p.packagings && Array.isArray(p.packagings)) {
-                        barcodeMatch = p.packagings.some(pkg => pkg.barcode && pkg.barcode.toLowerCase().includes(word));
+                        for (const pkg of p.packagings) {
+                            if (pkg.barcode && pkg.barcode.toLowerCase().includes(word)) {
+                                barcodeMatch = true;
+                                if (pkg.barcode.toLowerCase() === rawQuery) score += 100;
+                            }
+                            if (isNumWord) {
+                                if (pkg.sell_price_retail && String(pkg.sell_price_retail).includes(word)) priceMatch = true;
+                                if (pkg.sell_price_wholesale && String(pkg.sell_price_wholesale).includes(word)) priceMatch = true;
+                            }
+                        }
+                    }
+                    if (isNumWord && !priceMatch) {
+                        if (p.price_small_retail && String(p.price_small_retail).includes(word)) priceMatch = true;
+                        if (p.price_small_wholesale && String(p.price_small_wholesale).includes(word)) priceMatch = true;
                     }
 
-                    return nameMatch || brandMatch || codeMatch || supplierCodeMatch || barcodeMatch;
-                });
-            }).sort((a, b) => {
-                const getLabel = (p) => (p.short_label && p.short_label.trim() !== '') ? p.short_label : (p.full_name || '');
-                const nameA = getLabel(a).toLowerCase();
-                const nameB = getLabel(b).toLowerCase();
-                if (nameA < nameB) return -1;
-                if (nameA > nameB) return 1;
-                return 0;
-            }).slice(0, 100);
+                    if (!nameMatch && !brandMatch && !catMatch && !codeMatch && !barcodeMatch && !priceMatch) {
+                        matchesAllWords = false;
+                        break;
+                    }
+
+                    if (nameMatch) score += 30;
+                    if (brandMatch || catMatch) score += 20;
+                    if (codeMatch || barcodeMatch || priceMatch) score += 15;
+                }
+
+                if (matchesAllWords) {
+                    results.push({ item: p, score });
+                }
+            }
+
+            results.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                const labelA = (a.item.short_label && a.item.short_label.trim() !== '') ? a.item.short_label : (a.item.full_name || '');
+                const labelB = (b.item.short_label && b.item.short_label.trim() !== '') ? b.item.short_label : (b.item.full_name || '');
+                return labelA.localeCompare(labelB, 'id', { sensitivity: 'base' });
+            });
+
+            return results.map(r => r.item).slice(0, 100);
         } catch (e) {
             console.error("Offline search failed", e);
             return [];

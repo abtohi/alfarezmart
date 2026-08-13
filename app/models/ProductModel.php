@@ -63,7 +63,8 @@ class ProductModel extends Model
 
     public function searchProducts(string $keyword, int $limit = 20, bool $forPos = false)
     {
-        $words = array_filter(explode(' ', trim($keyword)), 'strlen');
+        $rawKeyword = trim($keyword);
+        $words = array_filter(explode(' ', $rawKeyword), 'strlen');
         $whereSql = "p.is_active = 1"; // base condition
         if ($forPos) {
             $whereSql .= " AND p.is_available = 1";
@@ -73,21 +74,24 @@ class ProductModel extends Model
         if (!empty($words)) {
             $whereClauses = [];
             foreach ($words as $idx => $word) {
-                // PDO requires unique param names — cannot reuse :kw_0 multiple times
                 $p_name  = ":kw_{$idx}_name";
                 $p_label = ":kw_{$idx}_label";
                 $p_brand = ":kw_{$idx}_brand";
+                $p_cat   = ":kw_{$idx}_cat";
                 $p_code  = ":kw_{$idx}_code";
                 $p_scode = ":kw_{$idx}_scode";
                 $p_bar   = ":kw_{$idx}_bar";
                 $p_inv   = ":kw_{$idx}_inv";
                 $p_sinv  = ":kw_{$idx}_sinv";
                 $p_price = ":kw_{$idx}_price";
-                $whereClauses[] = "(p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR b.name LIKE $p_brand OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND (pp.barcode LIKE $p_bar OR pp.sell_price_retail LIKE $p_price)))";
+                
+                $whereClauses[] = "(p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR b.name LIKE $p_brand OR c.name LIKE $p_cat OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND (pp.barcode LIKE $p_bar OR pp.sell_price_retail LIKE $p_price OR pp.sell_price_wholesale LIKE $p_price OR pp.buy_price LIKE $p_price)))";
+                
                 $like = "%{$word}%";
                 $params[$p_name]  = $like;
                 $params[$p_label] = $like;
                 $params[$p_brand] = $like;
+                $params[$p_cat]   = $like;
                 $params[$p_code]  = $like;
                 $params[$p_scode] = $like;
                 $params[$p_bar]   = $like;
@@ -100,7 +104,17 @@ class ProductModel extends Model
 
         $orderSql = "ORDER BY COALESCE(p.updated_at, p.created_at) DESC, COALESCE(NULLIF(TRIM(p.short_label), ''), p.full_name) ASC";
         if (!empty($words)) {
-            $orderSql = "ORDER BY COALESCE(NULLIF(TRIM(p.short_label), ''), p.full_name) ASC";
+            $params[':raw_kw']  = $rawKeyword;
+            $params[':pref_kw'] = $rawKeyword . '%';
+            $orderSql = "ORDER BY (
+                CASE 
+                    WHEN EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode = :raw_kw) THEN 1
+                    WHEN p.code = :raw_kw OR p.supplier_product_code = :raw_kw THEN 2
+                    WHEN p.short_label LIKE :pref_kw OR p.full_name LIKE :pref_kw THEN 3
+                    WHEN b.name LIKE :pref_kw THEN 4
+                    ELSE 5
+                END
+            ) ASC, COALESCE(NULLIF(TRIM(p.short_label), ''), p.full_name) ASC";
         }
 
         $stmt = $this->db->prepare("
@@ -334,23 +348,30 @@ class ProductModel extends Model
             if (!empty(trim($search))) {
                 $words = array_filter(explode(' ', trim($search)), 'strlen');
                 foreach ($words as $idx => $word) {
-                    // PDO requires unique param names per occurrence
                     $p_name  = ":s_{$idx}_name";
                     $p_brand = ":s_{$idx}_brand";
+                    $p_cat   = ":s_{$idx}_cat";
                     $p_bar   = ":s_{$idx}_bar";
                     $p_label = ":s_{$idx}_label";
                     $p_inv   = ":s_{$idx}_inv";
                     $p_code  = ":s_{$idx}_code";
+                    $p_scode = ":s_{$idx}_scode";
                     $p_sinv  = ":s_{$idx}_sinv";
-                    $where .= " AND (p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR p.code LIKE $p_code OR b.name LIKE $p_brand OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
+                    $p_price = ":s_{$idx}_price";
+                    
+                    $where .= " AND (p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR b.name LIKE $p_brand OR c.name LIKE $p_cat OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND (pp.barcode LIKE $p_bar OR pp.sell_price_retail LIKE $p_price OR pp.sell_price_wholesale LIKE $p_price)))";
+                    
                     $like = "%{$word}%";
                     $params[$p_name]  = $like;
                     $params[$p_label] = $like;
                     $params[$p_inv]   = $like;
                     $params[$p_sinv]  = $like;
                     $params[$p_code]  = $like;
+                    $params[$p_scode] = $like;
                     $params[$p_brand] = $like;
+                    $params[$p_cat]   = $like;
                     $params[$p_bar]   = $like;
+                    $params[$p_price] = $like;
                 }
             }
             if ($categoryId) {
