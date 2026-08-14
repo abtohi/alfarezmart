@@ -1,9 +1,23 @@
 <?php
+require_once __DIR__ . '/ImagePreprocessor.php';
+require_once __DIR__ . '/SupplierDetector.php';
+require_once __DIR__ . '/skills/SkillManager.php';
+require_once __DIR__ . '/PromptBuilder.php';
+require_once __DIR__ . '/LayoutAnalyzer.php';
+require_once __DIR__ . '/TableParser.php';
+require_once __DIR__ . '/InvoiceValidator.php';
+require_once __DIR__ . '/ProductMatcher.php';
+require_once __DIR__ . '/ConfidenceScorer.php';
+require_once __DIR__ . '/SelfCorrectionEngine.php';
+require_once __DIR__ . '/TemplateLearner.php';
+
 /**
  * InvoiceScanService
  *
- * Orchestrates the full 11-stage AI invoice scanning pipeline.
- * Replaces the monolithic logic previously in ApiController::scanInvoiceAI.
+ * Orchestrates the high-speed, modular AI invoice scanning pipeline.
+ * Utilizes SupplierDetector and SkillManager to adapt dynamically
+ * to specific supplier formats (e.g., PT Medan Distribusindo Raya / MDR)
+ * with graceful fallback to General invoice extraction.
  *
  * @package AlfarezMart\Services\Invoice
  */
@@ -19,6 +33,10 @@ class InvoiceScanService
     // Sub-services
     /** @var ImagePreprocessor */
     private $preprocessor;
+    /** @var SupplierDetector */
+    private $supplierDetector;
+    /** @var SkillManager */
+    private $skillManager;
     /** @var PromptBuilder */
     private $promptBuilder;
     /** @var LayoutAnalyzer */
@@ -36,36 +54,36 @@ class InvoiceScanService
     /** @var TemplateLearner */
     private $templateLearner;
 
+    /**
+     * @param \PDO $db
+     */
     public function __construct(\PDO $db)
     {
-        $this->db           = $db;
-        $this->settingModel = new SettingModel();
-        $this->productModel = new ProductModel();
+        $this->db               = $db;
+        $this->settingModel     = new SettingModel();
+        $this->productModel     = new ProductModel();
 
         // Initialize pipeline components
-        $this->preprocessor    = new ImagePreprocessor();
-        $this->promptBuilder   = new PromptBuilder($this->db, $this->settingModel);
-        $this->layoutAnalyzer  = new LayoutAnalyzer();
-        $this->tableParser     = new TableParser($this->layoutAnalyzer);
-        $this->validator       = new InvoiceValidator();
-        $this->matcher         = new ProductMatcher($this->layoutAnalyzer);
-        $this->scorer          = new ConfidenceScorer();
-        $this->selfCorrection  = new SelfCorrectionEngine();
-        $this->templateLearner = new TemplateLearner($this->db);
+        $this->preprocessor     = new ImagePreprocessor();
+        $this->supplierDetector = new SupplierDetector($this->db);
+        $this->skillManager     = new SkillManager();
+        $this->promptBuilder    = new PromptBuilder($this->db, $this->settingModel);
+        $this->layoutAnalyzer   = new LayoutAnalyzer();
+        $this->tableParser      = new TableParser($this->layoutAnalyzer);
+        $this->validator        = new InvoiceValidator();
+        $this->matcher          = new ProductMatcher($this->layoutAnalyzer);
+        $this->scorer           = new ConfidenceScorer();
+        $this->selfCorrection   = new SelfCorrectionEngine();
+        $this->templateLearner  = new TemplateLearner($this->db);
 
-        // Ensure database schema is up to date
         $this->ensureSupplierProductCodeColumn();
     }
 
-    /**
-     * Ensure the supplier_product_code column exists in supplier_products table.
-     */
     private function ensureSupplierProductCodeColumn(): void
     {
         try {
             $this->db->query("SELECT supplier_product_code FROM supplier_products LIMIT 1");
         } catch (\PDOException $e) {
-            // Column does not exist
             try {
                 $this->db->exec("ALTER TABLE supplier_products ADD COLUMN supplier_product_code VARCHAR(100) DEFAULT NULL AFTER product_id");
                 $this->db->exec("CREATE INDEX idx_sp_code ON supplier_products(supplier_product_code)");
@@ -75,155 +93,131 @@ class InvoiceScanService
         }
     }
 
-    // ----------------------------------------------------------------
-    // PUBLIC API
-    // ----------------------------------------------------------------
-
     /**
-     * Run the full invoice scanning pipeline.
+     * Run the full high-speed invoice scanning pipeline.
      *
      * @param  string   $imageB64     Raw base64 image
      * @param  int|null $supplierId   Optional supplier ID context
-     * @return array{
-     *   success: bool,
-     *   message: string,
-     *   data: array,
-     *   metadata: array
-     * }
+     * @return array
      */
     public function scan(string $imageB64, ?int $supplierId = null): array
     {
         $startTime = microtime(true);
 
         try {
-            // ================================================================
             // STAGE 1: Image Preprocessing & Validation
-            // ================================================================
             $imageInfo = $this->preprocessor->analyze($imageB64);
             if (!$imageInfo['valid']) {
                 throw new \Exception($imageInfo['error'] ?? 'Gambar tidak valid');
             }
 
-            // ================================================================
-            // STAGE 2: Context Gathering (Products & Templates)
-            // ================================================================
-            $allProducts = $this->getAllProductsWithPackagings();
-            $supplierProducts = [];
-            $supplierName = 'Unknown Supplier';
+            // STAGE 2: Supplier Detection & Skill Resolution
+            $detection = $this->supplierDetector->detect($supplierId);
+            $skill = $this->skillManager->getSkill($detection['skill_key']);
 
-            if ($supplierId && $supplierId > 0) {
-                // Get supplier products for context
-                $supplierProducts = $this->getSupplierProducts($supplierId);
-                $stmt = $this->db->prepare("SELECT name FROM suppliers WHERE id = ?");
-                $stmt->execute([$supplierId]);
-                $supplierName = $stmt->fetchColumn() ?: 'Unknown Supplier';
+            // STAGE 3: Context Gathering (Products & Supplier Data)
+            $allProducts = $this->getAllProductsWithPackagings();
+            $resolvedSupplierId = $detection['supplier_id'] ?: $supplierId;
+            $supplierProducts = [];
+
+            if ($resolvedSupplierId && $resolvedSupplierId > 0) {
+                $supplierProducts = $this->getSupplierProducts($resolvedSupplierId);
             }
 
-            // TEMPORARY: Bypass old templates to force the AI to read the new BSR/TGH rules
-            // $template = $this->templateLearner->findTemplate($supplierId);
-            $template = null;
+            // STAGE 4: Build System & User Prompts with Skill
+            $systemPrompt = $skill->getSystemPrompt();
+            $userHints = $skill->getUserPromptHints();
 
-            // ================================================================
-            // STAGE 3: Prompt Building
-            // ================================================================
-            $prompts = $this->promptBuilder->build(
-                $imageInfo,
-                $supplierProducts,
-                $template,
-                false, // not correction pass
-                []
-            );
+            $userPromptSetting = trim($this->settingModel->get('ai_invoice_prompt', ''));
+            $userMessageText = $userPromptSetting ?: 'Baca gambar invoice ini dan ekstrak semua item barang ke dalam format JSON.';
+            if (!empty($userHints)) {
+                $userMessageText .= "\n\n" . $userHints;
+            }
 
-            // ================================================================
-            // STAGE 4: First AI Call (OpenRouter)
-            // ================================================================
-            $aiResponse = $this->callOpenRouter($prompts['system'], $prompts['user'], $imageB64, $imageInfo['format']);
+            // Add concise product list context for faster exact matching by AI if available
+            if (!empty($supplierProducts)) {
+                $contextLines = ["\n## REFERENSI PRODUK SUPPLIER INI (Gunakan kode/nama jika cocok):"];
+                foreach (array_slice($supplierProducts, 0, 40) as $sp) {
+                    $c = trim($sp['supplier_product_code'] ?? $sp['code'] ?? '');
+                    $n = trim($sp['full_name'] ?? '');
+                    if ($c || $n) {
+                        $contextLines[] = "- Kode: " . ($c ?: '-') . " | " . $n;
+                    }
+                }
+                $userMessageText .= implode("\n", $contextLines);
+            }
+
+            // STAGE 5: AI Vision API Call
+            $aiResponse = $this->callOpenRouter($systemPrompt, $userMessageText, $imageB64, $imageInfo['format']);
             if (empty($aiResponse)) {
                 throw new \Exception('AI gagal memproses gambar atau mengembalikan respons kosong.');
             }
 
-            // ================================================================
-            // STAGE 5: Run Pipeline (Layout -> Parse -> Validate -> Match -> Score)
-            // ================================================================
-            $pipelineResult = $this->runExtractionPipeline($aiResponse, $allProducts, $supplierProducts);
-            $items          = $pipelineResult['items'];
-            $hasLowConf     = $pipelineResult['has_low_confidence'];
-            $avgConf        = $pipelineResult['avg_confidence'];
-            $colMap         = $pipelineResult['column_map'];
-
-            // Identify items needing correction (low conf or validation failed)
-            $correctionHints = [];
-            foreach ($items as $itm) {
-                if (($itm['needs_review'] ?? false) || ($itm['validation_failed'] ?? false)) {
-                    $correctionHints[] = [
-                        'name'   => $itm['name'] ?? '',
-                        'issues' => $itm['issues'] ?? []
-                    ];
-                }
-            }
-
-            // ================================================================
-            // STAGE 6: Self-Correction (if needed)
-            // ================================================================
-            $modelName = $this->getModelName();
-            $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free'];
-            if (($hasLowConf || !empty($correctionHints)) && !in_array($modelName, $freeTierModels)) {
-                $items = $this->selfCorrection->correct(
-                    $items,
-                    $hasLowConf,
-                    $correctionHints,
-                    $imageB64,
-                    $this->getApiKey(),
-                    $this->getModelName(),
-                    function($hints) use ($imageInfo, $supplierProducts, $template) {
-                        return $this->promptBuilder->build($imageInfo, $supplierProducts, $template, true, $hints);
-                    },
-                    function($sys, $usr, $img, $key, $mod) use ($imageInfo) {
-                        return $this->callOpenRouter($sys, $usr, $img, $imageInfo['format'], $key, $mod);
-                    },
-                    function($rawAiResp) use ($allProducts, $supplierProducts) {
-                        return $this->runExtractionPipeline($rawAiResp, $allProducts, $supplierProducts)['items'];
+            // If response is not an array of items, try to find the array key
+            $rawItems = [];
+            if (is_array($aiResponse)) {
+                if (isset($aiResponse['items']) && is_array($aiResponse['items'])) {
+                    $rawItems = $aiResponse['items'];
+                } elseif (isset($aiResponse[0])) {
+                    $rawItems = $aiResponse;
+                } else {
+                    foreach ($aiResponse as $val) {
+                        if (is_array($val) && isset($val[0])) {
+                            $rawItems = $val;
+                            break;
+                        }
                     }
-                );
-
-                // Re-calculate average confidence after correction
-                $totalConf = 0;
-                foreach ($items as $itm) {
-                    $totalConf += ($itm['confidence']['final'] ?? 0);
-                }
-                if (count($items) > 0) {
-                    $avgConf = round($totalConf / count($items), 3);
                 }
             }
 
-            // ================================================================
-            // STAGE 7: Template Learning
-            // ================================================================
-            if (count($items) > 0 && $avgConf >= TemplateLearner::MIN_CONFIDENCE_TO_SAVE) {
-                $this->templateLearner->saveTemplate(
-                    $supplierId,
-                    $supplierName,
-                    $colMap,
-                    LayoutAnalyzer::HEADER_ALIASES,
-                    $avgConf
-                );
+            // Check if extracted text in items reveals a different supplier signature
+            if ($detection['skill_key'] === 'general' && !empty($rawItems)) {
+                $sampleText = json_encode(array_slice($rawItems, 0, 5));
+                $signatureSkill = $this->skillManager->findSkillBySignatures($sampleText);
+                if ($signatureSkill->getSkillKey() !== 'general') {
+                    $skill = $signatureSkill;
+                }
             }
 
-            // ================================================================
-            // STAGE 8: Format Final Output (Backward Compatibility)
-            // ================================================================
-            $finalItems = $this->formatForFrontend($items);
+            // STAGE 6: Parse Items via Supplier Skill
+            $supplierProductIds = array_column($supplierProducts, 'id');
+            $parsedItems = [];
+            foreach ($rawItems as $rawItem) {
+                if (!is_array($rawItem)) continue;
+                $parsed = $skill->parseItem($rawItem);
+                if (!empty($parsed['name']) || !empty($parsed['supplier_code'])) {
+                    $parsedItems[] = $parsed;
+                }
+            }
 
+            // STAGE 7: Product Matching with Price Distance & Packaging Selection
+            $matchedItems = [];
+            foreach ($parsedItems as $item) {
+                $matchResult = $this->matcher->match($item, $allProducts, $supplierProductIds, $skill);
+                $mergedItem  = array_merge($item, $matchResult);
+                $scoredItem  = $this->scorer->score($mergedItem);
+                $matchedItems[] = $scoredItem;
+            }
+
+            // STAGE 8: Format Final Output with Complete Product Data for Instant Frontend Injection
+            $finalItems = $this->formatForFrontend($matchedItems);
             $executionTime = round(microtime(true) - $startTime, 2);
 
+            $avgScore = 0;
+            if (count($finalItems) > 0) {
+                $totalScore = array_sum(array_column($finalItems, 'confidence'));
+                $avgScore = round($totalScore / count($finalItems), 2);
+            }
+
             return [
-                'success' => true,
-                'message' => "Berhasil memproses " . count($finalItems) . " item (Avg Confidence: " . ($avgConf * 100) . "%)",
-                'data'    => $finalItems,
-                'metadata'=> [
-                    'avg_confidence' => $avgConf,
-                    'execution_time' => $executionTime,
-                    'columns_detected'=> $colMap,
+                'success'  => true,
+                'message'  => "Berhasil memproses " . count($finalItems) . " item via skill " . $skill->getSupplierName() . " ({$executionTime}s)",
+                'data'     => $finalItems,
+                'metadata' => [
+                    'supplier_detected' => $detection['supplier_name'],
+                    'skill_used'        => $skill->getSkillKey(),
+                    'execution_time'    => $executionTime,
+                    'avg_confidence'    => $avgScore,
                 ]
             ];
 
@@ -237,69 +231,19 @@ class InvoiceScanService
         }
     }
 
-    // ----------------------------------------------------------------
-    // PRIVATE PIPELINE RUNNER
-    // ----------------------------------------------------------------
-
-    /**
-     * Run the extraction pipeline on a raw AI JSON response.
-     */
-    private function runExtractionPipeline(array $rawAiResponse, array $allProducts, array $supplierProducts): array
-    {
-        $supplierProductIds = array_column($supplierProducts, 'id');
-
-        // 1. Analyze layout and semantic columns
-        $layoutResult = $this->layoutAnalyzer->analyze($rawAiResponse);
-        
-        // 2. Parse into clean table
-        $parsedItems = $this->tableParser->parse($layoutResult['items']);
-        
-        // 3. Validate logical consistency
-        $valResult = $this->validator->validate($parsedItems, $layoutResult['invoice_total']);
-        $validatedItems = $valResult['items'];
-
-        // 4. Product matching & Scoring
-        $finalItems = [];
-        foreach ($validatedItems as $item) {
-            // Match against DB
-            $matchResult = $this->matcher->match($item, $allProducts, $supplierProductIds);
-            $mergedItem  = array_merge($item, $matchResult);
-
-            // Score confidence
-            $scoredItem  = $this->scorer->score($mergedItem);
-            
-            $finalItems[] = $scoredItem;
-        }
-
-        // 5. Aggregate scores
-        $scoreResult = $this->scorer->scoreAll($finalItems);
-
-        return [
-            'items'              => $scoreResult['items'],
-            'has_low_confidence' => $scoreResult['has_low_confidence'],
-            'avg_confidence'     => $scoreResult['avg_confidence'],
-            'column_map'         => $layoutResult['detected_columns'],
-        ];
-    }
-
-    // ----------------------------------------------------------------
-    // PRIVATE DATA FETCHERS
-    // ----------------------------------------------------------------
-
     private function getAllProductsWithPackagings(): array
     {
-        // Use a cached or lightweight fetch if possible
         $stmt = $this->db->query("
-            SELECT p.id, p.full_name, p.code, p.supplier_invoice_name, p.short_label, 
+            SELECT p.id, p.full_name, p.code, p.invoice_name, p.supplier_invoice_name, p.short_label, 
                    p.variant, p.weight_value, p.weight_unit, b.name as brand_name,
-                   (SELECT supplier_product_code FROM supplier_products sp WHERE sp.product_id = p.id LIMIT 1) as supplier_product_code
+                   (SELECT supplier_product_code FROM supplier_products sp WHERE sp.product_id = p.id LIMIT 1) as supplier_product_code,
+                   (SELECT last_buy_price FROM supplier_products sp WHERE sp.product_id = p.id ORDER BY sp.id DESC LIMIT 1) as last_buy_price
             FROM products p
             LEFT JOIN brands b ON p.brand_id = b.id
             WHERE p.is_active = 1
         ");
         $products = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-        // Attach packagings
         $this->productModel->attachPackagingsForProductList($products);
         return $products;
     }
@@ -307,16 +251,17 @@ class InvoiceScanService
     private function getSupplierProducts(int $supplierId): array
     {
         $stmt = $this->db->prepare("
-            SELECT p.id, p.full_name, p.code, p.supplier_invoice_name, p.short_label,
+            SELECT p.id, p.full_name, p.code, p.invoice_name, p.supplier_invoice_name, p.short_label,
+                   p.variant, p.weight_value, p.weight_unit, b.name as brand_name,
                    sp.supplier_product_code, sp.last_buy_price
             FROM supplier_products sp
             JOIN products p ON sp.product_id = p.id
+            LEFT JOIN brands b ON p.brand_id = b.id
             WHERE sp.supplier_id = ? AND p.is_active = 1
         ");
         $stmt->execute([$supplierId]);
         $products = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-        // Attach packagings
         $this->productModel->attachPackagingsForProductList($products);
         return $products;
     }
@@ -329,13 +274,9 @@ class InvoiceScanService
 
     private function getModelName(): string
     {
-        $model = $this->settingModel->get('ai_model', 'openrouter/auto');
-        return $model ?: 'openrouter/auto';
+        $model = $this->settingModel->get('ai_model', 'google/gemini-2.0-flash-001');
+        return $model ?: 'google/gemini-2.0-flash-001';
     }
-
-    // ----------------------------------------------------------------
-    // API CALLER
-    // ----------------------------------------------------------------
 
     private function callOpenRouter(
         string $systemPrompt,
@@ -352,43 +293,26 @@ class InvoiceScanService
             throw new \Exception('API Key AI Scanner belum diatur di Pengaturan Aplikasi.');
         }
 
-        // Prevent timeout issues
         set_time_limit(120);
 
-        // Free vision model fallback chain — tried in order when 429 rate-limit hit
-        $FREE_VISION_MODELS = [
-            'google/gemma-4-31b-it:free',
-            'google/gemma-4-26b-a4b-it:free',
-            'nvidia/nemotron-nano-12b-v2-vl:free',
-        ];
-
-        // Build the list of models to try:
-        // - Primary: the configured model (default: openrouter/auto)
-        // - Fallbacks: free vision models, only tried if primary returns 429/5xx
         $FREE_VISION_FALLBACKS = [
+            'google/gemini-2.0-flash-001',
+            'google/gemini-2.5-flash',
             'google/gemma-4-31b-it:free',
             'google/gemma-4-26b-a4b-it:free',
-            'nvidia/nemotron-nano-12b-v2-vl:free',
         ];
 
         $modelsToTry = [$model];
-        // Only add free fallbacks if the primary is NOT already one of them
-        // (avoids duplicates and unnecessary retries for paid models)
-        if (!in_array($model, $FREE_VISION_FALLBACKS)) {
-            foreach ($FREE_VISION_FALLBACKS as $fb) {
+        foreach ($FREE_VISION_FALLBACKS as $fb) {
+            if ($fb !== $model && !in_array($fb, $modelsToTry)) {
                 $modelsToTry[] = $fb;
-            }
-        } else {
-            // Primary IS a free model — add remaining free models as fallbacks
-            foreach ($FREE_VISION_FALLBACKS as $fb) {
-                if ($fb !== $model) $modelsToTry[] = $fb;
             }
         }
 
         $imageBlock = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
         $lastError  = null;
 
-        foreach ($modelsToTry as $attempt => $tryModel) {
+        foreach ($modelsToTry as $tryModel) {
             $payload = [
                 'model'   => $tryModel,
                 'messages' => [
@@ -398,8 +322,8 @@ class InvoiceScanService
                         $imageBlock
                     ]]
                 ],
-                'temperature'     => 0.1,
-                'max_tokens'      => 8000,
+                'temperature' => 0.1,
+                'max_tokens'  => 8000,
             ];
 
             if (in_array($tryModel, ['openai/gpt-4o', 'openai/gpt-4o-mini', 'google/gemini-2.0-flash-001', 'google/gemini-2.5-flash'])) {
@@ -413,68 +337,60 @@ class InvoiceScanService
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Authorization: Bearer ' . $apiKey,
                 'Content-Type: application/json',
-                'HTTP-Referer: ' . BASE_URL,
+                'HTTP-Referer: ' . (defined('BASE_URL') ? BASE_URL : 'https://alfarezmart.com/'),
                 'X-Title: AlfarezMart'
             ]);
 
-            // Free tier gets a shorter timeout (55s); auto/paid models get full 110s
-            $freeTierModels = ['openrouter/free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-nano-12b-v2-vl:free'];
-            $timeout = in_array($tryModel, $freeTierModels) ? 55 : 110;
-            curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);
             $err      = curl_error($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+            if (PHP_VERSION_ID < 80500) {
+                @curl_close($ch);
+            }
+            unset($ch);
 
             if ($err) {
                 $lastError = "Koneksi ke OpenRouter gagal: " . $err;
-                continue; // try next model
+                continue;
             }
 
             if ($httpCode === 429) {
-                $nextModel = $modelsToTry[$attempt + 1] ?? null;
-                error_log("[AlfarezMart] Model {$tryModel} rate-limited (429). " . ($nextModel ? "Trying: $nextModel" : "No more fallbacks."));
-                $lastError = "Model {$tryModel} sedang dibatasi (rate limit). Mencoba model lain...";
+                $lastError = "Model {$tryModel} terkena rate limit. Mencoba model berikutnya...";
                 continue;
             }
 
             if ($httpCode !== 200) {
                 $errData = json_decode($response, true);
-                $msg = $errData['error']['message'] ?? 'Unknown error';
-                $lastError = "OpenRouter API Error ($httpCode): $msg";
-                if ($httpCode >= 500 || in_array($httpCode, [400, 402, 404])) continue; // retry next fallback
-                break; // 401 client error, stop
+                $msg = $errData['error']['message'] ?? "HTTP $httpCode";
+                $lastError = "OpenRouter Error ($httpCode): $msg";
+                if ($httpCode >= 500 || in_array($httpCode, [400, 402, 404])) continue;
+                break;
             }
 
-            // Success
             $resData = json_decode($response, true);
             $content = $resData['choices'][0]['message']['content'] ?? '';
             $content = preg_replace('/```json\s*/', '', $content);
             $content = preg_replace('/```\s*/', '',   $content);
-            return json_decode(trim($content), true);
+            $decoded = json_decode(trim($content), true);
+            if (is_array($decoded)) {
+                return $decoded;
+            }
         }
 
-        throw new \Exception($lastError ?? 'AI gagal memproses gambar setelah mencoba semua model.');
+        throw new \Exception($lastError ?? 'AI gagal memproses gambar setelah mencoba model yang tersedia.');
     }
 
-    // ----------------------------------------------------------------
-    // OUTPUT FORMATTER
-    // ----------------------------------------------------------------
-
-    /**
-     * Map the internal item structure to the format expected by the frontend.
-     * Preserves backward compatibility.
-     */
     private function formatForFrontend(array $items): array
     {
         $frontendItems = [];
 
         foreach ($items as $item) {
-            // Frontend expects specific keys (e.g., original_name, is_matched, product_id, match_score)
             $formatted = [
                 'original_name'   => $item['name'] ?? '',
+                'supplier_code'   => $item['supplier_code'] ?? '',
                 'qty'             => $item['qty'] ?? 1,
                 'unit_price'      => $item['unit_price'] ?? 0,
                 'total_price'     => $item['total_price'] ?? 0,
@@ -484,17 +400,9 @@ class InvoiceScanService
                 'product_name'    => $item['product_name'] ?? null,
                 'match_score'     => $item['match_score'] ?? 0,
                 'packaging_level' => $item['matched_packaging_level'] ?? 1,
-                'needs_review'    => $item['needs_review'] ?? false,
-                'confidence'      => $item['confidence']['final'] ?? 0,
+                'confidence'      => $item['confidence']['final'] ?? ($item['match_score'] ?? 0),
+                'product_data'    => $item['product_data'] ?? null,
             ];
-
-            // If there's issues or from correction, frontend might want to know
-            if (!empty($item['issues'])) {
-                $formatted['_issues'] = $item['issues'];
-            }
-            if (!empty($item['_from_correction'])) {
-                $formatted['_from_correction'] = true;
-            }
 
             $frontendItems[] = $formatted;
         }

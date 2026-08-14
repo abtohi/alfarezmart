@@ -548,24 +548,27 @@ function applyPriceFilter() {
 }
 
 function scanProductBarcode() {
+    const searchInput = document.getElementById('productSearchInput');
     if (typeof BarcodeUtil !== 'undefined' && BarcodeUtil.scanBarcode) {
-        const fakeInput = document.createElement('input');
-        fakeInput.type = 'text';
-        document.body.appendChild(fakeInput);
-        BarcodeUtil.scanBarcode(fakeInput, async (code) => {
-            document.body.removeChild(fakeInput);
-            if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
-                const product = await OfflineDB.findByBarcode(code);
-                if (product) {
-                    window.location.href = `<?= BASE_URL ?>products/${product.id}`;
-                    return;
+        BarcodeUtil.scanBarcode(searchInput, async (code) => {
+            if (code) {
+                if (searchInput) searchInput.value = code;
+                if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+                    const product = await OfflineDB.findByBarcode(code);
+                    if (product) {
+                        window.location.href = `<?= BASE_URL ?>products/${product.id}`;
+                        return;
+                    }
                 }
+                const form = document.getElementById('productSearchForm');
+                if (form) form.submit();
+                else window.location.href = '<?= BASE_URL ?>products?q=' + encodeURIComponent(code);
             }
-            window.location.href = '<?= BASE_URL ?>products?q=' + encodeURIComponent(code);
         });
     } else {
         const code = prompt('Masukkan kode barcode:');
         if (code) {
+            if (searchInput) searchInput.value = code;
             if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
                 OfflineDB.findByBarcode(code).then(product => {
                     if (product) window.location.href = `<?= BASE_URL ?>products/${product.id}`;

@@ -310,6 +310,8 @@ async function lookupBarcode() {
     _scannerFastCharCount = 0;
 
     const selectInp = () => {
+        // DO NOT select/focus on mobile touch devices as it selects all text and steals virtual keyboard focus while user is typing
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) return;
         setTimeout(() => {
             if (input) {
                 input.focus();
@@ -1109,6 +1111,9 @@ function openGlobalScanner() {
     const input = document.getElementById('barcodeInput');
     if (typeof BarcodeUtil !== 'undefined') {
         BarcodeUtil.scanBarcode(input, (code) => {
+            if (code && input) {
+                input.value = code;
+            }
             lookupBarcode();
         });
     } else {
@@ -1136,13 +1141,15 @@ if (barcodeInpEl) {
             return;
         }
 
-        // Live responsive search debounce (250ms)
+        // Live responsive search debounce (300ms)
         scannerTimer = setTimeout(() => {
             lookupBarcode();
-        }, 250);
+        }, 300);
     });
 
-    // Auto-focus on load
-    barcodeInpEl.focus();
+    // Auto-focus only on desktop (prevent opening mobile virtual keyboard automatically on page load)
+    if (!('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+        barcodeInpEl.focus();
+    }
 }
 </script>

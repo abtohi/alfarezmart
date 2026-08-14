@@ -79,8 +79,8 @@
                 </div>
             </div>
 
-            <!-- Step 3: Product Search (shown after supplier selected) -->
-            <div id="productSearchSection" style="display:none;">
+            <!-- Step 3: Product Search -->
+            <div id="productSearchSection" style="display:block;">
                 <div style="background:var(--surface-1); border-radius:var(--radius-lg); padding:16px; margin-bottom:12px; border:1px solid var(--border-color);">
                     <div class="section-title" style="margin-bottom:8px;">
                         <i class="bi bi-2-circle" style="color:var(--primary);"></i> Cari Produk
@@ -383,43 +383,29 @@ async function scanInvoiceWithAI() {
         
         if (result.success && result.data && result.data.length > 0) {
             showToast('AI berhasil memparsing ' + result.data.length + ' item', 'success');
-            
-            // Loop through results and add to bulk items
+            // Loop through results and add to bulk items instantly (0 network roundtrips)
             for (const item of result.data) {
                 if (item.is_matched && item.product_id) {
                     try {
-                        const productData = await api(`${BASE_URL}api/products/${item.product_id}`);
+                        const productData = item.product_data || await api(`${BASE_URL}api/products/${item.product_id}`);
                         // Set quantity and price based on AI output
                         if (productData && productData.packagings && productData.packagings.length > 0) {
-                            let bestPkg = null;
-                            let targetUnit = (item.unit || '').toLowerCase().trim();
+                            const targetLevel = item.packaging_level || 1;
+                            let bestPkg = productData.packagings.find(p => p.level == targetLevel);
                             
-                            // 1. First, try to match by unit name (if AI extracted 'Karton', match 'Karton')
-                            if (targetUnit) {
-                                bestPkg = productData.packagings.find(p => p.unit_name && p.unit_name.toLowerCase().includes(targetUnit));
-                            }
-                            
-                            // 2. If no name match, try to match by closest price (unit_price)
+                            // Fallback if target level not found
                             if (!bestPkg) {
-                                let closestDiff = Infinity;
-                                for (const p of productData.packagings) {
-                                    const diff = Math.abs((parseFloat(p.buy_price) || 0) - item.unit_price);
-                                    // If difference is within 20% of the price, consider it a possible match
-                                    if (diff < closestDiff && item.unit_price > 0 && (diff / item.unit_price) < 0.3) {
-                                        closestDiff = diff;
-                                        bestPkg = p;
-                                    }
+                                let targetUnit = (item.unit || '').toLowerCase().trim();
+                                if (targetUnit) {
+                                    bestPkg = productData.packagings.find(p => p.unit_name && p.unit_name.toLowerCase().includes(targetUnit));
                                 }
                             }
-                            
-                            // 3. Fallback to base packaging (level 1)
                             if (!bestPkg) {
-                                bestPkg = productData.packagings.find(p => p.level == 1) || productData.packagings[0];
+                                bestPkg = productData.packagings[0];
                             }
                             
                             // Set the selected packaging level's buy_price to the AI's unit_price
-                            // We do NOT modify sell_price_retail or sell_price_wholesale (they remain from DB)
-                            if (bestPkg) {
+                            if (bestPkg && item.unit_price > 0) {
                                 bestPkg.buy_price = item.unit_price;
                             }
                             
@@ -429,12 +415,11 @@ async function scanInvoiceWithAI() {
                             // Immediately update the added item's quantity, buy_price, and total
                             const addedItem = purchaseItems[0]; // addProductToCart unshifts to the front
                             if (addedItem && addedItem.product_id == item.product_id) {
-                                addedItem.quantity  = item.qty;
-                                addedItem.buy_price = item.unit_price;
-                                addedItem.total     = item.qty * item.unit_price;
+                                addedItem.quantity  = item.qty || 1;
+                                addedItem.buy_price = item.unit_price || 0;
+                                addedItem.total     = item.total_price || (addedItem.quantity * addedItem.buy_price);
 
-                                // Propagate AI buy_price to ALL packaging levels (so drawer/panel
-                                // kemasan juga menampilkan Harga Modal yang benar, bukan harga lama DB)
+                                // Propagate AI buy_price to ALL packaging levels
                                 propagateFromMainInputs(addedItem);
 
                                 // Also sync sell prices based on new buy price (maintain margin)
@@ -453,7 +438,7 @@ async function scanInvoiceWithAI() {
                         console.error('Failed to add AI mapped item', e);
                     }
                 } else {
-                    showToast('Item "' + item.original_name + '" tidak dikenali di database, silakan input manual.', 'warning');
+                    showToast('Item "' + (item.original_name || item.supplier_code) + '" tidak dikenali di database, silakan input manual.', 'warning');
                 }
             }
             renderCart();
@@ -629,7 +614,7 @@ function clearSalesRepSelection() {
     filterBySupplierSales = true;
 
     document.getElementById('supplierDisplaySection').style.display = 'none';
-    document.getElementById('productSearchSection').style.display = 'none';
+    document.getElementById('productSearchSection').style.display = 'block';
     document.getElementById('supplierDisplay').textContent = '—';
     document.getElementById('salesRepInfo').textContent = '';
 
@@ -638,8 +623,9 @@ function clearSalesRepSelection() {
 
     const filterCb = document.getElementById('filterBySupplierSales');
     if (filterCb) {
-        filterCb.checked = true;
+        filterCb.checked = false;
         filterCb.disabled = false;
+        filterBySupplierSales = false;
     }
 
     const productSearch = document.getElementById('productSearch');
@@ -958,8 +944,10 @@ function initPurchaseProductSearch() {
 }
 
 function scanProductBarcode() {
+    ensureSearchSectionVisible();
+    const searchInp = document.getElementById('productSearch');
     if (typeof BarcodeUtil !== 'undefined' && BarcodeUtil.scanBarcode) {
-        BarcodeUtil.scanBarcode(searchInput, (code) => {
+        BarcodeUtil.scanBarcode(searchInp, (code) => {
             if (code) {
                 processPurchaseBarcodeOrSearch(code);
             }
