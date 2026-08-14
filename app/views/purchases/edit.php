@@ -121,20 +121,24 @@
         </div>
     </div>
 
-    <!-- Items List -->
-    <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
-        <span><i class="bi bi-3-circle" style="color:var(--primary);"></i> Daftar Barang</span>
-        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-            <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px; display:inline-flex; align-items:center; gap:4px;" onclick="expandAllItems()" title="Tampilkan Semua Detail Produk">
+    <!-- Items List Header -->
+    <div class="purchase-items-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+            <span class="section-title" style="margin:0; white-space:nowrap; display:inline-flex; align-items:center; gap:6px;">
+                <i class="bi bi-3-circle" style="color:var(--primary);"></i> Daftar Barang
+            </span>
+            <span id="itemCountBadge" class="badge-custom badge-info" style="font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700;">0 Item</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; padding-bottom:2px;">
+            <button type="button" class="btn-outline-custom" style="padding:5px 9px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px; border-radius:6px; white-space:nowrap;" onclick="expandAllItems()" title="Tampilkan Semua Detail Produk">
                 <i class="bi bi-arrows-angle-expand"></i> Expand All
             </button>
-            <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px; display:inline-flex; align-items:center; gap:4px;" onclick="collapseAllItems()" title="Ringkaskan Tampilan Produk">
+            <button type="button" class="btn-outline-custom" style="padding:5px 9px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px; border-radius:6px; white-space:nowrap;" onclick="collapseAllItems()" title="Ringkaskan Tampilan Produk">
                 <i class="bi bi-arrows-angle-contract"></i> Collapse All
             </button>
-            <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px; color:var(--danger); border-color:var(--danger);" onclick="clearAllDrafts()" title="Kosongkan Semua Inputan">
+            <button type="button" class="btn-outline-custom" style="padding:5px 9px; font-size:11px; font-weight:600; color:var(--danger); border-color:rgba(239,68,68,0.4); background:rgba(239,68,68,0.06); display:inline-flex; align-items:center; gap:4px; border-radius:6px; white-space:nowrap;" onclick="clearAllDrafts()" title="Kosongkan Semua Inputan">
                 <i class="bi bi-trash"></i> Kosongkan
             </button>
-            <span id="itemCountBadge" class="badge-custom badge-info">0 Item</span>
         </div>
     </div>
     
