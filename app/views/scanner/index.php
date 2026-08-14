@@ -1117,8 +1117,6 @@ function openGlobalScanner() {
 }
 
 let scannerTimer = null;
-let _scannerLastCharTime = 0;
-let _scannerFastCharCount = 0;
 const barcodeInpEl = document.getElementById('barcodeInput');
 
 if (barcodeInpEl) {
@@ -1126,54 +1124,25 @@ if (barcodeInpEl) {
         if (e.key === 'Enter') {
             e.preventDefault();
             clearTimeout(scannerTimer);
-            clearTimeout(_scannerAutoLookupTimer);
             lookupBarcode();
         }
     });
 
     barcodeInpEl.addEventListener('input', (e) => {
-        const now = Date.now();
-        const gap = now - _scannerLastCharTime;
-        _scannerLastCharTime = now;
+        const val = barcodeInpEl.value.trim();
+        clearTimeout(scannerTimer);
 
-        const val = barcodeInpEl.value;
-
-        if (gap < 45) {
-            _scannerFastCharCount++;
-        } else {
-            _scannerFastCharCount = 1;
-        }
-
-        // Auto-reset input when a new fast scanner stream starts while old text was present
-        if (_scannerFastCharCount === 2 && val.length > 2) {
-            const firstTwo = val.slice(-2);
-            barcodeInpEl.value = firstTwo;
-        }
-
-        if (val.trim().length < 2) {
-            clearTimeout(scannerTimer);
-            clearTimeout(_scannerAutoLookupTimer);
+        if (val.length < 2) {
             return;
         }
 
-        const isFastScanner = _scannerFastCharCount >= 2;
-        clearTimeout(scannerTimer);
-        clearTimeout(_scannerAutoLookupTimer);
-
-        if (isFastScanner) {
-            // Fast scanner typing → auto trigger lookup 100ms after last digit
-            _scannerAutoLookupTimer = setTimeout(() => {
-                lookupBarcode();
-            }, 100);
-        } else {
-            // Human typing → 350ms debounce text search (supports multi-keyword)
-            scannerTimer = setTimeout(() => {
-                lookupBarcode();
-            }, 350);
-        }
+        // Live responsive search debounce (250ms)
+        scannerTimer = setTimeout(() => {
+            lookupBarcode();
+        }, 250);
     });
 
-    // Auto-focus & select on load
+    // Auto-focus on load
     barcodeInpEl.focus();
 }
 </script>
