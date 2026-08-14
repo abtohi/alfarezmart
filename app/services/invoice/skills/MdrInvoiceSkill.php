@@ -91,33 +91,35 @@ class MdrInvoiceSkill implements InvoiceSkillInterface
     public function getSystemPrompt(bool $isCorrectionPass = false): string
     {
         $lines = [];
-        $lines[] = 'Kamu adalah AI OCR & data extractor presisi tinggi spesialis faktur/invoice PT Medan Distribusindo Raya (MDR / Wings Group).';
-        $lines[] = 'Tugas utamamu: Ekstrak SEMUA baris produk dari baris pertama sampai baris paling bawah secara lengkap 100% tanpa ada yang terlewat!';
+        $lines[] = 'Kamu adalah AI OCR & data extractor presisi tinggi spesialis faktur/invoice ' . $this->getSupplierName() . '.';
+        $lines[] = 'Tugas utamamu: Ekstrak SEMUA baris produk yang ada pada faktur secara lengkap 100% tanpa ada baris yang terlewat atau digabungkan!';
         $lines[] = '';
-        $lines[] = '## STRUKTUR KOLOM FAKTUR MDR (Kiri ke Kanan):';
-        $lines[] = '1. QUANTITY (misal: "10 BOX", "3 PCS", "6 PCS", "36 PCS")';
-        $lines[] = '2. KODE BARANG (misal: "20270", "20226", "20234", "20031", "20453", "20392", "1020087", "1220055", "20295", "20297")';
-        $lines[] = '3. BATCH (abaikan / kosong)';
-        $lines[] = '4. NAMA BARANG (misal: "ALE ALE LECI CUP 180ML", "SEDAAP MIE KOREAN SPICY CHKN BAG 87GR", "GURIBEE BBQ BALADO 65GR", "GURIBEE RUMPUT LAUT 65GR", "PIRING KERAMIK 8 INCH WINGS")';
-        $lines[] = '5. ISI (Pcs) (jumlah isi kemasan)';
-        $lines[] = '6. HARGA (Rp.) (harga gross)';
-        $lines[] = '7. PROMO DISCOUNT (potongan promo)';
-        $lines[] = '8. REGULAR DISCOUNT (potongan reguler)';
-        $lines[] = '9. JUMLAH (Rp.) (KOLOM PALING KANAN — TOTAL PEMBELIAN AKHIR BARIS SETELAH DISKON)';
+        $lines[] = '## STRUKTUR KOLOM TABEL FAKTUR (Kiri ke Kanan):';
+        $lines[] = '1. QUANTITY (Angka kuantitas dan satuan kemasan, misal "10 BOX", "1 BOX", "6 PCS", "36 PCS")';
+        $lines[] = '2. KODE BARANG (Kode identifikasi barang dari supplier, angka atau alfanumerik)';
+        $lines[] = '3. BATCH (Nomor batch jika ada, abaikan jika kosong)';
+        $lines[] = '4. NAMA BARANG (Nama produk lengkap persis seperti yang tercetak di faktur)';
+        $lines[] = '5. ISI (Pcs) (Jumlah isi satuan per kemasan)';
+        $lines[] = '6. HARGA (Rp.) (Harga kotor per satuan kemasan sebelum potongan)';
+        $lines[] = '7. PROMO DISCOUNT (Potongan diskon promo jika ada)';
+        $lines[] = '8. REGULAR DISCOUNT (Potongan diskon reguler jika ada)';
+        $lines[] = '9. JUMLAH (Rp.) (KOLOM PALING KANAN — TOTAL NILAI AKHIR BARIS SETELAH POTONGAN DISKON)';
         $lines[] = '';
-        $lines[] = '## ATURAN EKSTRAKSI SANGAT KRUSIAL:';
-        $lines[] = '1. WAJIB BACA BARIS TERBAWAH / DI BAWAH GARIS TABEL / YANG TERKENA STEMPEL ATAU TERTINDIH GARIS:';
-        $lines[] = '   - Perhatikan dengan sangat cermat baris paling bawah (misal: "GURIBEE RUMPUT LAUT 65GR" kode 20297 qty 6 PCS total 35.880 dan "GURIBEE BBQ BALADO 65GR" kode 20295 qty 6 PCS).';
-        $lines[] = '   - Meskipun baris ini tercetak di bawah garis batas tabel atau tertimpa stempel Bank BRI / kotak peringatan, SELAMA ITU ADALAH BARIS PRODUK, WAJIB DIEKSTRAK KE DALAM ARRAY JSON!';
-        $lines[] = '2. EKSTRAK SEMUA ITEM TERMASUK FREE ITEM / BONUS (misal: "PIRING KERAMIK 8 INCH WINGS" jika total harga kosong/0 isi total_price: 0).';
-        $lines[] = '3. JANGAN PERNAH MENGGABUNGKAN / MELEWATKAN BARIS YANG HARGANYA SAMA ATAU MERKNYA SAMA!';
-        $lines[] = '4. "supplier_code": Ambil angka KODE BARANG persis seperti di kolom ke-2 (misal "20270", "20295", "20297").';
-        $lines[] = '5. "name": Ambil teks NAMA BARANG lengkap persis di faktur.';
-        $lines[] = '6. "qty": Ambil angka dari kolom QUANTITY (contoh "10 BOX" -> 10, "6 PCS" -> 6).';
-        $lines[] = '7. "unit": Ambil teks satuan ("BOX", "PCS", "CTN", "DUS").';
-        $lines[] = '8. "total_price": Ambil nilai angka dari kolom JUMLAH (Rp.) di PALING KANAN tabel (misal "194.000" -> 194000, "35.880" -> 35880, "336.798" -> 336798). Abaikan titik pemisah ribuan.';
-        $lines[] = '9. "unit_price": Biarkan null (sistem backend akan menghitung otomatis).';
-        $lines[] = '10. ABAIKAN HANYA baris non-produk: "Pindahan dari halaman ...", "SUB TOTAL", "Mohon Pembayaran Hanya ke Bank PT Medan Distribusindo Raya...", "Selesai dibongkar jam...".';
+        $lines[] = '## ATURAN EKSTRAKSI DINAMIS & UNIVERSAL:';
+        $lines[] = '1. BACA DARI BARIS PERTAMA HINGGA BARIS PALING BAWAH:';
+        $lines[] = '   - Ekstrak seluruh baris produk dari baris teratas di bawah header tabel hingga baris terbawah faktur.';
+        $lines[] = '   - Termasuk jika terdapat baris produk tambahan yang tercetak di bawah garis tabel, di baris overflow, atau yang posisinya sebagian bersinggungan dengan stempel/tanda tangan.';
+        $lines[] = '   - Selama baris tersebut memuat data produk (nama barang, kuantitas, kode, atau harga), WAJIB diekstrak ke dalam array JSON!';
+        $lines[] = '2. EKSTRAK SEMUA ITEM TERMASUK ITEM BONUS / FREE GIFT (Jika harga akhir 0 atau strip, isi total_price: 0).';
+        $lines[] = '3. JANGAN PERNAH MENGGABUNGKAN BARIS TERPISAH YANG MEMILIKI NILAI HARGA / KUANTITAS SERUPA:';
+        $lines[] = '   - Setiap baris cetak fisik adalah satu entri objek tersendiri di array JSON.';
+        $lines[] = '4. "supplier_code": Ambil kode barang supplier dari kolom ke-2 persis apa adanya.';
+        $lines[] = '5. "name": Ambil teks nama produk lengkap persis seperti tertulis di faktur.';
+        $lines[] = '6. "qty": Ambil angka kuantitas dari kolom Quantity (misal "10 BOX" -> 10, "6 PCS" -> 6).';
+        $lines[] = '7. "unit": Ambil satuan kemasan dari kolom Quantity (misal "BOX", "PCS", "CTN", "DUS", "BKS").';
+        $lines[] = '8. "total_price": Ambil angka dari kolom JUMLAH (Rp.) di PALING KANAN tabel (setelah diskon). Format angka Indonesia: hilangkan titik pemisah ribuan.';
+        $lines[] = '9. "unit_price": Biarkan null (sistem backend akan menghitung total_price / qty secara otomatis).';
+        $lines[] = '10. HANYA ABAIKAN teks non-produk: baris pemindahan halaman ("Pindahan dari halaman..."), subtotal ("SUB TOTAL"), catatan rekening bank, dan tanda tangan.';
         $lines[] = '';
 
         if ($isCorrectionPass) {
@@ -125,22 +127,14 @@ class MdrInvoiceSkill implements InvoiceSkillInterface
             $lines[] = '';
         }
 
-        $lines[] = '## FORMAT OUTPUT JSON (HANYA JSON ARRAY VALID, TANPA PENJELASAN LAIN):';
+        $lines[] = '## FORMAT OUTPUT JSON (HANYA JSON ARRAY VALID, TANPA TEKS LAIN):';
         $lines[] = '[';
         $lines[] = '  {';
         $lines[] = '    "supplier_code": "20270",';
-        $lines[] = '    "name": "ALE ALE LECI CUP 180ML",';
+        $lines[] = '    "name": "NAMA PRODUK DI FAKTUR",';
         $lines[] = '    "qty": 10,';
         $lines[] = '    "unit": "BOX",';
         $lines[] = '    "total_price": 194000,';
-        $lines[] = '    "unit_price": null';
-        $lines[] = '  },';
-        $lines[] = '  {';
-        $lines[] = '    "supplier_code": "20297",';
-        $lines[] = '    "name": "GURIBEE RUMPUT LAUT 65GR",';
-        $lines[] = '    "qty": 6,';
-        $lines[] = '    "unit": "PCS",';
-        $lines[] = '    "total_price": 35880,';
         $lines[] = '    "unit_price": null';
         $lines[] = '  }';
         $lines[] = ']';
@@ -150,9 +144,9 @@ class MdrInvoiceSkill implements InvoiceSkillInterface
 
     public function getUserPromptHints(): string
     {
-        return "Invoice PT Medan Distribusindo Raya (MDR / Wings Group). " .
-               "BACA SELURUH BARIS DARI ATAS SAMPAI BARIS PALING BAWAH (TERMASUK BARIS DI BAWAH GARIS TABEL SEPERTI GURIBEE RUMPUT LAUT 65GR KODE 20297 DAN GURIBEE BBQ BALADO 65GR KODE 20295 SERTA ITEM BONUS PIRING). " .
-               "Semua baris produk WAJIB masuk lengkap ke dalam array JSON!";
+        return "Invoice " . $this->getSupplierName() . ". " .
+               "BACA SEMUA BARIS PRODUK DARI PALING ATAS SAMPAI BARIS PALING BAWAH (termasuk baris tambahan di bawah garis batas tabel atau yang terkena stempel). " .
+               "Gunakan kolom QUANTITY, KODE BARANG, NAMA BARANG, dan JUMLAH paling kanan. Pastikan seluruh baris produk masuk lengkap ke array JSON!";
     }
 
     public function parseItem(array $rawItem): array
