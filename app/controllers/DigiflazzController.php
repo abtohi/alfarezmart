@@ -283,6 +283,9 @@ class DigiflazzController extends Controller {
             }
         }
 
+        // Fetch seller rates for sorting & badges
+        $sellerRates = $this->digiModel->getSellerSuccessRates();
+
         $history = [];
         foreach ($rows as $r) {
             $sku = $r['buyer_sku_code'];
@@ -295,6 +298,9 @@ class DigiflazzController extends Controller {
             }
 
             $seller = !empty($r['seller_name']) ? $r['seller_name'] : (!empty($r['user_name']) ? $r['user_name'] : 'Kasir');
+            $sellerData = $seller && isset($sellerRates[$seller]) ? $sellerRates[$seller] : null;
+            $sellerSr = ($sellerData && $sellerData['total'] > 0) ? round(($sellerData['success'] / $sellerData['total']) * 100, 1) : 0;
+            $sellerSpd = $sellerData && $sellerData['avg_speed'] !== null ? (float)$sellerData['avg_speed'] : 9999;
 
             $productPayload = $prodInfo ? [
                 'buyer_sku_code' => $prodInfo['buyer_sku_code'],
@@ -307,7 +313,9 @@ class DigiflazzController extends Controller {
                 'seller_name' => $prodInfo['seller_name'] ?: $seller,
                 'buyer_product_status' => (int)$prodInfo['buyer_product_status'],
                 'seller_product_status' => (int)$prodInfo['seller_product_status'],
-                'is_active' => (int)$prodInfo['is_active']
+                'is_active' => (int)$prodInfo['is_active'],
+                'seller_success_rate' => $sellerSr,
+                'seller_avg_speed' => $sellerSpd < 9999 ? $sellerSpd : null
             ] : [
                 'buyer_sku_code' => $r['buyer_sku_code'],
                 'product_name' => $r['product_name'] ?: $r['buyer_sku_code'],
@@ -319,8 +327,19 @@ class DigiflazzController extends Controller {
                 'seller_name' => $seller,
                 'buyer_product_status' => 1,
                 'seller_product_status' => 1,
-                'is_active' => 1
+                'is_active' => 1,
+                'seller_success_rate' => $sellerSr,
+                'seller_avg_speed' => $sellerSpd < 9999 ? $sellerSpd : null
             ];
+
+            $rawSt = strtolower(trim($r['status'] ?? ''));
+            // Rank status: 1 = Success, 2 = Pending/Processing, 3 = Failed/Gagal
+            $statusRank = 3;
+            if ($rawSt === 'success' || $rawSt === 'sukses') {
+                $statusRank = 1;
+            } elseif ($rawSt === 'pending' || $rawSt === 'processing') {
+                $statusRank = 2;
+            }
 
             $history[] = [
                 'id' => (int)$r['id'],
@@ -331,12 +350,37 @@ class DigiflazzController extends Controller {
                 'type' => $r['type'] ?: ($prodInfo['type'] ?? 'prepaid'),
                 'sell_price' => (float)$r['sell_price'],
                 'status' => $r['status'],
+                'status_rank' => $statusRank,
                 'seller_name' => $seller,
+                'seller_success_rate' => $sellerSr,
+                'seller_avg_speed' => $sellerSpd < 9999 ? $sellerSpd : null,
                 'created_at' => $r['created_at'],
                 'is_available' => $isAvailable,
                 'product' => $productPayload
             ];
         }
+
+        // Sort history: 
+        // 1. Status: Sukses terdepan (status_rank 1), Pending (2), Gagal paling belakang (3)
+        // 2. Kecepatan tercepat (avg_speed terendah)
+        // 3. Success Rate tertinggi (seller_success_rate tertinggi)
+        // 4. Waktu transaksi terbaru (created_at DESC)
+        usort($history, function($a, $b) {
+            if ($a['status_rank'] !== $b['status_rank']) {
+                return $a['status_rank'] - $b['status_rank'];
+            }
+            $spdA = $a['seller_avg_speed'] ?? 9999;
+            $spdB = $b['seller_avg_speed'] ?? 9999;
+            if ($spdA !== $spdB) {
+                return ($spdA < $spdB) ? -1 : 1;
+            }
+            $srA = (float)($a['seller_success_rate'] ?? 0);
+            $srB = (float)($b['seller_success_rate'] ?? 0);
+            if ($srA !== $srB) {
+                return ($srB > $srA) ? 1 : -1;
+            }
+            return strcmp($b['created_at'] ?? '', $a['created_at'] ?? '');
+        });
 
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'history' => $history]);

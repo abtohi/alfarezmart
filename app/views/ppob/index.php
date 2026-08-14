@@ -2921,7 +2921,34 @@ async function checkAndRenderTargetHistory(customerNo) {
             return;
         }
 
-        currentTargetHistory = data.history;
+        // Client-side sort guarantee:
+        // 1. Status: Sukses (1) > Proses (2) > Gagal (3)
+        // 2. Kecepatan tercepat (seller_avg_speed terendah)
+        // 3. Success Rate tertinggi (seller_success_rate tertinggi)
+        const histData = data.history || [];
+        histData.sort((a, b) => {
+            const rank = st => {
+                const s = (st || '').toLowerCase();
+                if (s === 'success' || s === 'sukses') return 1;
+                if (s === 'pending' || s === 'processing') return 2;
+                return 3; // failed / gagal
+            };
+            const rA = rank(a.status);
+            const rB = rank(b.status);
+            if (rA !== rB) return rA - rB;
+
+            const spdA = a.seller_avg_speed !== null && a.seller_avg_speed !== undefined ? parseFloat(a.seller_avg_speed) : 9999;
+            const spdB = b.seller_avg_speed !== null && b.seller_avg_speed !== undefined ? parseFloat(b.seller_avg_speed) : 9999;
+            if (spdA !== spdB) return spdA - spdB;
+
+            const srA = a.seller_success_rate !== null && a.seller_success_rate !== undefined ? parseFloat(a.seller_success_rate) : 0;
+            const srB = b.seller_success_rate !== null && b.seller_success_rate !== undefined ? parseFloat(b.seller_success_rate) : 0;
+            if (srA !== srB) return srB - srA;
+
+            return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+        });
+
+        currentTargetHistory = histData;
         if (badgeEl) badgeEl.innerText = `${currentTargetHistory.length} Transaksi`;
 
         renderTargetHistoryPage(1);
@@ -2952,12 +2979,29 @@ function renderTargetHistoryPage(page) {
     let html = '';
     pageItems.forEach(item => {
         const isAvail = item.is_available && item.product;
-        const statusClass = item.status === 'success' ? 'success' : (item.status === 'pending' || item.status === 'processing' ? 'warning' : 'danger');
-        const statusText = item.status === 'success' ? 'Sukses' : (item.status === 'pending' || item.status === 'processing' ? 'Proses' : 'Gagal');
+        const statusLower = (item.status || '').toLowerCase();
+        const isSuccess = statusLower === 'success' || statusLower === 'sukses';
+        const isPending = statusLower === 'pending' || statusLower === 'processing';
+        const statusClass = isSuccess ? 'success' : (isPending ? 'warning' : 'danger');
+        const statusText = isSuccess ? 'Sukses' : (isPending ? 'Proses' : 'Gagal');
         const formattedPrice = typeof formatRp === 'function' ? formatRp(item.sell_price) : `Rp${Number(item.sell_price).toLocaleString('id-ID')}`;
         const sellerName = item.seller_name || 'Kasir';
         const dateStr = item.created_at ? item.created_at.substring(0, 16) : '-';
         const jsonProd = item.product ? encodeURIComponent(JSON.stringify(item.product)) : '';
+
+        // Seller Speed & SR Badge
+        let sellerMetricsHtml = '';
+        if (item.seller_avg_speed !== null && item.seller_avg_speed !== undefined) {
+            const spVal = Math.round(parseFloat(item.seller_avg_speed));
+            const spText = spVal <= 59 ? `${spVal}d` : `${Math.floor(spVal/60)}m`;
+            const spColor = spVal <= 15 ? '#10b981' : (spVal <= 45 ? '#3b82f6' : '#f59e0b');
+            sellerMetricsHtml += `<span class="badge bg-opacity-10" style="background:${spColor}1a; color:${spColor}; font-size:9.5px; padding:2px 5px;"><i class="bi bi-lightning-charge-fill me-0.5"></i>${spText}</span>`;
+        }
+        if (item.seller_success_rate !== null && item.seller_success_rate !== undefined && parseFloat(item.seller_success_rate) > 0) {
+            const srVal = parseFloat(item.seller_success_rate);
+            const srColor = srVal >= 80 ? '#10b981' : (srVal >= 50 ? '#f59e0b' : '#ef4444');
+            sellerMetricsHtml += `<span class="badge bg-opacity-10" style="background:${srColor}1a; color:${srColor}; font-size:9.5px; padding:2px 5px;">${srVal}% SR</span>`;
+        }
 
         let actionBtn = `<button type="button" class="btn btn-sm btn-primary fw-bold px-3 py-1.5 rounded-pill d-inline-flex align-items-center shadow-sm" style="font-size: 11px; transition: all 0.2s;" onclick="reorderPpobProduct('${item.buyer_sku_code}', '${jsonProd}')">
             <i class="bi bi-arrow-repeat me-1 fs-6"></i>Beli Lagi
@@ -2965,15 +3009,16 @@ function renderTargetHistoryPage(page) {
 
         html += `
             <div class="d-flex align-items-center justify-content-between p-2.5 rounded-3 border" style="background: var(--surface-1, #ffffff); border-color: var(--border-color, #e2e8f0) !important; gap: 10px;">
-                <div class="d-flex flex-column min-w-0 flex-grow-1" style="gap: 2px;">
+                <div class="d-flex flex-column min-w-0 flex-grow-1" style="gap: 3px;">
                     <div class="d-flex align-items-center gap-2 flex-wrap">
                         <span class="fw-bold text-dark text-truncate" style="font-size: 12px; color: var(--text-primary) !important;">${item.product_name}</span>
-                        <span class="badge bg-${statusClass} bg-opacity-10 text-${statusClass}" style="font-size: 9px; padding: 2px 6px;">${statusText}</span>
+                        <span class="badge bg-${statusClass} bg-opacity-10 text-${statusClass}" style="font-size: 9.5px; padding: 2px 7px; font-weight:700;">${statusText}</span>
                     </div>
                     <div class="d-flex align-items-center gap-2 text-muted flex-wrap" style="font-size: 11px;">
                         <span><i class="bi bi-tag-fill me-1 text-primary opacity-75"></i>${formattedPrice}</span>
                         <span>•</span>
                         <span><i class="bi bi-shop me-1 text-info opacity-75"></i>Seller: <strong style="color: var(--text-primary);">${sellerName}</strong></span>
+                        ${sellerMetricsHtml}
                         <span>•</span>
                         <span style="font-size: 10px;"><i class="bi bi-calendar3 me-1"></i>${dateStr}</span>
                     </div>
@@ -3156,8 +3201,15 @@ function renderSellerRecommendations(products) {
         return;
     }
 
-    // Sort sellers: Highest score first, tiebreak by fastest avgSpeed, then highest trxCount
-    sellerList.sort((a, b) => b.score - a.score || a.avgSpeed - b.avgSpeed || b.trxCount - a.trxCount);
+    // Sort sellers: 
+    // 1. Highest success rate (avgSr DESC)
+    // 2. Fastest speed (avgSpeed ASC)
+    // 3. Highest transaction count (trxCount DESC)
+    sellerList.sort((a, b) => {
+        if (b.avgSr !== a.avgSr) return b.avgSr - a.avgSr;
+        if (a.avgSpeed !== b.avgSpeed) return a.avgSpeed - b.avgSpeed;
+        return b.trxCount - a.trxCount;
+    });
     const top10 = sellerList.slice(0, 10);
 
     container.style.display = 'block';
@@ -3843,11 +3895,28 @@ function renderProducts(products) {
             </div>
         `;
 
-        // Sort items inside group by actual sell_price ascending (cheapest selling price option first)
+        // Sort items inside group:
+        // 1. Seller status active (buyer_product_status === 1 && seller_product_status === 1) first
+        // 2. Highest Product Success Rate & Seller SR
+        // 3. Fastest Speed (sku_seller_avg_speed / seller_avg_speed)
+        // 4. Lowest Selling Price
         items.sort((a, b) => {
+            const actA = (parseInt(a.buyer_product_status ?? 1) === 1 && parseInt(a.seller_product_status ?? 1) === 1) ? 1 : 0;
+            const actB = (parseInt(b.buyer_product_status ?? 1) === 1 && parseInt(b.seller_product_status ?? 1) === 1) ? 1 : 0;
+            if (actA !== actB) return actB - actA;
+
+            const srA = a.product_success_rate !== null ? parseFloat(a.product_success_rate) : (a.success_rate !== null ? parseFloat(a.success_rate) : 0);
+            const srB = b.product_success_rate !== null ? parseFloat(b.product_success_rate) : (b.success_rate !== null ? parseFloat(b.success_rate) : 0);
+            if (srA !== srB) return srB - srA;
+
+            const spdA = a.sku_seller_avg_speed !== null ? parseFloat(a.sku_seller_avg_speed) : (a.seller_avg_speed !== null ? parseFloat(a.seller_avg_speed) : 9999);
+            const spdB = b.sku_seller_avg_speed !== null ? parseFloat(b.sku_seller_avg_speed) : (b.seller_avg_speed !== null ? parseFloat(b.seller_avg_speed) : 9999);
+            if (spdA !== spdB) return spdA - spdB;
+
             const sellA = getPpobSellPrice(a.buyer_sku_code) || (parseFloat(a.sell_price) || parseFloat(a.seller_price || 0));
             const sellB = getPpobSellPrice(b.buyer_sku_code) || (parseFloat(b.sell_price) || parseFloat(b.seller_price || 0));
             if (sellA !== sellB) return sellA - sellB;
+
             return parseFloat(a.seller_price || 0) - parseFloat(b.seller_price || 0);
         });
 

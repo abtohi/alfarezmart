@@ -179,16 +179,15 @@ class DigiflazzModel {
         $cat = strtolower(trim($apiCategory));
         if (strpos($cat, 'pulsa') !== false) return 'pulsa';
         if (strpos($cat, 'data') !== false) return 'data';
-        if (strpos($cat, 'sms') !== false || strpos($cat, 'nelpon') !== false) return 'sms_nelpon';
+        if (strpos($cat, 'sms') !== false || strpos($cat, 'nelpon') !== false || strpos($cat, 'telpon') !== false) return 'sms_nelpon';
         if (strpos($cat, 'pln') !== false) return 'pln';
-        if (strpos($cat, 'e-money') !== false || strpos($cat, 'ewallet') !== false) return 'ewallet';
+        if (strpos($cat, 'e-money') !== false || strpos($cat, 'ewallet') !== false || strpos($cat, 'e-wallet') !== false || strpos($cat, 'emoney') !== false || strpos($cat, 'uang elektronik') !== false || strpos($cat, 'wallet') !== false) return 'ewallet';
         if (strpos($cat, 'game') !== false) return 'game';
-        if (strpos($cat, 'tv') !== false) return 'tv';
+        if (strpos($cat, 'tv') !== false || strpos($cat, 'televisi') !== false) return 'tv';
         if (strpos($cat, 'voucher') !== false) return 'voucher';
         if (strpos($cat, 'bpjs') !== false) return 'bpjs';
         if (strpos($cat, 'multifinance') !== false || strpos($cat, 'finance') !== false) return 'multifinance';
         if (strpos($cat, 'bank') !== false || strpos($cat, 'transfer') !== false) return 'bank';
-        if (strpos($cat, 'tv') !== false) return 'tv';
         return $cat;
     }
 
@@ -304,9 +303,33 @@ class DigiflazzModel {
      * Get products for frontend by category and brand
      */
     public function getProducts(string $category, ?string $brand = null, string $type = 'prepaid') {
-        if ($category === 'voucher') {
+        $catLower = strtolower(trim($category));
+        
+        if ($catLower === 'ewallet' || $catLower === 'e-money' || $catLower === 'e-wallet') {
             $sql = "SELECT * FROM digi_products 
-                    WHERE (category = 'voucher' OR category = 'aktivasi voucher') AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
+                    WHERE (LOWER(category) IN ('ewallet', 'e-money', 'e-wallet', 'emoney', 'uang elektronik') 
+                           OR LOWER(brand) IN ('dana', 'gopay', 'ovo', 'shopeepay', 'linkaja', 'shopee pay', 'go pay', 'maxim', 'isaku', 'i-saku', 'sakuku', 'tapcash', 'brizzi', 'e-toll', 'etoll', 'grab', 'gojek'))
+                      AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
+            $params = ['type' => $type];
+        } elseif ($catLower === 'voucher') {
+            $sql = "SELECT * FROM digi_products 
+                    WHERE (LOWER(category) IN ('voucher', 'aktivasi voucher')) 
+                      AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
+            $params = ['type' => $type];
+        } elseif ($catLower === 'game' || $catLower === 'games') {
+            $sql = "SELECT * FROM digi_products 
+                    WHERE (LOWER(category) IN ('game', 'games')) 
+                      AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
+            $params = ['type' => $type];
+        } elseif ($catLower === 'tv' || $catLower === 'televisi') {
+            $sql = "SELECT * FROM digi_products 
+                    WHERE (LOWER(category) IN ('tv', 'televisi')) 
+                      AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
+            $params = ['type' => $type];
+        } elseif ($catLower === 'sms_nelpon') {
+            $sql = "SELECT * FROM digi_products 
+                    WHERE (LOWER(category) IN ('sms_nelpon', 'paket sms & telpon', 'sms', 'telepon', 'paket telepon', 'sms & telpon')) 
+                      AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
         } else {
             $sql = "SELECT * FROM digi_products 
