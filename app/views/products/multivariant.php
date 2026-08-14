@@ -480,8 +480,14 @@ function clearTargetSearch() {
 async function onSelectReference(prod) {
     document.getElementById('refLoader').classList.add('show');
     try {
-        const r    = await fetch(`${BASE}api/products/${prod.id}`);
-        const data = await r.json();
+        let data = null;
+        if (typeof OfflineDB !== 'undefined' && OfflineDB.getProductById) {
+            try { data = await OfflineDB.getProductById(prod.id); } catch(e) {}
+        }
+        if (!data || !data.packagings || data.packagings.length === 0) {
+            const r    = await fetch(`${BASE}api/products/${prod.id}`);
+            data = await r.json();
+        }
         if (!data || data.error) { showToast('Gagal memuat data produk', 'error'); return; }
 
         referenceProduct = data.product || data;

@@ -479,27 +479,64 @@ async function selectReferenceProduct(id) {
     document.getElementById('referenceResults').style.display = 'none';
     document.getElementById('referenceSearch').value = '';
     try {
-        const product = await api(`${BASE_URL}api/products/${id}`);
+        let product = null;
+        if (typeof OfflineDB !== 'undefined' && OfflineDB.getProductById) {
+            try {
+                product = await OfflineDB.getProductById(id);
+            } catch(e) {}
+        }
+        if (!product || !product.packagings || product.packagings.length === 0) {
+            try {
+                product = await api(`${BASE_URL}api/products/${id}`);
+            } catch(e) {
+                if (!product) throw e;
+            }
+        }
+        if (!product) throw new Error('Data produk tidak ditemukan');
         loadReferenceProduct(product);
     } catch (e) {
-        showToast('Gagal memuat produk referensi', 'error');
+        console.error('Error loading reference product:', e);
+        showToast('Gagal memuat produk referensi: ' + (e.message || ''), 'error');
     }
 }
 
 function loadReferenceProduct(product) {
+    if (!product) return;
     referenceProductData = product;
-    document.getElementById('referenceProductId').value = product.id;
-    document.getElementById('referenceSelectedName').textContent = product.short_label || product.full_name;
-    document.getElementById('referenceSelected').style.display = 'block';
+    const refIdInput = document.getElementById('referenceProductId');
+    if (refIdInput) refIdInput.value = product.id;
+    const refNameSpan = document.getElementById('referenceSelectedName');
+    if (refNameSpan) refNameSpan.textContent = product.short_label || product.full_name || '-';
+    const refSelectedDiv = document.getElementById('referenceSelected');
+    if (refSelectedDiv) refSelectedDiv.style.display = 'block';
 
-    if (product.brand_id) brandSB.select(String(product.brand_id), product.brand_name || '');
-    if (product.category_id) categorySB.select(String(product.category_id), product.category_name || '');
-    document.querySelector('[name="product_type"]').value = product.product_type || '';
-    document.querySelector('[name="weight_value"]').value = product.weight_value || '';
-    if (product.weight_unit) weightUnitSB.select(product.weight_unit, product.weight_unit);
+    if (product.brand_id && typeof brandSB !== 'undefined') {
+        brandSB.select(String(product.brand_id), product.brand_name || '');
+    } else if (product.brand_name && typeof brandSB !== 'undefined') {
+        const found = brandSB.options.find(o => o.label.toLowerCase() === String(product.brand_name).toLowerCase());
+        if (found) brandSB.select(found.value, found.label);
+    }
 
-    document.querySelector('[name="variant"]').value = '';
-    document.querySelector('[name="variant"]').focus();
+    if (product.category_id && typeof categorySB !== 'undefined') {
+        categorySB.select(String(product.category_id), product.category_name || '');
+    } else if (product.category_name && typeof categorySB !== 'undefined') {
+        const found = categorySB.options.find(o => o.label.toLowerCase() === String(product.category_name).toLowerCase());
+        if (found) categorySB.select(found.value, found.label);
+    }
+
+    const typeInput = document.querySelector('[name="product_type"]');
+    if (typeInput) typeInput.value = product.product_type || '';
+    const weightValInput = document.querySelector('[name="weight_value"]');
+    if (weightValInput) weightValInput.value = product.weight_value || '';
+    if (product.weight_unit && typeof weightUnitSB !== 'undefined') {
+        weightUnitSB.select(product.weight_unit, product.weight_unit);
+    }
+
+    const variantInput = document.querySelector('[name="variant"]');
+    if (variantInput) {
+        variantInput.value = '';
+        variantInput.focus();
+    }
 
     rebuildPackagingsFromReference(product.packagings || []);
     applyReferenceLock();
@@ -510,13 +547,16 @@ function loadReferenceProduct(product) {
         const chk = document.getElementById('isCustomLabel');
         if (chk) chk.checked = true;
         const manualLabel = document.getElementById('manualLabel');
-        manualLabel.disabled = false;
-        manualLabel.value = product.short_label || '';
+        if (manualLabel) {
+            manualLabel.disabled = false;
+            manualLabel.value = product.short_label || '';
+        }
     } else {
         isLabelEdited = false;
         const chk = document.getElementById('isCustomLabel');
         if (chk) chk.checked = false;
-        document.getElementById('manualLabel').disabled = true;
+        const manualLabel = document.getElementById('manualLabel');
+        if (manualLabel) manualLabel.disabled = true;
     }
 
     showToast('Data referensi dimuat. Isi varian & barcode baru.', 'success');

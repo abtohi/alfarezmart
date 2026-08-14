@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=15.67'; ?>
+    <?php $v = '?v=15.70'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -179,11 +179,15 @@ if ($userLevel === 'staff') {
         loader.dataset.hidden = '1';
         loader.style.pointerEvents = 'none';
         loader.style.opacity = '0';
-        setTimeout(() => { loader.style.display = 'none'; }, 500);
+        setTimeout(() => { loader.style.display = 'none'; }, 300);
     }
-    window.addEventListener('load', hideAppLoader);
-    document.addEventListener('DOMContentLoaded', hideAppLoader);
-    setTimeout(hideAppLoader, 2500);
+    if (document.readyState === 'interactive' || document.readyState === 'complete') {
+        hideAppLoader();
+    } else {
+        window.addEventListener('load', hideAppLoader);
+        document.addEventListener('DOMContentLoaded', hideAppLoader);
+    }
+    setTimeout(hideAppLoader, 600);
     </script>
 
     <!-- Desktop Sidebar Navigation (hidden on mobile via CSS) -->
@@ -529,8 +533,6 @@ if ($userLevel === 'staff') {
     <script src="<?= BASE_URL ?>public/js/packaging-prices.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/qty-pricing.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/components.js<?= $v ?>"></script>
-    <script src="<?= BASE_URL ?>public/js/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
     <script>
         // Injeksi konfigurasi geofencing untuk staff
         window.GEO_CONFIG = {
@@ -581,16 +583,14 @@ if ($userLevel === 'staff') {
         })();
     </script>
 
-    <script src="<?= BASE_URL ?>public/js/utils.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/geofencing.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/ppob_contacts.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/desktop.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/app.js<?= $v ?>"></script>
 
-    
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '15.68'; // Update this to force client reloads
+    const APP_VERSION = '15.70'; // Update this to force client reloads
     
     // Self-healing cache buster
     if (localStorage.getItem('app_version') !== APP_VERSION) {

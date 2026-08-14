@@ -63,17 +63,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Update badge immediately
             await updateSyncBadge();
             
-            // Background sync if online
+            // Background sync if online (throttled to prevent mobile lag)
             if (navigator.onLine) {
-                setTimeout(() => {
-                    if (typeof OfflineDB.syncAllDataFromServer === 'function') {
-                        OfflineDB.syncAllDataFromServer().catch(e => console.error('Background sync failed:', e));
-                    } else if (typeof OfflineDB.syncProductsFromServer === 'function') {
-                        OfflineDB.syncProductsFromServer().catch(e => console.error('Background sync failed:', e));
-                    }
-                    // Also flush pending outbox
-                    syncPendingChanges().catch(e => console.error('Pending sync failed:', e));
-                }, 4000);
+                const LAST_SYNC_KEY = 'alfarezmart_last_bg_sync';
+                const lastSync = parseInt(localStorage.getItem(LAST_SYNC_KEY) || '0', 10);
+                const now = Date.now();
+                // Only run automatic background sync if more than 15 minutes have passed
+                if (now - lastSync > 900000) {
+                    setTimeout(() => {
+                        localStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
+                        if (typeof OfflineDB.syncProductsFromServer === 'function') {
+                            OfflineDB.syncProductsFromServer().catch(() => {});
+                        }
+                        syncPendingChanges().catch(() => {});
+                    }, 5000);
+                } else {
+                    // Just flush pending outbox quietly
+                    setTimeout(() => {
+                        syncPendingChanges().catch(() => {});
+                    }, 2000);
+                }
             }
         }
     } catch (e) {

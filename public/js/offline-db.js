@@ -87,38 +87,8 @@ window.OfflineDB = (function() {
     }
 
     async function cacheProductImages(products) {
-        if (!products || !Array.isArray(products) || typeof caches === 'undefined') return;
-        try {
-            const cache = await caches.open('alfarezmart-dynamic-v16.0');
-            const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
-            const photoUrls = [];
-            products.forEach(p => {
-                if (p.photo) {
-                    let photoPath = p.photo;
-                    if (!photoPath.startsWith('http') && !photoPath.startsWith('/')) {
-                        photoPath = baseUrl + photoPath;
-                    }
-                    if (!photoUrls.includes(photoPath)) {
-                        photoUrls.push(photoPath);
-                    }
-                }
-            });
-
-            if (photoUrls.length === 0) return;
-            const BATCH_SIZE = 5;
-            for (let i = 0; i < photoUrls.length; i += BATCH_SIZE) {
-                const batch = photoUrls.slice(i, i + BATCH_SIZE);
-                await Promise.all(batch.map(async (url) => {
-                    try {
-                        const existing = await cache.match(url);
-                        if (!existing) {
-                            const res = await fetch(url, { cache: 'no-cache' });
-                            if (res.ok) await cache.put(url, res);
-                        }
-                    } catch (e) {}
-                }));
-            }
-        } catch (e) {}
+        // Images are dynamically cached on-demand by SW during browsing
+        return;
     }
 
     async function syncAllDataFromServer() {

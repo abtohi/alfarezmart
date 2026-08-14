@@ -818,12 +818,12 @@ async function doOfflineSearch(query) {
             const _isUnavail = (p.is_available == 0 || p.is_available === '0' || p.is_available === false);
 
             html += `
-            <div class="product-card" data-id="${p.id}" data-available="${_isUnavail ? 0 : 1}" style="position:relative;display:block;${_isUnavail ? 'opacity:0.65;' : ''}">
+            <div class="product-card" data-id="${p.id}" data-available="${_isUnavail ? 0 : 1}" style="position:relative;display:block;${_isUnavail ? 'opacity:0.7;' : ''}">
                 ${!ROLE_IS_STAFF ? `<input type="checkbox" class="product-checkbox" value="${p.id}" style="display:none;position:absolute;top:16px;left:16px;width:20px;height:20px;accent-color:var(--primary);z-index:2;">` : ''}
                 <a href="${BASE_URL}products/${p.id}" class="product-card-link" style="display:flex;text-decoration:none;color:inherit;width:100%;">
                     ${photoHtml}
-                    <div class="product-info" style="width:calc(100% - 110px);">
-                        <div class="product-name" style="padding-right:0;">${name}</div>
+                    <div class="product-info" style="width:calc(100% - 76px);">
+                        <div class="product-name" style="padding-right:36px;">${name}</div>
                         <div class="product-category">${brandCat}</div>`;
 
             let baseMarginHtml = '';
@@ -878,18 +878,11 @@ async function doOfflineSearch(query) {
             const availTx = (p.is_available == 0 || p.is_available === '0' || p.is_available === false) ? '0px' : '14px';
             const availVal = (p.is_available == 0 || p.is_available === '0' || p.is_available === false) ? 0 : 1;
             const availTitle = availVal === 1 ? 'Nonaktifkan produk' : 'Aktifkan produk';
-            const cardOpacity = availVal === 0 ? 'opacity:0.65;' : '';
 
             html += `
                     </div>
                 </a>
-                ${!ROLE_IS_STAFF ? `
-                <button class="btn-offline-edit" onclick="openOfflineEdit(${p.id}, event)" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); width:36px; height:36px; border-radius:50%; background:var(--primary-light); color:var(--primary); border:none; display:flex; align-items:center; justify-content:center; z-index:5;">
-                    <i class="bi bi-pencil"></i>
-                </button>
-                ` : ''}
-                ${_isUnavail ? `<div style="position:absolute;top:0;right:0;background:var(--danger);color:white;font-size:9px;padding:2px 8px;border-bottom-left-radius:var(--radius-sm);z-index:2;font-weight:600;">UNAVAILABLE</div>` : ''}
-                ${!ROLE_IS_STAFF ? `<button type="button" class="avail-toggle-btn" title="${availTitle}" onclick="event.stopPropagation(); quickToggleAvailability(this, ${p.id}, ${availVal})" style="position:absolute;top:10px;right:60px;width:34px;height:20px;border-radius:10px;border:none;cursor:pointer;padding:2px;transition:background 0.25s;background:${availBg};display:flex;align-items:center;z-index:3;"><span style="display:block;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);transition:transform 0.25s;transform:translateX(${availTx});"></span></button>` : ''}
+                ${!ROLE_IS_STAFF ? `<button type="button" class="avail-toggle-btn" title="${availTitle}" onclick="event.stopPropagation(); quickToggleAvailability(this, ${p.id}, ${availVal})" style="position:absolute;top:10px;right:10px;width:34px;height:20px;border-radius:10px;border:none;cursor:pointer;padding:2px;transition:background 0.25s;background:${availBg};display:flex;align-items:center;z-index:3;"><span style="display:block;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);transition:transform 0.25s;transform:translateX(${availTx});"></span></button>` : ''}
             </div>`;
         });
         

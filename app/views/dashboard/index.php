@@ -1385,8 +1385,19 @@ window.executeExport = async function(mode) {
         
         if (res.success && res.data && res.data.length > 0) {
             if (typeof ExcelJS === 'undefined') {
-                showToast("Library ExcelJS belum termuat. Pastikan koneksi internet aktif.", "error");
-                return;
+                showToast("Memuat library Excel...", "info");
+                try {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js';
+                        script.onload = resolve;
+                        script.onerror = () => reject(new Error('Gagal memuat library Excel'));
+                        document.head.appendChild(script);
+                    });
+                } catch(e) {
+                    showToast("Gagal memuat ExcelJS. Pastikan koneksi internet aktif.", "error");
+                    return;
+                }
             }
 
             // ─── Rename kolom "Satuan atau jenis kemasan" → "Satuan" ───
