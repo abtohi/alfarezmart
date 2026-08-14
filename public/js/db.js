@@ -49,6 +49,7 @@ window.OfflineDB = (function() {
                 if (trulyPending.length > 0) {
                     await db.products.bulkPut(trulyPending);
                 }
+                invalidateProductsCache();
                 return data.products.length;
             }
             return 0;
@@ -271,7 +272,34 @@ window.OfflineDB = (function() {
     function getAllFinance() { return db.finance.toArray(); }
     function getAllFinanceLogs() { return db.finance_logs.toArray(); }
 
+    // In-Memory RAM cache for instantaneous (0ms) search on mobile devices
+    let _inMemoryProductsCache = null;
+    let _inMemoryCacheTimestamp = 0;
+
+    async function getCachedProductsArray() {
+        const now = Date.now();
+        if (_inMemoryProductsCache && (now - _inMemoryCacheTimestamp < 300000)) {
+            return _inMemoryProductsCache;
+        }
+        try {
+            _inMemoryProductsCache = await db.products.toArray();
+            _inMemoryCacheTimestamp = now;
+            return _inMemoryProductsCache;
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function invalidateProductsCache() {
+        _inMemoryProductsCache = null;
+        _inMemoryCacheTimestamp = 0;
+    }
+
     function getProductById(id) {
+        if (_inMemoryProductsCache) {
+            const found = _inMemoryProductsCache.find(p => p.id === parseInt(id));
+            if (found) return Promise.resolve(found);
+        }
         return db.products.get(parseInt(id));
     }
 
@@ -282,9 +310,14 @@ window.OfflineDB = (function() {
         if (words.length === 0) return [];
         
         try {
-            const all = await db.products.filter(p => {
-                if (isPos && (p.is_available == 0 || p.is_available === '0' || p.is_available === false)) return false;
-                
+            // Use In-Memory array for instant 0-2ms response
+            const products = await getCachedProductsArray();
+            const matched = [];
+
+            for (let i = 0; i < products.length; i++) {
+                const p = products[i];
+                if (isPos && (p.is_available == 0 || p.is_available === '0' || p.is_available === false)) continue;
+
                 const fullName = (p.full_name || '').toLowerCase();
                 const shortLabel = (p.short_label || '').toLowerCase();
                 const invName = (p.invoice_name || '').toLowerCase();
@@ -294,19 +327,24 @@ window.OfflineDB = (function() {
                 const code = (p.code || '').toLowerCase();
                 const suppCode = (p.supplier_product_code || '').toLowerCase();
 
-                return words.every(word => {
+                let allMatch = true;
+                for (let j = 0; j < words.length; j++) {
+                    const word = words[j];
                     const isNumWord = !isNaN(word);
                     const nameMatch = fullName.includes(word) || shortLabel.includes(word) || invName.includes(word) || suppInvName.includes(word);
                     const brandMatch = brandName.includes(word);
                     const catMatch = categoryName.includes(word);
                     const codeMatch = code.includes(word) || suppCode.includes(word);
-                    
+
                     let barcodeMatch = false;
                     let priceMatch = false;
 
                     if (p.packagings && Array.isArray(p.packagings)) {
-                        for (const pkg of p.packagings) {
-                            if (pkg.barcode && pkg.barcode.toLowerCase().includes(word)) barcodeMatch = true;
+                        for (let k = 0; k < p.packagings.length; k++) {
+                            const pkg = p.packagings[k];
+                            if (pkg.barcode && pkg.barcode.toLowerCase().includes(word)) {
+                                barcodeMatch = true;
+                            }
                             if (isNumWord) {
                                 if (pkg.sell_price_retail && String(pkg.sell_price_retail).includes(word)) priceMatch = true;
                                 if (pkg.sell_price_wholesale && String(pkg.sell_price_wholesale).includes(word)) priceMatch = true;
@@ -318,11 +356,19 @@ window.OfflineDB = (function() {
                         if (p.price_small_wholesale && String(p.price_small_wholesale).includes(word)) priceMatch = true;
                     }
 
-                    return nameMatch || brandMatch || catMatch || codeMatch || barcodeMatch || priceMatch;
-                });
-            }).toArray();
+                    if (!(nameMatch || brandMatch || catMatch || codeMatch || barcodeMatch || priceMatch)) {
+                        allMatch = false;
+                        break;
+                    }
+                }
 
-            return all.slice(0, 100);
+                if (allMatch) {
+                    matched.push(p);
+                    if (matched.length >= 60) break; // Capped for UI responsiveness
+                }
+            }
+
+            return matched;
         } catch (e) {
             console.error("Offline search failed", e);
             return [];

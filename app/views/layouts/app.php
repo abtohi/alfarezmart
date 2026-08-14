@@ -587,10 +587,11 @@ if ($userLevel === 'staff') {
     <script src="<?= BASE_URL ?>public/js/ppob_contacts.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/desktop.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/app.js<?= $v ?>"></script>
+    <script src="<?= BASE_URL ?>public/js/instant-nav.js<?= $v ?>"></script>
 
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '15.75'; // Update this to force client reloads
+    const APP_VERSION = '15.80'; // Update this to force client reloads
     
     // Self-healing cache buster
     if (localStorage.getItem('app_version') !== APP_VERSION) {

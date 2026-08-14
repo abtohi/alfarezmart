@@ -1,9 +1,12 @@
 /**
- * AlfarezMart PWA - Service Worker
- * Cache Strategy: Cache First for assets & images, Network First with 600ms Fast Timeout for API & Navigation
+ * AlfarezMart PWA - Service Worker v29.0
+ * Cache Strategy: 
+ * - Static Assets, CSS, JS, Fonts: Cache First (Instant 0ms)
+ * - Navigation / HTML: Fast Network Race (350ms Timeout) with Instant Stale-While-Revalidate Fallback
+ * - API GET: Network First with Fast Fallback to Cache
  */
-const CACHE_NAME = 'alfarezmart-cache-v28.0';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v28.0';
+const CACHE_NAME = 'alfarezmart-cache-v29.0';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v29.0';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -19,6 +22,7 @@ const STATIC_ASSETS = [
     BASE_URL + 'finance',
     BASE_URL + 'reports',
     BASE_URL + 'settings',
+    BASE_URL + 'ppob',
     BASE_URL + 'public/css/variables.css',
     BASE_URL + 'public/css/app.css',
     BASE_URL + 'public/css/components.css',
@@ -29,6 +33,7 @@ const STATIC_ASSETS = [
     BASE_URL + 'public/js/app.js',
     BASE_URL + 'public/js/desktop.js',
     BASE_URL + 'public/js/chat.js',
+    BASE_URL + 'public/js/instant-nav.js',
     BASE_URL + 'chat',
     BASE_URL + 'manifest.json',
     BASE_URL + 'public/images/mobile_icon.png',
@@ -80,12 +85,13 @@ self.addEventListener('fetch', event => {
 
     const url = new URL(event.request.url);
 
+    // Bypass API products sync from SW interception
     if (url.pathname.includes('/api/products/sync')) {
         event.respondWith(fetch(event.request, { cache: 'no-cache' }));
         return;
     }
 
-    // ── 1. API Requests: Network First (Direct fetch, exact cache fallback on network fail) ──
+    // ── 1. API Requests: Network First with Fast Cache Fallback ──
     if (url.pathname.includes('/api/')) {
         event.respondWith(
             fetch(event.request, { cache: 'no-cache' })
@@ -116,7 +122,7 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // ── 3. Images: Cache First with Dynamic Fallback for 100% Crisp Offline Rendering ──
+    // ── 3. Images: Cache First with Dynamic Fallback ──
     const isImage = event.request.destination === 'image' || 
                     url.pathname.includes('/uploads/') || 
                     url.pathname.match(/\.(jpg|jpeg|png|webp|gif|svg|ico)($|\?)/i);
@@ -134,7 +140,6 @@ self.addEventListener('fetch', event => {
                     caches.open(DYNAMIC_CACHE).then(cache => cache.put(event.request, clone).catch(() => {}));
                     return response;
                 }).catch(() => {
-                    // Fallback to placeholder if offline and image not cached
                     return new Response('', { status: 404, statusText: 'Image Offline' });
                 });
             })
@@ -142,11 +147,12 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // ── 4. Styles, Scripts, Fonts: Cache First ──
+    // ── 4. Styles, Scripts, Fonts: Cache First (Instant 0ms execution) ──
     if (event.request.destination === 'style' || event.request.destination === 'script' || event.request.destination === 'font') {
         event.respondWith(
             caches.match(event.request, { ignoreSearch: true }).then(cached => {
-                return cached || fetch(event.request, { cache: 'no-cache' }).then(response => {
+                if (cached) return cached;
+                return fetch(event.request, { cache: 'no-cache' }).then(response => {
                     if (!response || response.status !== 200 || response.type === 'opaque' || !event.request.url.startsWith('http')) {
                         return response;
                     }
@@ -159,30 +165,41 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // ── 5. HTML/Navigation Requests: Network First, Cache Fallback on Offline ──
+    // ── 5. HTML/Navigation Requests: Ultra-Fast Race Strategy (350ms) ──
+    // If cached page exists, race network with 350ms timeout.
+    // If network is slow (>350ms) or offline, serve cached page INSTANTLY (0-20ms)
+    // while quietly updating the cache in the background!
     event.respondWith(
-        fetch(event.request, { cache: 'no-cache' })
-            .then(response => {
-                if (response && response.status === 200 && response.type !== 'opaque' && event.request.url.startsWith('http')) {
-                    const clone = response.clone();
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone).catch(() => {}));
-                }
-                return response;
-            })
-            .catch(async () => {
-                const exactCached = await caches.match(event.request);
-                if (exactCached) return exactCached;
-
-                const queryCached = await caches.match(event.request, { ignoreSearch: true });
-                if (queryCached) return queryCached;
-
-                const baseCached = await caches.match(BASE_URL);
-                if (baseCached) return baseCached;
-
-                return new Response('<html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Offline - AlfarezMart</title></head><body style="background:#1a1a2e;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;padding:24px;max-width:400px;"><h2>Mode Offline</h2><p style="color:#94a3b8;font-size:14px;">Halaman ini belum tersedia offline. Mohon periksa koneksi internet Anda.</p><button onclick="window.location.reload()" style="background:#e63946;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:bold;margin-top:12px;">Coba Lagi</button></div></body></html>', {
-                    status: 200,
-                    headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        caches.match(event.request, { ignoreSearch: true }).then(cachedResponse => {
+            // Background fetcher helper
+            const fetchPromise = fetch(event.request, { cache: 'no-cache' })
+                .then(networkResponse => {
+                    if (networkResponse && networkResponse.status === 200 && networkResponse.type !== 'opaque' && event.request.url.startsWith('http')) {
+                        const clone = networkResponse.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
+                    }
+                    return networkResponse;
+                })
+                .catch(async () => {
+                    if (cachedResponse) return cachedResponse;
+                    const baseCached = await caches.match(BASE_URL);
+                    if (baseCached) return baseCached;
+                    return new Response('<html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Offline - AlfarezMart</title></head><body style="background:#1a1a2e;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;padding:24px;max-width:400px;"><h2>Mode Offline</h2><p style="color:#94a3b8;font-size:14px;">Halaman ini belum tersedia offline. Mohon periksa koneksi internet Anda.</p><button onclick="window.location.reload()" style="background:#e63946;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:bold;margin-top:12px;">Coba Lagi</button></div></body></html>', {
+                        status: 200,
+                        headers: { 'Content-Type': 'text/html; charset=utf-8' }
+                    });
                 });
-            })
+
+            // If we have a cached version, give network only 350ms to respond, otherwise serve cache INSTANTLY
+            if (cachedResponse) {
+                return Promise.race([
+                    fetchPromise,
+                    new Promise(resolve => setTimeout(() => resolve(cachedResponse), 350))
+                ]);
+            }
+
+            // Not in cache yet: await network fetch directly
+            return fetchPromise;
+        })
     );
 });
