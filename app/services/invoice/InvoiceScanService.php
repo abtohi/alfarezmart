@@ -134,9 +134,26 @@ class InvoiceScanService
                 $userMessageText .= "\n\n" . $userHints;
             }
 
-            // Add concise product list context for faster exact matching by AI if available
-            if (!empty($supplierProducts)) {
-                $contextLines = ["\n## REFERENSI PRODUK SUPPLIER INI (Gunakan kode/nama jika cocok):"];
+            // DYNAMIC LEARNING: Inject learned alias context for this supplier into the AI prompt
+            require_once __DIR__ . '/InvoiceLearningService.php';
+            $learningService = new InvoiceLearningService($this->db);
+            $learnedAliases = $learningService->getLearnedAliasesForPrompt($resolvedSupplierId, 50);
+
+            $contextLines = [];
+            if (!empty($learnedAliases)) {
+                $contextLines[] = "\n## MEMORI POLA PRODUK SUPPLIER (Alias nota yang sudah dipelajari):";
+                foreach ($learnedAliases as $la) {
+                    $invAliases = trim((string)($la['supplier_invoice_name'] ?? ''));
+                    $code = trim((string)($la['supplier_product_code'] ?? ''));
+                    $fn = trim((string)($la['full_name'] ?? ''));
+                    $aliasSample = explode("\n", $invAliases)[0] ?? $invAliases;
+                    $line = "- " . $fn;
+                    if ($code) $line .= " (Kode: {$code})";
+                    if ($aliasSample && strcasecmp($aliasSample, $fn) !== 0) $line .= " [Nota: {$aliasSample}]";
+                    $contextLines[] = $line;
+                }
+            } elseif (!empty($supplierProducts)) {
+                $contextLines[] = "\n## REFERENSI PRODUK SUPPLIER INI (Gunakan kode/nama jika cocok):";
                 foreach (array_slice($supplierProducts, 0, 40) as $sp) {
                     $c = trim($sp['supplier_product_code'] ?? $sp['code'] ?? '');
                     $n = trim($sp['full_name'] ?? '');
@@ -144,6 +161,8 @@ class InvoiceScanService
                         $contextLines[] = "- Kode: " . ($c ?: '-') . " | " . $n;
                     }
                 }
+            }
+            if (!empty($contextLines)) {
                 $userMessageText .= implode("\n", $contextLines);
             }
 

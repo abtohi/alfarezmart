@@ -2051,6 +2051,16 @@ class ApiController extends Controller
             ];
 
             $id = $model->createWithDetails($headerData, $items);
+
+            // Auto-learn aliases & supplier mappings from confirmed purchase
+            try {
+                require_once APP_PATH . '/services/invoice/InvoiceLearningService.php';
+                $learningService = new InvoiceLearningService($this->db);
+                $learningService->learnFromPurchase((int)($headerData['supplier_id'] ?? 0), $items);
+            } catch (\Throwable $le) {
+                error_log('Invoice learning error: ' . $le->getMessage());
+            }
+
             $this->json(['success' => true, 'id' => $id, 'message' => 'Pembelian berhasil disimpan']);
         } catch (Exception $e) {
             $this->json(['error' => $e->getMessage()], 500);
@@ -2111,6 +2121,16 @@ class ApiController extends Controller
             ];
 
             $model->updateWithDetails($id, $headerData, $items);
+
+            // Auto-learn aliases & supplier mappings from updated purchase
+            try {
+                require_once APP_PATH . '/services/invoice/InvoiceLearningService.php';
+                $learningService = new InvoiceLearningService($this->db);
+                $learningService->learnFromPurchase((int)($headerData['supplier_id'] ?? 0), $items);
+            } catch (\Throwable $le) {
+                error_log('Invoice learning error: ' . $le->getMessage());
+            }
+
             $this->json(['success' => true, 'message' => 'Pembelian berhasil diupdate']);
         } catch (Exception $e) {
             $this->json(['error' => $e->getMessage()], 500);
