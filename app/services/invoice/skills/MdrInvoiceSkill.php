@@ -91,33 +91,33 @@ class MdrInvoiceSkill implements InvoiceSkillInterface
     public function getSystemPrompt(bool $isCorrectionPass = false): string
     {
         $lines = [];
-        $lines[] = 'Kamu adalah AI OCR & data extractor spesialis faktur/invoice PT Medan Distribusindo Raya (MDR / Wings Group).';
-        $lines[] = 'Tugasmu adalah membaca seluruh baris produk pada tabel faktur MDR secara lengkap tanpa ada baris yang terlewatkan (100% lengkap).';
+        $lines[] = 'Kamu adalah AI OCR & data extractor presisi tinggi spesialis faktur/invoice PT Medan Distribusindo Raya (MDR / Wings Group).';
+        $lines[] = 'Tugas utamamu: Ekstrak SEMUA baris produk dari baris pertama sampai baris terakhir tabel secara lengkap 100% tanpa ada yang terlewat atau digabungkan!';
         $lines[] = '';
-        $lines[] = '## STRUKTUR TABEL FAKTUR MDR:';
-        $lines[] = 'Kolom tabel MDR tersusun secara horizontal dari kiri ke kanan:';
-        $lines[] = '1. QUANTITY (misal: "10 BOX", "1 BOX", "12 PCS", "360 PCS")';
+        $lines[] = '## STRUKTUR KOLOM FAKTUR MDR (Kiri ke Kanan):';
+        $lines[] = '1. QUANTITY (misal: "10 BOX", "1 BOX", "360 PCS")';
         $lines[] = '2. KODE BARANG (misal: "609866", "609869", "60828", "1060495", "60490", "60870", "61023", "1463000", "1461238", "1480369")';
-        $lines[] = '3. BATCH (biasanya kosong / tanda minus)';
-        $lines[] = '4. NAMA BARANG (misal: "DAIA POWDER DET PUTIH SCT 23GR", "ROYALE PREM SPRING BLOSSOM SCT 13ML 4+1", "ROYALE SOFT PINK SATIN SCT 13ML 4+1", "ROYALE SOFT PURPLE DAWN SCT 13ML 4+1", "ALE ALE LECI CUP 180ML", "SEDAAP MIE SOTO BAG 76GR")';
-        $lines[] = '5. ISI (Pcs) (jumlah isi per box)';
-        $lines[] = '6. HARGA (Rp.) (harga gross per box sebelum diskon)';
-        $lines[] = '7. PROMO DISCOUNT (potongan promo jika ada)';
-        $lines[] = '8. REGULAR DISCOUNT (potongan reguler jika ada)';
-        $lines[] = '9. JUMLAH (Rp.) (KOLOM PALING KANAN — TOTAL PEMBELIAN SETELAH DISKON)';
+        $lines[] = '3. BATCH (abaikan / kosong)';
+        $lines[] = '4. NAMA BARANG (misal: "DAIA POWDER DET PUTIH SCT 23GR", "DAIA POWDER DET CLEAN&FRESH SCT 45GR", "DAIA POWDER DET LILY JASMINE SCT 45GR", "DAIA POWDER DET ROMANTIC PINK SCT 47GR", "DAIA POWDER DET VIOLET PASSION SCT 47GR", "ROYALE PREM SPRING BLOSSOM SCT 13ML 4+1")';
+        $lines[] = '5. ISI (Pcs) (jumlah isi kemasan)';
+        $lines[] = '6. HARGA (Rp.) (harga gross per box)';
+        $lines[] = '7. PROMO DISCOUNT (potongan promo)';
+        $lines[] = '8. REGULAR DISCOUNT (potongan reguler)';
+        $lines[] = '9. JUMLAH (Rp.) (KOLOM PALING KANAN — TOTAL PEMBELIAN AKHIR BARIS SETELAH DISKON)';
         $lines[] = '';
-        $lines[] = '## ATURAN EKSTRAKSI MDR SANGAT PENTING:';
-        $lines[] = '1. WAJIB BACA SELURUH BARIS DARI ATAS KE BAWAH HINGGA GARIS "End Of Document".';
-        $lines[] = '   - Dalam 1 faktur MDR sering ada bermacam-macam produk (misal deterjen DAIA, pelembut pakaian ROYALE, sabun, mie SEDAAP, minuman, dll).';
-        $lines[] = '   - JANGAN PERNAH berhenti di tengah-tengah tabel saat merk berganti!';
-        $lines[] = '2. "supplier_code": Ambil angka KODE BARANG persis seperti di kolom ke-2.';
-        $lines[] = '3. "name": Ambil teks NAMA BARANG secara lengkap persis seperti tertulis.';
-        $lines[] = '4. "qty": Ambil angka dari kolom QUANTITY (misal "10 BOX" -> qty: 10, unit: "BOX", "1 BOX" -> qty: 1, unit: "BOX").';
-        $lines[] = '5. "total_price": Ambil nilai angka dari kolom JUMLAH (Rp.) di PALING KANAN tabel (misal: "474.000" -> 474000, "55.800" -> 55800, "105.984" -> 105984).';
-        $lines[] = '   - Selalu ambil angka setelah dikurangi diskon (kolom JUMLAH paling kanan).';
-        $lines[] = '   - Format angka Indonesia: titik (.) adalah pemisah ribuan, abaikan titiknya.';
-        $lines[] = '6. "unit_price": Biarkan null (sistem backend akan menghitung total_price / qty).';
-        $lines[] = '7. ABAIKAN baris non-produk: "Pindahan dari halaman ...", "SUB TOTAL", "End Of Document", nomor rekening, tanda tangan.';
+        $lines[] = '## ATURAN EKSTRAKSI SANGAT KRUSIAL:';
+        $lines[] = '1. JANGAN PERNAH MENGGABUNGKAN / MELEWATKAN BARIS YANG HARGANYA SAMA!';
+        $lines[] = '   - Pada faktur MDR sering terdapat 5-10 baris dengan harga yang sama (misalnya varian Daia 45g & 47g harga 55.800).';
+        $lines[] = '   - SEMUA varian (Clean&Fresh, Fruity, Lily Jasmine, Romantic Pink, Violet Passion, Putih, Soft) ADALAH BARIS TERPISAH dan WAJIB MASUK SEMUANYA ke dalam JSON!';
+        $lines[] = '2. BACA DARI ATAS KE BAWAH SECARA BERURUTAN HINGGA GARIS "End Of Document".';
+        $lines[] = '3. "supplier_code": Ambil angka KODE BARANG persis seperti di kolom ke-2.';
+        $lines[] = '4. "name": Ambil teks NAMA BARANG lengkap persis di faktur.';
+        $lines[] = '5. "qty": Ambil angka dari kolom QUANTITY (contoh "10 BOX" -> 10, "1 BOX" -> 1).';
+        $lines[] = '6. "unit": Ambil teks satuan ("BOX", "PCS", "CTN", "DUS").';
+        $lines[] = '7. "total_price": Ambil nilai angka dari kolom JUMLAH (Rp.) di PALING KANAN tabel (misal "474.000" -> 474000, "55.800" -> 55800, "105.984" -> 105984).';
+        $lines[] = '   - Abaikan titik pemisah ribuan.';
+        $lines[] = '8. "unit_price": Biarkan null.';
+        $lines[] = '9. ABAIKAN baris non-produk: "Pindahan dari halaman ...", "SUB TOTAL", catatan kaki, tanda tangan, nomor rekening.';
         $lines[] = '';
 
         if ($isCorrectionPass) {
@@ -125,7 +125,7 @@ class MdrInvoiceSkill implements InvoiceSkillInterface
             $lines[] = '';
         }
 
-        $lines[] = '## FORMAT OUTPUT JSON (HANYA JSON ARRAY VALID, TANPA TEKS LAIN):';
+        $lines[] = '## FORMAT OUTPUT JSON (HANYA JSON ARRAY VALID, TANPA PENJELASAN LAIN):';
         $lines[] = '[';
         $lines[] = '  {';
         $lines[] = '    "supplier_code": "609866",';
@@ -133,6 +133,14 @@ class MdrInvoiceSkill implements InvoiceSkillInterface
         $lines[] = '    "qty": 10,';
         $lines[] = '    "unit": "BOX",';
         $lines[] = '    "total_price": 474000,';
+        $lines[] = '    "unit_price": null';
+        $lines[] = '  },';
+        $lines[] = '  {';
+        $lines[] = '    "supplier_code": "60490",';
+        $lines[] = '    "name": "DAIA POWDER DET LILY JASMINE SCT 45GR",';
+        $lines[] = '    "qty": 1,';
+        $lines[] = '    "unit": "BOX",';
+        $lines[] = '    "total_price": 55800,';
         $lines[] = '    "unit_price": null';
         $lines[] = '  },';
         $lines[] = '  {';
@@ -150,10 +158,9 @@ class MdrInvoiceSkill implements InvoiceSkillInterface
 
     public function getUserPromptHints(): string
     {
-        return "Invoice ini adalah faktur PT Medan Distribusindo Raya (MDR / Wings Group). " .
-               "BACA SEMUA BARIS PRODUK DARI PALING ATAS SAMPAI GARIS 'End Of Document'. " .
-               "Pastikan semua baris DAIA dan ROYALE serta produk lainnya diekstrak lengkap ke dalam JSON. " .
-               "Kolom KODE BARANG, QUANTITY, NAMA BARANG, dan JUMLAH paling kanan.";
+        return "Invoice PT Medan Distribusindo Raya (MDR / Wings Group). " .
+               "BACA BARIS PER BARIS DARI PALING ATAS SAMPAI GARIS 'End Of Document'. " .
+               "PENTING: Jangan skip baris yang harganya sama (misal Daia 55.800 ada 5 varian berbeda: Clean&Fresh, Fruity, Lily Jasmine, Romantic Pink, Violet Passion). Semua varian WAJIB masuk ke array JSON!";
     }
 
     public function parseItem(array $rawItem): array
