@@ -4,24 +4,26 @@ require_once __DIR__ . '/skills/InvoiceSkillInterface.php';
 /**
  * ProductMatcher
  *
- * Multi-strategy product matching pipeline.
+ * Multi-strategy product matching pipeline with intelligent scoring.
  *
- * Strategy chain (stops at first confident match):
- *  1. exactCodeMatch       — supplier_product_code or product code exact
- *  2. normalizedNameMatch  — lowercase + strip special chars exact
- *  3. supplierInvoiceMatch — match supplier_invoice_name (multi-name support)
- *  4. abbreviationExpand   — expand common abbreviations then rematch
- *  5. fuzzyMatch           — similar_text() + optional levenshtein
- *  6. barcodeMatch         — barcode field
- *  7. priceDistanceMatch   — packaging buy_price distance (closest price level)
- *  8. brandVariantBoost    — boost if brand/variant/weight matches
+ * Strategy chain (all strategies contribute scores, best total wins):
+ *  1. exactCodeMatch         — supplier_product_code or product code exact (score=200, instant match)
+ *  2. normalizedNameMatch    — lowercase + strip special chars exact (score=90)
+ *  3. supplierInvoiceMatch   — match supplier_invoice_name (multi-name support) (score=95)
+ *  4. abbreviationExpand     — expand common abbreviations then rematch (score=80)
+ *  5. smartTokenOverlap      — weighted token matching with brand/variant/weight awareness (score=0-85)
+ *  6. fuzzyMatch             — similar_text() for close matches (score based on similarity %)
+ *  7. barcodeMatch           — barcode field (score=150)
+ *  8. brandVariantWeightBoost— composite boost if brand+variant+weight all match (up to +45)
+ *  9. expandedNameMatch      — match expanded_name from skill (MDR abbreviations expanded)
+ * 10. supplierAffinityBoost  — +25 if product belongs to same supplier
  *
  * @package AlfarezMart\Services\Invoice
  */
 class ProductMatcher
 {
     /** Minimum score to consider a match valid */
-    const MATCH_THRESHOLD = 60;
+    const MATCH_THRESHOLD = 55;
 
     /** Score for exact supplier code match (highest priority) */
     const SCORE_EXACT_CODE = 200;
@@ -65,6 +67,28 @@ class ProductMatcher
         'det'  => 'detergent',
         'spc'  => 'special',
         'chkn' => 'chicken',
+        'prem' => 'premium',
+        'orig' => 'original',
+        'reg'  => 'regular',
+        'liq'  => 'liquid',
+        'pwdr' => 'powder',
+        'cln'  => 'clean',
+        'frsh' => 'fresh',
+        'spcy' => 'spicy',
+        'flr'  => 'floor',
+        'clnr' => 'cleaner',
+        'wht'  => 'white',
+        'grn'  => 'green',
+        'blu'  => 'blue',
+    ];
+
+    /**
+     * Tokens to SKIP during token overlap matching (packaging/unit terms, not meaningful for identity).
+     */
+    const SKIP_TOKENS = [
+        'bag', 'sct', 'cup', 'btl', 'isi', 'prg', 'box', 'pcs',
+        'sachet', 'bungkus', 'botol', 'karton', 'pack', 'pouch',
+        'x', 'ml', 'gr', 'g', 'kg', 'l', 'oz', 'cc',
     ];
 
     /** @var LayoutAnalyzer */
@@ -104,18 +128,18 @@ class ProductMatcher
 
         $name               = $item['name']                 ?? '';
         $supplierInvName    = $item['supplier_invoice_name'] ?? $name;
+        $expandedName       = $item['expanded_name']         ?? '';
         $extractedCode      = trim($item['supplier_code']   ?? '');
         $extractedBarcode   = trim($item['barcode']         ?? '');
         $extractedBrand     = trim($item['brand']           ?? '');
         $extractedVariant   = trim($item['variant']         ?? '');
         $unitPrice          = (float)($item['unit_price']   ?? 0);
         $unit               = $item['unit']                 ?? '';
-        $weightVal          = isset($item['weight']) ? (float)$item['weight'] : null;
+        $weightVal          = isset($item['weight']) ? (is_numeric($item['weight']) ? (float)$item['weight'] : null) : null;
         $weightUnit         = $item['weight_unit']          ?? '';
 
         // ---- STRATEGY 1: Exact supplier product code (Highest Priority) ----
         if (!empty($extractedCode)) {
-            // Trim leading zeroes or spaces for comparison
             $cleanExtCode = ltrim($extractedCode, '0');
             foreach ($allProducts as $p) {
                 $dbCode     = trim($p['supplier_product_code'] ?? '');
@@ -131,7 +155,7 @@ class ProductMatcher
             }
         }
 
-        // ---- STRATEGY 2-8: Score-based matching if no exact code match ----
+        // ---- STRATEGY 2-10: Score-based matching if no exact code match ----
         if (!$bestMatch) {
             foreach ($allProducts as $p) {
                 $score    = 0;
@@ -177,36 +201,19 @@ class ProductMatcher
                     }
                 }
 
-                // -- STRATEGY 4: Abbreviation expansion & Token Overlap --
-                $expandedName = $this->expandAbbreviations($name);
-                $normExpanded = $this->normalize($expandedName);
+                // -- STRATEGY 4: Abbreviation expansion & exact rematch --
+                $expandedMatchName = !empty($expandedName) ? $expandedName : $this->expandAbbreviations($name);
+                $normExpanded = $this->normalize($expandedMatchName);
                 if ($normExpanded === $normFull || $normExpanded === $normShort) {
                     $score    += 80;
                     $strategy  = 'abbreviation_expand';
                 }
 
-                // -- STRATEGY 5: Smart Token Overlap Match --
-                $extractTokens = array_filter(explode(' ', $normExpanded), fn($t) => strlen($t) >= 2 && !in_array($t, ['bag', 'sct', 'cup', 'btl', 'isi', 'prg']));
-                $dbTokens      = explode(' ', $normFull . ' ' . $normShort . ' ' . $normInvoice);
-                
-                if (!empty($extractTokens)) {
-                    $matchedCount = 0;
-                    foreach ($extractTokens as $tok) {
-                        foreach ($dbTokens as $dbTok) {
-                            if ($tok === $dbTok || (strlen($tok) >= 4 && strpos($dbTok, $tok) !== false)) {
-                                $matchedCount++;
-                                break;
-                            }
-                        }
-                    }
-                    $overlapRatio = $matchedCount / count($extractTokens);
-                    if ($overlapRatio >= 0.75) {
-                        $tokenScore = 70 + ($overlapRatio * 15);
-                        if ($tokenScore > $score) {
-                            $score = $tokenScore;
-                            $strategy = 'token_overlap';
-                        }
-                    }
+                // -- STRATEGY 5: Smart Token Overlap Match (with weight awareness) --
+                $tokenScore = $this->calculateTokenOverlapScore($normExpanded, $normFull, $normShort, $normInvoice, $p);
+                if ($tokenScore > 0 && $tokenScore > $score) {
+                    $score    = $tokenScore;
+                    $strategy = 'token_overlap';
                 }
 
                 // -- STRATEGY 6: Fuzzy match via similar_text (only if no higher score) --
@@ -225,13 +232,23 @@ class ProductMatcher
                         $similarities[] = $simInv;
                     }
 
+                    // Also fuzzy against expanded name
+                    if (!empty($expandedMatchName)) {
+                        similar_text(strtolower($expandedMatchName), strtolower($p['full_name'] ?? ''), $simExpFull);
+                        $similarities[] = $simExpFull;
+                    }
+
                     $bestSim = !empty($similarities) ? max($similarities) : 0;
-                    if ($bestSim >= 65) {
-                        $score = max($score, $bestSim * 0.75);
+                    if ($bestSim >= 60) {
+                        $fuzzyScore = $bestSim * 0.85;
+                        if ($fuzzyScore > $score) {
+                            $score = $fuzzyScore;
+                            $strategy = 'fuzzy';
+                        }
                     }
                 }
 
-                // -- STRATEGY 6: Barcode match --
+                // -- STRATEGY 7: Barcode match --
                 if (!empty($extractedBarcode) && !empty($p['packagings'])) {
                     foreach ($p['packagings'] as $pkg) {
                         $dbBarcode = trim($pkg['barcode'] ?? '');
@@ -242,27 +259,26 @@ class ProductMatcher
                     }
                 }
 
-                // -- STRATEGY 7: Brand boost --
-                if (!empty($extractedBrand) && !empty($p['brand_name'])) {
-                    if (stripos($p['brand_name'], $extractedBrand) !== false ||
-                        stripos($extractedBrand, $p['brand_name']) !== false) {
-                        $score += 15;
+                // -- STRATEGY 8: Brand + Variant + Weight composite boost --
+                $compositeBoost = $this->calculateCompositeBoost($extractedBrand, $extractedVariant, $weightVal, $weightUnit, $p);
+                if ($compositeBoost > 0) {
+                    $score += $compositeBoost;
+                    if ($compositeBoost >= 30 && $strategy === 'score') {
+                        $strategy = 'brand_variant_weight';
                     }
                 }
 
-                // -- STRATEGY 8: Variant & weight boost --
-                if (!empty($extractedVariant) && !empty($p['variant'])) {
-                    if (stripos($p['variant'], $extractedVariant) !== false ||
-                        stripos($extractedVariant, $p['variant']) !== false) {
-                        $score += 10;
-                    }
-                }
-                if ($weightVal !== null && !empty($p['weight_value'])) {
-                    if (abs((float)$p['weight_value'] - $weightVal) < 0.01) {
-                        $score += 10;
-                        if (!empty($weightUnit) && !empty($p['weight_unit']) &&
-                            strtolower(trim($weightUnit)) === strtolower(trim($p['weight_unit']))) {
-                            $score += 5;
+                // -- STRATEGY 9: Expanded name match against supplier_invoice_name --
+                if (!empty($expandedMatchName) && !empty($p['supplier_invoice_name'])) {
+                    $normExpandedLower = $this->normalize($expandedMatchName);
+                    $invEntries = preg_split('/[\n\r,;]+/', $p['supplier_invoice_name']);
+                    foreach ($invEntries as $entry) {
+                        $normEntry = $this->normalize($entry);
+                        if (!empty($normEntry) && !empty($normExpandedLower)) {
+                            if ($normExpandedLower === $normEntry) {
+                                $score = max($score, 92);
+                                $strategy = 'expanded_invoice_match';
+                            }
                         }
                     }
                 }
@@ -297,6 +313,11 @@ class ProductMatcher
             }
         }
 
+        // Log matching for debugging
+        if (!$isMatched) {
+            error_log("MATCHER_MISS: name='{$name}' code='{$extractedCode}' brand='{$extractedBrand}' variant='{$extractedVariant}' weight={$weightVal}{$weightUnit} bestScore={$highestScore} bestStrategy={$bestStrategy}");
+        }
+
         return [
             'product_id'              => $isMatched ? (int)$bestMatch['id']         : null,
             'product_name'            => $isMatched ? $bestMatch['full_name']        : null,
@@ -306,6 +327,251 @@ class ProductMatcher
             'match_strategy'          => $bestStrategy,
             'product_data'            => $isMatched ? $bestMatch                    : null,
         ];
+    }
+
+    /**
+     * Smart token overlap scoring.
+     *
+     * Tokenizes both the extracted (expanded) name and database product name,
+     * then calculates a weighted overlap score. Brand and variant tokens get
+     * higher weight than generic category words.
+     */
+    private function calculateTokenOverlapScore(
+        string $normExtracted,
+        string $normFull,
+        string $normShort,
+        string $normInvoice,
+        array $product
+    ): float {
+        // Build candidate tokens from extraction (exclude packaging/unit tokens)
+        $extractTokens = $this->getSignificantTokens($normExtracted);
+        if (empty($extractTokens)) return 0;
+
+        // Build DB tokens from all product name fields + brand + variant
+        $dbText = $normFull . ' ' . $normShort . ' ' . $normInvoice;
+        if (!empty($product['brand_name'])) {
+            $dbText .= ' ' . $this->normalize($product['brand_name']);
+        }
+        if (!empty($product['variant'])) {
+            $dbText .= ' ' . $this->normalize($product['variant']);
+        }
+        if (!empty($product['supplier_invoice_name'])) {
+            $dbText .= ' ' . $this->normalize($product['supplier_invoice_name']);
+        }
+
+        $dbTokens = array_unique(array_filter(explode(' ', $dbText), fn($t) => strlen($t) >= 2));
+
+        // Calculate match
+        $matchedCount = 0;
+        $totalWeight = 0;
+        $matchedWeight = 0;
+
+        foreach ($extractTokens as $tok) {
+            // Determine token weight
+            $weight = $this->getTokenWeight($tok);
+            $totalWeight += $weight;
+
+            foreach ($dbTokens as $dbTok) {
+                // Exact match
+                if ($tok === $dbTok) {
+                    $matchedCount++;
+                    $matchedWeight += $weight;
+                    break;
+                }
+                // Substring match for longer tokens (≥4 chars)
+                if (strlen($tok) >= 4 && (strpos($dbTok, $tok) !== false || strpos($tok, $dbTok) !== false)) {
+                    $matchedCount++;
+                    $matchedWeight += $weight * 0.85; // Partial match penalty
+                    break;
+                }
+                // Number match with tolerance (e.g., weight 45 vs 45)
+                if (is_numeric($tok) && is_numeric($dbTok)) {
+                    $numTok = (float)$tok;
+                    $numDb  = (float)$dbTok;
+                    if ($numTok > 0 && $numDb > 0 && abs($numTok - $numDb) / max($numTok, $numDb) < 0.05) {
+                        $matchedCount++;
+                        $matchedWeight += $weight;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if ($totalWeight == 0) return 0;
+
+        $overlapRatio = $matchedWeight / $totalWeight;
+        $tokenRatio = count($extractTokens) > 0 ? $matchedCount / count($extractTokens) : 0;
+
+        // Need at least 60% weighted match to be considered
+        if ($overlapRatio < 0.60) return 0;
+
+        // Score: base 55 + up to 30 bonus based on overlap quality
+        $score = 55 + ($overlapRatio * 30);
+
+        // Bonus for high token count matches (more tokens matched = more confident)
+        if ($matchedCount >= 4) $score += 5;
+        if ($matchedCount >= 5) $score += 5;
+
+        return min($score, 88); // Cap at 88 (below exact match scores)
+    }
+
+    /**
+     * Get significant tokens from a normalized string (excluding skip tokens).
+     */
+    private function getSignificantTokens(string $normalized): array
+    {
+        $tokens = explode(' ', $normalized);
+        return array_values(array_filter($tokens, function($t) {
+            return strlen($t) >= 2 && !in_array($t, self::SKIP_TOKENS);
+        }));
+    }
+
+    /**
+     * Get weight for a token (brand/variant words weigh more than generic terms).
+     */
+    private function getTokenWeight(string $token): float
+    {
+        // Category words (less distinctive)
+        $genericTokens = ['powder', 'detergent', 'liquid', 'cream', 'soap', 'mie', 'mi', 'instant',
+                          'noodle', 'premium', 'sabun', 'shampo', 'shampoo', 'pasta', 'gigi', 'minyak'];
+        if (in_array($token, $genericTokens)) return 0.5;
+
+        // Numeric tokens (weight/volume) - important for distinguishing variants
+        if (is_numeric($token)) return 1.5;
+
+        // Brand/variant words (most distinctive)
+        return 1.0;
+    }
+
+    /**
+     * Calculate composite boost from brand + variant + weight matching.
+     *
+     * When a product name from the invoice has brand=DAIA, variant=PUTIH, weight=23g,
+     * and the DB product also has brand=Daia, variant=Putih, weight=23g,
+     * this gives a significant boost to distinguish it from other similar products.
+     */
+    private function calculateCompositeBoost(
+        string $extractedBrand,
+        string $extractedVariant,
+        ?float $weightVal,
+        string $weightUnit,
+        array $product
+    ): float {
+        $boost = 0;
+
+        // Brand match (+15)
+        if (!empty($extractedBrand) && !empty($product['brand_name'])) {
+            $normBrand = strtolower(trim($extractedBrand));
+            $normDbBrand = strtolower(trim($product['brand_name']));
+            if ($normBrand === $normDbBrand ||
+                stripos($normDbBrand, $normBrand) !== false ||
+                stripos($normBrand, $normDbBrand) !== false) {
+                $boost += 15;
+            }
+        }
+
+        // Variant match (+20 for exact, +10 for partial)
+        if (!empty($extractedVariant)) {
+            $normVariant = $this->normalize($extractedVariant);
+            $dbVariant = $this->normalize($product['variant'] ?? '');
+            $dbFullName = $this->normalize($product['full_name'] ?? '');
+
+            if (!empty($dbVariant)) {
+                if ($normVariant === $dbVariant) {
+                    $boost += 20;
+                } elseif ($this->variantMatch($normVariant, $dbVariant)) {
+                    $boost += 15;
+                }
+            }
+
+            // Also check variant words in full product name
+            if ($boost < 15 && !empty($dbFullName)) {
+                $variantTokens = array_filter(explode(' ', $normVariant), fn($t) => strlen($t) >= 3);
+                $matchedVarTokens = 0;
+                foreach ($variantTokens as $vt) {
+                    if (strpos($dbFullName, $vt) !== false) {
+                        $matchedVarTokens++;
+                    }
+                }
+                if (!empty($variantTokens) && $matchedVarTokens / count($variantTokens) >= 0.6) {
+                    $boost += 10;
+                }
+            }
+        }
+
+        // Weight/volume match (+10 for exact, +5 for close)
+        if ($weightVal !== null && $weightVal > 0) {
+            $dbWeight = null;
+            $dbWeightUnit = '';
+
+            // Try from product fields
+            if (!empty($product['weight_value'])) {
+                $dbWeight = (float)$product['weight_value'];
+                $dbWeightUnit = strtolower(trim($product['weight_unit'] ?? ''));
+            }
+
+            // Also try to extract weight from full_name (e.g., "23g" in "Daia Powder Detergent Putih (20 × 6 × 23g)")
+            if ($dbWeight === null || $dbWeight == 0) {
+                $fn = $product['full_name'] ?? '';
+                if (preg_match('/(\d+(?:\.\d+)?)\s*(g|gr|ml|l|kg)\b/i', $fn, $fnMatch)) {
+                    $dbWeight = (float)$fnMatch[1];
+                    $dbWeightUnit = strtolower($fnMatch[2]);
+                    if ($dbWeightUnit === 'gr') $dbWeightUnit = 'g';
+                }
+            }
+
+            if ($dbWeight !== null && $dbWeight > 0) {
+                // Normalize units for comparison
+                $normExtUnit = strtolower(trim($weightUnit));
+                if ($normExtUnit === 'gr') $normExtUnit = 'g';
+
+                $unitsMatch = empty($normExtUnit) || empty($dbWeightUnit) ||
+                              $normExtUnit === $dbWeightUnit;
+
+                if ($unitsMatch) {
+                    $diff = abs($dbWeight - $weightVal);
+                    if ($diff < 0.5) {
+                        $boost += 10; // Exact weight match
+                    } elseif ($diff / max($dbWeight, $weightVal) <= 0.1) {
+                        $boost += 5;  // Close weight match
+                    }
+                }
+            }
+        }
+
+        return $boost;
+    }
+
+    /**
+     * Check if two variant strings refer to the same variant.
+     * Handles partial matches, word reordering, etc.
+     */
+    private function variantMatch(string $a, string $b): bool
+    {
+        if (empty($a) || empty($b)) return false;
+
+        // Direct containment
+        if (strpos($a, $b) !== false || strpos($b, $a) !== false) return true;
+
+        // Token overlap (all words of shorter string found in longer)
+        $tokensA = explode(' ', $a);
+        $tokensB = explode(' ', $b);
+        $shorter = count($tokensA) <= count($tokensB) ? $tokensA : $tokensB;
+        $longer  = count($tokensA) <= count($tokensB) ? $tokensB : $tokensA;
+
+        $matchCount = 0;
+        foreach ($shorter as $st) {
+            if (strlen($st) < 3) continue;
+            foreach ($longer as $lt) {
+                if ($st === $lt || (strlen($st) >= 4 && strpos($lt, $st) !== false)) {
+                    $matchCount++;
+                    break;
+                }
+            }
+        }
+
+        $significantTokens = count(array_filter($shorter, fn($t) => strlen($t) >= 3));
+        return $significantTokens > 0 && $matchCount / $significantTokens >= 0.7;
     }
 
     private function normalize(string $str): string
@@ -327,7 +593,8 @@ class ProductMatcher
         $words   = preg_split('/\s+/', strtolower(trim($name)));
         $result  = [];
         foreach ($words as $word) {
-            $result[] = self::ABBREVIATIONS[$word] ?? $word;
+            $clean = preg_replace('/[^a-z0-9&]/', '', $word);
+            $result[] = self::ABBREVIATIONS[$clean] ?? $word;
         }
         return implode(' ', $result);
     }

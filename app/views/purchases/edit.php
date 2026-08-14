@@ -387,58 +387,51 @@ async function scanInvoiceWithAI() {
         if (result.success && result.data && result.data.length > 0) {
             showToast('AI berhasil memparsing ' + result.data.length + ' item', 'success');
             
-            // Loop through results and add to bulk items instantly (0 network roundtrips)
             for (const item of result.data) {
                 if (item.is_matched && item.product_id) {
                     try {
                         const productData = item.product_data || await api(`${BASE_URL}api/products/${item.product_id}`);
-                        // Set quantity and price based on AI output
                         if (productData && productData.packagings && productData.packagings.length > 0) {
                             const targetLevel = item.packaging_level || 1;
-                            let bestPkg = productData.packagings.find(p => p.level == targetLevel);
-                            
-                            // Fallback if target level not found
-                            if (!bestPkg) {
+                            let selectedPkg = productData.packagings.find(p => p.level == targetLevel);
+                            if (!selectedPkg) {
                                 let targetUnit = (item.unit || '').toLowerCase().trim();
                                 if (targetUnit) {
-                                    bestPkg = productData.packagings.find(p => p.unit_name && p.unit_name.toLowerCase().includes(targetUnit));
+                                    selectedPkg = productData.packagings.find(p => p.unit_name && p.unit_name.toLowerCase().includes(targetUnit));
                                 }
                             }
-                            if (!bestPkg) {
-                                bestPkg = productData.packagings[0];
-                            }
-                            
-                            // Set the selected packaging level's buy_price to the AI's unit_price
-                            if (bestPkg && item.unit_price > 0) {
-                                bestPkg.buy_price = item.unit_price;
-                            }
-                            
-                            // Add to cart with the specific level pre-selected
-                            addProductToCart(productData, bestPkg ? bestPkg.level : 1);
-                            
-                            // Immediately update the added item's quantity, buy_price, and total
-                            const addedItem = purchaseItems[0]; // addProductToCart unshifts to the front
-                            if (addedItem && addedItem.product_id == item.product_id) {
-                                addedItem.quantity  = item.qty || 1;
-                                addedItem.buy_price = item.unit_price || 0;
-                                addedItem.total     = item.total_price || (addedItem.quantity * addedItem.buy_price);
+                            if (!selectedPkg) selectedPkg = productData.packagings[0];
 
-                                propagateFromMainInputs(addedItem);
-                                syncSellPricesWhenBuyPriceChanges(addedItem);
+                            const scanUnitPrice = parseFloat(item.unit_price) || 0;
+                            const scanQty = parseFloat(item.qty) || 1;
+                            const scanTotal = parseFloat(item.total_price) || (scanQty * scanUnitPrice);
 
-                                addedItem.harga_nett = calcItemNett(
-                                    addedItem.buy_price,
-                                    addedItem.ppn_pct || 0,
-                                    addedItem.diskon_mode || 'rp',
-                                    addedItem.diskon_value || 0
-                                );
+                            // Check if this product & level is already in cart
+                            const existingIndex = purchaseItems.findIndex(i => i.product_id == productData.id && i.level == selectedPkg.level);
+                            if (existingIndex > -1) {
+                                const existing = purchaseItems[existingIndex];
+                                existing.quantity = scanQty;
+                                if (scanUnitPrice > 0) existing.buy_price = scanUnitPrice;
+                                existing.total = scanTotal;
+                                propagateFromMainInputs(existing);
+                                syncSellPricesWhenBuyPriceChanges(existing);
+                            } else {
+                                addProductToCart(productData, selectedPkg.level);
+                                const addedItem = purchaseItems[0];
+                                if (addedItem && addedItem.product_id == productData.id) {
+                                    addedItem.quantity  = scanQty;
+                                    if (scanUnitPrice > 0) addedItem.buy_price = scanUnitPrice;
+                                    addedItem.total     = scanTotal;
+                                    propagateFromMainInputs(addedItem);
+                                    syncSellPricesWhenBuyPriceChanges(addedItem);
+                                }
                             }
                         }
                     } catch(e) {
                         console.error('Failed to add AI mapped item', e);
                     }
                 } else {
-                    showToast('Item "' + (item.original_name || item.supplier_code) + '" tidak dikenali di database, silakan input manual.', 'warning');
+                    showToast('Item "' + (item.original_name || item.supplier_code || item.name) + '" tidak dikenali di database, silakan input manual.', 'warning');
                 }
             }
             renderCart();
