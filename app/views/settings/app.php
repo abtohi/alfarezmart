@@ -59,12 +59,10 @@
                     <?php
                     $presetScannerModels = [
                         'openrouter/auto',
-                        'google/gemini-2.0-flash-lite-preview-02-05:free',
-                        'google/gemini-2.0-flash:free',
-                        'qwen/qwen-2.5-vl-72b-instruct:free',
-                        'meta-llama/llama-3.2-11b-vision-instruct:free',
-                        'mistralai/pixtral-12b:free',
-                        'google/gemini-2.0-flash-001',
+                        'google/gemma-4-31b-it:free',
+                        'google/gemma-4-26b-a4b-it:free',
+                        'nvidia/nemotron-nano-12b-v2-vl:free',
+                        'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
                     ];
                     $currentScannerModel = $aiModel ?? 'openrouter/auto';
                     $isScannerCustom = !empty($currentScannerModel) && !in_array($currentScannerModel, $presetScannerModels);
@@ -76,64 +74,46 @@
                             <div class="model-card <?= ($currentScannerModel === 'openrouter/auto' || !$currentScannerModel) ? 'selected' : '' ?>" onclick="selectModel('openrouter/auto', this)">
                                 <div class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">A</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Auto Model</div>
-                                    <div class="model-card-meta">Otomatis Tercepat</div>
+                                    <div class="model-card-name">Auto (Gemma)</div>
+                                    <div class="model-card-meta">Otomatis, Free Vision</div>
                                 </div>
-                                <span class="model-badge model-badge-pro">Default</span>
+                                <span class="model-badge model-badge-free">Default</span>
                             </div>
-                            
-                            <div class="model-card <?= $currentScannerModel === 'google/gemini-2.0-flash-lite-preview-02-05:free' ? 'selected' : '' ?>" onclick="selectModel('google/gemini-2.0-flash-lite-preview-02-05:free', this)">
+
+                            <div class="model-card <?= $currentScannerModel === 'google/gemma-4-31b-it:free' ? 'selected' : '' ?>" onclick="selectModel('google/gemma-4-31b-it:free', this)">
                                 <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#34A853);">G</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Gemini Flash Lite</div>
-                                    <div class="model-card-meta">Super Cepat & Kuota Tinggi</div>
+                                    <div class="model-card-name">Gemma 4 31B</div>
+                                    <div class="model-card-meta">Google Vision, Tajam OCR</div>
                                 </div>
                                 <span class="model-badge model-badge-free">Gratis</span>
                             </div>
 
-                            <div class="model-card <?= $currentScannerModel === 'google/gemini-2.0-flash:free' ? 'selected' : '' ?>" onclick="selectModel('google/gemini-2.0-flash:free', this)">
+                            <div class="model-card <?= $currentScannerModel === 'google/gemma-4-26b-a4b-it:free' ? 'selected' : '' ?>" onclick="selectModel('google/gemma-4-26b-a4b-it:free', this)">
                                 <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#EA4335);">G</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Gemini 2.0 Flash</div>
-                                    <div class="model-card-meta">Multimodal Cerdas</div>
+                                    <div class="model-card-name">Gemma 4 26B</div>
+                                    <div class="model-card-meta">Google Vision, MoE Ringan</div>
                                 </div>
                                 <span class="model-badge model-badge-free">Gratis</span>
                             </div>
 
-                            <div class="model-card <?= $currentScannerModel === 'qwen/qwen-2.5-vl-72b-instruct:free' ? 'selected' : '' ?>" onclick="selectModel('qwen/qwen-2.5-vl-72b-instruct:free', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#6C5CE7,#a29bfe);">Q</div>
+                            <div class="model-card <?= $currentScannerModel === 'nvidia/nemotron-nano-12b-v2-vl:free' ? 'selected' : '' ?>" onclick="selectModel('nvidia/nemotron-nano-12b-v2-vl:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#76b900,#4a7a00);">N</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Qwen 2.5 VL (OCR)</div>
-                                    <div class="model-card-meta">Tajam Baca Tabel & Faktur</div>
+                                    <div class="model-card-name">Nemotron VL 12B</div>
+                                    <div class="model-card-meta">NVIDIA Vision Language</div>
                                 </div>
                                 <span class="model-badge model-badge-free">Gratis</span>
                             </div>
 
-                            <div class="model-card <?= $currentScannerModel === 'meta-llama/llama-3.2-11b-vision-instruct:free' ? 'selected' : '' ?>" onclick="selectModel('meta-llama/llama-3.2-11b-vision-instruct:free', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#0668E1,#00A3FF);">L</div>
+                            <div class="model-card <?= $currentScannerModel === 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free' ? 'selected' : '' ?>" onclick="selectModel('nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#76b900,#264d00);">N</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Llama 3.2 Vision</div>
-                                    <div class="model-card-meta">Ringan & Cepat</div>
+                                    <div class="model-card-name">Nemotron Omni 30B</div>
+                                    <div class="model-card-meta">NVIDIA Multimodal</div>
                                 </div>
                                 <span class="model-badge model-badge-free">Gratis</span>
-                            </div>
-
-                            <div class="model-card <?= $currentScannerModel === 'mistralai/pixtral-12b:free' ? 'selected' : '' ?>" onclick="selectModel('mistralai/pixtral-12b:free', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#FF7043,#FF5722);">P</div>
-                                <div class="model-card-info">
-                                    <div class="model-card-name">Pixtral 12B</div>
-                                    <div class="model-card-meta">Mistral Vision</div>
-                                </div>
-                                <span class="model-badge model-badge-free">Gratis</span>
-                            </div>
-
-                            <div class="model-card <?= $currentScannerModel === 'google/gemini-2.0-flash-001' ? 'selected' : '' ?>" onclick="selectModel('google/gemini-2.0-flash-001', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#1a73e8,#174ea6);">G</div>
-                                <div class="model-card-info">
-                                    <div class="model-card-name">Gemini Flash (Pro)</div>
-                                    <div class="model-card-meta">Berbayar (Saldo OpenRouter)</div>
-                                </div>
-                                <span class="model-badge model-badge-pro">Pro</span>
                             </div>
 
                             <div class="model-card <?= $isScannerCustom ? 'selected' : '' ?>" onclick="selectModel('custom', this)">
@@ -148,7 +128,7 @@
 
                         <div id="ai_model_custom_wrap" style="margin-top:10px; display:<?= $isScannerCustom ? 'block' : 'none' ?>;">
                             <label style="display:block; font-size:var(--font-size-xs); color:var(--text-secondary); margin-bottom:4px;">Nama Model OpenRouter Kustom</label>
-                            <input id="ai_model_custom" type="text" value="<?= $isScannerCustom ? htmlspecialchars($currentScannerModel) : '' ?>" style="width:100%; padding:9px 12px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="contoh: google/gemini-2.0-flash-exp:free" oninput="onCustomModelInput(this.value)" />
+                            <input id="ai_model_custom" type="text" value="<?= $isScannerCustom ? htmlspecialchars($currentScannerModel) : '' ?>" style="width:100%; padding:9px 12px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="contoh: google/gemma-4-31b-it:free" oninput="onCustomModelInput(this.value)" />
                         </div>
                     </div>
                 </div>

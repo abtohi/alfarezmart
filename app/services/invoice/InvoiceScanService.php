@@ -295,23 +295,23 @@ class InvoiceScanService
 
         set_time_limit(120);
 
-        // List of proven fast, 100% free multimodal vision models on OpenRouter
+        // Only models verified to exist AND support vision on OpenRouter free tier (as of Aug 2026)
         $FREE_VISION_MODELS = [
-            'google/gemini-2.0-flash-lite-preview-02-05:free',
-            'google/gemini-2.0-flash:free',
-            'google/gemini-2.0-flash-exp:free',
-            'qwen/qwen-2.5-vl-72b-instruct:free',
-            'meta-llama/llama-3.2-11b-vision-instruct:free',
-            'mistralai/pixtral-12b:free',
-            'openrouter/free',
+            'google/gemma-4-31b-it:free',            // Gemma 4 31B Vision - gratis, bagus baca gambar
+            'google/gemma-4-26b-a4b-it:free',        // Gemma 4 26B Vision - fallback
+            'nvidia/nemotron-nano-12b-v2-vl:free',   // NVIDIA VL model - vision language
+            'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', // NVIDIA Omni multimodal
         ];
 
         // Determine list of models to try in order
-        if (empty($model) || in_array($model, ['openrouter/auto', 'auto', 'openrouter/free'])) {
-            // Default "Auto": Start with the fastest free vision model and cascade down if needed
+        if (empty($model) || in_array($model, ['openrouter/auto', 'auto'])) {
+            // Auto mode: cycle through known-good free vision models
             $modelsToTry = $FREE_VISION_MODELS;
+        } elseif ($model === 'openrouter/free') {
+            // openrouter/free router + fallbacks
+            $modelsToTry = array_unique(array_merge(['openrouter/free'], $FREE_VISION_MODELS));
         } else {
-            // User selected a specific model from UI (presets or custom) -> try that model first!
+            // User selected a specific model from UI → try that first, then fallback to free vision
             $modelsToTry = array_unique(array_merge([$model], $FREE_VISION_MODELS));
         }
 
@@ -331,13 +331,8 @@ class InvoiceScanService
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => 4000,
+                'max_tokens'  => 3000,
             ];
-
-            // Response format json only for OpenAI / Gemini models that strictly support it
-            if (strpos($tryModel, 'gpt-4o') !== false || strpos($tryModel, 'gemini-2.0-flash-001') !== false) {
-                $payload['response_format'] = ['type' => 'json_object'];
-            }
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -350,7 +345,7 @@ class InvoiceScanService
                 'X-Title: AlfarezMart Invoice Scanner'
             ]);
 
-            curl_setopt($ch, CURLOPT_TIMEOUT, 35);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 55); // 55s per model, PHP limit = 120s total
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);
