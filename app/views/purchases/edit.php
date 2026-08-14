@@ -124,7 +124,13 @@
     <!-- Items List -->
     <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
         <span><i class="bi bi-3-circle" style="color:var(--primary);"></i> Daftar Barang</span>
-        <div style="display:flex; align-items:center; gap:8px;">
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px; display:inline-flex; align-items:center; gap:4px;" onclick="expandAllItems()" title="Tampilkan Semua Detail Produk">
+                <i class="bi bi-arrows-angle-expand"></i> Expand All
+            </button>
+            <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px; display:inline-flex; align-items:center; gap:4px;" onclick="collapseAllItems()" title="Ringkaskan Tampilan Produk">
+                <i class="bi bi-arrows-angle-contract"></i> Collapse All
+            </button>
             <button type="button" class="btn-outline-custom" style="padding:4px 8px; font-size:10px; color:var(--danger); border-color:var(--danger);" onclick="clearAllDrafts()" title="Kosongkan Semua Inputan">
                 <i class="bi bi-trash"></i> Kosongkan
             </button>
@@ -1173,6 +1179,7 @@ function addProductToCart(product, defaultLevel = null) {
             id: Date.now(),
             product_id: product.id,
             name: product.full_name || product.short_label,
+            is_collapsed: false,
             is_manual_price: false,
             packagings: product.packagings,
             level: selectedPkg.level,
@@ -2000,6 +2007,23 @@ function recalcTierHint(el) {
 
 
 
+function toggleItemCollapse(uid) {
+    const item = purchaseItems.find(i => i.id == uid);
+    if (!item) return;
+    item.is_collapsed = !item.is_collapsed;
+    renderCart();
+}
+
+function expandAllItems() {
+    purchaseItems.forEach(item => { item.is_collapsed = false; });
+    renderCart();
+}
+
+function collapseAllItems() {
+    purchaseItems.forEach(item => { item.is_collapsed = true; });
+    renderCart();
+}
+
 function removeItem(tempId) {
     purchaseItems = purchaseItems.filter(i => i.id != tempId);
     renderCart();
@@ -2786,6 +2810,8 @@ function renderCart() {
             if (!pkg.qty_prices) pkg.qty_prices = [];
         });
 
+        if (item.is_collapsed === undefined) item.is_collapsed = false;
+
         const levelOptions = item.packagings.map(p => 
             `<li><a class="dropdown-item ${p.level == item.level ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='${p.level}'; dp.querySelector('button span').textContent='${p.unit_name} (Isi ${p.base_qty})'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">${p.unit_name} (Isi ${p.base_qty})</a></li>`
         ).join('');
@@ -2795,7 +2821,7 @@ function renderCart() {
         const selBaseQty = parseFloat(selPkg?.base_qty) || 1;
         const totalVal  = (item.total !== undefined && item.total !== null && item.total > 0) ? item.total : ((item.quantity || 1) * (item.buy_price || 0));
         const hasPkgs   = item.packagings.length > 1;
-        const drawerHtml  = hasPkgs ? buildDrawerRowHtml(item, 'item') : '';
+        const drawerHtml  = buildDrawerRowHtml(item, 'item');
 
         // Simple per-unit price summary
         const buyPrice = parseFloat(selPkg?.buy_price) || 0;
@@ -2811,92 +2837,130 @@ function renderCart() {
             priceSummary += ` <span style="font-size:9px;color:${diffColor};font-weight:600;"><i class="bi ${diffIcon}"></i>${diff > 0 ? '+' : ''}Rp${Math.round(Math.abs(diff)).toLocaleString('id-ID')}</span>`;
         }
 
+        const isCollapsed = !!item.is_collapsed;
+
+        const collapseToggleBtn = isCollapsed
+            ? `<button type="button" class="btn-outline-custom" style="padding:3px 8px; font-size:10px; display:inline-flex; align-items:center; gap:4px; border-color:var(--primary); color:var(--primary);" onclick="toggleItemCollapse(${item.id})" title="Tampilkan Detail Lengkap"><i class="bi bi-chevron-down"></i> Expand</button>`
+            : `<button type="button" class="btn-outline-custom" style="padding:3px 8px; font-size:10px; display:inline-flex; align-items:center; gap:4px;" onclick="toggleItemCollapse(${item.id})" title="Ringkaskan Tampilan"><i class="bi bi-chevron-up"></i> Collapse</button>`;
+
+        let collapsedSummaryHtml = '';
+        if (isCollapsed) {
+            collapsedSummaryHtml = `
+            <div class="item-collapsed-summary" style="margin-top:6px; padding:6px 10px; background:var(--surface-2); border-radius:var(--radius-md); border:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:11px;">
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:nowrap;">
+                    <span style="color:var(--text-muted); font-size:10px;">Beli: <strong style="color:var(--text-primary); font-size:11px;">${item.quantity} ${selPkg.unit_name}</strong></span>
+                    <span style="color:var(--border-color);">|</span>
+                    <span style="color:var(--text-muted); font-size:10px;">Total: <strong style="color:var(--info); font-size:11px;">${formatRupiah(totalVal)}</strong></span>
+                </div>
+                
+                <div style="display:flex; align-items:center; gap:4px; flex-wrap:nowrap; overflow-x:auto;">
+                    ${item.packagings.map(pkg => {
+                        const isSel = (pkg.level == item.level);
+                        const buy = parseFloat(pkg.buy_price) || 0;
+                        const ppn = parseFloat(pkg.ppn_pct || item.ppn_pct || 0);
+                        const dm  = pkg.diskon_mode || item.diskon_mode || 'rp';
+                        const dv  = parseFloat(pkg.diskon_value || item.diskon_value || 0);
+                        const nett = calcItemNett(buy, ppn, dm, dv, item.quantity);
+                        return `<div style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; background:${isSel ? 'rgba(230,57,70,0.12)' : 'var(--bg-input)'}; border:1px solid ${isSel ? 'var(--primary)' : 'var(--border-color)'}; border-radius:var(--radius-sm); font-size:9.5px; white-space:nowrap;">
+                            <span style="font-weight:600; color:${isSel ? 'var(--primary)' : 'var(--text-primary)'};">${pkg.unit_name}</span>
+                            <span style="color:var(--text-muted); font-size:8.5px;">(x${pkg.base_qty})</span>
+                            <span style="color:var(--text-primary); font-weight:700;">${formatRupiah(nett)}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+            </div>`;
+        }
+
         html += `
-        <div class="item-card" id="item_card_${item.id}" data-ppn="${item.ppn_pct || 0}" style="background:var(--surface-1);border-radius:var(--radius-lg);padding:16px;margin-bottom:12px;border:1px solid var(--border-color);position:relative;">
-            <!-- Actions -->
-            <div style="position:absolute;top:12px;right:16px;display:flex;align-items:center;gap:12px;">
-                <input type="checkbox" class="item-select-chk" value="${item.id}" style="width:18px;height:18px;accent-color:var(--danger);cursor:pointer;" onchange="updateMassSelect()">
+        <div class="item-card" id="item_card_${item.id}" data-ppn="${item.ppn_pct || 0}" style="background:var(--surface-1);border-radius:var(--radius-lg);padding:${isCollapsed ? '10px 14px' : '16px'};margin-bottom:12px;border:1px solid var(--border-color);position:relative;">
+            <!-- Top Bar Actions -->
+            <div style="position:absolute;top:10px;right:14px;display:flex;align-items:center;gap:8px;">
+                ${collapseToggleBtn}
+                <button type="button" onclick="removeItem(${item.id})" style="background:transparent; border:none; color:var(--danger); font-size:14px; cursor:pointer; padding:2px 4px;" title="Hapus Produk"><i class="bi bi-trash"></i></button>
+                <input type="checkbox" class="item-select-chk" value="${item.id}" style="width:18px;height:18px;accent-color:var(--danger);cursor:pointer;margin-left:4px;" onchange="updateMassSelect()">
             </div>
 
             <!-- Product Name -->
-            <div style="font-weight:700;font-size:var(--font-size-sm);margin-bottom:12px;padding-right:28px;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+            <div style="font-weight:700;font-size:var(--font-size-sm);margin-bottom:${isCollapsed ? '4px' : '12px'};padding-right:160px;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
                 ${item.name}
                 ${hasPkgs ? `<span style="font-size:9px;background:var(--info-bg);color:var(--info);padding:2px 6px;border-radius:8px;white-space:nowrap;">${item.packagings.length} kemasan</span>` : ''}
             </div>
-            ${priceSummary ? `<div style="margin-bottom:10px;">${priceSummary}</div>` : ''}
 
-            <!-- ── ROW 1: Kemasan + Qty ── -->
-            <div style="display:flex;gap:8px;margin-bottom:10px;">
-                <div style="flex:2;">
-                    <label style="font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:4px;">
-                        <span>Kemasan Beli</span>
-                    </label>
-                    <div class="dropdown" style="width:100%;">
-                        <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:8px; font-size:12px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
-                            <span>${activePkgStr}</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
-                            ${levelOptions}
-                        </ul>
-                        <input type="hidden" value="${item.level}" onchange="changeLevel(${item.id}, this.value)">
-                    </div>
-                </div>
-                <div style="flex:1;">
-                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Qty Beli</label>
-                    <input type="number" class="form-control-dark" style="width:100%;padding:8px;font-size:12px;text-align:center;" value="${item.quantity}" min="0.01" step="0.01"
-                           oninput="onMainInputChange(${item.id}, 'qty', this.value)">
-                </div>
-            </div>
+            ${isCollapsed ? collapsedSummaryHtml : `
+                ${priceSummary ? `<div style="margin-bottom:10px;">${priceSummary}</div>` : ''}
 
-            <!-- ── ROW 2: Total Harga ── -->
-            <div style="margin-bottom:10px;">
-                <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Total Harga Pembelian</label>
-                <input type="number" id="main_total_${item.id}" class="form-control-dark" style="width:100%;padding:8px;font-size:13px;font-weight:600;color:var(--info);"
-                       value="${totalVal > 0 ? totalVal : ''}" placeholder="Masukkan total harga..." step="any"
-                       oninput="onMainInputChange(${item.id}, 'total', this.value)">
-            </div>
-
-            <!-- ── ROW 3: PPN + Diskon ── -->
-            <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:4px;">
-                <div>
-                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">PPN (%)</label>
-                    <input type="number" class="form-control-dark item-ppn" style="width:100%;padding:8px;font-size:12px;" value="${item.ppn_pct || 0}" min="0" max="100" placeholder="0"
-                           oninput="onMainInputChange(${item.id}, 'ppn', this.value)">
-                </div>
-                <div>
-                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Diskon</label>
-                    <div style="display:flex;gap:4px;">
-                        <div class="discount-toggle-group" style="display:flex; border-radius:var(--radius-md) 0 0 var(--radius-md); overflow:hidden; border:1px solid var(--border-color); border-right:none; width:65px;">
-                            <button type="button" class="btn-discount-mode rp-mode ${(item.diskon_mode||'rp')==='rp'?'active':''}" style="flex:1; padding:8px 0; background:${(item.diskon_mode||'rp')==='rp'?'var(--primary)':'var(--bg-input)'}; color:${(item.diskon_mode||'rp')==='rp'?'#fff':'var(--text-muted)'}; border:none; font-size:11px; font-weight:bold; cursor:pointer;" onclick="event.preventDefault(); const p=this.closest('.discount-toggle-group'); p.querySelector('.pct-mode').style.background='var(--bg-input)'; p.querySelector('.pct-mode').style.color='var(--text-muted)'; this.style.background='var(--primary)'; this.style.color='#fff'; const hidden=p.nextElementSibling; hidden.value='rp'; hidden.dispatchEvent(new Event('change'));">Rp</button>
-                            <button type="button" class="btn-discount-mode pct-mode ${item.diskon_mode==='pct'?'active':''}" style="flex:1; padding:8px 0; background:${item.diskon_mode==='pct'?'var(--primary)':'var(--bg-input)'}; color:${item.diskon_mode==='pct'?'#fff':'var(--text-muted)'}; border:none; font-size:11px; font-weight:bold; cursor:pointer;" onclick="event.preventDefault(); const p=this.closest('.discount-toggle-group'); p.querySelector('.rp-mode').style.background='var(--bg-input)'; p.querySelector('.rp-mode').style.color='var(--text-muted)'; this.style.background='var(--primary)'; this.style.color='#fff'; const hidden=p.nextElementSibling; hidden.value='pct'; hidden.dispatchEvent(new Event('change'));">%</button>
+                <!-- ── ROW 1: Kemasan + Qty ── -->
+                <div style="display:flex;gap:8px;margin-bottom:10px;">
+                    <div style="flex:2;">
+                        <label style="font-size:10px;color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:4px;">
+                            <span>Kemasan Beli</span>
+                        </label>
+                        <div class="dropdown" style="width:100%;">
+                            <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:8px; font-size:12px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                                <span>${activePkgStr}</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
+                                ${levelOptions}
+                            </ul>
+                            <input type="hidden" value="${item.level}" onchange="changeLevel(${item.id}, this.value)">
                         </div>
-                        <input type="hidden" class="item-diskon-mode" value="${item.diskon_mode||'rp'}" onchange="onMainInputChange(${item.id}, 'diskon_mode', this.value)">
-                        <input type="number" class="form-control-dark item-diskon-value" style="flex:1;padding:8px;font-size:12px;" value="${item.diskon_value || 0}" min="0" placeholder="0"
-                               oninput="onMainInputChange(${item.id}, 'diskon_value', this.value)">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Qty Beli</label>
+                        <input type="number" class="form-control-dark" style="width:100%;padding:8px;font-size:12px;text-align:center;" value="${item.quantity}" min="0.01" step="0.01"
+                               oninput="onMainInputChange(${item.id}, 'qty', this.value)">
                     </div>
                 </div>
-            </div>
 
-            <!-- ── Mini Pricing Table (OUTSIDE drawer) ── -->
-            <div class="item-mini-table">${buildMiniPricingTableHtml(item)}</div>
-            <!-- ── Trend Banner (OUTSIDE drawer) ── -->
-            <div class="item-trend-banner">${buildTrendBannerHtml(item)}</div>
-
-            ${hasPkgs ? `
-            <!-- ── Drawer Toggle Button ── -->
-            <button id="drawer_btn_${item.id}" type="button" onclick="toggleItemDrawer(${item.id})"
-                    style="width:100%;margin-top:10px;background:var(--surface-2);color:var(--primary);border:1px dashed var(--border-color);padding:9px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;">
-                <i class="bi bi-tags"></i> Atur Harga Kemasan Lainnya
-            </button>
-
-            <!-- ── Collapsible Drawer ── -->
-            <div id="drawer_${item.id}" style="display:none;margin-top:10px;">
-                <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;padding:8px;background:rgba(0,0,0,0.1);border-radius:var(--radius-sm);">
-                    <i class="bi bi-info-circle"></i> Harga modal dihitung otomatis. PPN & Diskon sama untuk semua kemasan. Centang "Custom" untuk mengunci harga individual.
+                <!-- ── ROW 2: Total Harga ── -->
+                <div style="margin-bottom:10px;">
+                    <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Total Harga Pembelian</label>
+                    <input type="number" id="main_total_${item.id}" step="any" class="form-control-dark" style="width:100%;padding:8px;font-size:13px;font-weight:600;color:var(--info);"
+                           value="${totalVal > 0 ? totalVal : ''}" placeholder="Masukkan total harga..."
+                           oninput="onMainInputChange(${item.id}, 'total', this.value)">
                 </div>
-                <!-- Per-packaging detail editors -->
-                ${drawerHtml}
-            </div>` : ''}
+
+                <!-- ── ROW 3: PPN + Diskon ── -->
+                <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:4px;">
+                    <div>
+                        <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">PPN (%)</label>
+                        <input type="number" class="form-control-dark item-ppn" style="width:100%;padding:8px;font-size:12px;" value="${item.ppn_pct || 0}" min="0" max="100" placeholder="0"
+                               oninput="onMainInputChange(${item.id}, 'ppn', this.value)">
+                    </div>
+                    <div>
+                        <label style="font-size:10px;color:var(--text-muted);display:block;margin-bottom:4px;">Diskon (Rp=Total)</label>
+                        <div style="display:flex;gap:4px;">
+                            <div class="discount-toggle-group" style="display:flex; border-radius:var(--radius-md) 0 0 var(--radius-md); overflow:hidden; border:1px solid var(--border-color); border-right:none; width:65px;">
+                                <button type="button" class="btn-discount-mode rp-mode ${(item.diskon_mode||'rp')==='rp'?'active':''}" style="flex:1; padding:8px 0; background:${(item.diskon_mode||'rp')==='rp'?'var(--primary)':'var(--bg-input)'}; color:${(item.diskon_mode||'rp')==='rp'?'#fff':'var(--text-muted)'}; border:none; font-size:11px; font-weight:bold; cursor:pointer;" onclick="event.preventDefault(); const p=this.closest('.discount-toggle-group'); p.querySelector('.pct-mode').style.background='var(--bg-input)'; p.querySelector('.pct-mode').style.color='var(--text-muted)'; this.style.background='var(--primary)'; this.style.color='#fff'; const hidden=p.nextElementSibling; hidden.value='rp'; hidden.dispatchEvent(new Event('change'));">Rp</button>
+                                <button type="button" class="btn-discount-mode pct-mode ${item.diskon_mode==='pct'?'active':''}" style="flex:1; padding:8px 0; background:${item.diskon_mode==='pct'?'var(--primary)':'var(--bg-input)'}; color:${item.diskon_mode==='pct'?'#fff':'var(--text-muted)'}; border:none; font-size:11px; font-weight:bold; cursor:pointer;" onclick="event.preventDefault(); const p=this.closest('.discount-toggle-group'); p.querySelector('.rp-mode').style.background='var(--bg-input)'; p.querySelector('.rp-mode').style.color='var(--text-muted)'; this.style.background='var(--primary)'; this.style.color='#fff'; const hidden=p.nextElementSibling; hidden.value='pct'; hidden.dispatchEvent(new Event('change'));">%</button>
+                            </div>
+                            <input type="hidden" class="item-diskon-mode" value="${item.diskon_mode||'rp'}" onchange="onMainInputChange(${item.id}, 'diskon_mode', this.value)">
+                            <input type="number" class="form-control-dark item-diskon-value" style="flex:1;padding:8px;font-size:12px;" value="${item.diskon_value || 0}" min="0" placeholder="0"
+                                   oninput="onMainInputChange(${item.id}, 'diskon_value', this.value)">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Mini Pricing Table (OUTSIDE drawer) ── -->
+                <div class="item-mini-table">${buildMiniPricingTableHtml(item)}</div>
+                <!-- ── Trend Banner (OUTSIDE drawer) ── -->
+                <div class="item-trend-banner">${buildTrendBannerHtml(item)}</div>
+
+                <!-- ── Drawer Toggle Button ── -->
+                <button id="drawer_btn_${item.id}" type="button" onclick="toggleItemDrawer(${item.id})"
+                        style="width:100%;margin-top:10px;background:var(--surface-2);color:var(--primary);border:1px dashed var(--border-color);padding:9px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;">
+                    <i class="bi bi-tags"></i> Atur Harga Kemasan Lainnya
+                </button>
+
+                <!-- ── Collapsible Drawer ── -->
+                <div id="drawer_${item.id}" style="display:none;margin-top:10px;">
+                    <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;padding:8px;background:rgba(0,0,0,0.1);border-radius:var(--radius-sm);">
+                        <i class="bi bi-info-circle"></i> Harga modal dihitung otomatis. PPN & Diskon sama untuk semua kemasan. Centang "Custom" untuk mengunci harga individual.
+                    </div>
+                    <!-- Per-packaging detail editors -->
+                    ${drawerHtml}
+                </div>
+            `}
         </div>`;
     });
 
