@@ -338,6 +338,39 @@ function savePhotoPreview() {
     showToast('Foto berhasil disiapkan', 'success');
 }
 
+// Helper to safely optimize any high-res image down to perfect OCR dimensions (< 500KB)
+async function compressImageForAI(dataUrl, maxDimension = 1800, quality = 0.85) {
+    if (!dataUrl || !dataUrl.startsWith('data:image')) return dataUrl;
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            let w = img.width;
+            let h = img.height;
+            if (w > maxDimension || h > maxDimension) {
+                if (w > h) {
+                    h = Math.round((h * maxDimension) / w);
+                    w = maxDimension;
+                } else {
+                    w = Math.round((w * maxDimension) / h);
+                    h = maxDimension;
+                }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            try {
+                resolve(canvas.toDataURL('image/webp', quality));
+            } catch(e) {
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            }
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+    });
+}
+
 async function scanInvoiceWithAI() {
     if (!invoicePhotoBase64) {
         showToast('Pilih atau ambil foto invoice terlebih dahulu', 'error');
@@ -351,9 +384,12 @@ async function scanInvoiceWithAI() {
         btn.disabled = true;
         btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Memproses AI...';
         
+        // Auto-optimize image resolution to prevent large payload timeouts
+        const optimizedImage = await compressImageForAI(invoicePhotoBase64, 1800, 0.85);
+
         const data = {
             csrf_token: csrfVal,
-            image_base64: invoicePhotoBase64,
+            image_base64: optimizedImage,
             supplier_id: currentSupplierId || null
         };
         

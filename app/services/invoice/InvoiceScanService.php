@@ -314,12 +314,12 @@ class InvoiceScanService
 
         set_time_limit(120);
 
-        // Only models verified to exist AND support vision on OpenRouter free tier (as of Aug 2026)
+        // Only fast, verified non-reasoning free vision models on OpenRouter
         $FREE_VISION_MODELS = [
-            'google/gemma-4-31b-it:free',            // Gemma 4 31B Vision - gratis, bagus baca gambar
-            'google/gemma-4-26b-a4b-it:free',        // Gemma 4 26B Vision - fallback
-            'nvidia/nemotron-nano-12b-v2-vl:free',   // NVIDIA VL model - vision language
-            'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', // NVIDIA Omni multimodal
+            'google/gemma-4-31b-it:free',            // Google Gemma 4 31B Vision - cepat & akurat OCR
+            'google/gemma-4-26b-a4b-it:free',        // Google Gemma 4 26B Vision - fallback cepat
+            'nvidia/nemotron-nano-12b-v2-vl:free',   // NVIDIA VL 12B model - vision language
+            'openrouter/free',                       // OpenRouter Free Auto Router
         ];
 
         // Determine list of models to try in order
@@ -327,7 +327,6 @@ class InvoiceScanService
             // Auto mode: cycle through known-good free vision models
             $modelsToTry = $FREE_VISION_MODELS;
         } elseif ($model === 'openrouter/free') {
-            // openrouter/free router + fallbacks
             $modelsToTry = array_unique(array_merge(['openrouter/free'], $FREE_VISION_MODELS));
         } else {
             // User selected a specific model from UI → try that first, then fallback to free vision
@@ -364,7 +363,7 @@ class InvoiceScanService
                 'X-Title: AlfarezMart Invoice Scanner'
             ]);
 
-            curl_setopt($ch, CURLOPT_TIMEOUT, 55); // 55s per model, PHP limit = 120s total
+            curl_setopt($ch, CURLOPT_TIMEOUT, 40); // 40s per attempt, PHP limit = 120s total
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);

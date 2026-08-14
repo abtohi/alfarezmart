@@ -62,7 +62,6 @@
                         'google/gemma-4-31b-it:free',
                         'google/gemma-4-26b-a4b-it:free',
                         'nvidia/nemotron-nano-12b-v2-vl:free',
-                        'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
                     ];
                     $currentScannerModel = $aiModel ?? 'openrouter/auto';
                     $isScannerCustom = !empty($currentScannerModel) && !in_array($currentScannerModel, $presetScannerModels);
@@ -75,7 +74,7 @@
                                 <div class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">A</div>
                                 <div class="model-card-info">
                                     <div class="model-card-name">Auto (Gemma)</div>
-                                    <div class="model-card-meta">Otomatis, Free Vision</div>
+                                    <div class="model-card-meta">Otomatis, Free Vision Cepat</div>
                                 </div>
                                 <span class="model-badge model-badge-free">Default</span>
                             </div>
@@ -103,15 +102,6 @@
                                 <div class="model-card-info">
                                     <div class="model-card-name">Nemotron VL 12B</div>
                                     <div class="model-card-meta">NVIDIA Vision Language</div>
-                                </div>
-                                <span class="model-badge model-badge-free">Gratis</span>
-                            </div>
-
-                            <div class="model-card <?= $currentScannerModel === 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free' ? 'selected' : '' ?>" onclick="selectModel('nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#76b900,#264d00);">N</div>
-                                <div class="model-card-info">
-                                    <div class="model-card-name">Nemotron Omni 30B</div>
-                                    <div class="model-card-meta">NVIDIA Multimodal</div>
                                 </div>
                                 <span class="model-badge model-badge-free">Gratis</span>
                             </div>
