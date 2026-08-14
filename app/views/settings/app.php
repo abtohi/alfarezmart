@@ -56,27 +56,99 @@
                         <i class="bi bi-cpu-fill" style="color:var(--primary); margin-right:4px;"></i> Model AI Scanner
                     </label>
 
-                    <input type="hidden" id="ai_model" name="ai_model" value="<?= htmlspecialchars($aiModel ?? 'openrouter/auto') ?>">
+                    <?php
+                    $presetScannerModels = [
+                        'openrouter/auto',
+                        'google/gemini-2.0-flash-lite-preview-02-05:free',
+                        'google/gemini-2.0-flash:free',
+                        'qwen/qwen-2.5-vl-72b-instruct:free',
+                        'meta-llama/llama-3.2-11b-vision-instruct:free',
+                        'mistralai/pixtral-12b:free',
+                        'google/gemini-2.0-flash-001',
+                    ];
+                    $currentScannerModel = $aiModel ?? 'openrouter/auto';
+                    $isScannerCustom = !empty($currentScannerModel) && !in_array($currentScannerModel, $presetScannerModels);
+                    ?>
+                    <input type="hidden" id="ai_model" name="ai_model" value="<?= htmlspecialchars($currentScannerModel) ?>">
 
                     <div style="margin-bottom:10px;">
                         <div class="model-cards-grid">
-                            <div class="model-card <?= ($aiModel ?? '') === 'openrouter/auto' || !$aiModel ? 'selected' : '' ?>" onclick="selectModel('openrouter/auto', this)">
+                            <div class="model-card <?= ($currentScannerModel === 'openrouter/auto' || !$currentScannerModel) ? 'selected' : '' ?>" onclick="selectModel('openrouter/auto', this)">
                                 <div class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">A</div>
                                 <div class="model-card-info">
                                     <div class="model-card-name">Auto Model</div>
-                                    <div class="model-card-meta">Otomatis Terbaik</div>
+                                    <div class="model-card-meta">Otomatis Tercepat</div>
                                 </div>
                                 <span class="model-badge model-badge-pro">Default</span>
                             </div>
                             
-                            <div class="model-card <?= ($aiModel ?? '') === 'openrouter/free' ? 'selected' : '' ?>" onclick="selectModel('openrouter/free', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">F</div>
+                            <div class="model-card <?= $currentScannerModel === 'google/gemini-2.0-flash-lite-preview-02-05:free' ? 'selected' : '' ?>" onclick="selectModel('google/gemini-2.0-flash-lite-preview-02-05:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#34A853);">G</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Free Router</div>
-                                    <div class="model-card-meta">Model Gratis</div>
+                                    <div class="model-card-name">Gemini Flash Lite</div>
+                                    <div class="model-card-meta">Super Cepat & Kuota Tinggi</div>
                                 </div>
                                 <span class="model-badge model-badge-free">Gratis</span>
                             </div>
+
+                            <div class="model-card <?= $currentScannerModel === 'google/gemini-2.0-flash:free' ? 'selected' : '' ?>" onclick="selectModel('google/gemini-2.0-flash:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#EA4335);">G</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Gemini 2.0 Flash</div>
+                                    <div class="model-card-meta">Multimodal Cerdas</div>
+                                </div>
+                                <span class="model-badge model-badge-free">Gratis</span>
+                            </div>
+
+                            <div class="model-card <?= $currentScannerModel === 'qwen/qwen-2.5-vl-72b-instruct:free' ? 'selected' : '' ?>" onclick="selectModel('qwen/qwen-2.5-vl-72b-instruct:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#6C5CE7,#a29bfe);">Q</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Qwen 2.5 VL (OCR)</div>
+                                    <div class="model-card-meta">Tajam Baca Tabel & Faktur</div>
+                                </div>
+                                <span class="model-badge model-badge-free">Gratis</span>
+                            </div>
+
+                            <div class="model-card <?= $currentScannerModel === 'meta-llama/llama-3.2-11b-vision-instruct:free' ? 'selected' : '' ?>" onclick="selectModel('meta-llama/llama-3.2-11b-vision-instruct:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#0668E1,#00A3FF);">L</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Llama 3.2 Vision</div>
+                                    <div class="model-card-meta">Ringan & Cepat</div>
+                                </div>
+                                <span class="model-badge model-badge-free">Gratis</span>
+                            </div>
+
+                            <div class="model-card <?= $currentScannerModel === 'mistralai/pixtral-12b:free' ? 'selected' : '' ?>" onclick="selectModel('mistralai/pixtral-12b:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#FF7043,#FF5722);">P</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Pixtral 12B</div>
+                                    <div class="model-card-meta">Mistral Vision</div>
+                                </div>
+                                <span class="model-badge model-badge-free">Gratis</span>
+                            </div>
+
+                            <div class="model-card <?= $currentScannerModel === 'google/gemini-2.0-flash-001' ? 'selected' : '' ?>" onclick="selectModel('google/gemini-2.0-flash-001', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#1a73e8,#174ea6);">G</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Gemini Flash (Pro)</div>
+                                    <div class="model-card-meta">Berbayar (Saldo OpenRouter)</div>
+                                </div>
+                                <span class="model-badge model-badge-pro">Pro</span>
+                            </div>
+
+                            <div class="model-card <?= $isScannerCustom ? 'selected' : '' ?>" onclick="selectModel('custom', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#6c757d,#495057);"><i class="bi bi-sliders"></i></div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Custom Model</div>
+                                    <div class="model-card-meta">Ketik Model Sendiri</div>
+                                </div>
+                                <span class="model-badge" style="background:rgba(255,255,255,0.1); color:var(--text-muted);">Manual</span>
+                            </div>
+                        </div>
+
+                        <div id="ai_model_custom_wrap" style="margin-top:10px; display:<?= $isScannerCustom ? 'block' : 'none' ?>;">
+                            <label style="display:block; font-size:var(--font-size-xs); color:var(--text-secondary); margin-bottom:4px;">Nama Model OpenRouter Kustom</label>
+                            <input id="ai_model_custom" type="text" value="<?= $isScannerCustom ? htmlspecialchars($currentScannerModel) : '' ?>" style="width:100%; padding:9px 12px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="contoh: google/gemini-2.0-flash-exp:free" oninput="onCustomModelInput(this.value)" />
                         </div>
                     </div>
                 </div>
@@ -308,7 +380,24 @@
     function selectModel(modelId, cardEl) {
         document.querySelectorAll('#ai-settings-form .model-card').forEach(c => c.classList.remove('selected'));
         if (cardEl) cardEl.classList.add('selected');
-        document.getElementById('ai_model').value = modelId;
+        
+        const customWrap = document.getElementById('ai_model_custom_wrap');
+        const customInput = document.getElementById('ai_model_custom');
+        
+        if (modelId === 'custom') {
+            if (customWrap) customWrap.style.display = 'block';
+            if (customInput) {
+                customInput.focus();
+                document.getElementById('ai_model').value = customInput.value.trim() || 'openrouter/auto';
+            }
+        } else {
+            if (customWrap) customWrap.style.display = 'none';
+            document.getElementById('ai_model').value = modelId;
+        }
+    }
+
+    function onCustomModelInput(val) {
+        document.getElementById('ai_model').value = val.trim() || 'openrouter/auto';
     }
 
     function selectChatModel(modelId, cardEl) {

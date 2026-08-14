@@ -23,6 +23,7 @@ class PurchaseController extends Controller
     {
         $supplierModel = new SupplierModel();
         $salesRepModel = new SalesRepModel();
+        $settingModel  = new SettingModel();
 
         try {
             $salesReps = $salesRepModel->getAllWithSupplier();
@@ -37,11 +38,14 @@ class PurchaseController extends Controller
             $suppliers = [];
         }
 
+        $aiModel = $settingModel->get('ai_model', 'openrouter/auto');
+
         $this->view('purchases.create', [
             'title' => 'Input Barang Masuk',
             'activeNav' => 'purchase',
             'salesReps' => $salesReps,
             'suppliers' => $suppliers,
+            'aiModel' => $aiModel,
         ]);
     }
 
@@ -74,6 +78,9 @@ class PurchaseController extends Controller
 
         $supplierModel = new SupplierModel();
         $salesRepModel = new SalesRepModel();
+        $settingModel  = new SettingModel();
+
+        $aiModel = $settingModel->get('ai_model', 'openrouter/auto');
 
         $this->view('purchases.edit', [
             'title' => 'Edit Pembelian',
@@ -81,6 +88,7 @@ class PurchaseController extends Controller
             'purchase' => $purchase,
             'salesReps' => $salesRepModel->getAllWithSupplier($purchase['sales_rep_id']),
             'suppliers' => $supplierModel->all('name', 'ASC'),
+            'aiModel' => $aiModel,
         ]);
     }
 }

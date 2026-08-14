@@ -71,8 +71,20 @@
                             </label>
                         </div>
                         <div style="display:flex; gap:8px; margin-top:8px;">
+                            <?php
+                            $currentAiModel = $aiModel ?? 'openrouter/auto';
+                            if ($currentAiModel === 'openrouter/auto' || $currentAiModel === 'openrouter/free' || empty($currentAiModel)) {
+                                $aiButtonLabel = 'Scan dengan AI (Otomatis)';
+                            } else {
+                                $parts = explode('/', $currentAiModel);
+                                $modelShort = end($parts);
+                                $modelShort = explode(':', $modelShort)[0];
+                                $modelShort = ucwords(str_replace(['-', '_'], ' ', $modelShort));
+                                $aiButtonLabel = 'Scan dengan AI (' . htmlspecialchars($modelShort) . ')';
+                            }
+                            ?>
                             <button type="button" class="btn-primary-custom" id="btnScanAI" style="flex:1; padding:10px 4px; font-size:12px; display:none; height:44px;" onclick="scanInvoiceWithAI()">
-                                <i class="bi bi-robot"></i> Scan dengan AI (Otomatis)
+                                <i class="bi bi-robot"></i> <?= $aiButtonLabel ?>
                             </button>
                         </div>
                     </div>

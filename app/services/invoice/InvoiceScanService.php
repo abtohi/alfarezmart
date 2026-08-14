@@ -274,8 +274,8 @@ class InvoiceScanService
 
     private function getModelName(): string
     {
-        $model = $this->settingModel->get('ai_model', 'google/gemini-2.0-flash-001');
-        return $model ?: 'google/gemini-2.0-flash-001';
+        $model = trim($this->settingModel->get('ai_model', 'openrouter/auto'));
+        return $model ?: 'openrouter/auto';
     }
 
     private function callOpenRouter(
@@ -290,31 +290,39 @@ class InvoiceScanService
         $model  = $model  ?? $this->getModelName();
 
         if (empty($apiKey)) {
-            throw new \Exception('API Key AI Scanner belum diatur di Pengaturan Aplikasi.');
+            throw new \Exception('API Key AI Scanner belum diatur di Pengaturan Sistem & AI.');
         }
 
         set_time_limit(120);
 
-        $FREE_VISION_FALLBACKS = [
-            'google/gemini-2.0-flash-001',
-            'google/gemini-2.5-flash',
-            'google/gemma-4-31b-it:free',
-            'google/gemma-4-26b-a4b-it:free',
+        // List of proven fast, 100% free multimodal vision models on OpenRouter
+        $FREE_VISION_MODELS = [
+            'google/gemini-2.0-flash-lite-preview-02-05:free',
+            'google/gemini-2.0-flash:free',
+            'google/gemini-2.0-flash-exp:free',
+            'qwen/qwen-2.5-vl-72b-instruct:free',
+            'meta-llama/llama-3.2-11b-vision-instruct:free',
+            'mistralai/pixtral-12b:free',
+            'openrouter/free',
         ];
 
-        $modelsToTry = [$model];
-        foreach ($FREE_VISION_FALLBACKS as $fb) {
-            if ($fb !== $model && !in_array($fb, $modelsToTry)) {
-                $modelsToTry[] = $fb;
-            }
+        // Determine list of models to try in order
+        if (empty($model) || in_array($model, ['openrouter/auto', 'auto', 'openrouter/free'])) {
+            // Default "Auto": Start with the fastest free vision model and cascade down if needed
+            $modelsToTry = $FREE_VISION_MODELS;
+        } else {
+            // User selected a specific model from UI (presets or custom) -> try that model first!
+            $modelsToTry = array_unique(array_merge([$model], $FREE_VISION_MODELS));
         }
 
         $imageBlock = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
         $lastError  = null;
 
         foreach ($modelsToTry as $tryModel) {
+            error_log("SCAN_AI_TRACE: Attempting OpenRouter model: {$tryModel}");
+
             $payload = [
-                'model'   => $tryModel,
+                'model'    => $tryModel,
                 'messages' => [
                     ['role' => 'system', 'content' => $systemPrompt],
                     ['role' => 'user',   'content' => [
@@ -323,10 +331,11 @@ class InvoiceScanService
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => 8000,
+                'max_tokens'  => 4000,
             ];
 
-            if (in_array($tryModel, ['openai/gpt-4o', 'openai/gpt-4o-mini', 'google/gemini-2.0-flash-001', 'google/gemini-2.5-flash'])) {
+            // Response format json only for OpenAI / Gemini models that strictly support it
+            if (strpos($tryModel, 'gpt-4o') !== false || strpos($tryModel, 'gemini-2.0-flash-001') !== false) {
                 $payload['response_format'] = ['type' => 'json_object'];
             }
 
@@ -338,10 +347,10 @@ class InvoiceScanService
                 'Authorization: Bearer ' . $apiKey,
                 'Content-Type: application/json',
                 'HTTP-Referer: ' . (defined('BASE_URL') ? BASE_URL : 'https://alfarezmart.com/'),
-                'X-Title: AlfarezMart'
+                'X-Title: AlfarezMart Invoice Scanner'
             ]);
 
-            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 35);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);
@@ -353,34 +362,71 @@ class InvoiceScanService
             unset($ch);
 
             if ($err) {
-                $lastError = "Koneksi ke OpenRouter gagal: " . $err;
+                error_log("SCAN_AI_TRACE: Model {$tryModel} curl error: {$err}");
+                $lastError = "Koneksi ke OpenRouter gagal ({$tryModel}): " . $err;
                 continue;
             }
 
             if ($httpCode === 429) {
-                $lastError = "Model {$tryModel} terkena rate limit. Mencoba model berikutnya...";
+                error_log("SCAN_AI_TRACE: Model {$tryModel} hit rate limit 429, trying next model...");
+                $lastError = "Model {$tryModel} terkena rate limit (429).";
                 continue;
             }
 
             if ($httpCode !== 200) {
                 $errData = json_decode($response, true);
                 $msg = $errData['error']['message'] ?? "HTTP $httpCode";
-                $lastError = "OpenRouter Error ($httpCode): $msg";
-                if ($httpCode >= 500 || in_array($httpCode, [400, 402, 404])) continue;
+                error_log("SCAN_AI_TRACE: Model {$tryModel} error ($httpCode): $msg");
+                $lastError = "OpenRouter ({$tryModel}): $msg";
+                if ($httpCode >= 500 || in_array($httpCode, [400, 402, 404, 503])) {
+                    continue;
+                }
                 break;
             }
 
             $resData = json_decode($response, true);
             $content = $resData['choices'][0]['message']['content'] ?? '';
-            $content = preg_replace('/```json\s*/', '', $content);
-            $content = preg_replace('/```\s*/', '',   $content);
-            $decoded = json_decode(trim($content), true);
+
+            if (empty(trim($content))) {
+                error_log("SCAN_AI_TRACE: Model {$tryModel} returned empty content.");
+                continue;
+            }
+
+            // Robust JSON extraction
+            $decoded = null;
+            $cleanContent = trim($content);
+            if (preg_match('/```(?:json)?\s*([\s\S]*?)\s*```/', $cleanContent, $m)) {
+                $decoded = json_decode(trim($m[1]), true);
+            }
+            if (!is_array($decoded)) {
+                $decoded = json_decode($cleanContent, true);
+            }
+            if (!is_array($decoded)) {
+                $firstBracket = strpos($cleanContent, '[');
+                $lastBracket = strrpos($cleanContent, ']');
+                if ($firstBracket !== false && $lastBracket !== false && $lastBracket > $firstBracket) {
+                    $slice = substr($cleanContent, $firstBracket, $lastBracket - $firstBracket + 1);
+                    $decoded = json_decode($slice, true);
+                }
+            }
+            if (!is_array($decoded)) {
+                $firstBrace = strpos($cleanContent, '{');
+                $lastBrace = strrpos($cleanContent, '}');
+                if ($firstBrace !== false && $lastBrace !== false && $lastBrace > $firstBrace) {
+                    $slice = substr($cleanContent, $firstBrace, $lastBrace - $firstBrace + 1);
+                    $decoded = json_decode($slice, true);
+                }
+            }
+
             if (is_array($decoded)) {
+                error_log("SCAN_AI_TRACE: Successfully parsed response from model {$tryModel}");
                 return $decoded;
+            } else {
+                error_log("SCAN_AI_TRACE: Model {$tryModel} returned non-JSON content: " . substr($content, 0, 200));
             }
         }
 
-        throw new \Exception($lastError ?? 'AI gagal memproses gambar setelah mencoba model yang tersedia.');
+        throw new \Exception($lastError ?: 'AI gagal membaca gambar invoice setelah mencoba model yang tersedia. Pastikan gambar jelas dan coba kembali.');
     }
 
     private function formatForFrontend(array $items): array
