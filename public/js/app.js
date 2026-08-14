@@ -256,8 +256,8 @@ function initSearch() {
                         return;
                     }
 
-                    // Fetch server results with fast abort controller (handles new items)
-                    const serverData = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(currentQ)}`, { timeout: isWeak ? 400 : 1000 });
+                    // Fetch server results (handles new items)
+                    const serverData = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(currentQ)}`, { timeout: 6000, silent: true });
                     if (input.value.trim() !== currentQ) return; // stale
                     if (input.value.trim().length < 2) { results.innerHTML = ''; return; }
                     renderProductSearch(serverData, results, currentQ);
@@ -269,7 +269,7 @@ function initSearch() {
                             if (input.value.trim().length >= 2) renderProductSearch(fallback, results, q);
                         }
                     } catch (e2) {
-                        if (input.value.trim() === q) results.innerHTML = '<div class="empty-state" style="padding:24px"><p>Gagal mencari produk</p></div>';
+                        if (input.value.trim() === q) results.innerHTML = '<div class="empty-state" style="padding:24px"><p>Produk tidak ditemukan</p></div>';
                     }
                 }
             }

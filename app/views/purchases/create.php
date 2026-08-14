@@ -1096,9 +1096,12 @@ async function performProductSearch() {
         // Render local results immediately (no waiting for network!)
         if (thisSearchVersion === _searchVersion && Array.isArray(data) && data.length > 0) {
             renderSearchResults(data);
+        } else if (navigator.onLine && suggestionsDiv) {
+            suggestionsDiv.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;"><div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>Mencari produk...</div>';
         }
 
         // ========== STEP 2: BACKGROUND API — Supplement with server results ==========
+        let apiData = null;
         if (navigator.onLine) {
             try {
                 let url;
@@ -1109,7 +1112,7 @@ async function performProductSearch() {
                 } else {
                     url = `${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`;
                 }
-                const apiData = await api(url);
+                apiData = await api(url, { silent: true });
 
                 // Only update if this is still the latest search
                 if (thisSearchVersion === _searchVersion && Array.isArray(apiData) && apiData.length > 0) {
@@ -1117,37 +1120,35 @@ async function performProductSearch() {
                     const localIds = new Set((data || []).map(p => p.id));
                     const newFromApi = apiData.filter(p => !localIds.has(p.id));
 
-                    if (newFromApi.length > 0) {
+                    if (newFromApi.length > 0 && data && data.length > 0) {
                         // Combine: local results first (better scored), then new API results
-                        const merged = [...(data || []), ...newFromApi].slice(0, 30);
+                        const merged = [...data, ...newFromApi].slice(0, 30);
                         renderSearchResults(merged);
-                    } else if (!data || data.length === 0) {
-                        // No local results but API has results
+                    } else {
                         renderSearchResults(apiData);
                     }
+                    return;
                 }
             } catch (e) {
-                // API failed — local results already displayed, so this is fine
                 console.log('API search supplement failed (offline results shown):', e.message);
             }
         }
 
         // ========== STEP 3: Show empty state if nothing found ==========
-        if (thisSearchVersion === _searchVersion && (!data || data.length === 0)) {
-            // Check if we already rendered from API above
-            if (!suggestionsDiv.querySelector('.search-result-item')) {
-                suggestionsDiv.innerHTML = `
-                    <div style="padding:12px;text-align:center;">
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Produk tidak ditemukan</div>
-                        <a href="${BASE_URL}products/create" class="btn-outline-custom" style="padding:6px 16px;font-size:12px;text-decoration:none;">
-                            <i class="bi bi-plus"></i> Tambah Produk Baru
-                        </a>
-                    </div>`;
-            }
+        if (thisSearchVersion === _searchVersion && (!data || data.length === 0) && (!apiData || apiData.length === 0)) {
+            suggestionsDiv.innerHTML = `
+                <div style="padding:12px;text-align:center;">
+                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Produk tidak ditemukan</div>
+                    <a href="${BASE_URL}products/create" class="btn-outline-custom" style="padding:6px 16px;font-size:12px;text-decoration:none;">
+                        <i class="bi bi-plus"></i> Tambah Produk Baru
+                    </a>
+                </div>`;
         }
     } catch (e) {
         console.error("Product Search Error:", e);
-        suggestionsDiv.innerHTML = `<div style="padding:12px;text-align:center;color:var(--danger);font-size:12px;">Pencarian gagal: ${e.message}</div>`;
+        if (thisSearchVersion === _searchVersion) {
+            suggestionsDiv.innerHTML = `<div style="padding:12px;text-align:center;color:var(--danger);font-size:12px;">Pencarian gagal: ${e.message}</div>`;
+        }
     }
 }
 

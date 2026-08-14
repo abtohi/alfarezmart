@@ -142,13 +142,13 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
         config.headers['X-CSRF-Token'] = csrfToken;
     }
 
-    // Set appropriate timeout: 60s for heavy endpoints (sync/scan-ai/import/export), 15s default
+    // Set appropriate timeout: 60s for heavy endpoints (sync/scan-ai/import/export), 8s for weak signal, 15s default
     const isHeavyEndpoint = endpoint.includes('/sync') || endpoint.includes('/scan-ai') || endpoint.includes('/export') || endpoint.includes('/import');
     let defaultTimeout = isHeavyEndpoint ? 60000 : 15000;
     if (typeof window.getSignalState === 'function' && window.getSignalState() === 'weak' && !isHeavyEndpoint) {
-        defaultTimeout = 3000;
+        defaultTimeout = 8000;
     }
-    const timeoutMs = config.timeout || defaultTimeout;
+    const timeoutMs = Math.max(config.timeout || defaultTimeout, 5000);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     if (!config.signal) config.signal = controller.signal;

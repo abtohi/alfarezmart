@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=15.71'; ?>
+    <?php $v = '?v=15.72'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -590,7 +590,7 @@ if ($userLevel === 'staff') {
 
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '15.71'; // Update this to force client reloads
+    const APP_VERSION = '15.72'; // Update this to force client reloads
     
     // Self-healing cache buster
     if (localStorage.getItem('app_version') !== APP_VERSION) {
@@ -611,7 +611,7 @@ if ($userLevel === 'staff') {
     }
 
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('<?= BASE_URL ?>sw.js')
+        navigator.serviceWorker.register('<?= BASE_URL ?>sw.js?v=' + APP_VERSION, { updateViaCache: 'none' })
             .then(reg => {
                 console.log('SW registered:', reg.scope);
                 // Force the new SW to activate immediately
