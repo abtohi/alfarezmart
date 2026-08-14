@@ -375,49 +375,31 @@ async function scanInvoiceWithAI() {
         btn.disabled = true;
         btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Memproses AI...';
         
-        // Auto-optimize image resolution to prevent large payload timeouts
-        const optimizedImage = await compressImageForAI(invoicePhotoBase64, 1800, 0.85);
+        // Auto-optimize image resolution safely
+        let imageToSend = invoicePhotoBase64;
+        try {
+            imageToSend = await compressImageForAI(invoicePhotoBase64, 1800, 0.85);
+        } catch(ce) {
+            console.warn('Image pre-compression bypassed:', ce);
+        }
 
-        const data = {
+        const payload = {
             csrf_token: csrfVal,
-            image_base64: optimizedImage,
+            image_base64: imageToSend,
             supplier_id: currentSupplierId || null
         };
         
-        // Use custom fetch with 2-minute timeout instead of api() helper
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 120000); // 2 min
-        
-        let result;
-        try {
-            const response = await fetch(BASE_URL + 'api/ai/scan-invoice', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfVal
-                },
-                body: JSON.stringify(data),
-                signal: controller.signal
-            });
-            clearTimeout(timeout);
-            
-            const text = await response.text();
-            if (!text || text.trim().length === 0) {
-                throw new Error('Server mengembalikan respons kosong. Kemungkinan timeout server.');
-            }
-            try {
-                result = JSON.parse(text);
-            } catch(pe) {
-                console.error('AI scan response not JSON:', text.substring(0, 500));
-                throw new Error('Respons AI tidak valid. Coba lagi atau gunakan gambar lebih kecil.');
-            }
-            if (result.error) throw new Error(result.error);
-        } catch(fetchErr) {
-            clearTimeout(timeout);
-            if (fetchErr.name === 'AbortError') {
-                throw new Error('Request timeout (2 menit). Coba gunakan gambar dengan resolusi lebih rendah.');
-            }
-            throw fetchErr;
+        const result = await api(`${BASE_URL}api/ai/scan-invoice`, {
+            method: 'POST',
+            timeout: 120000,
+            body: JSON.stringify(payload)
+        });
+
+        if (!result) {
+            throw new Error('Tidak ada respons dari server.');
+        }
+        if (result.error) {
+            throw new Error(result.error);
         }
         
         if (result.success && result.data && result.data.length > 0) {
