@@ -549,6 +549,31 @@ function loadReferenceProduct(product) {
         variantInput.focus();
     }
 
+    // Auto-fill kode barang supplier dari referensi jika masih blank/kosong
+    const supCodeInput = document.getElementById('supplierProductCode');
+    if (supCodeInput && (!supCodeInput.value || supCodeInput.value.trim() === '')) {
+        if (product.supplier_product_code) {
+            supCodeInput.value = product.supplier_product_code;
+        }
+    }
+
+    // Auto-fill nama barang invoice dari referensi jika masih blank/kosong
+    const currentInvNames = typeof collectInvoiceNames === 'function' ? collectInvoiceNames() : '';
+    if (!currentInvNames || currentInvNames.trim() === '') {
+        const refInvName = product.supplier_invoice_name || product.invoice_name || product.short_label || product.full_name || '';
+        if (refInvName && typeof initInvoiceNameList === 'function') {
+            initInvoiceNameList(refInvName);
+        }
+    }
+
+    // Buka panel info supplier otomatis jika ada kode/nama invoice yang terisi
+    const supPanel = document.getElementById('supplierInfoPanel');
+    const supCodeVal = document.getElementById('supplierProductCode')?.value?.trim();
+    const supNameVal = typeof collectInvoiceNames === 'function' ? collectInvoiceNames() : '';
+    if (supPanel && (supCodeVal || supNameVal) && supPanel.style.display === 'none') {
+        if (typeof toggleSupplierInfo === 'function') toggleSupplierInfo();
+    }
+
     rebuildPackagingsFromReference(product.packagings || []);
     applyReferenceLock();
     updateNamePreview();
@@ -586,16 +611,28 @@ function rebuildPackagingsFromReference(packagings) {
     container.innerHTML = '';
     levelCount = 0;
     const sorted = [...packagings].sort((a, b) => a.level - b.level);
-    sorted.forEach(pk => addPackagingLevel({
-        unit_id: pk.unit_id,
-        unit_name: pk.unit_name,
-        contained_qty: pk.contained_qty,
-        buy_price: pk.buy_price,
-        sell_price_retail: pk.sell_price_retail,
-        sell_price_wholesale: pk.sell_price_wholesale,
-        barcode: '',
-        qty_prices: pk.qty_prices ? [...pk.qty_prices] : [] // Copy qty_prices from reference, not empty
-    }));
+    sorted.forEach(pk => {
+        let uName = pk.unit_name || pk.unit_abbr || '';
+        let uId = pk.unit_id;
+        if (!uName && uId && typeof unitsData !== 'undefined') {
+            const foundU = unitsData.find(u => String(u.value) === String(uId));
+            if (foundU) uName = foundU.label;
+        } else if (!uId && uName && typeof unitsData !== 'undefined') {
+            const foundU = unitsData.find(u => u.label.toLowerCase() === uName.toLowerCase());
+            if (foundU) uId = foundU.value;
+        }
+
+        addPackagingLevel({
+            unit_id: uId,
+            unit_name: uName,
+            contained_qty: pk.contained_qty,
+            buy_price: pk.buy_price,
+            sell_price_retail: pk.sell_price_retail,
+            sell_price_wholesale: pk.sell_price_wholesale,
+            barcode: '',
+            qty_prices: pk.qty_prices ? [...pk.qty_prices] : [] // Copy qty_prices from reference, not empty
+        });
+    });
     if (sorted.length === 0) addPackagingLevel();
     updateBaseQtyInfo();
 }
@@ -888,7 +925,9 @@ function addPackagingLevel(prefill = null) {
     unitContainer._searchbox = unitSB;
 
     if (prefill) {
-        if (prefill.unit_id) unitSB.select(String(prefill.unit_id), prefill.unit_name || '');
+        let uId = prefill.unit_id;
+        let uName = prefill.unit_name || prefill.unit_abbr || '';
+        if (uId || uName) unitSB.select(uId ? String(uId) : '', uName);
         const cqtyEl = div.querySelector('input[name="contained_qty[]"]');
         if (cqtyEl && prefill.contained_qty) cqtyEl.value = prefill.contained_qty;
         const buyEl = div.querySelector('.buy-price');

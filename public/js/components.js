@@ -625,8 +625,19 @@ class SearchBox {
     }
 
     select(value, label) {
-        this.selectedValue = String(value);
-        this.selectedLabel = label;
+        this.selectedValue = (value !== null && value !== undefined) ? String(value) : '';
+        if (!label && this.selectedValue) {
+            const found = this.options.find(o => String(o.value) === this.selectedValue);
+            if (found) label = found.label;
+        }
+        if ((!this.selectedValue || this.selectedValue === '') && label) {
+            const found = this.options.find(o => o.label.toLowerCase() === String(label).toLowerCase());
+            if (found) {
+                this.selectedValue = String(found.value);
+                label = found.label;
+            }
+        }
+        this.selectedLabel = label || '';
         this._hiddenInput.value = this.selectedValue;
         this._updateDisplay();
         this.close();
@@ -634,8 +645,8 @@ class SearchBox {
         // Trigger change event on hidden input
         this._hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-        if (this.config.onSelect) this.config.onSelect(value, label);
-        if (this.config.onChange) this.config.onChange(value, label);
+        if (this.config.onSelect) this.config.onSelect(this.selectedValue, this.selectedLabel);
+        if (this.config.onChange) this.config.onChange(this.selectedValue, this.selectedLabel);
     }
 
     /** Add a new option and optionally select it */
