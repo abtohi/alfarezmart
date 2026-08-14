@@ -31,7 +31,7 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
             <input type="hidden" name="max_price" value="<?= htmlspecialchars($maxPrice ?? '') ?>">
             <div class="search-input-wrapper">
                 <i class="bi bi-search"></i>
-                <input type="text" name="q" id="productSearchInput" class="no-track" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Cari produk..." autocomplete="off" oninput="filterProductsClientSide(this.value)">
+                <input type="text" name="q" id="productSearchInput" class="no-track" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Cari produk..." autocomplete="off">
                 <?php if (!empty($search)): ?>
                     <a href="<?= $clearSearchUrl ?>" style="color:var(--text-muted);text-decoration:none;flex-shrink:0;"><i class="bi bi-x-lg"></i></a>
                 <?php endif; ?>
@@ -671,15 +671,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         timer = setTimeout(async () => {
             if (input.value.trim() !== q) return;
-            const isWeak = (typeof window.getSignalState === 'function' && window.getSignalState() === 'weak');
 
+            let fetchedItems = null;
             if (navigator.onLine) {
                 try {
                     currentAbortController = new AbortController();
-                    const timeoutMs = isWeak ? 400 : 900;
                     const timeoutId = setTimeout(() => {
                         if (currentAbortController) currentAbortController.abort();
-                    }, timeoutMs);
+                    }, 4000);
 
                     const res = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`, {
                         signal: currentAbortController.signal
@@ -689,6 +688,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (res.ok && input.value.trim() === q) {
                         const items = await res.json();
                         if (Array.isArray(items)) {
+                            fetchedItems = items;
                             renderResults(items, q);
                             return;
                         }
@@ -699,13 +699,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Fallback to offline DB if server fetch failed or timed out
-            if (input.value.trim() === q && !localFound && typeof OfflineDB !== 'undefined') {
+            if (input.value.trim() === q && !fetchedItems && typeof OfflineDB !== 'undefined') {
                 try {
                     const fallback = await OfflineDB.searchProducts(q);
                     if (input.value.trim() === q) renderResults(fallback, q);
                 } catch(e) {}
             }
-        }, 150);
+        }, 200);
     });
 
     input.addEventListener('keypress', e => {

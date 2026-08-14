@@ -2,8 +2,8 @@
  * AlfarezMart PWA - Service Worker
  * Cache Strategy: Cache First for assets & images, Network First with 600ms Fast Timeout for API & Navigation
  */
-const CACHE_NAME = 'alfarezmart-cache-v20.0';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v20.0';
+const CACHE_NAME = 'alfarezmart-cache-v21.0';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v21.0';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -85,53 +85,25 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // ── 1. API Requests: Network First with 600ms Fast Timeout for Weak Signal ──
+    // ── 1. API Requests: Network First (Direct fetch, exact cache fallback on network fail) ──
     if (url.pathname.includes('/api/')) {
         event.respondWith(
-            new Promise((resolve) => {
-                let isResolved = false;
-
-                // 300ms Fast Timeout for weak signal fallback to cache
-                const timeoutId = setTimeout(() => {
-                    if (!isResolved) {
-                        caches.match(event.request, { ignoreSearch: true }).then(cached => {
-                            if (cached && !isResolved) {
-                                isResolved = true;
-                                resolve(cached);
-                            }
-                        });
+            fetch(event.request, { cache: 'no-cache' })
+                .then(response => {
+                    if (response && response.ok && event.request.method === 'GET') {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
                     }
-                }, 300);
-
-                fetch(event.request, { cache: 'no-cache' })
-                    .then(response => {
-                        clearTimeout(timeoutId);
-                        if (response.ok) {
-                            const clone = response.clone();
-                            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-                        }
-                        if (!isResolved) {
-                            isResolved = true;
-                            resolve(response);
-                        }
-                    })
-                    .catch(() => {
-                        clearTimeout(timeoutId);
-                        if (!isResolved) {
-                            caches.match(event.request, { ignoreSearch: true }).then(cached => {
-                                isResolved = true;
-                                if (cached) {
-                                    resolve(cached);
-                                } else {
-                                    resolve(new Response(
-                                        JSON.stringify({ offline: true, error: 'Offline', data: [] }),
-                                        { status: 503, headers: { 'Content-Type': 'application/json' } }
-                                    ));
-                                }
-                            });
-                        }
-                    });
-            })
+                    return response;
+                })
+                .catch(async () => {
+                    const cached = await caches.match(event.request);
+                    if (cached) return cached;
+                    return new Response(
+                        JSON.stringify({ offline: true, error: 'Offline', data: [] }),
+                        { status: 503, headers: { 'Content-Type': 'application/json' } }
+                    );
+                })
         );
         return;
     }

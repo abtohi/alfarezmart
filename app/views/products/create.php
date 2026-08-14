@@ -443,29 +443,40 @@ async function openMasterModal(type) {
 // ===== Reference Product (Multivarian) =====
 async function searchReferenceProducts(q) {
     const box = document.getElementById('referenceResults');
+    if (!box) return;
     try {
         let items = [];
-        if (typeof OfflineDB !== 'undefined') {
-            items = await OfflineDB.searchProducts(q);
+        if (navigator.onLine) {
+            try {
+                const res = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data)) items = data;
+                }
+            } catch(e) {}
         }
-        if ((!items || items.length === 0) && navigator.onLine) {
-            const res = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
-            items = await res.json();
+        if ((!items || items.length === 0) && typeof OfflineDB !== 'undefined' && OfflineDB.searchProducts) {
+            try {
+                items = await OfflineDB.searchProducts(q);
+            } catch(e) {}
         }
-        if (!items.length) {
-            box.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--text-muted);">Tidak ditemukan</div>';
+        if (!items || !items.length) {
+            box.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--text-muted);text-align:center;">Tidak ditemukan</div>';
             box.style.display = 'block';
             return;
         }
         box.innerHTML = items.map(p => `
-            <button type="button" onclick="selectReferenceProduct(${p.id})" style="display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text-primary);font-size:12px;cursor:pointer;border-bottom:1px solid var(--border-color);">
+            <button type="button" onclick="selectReferenceProduct(${p.id})" style="display:block;width:100%;text-align:left;padding:10px 12px;border:none;background:transparent;color:var(--text-primary);font-size:12px;cursor:pointer;border-bottom:1px solid var(--border-color);" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
                 <strong>${escapeHtml(p.short_label || p.full_name)}</strong>
                 ${p.variant ? `<span style="color:var(--text-muted);"> · ${escapeHtml(p.variant)}</span>` : ''}
+                ${p.brand_name ? `<span style="color:var(--text-muted);font-size:11px;"> (${escapeHtml(p.brand_name)})</span>` : ''}
             </button>
         `).join('');
         box.style.display = 'block';
     } catch (e) {
-        showToast('Gagal mencari produk', 'error');
+        console.error('Search reference error:', e);
+        box.innerHTML = '<div style="padding:12px;font-size:12px;color:var(--danger);text-align:center;">Gagal mencari produk</div>';
+        box.style.display = 'block';
     }
 }
 
