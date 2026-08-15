@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=15.91'; ?>
+    <?php $v = '?v=15.92'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -395,8 +395,8 @@ if ($userLevel === 'staff') {
                     <i class="bi bi-arrow-repeat" id="syncIcon"></i>
                     <span class="notif-badge" id="offlineSyncBadge" style="display:none">0</span>
                 </button>
-                <button class="header-btn" id="btnSearch" aria-label="Cari">
-                    <i class="bi bi-search"></i>
+                <button class="header-btn" id="btnTurboClean" aria-label="Bersihkan Cache &amp; Turbo" onclick="window.AppCleaner && window.AppCleaner.cleanAll()" title="Bersihkan Cache &amp; Percepat Aplikasi" style="color:#eab308; background:rgba(234,179,8,0.12); border-radius:8px;">
+                    <i class="bi bi-lightning-charge-fill"></i>
                 </button>
                 <button class="header-btn" id="btnNotif" aria-label="Notifikasi">
                     <i class="bi bi-bell"></i>
@@ -594,7 +594,7 @@ if ($userLevel === 'staff') {
 
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '15.91'; // Update this to force client reloads
+    const APP_VERSION = '15.92'; // Update this to force client reloads
     
     // Self-healing cache buster
     if (localStorage.getItem('app_version') !== APP_VERSION) {
