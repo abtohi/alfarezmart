@@ -170,6 +170,8 @@ var TYPE_CONFIG = {
     'console_error':  { label: 'Console ❌',     cls: 'log-type-console_error', icon: 'bi-terminal-fill',            color: '#f59e0b' },
     'console_warn':   { label: 'Console ⚠',      cls: 'log-type-console_warn',  icon: 'bi-terminal',                 color: '#818cf8' },
     'network':        { label: 'Network',         cls: 'log-type-network',       icon: 'bi-wifi-off',                 color: '#3b82f6' },
+    'sw_error':       { label: 'SW / Cache ⚠',   cls: 'log-type-console_warn',  icon: 'bi-gear-wide-connected',      color: '#f59e0b' },
+    'cleaner_error':  { label: 'Cleaner ❌',     cls: 'log-type-error',         icon: 'bi-lightning-charge',         color: '#ef4444' },
     'ai_scan':        { label: 'AI Scan ❌',      cls: 'log-type-ai-error',      icon: 'bi-camera-fill',              color: '#ec4899' },
     'ai_scan_error':  { label: 'AI Scan Error',   cls: 'log-type-ai-error',      icon: 'bi-camera-fill',              color: '#ec4899' },
     'ai_scan_empty':  { label: 'AI Scan 0 Item',  cls: 'log-type-ai-empty',      icon: 'bi-camera',                   color: '#a855f7' },

@@ -995,20 +995,33 @@ window.AppCleaner = {
                         }
                         setStep('step-ram', 'done');
 
-                        // Step 4: Service Worker update
+                        // Step 4: Service Worker update (Fast Race: max 800ms to prevent hanging on weak signal)
                         setStep('step-sw', 'running', 'Mendaftarkan service worker segar...');
-                        await new Promise(r => setTimeout(r, 200));
                         if ('serviceWorker' in navigator) {
-                            const regs = await navigator.serviceWorker.getRegistrations();
-                            for (let reg of regs) {
-                                await reg.update().catch(() => {});
+                            try {
+                                const regs = await navigator.serviceWorker.getRegistrations();
+                                const updatePromises = regs.map(reg => {
+                                    return Promise.race([
+                                        reg.update().catch(err => {
+                                            if (window.ErrorLogger) {
+                                                window.ErrorLogger.log('sw_error', 'Gagal memperbarui service worker: ' + (err.message || err), { error: String(err) });
+                                            }
+                                        }),
+                                        new Promise(resolve => setTimeout(resolve, 800)) // 800ms timeout per registration
+                                    ]);
+                                });
+                                await Promise.all(updatePromises);
+                            } catch (swErr) {
+                                if (window.ErrorLogger) {
+                                    window.ErrorLogger.log('sw_error', 'Service Worker update error: ' + (swErr.message || swErr), { stack: swErr.stack || null });
+                                }
                             }
                         }
                         setStep('step-sw', 'done', '✅ Semua sampah berhasil dibersihkan! Memuat ulang...');
 
                         showToast('⚡ Aplikasi berhasil dioptimasi & bebas sampah!', 'success', 3000);
 
-                        await new Promise(r => setTimeout(r, 800));
+                        await new Promise(r => setTimeout(r, 400));
 
                         if (autoReload) {
                             window.location.reload(true);
@@ -1017,7 +1030,16 @@ window.AppCleaner = {
                         return true;
                     } catch (err) {
                         console.error('AppCleaner error:', err);
-                        showToast('Gagal membersihkan sebagian cache: ' + err.message, 'error');
+                        if (window.ErrorLogger) {
+                            window.ErrorLogger.log('cleaner_error', 'Pembersih Cache Gagal: ' + (err.message || err), {
+                                errorType: err.name || 'Error',
+                                stack: err.stack ? err.stack.substring(0, 400) : null
+                            });
+                        }
+                        showToast('Sebagian cache dibersihkan: ' + err.message, 'warning');
+                        if (autoReload) {
+                            setTimeout(() => window.location.reload(true), 600);
+                        }
                         resolve(false);
                         return true;
                     }

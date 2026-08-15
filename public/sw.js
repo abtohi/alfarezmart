@@ -1,23 +1,11 @@
 /**
  * AlfarezMart PWA - Service Worker (public/sw.js)
  */
-const CACHE_NAME = 'alfarezmart-cache-v19.4';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v19.2';
+const CACHE_NAME = 'alfarezmart-cache-v19.5';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v19.5';
 const BASE_URL = self.location.pathname.replace('/public/sw.js', '/');
-const STATIC_ASSETS = [
+const CORE_ASSETS = [
     BASE_URL,
-    BASE_URL + 'sales',
-    BASE_URL + 'sales/pos',
-    BASE_URL + 'scanner',
-    BASE_URL + 'products',
-    BASE_URL + 'products/create',
-    BASE_URL + 'suppliers',
-    BASE_URL + 'purchases',
-    BASE_URL + 'purchases/create',
-    BASE_URL + 'debts',
-    BASE_URL + 'finance',
-    BASE_URL + 'reports',
-    BASE_URL + 'settings',
     BASE_URL + 'public/css/variables.css',
     BASE_URL + 'public/css/app.css',
     BASE_URL + 'public/css/components.css',
@@ -28,12 +16,11 @@ const STATIC_ASSETS = [
     BASE_URL + 'public/js/app.js',
     BASE_URL + 'public/js/desktop.js',
     BASE_URL + 'public/js/chat.js',
-    BASE_URL + 'chat',
+    BASE_URL + 'public/js/error-logger.js',
+    BASE_URL + 'public/js/instant-nav.js',
     BASE_URL + 'manifest.json',
+    BASE_URL + 'public/images/Icon.png',
     BASE_URL + 'public/images/mobile_icon.png',
-    BASE_URL + 'public/images/mobile_icon_192.png',
-    BASE_URL + 'public/images/mobile_icon_512.png',
-    BASE_URL + 'public/images/splash_logo.png',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
@@ -43,15 +30,14 @@ self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
             return Promise.all(
-                STATIC_ASSETS.map(url => {
+                CORE_ASSETS.map(url => {
                     return fetch(url, { cache: 'no-cache', credentials: 'same-origin' })
                         .then(response => {
-                            if (!response.ok && response.type !== 'opaque') {
-                                throw new Error('Request failed for ' + url);
+                            if (response.ok || response.type === 'opaque') {
+                                return cache.put(url, response).catch(() => {});
                             }
-                            return cache.put(url, response).catch(() => {});
                         })
-                        .catch(err => console.log('Failed to cache:', url, err));
+                        .catch(() => {});
                 })
             );
         })
