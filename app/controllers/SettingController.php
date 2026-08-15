@@ -67,6 +67,14 @@ class SettingController extends Controller
         ]);
     }
 
+    public function errorLogs()
+    {
+        $this->view('settings.error_logs', [
+            'title'     => 'Error Log Catcher',
+            'activeNav' => 'home',
+        ]);
+    }
+
     public function setupDatabase()
     {
         if (defined('APP_ENV') && APP_ENV !== 'development') {

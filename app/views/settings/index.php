@@ -62,6 +62,21 @@
         <?php endif; ?>
     </ul>
 
+    <!-- SISTEM & DUKUNGAN -->
+    <div class="section-title" style="margin-top:24px;">Sistem &amp; Dukungan</div>
+    <ul class="menu-list">
+        <a href="<?= BASE_URL ?>settings/error-logs" class="menu-item">
+            <div class="menu-icon" style="background:rgba(239,68,68,0.12);color:var(--danger);">
+                <i class="bi bi-bug"></i>
+            </div>
+            <div class="menu-text">
+                <h6>Error Log Catcher</h6>
+                <small>Lihat semua error yang terjadi di aplikasi</small>
+            </div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
+    </ul>
+
     <!-- Fitur Aktif -->
     <div class="section-title" style="margin-top:24px;">Fitur Tersedia</div>
     <ul class="menu-list">

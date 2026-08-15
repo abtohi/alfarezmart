@@ -29,6 +29,9 @@
     document.addEventListener('mouseenter', handleIntent, { capture: true, passive: true });
 
     function handleIntent(event) {
+        // Guard: event.target may be a text node or non-Element (e.g. document)
+        // during mouseenter with capture:true, which doesn't have .closest()
+        if (!(event.target instanceof Element)) return;
         const link = event.target.closest('a[href]');
         if (!link) return;
 

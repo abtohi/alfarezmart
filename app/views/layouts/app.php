@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=15.78'; ?>
+    <?php $v = '?v=15.79'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -107,6 +107,9 @@ if ($userLevel === 'staff') {
 <body>
 <?php $__globalCsrf = (new Security())->getCSRFToken(); ?>
 <input type="hidden" id="csrfToken" value="<?= $__globalCsrf ?>">
+
+    <!-- ⚡ Error Log Catcher — dimuat paling awal agar menangkap semua error -->
+    <script src="<?= BASE_URL ?>public/js/error-logger.js<?= $v ?>"></script>
 
     <!-- Ultra-Sleek Animated Typography Splash Loader -->
     <style>
