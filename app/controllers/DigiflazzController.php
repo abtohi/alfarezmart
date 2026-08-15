@@ -682,26 +682,7 @@ class DigiflazzController extends Controller {
         $data = json_decode(file_get_contents('php://input'), true);
         $settingModel = new SettingModel();
         
-        $currentMode = $settingModel->get('digiflazz_mode', 'development');
         $newMode = trim($data['mode'] ?? '');
-        
-        if ($newMode === 'production' && $currentMode !== 'production') {
-            // Require password verification
-            $password = $data['password'] ?? '';
-            if (empty($password)) {
-                header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'message' => 'Password wajib diisi untuk beralih ke mode Production.']);
-                exit;
-            }
-            
-            $userModel = new UserModel();
-            $user = $userModel->find($_SESSION['user_id']);
-            if (!$userModel->verifyPassword($password, $user['password_hash'])) {
-                header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'message' => 'Password tidak valid. Gagal beralih ke mode Production.']);
-                exit;
-            }
-        }
         
         if (isset($data['username'])) $settingModel->set('digiflazz_username', trim($data['username']));
         if (isset($data['api_key_dev'])) $settingModel->set('digiflazz_api_key_dev', trim($data['api_key_dev']));

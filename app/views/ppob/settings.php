@@ -75,7 +75,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="ppob-hint mb-3" style="margin-top:-10px;">Dapatkan di: <strong>Dashboard Digiflazz ' Profil ' API Key</strong></div>
+                <div class="ppob-hint mb-3" style="margin-top:-10px;">Dapatkan di: <strong>Dashboard Digiflazz &rarr; Profil &rarr; API Key</strong></div>
 
                 <!-- Webhook Secret -->
                 <div style="margin-bottom:20px;">
@@ -86,7 +86,7 @@
                             placeholder="Isi dengan secret dari Dashboard Digiflazz" style="padding-right:44px;">
                         <button type="button" onclick="togglePwd('cfg-webhook',this)" class="ppob-eye-btn"><i class="bi bi-eye"></i></button>
                     </div>
-                    <div class="ppob-hint">Digunakan untuk memvalidasi callback webhook dari Digiflazz. Atur di <strong>Digiflazz → Atur Koneksi → API → Webhook Secret</strong>.</div>
+                    <div class="ppob-hint">Digunakan untuk memvalidasi callback webhook dari Digiflazz. Atur di <strong>Digiflazz &rarr; Atur Koneksi &rarr; API &rarr; Webhook Secret</strong>.</div>
                 </div>
 
                 <!-- Transaction PIN -->
@@ -184,7 +184,7 @@
             </div>
         </div>
         <div style="padding:24px;">
-            <p style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:12px;">Daftarkan URL berikut ke panel Digiflazz (<strong>Atur Koneksi → API → Webhook URL</strong>) agar status transaksi diperbarui otomatis tanpa perlu refresh manual.</p>
+            <p style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:12px;">Daftarkan URL berikut ke panel Digiflazz (<strong>Atur Koneksi &rarr; API &rarr; Webhook URL</strong>) agar status transaksi diperbarui otomatis tanpa perlu refresh manual.</p>
 
             <!-- Webhook URL copy -->
             <div style="position:relative;margin-bottom:16px;">
@@ -210,7 +210,7 @@
                     </div>
                     <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:10px;">
                         <div style="font-weight:700;color:var(--text-muted);font-size:9px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">X-Digiflazz-Event</div>
-                        <div style="color:var(--text-secondary);"><code style="font-size:9px;">create</code> · <code style="font-size:9px;">update</code> · <code style="font-size:9px;">resend</code></div>
+                        <div style="color:var(--text-secondary);"><code style="font-size:9px;">create</code> &middot; <code style="font-size:9px;">update</code> &middot; <code style="font-size:9px;">resend</code></div>
                     </div>
                     <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:10px;">
                         <div style="font-weight:700;color:var(--text-muted);font-size:9px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">User-Agent (Prepaid)</div>
@@ -226,7 +226,7 @@
             <!-- Server IP -->
             <div style="margin-top:14px;background:var(--warning-bg);border:1px solid rgba(255,183,3,0.25);border-radius:var(--radius-md);padding:12px 14px;font-size:var(--font-size-xs);">
                 <i class="bi bi-exclamation-triangle-fill me-2" style="color:var(--warning);"></i>
-                <strong>Whitelist IP Digiflazz:</strong> Daftarkan IP server Anda di <strong>Dashboard Digiflazz → Atur Koneksi → IP Development/Production</strong>.
+                <strong>Whitelist IP Digiflazz:</strong> Daftarkan IP server Anda di <strong>Dashboard Digiflazz &rarr; Atur Koneksi &rarr; IP Development/Production</strong>.
                 IP Server Anda: <strong id="server-ip" style="color:var(--primary);">Memuat...</strong>
             </div>
         </div>
@@ -247,9 +247,9 @@
                     <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);margin-bottom:8px;">Endpoint Utama</div>
                     <code style="font-size:var(--font-size-xs);color:var(--primary);">POST https://api.digiflazz.com/v1/</code>
                     <ul style="margin:8px 0 0;padding-left:16px;font-size:var(--font-size-xs);color:var(--text-secondary);line-height:2;">
-                        <li><code>cek-saldo</code> — Cek saldo deposit</li>
-                        <li><code>price-list</code> — Daftar produk & harga</li>
-                        <li><code>transaction</code> — Transaksi prabayar</li>
+                        <li><code>cek-saldo</code> &mdash; Cek saldo deposit</li>
+                        <li><code>price-list</code> &mdash; Daftar produk & harga</li>
+                        <li><code>transaction</code> &mdash; Transaksi prabayar</li>
                     </ul>
                 </div>
                 <div style="background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:12px;">
@@ -406,38 +406,23 @@
     }
 </style>
 
-<!-- Password Modal -->
-<div class="modal fade" id="passwordModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content" style="border-radius:16px;border:none;background:var(--surface-1);">
-            <div class="modal-header border-0" style="background:var(--surface-2);border-radius:16px 16px 0 0;padding:15px 20px;">
-                <h6 class="modal-title fw-bold" style="color:var(--text-primary);"><i class="bi bi-shield-lock-fill me-2" style="color:var(--danger);"></i>Verifikasi Keamanan</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter:var(--btn-close-filter, invert(1) grayscale(100%) brightness(200%));"></button>
-            </div>
-            <div class="modal-body p-4 text-center">
-                <p style="font-size:12px;color:var(--text-muted);margin-bottom:15px;">Masukkan password Anda untuk beralih ke mode <strong>Production</strong>.</p>
-                <input type="password" class="form-control mb-3 text-center shadow-none" id="auth-password" placeholder="Password" style="border-radius:10px;background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border-color);">
-                <button type="button" class="btn w-100 fw-bold" style="background:var(--primary);color:#fff;border-radius:10px;" onclick="submitSettingsWithPassword()">Konfirmasi</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
 function togglePwd(id, btn) {
     const inp = document.getElementById(id);
-    const ico = btn.querySelector('i');
+    const ico = btn ? btn.querySelector('i') : null;
+    if (!inp) return;
     if (inp.type === 'password') {
         inp.type = 'text';
-        ico.classList.replace('bi-eye','bi-eye-slash');
+        if (ico) ico.classList.replace('bi-eye','bi-eye-slash');
     } else {
         inp.type = 'password';
-        ico.classList.replace('bi-eye-slash','bi-eye');
+        if (ico) ico.classList.replace('bi-eye-slash','bi-eye');
     }
 }
 
 function updateModeBadge(val) {
     const badge = document.getElementById('mode-badge');
+    if (!badge) return;
     if (val === 'production') {
         badge.style.cssText = 'font-size:11px;padding:5px 12px;border-radius:20px;font-weight:700;font-family:var(--font-family);background:var(--success-bg);color:var(--success);border:1px solid rgba(46,196,182,0.3);';
         badge.textContent = '🟢 Production';
@@ -449,6 +434,7 @@ function updateModeBadge(val) {
 
 function showStatus(id, type, msg) {
     const el = document.getElementById(id);
+    if (!el) return;
     const configs = {
         success: { bg: 'var(--success-bg)', color: 'var(--success)', border: 'rgba(46,196,182,0.3)', icon: 'bi-check-circle-fill' },
         danger:  { bg: 'var(--danger-bg)',  color: 'var(--danger)',  border: 'rgba(230,57,70,0.3)',  icon: 'bi-x-circle-fill' },
@@ -460,42 +446,28 @@ function showStatus(id, type, msg) {
 }
 
 function copyWebhook() {
-    const val = document.getElementById('webhook-url').value;
-    navigator.clipboard.writeText(val).then(() => {
+    const el = document.getElementById('webhook-url');
+    if (!el) return;
+    navigator.clipboard.writeText(el.value).then(() => {
         const ico = document.getElementById('copy-icon');
-        ico.classList.replace('bi-clipboard','bi-check-lg');
-        setTimeout(() => ico.classList.replace('bi-check-lg','bi-clipboard'), 2000);
+        if (ico) {
+            ico.classList.replace('bi-clipboard','bi-check-lg');
+            setTimeout(() => ico.classList.replace('bi-check-lg','bi-clipboard'), 2000);
+        }
     });
 }
 
-const initialMode = '<?= $settings['mode'] ?? 'development' ?>';
-
 function saveSettings(e) {
     e.preventDefault();
-    const mode = document.getElementById('cfg-mode').value;
-    if (mode === 'production' && initialMode !== 'production') {
-        document.getElementById('auth-password').value = '';
-        const modal = new bootstrap.Modal(document.getElementById('passwordModal'));
-        modal.show();
-    } else {
-        sendSettings('');
-    }
+    sendSettings();
 }
 
-function submitSettingsWithPassword() {
-    const pwd = document.getElementById('auth-password').value;
-    if (!pwd) {
-        showStatus('cfg-status','danger','Password wajib diisi!');
-        return;
-    }
-    bootstrap.Modal.getInstance(document.getElementById('passwordModal')).hide();
-    sendSettings(pwd);
-}
-
-async function sendSettings(password) {
+async function sendSettings() {
     const btn = document.getElementById('btn-save-cfg');
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
-    btn.disabled = true;
+    if (btn) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
+        btn.disabled = true;
+    }
     try {
         const res = await fetch('<?= BASE_URL ?>api/ppob/settings', {
             method: 'POST',
@@ -506,30 +478,33 @@ async function sendSettings(password) {
                 api_key_prod: document.getElementById('cfg-apikey-prod').value,
                 webhook_secret: document.getElementById('cfg-webhook').value,
                 mode: document.getElementById('cfg-mode').value,
-                pin: document.getElementById('cfg-pin').value,
-                password: password
+                pin: document.getElementById('cfg-pin').value
             })
         });
         const data = await res.json();
         if (data.success) {
             showStatus('cfg-status','success','Pengaturan berhasil disimpan!');
-            setTimeout(() => { location.reload(); }, 1500);
+            setTimeout(() => { location.reload(); }, 1200);
         } else {
             showStatus('cfg-status','danger', data.message || 'Gagal menyimpan.');
         }
     } catch (err) {
         showStatus('cfg-status','danger','Koneksi error: ' + err.message);
     } finally {
-        btn.innerHTML = '<i class="bi bi-save me-1"></i> Simpan Pengaturan';
-        btn.disabled = false;
+        if (btn) {
+            btn.innerHTML = '<i class="bi bi-save me-1"></i> Simpan Pengaturan';
+            btn.disabled = false;
+        }
     }
 }
 
 // Test Connection
 async function testConnection() {
     const btn = document.getElementById('btn-test-conn');
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Testing...';
-    btn.disabled = true;
+    if (btn) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Testing...';
+        btn.disabled = true;
+    }
     showStatus('cfg-status','info','Menghubungkan ke API Digiflazz...');
     try {
         const res = await fetch('<?= BASE_URL ?>api/ppob/balance');
@@ -543,38 +518,48 @@ async function testConnection() {
     } catch (err) {
         showStatus('cfg-status','danger','Error: ' + err.message);
     } finally {
-        btn.innerHTML = '<i class="bi bi-plug me-1"></i> Test Koneksi';
-        btn.disabled = false;
+        if (btn) {
+            btn.innerHTML = '<i class="bi bi-plug me-1"></i> Test Koneksi';
+            btn.disabled = false;
+        }
     }
 }
 
 // Cek Saldo
 async function cekSaldo() {
     const btn = document.getElementById('btn-cek-saldo');
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memeriksa...';
-    btn.disabled = true;
-    document.getElementById('info-saldo').textContent = '...';
-    document.getElementById('info-status').textContent = '...';
+    if (btn) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Memeriksa...';
+        btn.disabled = true;
+    }
+    const infoSaldo = document.getElementById('info-saldo');
+    const infoStatus = document.getElementById('info-status');
+    if (infoSaldo) infoSaldo.textContent = '...';
+    if (infoStatus) infoStatus.textContent = '...';
     try {
         const res = await fetch('<?= BASE_URL ?>api/ppob/balance');
         const data = await res.json();
         if (data.success) {
             const saldo = parseInt(data.data?.deposit || data.deposit || 0).toLocaleString('id-ID');
-            document.getElementById('info-saldo').innerHTML = `<span style="color:var(--success);">Rp ${saldo}</span>`;
-            document.getElementById('info-status').innerHTML = `<span style="color:var(--success);"><i class="bi bi-circle-fill" style="font-size:7px;"></i> Terhubung</span>`;
+            if (infoSaldo) infoSaldo.innerHTML = `<span style="color:var(--success);">Rp ${saldo}</span>`;
+            if (infoStatus) infoStatus.innerHTML = `<span style="color:var(--success);"><i class="bi bi-circle-fill" style="font-size:7px;"></i> Terhubung</span>`;
         } else {
-            document.getElementById('info-saldo').innerHTML = `<span style="color:var(--danger);">Error</span>`;
-            document.getElementById('info-status').innerHTML = `<span style="color:var(--danger);"><i class="bi bi-circle-fill" style="font-size:7px;"></i> Gagal</span>`;
+            if (infoSaldo) infoSaldo.innerHTML = `<span style="color:var(--danger);">Error</span>`;
+            if (infoStatus) infoStatus.innerHTML = `<span style="color:var(--danger);"><i class="bi bi-circle-fill" style="font-size:7px;"></i> Gagal</span>`;
         }
         const mode = document.getElementById('cfg-mode').value;
-        document.getElementById('info-mode').textContent = mode === 'production' ? '🟢 Production' : '🟡 Development';
-        document.getElementById('info-time').textContent = new Date().toLocaleTimeString('id-ID');
+        const infoMode = document.getElementById('info-mode');
+        const infoTime = document.getElementById('info-time');
+        if (infoMode) infoMode.textContent = mode === 'production' ? '🟢 Production' : '🟡 Development';
+        if (infoTime) infoTime.textContent = new Date().toLocaleTimeString('id-ID');
     } catch (err) {
-        document.getElementById('info-saldo').innerHTML = `<span style="color:var(--danger);">Offline</span>`;
-        document.getElementById('info-status').innerHTML = `<span style="color:var(--text-muted);">-</span>`;
+        if (infoSaldo) infoSaldo.innerHTML = `<span style="color:var(--danger);">Offline</span>`;
+        if (infoStatus) infoStatus.innerHTML = `<span style="color:var(--text-muted);">-</span>`;
     } finally {
-        btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Cek Saldo Sekarang';
-        btn.disabled = false;
+        if (btn) {
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i> Cek Saldo Sekarang';
+            btn.disabled = false;
+        }
     }
 }
 
@@ -583,8 +568,10 @@ async function syncProducts(type) {
     const btnId = type === 'prepaid' ? 'btn-sync-prepaid' : 'btn-sync-postpaid';
     const btn = document.getElementById(btnId);
     const label = type === 'prepaid' ? 'Prabayar' : 'Pascabayar';
-    btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Sinkronisasi ${label}...`;
-    btn.disabled = true;
+    if (btn) {
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Sinkronisasi ${label}...`;
+        btn.disabled = true;
+    }
     showStatus('sync-status','info',`Mengunduh daftar produk ${label.toLowerCase()} dari Digiflazz. Harap tunggu...`);
     try {
         const res = await fetch('<?= BASE_URL ?>api/ppob/sync-prices', {
@@ -601,8 +588,10 @@ async function syncProducts(type) {
     } catch (err) {
         showStatus('sync-status','danger','Error: ' + err.message);
     } finally {
-        btn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i> Sync ${label}`;
-        btn.disabled = false;
+        if (btn) {
+            btn.innerHTML = `<i class="bi bi-arrow-repeat me-1"></i> Sync ${label}`;
+            btn.disabled = false;
+        }
     }
 }
 
@@ -626,14 +615,21 @@ function confirmClearSettings() {
 // Load server IP
 fetch('https://api.ipify.org?format=json')
     .then(r => r.json())
-    .then(d => document.getElementById('server-ip').textContent = d.ip)
-    .catch(() => document.getElementById('server-ip').textContent = 'Tidak dapat dideteksi');
+    .then(d => {
+        const el = document.getElementById('server-ip');
+        if (el) el.textContent = d.ip;
+    })
+    .catch(() => {
+        const el = document.getElementById('server-ip');
+        if (el) el.textContent = 'Tidak dapat dideteksi';
+    });
 
 // Auto cek saldo on load
 document.addEventListener('DOMContentLoaded', () => {
-    const apiKeyDev = document.getElementById('cfg-apikey-dev').value;
-    const apiKeyProd = document.getElementById('cfg-apikey-prod').value;
-    if (apiKeyDev.length > 5 || apiKeyProd.length > 5) cekSaldo();
+    const apiKeyDev = document.getElementById('cfg-apikey-dev');
+    const apiKeyProd = document.getElementById('cfg-apikey-prod');
+    if ((apiKeyDev && apiKeyDev.value.length > 5) || (apiKeyProd && apiKeyProd.value.length > 5)) {
+        cekSaldo();
+    }
 });
-
 </script>
