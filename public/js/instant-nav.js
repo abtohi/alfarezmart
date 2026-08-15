@@ -13,13 +13,20 @@
             const parsed = new URL(url, window.location.origin);
             // Only prefetch same-origin HTML pages
             if (parsed.origin !== window.location.origin) return;
-            if (parsed.pathname.startsWith('/api/') || parsed.pathname.includes('/logout')) return;
+            if (parsed.pathname.startsWith('/api/') || 
+                parsed.pathname.includes('/logout') ||
+                parsed.pathname.includes('/login') ||
+                parsed.pathname.includes('/setup')) return;
             
             prefetchedUrls.add(url);
             
             // Low priority background fetch into Service Worker cache
             if (window.fetch) {
-                fetch(url, { priority: 'low', credentials: 'same-origin' }).catch(() => {});
+                fetch(url, { 
+                    priority: 'low', 
+                    credentials: 'same-origin',
+                    headers: { 'X-Prefetch': '1' }
+                }).catch(() => {});
             }
         } catch (e) {}
     }
@@ -29,18 +36,23 @@
     document.addEventListener('mouseenter', handleIntent, { capture: true, passive: true });
 
     function handleIntent(event) {
-        // Guard: event.target may be a text node or non-Element (e.g. document)
-        // during mouseenter with capture:true, which doesn't have .closest()
-        if (!(event.target instanceof Element)) return;
-        const link = event.target.closest('a[href]');
-        if (!link) return;
+        if (!event || !event.target) return;
+        try {
+            // Guard: Handle text nodes, document, window, or elements without .closest
+            let target = event.target;
+            if (target.nodeType === 3) target = target.parentElement; // Text node -> parent
+            if (!target || typeof target.closest !== 'function') return;
 
-        const href = link.getAttribute('href');
-        if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('tel:') || href.startsWith('mailto:')) {
-            return;
-        }
+            const link = target.closest('a[href]');
+            if (!link) return;
 
-        prefetchUrl(href);
+            const href = link.getAttribute('href');
+            if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('tel:') || href.startsWith('mailto:')) {
+                return;
+            }
+
+            prefetchUrl(href);
+        } catch (e) {}
     }
 
     // Instant prefetch visible bottom navigation links after DOM is ready

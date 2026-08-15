@@ -1,12 +1,12 @@
 /**
- * AlfarezMart PWA - Service Worker v29.0
- * Cache Strategy: 
+ * AlfarezMart PWA - Service Worker v30.0
+ * Cache Strategy:
  * - Static Assets, CSS, JS, Fonts: Cache First (Instant 0ms)
  * - Navigation / HTML: Fast Network Race (350ms Timeout) with Instant Stale-While-Revalidate Fallback
  * - API GET: Network First with Fast Fallback to Cache
  */
-const CACHE_NAME = 'alfarezmart-cache-v29.0';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v29.0';
+const CACHE_NAME = 'alfarezmart-cache-v30.0';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v30.0';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     BASE_URL,
@@ -148,9 +148,11 @@ self.addEventListener('fetch', event => {
     }
 
     // ── 4. Styles, Scripts, Fonts: Cache First (Instant 0ms execution) ──
+    // NOTE: Do NOT use ignoreSearch:true — versioned URLs (?v=X.Y) must bypass old unversioned cache entries.
+    // We do an exact URL match first, then fall through to network.
     if (event.request.destination === 'style' || event.request.destination === 'script' || event.request.destination === 'font') {
         event.respondWith(
-            caches.match(event.request, { ignoreSearch: true }).then(cached => {
+            caches.match(event.request).then(cached => {
                 if (cached) return cached;
                 return fetch(event.request, { cache: 'no-cache' }).then(response => {
                     if (!response || response.status !== 200 || response.type === 'opaque' || !event.request.url.startsWith('http')) {

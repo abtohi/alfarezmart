@@ -130,33 +130,58 @@
     };
 
     // ─── 4. Intercept fetch untuk menangkap network error ───────────────────
+    // URL-URL berikut diabaikan dari pencatatan error (fire-and-forget / expected)
+    var IGNORED_URL_PATTERNS = [
+        '/api/activity/log',      // fire-and-forget activity tracker
+        '/api/sync/',             // background sync
+        '/setup',                 // 403 intentional di production
+        '/sw.js',                 // service worker check
+    ];
+
+    function isIgnoredUrl(url) {
+        if (!url) return false;
+        return IGNORED_URL_PATTERNS.some(function(p) { return url.indexOf(p) !== -1; });
+    }
+
     if (window.fetch) {
         var _origFetch = window.fetch;
         window.fetch = function (input, init) {
             var url = typeof input === 'string' ? input : (input && input.url ? input.url : String(input));
+            // Abaikan URL yang memang fire-and-forget atau expected
+            var skipLog = isIgnoredUrl(url);
+            // Abaikan prefetch requests dari instant-nav (X-Prefetch header)
+            if (!skipLog && init && init.headers && init.headers['X-Prefetch']) {
+                skipLog = true;
+            }
             return _origFetch.apply(this, arguments).then(function (response) {
-                // Tangkap HTTP error (4xx, 5xx) kecuali yang sudah di-handle (misal 200)
-                if (!response.ok) {
-                    var cloned = response.clone();
-                    cloned.text().then(function (bodyText) {
-                        addLog('network', 'HTTP ' + response.status + ' ' + response.statusText + ' - ' + url, {
-                            status: response.status,
-                            statusText: response.statusText,
-                            responsePreview: bodyText.substring(0, 500)
+                if (!response.ok && !skipLog) {
+                    // Abaikan 403 dan 404 untuk halaman navigasi biasa (bukan API)
+                    var skip4xx = (response.status === 403 || response.status === 404) &&
+                                  url.indexOf('/api/') === -1;
+                    if (!skip4xx) {
+                        var cloned = response.clone();
+                        cloned.text().then(function (bodyText) {
+                            addLog('network', 'HTTP ' + response.status + ' ' + response.statusText + ' - ' + url, {
+                                status: response.status,
+                                statusText: response.statusText,
+                                responsePreview: bodyText.substring(0, 500)
+                            });
+                        }).catch(function () {
+                            addLog('network', 'HTTP ' + response.status + ' ' + response.statusText + ' - ' + url, {
+                                status: response.status,
+                                statusText: response.statusText
+                            });
                         });
-                    }).catch(function () {
-                        addLog('network', 'HTTP ' + response.status + ' ' + response.statusText + ' - ' + url, {
-                            status: response.status,
-                            statusText: response.statusText
-                        });
-                    });
+                    }
                 }
                 return response;
             }).catch(function (err) {
-                // Network failure (offline, CORS, timeout)
-                addLog('network', 'Fetch Failed: ' + (err && err.message ? err.message : String(err)) + ' - ' + url, {
-                    errorType: err && err.name ? err.name : 'NetworkError'
-                });
+                // Network failure (offline, CORS, timeout) — log hanya jika bukan prefetch/fire-and-forget
+                if (!skipLog) {
+                    addLog('network', 'Fetch Failed: ' + (err && err.message ? err.message : String(err)) + ' - ' + url, {
+                        errorType: err && err.name ? err.name : 'NetworkError'
+                    });
+                }
                 throw err;
             });
         };
