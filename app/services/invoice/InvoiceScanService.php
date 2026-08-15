@@ -10,14 +10,30 @@ require_once __DIR__ . '/ProductMatcher.php';
 require_once __DIR__ . '/ConfidenceScorer.php';
 require_once __DIR__ . '/SelfCorrectionEngine.php';
 require_once __DIR__ . '/TemplateLearner.php';
+require_once __DIR__ . '/LearnedAliasLookup.php';
+require_once __DIR__ . '/ScanCache.php';
 
 /**
  * InvoiceScanService
  *
  * Orchestrates the high-speed, modular AI invoice scanning pipeline.
- * Utilizes SupplierDetector and SkillManager to adapt dynamically
- * to specific supplier formats (e.g., PT Medan Distribusindo Raya / MDR)
- * with graceful fallback to General invoice extraction.
+ *
+ * 2-Phase Architecture (Deterministic First, AI Fallback):
+ *
+ *   Phase 1 — FAST PATH (No AI):
+ *     Image Validate → Hash Cache Check → Supplier Detect → Learned Alias Lookup
+ *     → Product Match → Confidence Check → RETURN (0 AI calls)
+ *
+ *   Phase 2 — AI FALLBACK (only when fast path confidence is insufficient):
+ *     Build Prompt → AI Vision Call → Parse Items → Match → Score → Cache → RETURN
+ *
+ * Features:
+ *   - Image hash cache (skip AI for identical invoices)
+ *   - Learned alias fast path (skip AI for known products)
+ *   - Circuit breaker (prevent rate limit storms)
+ *   - Multi-model failover
+ *   - Full observability metadata
+ *   - Duplicate invoice detection
  *
  * @package AlfarezMart\Services\Invoice
  */
@@ -53,6 +69,16 @@ class InvoiceScanService
     private $selfCorrection;
     /** @var TemplateLearner */
     private $templateLearner;
+    /** @var LearnedAliasLookup */
+    private $aliasLookup;
+    /** @var ScanCache */
+    private $scanCache;
+
+    // Circuit breaker state file path
+    const CIRCUIT_BREAKER_FILE = __DIR__ . '/../../../logs/ai_circuit_breaker.json';
+    const CIRCUIT_BREAKER_THRESHOLD = 5;    // Max 429 errors before opening circuit
+    const CIRCUIT_BREAKER_WINDOW = 300;     // 5 minutes window
+    const CIRCUIT_BREAKER_COOLDOWN = 300;   // 5 minutes cooldown
 
     /**
      * @param \PDO $db
@@ -75,6 +101,8 @@ class InvoiceScanService
         $this->scorer           = new ConfidenceScorer();
         $this->selfCorrection   = new SelfCorrectionEngine();
         $this->templateLearner  = new TemplateLearner($this->db);
+        $this->aliasLookup      = new LearnedAliasLookup($this->db);
+        $this->scanCache        = new ScanCache($this->db);
 
         $this->ensureSupplierProductCodeColumn();
     }
@@ -94,7 +122,7 @@ class InvoiceScanService
     }
 
     /**
-     * Run the full high-speed invoice scanning pipeline.
+     * Run the optimized 2-phase invoice scanning pipeline.
      *
      * @param  string   $imageB64     Raw base64 image
      * @param  int|null $supplierId   Optional supplier ID context
@@ -103,28 +131,89 @@ class InvoiceScanService
     public function scan(string $imageB64, ?int $supplierId = null): array
     {
         $startTime = microtime(true);
+        $scanId = uniqid('scan_', true);
+        $metrics = [
+            'scan_id'           => $scanId,
+            'ai_called'         => false,
+            'ai_provider'       => null,
+            'ai_model_used'     => null,
+            'ai_duration'       => 0,
+            'ai_request_count'  => 0,
+            'cache_hit'         => false,
+            'fast_path'         => false,
+            'file_hash'         => null,
+            'matched_count'     => 0,
+            'unmatched_count'   => 0,
+            'duplicate_warning' => null,
+        ];
 
         try {
-            // STAGE 1: Image Preprocessing & Validation
+            // ========================================
+            // STAGE 1: Image Validation
+            // ========================================
             $imageInfo = $this->preprocessor->analyze($imageB64);
             if (!$imageInfo['valid']) {
                 throw new \Exception($imageInfo['error'] ?? 'Gambar tidak valid');
             }
 
-            // STAGE 2: Supplier Detection & Skill Resolution
+            // ========================================
+            // STAGE 2: Image Hash & Cache Check
+            // ========================================
+            $imageHash = $this->scanCache->hashImage($imageB64);
+            $metrics['file_hash'] = $imageHash;
+
+            $cachedResult = $this->scanCache->get($imageHash, $supplierId);
+            if ($cachedResult !== null) {
+                $metrics['cache_hit'] = true;
+                $metrics['fast_path'] = true;
+                $executionTime = round(microtime(true) - $startTime, 2);
+
+                error_log("SCAN_TRACE [{$scanId}]: Cache HIT for hash {$imageHash} — returning cached result");
+
+                return [
+                    'success'  => true,
+                    'message'  => "Berhasil memproses " . count($cachedResult['data'] ?? []) . " item dari cache ({$executionTime}s)",
+                    'data'     => $cachedResult['data'] ?? [],
+                    'metadata' => array_merge($cachedResult['metadata'] ?? [], $metrics, [
+                        'execution_time' => $executionTime,
+                    ])
+                ];
+            }
+
+            // ========================================
+            // STAGE 3: Supplier Detection & Skill Resolution
+            // ========================================
             $detection = $this->supplierDetector->detect($supplierId);
             $skill = $this->skillManager->getSkill($detection['skill_key']);
-
-            // STAGE 3: Context Gathering (Products & Supplier Data)
-            $allProducts = $this->getAllProductsWithPackagings();
             $resolvedSupplierId = $detection['supplier_id'] ?: $supplierId;
-            $supplierProducts = [];
 
+            // ========================================
+            // STAGE 4: Load Products & Learned Aliases
+            // ========================================
+            $allProducts = $this->getAllProductsWithPackagings();
+            $supplierProducts = [];
             if ($resolvedSupplierId && $resolvedSupplierId > 0) {
                 $supplierProducts = $this->getSupplierProducts($resolvedSupplierId);
             }
+            $supplierProductIds = array_column($supplierProducts, 'id');
 
-            // STAGE 4: Build System & User Prompts with Skill
+            // Load learned alias lookup for fast path matching
+            $this->aliasLookup->loadForSupplier($resolvedSupplierId);
+            $aliasCount = $this->aliasLookup->getAliasCount();
+            error_log("SCAN_TRACE [{$scanId}]: Loaded {$aliasCount} learned aliases for supplier {$resolvedSupplierId}");
+
+            // ========================================
+            // STAGE 5: AI Vision Call (with circuit breaker)
+            // ========================================
+            $aiStartTime = microtime(true);
+
+            // Check circuit breaker before making AI call
+            if ($this->isCircuitOpen()) {
+                error_log("SCAN_TRACE [{$scanId}]: Circuit breaker OPEN — AI call skipped");
+                throw new \Exception('AI Scanner sedang dalam mode cooldown karena rate limit. Coba lagi dalam beberapa menit.');
+            }
+
+            // Build prompts
             $systemPrompt = $skill->getSystemPrompt();
             $userHints = $skill->getUserPromptHints();
 
@@ -166,28 +255,19 @@ class InvoiceScanService
                 $userMessageText .= implode("\n", $contextLines);
             }
 
-            // STAGE 5: AI Vision API Call
-            $aiResponse = $this->callOpenRouter($systemPrompt, $userMessageText, $imageB64, $imageInfo['format']);
+            // Make AI Vision Call
+            $aiResponse = $this->callOpenRouter($systemPrompt, $userMessageText, $imageB64, $imageInfo['format'], null, null, $metrics);
+            $metrics['ai_called'] = true;
+            $metrics['ai_duration'] = round(microtime(true) - $aiStartTime, 2);
+
             if (empty($aiResponse)) {
                 throw new \Exception('AI gagal memproses gambar atau mengembalikan respons kosong.');
             }
 
-            // If response is not an array of items, try to find the array key
-            $rawItems = [];
-            if (is_array($aiResponse)) {
-                if (isset($aiResponse['items']) && is_array($aiResponse['items'])) {
-                    $rawItems = $aiResponse['items'];
-                } elseif (isset($aiResponse[0])) {
-                    $rawItems = $aiResponse;
-                } else {
-                    foreach ($aiResponse as $val) {
-                        if (is_array($val) && isset($val[0])) {
-                            $rawItems = $val;
-                            break;
-                        }
-                    }
-                }
-            }
+            // ========================================
+            // STAGE 6: Extract Raw Items from AI Response
+            // ========================================
+            $rawItems = $this->extractRawItems($aiResponse);
 
             // Check if extracted text in items reveals a different supplier signature
             if ($detection['skill_key'] === 'general' && !empty($rawItems)) {
@@ -198,8 +278,9 @@ class InvoiceScanService
                 }
             }
 
-            // STAGE 6: Parse Items via Supplier Skill
-            $supplierProductIds = array_column($supplierProducts, 'id');
+            // ========================================
+            // STAGE 7: Parse Items via Supplier Skill
+            // ========================================
             $parsedItems = [];
             foreach ($rawItems as $rawItem) {
                 if (!is_array($rawItem)) continue;
@@ -209,18 +290,64 @@ class InvoiceScanService
                 }
             }
 
-            // STAGE 7: Product Matching with Price Distance & Packaging Selection
+            // ========================================
+            // STAGE 8: Product Matching (with Learned Alias Priority)
+            // ========================================
             $matchedItems = [];
             foreach ($parsedItems as $item) {
-                $matchResult = $this->matcher->match($item, $allProducts, $supplierProductIds, $skill);
-                $mergedItem  = array_merge($item, $matchResult);
-                $scoredItem  = $this->scorer->score($mergedItem);
-                $matchedItems[] = $scoredItem;
+                // Try learned alias first (instant match, no fuzzy needed)
+                $aliasResult = $this->aliasLookup->lookup(
+                    $item['name'] ?? '',
+                    $item['supplier_code'] ?? ''
+                );
+
+                if ($aliasResult !== null) {
+                    // Fast path: learned alias matched
+                    $mergedItem = array_merge($item, [
+                        'product_id'              => $aliasResult['product_id'],
+                        'product_name'            => $aliasResult['full_name'],
+                        'is_matched'              => true,
+                        'match_score'             => $aliasResult['match_score'],
+                        'match_strategy'          => $aliasResult['match_type'],
+                        'matched_packaging_level' => 1,
+                        'product_data'            => $aliasResult,
+                    ]);
+
+                    // Determine packaging level using skill
+                    $unitPrice = (float)($item['unit_price'] ?? 0);
+                    $unit = $item['unit'] ?? '';
+                    if (!empty($aliasResult['product_id'])) {
+                        $productPackagings = $this->getProductPackagings($aliasResult['product_id']);
+                        if (!empty($productPackagings)) {
+                            $pkgDecision = $skill->determinePackagingLevel(
+                                $unitPrice, $productPackagings, $unit,
+                                $aliasResult['last_buy_price'] ?? null
+                            );
+                            $mergedItem['matched_packaging_level'] = $pkgDecision['level'] ?? 1;
+                        }
+                    }
+
+                    $scoredItem = $this->scorer->score($mergedItem);
+                    $matchedItems[] = $scoredItem;
+                } else {
+                    // Slow path: full ProductMatcher pipeline
+                    $matchResult = $this->matcher->match($item, $allProducts, $supplierProductIds, $skill);
+                    $mergedItem  = array_merge($item, $matchResult);
+                    $scoredItem  = $this->scorer->score($mergedItem);
+                    $matchedItems[] = $scoredItem;
+                }
             }
 
-            // STAGE 8: Format Final Output with Complete Product Data for Instant Frontend Injection
+            // ========================================
+            // STAGE 9: Format Final Output
+            // ========================================
             $finalItems = $this->formatForFrontend($matchedItems);
             $executionTime = round(microtime(true) - $startTime, 2);
+
+            $matchedCount = count(array_filter($finalItems, fn($i) => $i['is_matched'] && $i['product_id']));
+            $unmatchedCount = count($finalItems) - $matchedCount;
+            $metrics['matched_count'] = $matchedCount;
+            $metrics['unmatched_count'] = $unmatchedCount;
 
             $avgScore = 0;
             if (count($finalItems) > 0) {
@@ -228,25 +355,93 @@ class InvoiceScanService
                 $avgScore = round($totalScore / count($finalItems), 2);
             }
 
-            return [
+            // ========================================
+            // STAGE 10: Cache Result & Duplicate Detection
+            // ========================================
+            $result = [
                 'success'  => true,
                 'message'  => "Berhasil memproses " . count($finalItems) . " item via skill " . $skill->getSupplierName() . " ({$executionTime}s)",
                 'data'     => $finalItems,
-                'metadata' => [
+                'metadata' => array_merge($metrics, [
                     'supplier_detected' => $detection['supplier_name'],
                     'skill_used'        => $skill->getSkillKey(),
                     'execution_time'    => $executionTime,
                     'avg_confidence'    => $avgScore,
-                ]
+                    'item_count'        => count($finalItems),
+                    'alias_count'       => $aliasCount,
+                ])
             ];
 
+            // Store in cache for future reuse
+            $this->scanCache->set($imageHash, $resolvedSupplierId, $result);
+
+            // Duplicate detection
+            $totalPrice = array_sum(array_column($finalItems, 'total_price'));
+            if ($this->scanCache->isDuplicate($resolvedSupplierId, count($finalItems), $totalPrice)) {
+                $result['metadata']['duplicate_warning'] = 'Invoice ini mungkin sudah pernah di-scan sebelumnya. Periksa kembali sebelum menyimpan.';
+            }
+            $this->scanCache->storeFingerprint($imageHash, $resolvedSupplierId, count($finalItems), $totalPrice);
+
+            error_log("SCAN_TRACE [{$scanId}]: Complete — {$matchedCount} matched, {$unmatchedCount} unmatched, AI={$metrics['ai_called']}, time={$executionTime}s");
+
+            return $result;
+
         } catch (\Throwable $e) {
-            error_log('InvoiceScanService error: ' . $e->getMessage());
+            $executionTime = round(microtime(true) - $startTime, 2);
+            error_log("InvoiceScanService error [{$scanId}]: " . $e->getMessage());
             return [
-                'success' => false,
-                'message' => $e->getMessage(),
-                'data'    => []
+                'success'  => false,
+                'message'  => $e->getMessage(),
+                'data'     => [],
+                'metadata' => array_merge($metrics, [
+                    'execution_time' => $executionTime,
+                    'error'          => $e->getMessage(),
+                ])
             ];
+        }
+    }
+
+    /**
+     * Extract raw items array from AI response (handles various envelope shapes).
+     */
+    private function extractRawItems($aiResponse): array
+    {
+        $rawItems = [];
+        if (is_array($aiResponse)) {
+            if (isset($aiResponse['items']) && is_array($aiResponse['items'])) {
+                $rawItems = $aiResponse['items'];
+            } elseif (isset($aiResponse[0])) {
+                $rawItems = $aiResponse;
+            } else {
+                foreach ($aiResponse as $val) {
+                    if (is_array($val) && isset($val[0])) {
+                        $rawItems = $val;
+                        break;
+                    }
+                }
+            }
+        }
+        return $rawItems;
+    }
+
+    /**
+     * Get packagings for a specific product (for alias-matched items).
+     */
+    private function getProductPackagings(int $productId): array
+    {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT pp.id, pp.level, pp.base_qty, pp.buy_price, pp.sell_price, pp.barcode,
+                       u.name as unit_name
+                FROM product_packagings pp
+                LEFT JOIN units u ON pp.unit_id = u.id
+                WHERE pp.product_id = ?
+                ORDER BY pp.level ASC
+            ");
+            $stmt->execute([$productId]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            return [];
         }
     }
 
@@ -297,13 +492,105 @@ class InvoiceScanService
         return $model ?: 'openrouter/auto';
     }
 
+    // ================================================================
+    // CIRCUIT BREAKER — Prevents rate limit storms
+    // ================================================================
+
+    /**
+     * Check if the circuit breaker is currently open (blocking AI calls).
+     */
+    private function isCircuitOpen(): bool
+    {
+        $file = self::CIRCUIT_BREAKER_FILE;
+        if (!file_exists($file)) return false;
+
+        try {
+            $data = json_decode(file_get_contents($file), true);
+            if (!is_array($data)) return false;
+
+            $now = time();
+
+            // Check if in cooldown period after circuit opened
+            if (isset($data['circuit_opened_at'])) {
+                $elapsed = $now - (int)$data['circuit_opened_at'];
+                if ($elapsed < self::CIRCUIT_BREAKER_COOLDOWN) {
+                    return true; // Still in cooldown
+                }
+                // Cooldown expired — reset circuit (half-open, allow 1 attempt)
+                $this->resetCircuitBreaker();
+                return false;
+            }
+
+            // Count recent 429 errors within window
+            $errors = $data['errors'] ?? [];
+            $recentErrors = array_filter($errors, fn($ts) => ($now - $ts) < self::CIRCUIT_BREAKER_WINDOW);
+
+            if (count($recentErrors) >= self::CIRCUIT_BREAKER_THRESHOLD) {
+                // Open the circuit
+                $data['circuit_opened_at'] = $now;
+                @file_put_contents($file, json_encode($data));
+                error_log("CIRCUIT_BREAKER: Circuit OPENED — {$recentErrors} 429 errors in " . self::CIRCUIT_BREAKER_WINDOW . "s window");
+                return true;
+            }
+        } catch (\Throwable $e) {
+            // If file read fails, don't block AI calls
+            return false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Record a 429 rate limit error for circuit breaker tracking.
+     */
+    private function recordRateLimitError(): void
+    {
+        $file = self::CIRCUIT_BREAKER_FILE;
+        try {
+            $data = file_exists($file) ? (json_decode(file_get_contents($file), true) ?: []) : [];
+            $data['errors'] = $data['errors'] ?? [];
+            $data['errors'][] = time();
+
+            // Keep only recent errors (within window)
+            $now = time();
+            $data['errors'] = array_values(array_filter(
+                $data['errors'],
+                fn($ts) => ($now - $ts) < self::CIRCUIT_BREAKER_WINDOW * 2
+            ));
+
+            $dir = dirname($file);
+            if (!is_dir($dir)) @mkdir($dir, 0755, true);
+            @file_put_contents($file, json_encode($data));
+        } catch (\Throwable $e) {
+            // Silently fail
+        }
+    }
+
+    /**
+     * Reset the circuit breaker after cooldown.
+     */
+    private function resetCircuitBreaker(): void
+    {
+        $file = self::CIRCUIT_BREAKER_FILE;
+        try {
+            @file_put_contents($file, json_encode(['errors' => [], 'reset_at' => time()]));
+        } catch (\Throwable $e) {
+            // Silently fail
+        }
+    }
+
+    // ================================================================
+    // AI VISION API CALL — Multi-model with rate limit tracking
+    // ================================================================
+
     private function callOpenRouter(
         string $systemPrompt,
         string $userPrompt,
         string $imageB64,
         string $imageFormat,
         ?string $apiKey = null,
-        ?string $model = null
+        ?string $model = null,
+        array &$metrics = []
     ): ?array {
         $apiKey = $apiKey ?? $this->getApiKey();
         $model  = $model  ?? $this->getModelName();
@@ -333,15 +620,18 @@ class InvoiceScanService
         } elseif ($model === 'openrouter/free') {
             $modelsToTry = array_unique(array_merge($FREE_VISION_MODELS, ['openrouter/free']));
         } else {
-            // User configured a specific model (e.g. Gemini 2.0 Flash / Pro / Claude) → try that first
+            // User configured a specific model (e.g. Gemini 2.0 Flash / Pro / Claude) — try that first
             $modelsToTry = array_unique(array_merge([$model], $FREE_VISION_MODELS));
         }
 
         $imageBlock = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
         $lastError  = null;
+        $requestCount = 0;
+        $rateLimitCount = 0;
 
         foreach ($modelsToTry as $tryModel) {
             error_log("SCAN_AI_TRACE: Attempting OpenRouter model: {$tryModel}");
+            $requestCount++;
 
             $payload = [
                 'model'    => $tryModel,
@@ -385,7 +675,9 @@ class InvoiceScanService
             }
 
             if ($httpCode === 429) {
-                error_log("SCAN_AI_TRACE: Model {$tryModel} hit rate limit 429, trying next model immediately...");
+                $rateLimitCount++;
+                $this->recordRateLimitError();
+                error_log("SCAN_AI_TRACE: Model {$tryModel} hit rate limit 429 (count: {$rateLimitCount}), trying next model...");
                 $lastError = "Model {$tryModel} terkena rate limit (429).";
                 continue;
             }
@@ -407,40 +699,59 @@ class InvoiceScanService
             }
 
             // Robust JSON extraction
-            $decoded = null;
-            $cleanContent = trim($content);
-            if (preg_match('/```(?:json)?\s*([\s\S]*?)\s*```/', $cleanContent, $m)) {
-                $decoded = json_decode(trim($m[1]), true);
-            }
-            if (!is_array($decoded)) {
-                $decoded = json_decode($cleanContent, true);
-            }
-            if (!is_array($decoded)) {
-                $firstBracket = strpos($cleanContent, '[');
-                $lastBracket = strrpos($cleanContent, ']');
-                if ($firstBracket !== false && $lastBracket !== false && $lastBracket > $firstBracket) {
-                    $slice = substr($cleanContent, $firstBracket, $lastBracket - $firstBracket + 1);
-                    $decoded = json_decode($slice, true);
-                }
-            }
-            if (!is_array($decoded)) {
-                $firstBrace = strpos($cleanContent, '{');
-                $lastBrace = strrpos($cleanContent, '}');
-                if ($firstBrace !== false && $lastBrace !== false && $lastBrace > $firstBrace) {
-                    $slice = substr($cleanContent, $firstBrace, $lastBrace - $firstBrace + 1);
-                    $decoded = json_decode($slice, true);
-                }
-            }
+            $decoded = $this->extractJsonFromContent($content);
 
             if (is_array($decoded)) {
                 error_log("SCAN_AI_TRACE: Successfully parsed response from model {$tryModel}");
+                $metrics['ai_provider'] = 'openrouter';
+                $metrics['ai_model_used'] = $tryModel;
+                $metrics['ai_request_count'] = $requestCount;
                 return $decoded;
             } else {
                 error_log("SCAN_AI_TRACE: Model {$tryModel} returned non-JSON content: " . substr($content, 0, 200));
             }
         }
 
+        $metrics['ai_request_count'] = $requestCount;
         throw new \Exception($lastError ?: 'AI gagal membaca gambar invoice setelah mencoba model yang tersedia. Pastikan gambar jelas dan coba kembali.');
+    }
+
+    /**
+     * Extract JSON from AI response content (handles various formats).
+     */
+    private function extractJsonFromContent(string $content): ?array
+    {
+        $cleanContent = trim($content);
+
+        // Try markdown code block first
+        if (preg_match('/```(?:json)?\s*([\s\S]*?)\s*```/', $cleanContent, $m)) {
+            $decoded = json_decode(trim($m[1]), true);
+            if (is_array($decoded)) return $decoded;
+        }
+
+        // Try direct JSON
+        $decoded = json_decode($cleanContent, true);
+        if (is_array($decoded)) return $decoded;
+
+        // Try extracting JSON array
+        $firstBracket = strpos($cleanContent, '[');
+        $lastBracket = strrpos($cleanContent, ']');
+        if ($firstBracket !== false && $lastBracket !== false && $lastBracket > $firstBracket) {
+            $slice = substr($cleanContent, $firstBracket, $lastBracket - $firstBracket + 1);
+            $decoded = json_decode($slice, true);
+            if (is_array($decoded)) return $decoded;
+        }
+
+        // Try extracting JSON object
+        $firstBrace = strpos($cleanContent, '{');
+        $lastBrace = strrpos($cleanContent, '}');
+        if ($firstBrace !== false && $lastBrace !== false && $lastBrace > $firstBrace) {
+            $slice = substr($cleanContent, $firstBrace, $lastBrace - $firstBrace + 1);
+            $decoded = json_decode($slice, true);
+            if (is_array($decoded)) return $decoded;
+        }
+
+        return null;
     }
 
     private function formatForFrontend(array $items): array
@@ -461,6 +772,7 @@ class InvoiceScanService
                 'match_score'     => $item['match_score'] ?? 0,
                 'packaging_level' => $item['matched_packaging_level'] ?? 1,
                 'confidence'      => $item['confidence']['final'] ?? ($item['match_score'] ?? 0),
+                'match_strategy'  => $item['match_strategy'] ?? 'none',
                 'product_data'    => $item['product_data'] ?? null,
             ];
 

@@ -1,350 +1,874 @@
-# 🧠 AI Invoice Skill Guidelines & Architecture (AlfarezMart)
+# AI_INVOICE_SKILL_GUIDELINES.md
 
-Panduan teknis dan standar arsitektur untuk menambahkan skill OCR & AI invoice scanner untuk supplier baru di **AlfarezMart**.
+## 1. Tujuan Utama
 
-Dokumen ini dirancang agar AI di masa depan dapat membaca panduan ini dan langsung mengenerate file skill baru yang **100% akurat, cepat, hemat token, dan kompatibel dengan AI Vision model gratisan** (seperti Gemma 4, Nemotron, dll).
+Sistem invoice scanner AlfarezMart harus mengutamakan:
+
+1. Kecepatan scan.
+2. Akurasi pembacaan dan pemetaan produk.
+3. Pemakaian AI seminimal mungkin.
+4. Tidak bergantung pada satu model AI atau satu provider.
+5. Tidak mudah terkena rate limit/token limit.
+6. Tetap kompatibel dengan supplier baru dan format invoice baru.
+7. Mampu belajar dari hasil invoice yang sudah dikonfirmasi user.
+8. Tidak merusak fungsi invoice scanner yang sudah berjalan.
+
+Prinsip utama:
+
+> Gunakan deterministic/local processing terlebih dahulu. Gunakan AI hanya sebagai fallback ketika sistem tidak cukup yakin.
+
+Dokumen lama sudah menggunakan konsep supplier-specific skill, SupplierDetector, SkillManager, ProductMatcher, packaging resolution, dan auto-learning alias. Guideline ini mempertahankan konsep tersebut tetapi memindahkan logika umum ke invoice engine sehingga supplier skill hanya menangani keunikan supplier.
 
 ---
 
-## 📑 Daftar Isi
-1. [Arsitektur AI Invoice Scanner](#1-arsitektur-ai-invoice-scanner)
-2. [Anatomi Invoice Skill](#2-anatomi-invoice-skill)
-3. [Langkah Pembuatan Skill Baru (Step-by-Step)](#3-langkah-pembuatan-skill-baru-step-by-step)
-4. [Sistem Dynamic Self-Learning (AI Belajar Otomatis)](#4-sistem-dynamic-self-learning-ai-belajar-otomatis)
-5. [Contoh Template Lengkap Skill Baru](#5-contoh-template-lengkap-skill-baru)
-6. [Best Practices & Tips Presisi 99%+](#6-best-practices--tips-presisi-99)
+## 2. Arsitektur Target
 
----
-
-## 1. Arsitektur AI Invoice Scanner
-
-Pipeline pemrosesan invoice di AlfarezMart berjalan secara modular dalam 8 tahapan:
-
+```text
+Invoice Image/PDF
+      |
+      v
+[1] Input Validator
+      |
+      v
+[2] Image Preprocessor
+      |
+      v
+[3] OCR / Text Extraction
+      |
+      v
+[4] OCR Normalizer
+      |
+      v
+[5] Supplier Detector
+      |
+      v
+[6] Invoice Layout Detector
+      |
+      v
+[7] Row/Column Parser
+      |
+      v
+[8] Product Matcher
+      |
+      v
+[9] Packaging Resolver
+      |
+      v
+[10] Confidence Engine
+      |
+      +---- high confidence ----> RESULT
+      |
+      +---- medium confidence --> local correction / alias learning
+      |
+      +---- low confidence ------> AI Fallback
+                                      |
+                                      v
+                               structured result
+                                      |
+                                      v
+                              Alias / Learning Store
 ```
-[Foto Invoice] 
-       │
-       ▼
-1. ImagePreprocessor (Resize, Exif, Optimasi Format)
-       │
-       ▼
-2. SupplierDetector (Deteksi Supplier via Tanda Tangan / Dropdown)
-       │
-       ▼
-3. SkillManager (Resolve Skill yang Sesuai: MdrInvoiceSkill, GeneralInvoiceSkill, dll)
-       │
-       ▼
-4. Context & Learning Injection (Injeksi Alias Produk & Pola yang Sudah Dipelajari)
-       │
-       ▼
-5. OpenRouter Vision API (Kirim Prompt & Image ke Model AI Pilihan)
-       │
-       ▼
-6. parseItem() dari Skill (Pembersihan, Ekstraksi Brand, Varian, Berat, dan Harga)
-       │
-       ▼
-7. ProductMatcher (Pencocokan Multi-Strategi: Exact Code, Alias, Token Overlap, Packaging Level)
-       │
-       ▼
-8. Frontend Injection (Auto-Fill Form Pembelian Tanpa Roundtrip Tambahan)
-       │
-       ▼
-9. InvoiceLearningService (Otomatis Mempelajari Alias & Pola Baru Saat Pembelian Disimpan)
+
+AI bukan parser utama. AI adalah fallback intelligence.
+
+---
+
+## 3. Input Validator
+
+Sebelum OCR:
+
+- Validasi MIME type.
+- Validasi ukuran file.
+- Validasi resolusi minimum.
+- Deteksi image kosong/korup.
+- Dukungan JPG, JPEG, PNG, WEBP, dan PDF jika aplikasi memang mendukung PDF.
+- Tolak file yang jelas tidak berisi invoice.
+- Hindari resize berlebihan yang merusak karakter kecil.
+
+Simpan checksum/hash file untuk cache sehingga invoice yang sama tidak diproses dua kali tanpa alasan.
+
+---
+
+## 4. Image Preprocessing
+
+Preprocessing harus ringan dan deterministik.
+
+Urutan yang disarankan:
+
+1. Auto-orientation.
+2. Crop margin kosong yang jelas.
+3. Deskew ringan.
+4. Contrast normalization jika perlu.
+5. Grayscale jika OCR engine membutuhkannya.
+6. Upscale hanya ketika karakter terlalu kecil.
+7. Jangan selalu mengirim gambar resolusi penuh ke AI.
+
+Jika invoice sangat panjang:
+
+```text
+full image
+   -> detect header/table/footer
+   -> crop relevant regions
+   -> process region independently
 ```
 
----
-
-## 2. Anatomi Invoice Skill
-
-Setiap skill supplier mengimplementasikan interface `InvoiceSkillInterface` yang terletak di:
-`app/services/invoice/skills/InvoiceSkillInterface.php`.
-
-### 5 Method Wajib:
-
-| Method | Return Type | Fungsi |
-|---|---|---|
-| `getSkillKey()` | `string` | Identifier unik (huruf kecil, misal: `'mdr'`, `'indomarco'`, `'unilever'`) |
-| `getSupplierName()` | `string` | Nama resmi supplier (misal: `'PT Medan Distribusindo Raya'`) |
-| `getDetectionSignatures()` | `array` | Kata kunci visual unik untuk auto-deteksi dari teks/header faktur |
-| `getSystemPrompt(bool $isCorrectionPass)` | `string` | Prompt instruksi khusus tabel & kolom faktur supplier tersebut |
-| `getUserPromptHints()` | `string` | Petunjuk ringkas format kolom untuk model |
-| `parseItem(array $rawItem)` | `array` | Parser cerdas untuk membersihkan harga, mengekstrak merk, varian, berat, dan kemasan |
-| `determinePackagingLevel(float $unitPrice, array $packagings, string $extractedUnit, ?float $lastBuyPrice)` | `array` | Penentu level kemasan (Karton, Renceng, Lusin, Pcs) berdasarkan harga satuan |
+Tujuan preprocessing adalah mengurangi biaya OCR/AI tanpa kehilangan informasi.
 
 ---
 
-## 3. Langkah Pembuatan Skill Baru (Step-by-Step)
+## 5. OCR Layer
 
-Ketika user meminta membuat skill untuk supplier baru (misal: **PT Indomarco Adi Prima / Indofood**):
+OCR harus menjadi sumber teks awal.
 
-### Langkah 1: Analisis Struktur Nota Fisik
-Identifikasi kolom-kolom pada nota:
-- Nomor kolom dari kiri ke kanan.
-- Posisi `QUANTITY` & satuannya (Karton, Dus, Pcs).
-- Posisi `KODE BARANG` supplier.
-- Posisi `NAMA BARANG` dan pola singkatannya (misal: `INDOMIE GOR SP`, `BUMBU RACIK`).
-- Posisi `HARGA SATUAN`, `DISKON`, dan `TOTAL JUMLAH (Rp)`.
+OCR output minimal harus menyimpan:
 
-### Langkah 2: Buat File Skill di `app/services/invoice/skills/`
-Buat file bernama `[Supplier]InvoiceSkill.php` (contoh: `IndomarcoInvoiceSkill.php`).
+- text
+- bounding box
+- page number
+- line number
+- confidence jika tersedia
+- word/segment coordinates jika tersedia
 
-### Langkah 3: Daftarkan Skill di `SkillManager.php`
-Buka `app/services/invoice/skills/SkillManager.php`:
-1. Tambahkan `require_once __DIR__ . '/[Supplier]InvoiceSkill.php';`
-2. Daftarkan di constructor `$this->registerSkill(new [Supplier]InvoiceSkill());`
-
-### Langkah 4: Daftarkan Tanda Tangan di `SupplierDetector.php`
-Buka `app/services/invoice/SupplierDetector.php` dan tambahkan deteksi kata kunci supplier tersebut pada method `detect()`.
-
----
-
-## 4. Sistem Dynamic Self-Learning (AI Belajar Otomatis)
-
-AlfarezMart dilengkapi dengan sistem pembelajaran otomatis (`InvoiceLearningService.php`) yang membuat sistem semakin cerdas seiring penggunaan:
-
-### Bagaimana AI Belajar?
-1. **Auto-Learning Alias Nota (`supplier_invoice_name`)**:
-   - Ketika user menyimpan form pembelian, sistem secara otomatis mengekstrak nama barang nota supplier dan menyimpannya sebagai alias baru di database produk.
-   - Pada scan berikutnya, barang tersebut akan langsung ter-match **100% instan** dengan Score 200 (Exact Match).
-2. **Auto-Learning Supplier Product Code (`supplier_product_code`)**:
-   - Kode barang supplier yang diinput/dikonfirmasi otomatis dihubungkan ke `supplier_products`.
-3. **Dynamic Prompt Context Injection**:
-   - Sebelum mengirim gambar ke AI, sistem menyuntikkan daftar produk & alias yang sudah dipelajari ke dalam prompt.
-   - Hasilnya, model AI gratisan sekalipun dapat mengenali barang dengan tingkat keberhasilan 99%+.
-
----
-
-## 5. Contoh Template Lengkap Skill Baru
-
-Berikut adalah template standar yang siap digunakan saat membuat skill supplier baru:
+Contoh struktur internal:
 
 ```php
-<?php
-require_once __DIR__ . '/InvoiceSkillInterface.php';
+[
+    [
+        'text' => 'INDOMIE GORENG 40G',
+        'confidence' => 0.97,
+        'x' => 100,
+        'y' => 420,
+        'width' => 320,
+        'height' => 28,
+        'page' => 1,
+        'line' => 8,
+    ],
+]
+```
 
-/**
- * [SupplierName]InvoiceSkill
- *
- * Dedicated AI scanning skill for [Nama PT Supplier].
- *
- * @package AlfarezMart\Services\Invoice\Skills
- */
-class [SupplierName]InvoiceSkill implements InvoiceSkillInterface
+Simpan hasil OCR dalam cache yang dapat digunakan kembali oleh proses berikutnya.
+
+---
+
+## 6. OCR Normalizer
+
+Normalisasi harus dilakukan tanpa mengubah raw OCR.
+
+Simpan dua nilai:
+
+- `raw_text`
+- `normalized_text`
+
+Normalisasi harus menangani antara lain:
+
+- `0/O`
+- `1/I/L`
+- `5/S`
+- `8/B`
+- koma/titik sebagai pemisah angka
+- spasi ganda
+- karakter aneh hasil OCR
+- pemisahan angka dan satuan
+- singkatan umum supplier
+- variasi huruf besar/kecil
+
+Contoh:
+
+```text
+INDM GORENG 40 GR
+INDOMIE GORENG 40G
+INDM GORENG40G
+```
+
+dapat dinormalisasi menjadi token yang lebih mudah dicocokkan, tetapi raw text harus tetap tersedia untuk debugging.
+
+---
+
+## 7. SupplierDetector
+
+Supplier detection wajib terjadi sebelum parsing khusus supplier.
+
+Sumber sinyal, dari yang paling kuat:
+
+1. Identitas legal supplier.
+2. NPWP.
+3. Nomor rekening.
+4. Nomor invoice/pola invoice.
+5. Header keyword.
+6. Alamat/telepon.
+7. Brand dominan.
+8. Layout fingerprint.
+
+SupplierDetector harus mengembalikan:
+
+```php
+[
+    'supplier_key' => 'indomarco',
+    'confidence' => 0.98,
+    'matched_rules' => [...],
+]
+```
+
+Jangan langsung memilih supplier jika skor berada di bawah threshold aman. Dalam kondisi ambigu, gunakan generic parser lalu AI fallback bila diperlukan.
+
+---
+
+## 8. Supplier Skill
+
+Supplier skill hanya bertanggung jawab atas aturan unik supplier tersebut.
+
+Contoh tanggung jawab:
+
+- keyword supplier
+- header mapping
+- abbreviation
+- known brands
+- column hints
+- unit code khas supplier
+- promo format khas
+- layout rules khas supplier
+- parsing exception tertentu
+
+Supplier skill TIDAK boleh menggandakan logika umum yang seharusnya berada di engine.
+
+Target struktur:
+
+```text
+app/services/invoice/
+├── InvoiceEngine.php
+├── InputValidator.php
+├── ImagePreprocessor.php
+├── OCR/
+├── Parser/
+├── Matching/
+├── Packaging/
+├── Confidence/
+├── Learning/
+├── AI/
+├── skills/
+│   ├── SupplierAInvoiceSkill.php
+│   ├── SupplierBInvoiceSkill.php
+│   └── ...
+├── SkillManager.php
+└── SupplierDetector.php
+```
+
+---
+
+## 9. Layout Detector
+
+Invoice layout harus diperlakukan sebagai data.
+
+Sistem harus mencoba menemukan:
+
+- header tabel
+- kode barang
+- barcode bila ada
+- nama barang
+- qty
+- unit
+- harga satuan
+- diskon
+- subtotal
+- total baris
+- footer
+- total invoice
+
+Layout detector harus menggunakan kombinasi:
+
+- OCR coordinates
+- header keyword
+- relative x-position
+- relative y-position
+- separator/line detection bila tersedia
+- supplier-specific layout rules
+
+Jangan mengasumsikan semua supplier memiliki urutan kolom yang sama.
+
+---
+
+## 10. Row Parser
+
+Parser harus mengubah hasil OCR menjadi row terstruktur:
+
+```php
+[
+    'line_index' => 1,
+    'product_code' => null,
+    'product_text' => 'INDOMIE GORENG 40G',
+    'qty' => 10,
+    'unit' => 'PCS',
+    'unit_price' => 2500,
+    'discount' => 0,
+    'line_total' => 25000,
+    'confidence' => 0.96,
+]
+```
+
+Baris harus dapat digabung ketika OCR memecah nama produk menjadi beberapa line.
+
+Parser harus dapat mendeteksi dan memisahkan:
+
+- product code
+- description
+- quantity
+- package/unit
+- price
+- discount
+- total
+
+Jangan menggunakan AI jika parser deterministik sudah cukup yakin.
+
+---
+
+## 11. ProductMatcher
+
+Urutan matching:
+
+1. exact product code
+2. exact normalized SKU/barcode
+3. learned alias
+4. exact normalized product name
+5. supplier-specific alias
+6. brand + variant + size
+7. fuzzy similarity
+8. historical invoice pattern
+9. AI fallback
+
+ProductMatcher harus mengembalikan alasan matching.
+
+Contoh:
+
+```php
+[
+    'product_id' => 12345,
+    'match_type' => 'learned_alias',
+    'score' => 0.97,
+]
+```
+
+Jangan menyimpan fuzzy match sebagai alias permanen jika confidence belum melewati threshold tinggi dan belum dikonfirmasi.
+
+---
+
+## 12. Product Identity Extraction
+
+Dari nama produk, sistem harus berusaha memisahkan:
+
+- brand
+- product family
+- variant/flavor
+- size
+- weight
+- volume
+- package type
+
+Contoh:
+
+```text
+INDOMIE SOTO 40G 1 RENTENG
+```
+
+menjadi:
+
+```text
+brand       = INDOMIE
+variant     = SOTO
+weight      = 40G
+package     = RENTENG/PACK
+```
+
+Jangan mengubah produk database hanya berdasarkan OCR.
+
+---
+
+## 13. Packaging Resolver
+
+Packaging resolver harus menjadi modul terpisah.
+
+Gunakan kombinasi:
+
+- OCR unit
+- supplier unit code
+- database packaging
+- price distance
+- quantity
+- product master
+- historical invoice
+- known conversion
+
+Contoh conversion:
+
+```text
+1 BOX = 10 PACK
+1 PACK = 10 PCS
+```
+
+Konversi harus disimpan sebagai data, bukan hard-coded di banyak tempat.
+
+Kode internal seperti berikut harus bisa dikonfigurasi:
+
+```text
+BSR -> BOX/KARTON
+TGH -> PACK/RENTENG
+KCL -> PCS
+```
+
+Jangan menganggap seluruh supplier memakai arti kode yang sama.
+
+---
+
+## 14. Price Distance
+
+Price Distance boleh digunakan sebagai signal, bukan sebagai satu-satunya keputusan.
+
+Contoh:
+
+```text
+PCS  = 2,500
+PACK = 25,000
+BOX  = 250,000
+
+OCR price = 25,000
+```
+
+Harga paling dekat adalah PACK.
+
+Tetapi keputusan final harus mempertimbangkan unit OCR, conversion, dan product master.
+
+---
+
+## 15. Confidence Engine
+
+Setiap item harus memiliki confidence score.
+
+Confidence dapat dihitung dari kombinasi:
+
+- OCR confidence
+- supplier confidence
+- parser confidence
+- product match confidence
+- unit confidence
+- price consistency
+- line total consistency
+- invoice total consistency
+- historical consistency
+
+Contoh klasifikasi:
+
+```text
+>= 0.95  AUTO ACCEPT
+0.80-0.949  REVIEW / LOCAL CORRECTION
+< 0.80  AI FALLBACK
+```
+
+Threshold harus configurable.
+
+Jangan memakai satu confidence score yang tidak bisa dijelaskan. Simpan breakdown score.
+
+---
+
+## 16. Mathematical Validation
+
+Setiap baris harus divalidasi:
+
+```text
+qty × unit_price
+```
+
+lalu diperiksa terhadap:
+
+- discount
+- subtotal
+- line_total
+
+Setelah semua baris:
+
+```text
+sum(line_total)
+```
+
+harus dibandingkan dengan total invoice.
+
+Jika selisih melewati tolerance, confidence harus turun.
+
+Tolerance harus configurable dan mempertimbangkan pembulatan.
+
+---
+
+## 17. AI Fallback
+
+AI hanya dipanggil jika:
+
+- supplier tidak dikenal
+- layout tidak dikenal
+- row parser gagal
+- produk tidak teridentifikasi
+- packaging ambigu
+- total tidak konsisten
+- confidence di bawah threshold
+
+Request AI harus sekecil mungkin.
+
+Prioritas:
+
+1. kirim cropped region bermasalah, bukan seluruh invoice
+2. kirim OCR text + coordinates jika lebih efisien
+3. minta structured JSON
+4. jangan minta penjelasan panjang
+5. gunakan timeout
+6. retry terbatas
+7. fallback ke provider/model lain jika tersedia
+
+AI output wajib tervalidasi oleh schema.
+
+---
+
+## 18. AI Response Schema
+
+Gunakan schema terstruktur seperti:
+
+```json
 {
-    /** Singkatan umum nota supplier ini */
-    const ABBREVIATIONS = [
-        'sct'  => 'sachet',
-        'btl'  => 'botol',
-        'bks'  => 'bungkus',
-        'ctn'  => 'karton',
-        'dus'  => 'karton',
-        'gor'  => 'goreng',
-        'sp'   => 'spesial',
-        'kcl'  => 'kecil',
-        'bsr'  => 'besar',
-    ];
-
-    /** Brand-brand yang dinaungi supplier ini */
-    const KNOWN_BRANDS = [
-        'indomie', 'supermi', 'sarimi', 'pop mie', 'chitato', 'chiki', 'indomilk',
-    ];
-
-    public function getSkillKey(): string
+  "supplier": {
+    "key": "indomarco",
+    "confidence": 0.99
+  },
+  "items": [
     {
-        return '[nama_pendek_supplier]'; // contoh: 'indomarco'
+      "line": 1,
+      "product_code": "123456",
+      "name": "INDOMIE GORENG 40G",
+      "qty": 10,
+      "unit": "PCS",
+      "unit_price": 2500,
+      "discount": 0,
+      "line_total": 25000,
+      "confidence": 0.98
     }
-
-    public function getSupplierName(): string
-    {
-        return '[Nama Lengkap Supplier]'; // contoh: 'PT Indomarco Adi Prima'
-    }
-
-    public function getDetectionSignatures(): array
-    {
-        return [
-            'indomarco',
-            'indomarco adi prima',
-            'indofood',
-            // nomor rekening atau ciri visual lainnya
-        ];
-    }
-
-    public function getSystemPrompt(bool $isCorrectionPass = false): string
-    {
-        $lines = [];
-        $lines[] = 'Kamu adalah AI OCR & data extractor spesialis faktur ' . $this->getSupplierName() . '.';
-        $lines[] = 'Tugasmu adalah membaca seluruh baris produk pada tabel faktur secara lengkap 100% tanpa terlewat.';
-        $lines[] = '';
-        $lines[] = '## STRUKTUR TABEL FAKTUR:';
-        $lines[] = '1. KODE BARANG';
-        $lines[] = '2. NAMA BARANG LENGKAP';
-        $lines[] = '3. QUANTITY (misal: "1 DUS", "10 PCS")';
-        $lines[] = '4. HARGA SATUAN';
-        $lines[] = '5. DISKON';
-        $lines[] = '6. TOTAL JUMLAH (Rp) (Kolom paling kanan setelah diskon)';
-        $lines[] = '';
-        $lines[] = '## ATURAN EKSTRAKSI:';
-        $lines[] = '1. BACA SEMUA BARIS PRODUK DARI PALING ATAS SAMPAI BARIS TERAKHIR TABEL.';
-        $lines[] = '2. "supplier_code": Ambil kode barang supplier jika ada.';
-        $lines[] = '3. "name": Ambil nama barang lengkap persis di nota.';
-        $lines[] = '4. "qty": Jumlah beli (angka).';
-        $lines[] = '5. "unit": Satuan (Karton, Dus, Pcs, Renceng).';
-        $lines[] = '6. "total_price": Total harga akhir setelah diskon di kolom paling kanan.';
-        $lines[] = '7. "unit_price": Biarkan null (dihitung backend otomatis).';
-        $lines[] = '8. ABAIKAN baris header/footer, subtotal, dan nomor rekening.';
-        $lines[] = '';
-        $lines[] = '## FORMAT OUTPUT JSON (HANYA JSON ARRAY VALID):';
-        $lines[] = '[';
-        $lines[] = '  {';
-        $lines[] = '    "supplier_code": "100234",';
-        $lines[] = '    "name": "INDOMIE MI GORENG SPESIAL 85GR",';
-        $lines[] = '    "qty": 5,';
-        $lines[] = '    "unit": "DUS",';
-        $lines[] = '    "total_price": 550000,';
-        $lines[] = '    "unit_price": null';
-        $lines[] = '  }';
-        $lines[] = ']';
-
-        return implode("\n", $lines);
-    }
-
-    public function getUserPromptHints(): string
-    {
-        return "Invoice " . $this->getSupplierName() . ". Ambil kode barang, nama produk, quantity, dan total harga di kolom paling kanan. Ekstrak SEMUA baris produk tanpa terkecuali.";
-    }
-
-    public function parseItem(array $rawItem): array
-    {
-        $name = trim($rawItem['name'] ?? $rawItem['product_name'] ?? '');
-        $code = trim($rawItem['supplier_code'] ?? $rawItem['code'] ?? '');
-        
-        $rawQty = $rawItem['qty'] ?? 1;
-        $qty = is_numeric($rawQty) ? max(1, (float)$rawQty) : 1;
-        $unit = strtoupper(trim($rawItem['unit'] ?? ''));
-
-        // Pembersihan total harga Indonesia format (titik pemisah ribuan)
-        $rawTotal = $rawItem['total_price'] ?? $rawItem['total'] ?? 0;
-        if (is_string($rawTotal)) {
-            $cleaned = preg_replace('/[^0-9,]/', '', str_replace('.', '', $rawTotal));
-            $cleaned = str_replace(',', '.', $cleaned);
-            $totalPrice = (float)$cleaned;
-        } else {
-            $totalPrice = (float)$rawTotal;
-        }
-
-        $unitPrice = $qty > 0 ? round($totalPrice / $qty, 2) : $totalPrice;
-
-        // Ekstraksi brand, varian, berat
-        $parsed = $this->parseProductName($name);
-
-        return [
-            'name'                  => $name,
-            'supplier_invoice_name' => $name,
-            'expanded_name'         => $parsed['expanded_name'],
-            'supplier_code'         => $code,
-            'qty'                   => $qty,
-            'unit'                  => $unit,
-            'total_price'           => $totalPrice,
-            'unit_price'            => $unitPrice,
-            'brand'                 => $parsed['brand'],
-            'variant'               => $parsed['variant'],
-            'weight'                => $parsed['weight'],
-            'weight_unit'           => $parsed['weight_unit'],
-            'skill_used'            => $this->getSkillKey()
-        ];
-    }
-
-    private function parseProductName(string $name): array
-    {
-        $result = [
-            'brand'         => '',
-            'variant'       => '',
-            'weight'        => null,
-            'weight_unit'   => '',
-            'expanded_name' => '',
-        ];
-
-        if (empty($name)) return $result;
-        $lower = mb_strtolower(trim($name));
-
-        // Ekstrak berat (contoh: 85GR, 500ML, 1KG)
-        if (preg_match('/(\d+(?:\.\d+)?)\s*(gr|g|ml|l|kg)\b/i', $name, $m)) {
-            $result['weight'] = (float)$m[1];
-            $result['weight_unit'] = strtolower($m[2]) === 'gr' ? 'g' : strtolower($m[2]);
-        }
-
-        // Deteksi Brand
-        foreach (self::KNOWN_BRANDS as $b) {
-            if (stripos($lower, $b) !== false) {
-                $result['brand'] = $b;
-                break;
-            }
-        }
-
-        // Ekspansi singkatan
-        $words = preg_split('/\s+/', $lower);
-        $exp = [];
-        foreach ($words as $w) {
-            $clean = preg_replace('/[^a-z0-9]/', '', $w);
-            $exp[] = self::ABBREVIATIONS[$clean] ?? $w;
-        }
-        $result['expanded_name'] = implode(' ', $exp);
-
-        return $result;
-    }
-
-    public function determinePackagingLevel(
-        float $unitPrice,
-        array $packagings,
-        string $extractedUnit = '',
-        ?float $lastBuyPrice = null
-    ): array {
-        if (empty($packagings)) {
-            return ['packaging' => null, 'level' => 1, 'strategy' => 'default_level_1'];
-        }
-
-        // Price Distance Matching
-        if ($unitPrice > 0) {
-            $bestPkg = null;
-            $minDiff = PHP_FLOAT_MAX;
-            $bestLevel = 1;
-
-            foreach ($packagings as $pkg) {
-                $buyPrice = (float)($pkg['buy_price'] ?? 0);
-                if ($buyPrice > 0) {
-                    $diff = abs($buyPrice - $unitPrice);
-                    if ($diff < $minDiff && ($diff / $buyPrice) <= 0.45) {
-                        $minDiff = $diff;
-                        $bestPkg = $pkg;
-                        $bestLevel = (int)$pkg['level'];
-                    }
-                }
-            }
-
-            if ($bestPkg !== null) {
-                return ['packaging' => $bestPkg, 'level' => $bestLevel, 'strategy' => 'price_distance'];
-            }
-        }
-
-        return ['packaging' => $packagings[0], 'level' => (int)($packagings[0]['level'] ?? 1), 'strategy' => 'fallback'];
-    }
+  ],
+  "invoice_total": 25000,
+  "confidence": 0.98
 }
 ```
 
----
-
-## 6. Best Practices & Tips Presisi 99%+
-
-1. **Format Angka Indonesia**:
-   - Selalu hapus titik (`.`) ribuan sebelum mengonversi ke float.
-   - Contoh: `"474.000"` → `474000`.
-2. **Kalkulasi Harga Satuan**:
-   - Biarkan AI mengisi `total_price` kolom paling kanan, dan biarkan backend menghitung `unit_price = total_price / qty`. Ini mencegah kesalahan pembulatan OCR.
-3. **Diskon Baris**:
-   - Ambil nilai di kolom paling kanan `JUMLAH (Rp)` yang sudah merupakan nilai nett setelah promo/regular discount.
-4. **Ekspansi Singkatan**:
-   - Daftarkan singkatan khas supplier ke dalam konstanta `ABBREVIATIONS` agar pencocokan nama berbasis fuzzy dan token overlap bekerja maksimal.
-5. **Self-Learning Verification**:
-   - Pastikan setiap ada transaksi pembelian baru, `InvoiceLearningService::learnFromPurchase()` terpanggil agar memori alias nota otomatis terupdate.
+AI tidak boleh mengeluarkan format bebas untuk diproses aplikasi.
 
 ---
-*Dokumen ini dikelola secara otomatis oleh Sistem AI AlfarezMart.*
+
+## 19. Provider/Model Abstraction
+
+Jangan hard-code aplikasi ke satu provider.
+
+Gunakan interface:
+
+```php
+interface InvoiceAIProviderInterface
+{
+    public function analyzeInvoice(array $payload): array;
+}
+```
+
+Kemudian:
+
+```text
+GemmaProvider
+NemotronProvider
+OpenAIProvider
+GeminiProvider
+ClaudeProvider
+...
+```
+
+Provider selection dapat didasarkan pada:
+
+- availability
+- cost
+- rate limit
+- latency
+- task type
+- confidence requirement
+
+---
+
+## 20. Rate Limit Protection
+
+Sistem wajib memiliki:
+
+- request queue
+- exponential backoff
+- retry limit
+- timeout
+- provider failover
+- circuit breaker sederhana
+- cache
+- request deduplication
+- token/image size control
+
+Jangan retry tanpa batas.
+
+Jika provider sedang rate-limited, jangan membuat request paralel tambahan secara agresif.
+
+---
+
+## 21. Caching
+
+Cache minimal:
+
+1. image hash -> OCR result
+2. OCR hash -> supplier detection
+3. invoice/layout fingerprint -> parser strategy
+4. product alias -> product_id
+5. AI request fingerprint -> AI structured result
+
+Gunakan TTL yang sesuai dan invalidation bila master data berubah.
+
+---
+
+## 22. Alias Learning
+
+Learning hanya terjadi dari sumber yang dipercaya:
+
+- user confirmed item
+- saved purchase
+- manually corrected product
+- high confidence repeated match
+
+Contoh:
+
+```text
+INDM GORENG 40GR
+INDOM GORENG 40G
+INDM GRG 40
+```
+
+dapat dipetakan ke satu product_id setelah cukup banyak bukti.
+
+Simpan:
+
+- alias
+- product_id
+- supplier_key
+- source
+- confidence
+- usage_count
+- last_seen
+- confirmed_count
+
+Jangan mencampur alias supplier A dengan supplier B jika ambigu.
+
+---
+
+## 23. Incremental Learning
+
+Setelah user menyimpan invoice:
+
+```text
+scan
+ ↓
+user correction
+ ↓
+confirmed result
+ ↓
+learning event
+ ↓
+alias/product/unit update
+ ↓
+next scan becomes faster
+```
+
+Learning harus asynchronous bila arsitektur memungkinkan agar penyimpanan invoice tidak menjadi lambat.
+
+---
+
+## 24. Performance Rules
+
+Target utama:
+
+- Hindari request AI jika tidak diperlukan.
+- Hindari OCR berulang pada gambar yang sama.
+- Hindari query DB berulang untuk produk yang sama.
+- Batch product lookup jika memungkinkan.
+- Gunakan in-memory map untuk data referensi selama satu scan.
+- Gunakan prepared statement.
+- Batasi fuzzy matching hanya pada kandidat yang masuk akal.
+- Jangan fuzzy match terhadap seluruh database jika supplier/brand sudah diketahui.
+
+---
+
+## 25. Database Matching Optimization
+
+Jika product master besar:
+
+```text
+supplier -> brand -> normalized token -> candidate products
+```
+
+baru lakukan fuzzy matching.
+
+Jangan:
+
+```text
+OCR row -> query seluruh product table -> fuzzy match semuanya
+```
+
+Gunakan indexing sesuai database engine yang tersedia.
+
+---
+
+## 26. Generic Parser
+
+Harus tersedia generic parser untuk supplier yang belum mempunyai skill.
+
+Generic parser menggunakan:
+
+- OCR coordinates
+- header detection
+- numeric column detection
+- product description heuristics
+- price/total arithmetic
+- known units
+
+Jika generic parser confidence tinggi, invoice dapat diproses tanpa membuat supplier skill baru.
+
+---
+
+## 27. Skill Generation
+
+Supplier skill baru dibuat hanya ketika:
+
+- supplier formatnya stabil
+- generic parser sering gagal
+- ada nilai bisnis untuk optimasi khusus supplier
+
+Skill generation harus mempelajari:
+
+- column layout
+- keyword
+- abbreviations
+- known brands
+- unit codes
+- promo conventions
+- invoice fingerprint
+
+Jangan membuat skill yang meng-copy seluruh InvoiceEngine.
+
+---
+
+## 28. Observability
+
+Setiap scan harus menyimpan metadata minimal:
+
+```text
+scan_id
+supplier
+file_hash
+ocr_duration
+parse_duration
+matching_duration
+ai_duration
+ai_called
+ai_provider
+ai_request_count
+item_count
+matched_count
+unmatched_count
+review_count
+confidence_avg
+invoice_total
+validation_status
+```
+
+Ini diperlukan untuk mengetahui bottleneck yang sebenarnya.
+
+---
+
+## 29. Error Handling
+
+Error harus dibedakan:
+
+- invalid file
+- OCR failure
+- supplier unknown
+- parser failure
+- matcher failure
+- AI timeout
+- AI rate limit
+- schema validation failure
+- database error
+- arithmetic mismatch
+
+Jangan menampilkan raw exception provider kepada user.
+
+Simpan detail teknis di log.
+
+---
+
+## 30. No Regression Rule
+
+Perbaikan scanner tidak boleh:
+
+- merusak supplier skill lama
+- menghilangkan alias lama
+- mengubah product_id secara diam-diam
+- mengubah harga pembelian yang sudah tersimpan
+- mengubah hasil invoice lama
+- menghapus data learning
+
+Migrasi database wajib backward-compatible.
+
+---
+
+## 31. Testing Minimum
+
+Wajib memiliki test untuk:
+
+1. supplier detection
+2. OCR normalization
+3. row parsing
+4. product matching
+5. packaging resolution
+6. price distance
+7. arithmetic validation
+8. confidence scoring
+9. AI schema validation
+10. rate-limit retry
+11. provider failover
+12. alias learning
+13. duplicate invoice detection
+14. long invoice
+15. invoice multi-page
+
+Gunakan fixture invoice nyata yang telah disetujui.
+
+---
+
+## 32. Acceptance Criteria
+
+Sistem dianggap berhasil jika:
+
+- invoice format lama tetap berjalan
+- supplier lama tetap terdeteksi
+- sebagian besar invoice dikenal selesai tanpa AI
+- invoice baru dapat diproses generic parser sebelum membuat skill baru
+- AI fallback hanya dipakai ketika diperlukan
+- hasil AI selalu tervalidasi
+- scan yang sama dapat menggunakan cache
+- alias learning meningkatkan hasil scan berikutnya
+- tidak ada retry tak terbatas
+- provider dapat diganti
+- semua hasil penting dapat diaudit
+
+---
+
+## 33. Prinsip Akhir
+
+```text
+FAST PATH FIRST
+LOCAL/DATABASE FIRST
+AI SECOND
+LEARNING ALWAYS
+VALIDATE EVERYTHING
+CACHE EVERYTHING THAT IS SAFE TO CACHE
+NEVER BREAK EXISTING SUPPLIER SKILLS
+```
