@@ -167,12 +167,16 @@ var TYPE_CONFIG = {
 };
 
 function formatDate(isoStr) {
+    if (!isoStr) return '-';
     try {
         var d = new Date(isoStr);
-        var pad = function(n) { return n < 10 ? '0' + n : n; };
-        return pad(d.getDate()) + '/' + pad(d.getMonth()+1) + '/' + d.getFullYear()
-            + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
-    } catch(e) { return isoStr; }
+        if (isNaN(d.getTime())) return String(isoStr);
+        var pad = function(n) { return n < 10 ? '0' + n : String(n); };
+        var months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+        var datePart = pad(d.getDate()) + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+        var timePart = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+        return datePart + ', ' + timePart + ' WIB';
+    } catch(e) { return String(isoStr); }
 }
 
 function safeHtml(str) {

@@ -140,24 +140,35 @@
 
     function isIgnoredUrl(url) {
         if (!url) return false;
-        return IGNORED_URL_PATTERNS.some(function(p) { return url.indexOf(p) !== -1; });
+        var u = String(url).toLowerCase();
+        return IGNORED_URL_PATTERNS.some(function(p) { return u.indexOf(p.toLowerCase()) !== -1; });
     }
 
     if (window.fetch) {
         var _origFetch = window.fetch;
         window.fetch = function (input, init) {
             var url = typeof input === 'string' ? input : (input && input.url ? input.url : String(input));
+            
             // Abaikan URL yang memang fire-and-forget atau expected
             var skipLog = isIgnoredUrl(url);
-            // Abaikan prefetch requests dari instant-nav (X-Prefetch header)
-            if (!skipLog && init && init.headers && init.headers['X-Prefetch']) {
-                skipLog = true;
+
+            // Deteksi prefetch (X-Prefetch header atau priority: low)
+            if (!skipLog && init) {
+                if (init.priority === 'low') skipLog = true;
+                if (init.headers) {
+                    if (typeof init.headers.get === 'function' && init.headers.get('X-Prefetch')) {
+                        skipLog = true;
+                    } else if (init.headers['X-Prefetch'] || init.headers['x-prefetch']) {
+                        skipLog = true;
+                    }
+                }
             }
+
             return _origFetch.apply(this, arguments).then(function (response) {
                 if (!response.ok && !skipLog) {
                     // Abaikan 403 dan 404 untuk halaman navigasi biasa (bukan API)
-                    var skip4xx = (response.status === 403 || response.status === 404) &&
-                                  url.indexOf('/api/') === -1;
+                    var isApi = String(url).indexOf('/api/') !== -1;
+                    var skip4xx = (response.status === 403 || response.status === 404) && !isApi;
                     if (!skip4xx) {
                         var cloned = response.clone();
                         cloned.text().then(function (bodyText) {
@@ -176,10 +187,16 @@
                 }
                 return response;
             }).catch(function (err) {
+                // Abaikan AbortError (misal request dibatalkan saat navigasi berpindah)
+                var errName = err && err.name ? err.name : '';
+                if (errName === 'AbortError') {
+                    throw err;
+                }
+
                 // Network failure (offline, CORS, timeout) — log hanya jika bukan prefetch/fire-and-forget
                 if (!skipLog) {
                     addLog('network', 'Fetch Failed: ' + (err && err.message ? err.message : String(err)) + ' - ' + url, {
-                        errorType: err && err.name ? err.name : 'NetworkError'
+                        errorType: errName || 'NetworkError'
                     });
                 }
                 throw err;

@@ -329,7 +329,9 @@ window.setUnsavedChanges = function(state) {
 
 // Listen to input changes in any form to set the flag
 document.addEventListener('input', function(e) {
-    if (e.target.closest('form') && !e.target.classList.contains('no-track')) {
+    if (!e || !e.target) return;
+    const target = e.target.nodeType === 1 ? e.target : (e.target ? e.target.parentElement : null);
+    if (target && typeof target.closest === 'function' && target.closest('form') && !target.classList.contains('no-track')) {
         window.hasUnsavedChanges = true;
     }
 });
@@ -341,7 +343,10 @@ document.addEventListener('submit', function(e) {
 
 // Intercept clicks on links
 document.addEventListener('click', function(e) {
-    const a = e.target.closest('a');
+    if (!e || !e.target) return;
+    const target = e.target.nodeType === 1 ? e.target : (e.target ? e.target.parentElement : null);
+    if (!target || typeof target.closest !== 'function') return;
+    const a = target.closest('a');
     // Only intercept if we have unsaved changes and it's a real navigation link
     if (a && a.href && !a.target && window.hasUnsavedChanges) {
         const href = a.getAttribute('href');
@@ -620,7 +625,10 @@ async function clearPendingQueue() {
 // OFFLINE DETAIL MODALS
 // ==========================================
 document.addEventListener('click', function(e) {
-    const a = e.target.closest('a');
+    if (!e || !e.target) return;
+    const target = e.target.nodeType === 1 ? e.target : (e.target ? e.target.parentElement : null);
+    if (!target || typeof target.closest !== 'function') return;
+    const a = target.closest('a');
     if (a && a.href && !a.target && !navigator.onLine) {
         const href = a.getAttribute('href');
         if (href && !href.startsWith('#') && !href.startsWith('javascript:')) {

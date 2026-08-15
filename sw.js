@@ -1,14 +1,19 @@
 /**
- * AlfarezMart PWA - Service Worker v30.0
+ * AlfarezMart PWA - Service Worker v31.0
  * Cache Strategy:
- * - Static Assets, CSS, JS, Fonts: Cache First (Instant 0ms)
- * - Navigation / HTML: Fast Network Race (350ms Timeout) with Instant Stale-While-Revalidate Fallback
+ * - CSS/JS versioned assets: Cache First with EXACT URL match (no ignoreSearch)
+ * - Navigation / HTML: Fast Network Race (350ms Timeout) with Stale-While-Revalidate
  * - API GET: Network First with Fast Fallback to Cache
+ *
+ * IMPORTANT: Versioned JS/CSS files (e.g. app.js?v=X.Y) are NOT in STATIC_ASSETS.
+ * They are cached on first request via the Cache-First fetch handler.
+ * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v30.0';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v30.0';
+const CACHE_NAME = 'alfarezmart-cache-v31.0';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v31.0';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
+    // HTML navigation pages only — NOT versioned JS/CSS (those are cached on first use)
     BASE_URL,
     BASE_URL + 'sales',
     BASE_URL + 'sales/pos',
@@ -23,17 +28,6 @@ const STATIC_ASSETS = [
     BASE_URL + 'reports',
     BASE_URL + 'settings',
     BASE_URL + 'ppob',
-    BASE_URL + 'public/css/variables.css',
-    BASE_URL + 'public/css/app.css',
-    BASE_URL + 'public/css/components.css',
-    BASE_URL + 'public/css/desktop.css',
-    BASE_URL + 'public/js/utils.js',
-    BASE_URL + 'public/js/dexie.min.js',
-    BASE_URL + 'public/js/db.js',
-    BASE_URL + 'public/js/app.js',
-    BASE_URL + 'public/js/desktop.js',
-    BASE_URL + 'public/js/chat.js',
-    BASE_URL + 'public/js/instant-nav.js',
     BASE_URL + 'chat',
     BASE_URL + 'manifest.json',
     BASE_URL + 'public/images/mobile_icon.png',
