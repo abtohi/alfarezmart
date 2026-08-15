@@ -1318,7 +1318,7 @@ function initQtyTiers(levelDiv, tiers = []) {
     btn.parentNode.replaceChild(clone, btn);
     clone.addEventListener('click', function(e) {
         e.preventDefault();
-        try { addQtyTierRow(list); } catch(err) { console.error(err); alert('Error: ' + err.message); }
+        try { addQtyTierRow(list); } catch(err) { if (typeof showToast === 'function') showToast('Error: ' + err.message, 'error'); else console.error(err); }
     });
 }
 

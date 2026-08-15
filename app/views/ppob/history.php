@@ -457,11 +457,7 @@
     }
 
     function triggerToast(msg, type = 'info') {
-        if (typeof showToast === 'function') {
-            showToast(msg, type);
-        } else {
-            alert(msg);
-        }
+        if (typeof showToast === 'function') showToast(msg, type);
     }
 
     function copyToken(sn) {

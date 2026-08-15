@@ -596,8 +596,13 @@ async function syncProducts(type) {
 }
 
 // Clear Credentials
-function confirmClearSettings() {
-    if (!confirm('Apakah Anda Yakin ingin menghapus semua kredensial API Digiflazz?\nLayanan PPOB akan berhenti berfungsi hingga Anda mengisi ulang.')) return;
+async function confirmClearSettings() {
+    const ok = await AppModal.confirm(
+        '⚠️ Hapus Semua Kredensial PPOB',
+        'Semua kredensial API Digiflazz akan dihapus. Layanan PPOB akan berhenti berfungsi hingga Anda mengisi ulang. Lanjutkan?',
+        'Ya, Hapus Semua', 'var(--danger)'
+    );
+    if (!ok) return;
     fetch('<?= BASE_URL ?>api/ppob/settings', {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({username:'',api_key_dev:'',api_key_prod:'',webhook_secret:'',mode:'development'})

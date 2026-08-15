@@ -695,7 +695,8 @@ async function addSupplierProduct(supplierId, productId, supplierName) {
 }
 
 async function removeSupplierProduct(supplierId, productId, supplierName) {
-    if (!confirm('Hapus produk ini dari daftar supplier?')) return;
+    const ok = await AppModal.confirm('Hapus Produk Supplier', 'Hapus produk ini dari daftar supplier? Tindakan tidak bisa dibatalkan.', 'Ya, Hapus', 'var(--danger)');
+    if (!ok) return;
     try {
         const res = await api(`${BASE_URL}api/suppliers/${supplierId}/products/${productId}/delete`, 'POST', { csrf_token: csrfVal });
         if (res.success) {

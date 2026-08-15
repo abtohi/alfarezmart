@@ -351,11 +351,11 @@
                 renderTrendChart(json.data.daily_trend);
                 renderSellerTable(json.data.sellers);
             } else {
-                alert('Gagal memuat analitik: ' + (json.message || 'Error'));
+                if (typeof showToast === 'function') showToast('Gagal memuat analitik: ' + (json.message || 'Error'), 'error');
             }
         } catch (e) {
             console.error('Error loading analytics:', e);
-            alert('Terjadi kesalahan koneksi saat memuat data analitik.');
+            if (typeof showToast === 'function') showToast('Terjadi kesalahan koneksi saat memuat data analitik.', 'error');
         } finally {
             document.getElementById('loading-state').classList.add('d-none');
             document.getElementById('analytics-content').style.display = 'block';

@@ -748,8 +748,8 @@ function initQtyTiers(levelDiv, tiers = []) {
         try {
             addQtyTierRow(list);
         } catch(err) {
-            console.error('Error adding tier row:', err);
-            alert('Terjadi kesalahan: ' + err.message);
+            if (typeof showToast === 'function') showToast('Terjadi kesalahan: ' + err.message, 'error');
+            else console.error('Error adding tier row:', err);
         }
     });
 }

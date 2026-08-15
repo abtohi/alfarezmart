@@ -1489,8 +1489,11 @@ function openDrafts() {
     });
 }
 
-window.loadDraft = function(id) {
-    if (cart.length > 0 && !confirm('Keranjang saat ini tidak kosong. Timpa dengan draft?')) return;
+window.loadDraft = async function(id) {
+    if (cart.length > 0) {
+        const ok = await AppModal.confirm('Muat Draft', 'Keranjang saat ini tidak kosong. Timpa dengan draft ini?', 'Ya, Timpa', 'var(--warning)');
+        if (!ok) return;
+    }
     
     const drafts = JSON.parse(localStorage.getItem('pos_drafts') || '[]');
     const d = drafts.find(x => x.id === id);
@@ -1511,8 +1514,9 @@ window.loadDraft = function(id) {
     showToast('Draft dimuat', 'success');
 };
 
-window.deleteDraft = function(id) {
-    if (!confirm('Hapus draft ini?')) return;
+window.deleteDraft = async function(id) {
+    const ok = await AppModal.confirm('Hapus Draft', 'Draft ini akan dihapus permanen dan tidak bisa dikembalikan.', 'Ya, Hapus', 'var(--danger)');
+    if (!ok) return;
     let drafts = JSON.parse(localStorage.getItem('pos_drafts') || '[]');
     drafts = drafts.filter(x => x.id !== id);
     localStorage.setItem('pos_drafts', JSON.stringify(drafts));

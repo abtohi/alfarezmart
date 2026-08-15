@@ -566,18 +566,32 @@ function scanProductBarcode() {
             }
         });
     } else {
-        const code = prompt('Masukkan kode barcode:');
-        if (code) {
-            if (searchInput) searchInput.value = code;
-            if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
-                OfflineDB.findByBarcode(code).then(product => {
-                    if (product) window.location.href = `<?= BASE_URL ?>products/${product.id}`;
-                    else window.location.href = '<?= BASE_URL ?>products?q=' + encodeURIComponent(code);
-                });
-            } else {
-                window.location.href = '<?= BASE_URL ?>products?q=' + encodeURIComponent(code);
+        AppModal.show({
+            title: 'Cari Produk via Barcode',
+            icon: 'bi-upc-scan',
+            iconColor: 'var(--primary-bg)',
+            iconAccent: 'var(--primary)',
+            bodyHTML: `<div class="modal-form-group">
+                <label>Kode Barcode / SKU</label>
+                <input type="text" class="form-control-dark" id="manualBarcodeInput" placeholder="Scan atau ketik kode barcode..." autocomplete="off" inputmode="numeric">
+            </div>`,
+            submitText: '<i class="bi bi-search"></i> Cari',
+            onSubmit: () => {
+                const code = document.getElementById('manualBarcodeInput')?.value?.trim();
+                if (code) {
+                    if (searchInput) searchInput.value = code;
+                    if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+                        OfflineDB.findByBarcode(code).then(product => {
+                            if (product) window.location.href = `<?= BASE_URL ?>products/${product.id}`;
+                            else window.location.href = '<?= BASE_URL ?>products?q=' + encodeURIComponent(code);
+                        });
+                    } else {
+                        window.location.href = '<?= BASE_URL ?>products?q=' + encodeURIComponent(code);
+                    }
+                }
+                return true;
             }
-        }
+        });
     }
 }
 

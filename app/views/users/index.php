@@ -911,13 +911,13 @@ async function saveAccessControlSettings() {
             staff_permissions: staffPerms
         });
         if (res.success) {
-            alert(res.message || 'Pengaturan Kontrol Akses Layanan berhasil disimpan');
+            if (typeof showToast === 'function') showToast(res.message || 'Pengaturan Kontrol Akses berhasil disimpan', 'success');
             location.reload();
         } else {
-            alert(res.error || res.message || 'Gagal menyimpan kontrol akses');
+            if (typeof showToast === 'function') showToast(res.error || res.message || 'Gagal menyimpan kontrol akses', 'error');
         }
     } catch (e) {
-        alert('Terjadi kesalahan koneksi saat menyimpan kontrol akses');
+        if (typeof showToast === 'function') showToast('Terjadi kesalahan koneksi saat menyimpan kontrol akses', 'error');
     }
 }
 </script>

@@ -1032,10 +1032,22 @@ function scanProductBarcode() {
             }
         });
     } else {
-        const code = prompt('Masukkan kode barcode:');
-        if (code) {
-            processPurchaseBarcodeOrSearch(code);
-        }
+        AppModal.show({
+            title: 'Masukkan Barcode',
+            icon: 'bi-upc-scan',
+            iconColor: 'var(--primary-bg)',
+            iconAccent: 'var(--primary)',
+            bodyHTML: `<div class="modal-form-group">
+                <label>Kode Barcode / SKU</label>
+                <input type="text" class="form-control-dark" id="manualBarcodeInput" placeholder="Scan atau ketik kode barcode..." autocomplete="off" inputmode="numeric">
+            </div>`,
+            submitText: '<i class="bi bi-search"></i> Cari',
+            onSubmit: () => {
+                const code = document.getElementById('manualBarcodeInput')?.value?.trim();
+                if (code) processPurchaseBarcodeOrSearch(code);
+                return true;
+            }
+        });
     }
 }
 

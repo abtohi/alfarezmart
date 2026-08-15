@@ -268,15 +268,12 @@
 
     document.getElementById('btnClearOrder').addEventListener('click', () => {
         if (orderItems.length === 0) return;
-        if (typeof AppModal !== 'undefined' && AppModal.confirm) {
-            AppModal.confirm({
-                title: 'Kosongkan Daftar?',
-                message: 'Semua item orderan akan dihapus.',
-                confirmText: 'Ya, Kosongkan',
-                onConfirm: () => { orderItems.length = 0; renderList(); }
+        if (typeof AppModal !== 'undefined') {
+            AppModal.confirm('Kosongkan Daftar?', 'Semua item orderan akan dihapus.', 'Ya, Kosongkan', 'var(--danger)').then(ok => {
+                if (ok) { orderItems.length = 0; renderList(); }
             });
-        } else if (confirm('Kosongkan daftar orderan?')) {
-            orderItems.length = 0; renderList();
+        } else {
+            if (confirm('Kosongkan daftar orderan?')) { orderItems.length = 0; renderList(); }
         }
     });
 
@@ -657,7 +654,10 @@
     };
 
     window.loadOrderDraft = async function(id) {
-        if (orderItems.length > 0 && !confirm('Daftar saat ini tidak kosong. Timpa dengan draft?')) return;
+        if (orderItems.length > 0) {
+            const ok = await AppModal.confirm('Muat Draft', 'Daftar saat ini tidak kosong. Timpa dengan draft ini?', 'Ya, Timpa', 'var(--warning)');
+            if (!ok) return;
+        }
         try {
             const res = await fetch(`<?= BASE_URL ?>api/orders/estimates/${id}`);
             const data = await res.json();
@@ -691,7 +691,8 @@
     };
 
     window.deleteOrderDraft = async function(id) {
-        if (!confirm('Hapus draft ini?')) return;
+        const ok = await AppModal.confirm('Hapus Draft', 'Draft orderan ini akan dihapus permanen.', 'Ya, Hapus', 'var(--danger)');
+        if (!ok) return;
         try {
             const csrf = document.getElementById('csrfToken')?.value || '';
             const res = await fetch(`<?= BASE_URL ?>api/orders/estimates/${id}/delete`, {

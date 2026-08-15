@@ -371,8 +371,9 @@ function applyFilterAndSearch() {
     });
 }
 
-function deleteCustomer(id) {
-    if(!confirm('Apakah Anda yakin ingin menghapus pelanggan ini?')) return;
+async function deleteCustomer(id) {
+    const ok = await AppModal.confirm('Hapus Pelanggan', 'Data pelanggan PPOB ini akan dihapus permanen. Lanjutkan?', 'Ya, Hapus', 'var(--danger)');
+    if (!ok) return;
 
     const formData = new FormData();
     formData.append('id', id);

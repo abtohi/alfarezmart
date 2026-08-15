@@ -744,22 +744,18 @@ async function syncPrices() {
         if (data.success) {
             if (typeof showToast === 'function') {
                 showToast('✅ Sinkronisasi harga berhasil!', 'success');
-            } else {
-                alert('✅ Sinkronisasi harga berhasil!');
             }
             loadPrices();
         } else {
-            if (typeof showAlert === 'function') {
-                showAlert('❌ Gagal: ' + (data.message || 'Sinkronisasi gagal'), 'danger');
-            } else {
-                alert('❌ Gagal: ' + (data.message || 'Sinkronisasi gagal'));
+            if (typeof showToast === 'function') {
+                showToast('❌ Gagal: ' + (data.message || 'Sinkronisasi gagal'), 'error');
             }
         }
     } catch(e) {
         modal.hide();
         btn.innerHTML = ogHtml;
         btn.disabled = false;
-        alert('❌ Terjadi kesalahan jaringan saat sinkronisasi.');
+        if (typeof showToast === 'function') showToast('❌ Terjadi kesalahan jaringan saat sinkronisasi.', 'error');
     }
 }
 </script>
