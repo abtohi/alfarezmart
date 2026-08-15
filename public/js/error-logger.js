@@ -158,6 +158,7 @@
         '/api/products/sync',     // background Dexie IndexedDB sync
         '/setup',                 // 403 intentional di production
         '/sw.js',                 // service worker check
+        '/api/ai/scan-invoice',   // AI scan error ditangkap langsung oleh scanInvoiceWithAI() dengan detail lebih lengkap
     ];
 
     function isIgnoredUrl(url) {
@@ -234,7 +235,11 @@
         clearLogs: function () {
             localStorage.removeItem(STORAGE_KEY);
         },
-        addLog: addLog
+        addLog: addLog,
+        /** Shorthand manual log: ErrorLogger.log(type, message, details) */
+        log: function (type, message, details) {
+            addLog(type, message, details || null);
+        }
     };
 
 })();

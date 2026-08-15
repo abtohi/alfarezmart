@@ -440,6 +440,14 @@ async function syncPendingChanges() {
             const failKey = `sync_fail_${change.id}`;
             let retries = parseInt(localStorage.getItem(failKey) || '0');
 
+            // Discard invalid / non-queueable endpoints (like AI scan, export, logs)
+            const rawEp = String(change.endpoint || '').toLowerCase();
+            if (rawEp.includes('/ai/') || rawEp.includes('/scan-invoice') || rawEp.includes('/export') || rawEp.includes('/sync') || rawEp.includes('/activity/log') || retries >= 5) {
+                await window.OfflineDB.removePendingChange(change.id);
+                localStorage.removeItem(failKey);
+                continue;
+            }
+
             try {
                 // Ensure endpoint is normalized using BASE_URL if relative
                 let endpoint = change.endpoint;

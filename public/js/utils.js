@@ -97,6 +97,16 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
 
     // Helper to queue mutation offline
     async function fallbackOfflineQueue() {
+        // Never queue AI, scan, export, sync, or explicitly non-queueable endpoints
+        const isNonQueueable = options.noOfflineQueue === true ||
+            endpoint.includes('/ai/') || endpoint.includes('/scan-') ||
+            endpoint.includes('/sync') || endpoint.includes('/export') ||
+            endpoint.includes('/import') || endpoint.includes('/ppob/') ||
+            endpoint.includes('/activity/log');
+        if (isNonQueueable) {
+            return null;
+        }
+
         if (window.OfflineDB && ['POST', 'PUT', 'DELETE'].includes(method)) {
             try {
                 let payloadData = null;

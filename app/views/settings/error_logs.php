@@ -105,6 +105,9 @@
 .log-type-console_error { background: rgba(245,158,11,0.15); color: #f59e0b; }
 .log-type-console_warn  { background: rgba(99,102,241,0.15); color: #818cf8; }
 .log-type-network   { background: rgba(59,130,246,0.15);  color: #3b82f6; }
+.log-type-ai-error  { background: rgba(236,72,153,0.15);  color: #ec4899; }
+.log-type-ai-empty  { background: rgba(168,85,247,0.15);  color: #a855f7; }
+.log-type-ai-partial{ background: rgba(249,115,22,0.15);  color: #f97316; }
 .log-entry-msg {
     flex: 1;
     font-size: var(--font-size-xs);
@@ -159,11 +162,15 @@ var _allLogs = [];
 var _currentFilter = 'all';
 
 var TYPE_CONFIG = {
-    'error':         { label: 'JS Error',   cls: 'log-type-error',         icon: 'bi-exclamation-octagon-fill', color: '#ef4444' },
-    'promise':       { label: 'Promise',    cls: 'log-type-promise',        icon: 'bi-arrow-repeat',             color: '#f59e0b' },
-    'console_error': { label: 'Console ❌', cls: 'log-type-console_error',  icon: 'bi-terminal-fill',            color: '#f59e0b' },
-    'console_warn':  { label: 'Console ⚠', cls: 'log-type-console_warn',   icon: 'bi-terminal',                 color: '#818cf8' },
-    'network':       { label: 'Network',    cls: 'log-type-network',        icon: 'bi-wifi-off',                 color: '#3b82f6' },
+    'error':          { label: 'JS Error',      cls: 'log-type-error',         icon: 'bi-exclamation-octagon-fill', color: '#ef4444' },
+    'promise':        { label: 'Promise',        cls: 'log-type-promise',       icon: 'bi-arrow-repeat',             color: '#f59e0b' },
+    'console_error':  { label: 'Console ❌',     cls: 'log-type-console_error', icon: 'bi-terminal-fill',            color: '#f59e0b' },
+    'console_warn':   { label: 'Console ⚠',      cls: 'log-type-console_warn',  icon: 'bi-terminal',                 color: '#818cf8' },
+    'network':        { label: 'Network',         cls: 'log-type-network',       icon: 'bi-wifi-off',                 color: '#3b82f6' },
+    'ai_scan':        { label: 'AI Scan ❌',      cls: 'log-type-ai-error',      icon: 'bi-camera-fill',              color: '#ec4899' },
+    'ai_scan_error':  { label: 'AI Scan Error',   cls: 'log-type-ai-error',      icon: 'bi-camera-fill',              color: '#ec4899' },
+    'ai_scan_empty':  { label: 'AI Scan 0 Item',  cls: 'log-type-ai-empty',      icon: 'bi-camera',                   color: '#a855f7' },
+    'ai_scan_result': { label: 'AI Scan Parsial', cls: 'log-type-ai-partial',    icon: 'bi-camera2',                  color: '#f97316' },
 };
 
 function formatDate(isoStr, fallbackStr) {

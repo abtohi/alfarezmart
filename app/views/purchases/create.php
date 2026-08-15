@@ -379,6 +379,7 @@ async function scanInvoiceWithAI() {
     
     const btn = document.getElementById('btnScanAI');
     const originalText = btn.innerHTML;
+    const _scanStart = Date.now();
     
     try {
         btn.disabled = true;
@@ -386,8 +387,10 @@ async function scanInvoiceWithAI() {
         
         // Auto-optimize image resolution safely
         let imageToSend = invoicePhotoBase64;
+        let imageSizeKb = 0;
         try {
             imageToSend = await compressImageForAI(invoicePhotoBase64, 1800, 0.85);
+            imageSizeKb = Math.round((imageToSend.length * 3 / 4) / 1024);
         } catch(ce) {
             console.warn('Image pre-compression bypassed:', ce);
         }
@@ -398,22 +401,58 @@ async function scanInvoiceWithAI() {
             supplier_id: currentSupplierId || null
         };
         
-        const result = await api(`${BASE_URL}api/ai/scan-invoice`, {
-            method: 'POST',
-            timeout: 120000,
-            body: JSON.stringify(payload)
-        });
+        // Use silent + noOfflineQueue to prevent failed AI scan from entering offline sync queue
+        let result;
+        try {
+            result = await api(`${BASE_URL}api/ai/scan-invoice`, {
+                method: 'POST',
+                timeout: 120000,
+                silent: true,
+                noOfflineQueue: true,
+                body: JSON.stringify(payload)
+            });
+        } catch (fetchErr) {
+            const elapsedMs = Date.now() - _scanStart;
+            // Log detailed fetch failure to ErrorLogger
+            if (window.ErrorLogger) {
+                window.ErrorLogger.log('ai_scan', '[AI Scan] Fetch Gagal: ' + fetchErr.message, {
+                    errorType: fetchErr.name || 'FetchError',
+                    elapsedMs: elapsedMs,
+                    imageSizeKb: imageSizeKb,
+                    supplierId: currentSupplierId || null,
+                    hint: elapsedMs >= 119000 ? 'TIMEOUT (>119s) — server tidak merespons dalam batas waktu' : 'Network error — server tidak dapat dijangkau'
+                });
+            }
+            throw fetchErr;
+        }
 
-        if (!result) {
-            throw new Error('Tidak ada respons dari server.');
-        }
-        if (result.error) {
-            throw new Error(result.error);
-        }
+        if (!result) throw new Error('Tidak ada respons dari server.');
+        if (result.error) throw new Error(result.error);
+        
+        const elapsedSec = ((Date.now() - _scanStart) / 1000).toFixed(1);
+        const meta = result.metadata || {};
         
         if (result.success && result.data && result.data.length > 0) {
-            showToast('AI berhasil memparsing ' + result.data.length + ' item', 'success');
-            
+            const matched   = result.data.filter(i => i.is_matched && i.product_id);
+            const unmatched = result.data.filter(i => !i.is_matched || !i.product_id);
+
+            showToast(`AI: ${matched.length} item cocok, ${unmatched.length} tidak dikenali (${elapsedSec}s)`, matched.length > 0 ? 'success' : 'warning');
+
+            // Log AI scan result summary to ErrorLogger for optimization
+            if (window.ErrorLogger && (unmatched.length > 0 || meta.avg_confidence < 70)) {
+                window.ErrorLogger.log('ai_scan_result', '[AI Scan] Hasil Parsial/Tidak Cocok', {
+                    elapsedSec: parseFloat(elapsedSec),
+                    imageSizeKb: imageSizeKb,
+                    model_used: meta.skill_used || 'unknown',
+                    supplier_detected: meta.supplier_detected || 'unknown',
+                    total_extracted: result.data.length,
+                    matched_count: matched.length,
+                    unmatched_count: unmatched.length,
+                    avg_confidence: meta.avg_confidence || 0,
+                    unmatched_names: unmatched.slice(0, 10).map(i => i.original_name || i.supplier_code || '-')
+                });
+            }
+
             for (const item of result.data) {
                 if (item.is_matched && item.product_id) {
                     try {
@@ -433,17 +472,15 @@ async function scanInvoiceWithAI() {
                             const scanQty = parseFloat(item.qty) || 1;
                             const scanTotal = parseFloat(item.total_price) || (scanQty * scanUnitPrice);
 
-                            // Check if this product & level is already in cart
                             const existingIndex = purchaseItems.findIndex(i => i.product_id == productData.id && i.level == selectedPkg.level);
                             if (existingIndex > -1) {
                                 const existing = purchaseItems[existingIndex];
-                                existing.quantity = scanQty; // Set to scanned qty
+                                existing.quantity = scanQty;
                                 if (scanUnitPrice > 0) existing.buy_price = scanUnitPrice;
                                 existing.total = scanTotal;
                                 propagateFromMainInputs(existing);
                                 syncSellPricesWhenBuyPriceChanges(existing);
                             } else {
-                                // Add as fresh item
                                 addProductToCart(productData, selectedPkg.level);
                                 const addedItem = purchaseItems[0];
                                 if (addedItem && addedItem.product_id == productData.id) {
@@ -459,15 +496,36 @@ async function scanInvoiceWithAI() {
                         console.error('Failed to add AI mapped item', e);
                     }
                 } else {
-                    showToast('Item "' + (item.original_name || item.supplier_code || item.name) + '" tidak dikenali di database, silakan input manual.', 'warning');
+                    showToast('Item "' + (item.original_name || item.supplier_code || '-') + '" belum cocok, input manual.', 'warning');
                 }
             }
             renderCart();
             calculateTotal();
         } else {
-            showToast('AI tidak menemukan item yang valid', 'warning');
+            const elapsedSecEnd = ((Date.now() - _scanStart) / 1000).toFixed(1);
+            // Log zero-result scan to ErrorLogger
+            if (window.ErrorLogger) {
+                window.ErrorLogger.log('ai_scan_empty', '[AI Scan] Hasil 0 Item — AI tidak mengekstrak apapun', {
+                    elapsedSec: parseFloat(elapsedSecEnd),
+                    imageSizeKb: imageSizeKb,
+                    model_used: meta.skill_used || 'unknown',
+                    supplier_detected: meta.supplier_detected || 'unknown',
+                    raw_message: result.message || '',
+                    hint: 'Periksa kualitas gambar dan konfigurasi API Key / Model di Pengaturan AI'
+                });
+            }
+            showToast('AI tidak mengekstrak item apapun — coba foto lebih jelas', 'warning');
         }
     } catch (err) {
+        const elapsedMs = Date.now() - _scanStart;
+        if (window.ErrorLogger) {
+            window.ErrorLogger.log('ai_scan_error', '[AI Scan] Error: ' + (err.message || 'Unknown'), {
+                errorType: err.name || 'Error',
+                elapsedMs: elapsedMs,
+                supplierId: currentSupplierId || null,
+                stack: err.stack ? err.stack.substring(0, 400) : null
+            });
+        }
         console.error('Error scanning invoice:', err);
         showToast(err.message || 'Gagal memindai invoice dengan AI', 'error');
     } finally {
