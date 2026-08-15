@@ -190,8 +190,8 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
             error.message = 'Permintaan waktu habis (timeout server).';
         }
 
-        console.error('API Error:', error);
         if (!options.silent && !config.silent) {
+            console.error('API Error:', error);
             showToast(error.message || 'Koneksi terputus', 'error');
         }
         throw error;

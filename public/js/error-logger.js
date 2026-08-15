@@ -144,6 +144,7 @@
     var IGNORED_URL_PATTERNS = [
         '/api/activity/log',      // fire-and-forget activity tracker
         '/api/sync/',             // background sync
+        '/api/products/sync',     // background Dexie IndexedDB sync
         '/setup',                 // 403 intentional di production
         '/sw.js',                 // service worker check
     ];

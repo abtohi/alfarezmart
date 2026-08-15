@@ -1004,15 +1004,11 @@ async function _confirmAvailToggle() {
     btn.setAttribute('onclick', `event.stopPropagation(); quickToggleAvailability(this, ${id}, ${newVal})`);
 
     try {
-        const csrfToken = '<?= $_SESSION["csrf_token"] ?? "" ?>';
-        const res = await fetch(`${BASE_URL}api/products/${id}/availability`, {
+        const data = await api(`${BASE_URL}api/products/${id}/availability`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-            credentials: 'same-origin',
-            body: JSON.stringify({ is_available: newVal, csrf_token: csrfToken })
+            body: { is_available: newVal }
         });
-        const data = await res.json();
-        if (!data.success) throw new Error(data.error || 'Gagal update');
+        if (!data || !data.success) throw new Error(data && data.error ? data.error : 'Gagal update');
 
         // Also update Dexie local cache so offline search reflects the change immediately
         if (typeof OfflineDB !== 'undefined') {

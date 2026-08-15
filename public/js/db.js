@@ -34,8 +34,8 @@ window.OfflineDB = (function() {
 
     async function syncProductsFromServer() {
         try {
-            const data = await api(`${BASE_URL}api/products/sync?_t=` + Date.now());
-            if (data && data.products) {
+            const data = await api(`${BASE_URL}api/products/sync?_t=` + Date.now(), { silent: true });
+            if (data && data.products && Array.isArray(data.products) && data.products.length > 0) {
                 // Preserve pending local products before clearing
                 const pendingLocals = await db.products
                     .filter(p => p.is_pending === true || p.is_pending_update === true)
@@ -54,8 +54,8 @@ window.OfflineDB = (function() {
             }
             return 0;
         } catch (e) {
-            console.error("Failed to sync products from server:", e);
-            throw e;
+            console.warn("Background product sync deferred (offline/weak signal)");
+            return 0;
         }
     }
 
