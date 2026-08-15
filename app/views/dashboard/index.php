@@ -889,6 +889,11 @@
             <div class="menu-text"><h6>Pusat Bantuan &amp; Panduan</h6><small>Cara penggunaan &amp; solusi perbaikan masalah</small></div>
             <i class="bi bi-chevron-right menu-arrow"></i>
         </a>
+        <a href="<?= BASE_URL ?>settings/error-logs" class="menu-item">
+            <div class="menu-icon" style="background:rgba(239,68,68,0.12);color:var(--danger);"><i class="bi bi-bug"></i></div>
+            <div class="menu-text"><h6>Error Log Catcher</h6><small>Lihat &amp; salin semua error yang terjadi di aplikasi</small></div>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
     </ul>
 
     <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:var(--font-size-xs);">
