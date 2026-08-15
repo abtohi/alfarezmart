@@ -100,6 +100,16 @@
         var message = reason instanceof Error
             ? reason.message
             : (typeof reason === 'string' ? reason : JSON.stringify(reason));
+        
+        // Abaikan rejection internal browser saat update ServiceWorker background
+        if (message && (
+            message.indexOf('ServiceWorker') !== -1 ||
+            message.indexOf('serviceworker') !== -1 ||
+            message.indexOf('AbortError') !== -1
+        )) {
+            return;
+        }
+
         addLog('promise', 'Unhandled Promise Rejection: ' + message, {
             stack: reason instanceof Error && reason.stack
                 ? String(reason.stack).substring(0, 1000)
