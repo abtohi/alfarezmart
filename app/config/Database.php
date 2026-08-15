@@ -387,6 +387,28 @@ class Database
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )",
+                "CREATE TABLE IF NOT EXISTS digi_markup_rules (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    category TEXT UNIQUE,
+                    brand TEXT,
+                    markup_type TEXT DEFAULT 'fixed',
+                    markup_value REAL DEFAULT 0,
+                    min_price REAL DEFAULT 0,
+                    max_price REAL DEFAULT 0,
+                    is_active INTEGER DEFAULT 1,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )",
+                "CREATE TABLE IF NOT EXISTS digi_deposits (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    amount REAL DEFAULT 0,
+                    bank TEXT,
+                    owner_name TEXT,
+                    status TEXT DEFAULT 'pending',
+                    notes TEXT,
+                    raw_response TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )",
                 "CREATE TABLE IF NOT EXISTS app_settings (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     setting_key TEXT UNIQUE NOT NULL,

@@ -80,12 +80,19 @@ class DigiflazzController extends Controller {
 
     public function apiGetBalance() {
         AuthController::requireAuth();
-        $res = $this->digiService->getBalance();
-        if ($res['success'] && isset($res['data']['deposit'])) {
-            $this->syncPendingDeposits((float)$res['data']['deposit']);
+        try {
+            $res = $this->digiService->getBalance();
+            if ($res['success'] && isset($res['data']['deposit'])) {
+                try {
+                    $this->syncPendingDeposits((float)$res['data']['deposit']);
+                } catch (\Throwable $te) {}
+            }
+            header('Content-Type: application/json');
+            echo json_encode($res);
+        } catch (\Throwable $e) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
-        header('Content-Type: application/json');
-        echo json_encode($res);
         exit;
     }
 

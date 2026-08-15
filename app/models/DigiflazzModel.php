@@ -10,6 +10,7 @@ class DigiflazzModel {
 
     public function __construct() {
         $this->db = Database::getInstance()->getConnection();
+        $this->ensureTables();
         try {
             if ($this->db->getAttribute(PDO::ATTR_DRIVER_NAME) !== 'sqlite') {
                 $check = $this->db->query("SHOW COLUMNS FROM digi_products LIKE 'is_custom_price'");
@@ -19,6 +20,90 @@ class DigiflazzModel {
             }
         } catch (\Exception $e) {
             error_log("[DigiflazzModel] is_custom_price migration error: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Auto-create required Digiflazz tables if missing
+     */
+    public function ensureTables(): void {
+        try {
+            $isSqlite = ($this->db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite');
+            if ($isSqlite) {
+                $this->db->exec("
+                    CREATE TABLE IF NOT EXISTS digi_markup_rules (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        category TEXT UNIQUE,
+                        brand TEXT,
+                        markup_type TEXT DEFAULT 'fixed',
+                        markup_value REAL DEFAULT 0,
+                        min_price REAL DEFAULT 0,
+                        max_price REAL DEFAULT 0,
+                        is_active INTEGER DEFAULT 1,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS digi_deposits (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        amount REAL DEFAULT 0,
+                        bank TEXT,
+                        owner_name TEXT,
+                        status TEXT DEFAULT 'pending',
+                        notes TEXT,
+                        raw_response TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                ");
+            } else {
+                $this->db->exec("
+                    CREATE TABLE IF NOT EXISTS digi_markup_rules (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        category VARCHAR(50) UNIQUE,
+                        brand VARCHAR(100),
+                        markup_type ENUM('fixed','percentage') DEFAULT 'fixed',
+                        markup_value DECIMAL(15,2) DEFAULT 0,
+                        min_price DECIMAL(15,2) DEFAULT 0,
+                        max_price DECIMAL(15,2) DEFAULT 0,
+                        is_active TINYINT(1) DEFAULT 1,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS digi_deposits (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        amount DECIMAL(15,2) DEFAULT 0,
+                        bank VARCHAR(50),
+                        owner_name VARCHAR(100),
+                        status ENUM('pending','success','failed','expired') DEFAULT 'pending',
+                        notes TEXT,
+                        raw_response JSON,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_status (status),
+                        INDEX idx_date (created_at)
+                    );
+                ");
+            }
+
+            // Seed default markup rules if table is empty
+            $countStmt = $this->db->query("SELECT COUNT(*) as c FROM digi_markup_rules");
+            $count = (int)($countStmt ? ($countStmt->fetchColumn() ?? 0) : 0);
+            if ($count === 0) {
+                $defaultCategories = [
+                    'Pulsa' => ['fixed', 1500],
+                    'Data' => ['fixed', 2000],
+                    'PLN' => ['fixed', 2500],
+                    'E-Money' => ['fixed', 1500],
+                    'Games' => ['fixed', 2000],
+                    'Voucher' => ['fixed', 2000],
+                    'Streaming' => ['fixed', 2000],
+                    'TV' => ['fixed', 2500],
+                    'Pascabayar' => ['fixed', 2500],
+                ];
+                foreach ($defaultCategories as $cat => $val) {
+                    $this->saveMarkupRule($cat, $val[0], (float)$val[1]);
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log("[DigiflazzModel] ensureTables error: " . $e->getMessage());
         }
     }
 
@@ -245,7 +330,22 @@ class DigiflazzModel {
             ");
             $this->db->exec("UPDATE digi_products SET sell_price = CEIL((seller_price + markup) / 100) * 100 WHERE is_custom_price = 0");
         } else {
-            $this->db->exec("UPDATE digi_products SET sell_price = (seller_price + 2000) WHERE is_custom_price = 0");
+            try {
+                $rules = $this->getMarkupRules();
+                foreach ($rules as $r) {
+                    $cat = addslashes($r['category']);
+                    $type = $r['markup_type'];
+                    $val = (float)$r['markup_value'];
+                    if ($type === 'percentage') {
+                        $this->db->exec("UPDATE digi_products SET markup = (seller_price * $val / 100), sell_price = (seller_price + (seller_price * $val / 100)) WHERE category = '$cat' AND is_custom_price = 0");
+                    } else {
+                        $this->db->exec("UPDATE digi_products SET markup = $val, sell_price = (seller_price + $val) WHERE category = '$cat' AND is_custom_price = 0");
+                    }
+                }
+                $this->db->exec("UPDATE digi_products SET sell_price = (seller_price + 2000) WHERE (sell_price IS NULL OR sell_price = 0) AND is_custom_price = 0");
+            } catch (\Throwable $e) {
+                $this->db->exec("UPDATE digi_products SET sell_price = (seller_price + 2000) WHERE is_custom_price = 0");
+            }
         }
     }
 
@@ -274,19 +374,38 @@ class DigiflazzModel {
      * Get all markup rules
      */
     public function getMarkupRules() {
-        $stmt = $this->db->query("SELECT * FROM digi_markup_rules ORDER BY category");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->db->query("SELECT * FROM digi_markup_rules ORDER BY category");
+            return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        } catch (\Throwable $e) {
+            $this->ensureTables();
+            try {
+                $stmt = $this->db->query("SELECT * FROM digi_markup_rules ORDER BY category");
+                return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            } catch (\Throwable $e2) {
+                return [];
+            }
+        }
     }
 
     /**
      * Save (upsert) a markup rule
      */
     public function saveMarkupRule(string $category, string $markupType, float $markupValue) {
-        $stmt = $this->db->prepare("
-            INSERT INTO digi_markup_rules (category, brand, markup_type, markup_value)
-            VALUES (:cat, NULL, :type, :val)
-            ON DUPLICATE KEY UPDATE markup_type = :type, markup_value = :val
-        ");
+        $isSqlite = ($this->db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite');
+        if ($isSqlite) {
+            $stmt = $this->db->prepare("
+                INSERT INTO digi_markup_rules (category, brand, markup_type, markup_value)
+                VALUES (:cat, NULL, :type, :val)
+                ON CONFLICT(category) DO UPDATE SET markup_type = excluded.markup_type, markup_value = excluded.markup_value
+            ");
+        } else {
+            $stmt = $this->db->prepare("
+                INSERT INTO digi_markup_rules (category, brand, markup_type, markup_value)
+                VALUES (:cat, NULL, :type, :val)
+                ON DUPLICATE KEY UPDATE markup_type = :type, markup_value = :val
+            ");
+        }
         return $stmt->execute(['cat' => $category, 'type' => $markupType, 'val' => $markupValue]);
     }
 
@@ -564,18 +683,40 @@ class DigiflazzModel {
      * Get recent deposits
      */
     public function getDeposits($limit = 20) {
-        $stmt = $this->db->prepare("SELECT * FROM digi_deposits ORDER BY created_at DESC LIMIT :limit");
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->db->prepare("SELECT * FROM digi_deposits ORDER BY created_at DESC LIMIT :limit");
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            $this->ensureTables();
+            try {
+                $stmt = $this->db->prepare("SELECT * FROM digi_deposits ORDER BY created_at DESC LIMIT :limit");
+                $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+                $stmt->execute();
+                return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Throwable $e2) {
+                return [];
+            }
+        }
     }
 
     /**
      * Get pending deposits
      */
     public function getPendingDeposits() {
-        $stmt = $this->db->query("SELECT * FROM digi_deposits WHERE status = 'pending' ORDER BY created_at ASC");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->db->query("SELECT * FROM digi_deposits WHERE status = 'pending' ORDER BY created_at ASC");
+            return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        } catch (\Throwable $e) {
+            $this->ensureTables();
+            try {
+                $stmt = $this->db->query("SELECT * FROM digi_deposits WHERE status = 'pending' ORDER BY created_at ASC");
+                return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+            } catch (\Throwable $e2) {
+                return [];
+            }
+        }
     }
 
     /**
