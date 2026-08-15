@@ -2,6 +2,7 @@
 require_once __DIR__ . '/InvoiceSkillInterface.php';
 require_once __DIR__ . '/GeneralInvoiceSkill.php';
 require_once __DIR__ . '/MdrInvoiceSkill.php';
+require_once __DIR__ . '/BudiJayaInvoiceSkill.php';
 
 /**
  * SkillManager
@@ -19,6 +20,7 @@ class SkillManager
     {
         $this->registerSkill(new GeneralInvoiceSkill());
         $this->registerSkill(new MdrInvoiceSkill());
+        $this->registerSkill(new BudiJayaInvoiceSkill());
     }
 
     public function registerSkill(InvoiceSkillInterface $skill): void

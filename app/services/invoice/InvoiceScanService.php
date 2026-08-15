@@ -314,22 +314,26 @@ class InvoiceScanService
 
         set_time_limit(120);
 
-        // Only fast, verified non-reasoning free vision models on OpenRouter
+        // Fast, high-accuracy free and preview vision models on OpenRouter
         $FREE_VISION_MODELS = [
-            'google/gemma-4-31b-it:free',            // Google Gemma 4 31B Vision - cepat & akurat OCR
-            'google/gemma-4-26b-a4b-it:free',        // Google Gemma 4 26B Vision - fallback cepat
-            'nvidia/nemotron-nano-12b-v2-vl:free',   // NVIDIA VL 12B model - vision language
-            'openrouter/free',                       // OpenRouter Free Auto Router
+            'google/gemini-2.0-flash-exp:free',
+            'meta-llama/llama-3.2-11b-vision-instruct:free',
+            'mistralai/pixtral-12b:free',
+            'qwen/qwen-2-vl-72b-instruct:free',
+            'google/gemma-3-27b-it:free',
+            'google/gemma-4-31b-it:free',
+            'google/gemma-4-26b-a4b-it:free',
+            'nvidia/nemotron-nano-12b-v2-vl:free',
+            'openrouter/free',
         ];
 
         // Determine list of models to try in order
         if (empty($model) || in_array($model, ['openrouter/auto', 'auto'])) {
-            // Auto mode: cycle through known-good free vision models
             $modelsToTry = $FREE_VISION_MODELS;
         } elseif ($model === 'openrouter/free') {
-            $modelsToTry = array_unique(array_merge(['openrouter/free'], $FREE_VISION_MODELS));
+            $modelsToTry = array_unique(array_merge($FREE_VISION_MODELS, ['openrouter/free']));
         } else {
-            // User selected a specific model from UI → try that first, then fallback to free vision
+            // User configured a specific model (e.g. Gemini 2.0 Flash / Pro / Claude) → try that first
             $modelsToTry = array_unique(array_merge([$model], $FREE_VISION_MODELS));
         }
 
@@ -363,7 +367,7 @@ class InvoiceScanService
                 'X-Title: AlfarezMart Invoice Scanner'
             ]);
 
-            curl_setopt($ch, CURLOPT_TIMEOUT, 40); // 40s per attempt, PHP limit = 120s total
+            curl_setopt($ch, CURLOPT_TIMEOUT, 25); // Fast 25s timeout per attempt
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);
@@ -381,7 +385,7 @@ class InvoiceScanService
             }
 
             if ($httpCode === 429) {
-                error_log("SCAN_AI_TRACE: Model {$tryModel} hit rate limit 429, trying next model...");
+                error_log("SCAN_AI_TRACE: Model {$tryModel} hit rate limit 429, trying next model immediately...");
                 $lastError = "Model {$tryModel} terkena rate limit (429).";
                 continue;
             }
@@ -391,10 +395,7 @@ class InvoiceScanService
                 $msg = $errData['error']['message'] ?? "HTTP $httpCode";
                 error_log("SCAN_AI_TRACE: Model {$tryModel} error ($httpCode): $msg");
                 $lastError = "OpenRouter ({$tryModel}): $msg";
-                if ($httpCode >= 500 || in_array($httpCode, [400, 402, 404, 503])) {
-                    continue;
-                }
-                break;
+                continue;
             }
 
             $resData = json_decode($response, true);
