@@ -166,7 +166,8 @@ var TYPE_CONFIG = {
     'network':       { label: 'Network',    cls: 'log-type-network',        icon: 'bi-wifi-off',                 color: '#3b82f6' },
 };
 
-function formatDate(isoStr) {
+function formatDate(isoStr, fallbackStr) {
+    if (fallbackStr && String(fallbackStr).includes(':')) return fallbackStr;
     if (!isoStr) return '-';
     try {
         var d = new Date(isoStr);
@@ -251,16 +252,18 @@ function renderLogs(filter) {
             sourceInfo = 'HTTP ' + entry.details.status;
         }
 
+        var timeFormatted = entry.time_str || formatDate(entry.ts);
+
         html += '<div class="log-entry" data-type="' + safeHtml(entry.type) + '">';
         html += '<div class="log-entry-header" onclick="toggleDetails(\'details-' + idx + '\')">';
         html += '<div>';
         html += '<span class="log-type-badge ' + cfg.cls + '">' + cfg.label + '</span>';
         html += '</div>';
         html += '<div class="log-entry-msg">';
-        html += '<div>' + safeHtml(entry.message) + '</div>';
-        html += '<div class="log-entry-meta">';
-        html += '<i class="bi bi-clock" style="margin-right:3px;"></i>' + formatDate(entry.ts);
-        if (sourceInfo) html += ' &nbsp;·&nbsp; <code style="font-size:10px;font-family:monospace;">' + safeHtml(sourceInfo) + '</code>';
+        html += '<div style="font-weight:600;">' + safeHtml(entry.message) + '</div>';
+        html += '<div class="log-entry-meta" style="margin-top:4px; display:flex; align-items:center; flex-wrap:wrap; gap:6px;">';
+        html += '<span style="background:var(--surface-2); padding:2px 7px; border-radius:4px; font-weight:600; color:var(--text-primary); border:1px solid var(--border-color);"><i class="bi bi-clock-fill" style="margin-right:4px;color:var(--primary);"></i>' + safeHtml(timeFormatted) + '</span>';
+        if (sourceInfo) html += '<code style="font-size:10px;font-family:monospace; background:var(--surface-2); padding:2px 6px; border-radius:4px;">' + safeHtml(sourceInfo) + '</code>';
         html += '</div>';
         html += '</div>';
         if (hasDetails || entry.url || entry.stack) {
@@ -343,13 +346,19 @@ function copyLogsToClipboard() {
         showToast('Tidak ada log untuk disalin', 'warning');
         return;
     }
+    var nowExport = new Date();
+    var pad = function(n) { return n < 10 ? '0' + n : String(n); };
+    var months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    var exportTimeStr = pad(nowExport.getDate()) + ' ' + months[nowExport.getMonth()] + ' ' + nowExport.getFullYear() + ', ' + pad(nowExport.getHours()) + ':' + pad(nowExport.getMinutes()) + ':' + pad(nowExport.getSeconds()) + ' WIB';
+
     var text = '=== AlfarezMart Error Log Export ===\n';
-    text += 'Waktu Export: ' + new Date().toISOString() + '\n';
-    text += 'Total Entri: ' + _allLogs.length + '\n\n';
+    text += 'Waktu Export : ' + exportTimeStr + '\n';
+    text += 'Total Entri  : ' + _allLogs.length + '\n\n';
 
     _allLogs.forEach(function(e, i) {
+        var timeDisplay = e.time_str || formatDate(e.ts);
         text += '--- [' + (i + 1) + '] ---\n';
-        text += 'Waktu  : ' + formatDate(e.ts) + '\n';
+        text += 'Waktu  : ' + timeDisplay + '\n';
         text += 'Tipe   : ' + e.type + '\n';
         text += 'Pesan  : ' + e.message + '\n';
         text += 'URL    : ' + e.url + '\n';

@@ -10,9 +10,18 @@
     const MAX_DAYS = 7;
     const MAX_LOGS = 500; // batas maksimum entri log agar tidak terlalu besar
 
-    // ─── Helper: timestamp ISO ───────────────────────────────────────────────
+    // ─── Helper: timestamp ISO & string ─────────────────────────────────────
     function now() {
         return new Date().toISOString();
+    }
+
+    function formatTime(d) {
+        if (!d) d = new Date();
+        var pad = function(n) { return n < 10 ? '0' + n : String(n); };
+        var months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+        var datePart = pad(d.getDate()) + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+        var timePart = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+        return datePart + ', ' + timePart + ' WIB';
     }
 
     // ─── Load logs dari localStorage ────────────────────────────────────────
@@ -57,9 +66,11 @@
     // ─── Tambah satu entri log baru ─────────────────────────────────────────
     function addLog(type, message, details) {
         var logs = purgeLogs(loadLogs());
+        var nowObj = new Date();
         var entry = {
             id: Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-            ts: now(),
+            ts: nowObj.toISOString(),
+            time_str: formatTime(nowObj),
             type: type,        // 'error' | 'promise' | 'console_error' | 'console_warn' | 'network'
             message: String(message || '').substring(0, 500),
             details: details || null,
