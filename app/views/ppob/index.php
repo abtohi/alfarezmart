@@ -4938,7 +4938,7 @@ async function executeTransactionAPI(payload) {
         }
     }, 400); // 400ms delay to wait for loadingModal to hide
     } catch(e) {
-        getLoadingModal().hide();
+        if (typeof resultModal !== 'undefined') resultModal.hide();
         showAlert('❌ Terjadi kesalahan jaringan saat transaksi.', 'danger');
     }
 }

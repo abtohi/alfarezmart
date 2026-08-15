@@ -514,16 +514,24 @@ async function syncPendingChanges() {
                     }
                 }
             } catch (e) {
-                console.error("Error saat sinkron data ID:", change.id, e);
-                retries += 1;
-                localStorage.setItem(failKey, retries);
-
-                if (retries >= 3) {
-                    await window.OfflineDB.removePendingChange(change.id);
-                    localStorage.removeItem(failKey);
-                    console.warn(`Menghapus antrian ID ${change.id} setelah ${retries}x percobaan exception`);
-                } else {
+                // If it's a network error (e.g. Failed to fetch), do not increment retries and DO NOT delete
+                const isNetworkError = e instanceof TypeError || (e.message && e.message.toLowerCase().includes('fetch'));
+                
+                if (isNetworkError) {
+                    console.warn("Network error saat sinkron data ID:", change.id, e.message, "(Akan dicoba lagi nanti)");
                     failCount++;
+                } else {
+                    console.error("Error saat sinkron data ID:", change.id, e);
+                    retries += 1;
+                    localStorage.setItem(failKey, retries);
+
+                    if (retries >= 3) {
+                        await window.OfflineDB.removePendingChange(change.id);
+                        localStorage.removeItem(failKey);
+                        console.warn(`Menghapus antrian ID ${change.id} setelah ${retries}x percobaan exception`);
+                    } else {
+                        failCount++;
+                    }
                 }
             }
             updateSyncBadge(); // Update UI badge live

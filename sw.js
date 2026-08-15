@@ -9,8 +9,8 @@
  * They are cached on first request via the Cache-First fetch handler.
  * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v32.0';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v32.0';
+const CACHE_NAME = 'alfarezmart-cache-v33.0';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v33.0';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     // HTML navigation pages only — NOT versioned JS/CSS (those are cached on first use)
@@ -107,8 +107,8 @@ self.addEventListener('fetch', event => {
                     const cached = await caches.match(event.request);
                     if (cached) return cached;
                     return new Response(
-                        JSON.stringify({ offline: true, error: 'Offline', data: [] }),
-                        { status: 503, headers: { 'Content-Type': 'application/json' } }
+                        JSON.stringify({ success: false, offline: true, error: 'Offline', data: [] }),
+                        { status: 200, headers: { 'Content-Type': 'application/json' } }
                     );
                 })
         );
