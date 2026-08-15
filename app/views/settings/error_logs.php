@@ -10,6 +10,9 @@
             </p>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="btn-turbo-clean" onclick="window.AppCleaner && window.AppCleaner.cleanAll()" class="btn-outline-custom" style="padding:8px 14px; font-size:var(--font-size-xs); display:flex; align-items:center; gap:6px; color:#ca8a04; border-color:#eab308; background:rgba(234,179,8,0.1); font-weight:700;">
+                <i class="bi bi-lightning-charge-fill"></i> Bersihkan Cache &amp; Turbo
+            </button>
             <button id="btn-refresh-logs" onclick="loadErrorLogs()" class="btn-outline-custom" style="padding:8px 14px; font-size:var(--font-size-xs); display:flex; align-items:center; gap:6px;">
                 <i class="bi bi-arrow-clockwise"></i> Refresh
             </button>

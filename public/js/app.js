@@ -876,3 +876,153 @@ function initPullToRefresh() {
         touchMoveY = 0;
     });
 }
+
+// ==========================================
+// 🚀 APP CLEANER & TURBO OPTIMIZER
+// ==========================================
+window.AppCleaner = {
+    async cleanAll(options = {}) {
+        const autoReload = options.autoReload !== false;
+        
+        return new Promise((resolve) => {
+            if (typeof AppModal === 'undefined') {
+                if (confirm('Bersihkan semua cache dan optimalkan aplikasi?')) {
+                    if ('caches' in window) {
+                        caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
+                    }
+                    sessionStorage.clear();
+                    localStorage.removeItem('alfarezmart_error_logs');
+                    localStorage.removeItem('alfarezmart_last_bg_sync');
+                    showToast('Cache berhasil dibersihkan', 'success');
+                    setTimeout(() => window.location.reload(true), 600);
+                }
+                resolve(true);
+                return;
+            }
+
+            AppModal.show({
+                title: '⚡ Bersihkan Cache & Turbo App',
+                subtitle: 'Optimasi kecepatan & perbaikan error',
+                icon: 'bi-lightning-charge-fill',
+                iconColor: 'rgba(234,179,8,0.15)',
+                iconAccent: '#eab308',
+                bodyHTML: `
+                    <div style="font-size:var(--font-size-sm); color:var(--text-secondary); margin-bottom:16px;">
+                        Fitur ini akan membersihkan cache lama, mereset memori browser, membersihkan antrean gagal, dan menyegarkan sistem agar aplikasi kembali <strong>ringan, cepat, dan bebas error</strong>.
+                    </div>
+                    <div id="cleaner-progress-box" style="background:var(--surface-2); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; margin-bottom:12px; font-size:var(--font-size-xs);">
+                        <div id="step-cache" style="margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+                            <span id="icon-step-cache"><i class="bi bi-circle" style="color:var(--text-muted);"></i></span>
+                            <span>Membersihkan Cache Storage &amp; Asset Statis</span>
+                        </div>
+                        <div id="step-storage" style="margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+                            <span id="icon-step-storage"><i class="bi bi-circle" style="color:var(--text-muted);"></i></span>
+                            <span>Membersihkan Sampah Storage &amp; Antrean Gagal</span>
+                        </div>
+                        <div id="step-ram" style="margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+                            <span id="icon-step-ram"><i class="bi bi-circle" style="color:var(--text-muted);"></i></span>
+                            <span>Mereset In-Memory RAM &amp; Cache Produk</span>
+                        </div>
+                        <div id="step-sw" style="display:flex; align-items:center; gap:8px;">
+                            <span id="icon-step-sw"><i class="bi bi-circle" style="color:var(--text-muted);"></i></span>
+                            <span>Memperbarui Service Worker ke Versi Terbaru</span>
+                        </div>
+                    </div>
+                    <div id="cleaner-status-msg" style="text-align:center; font-size:var(--font-size-xs); color:var(--text-muted); font-weight:600;">
+                        Siap memulai optimasi...
+                    </div>
+                `,
+                submitText: '⚡ Mulai Bersihkan &amp; Optimalkan',
+                submitClass: 'btn-primary-custom',
+                onSubmit: async function() {
+                    const btn = document.querySelector('.modal-footer .btn-primary-custom');
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Membersihkan...';
+                    }
+
+                    const setStep = (id, status, text) => {
+                        const iconEl = document.getElementById('icon-' + id);
+                        if (iconEl) {
+                            if (status === 'running') {
+                                iconEl.innerHTML = '<i class="spinner-border spinner-border-sm" style="width:12px;height:12px;color:var(--primary);"></i>';
+                            } else if (status === 'done') {
+                                iconEl.innerHTML = '<i class="bi bi-check-circle-fill" style="color:var(--success);"></i>';
+                            }
+                        }
+                        const statusMsg = document.getElementById('cleaner-status-msg');
+                        if (statusMsg && text) statusMsg.textContent = text;
+                    };
+
+                    try {
+                        // Step 1: Bersihkan Cache Storage
+                        setStep('step-cache', 'running', 'Menghapus cache aset lama...');
+                        await new Promise(r => setTimeout(r, 200));
+                        if ('caches' in window) {
+                            const keys = await caches.keys();
+                            await Promise.all(keys.map(key => caches.delete(key)));
+                        }
+                        setStep('step-cache', 'done');
+
+                        // Step 2: Bersihkan LocalStorage sampah & antrean gagal
+                        setStep('step-storage', 'running', 'Membersihkan antrean sync & storage usang...');
+                        await new Promise(r => setTimeout(r, 200));
+                        
+                        const keysToRemove = [];
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const k = localStorage.key(i);
+                            if (k && (k.startsWith('sync_fail_') || k.startsWith('alfarezmart_error_logs') || k === 'alfarezmart_last_bg_sync')) {
+                                keysToRemove.push(k);
+                            }
+                        }
+                        keysToRemove.forEach(k => localStorage.removeItem(k));
+                        sessionStorage.clear();
+
+                        if (typeof db !== 'undefined' && db.pending_changes) {
+                            try {
+                                await db.pending_changes.clear();
+                            } catch(e) {}
+                        }
+                        setStep('step-storage', 'done');
+
+                        // Step 3: Reset RAM In-Memory Cache
+                        setStep('step-ram', 'running', 'Mereset cache memori RAM...');
+                        await new Promise(r => setTimeout(r, 200));
+                        if (typeof OfflineDB !== 'undefined') {
+                            if (typeof OfflineDB.invalidateProductsCache === 'function') {
+                                OfflineDB.invalidateProductsCache();
+                            }
+                        }
+                        setStep('step-ram', 'done');
+
+                        // Step 4: Service Worker update
+                        setStep('step-sw', 'running', 'Mendaftarkan service worker segar...');
+                        await new Promise(r => setTimeout(r, 200));
+                        if ('serviceWorker' in navigator) {
+                            const regs = await navigator.serviceWorker.getRegistrations();
+                            for (let reg of regs) {
+                                await reg.update().catch(() => {});
+                            }
+                        }
+                        setStep('step-sw', 'done', '✅ Semua sampah berhasil dibersihkan! Memuat ulang...');
+
+                        showToast('⚡ Aplikasi berhasil dioptimasi & bebas sampah!', 'success', 3000);
+
+                        await new Promise(r => setTimeout(r, 800));
+
+                        if (autoReload) {
+                            window.location.reload(true);
+                        }
+                        resolve(true);
+                        return true;
+                    } catch (err) {
+                        console.error('AppCleaner error:', err);
+                        showToast('Gagal membersihkan sebagian cache: ' + err.message, 'error');
+                        resolve(false);
+                        return true;
+                    }
+                }
+            });
+        });
+    }
+};

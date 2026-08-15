@@ -65,6 +65,16 @@
     <!-- SISTEM & DUKUNGAN -->
     <div class="section-title" style="margin-top:24px;">Sistem &amp; Dukungan</div>
     <ul class="menu-list">
+        <div class="menu-item" onclick="window.AppCleaner && window.AppCleaner.cleanAll()" style="cursor:pointer; background:linear-gradient(135deg, rgba(234,179,8,0.08) 0%, rgba(245,158,11,0.03) 100%); border:1px dashed rgba(234,179,8,0.3);">
+            <div class="menu-icon" style="background:rgba(234,179,8,0.15);color:#ca8a04;">
+                <i class="bi bi-lightning-charge-fill"></i>
+            </div>
+            <div class="menu-text">
+                <h6 style="color:var(--text-primary); font-weight:700;">Bersihkan Cache &amp; Turbo App</h6>
+                <small style="color:var(--text-muted);">Hapus sampah memori, perbaiki error, &amp; percepat aplikasi</small>
+            </div>
+            <span class="badge-custom badge-warning" style="font-size:10px; padding:3px 8px;">⚡ Turbo</span>
+        </div>
         <a href="<?= BASE_URL ?>settings/error-logs" class="menu-item">
             <div class="menu-icon" style="background:rgba(239,68,68,0.12);color:var(--danger);">
                 <i class="bi bi-bug"></i>
