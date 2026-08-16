@@ -410,36 +410,27 @@ if ($userLevel === 'staff') {
         function checkSignal() {
             if (!navigator.onLine) { setState('offline'); return; }
 
-            // Use Network Information API if available
+            // Use Network Information API if available (0 network requests)
             const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
             if (conn) {
-                // Only flag as weak if it's truly slow-2g or RTT > 1500ms
                 const slow = conn.saveData || (conn.rtt && conn.rtt > 1500) || ['slow-2g'].includes(conn.effectiveType);
                 setState(slow ? 'weak' : 'online');
                 return;
             }
 
-            // Fallback: probe with a tiny asset (splash_icon.svg ~1.6KB) and realistic RTT threshold
-            const t0 = Date.now();
-            const probe = new Image();
-            const timeout = setTimeout(() => { probe.src = ''; setState('weak'); }, 4000);
-            probe.onload  = () => { clearTimeout(timeout); setState(Date.now() - t0 > 2500 ? 'weak' : 'online'); };
-            probe.onerror = () => { clearTimeout(timeout); setState(navigator.onLine ? 'online' : 'offline'); };
-            probe.src = '<?= BASE_URL ?>public/images/splash_icon.svg?_t=' + t0;
+            setState('online');
         }
-
 
         window.addEventListener('online',  () => checkSignal());
         window.addEventListener('offline', () => setState('offline'));
 
-        // Network Information API change event
+        // Network Information API change event (passive, no polling)
         const conn2 = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
         if (conn2) conn2.addEventListener('change', checkSignal);
 
-        // Initial check after DOM ready and every 30s
+        // Initial check once on DOM ready without looping probe
         document.addEventListener('DOMContentLoaded', () => {
             checkSignal();
-            setInterval(checkSignal, 30000);
         });
     })();
     </script>

@@ -985,16 +985,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (!navigator.onLine || window.IS_DB_OFFLINE || serverCards.length === 0) {
             doOfflineSearch(q);
-        } else {
-            // Background sync silent to ensure Dexie cache stays fresh
-            setTimeout(() => {
-                if (typeof OfflineDB.syncProductsFromServer === 'function') {
-                    OfflineDB.syncProductsFromServer().catch(() => {});
-                }
-            }, 3000);
         }
     }
 });
+
 
 
 // =====================================================

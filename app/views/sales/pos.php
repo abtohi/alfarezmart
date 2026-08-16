@@ -607,9 +607,13 @@ async function preloadPosCatalog() {
         } catch(e) {}
     }
 
-    // 3. Always fetch fresh catalog from server (non-blocking, 5s timeout)
-    // This ensures new products are ALWAYS available, even if not yet synced locally.
-    if (navigator.onLine) {
+    // 3. Fetch fresh catalog from server (throttled to 10 mins if local data already present)
+    const POS_LAST_SYNC_KEY = 'pos_last_auto_sync_time';
+    const lastSyncTime = parseInt(localStorage.getItem(POS_LAST_SYNC_KEY) || '0', 10);
+    const hasLocalCatalog = window._posProductsCatalog.length > 0;
+    const shouldFetch = !hasLocalCatalog || (Date.now() - lastSyncTime > 600000); // 10 minutes
+
+    if (navigator.onLine && shouldFetch) {
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -617,12 +621,16 @@ async function preloadPosCatalog() {
             clearTimeout(timeoutId);
             if (res.ok) {
                 const data = await res.json();
-                if (data && data.products && Array.isArray(data.products)) {
+                if (data && data.products && Array.isArray(data.products) && data.products.length > 0) {
+                    localStorage.setItem(POS_LAST_SYNC_KEY, String(Date.now()));
                     // Update in-memory catalog immediately
                     window._posProductsCatalog = data.products;
-                    // Update Dexie IndexedDB in background (non-blocking)
+                    // Update Dexie IndexedDB in background
                     if (typeof db !== 'undefined' && db.products) {
-                        db.products.clear().then(() => db.products.bulkPut(data.products)).catch(() => {});
+                        try {
+                            await db.products.clear();
+                            await db.products.bulkPut(data.products);
+                        } catch(dbErr) {}
                     }
                     // Update localStorage cache (cap at 1.5MB to avoid quota errors)
                     try {

@@ -66,17 +66,16 @@ class Database
 
         $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
         $options = [
-            PDO::ATTR_PERSISTENT         => false, // Disabled persistent to prevent stale socket 'MySQL server has gone away' errors
+            PDO::ATTR_PERSISTENT         => true, // Menggunakan connection pooling agar tidak membuat ratusan koneksi baru per jam
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
-            PDO::ATTR_TIMEOUT            => 3, // Reduced timeout to 3s for fast mobile fallback
+            PDO::ATTR_TIMEOUT            => 3,
         ];
 
         $this->pdo = new PDO($dsn, $user, $pass, $options);
         $this->pdo->exec("SET time_zone = '+07:00'");
-        $this->pdo->exec("SET SESSION wait_timeout = 28800");
-        $this->pdo->exec("SET SESSION interactive_timeout = 28800");
+
     }
 
     private function connectSQLite(): void
@@ -488,22 +487,10 @@ class Database
     }
 
     /**
-     * Get PDO connection (auto pings and reconnects if stale)
+     * Get PDO connection
      */
     public function getConnection(): \PDO
     {
-        if ($this->activeDriver === 'mysql' && $this->pdo !== null) {
-            try {
-                @$this->pdo->query('SELECT 1');
-            } catch (\Throwable $e) {
-                error_log('[AlfarezMart] MySQL connection lost, reconnecting...');
-                try {
-                    $this->connectMySQL();
-                } catch (\Throwable $e2) {
-                    error_log('[AlfarezMart] MySQL reconnect failed: ' . $e2->getMessage());
-                }
-            }
-        }
         return $this->pdo;
     }
 
