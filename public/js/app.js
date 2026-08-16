@@ -503,14 +503,33 @@ async function syncPendingChanges() {
                     retries += 1;
                     localStorage.setItem(failKey, retries);
 
-                    // Client errors (4xx) OR items failed >= 3 times: drop permanently to prevent clog
+                    // ===== PERBAIKAN KRITIS =====
+                    // SEBELUMNYA: hapus data permanen saat 4xx/retry>=3 → DATA HILANG DIAM-DIAM
+                    // SEKARANG: simpan ke backup localStorage, beri tahu user dengan banner merah
                     if ((status >= 400 && status < 500) || retries >= 3) {
+                        // Backup payload ke localStorage — data TIDAK hilang
+                        try {
+                            const failedBackup = JSON.parse(localStorage.getItem('sync_failed_backup') || '[]');
+                            failedBackup.push({
+                                id: change.id,
+                                endpoint: change.endpoint,
+                                method: change.method,
+                                payload: change.payload,
+                                fail_reason: status >= 400 && status < 500
+                                    ? `Server menolak (HTTP ${status}): ${errorMsg}`
+                                    : `Gagal ${retries}x: ${errorMsg}`,
+                                failed_at: new Date().toISOString()
+                            });
+                            localStorage.setItem('sync_failed_backup', JSON.stringify(failedBackup.slice(-30)));
+                        } catch(backupErr) {}
+                        // Hapus dari antrian setelah di-backup
                         await window.OfflineDB.removePendingChange(change.id);
                         localStorage.removeItem(failKey);
-                        console.warn(`Menghapus antrian ID ${change.id} (${status >= 400 && status < 500 ? 'Client Error HTTP ' + status : 'Gagal 3x (' + errorMsg + ')'})`);
+                        failCount++;
+                        console.warn(`[Sync] ⚠️ Data ID ${change.id} gagal (${status >= 400 && status < 500 ? 'HTTP ' + status : 'Gagal ' + retries + 'x'}): ${errorMsg} — di-backup ke localStorage`);
                     } else {
                         failCount++;
-                        console.error(`Gagal sinkron data ID: ${change.id} (percobaan ${retries}) HTTP ${status} — akan dicoba lagi`);
+                        console.warn(`[Sync] Gagal ID: ${change.id} (percobaan ${retries}) HTTP ${status} — akan dicoba lagi`);
                     }
                 }
             } catch (e) {
@@ -521,14 +540,28 @@ async function syncPendingChanges() {
                     console.warn("Network error saat sinkron data ID:", change.id, e.message, "(Akan dicoba lagi nanti)");
                     failCount++;
                 } else {
-                    console.error("Error saat sinkron data ID:", change.id, e);
+                    console.error('[Sync] Exception untuk ID:', change.id, e);
                     retries += 1;
                     localStorage.setItem(failKey, retries);
 
                     if (retries >= 3) {
+                        // Backup ke localStorage, JANGAN hapus tanpa backup
+                        try {
+                            const failedBackup = JSON.parse(localStorage.getItem('sync_failed_backup') || '[]');
+                            failedBackup.push({
+                                id: change.id,
+                                endpoint: change.endpoint,
+                                method: change.method,
+                                payload: change.payload,
+                                fail_reason: `Exception: ${e.message}`,
+                                failed_at: new Date().toISOString()
+                            });
+                            localStorage.setItem('sync_failed_backup', JSON.stringify(failedBackup.slice(-30)));
+                        } catch(backupErr) {}
                         await window.OfflineDB.removePendingChange(change.id);
                         localStorage.removeItem(failKey);
-                        console.warn(`Menghapus antrian ID ${change.id} setelah ${retries}x percobaan exception`);
+                        failCount++;
+                        console.warn(`[Sync] ⚠️ Data ID ${change.id} di-backup setelah ${retries}x exception`);
                     } else {
                         failCount++;
                     }
@@ -541,20 +574,61 @@ async function syncPendingChanges() {
         if (syncIcon) syncIcon.style.animation = '';
 
         if (failCount === 0) {
-            showToast(`Sinkronisasi selesai (${successCount} data)`, 'success');
+            showToast(`✅ Sinkronisasi selesai (${successCount} data tersimpan)`, 'success');
             if (typeof OfflineDB.syncAllDataFromServer === 'function') {
                 OfflineDB.syncAllDataFromServer().catch(e => console.log('Gagal update cache master', e));
             } else if (typeof OfflineDB.syncProductsFromServer === 'function') {
                 OfflineDB.syncProductsFromServer().catch(e => console.log('Gagal update cache produk', e));
             }
         } else {
-            showToast(`Sinkronisasi selesai dengan ${failCount} gagal`, 'warning');
+            // Notifikasi merah persisten — data TIDAK hilang, ada di backup localStorage
+            showToast(`⚠️ ${successCount} berhasil. ${failCount} gagal sync — data TIDAK hilang, lihat banner merah`, 'warning', 8000);
+            _showSyncFailedBanner(failCount);
         }
     } catch (e) {
         console.error("Sync process failed", e);
         updateSyncBadge();
     }
 }
+
+/**
+ * Tampilkan banner merah persisten saat ada data gagal sync.
+ * Data TIDAK hilang — tersimpan aman di backup localStorage.
+ */
+function _showSyncFailedBanner(count) {
+    const existing = document.getElementById('syncFailedBanner');
+    if (existing) existing.remove();
+
+    const banner = document.createElement('div');
+    banner.id = 'syncFailedBanner';
+    banner.style.cssText = `
+        position:fixed;bottom:70px;left:50%;transform:translateX(-50%);
+        z-index:9999;background:var(--danger,#ef4444);color:white;
+        border-radius:12px;padding:10px 16px;font-size:12px;font-weight:700;
+        display:flex;align-items:center;gap:10px;
+        box-shadow:0 4px 20px rgba(239,68,68,0.5);
+        max-width:360px;width:calc(100% - 32px);
+        animation:slideUp 0.3s ease;
+    `;
+    banner.innerHTML = `
+        <i class="bi bi-exclamation-triangle-fill" style="font-size:1.2rem;flex-shrink:0;"></i>
+        <div style="flex:1;">
+            <div>${count} data gagal sync — data TIDAK hilang</div>
+            <div style="font-weight:400;font-size:11px;opacity:0.9;margin-top:2px;">Tersimpan di backup lokal. Klik Coba Lagi saat sinyal stabil.</div>
+        </div>
+        <button onclick="triggerSync();this.closest('#syncFailedBanner').remove();"
+                style="background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);
+                       color:white;padding:4px 8px;border-radius:6px;font-size:11px;
+                       cursor:pointer;white-space:nowrap;font-weight:700;">
+            Coba Lagi
+        </button>
+        <button onclick="this.closest('#syncFailedBanner').remove()"
+                style="background:none;border:none;color:white;cursor:pointer;font-size:1.1rem;padding:0;flex-shrink:0;">✕</button>
+    `;
+    document.body.appendChild(banner);
+    setTimeout(() => { if (banner.parentNode) banner.remove(); }, 30000);
+}
+
 
 // ==========================================
 // SYNC SETTINGS MODAL & LONG PRESS LOGIC

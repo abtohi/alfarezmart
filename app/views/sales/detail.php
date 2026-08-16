@@ -4,6 +4,9 @@
  * @var array $storeSettings
  */
 ?>
+<script>
+window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;
+</script>
 <!-- Sales Detail View -->
 <div class="page-section">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
@@ -11,6 +14,7 @@
             <a href="<?= BASE_URL ?>sales" style="color:var(--text-primary);"><i class="bi bi-arrow-left"></i></a>
             <h2 style="font-size: var(--font-size-lg); font-weight:700;">Detail Transaksi</h2>
         </div>
+
         <div style="display:flex; gap:8px;">
             <a href="<?= BASE_URL ?>sales/pos?edit=<?= $sale['id'] ?>" onclick="try{localStorage.setItem('pos_edit_sale_payload', JSON.stringify(SALE_DATA));}catch(e){}" class="btn-outline-custom" style="padding:6px 12px; font-size:var(--font-size-xs); text-decoration:none; color:var(--text-primary); border:1px solid var(--border-color); display:flex; align-items:center; gap:4px;">
                 <i class="bi bi-pencil-square"></i> Edit

@@ -466,22 +466,26 @@ function resetFilter() {
         </div>`;
 }
 
-// ===== Main: Apply Filter & Fetch (with Instant Stale-While-Revalidate Caching) =====
+// ===== Main: Apply Filter & Fetch (with Instant Stale-While-Revalidate & Fallback Caching) =====
 async function applyFilter() {
     const dateFrom    = document.getElementById('filterDateFrom').value;
     const dateTo      = document.getElementById('filterDateTo').value;
     const customerId  = document.getElementById('filterCustomerId').value;
 
     const container = document.getElementById('salesListContainer');
-    const cacheKey = `sales_analytics_${dateFrom || 'all'}_${dateTo || 'all'}_${customerId || 'all'}`;
+    const exactCacheKey = `sales_analytics_${dateFrom || 'all'}_${dateTo || 'all'}_${customerId || 'all'}`;
+    const fallbackCacheKey = `sales_analytics_latest_backup`;
 
-    // 1. Instant 0ms cache check
+    // 1. Instant 0ms cache check (coba exact cache key dulu, jika belum ada gunakan latest backup cache)
     let hasRenderedCache = false;
     try {
-        const cachedRaw = localStorage.getItem(cacheKey) || sessionStorage.getItem(cacheKey);
+        let cachedRaw = localStorage.getItem(exactCacheKey) || sessionStorage.getItem(exactCacheKey);
+        if (!cachedRaw) {
+            cachedRaw = localStorage.getItem(fallbackCacheKey);
+        }
         if (cachedRaw) {
             const cachedData = JSON.parse(cachedRaw);
-            if (cachedData && cachedData.summary && cachedData.transactions) {
+            if (cachedData && cachedData.summary && cachedData.transactions && cachedData.transactions.length > 0) {
                 _currentData = cachedData;
                 renderSummary(cachedData.summary);
                 renderCustomerRanking(cachedData.customer_ranking);
@@ -521,20 +525,37 @@ async function applyFilter() {
             renderCustomerRanking(res.data.customer_ranking);
             renderGroupedSales(res.data.transactions);
 
-            // Save fresh data to local cache
+            // Simpan data segar ke exact cache key dan latest backup cache
             try {
                 const serialized = JSON.stringify(res.data);
-                localStorage.setItem(cacheKey, serialized);
+                localStorage.setItem(exactCacheKey, serialized);
+                localStorage.setItem(fallbackCacheKey, serialized);
             } catch(e) {}
         } else if (!hasRenderedCache) {
             throw new Error(res?.error || 'Gagal memuat data');
         }
     } catch(e) {
         if (!hasRenderedCache) {
+            // Coba sekali lagi render fallback cache jika fetch gagal total
+            try {
+                const backupRaw = localStorage.getItem(fallbackCacheKey);
+                if (backupRaw) {
+                    const backupData = JSON.parse(backupRaw);
+                    if (backupData && backupData.summary && backupData.transactions) {
+                        _currentData = backupData;
+                        renderSummary(backupData.summary);
+                        renderCustomerRanking(backupData.customer_ranking);
+                        renderGroupedSales(backupData.transactions);
+                        showToast('Menampilkan data tersimpan (offline/sinyal lemah)', 'info');
+                        return;
+                    }
+                }
+            } catch(be) {}
             container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><h3>Error</h3><p>${e.message}</p></div>`;
         }
     }
 }
+
 
 
 // ===== Render Summary =====
