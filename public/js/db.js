@@ -33,8 +33,9 @@ window.OfflineDB = (function() {
     }
 
     async function syncProductsFromServer() {
+        if (!navigator.onLine) return 0;
         try {
-            const data = await api(`${BASE_URL}api/products/sync?_t=` + Date.now(), { silent: true });
+            const data = await api(`${BASE_URL}api/products/sync?_t=` + Date.now(), { silent: true, noOfflineQueue: true });
             if (data && data.products && Array.isArray(data.products) && data.products.length > 0) {
                 // Preserve pending local products before clearing
                 const pendingLocals = await db.products
@@ -54,23 +55,23 @@ window.OfflineDB = (function() {
             }
             return 0;
         } catch (e) {
-            console.warn("Background product sync deferred (offline/weak signal)");
             return 0;
         }
     }
 
     async function syncAllDataFromServer() {
+        if (!navigator.onLine) return false;
         try {
-            const data = await api(`${BASE_URL}api/sync/all?_t=` + Date.now(), { timeout: 60000, silent: true });
+            const data = await api(`${BASE_URL}api/sync/all?_t=` + Date.now(), { timeout: 60000, silent: true, noOfflineQueue: true });
             if (data) {
                 return await saveFromPayload(data);
             }
             return false;
         } catch (e) {
-            console.warn("Background sync warning:", e.message || e);
             return false;
         }
     }
+
 
     async function cacheProductImages(products) {
         // Images are dynamically cached on-demand by SW during browsing

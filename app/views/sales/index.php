@@ -716,6 +716,9 @@ function renderGroupedSales(transactions) {
                         <a href="${BASE_URL}sales/${t.id}" class="btn-outline-custom" title="Lihat Detail" style="padding:4px 8px;font-size:11px;border-radius:6px;text-decoration:none;color:var(--text-primary);">
                             <i class="bi bi-eye"></i> Detail
                         </a>
+                        <button type="button" onclick="printSingleSale(${t.id}, '${t.invoice_number}')" title="Cetak Struk Transaksi" class="btn-outline-custom" style="padding:4px 8px;font-size:11px;border-radius:6px;color:var(--success);border-color:rgba(16,185,129,0.3);">
+                            <i class="bi bi-printer"></i>
+                        </button>
                         <button type="button" onclick="shareInvoice(${t.id}, '${t.invoice_number}')" data-share-btn="${t.id}" title="Bagikan / Unduh Struk" class="btn-outline-custom" style="padding:4px 8px;font-size:11px;border-radius:6px;color:var(--primary);border-color:var(--primary-bg);">
                             <i class="bi bi-share"></i>
                         </button>
@@ -760,6 +763,14 @@ function renderSaleCard(t) {
                 <div style="display:flex;align-items:center;gap:8px;">
                     <span style="font-size:var(--font-size-xs);color:var(--text-muted);">${fmtDateTime(t.created_at)}</span>
                     <button type="button"
+                        onclick="event.stopPropagation(); printSingleSale(${t.id}, '${t.invoice_number}')"
+                        title="Cetak struk"
+                        style="background:none;border:none;padding:2px 4px;cursor:pointer;color:var(--success);font-size:1rem;border-radius:var(--radius-sm);transition:color 0.2s,background 0.2s;line-height:1;display:flex;align-items:center;"
+                        onmouseover="this.style.background='var(--success-bg)'"
+                        onmouseout="this.style.background='none'">
+                        <i class="bi bi-printer"></i>
+                    </button>
+                    <button type="button"
                         onclick="event.stopPropagation(); shareInvoice(${t.id}, '${t.invoice_number}')"
                         title="Bagikan struk"
                         style="background:none;border:none;padding:2px 4px;cursor:pointer;color:var(--text-muted);font-size:1rem;border-radius:var(--radius-sm);transition:color 0.2s,background 0.2s;line-height:1;display:flex;align-items:center;"
@@ -782,6 +793,7 @@ function renderSaleCard(t) {
                 <span><i class="bi bi-person"></i> ${custName}</span>
                 <span class="badge-custom badge-${t.sale_mode === 'retail' ? 'info' : 'warning'}">${t.sale_mode === 'retail' ? 'Retail' : 'Grosir'}</span>
             </div>
+
             <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;">
                 <span style="font-size:var(--font-size-xs);color:var(--text-muted);">${t.total_items || 0} item</span>
                 <span style="font-weight:700;color:var(--primary);font-size:var(--font-size-base);">${rupiah(t.total_amount)}</span>
@@ -1097,49 +1109,148 @@ async function bulkDeleteSelected() {
 }
 
 // ===== Printer =====
+function getSalesPrinter() {
+    if (window.thermalPrinter) return window.thermalPrinter;
+    if (typeof ThermalPrinter !== 'undefined') {
+        window.thermalPrinter = new ThermalPrinter();
+        return window.thermalPrinter;
+    }
+    return null;
+}
+
 function updatePrinterUI() {
     const btn = document.getElementById('btnSalesPrinter');
     const icon = document.getElementById('salesPrinterIcon');
     const label = document.getElementById('salesPrinterLabel');
-    const tp = (typeof thermalPrinter !== 'undefined') ? thermalPrinter : null;
+    const tp = getSalesPrinter();
     if (!btn || !tp) return;
 
-    if (tp.isConnected()) {
+    if (tp.isConnected && tp.isConnected()) {
         btn.style.background = 'var(--success-bg)'; btn.style.color = 'var(--success)'; btn.style.borderColor = 'var(--success)';
-        icon.className = 'bi bi-printer-fill'; label.textContent = tp.device?.name || 'Terhubung'; label.style.display = 'inline';
+        if (icon) icon.className = 'bi bi-printer-fill';
+        if (label) { label.textContent = tp.device?.name || 'Terhubung'; label.style.display = 'inline'; }
         btn.title = 'Printer terhubung - Klik untuk putuskan';
-    } else if (tp.hasSavedDevice()) {
+    } else if (tp.hasSavedDevice && tp.hasSavedDevice()) {
         btn.style.background = 'var(--warning-bg)'; btn.style.color = 'var(--warning)'; btn.style.borderColor = 'var(--warning)';
-        icon.className = 'bi bi-printer'; label.textContent = 'Tersimpan'; label.style.display = 'inline';
+        if (icon) icon.className = 'bi bi-printer';
+        if (label) { label.textContent = 'Tersimpan'; label.style.display = 'inline'; }
         btn.title = 'Printer tersimpan - Klik untuk hubungkan';
     } else {
         btn.style.background = 'var(--surface-1)'; btn.style.color = 'var(--text-muted)'; btn.style.borderColor = 'var(--border-color)';
-        icon.className = 'bi bi-printer'; label.style.display = 'none';
+        if (icon) icon.className = 'bi bi-printer';
+        if (label) label.style.display = 'none';
         btn.title = 'Hubungkan Printer Thermal Bluetooth';
     }
 }
 
 async function toggleSalesPrinter() {
-    const tp = (typeof thermalPrinter !== 'undefined') ? thermalPrinter : null;
-    if (!tp) { showToast('Module printer tidak tersedia', 'error'); return; }
+    const tp = getSalesPrinter();
+    if (!tp) { showToast('Module printer belum siap', 'warning'); return; }
     if (tp.isIOS || !tp.hasBluetoothAPI) {
-        showToast('Perangkat ini menggunakan cetak via Browser/AirPrint. Hubungkan printer saat checkout di POS.', 'info'); return;
+        showToast('Perangkat ini menggunakan cetak via Browser/AirPrint.', 'info'); return;
     }
-    if (tp.isConnected()) { tp.disconnect(); tp.clearLastDevice(); showToast('Printer diputuskan', 'info'); updatePrinterUI(); return; }
+    if (tp.isConnected && tp.isConnected()) {
+        tp.disconnect();
+        if (tp.clearLastDevice) tp.clearLastDevice();
+        showToast('Printer diputuskan', 'info');
+        updatePrinterUI();
+        return;
+    }
 
     const btn = document.getElementById('btnSalesPrinter');
-    const prevHTML = btn.innerHTML;
-    btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i>'; btn.disabled = true;
+    const prevHTML = btn ? btn.innerHTML : '';
+    if (btn) { btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i>'; btn.disabled = true; }
     try {
-        if (tp.device || tp.hasSavedDevice()) {
+        if (tp.device || (tp.hasSavedDevice && tp.hasSavedDevice())) {
             const ok = await tp.tryAutoReconnect();
-            if (ok) { showToast(`Printer terhubung: ${tp.device?.name || 'Bluetooth'}`, 'success'); updatePrinterUI(); btn.disabled = false; return; }
+            if (ok) {
+                showToast(`Printer terhubung: ${tp.device?.name || 'Bluetooth'}`, 'success');
+                updatePrinterUI();
+                if (btn) btn.disabled = false;
+                return;
+            }
         }
         await tp.connect();
         showToast(`Printer terhubung: ${tp.device?.name || 'Bluetooth'}`, 'success');
-    } catch(e) { showToast(e.message || 'Gagal menghubungkan printer', 'error'); }
-    btn.innerHTML = prevHTML; btn.disabled = false; updatePrinterUI();
+    } catch(e) {
+        showToast(e.message || 'Gagal menghubungkan printer', 'error');
+    }
+    if (btn) { btn.innerHTML = prevHTML; btn.disabled = false; }
+    updatePrinterUI();
 }
+
+async function printSingleSale(id, invoiceNumber) {
+    const tp = getSalesPrinter();
+    showToast(`Menyiapkan struk #${invoiceNumber}...`, 'info');
+
+    try {
+        let sale = null;
+        try {
+            const resp = await fetch(`${BASE_URL}api/sales/${id}`);
+            if (resp.ok) {
+                const resData = await resp.json();
+                sale = resData.sale || resData.data || resData;
+            }
+        } catch(e) {}
+
+        if (!sale || !sale.items || sale.items.length === 0) {
+            const resp2 = await fetch(`${BASE_URL}sales/${id}?format=json`);
+            if (resp2.ok) {
+                const resData2 = await resp2.json();
+                sale = resData2.sale || resData2;
+            }
+        }
+
+        if (!sale || !sale.items || sale.items.length === 0) {
+            window.location.href = `${BASE_URL}sales/${id}`;
+            return;
+        }
+
+        const cartData = (sale.items || []).map(i => ({
+            name: i.invoice_name || i.full_name || i.custom_name || 'Item',
+            print_name: i.invoice_name || i.full_name || i.custom_name || 'Item',
+            quantity: parseFloat(i.quantity) || 1,
+            unit_price: parseFloat(i.unit_price) || 0,
+            total: parseFloat(i.total_price) || 0,
+            unit_name: i.unit_name || 'pcs'
+        }));
+
+        if (!tp || tp.isIOS || !tp.hasBluetoothAPI) {
+            await (tp || new ThermalPrinter()).printBrowser(cartData, parseFloat(sale.total_amount), sale.invoice_number, {
+                paymentMethod: sale.payment_method
+            });
+            showToast('Struk dibuka untuk dicetak', 'success');
+            return;
+        }
+
+        if (!tp.isConnected()) {
+            const ok = (tp.device || (tp.hasSavedDevice && tp.hasSavedDevice())) ? await tp.tryAutoReconnect() : false;
+            if (!ok) {
+                await tp.connect();
+            }
+            updatePrinterUI();
+        }
+
+        await tp.print(cartData, parseFloat(sale.total_amount), sale.invoice_number, {
+            paymentMethod: sale.payment_method
+        });
+        showToast(`Struk #${invoiceNumber} berhasil dicetak`, 'success');
+    } catch(err) {
+        console.error('printSingleSale error:', err);
+        try {
+            if (tp) {
+                await tp.printBrowser(cartData, parseFloat(sale.total_amount), sale.invoice_number, { paymentMethod: sale.payment_method });
+            } else {
+                window.location.href = `${BASE_URL}sales/${id}`;
+            }
+        } catch(e2) {
+            window.location.href = `${BASE_URL}sales/${id}`;
+        }
+    } finally {
+        updatePrinterUI();
+    }
+}
+
 
 // ===== Init =====
 document.addEventListener('DOMContentLoaded', () => {

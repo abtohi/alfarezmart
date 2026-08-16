@@ -103,10 +103,77 @@ if ($userLevel === 'staff') {
     </style>
 
     <link rel="manifest" href="<?= BASE_URL ?>manifest.json<?= $v ?>">
+
+    <!-- Global Product & Packaging Sync & Repair Engine -->
+    <script>
+    window.fixAndSyncProducts = async function() {
+        const btn = document.getElementById('btnFixProducts');
+        const icon = btn ? btn.querySelector('i') : null;
+        if (icon) icon.className = 'spinner-border spinner-border-sm';
+        if (typeof showToast === 'function') showToast('Memperbaiki & mensinkronkan data produk, kemasan & harga...', 'info');
+
+        try {
+            // 1. Clear local cached catalogs
+            localStorage.removeItem('pos_catalog_cache');
+            localStorage.removeItem('cached_products');
+            
+            // 2. Fetch latest fresh products catalog with all packaging levels from server
+            const res = await fetch('<?= BASE_URL ?>api/products/sync?pos=1&_t=' + Date.now(), { cache: 'no-store' });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.products && Array.isArray(data.products)) {
+                    // Update in-memory catalog
+                    window._posProductsCatalog = data.products;
+                    
+                    // Update IndexedDB (Dexie / OfflineDB)
+                    if (typeof db !== 'undefined' && db.products) {
+                        try {
+                            await db.products.clear();
+                            await db.products.bulkPut(data.products);
+                        } catch(dbErr) {}
+                    }
+                    
+                    // Re-save to localStorage
+                    try {
+                        const serialized = JSON.stringify(data.products);
+                        if (serialized.length < 1500000) {
+                            localStorage.setItem('pos_catalog_cache', serialized);
+                        }
+                    } catch(e) {}
+                    
+                    // If on POS page, re-calculate and re-render cart
+                    if (typeof renderCart === 'function' && typeof cart !== 'undefined' && Array.isArray(cart)) {
+                        cart.forEach(item => {
+                            const fresh = data.products.find(p => p.id == item.product_id);
+                            if (fresh && fresh.packagings) {
+                                item.packagings = fresh.packagings;
+                            }
+                            if (typeof recalcItemPrice === 'function') recalcItemPrice(item);
+                        });
+                        renderCart();
+                    }
+
+                    if (typeof showToast === 'function') {
+                        showToast(`✅ Sukses! ${data.products.length} produk & seluruh kemasan berhasil disinkronkan & diperbaiki.`, 'success', 4000);
+                    }
+                } else {
+                    if (typeof showToast === 'function') showToast('Katalog produk diperbarui.', 'success');
+                }
+            } else {
+                if (typeof showToast === 'function') showToast('Gagal terhubung ke server untuk sinkronisasi produk.', 'error');
+            }
+        } catch(err) {
+            if (typeof showToast === 'function') showToast('Gagal sinkronisasi produk: ' + err.message, 'error');
+        } finally {
+            if (icon) icon.className = 'bi bi-tools';
+        }
+    };
+    </script>
 </head>
 <body>
 <?php $__globalCsrf = (new Security())->getCSRFToken(); ?>
 <input type="hidden" id="csrfToken" value="<?= $__globalCsrf ?>">
+
 
     <!-- ⚡ Error Log Catcher — dimuat paling awal agar menangkap semua error -->
     <script src="<?= BASE_URL ?>public/js/error-logger.js<?= $v ?>"></script>
@@ -594,71 +661,10 @@ if ($userLevel === 'staff') {
     <script src="<?= BASE_URL ?>public/js/app.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/instant-nav.js<?= $v ?>"></script>
 
-    <!-- Global Product & Packaging Repair / Sync Tool -->
-    <script>
-    window.fixAndSyncProducts = async function() {
-        const btn = document.getElementById('btnFixProducts');
-        const icon = btn ? btn.querySelector('i') : null;
-        if (icon) icon.className = 'spinner-border spinner-border-sm';
-        showToast('Memperbaiki & mensinkronkan data produk, kemasan & harga...', 'info');
-
-        try {
-            // 1. Clear local cached catalogs
-            localStorage.removeItem('pos_catalog_cache');
-            localStorage.removeItem('cached_products');
-            
-            // 2. Fetch latest fresh products catalog with all packaging levels from server
-            const res = await fetch(`${BASE_URL}api/products/sync?pos=1&_t=` + Date.now(), { cache: 'no-store' });
-            if (res.ok) {
-                const data = await res.json();
-                if (data && data.products && Array.isArray(data.products)) {
-                    // Update in-memory catalog
-                    window._posProductsCatalog = data.products;
-                    
-                    // Update IndexedDB (Dexie / OfflineDB)
-                    if (typeof db !== 'undefined' && db.products) {
-                        await db.products.clear();
-                        await db.products.bulkPut(data.products);
-                    }
-                    
-                    // Re-save to localStorage
-                    try {
-                        const serialized = JSON.stringify(data.products);
-                        if (serialized.length < 1500000) {
-                            localStorage.setItem('pos_catalog_cache', serialized);
-                        }
-                    } catch(e) {}
-                    
-                    // If on POS page, re-calculate and re-render cart
-                    if (typeof renderCart === 'function' && typeof cart !== 'undefined' && Array.isArray(cart)) {
-                        cart.forEach(item => {
-                            const fresh = data.products.find(p => p.id == item.product_id);
-                            if (fresh && fresh.packagings) {
-                                item.packagings = fresh.packagings;
-                            }
-                            if (typeof recalcItemPrice === 'function') recalcItemPrice(item);
-                        });
-                        renderCart();
-                    }
-
-                    showToast(`✅ Sukses! ${data.products.length} produk & seluruh level kemasan berhasil disinkronkan & diperbaiki.`, 'success', 4000);
-                } else {
-                    showToast('Katalog produk diperbarui.', 'success');
-                }
-            } else {
-                showToast('Gagal terhubung ke server untuk sinkronisasi produk.', 'error');
-            }
-        } catch(err) {
-            showToast('Gagal sinkronisasi produk: ' + err.message, 'error');
-        } finally {
-            if (icon) icon.className = 'bi bi-tools';
-        }
-    };
-    </script>
-
     <!-- Service Worker Registration & Cache Buster -->
     <script>
     const APP_VERSION = '15.96'; // Update this to force client reloads
+
 
     
     // Self-healing cache buster
