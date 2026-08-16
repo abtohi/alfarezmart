@@ -254,9 +254,15 @@ class ApiController extends Controller
         // Fetch all active products (up to a large limit)
         $result = $model->getProductsWithPrices(1, 999999, '', null);
         
+        $forPos = isset($_GET['pos']) && $_GET['pos'] == 1;
+        
         // Return only what is needed for OfflineDB to keep payload small
         $products = [];
         foreach ($result['data'] as $p) {
+            $isAvail = (int)($p['is_available'] ?? 1);
+            if ($forPos && $isAvail !== 1) {
+                continue;
+            }
             $products[] = [
                 'id'                    => (int)$p['id'],
                 'short_label'           => $p['short_label'],
@@ -273,7 +279,7 @@ class ApiController extends Controller
                 'variant'               => $p['variant'] ?? null,
                 'is_custom_label'       => (int)($p['is_custom_label'] ?? 0),
                 'code'                  => $p['code'],
-                'is_available'          => (int)($p['is_available'] ?? 1),
+                'is_available'          => $isAvail,
                 'photo'                 => $p['photo'] ?? null,
                 'updated_at'            => $p['updated_at'] ?? null,
                 'created_at'            => $p['created_at'] ?? null,
@@ -1063,7 +1069,7 @@ class ApiController extends Controller
                 'weight_value' => $this->input('weight_value') ?: null,
                 'weight_unit' => $this->input('weight_unit'),
                 'is_custom_label' => $this->input('is_custom_label') ? 1 : 0,
-                'is_available' => isset($_POST['is_available']) ? (int)$_POST['is_available'] : 1,
+                'is_available' => $this->input('is_available') !== null ? (int)$this->input('is_available') : (isset($_POST['is_available']) ? (int)$_POST['is_available'] : 1),
             ];
 
             $packagings = [];
@@ -1164,9 +1170,13 @@ class ApiController extends Controller
         $this->validateCSRF();
         $model = new ProductModel();
         try {
-            $is_available = (int)$this->input('is_available');
+            $rawVal = $this->input('is_available');
+            if ($rawVal === null && isset($_POST['is_available'])) {
+                $rawVal = $_POST['is_available'];
+            }
+            $is_available = ($rawVal !== null && ($rawVal === '1' || $rawVal === 1 || $rawVal === true || $rawVal === 'true')) ? 1 : 0;
             $model->update($id, ['is_available' => $is_available, 'updated_at' => date('Y-m-d H:i:s')]);
-            $this->json(['success' => true]);
+            $this->json(['success' => true, 'is_available' => $is_available]);
         } catch (Exception $e) {
             $this->json(['error' => $e->getMessage()], 500);
         }

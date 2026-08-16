@@ -84,6 +84,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }, 2000);
                 }
             }
+            // Run automatic daily backup check in background
+            if (typeof DailyBackup !== 'undefined') {
+                setTimeout(() => {
+                    DailyBackup.runDailyCheck().catch(() => {});
+                }, 4000);
+            }
         }
     } catch (e) {
         console.error('Offline DB init failed:', e);

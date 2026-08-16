@@ -75,6 +75,14 @@ class SettingController extends Controller
         ]);
     }
 
+    public function backupData()
+    {
+        $this->view('settings.backup', [
+            'title'     => 'Backup Data Harian',
+            'activeNav' => 'home',
+        ]);
+    }
+
     public function setupDatabase()
     {
         if (defined('APP_ENV') && APP_ENV !== 'development') {

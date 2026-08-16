@@ -85,6 +85,17 @@
             </div>
             <i class="bi bi-chevron-right menu-arrow"></i>
         </a>
+        <a href="<?= BASE_URL ?>settings/backup" class="menu-item" style="background:linear-gradient(135deg,rgba(99,102,241,0.07) 0%,rgba(99,102,241,0.02) 100%);border:1px dashed rgba(99,102,241,0.28);">
+            <div class="menu-icon" style="background:rgba(99,102,241,0.12);color:#818cf8;">
+                <i class="bi bi-shield-lock-fill"></i>
+            </div>
+            <div class="menu-text">
+                <h6 style="color:var(--text-primary);">Backup Data Harian</h6>
+                <small style="color:var(--text-muted);">Snapshot darurat offline &mdash; aman dari Turbo Clean</small>
+            </div>
+            <span id="backup-menu-badge" class="badge-custom" style="font-size:10px;padding:3px 8px;display:none;"></span>
+            <i class="bi bi-chevron-right menu-arrow"></i>
+        </a>
     </ul>
 
     <!-- Fitur Aktif -->

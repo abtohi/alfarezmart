@@ -660,6 +660,11 @@ window.OfflineDB = (function() {
         clearPending,
         countPending,
         saveAuth,
-        getAuth
+        getAuth,
+        // Exposed for DailyBackup restore operations
+        _saveAll,
+        invalidateProductsCache: function() {
+            // No-op if not implemented; kept for forward-compatibility
+        }
     };
 })();

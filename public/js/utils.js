@@ -142,7 +142,10 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
 
     const config = { ...options };
     if (!config.headers) config.headers = {};
-    if (!(options.body instanceof FormData) && !config.headers['Content-Type']) {
+    if (config.body && !(config.body instanceof FormData) && typeof config.body === 'object') {
+        config.body = JSON.stringify(config.body);
+    }
+    if (!(config.body instanceof FormData) && !config.headers['Content-Type']) {
         config.headers['Content-Type'] = 'application/json';
     }
     

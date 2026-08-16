@@ -1275,7 +1275,9 @@ async function submitProduct(e) {
         
         // Ensure is_available is explicitly set from the toggle state
         const isAvailableToggle = document.getElementById('toggleIsAvailableCreate');
-        updatedData.set('is_available', isAvailableToggle && isAvailableToggle.checked ? 1 : 0);
+        const isAvailValue = (isAvailableToggle && (isAvailableToggle.value === '1' || isAvailableToggle.value == 1)) ? 1 : 0;
+        updatedData.set('is_available', isAvailValue);
+        data.set('is_available', isAvailValue);
         
         // ── Build local product snapshot for IndexedDB ──────────────────────
         const payload = {};

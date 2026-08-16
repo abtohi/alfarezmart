@@ -589,11 +589,14 @@ function setMixDefault(mode) {
 window._posProductsCatalog = window._posProductsCatalog || [];
 
 async function preloadPosCatalog() {
-    // 1. Load from LocalStorage for 0ms immediate availability
+    // 1. Load from LocalStorage for 0ms immediate availability (only available products for POS)
     try {
         const cached = localStorage.getItem('pos_catalog_cache');
         if (cached) {
-            window._posProductsCatalog = JSON.parse(cached);
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed)) {
+                window._posProductsCatalog = parsed.filter(p => p.is_available != 0 && p.is_available !== '0' && p.is_available !== false);
+            }
         }
     } catch(e) {}
 
@@ -623,8 +626,9 @@ async function preloadPosCatalog() {
                 const data = await res.json();
                 if (data && data.products && Array.isArray(data.products) && data.products.length > 0) {
                     localStorage.setItem(POS_LAST_SYNC_KEY, String(Date.now()));
-                    // Update in-memory catalog immediately
-                    window._posProductsCatalog = data.products;
+                    // Update in-memory catalog immediately (filter out unavailable products)
+                    const availProducts = data.products.filter(p => p.is_available != 0 && p.is_available !== '0' && p.is_available !== false);
+                    window._posProductsCatalog = availProducts;
                     // Update Dexie IndexedDB in background
                     if (typeof db !== 'undefined' && db.products) {
                         try {
@@ -634,7 +638,7 @@ async function preloadPosCatalog() {
                     }
                     // Update localStorage cache (cap at 1.5MB to avoid quota errors)
                     try {
-                        const serialized = JSON.stringify(data.products);
+                        const serialized = JSON.stringify(availProducts);
                         if (serialized.length < 1500000) {
                             localStorage.setItem('pos_catalog_cache', serialized);
                         }
@@ -957,8 +961,11 @@ async function performSearch(q) {
             if (currentInput && currentInput.value.trim().toLowerCase() === q.toLowerCase()) {
                 const serverItems = await resp.json();
                 if (currentInput.value.trim().toLowerCase() === q.toLowerCase()) {
-                    if (Array.isArray(serverItems) && serverItems.length > 0) {
-                        renderPosSearchSuggestions(sug, serverItems, q);
+                    const filteredServerItems = Array.isArray(serverItems) 
+                        ? serverItems.filter(p => p.is_available != 0 && p.is_available !== '0' && p.is_available !== false)
+                        : [];
+                    if (filteredServerItems.length > 0) {
+                        renderPosSearchSuggestions(sug, filteredServerItems, q);
                     } else if (items.length === 0) {
                         sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Tidak ada produk ditemukan</div>';
                     }

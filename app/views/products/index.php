@@ -1074,7 +1074,7 @@ async function _confirmAvailToggle() {
         });
         if (!data || !data.success) throw new Error(data && data.error ? data.error : 'Gagal update');
 
-        // Also update Dexie local cache so offline search reflects the change immediately
+        // 1. Update Dexie IndexedDB cache immediately
         if (typeof OfflineDB !== 'undefined') {
             try {
                 const local = await OfflineDB.getProductById(id);
@@ -1082,7 +1082,31 @@ async function _confirmAvailToggle() {
                     local.is_available = newVal;
                     await OfflineDB.saveProduct(local);
                 }
+                if (typeof OfflineDB.invalidateProductsCache === 'function') {
+                    OfflineDB.invalidateProductsCache();
+                }
             } catch(e) { /* non-critical */ }
+        }
+
+        // 2. Update pos_catalog_cache in LocalStorage
+        try {
+            const cached = localStorage.getItem('pos_catalog_cache');
+            if (cached) {
+                let catalog = JSON.parse(cached);
+                if (Array.isArray(catalog)) {
+                    const idx = catalog.findIndex(p => p.id == id);
+                    if (idx !== -1) {
+                        catalog[idx].is_available = newVal;
+                        localStorage.setItem('pos_catalog_cache', JSON.stringify(catalog));
+                    }
+                }
+            }
+        } catch(e) {}
+
+        // 3. Update in-memory POS catalog if on window
+        if (window._posProductsCatalog && Array.isArray(window._posProductsCatalog)) {
+            const pInMem = window._posProductsCatalog.find(p => p.id == id);
+            if (pInMem) pInMem.is_available = newVal;
         }
 
         if (typeof showToast === 'function') {

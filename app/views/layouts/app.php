@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=15.93'; ?>
+    <?php $v = '?v=15.97'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -651,12 +651,13 @@ if ($userLevel === 'staff') {
     <script src="<?= BASE_URL ?>public/js/geofencing.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/ppob_contacts.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/desktop.js<?= $v ?>"></script>
+    <script src="<?= BASE_URL ?>public/js/daily-backup.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/app.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/instant-nav.js<?= $v ?>"></script>
 
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '15.96'; // Update this to force client reloads
+    const APP_VERSION = '15.97'; // Update this to force client reloads
 
 
     
