@@ -1631,6 +1631,19 @@ async function proceedCheckout() {
                 showToast(`Perubahan transaksi berhasil disimpan!`, 'success');
             }
 
+            // Invalidate sales analytics cache so sales history displays fresh data
+            try {
+                localStorage.removeItem('sales_analytics_latest_backup');
+                localStorage.removeItem('pos_edit_sale_payload');
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i);
+                    if (k && k.startsWith('sales_analytics_')) keysToRemove.push(k);
+                }
+                keysToRemove.forEach(k => localStorage.removeItem(k));
+            } catch(e) {}
+
+
             const printCart = cart.map(i => ({ ...i }));
             const printTotal = calculateTotal();
             const invoiceNo = result.invoice || result.id || ('OFF-' + Date.now());
@@ -2379,6 +2392,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadSaleForEdit(id) {
     try {
+        editSaleId = parseInt(id, 10) || id;
         let sale = null;
 
         // 1. Instant 0ms check from localStorage payload (cached when clicking Edit from detail page)
@@ -2391,6 +2405,7 @@ async function loadSaleForEdit(id) {
                 }
             }
         } catch(e) {}
+
 
         // 2. Fetch from server if not cached locally
         if (!sale) {

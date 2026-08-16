@@ -9,11 +9,15 @@ class SaleModel extends Model
             $this->db->beginTransaction();
 
             // 1. Create Sale Header
+            $hasCreatedAt = !empty($data['created_at']);
+            $createdAtSql = $hasCreatedAt ? ", created_at" : "";
+            $createdAtVal = $hasCreatedAt ? ", :created_at" : "";
+
             $stmt = $this->db->prepare("
-                INSERT INTO sale_transactions (invoice_number, customer_id, sale_mode, total_amount, payment_method, payment_status, notes)
-                VALUES (:inv, :cust, :mode, :total, :pay_method, :status, :notes)
+                INSERT INTO sale_transactions (invoice_number, customer_id, sale_mode, total_amount, payment_method, payment_status, notes{$createdAtSql})
+                VALUES (:inv, :cust, :mode, :total, :pay_method, :status, :notes{$createdAtVal})
             ");
-            $stmt->execute([
+            $headerParams = [
                 ':inv' => $data['invoice_number'],
                 ':cust' => $data['customer_id'] ?? null,
                 ':mode' => $data['sale_mode'], // 'retail' or 'wholesale'
@@ -21,8 +25,13 @@ class SaleModel extends Model
                 ':pay_method' => $data['payment_method'] ?? 'Cash',
                 ':status' => $data['payment_status'] ?? 'Lunas',
                 ':notes' => $data['notes'] ?? ''
-            ]);
+            ];
+            if ($hasCreatedAt) {
+                $headerParams[':created_at'] = $data['created_at'];
+            }
+            $stmt->execute($headerParams);
             $transactionId = $this->db->lastInsertId();
+
 
             // 2. Insert Items & Update Stock
             $stmtItem = $this->db->prepare("
