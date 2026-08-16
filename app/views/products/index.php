@@ -751,32 +751,58 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 })();
 
-// OFFLINE SEARCH EXECUTION
+// OFFLINE SEARCH & INSTANT CATALOG RENDER
 async function doOfflineSearch(query) {
     const container = document.getElementById('productListContainer');
     if (!container) return;
 
-    container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner-border text-primary"></div><div style="margin-top:10px;font-size:12px;color:var(--text-muted);">Mencari di data offline...</div></div>';
+    const currentCardCount = container.querySelectorAll('.product-card').length;
+    if (currentCardCount === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="spinner-border text-primary"></div><div style="margin-top:10px;font-size:12px;color:var(--text-muted);">Memuat katalog produk...</div></div>';
+    }
     
     try {
         let items = [];
-        if (!query || query.trim() === '') {
-            // Get all products
-            items = await OfflineDB.getAllProducts();
+        const cleanQ = (query || '').trim();
+
+        if (!cleanQ) {
+            // 1. Ambil semua produk dari IndexedDB
+            if (typeof OfflineDB !== 'undefined') {
+                items = await OfflineDB.getAllProducts();
+            }
         } else {
-            items = await OfflineDB.searchProducts(query);
+            // 2. Cari produk dari IndexedDB
+            if (typeof OfflineDB !== 'undefined') {
+                items = await OfflineDB.searchProducts(cleanQ);
+            }
         }
 
-        // Apply Filters from URL params
+        // 3. Emergency Sync Fallback jika IndexedDB lokal masih kosong
+        if ((!items || items.length === 0) && navigator.onLine) {
+            try {
+                const syncData = await api(`${BASE_URL}api/products/sync?_t=` + Date.now(), { timeout: 8000, silent: true, noOfflineQueue: true });
+                if (syncData && Array.isArray(syncData.products) && syncData.products.length > 0) {
+                    if (typeof db !== 'undefined' && db.products) {
+                        await db.products.clear();
+                        await db.products.bulkPut(syncData.products);
+                    }
+                    items = cleanQ 
+                        ? (typeof OfflineDB !== 'undefined' ? await OfflineDB.searchProducts(cleanQ) : syncData.products)
+                        : syncData.products;
+                }
+            } catch(syncErr) {}
+        }
+
+        // Apply Filters from URL params safely
         const urlParams = new URLSearchParams(window.location.search);
-        const catId = urlParams.get('category');
+        const rawCatId = urlParams.get('category');
+        const catId = (rawCatId && rawCatId.trim() !== '' && rawCatId !== '0' && rawCatId !== 'null') ? rawCatId.trim() : null;
         const minP = parseFloat(urlParams.get('min_price'));
         const maxP = parseFloat(urlParams.get('max_price'));
         
-        if (catId || !isNaN(minP) || !isNaN(maxP)) {
+        if (items && items.length > 0 && (catId || (!isNaN(minP) && minP > 0) || (!isNaN(maxP) && maxP > 0))) {
             items = items.filter(p => {
                 let match = true;
-                // Filter by category (compare category_id if available, or fallback to category name)
                 if (catId) {
                     const pCatId = String(p.category_id || '');
                     const pCatName = String(p.category_name || '').toLowerCase();
@@ -785,40 +811,44 @@ async function doOfflineSearch(query) {
                         match = false;
                     }
                 }
-                // Filter by price range
                 const price = p.price_small_retail ? parseFloat(p.price_small_retail) : (p.packagings && p.packagings.length > 0 ? parseFloat(p.packagings[0].sell_price_retail) : 0);
-                if (!isNaN(minP) && price < minP) match = false;
-                if (!isNaN(maxP) && price > maxP) match = false;
+                if (!isNaN(minP) && minP > 0 && price < minP) match = false;
+                if (!isNaN(maxP) && maxP > 0 && price > maxP) match = false;
                 return match;
             });
         }
 
-        // Sort exactly like online mode: ORDER BY COALESCE(updated_at, created_at) DESC, full_name ASC
+        if (!items || items.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-box-seam"></i>
+                    <h3>Produk Tidak Ditemukan</h3>
+                    <p>${cleanQ ? `Tidak ada produk yang cocok dengan pencarian "${cleanQ}".` : 'Belum ada produk tersimpan di perangkat.'}</p>
+                </div>
+            `;
+            const totalText = document.getElementById('totalProductsText');
+            if (totalText) totalText.textContent = `0 produk`;
+            return;
+        }
+
+        // Sort: ORDER BY COALESCE(updated_at, created_at) DESC, full_name ASC
         items.sort((a, b) => {
             const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
             const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
             if (dateA !== dateB) return dateB - dateA;
             
-            const nameA = (a.full_name || '').toLowerCase();
-            const nameB = (b.full_name || '').toLowerCase();
+            const nameA = (a.full_name || a.short_label || '').toLowerCase();
+            const nameB = (b.full_name || b.short_label || '').toLowerCase();
             if (nameA < nameB) return -1;
             if (nameA > nameB) return 1;
             return 0;
         });
 
-        if (items.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="bi bi-box-seam"></i>
-                    <h3>Produk Tidak Ditemukan</h3>
-                    <p>Tidak ada produk yang cocok dengan pencarian (Offline Mode).</p>
-                </div>
-            `;
-            return;
-        }
+        // Render max 100 items for silky-smooth mobile performance
+        const displayItems = items.slice(0, 100);
 
         let html = '';
-        items.forEach(p => {
+        displayItems.forEach(p => {
             const name = (p.full_name || p.short_label || '-').replace(/</g, '&lt;');
             const brandCat = `${p.brand_name || ''} ${p.brand_name && p.category_name ? '·' : ''} ${p.category_name || ''}`;
             const price = p.price_small_retail ? parseFloat(p.price_small_retail) : (p.packagings && p.packagings.length > 0 ? parseFloat(p.packagings[0].sell_price_retail) : 0);
@@ -826,7 +856,7 @@ async function doOfflineSearch(query) {
             
             const photoHtml = p.photo 
                 ? `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); overflow:hidden; display:flex; align-items:center; justify-content:center; background:transparent; flex-shrink:0; margin-right:16px;">
-                       <img src="${BASE_URL}${p.photo}" style="width:100%; height:100%; object-fit:contain;">
+                       <img src="${BASE_URL}${p.photo}" style="width:100%; height:100%; object-fit:contain;" loading="lazy">
                    </div>`
                 : `<div class="product-icon" style="width:60px; height:60px; border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; background:var(--primary-bg); color:var(--primary); font-size:1.5rem; flex-shrink:0; margin-right:16px;">
                        <i class="bi bi-box-seam"></i>
@@ -849,9 +879,9 @@ async function doOfflineSearch(query) {
                 const baseMarginAmt = parseFloat(basePkg.sell_price_retail) - parseFloat(basePkg.buy_price || 0);
                 const baseMarginPct = parseFloat(basePkg.buy_price) > 0 ? ((baseMarginAmt / parseFloat(basePkg.buy_price)) * 100).toFixed(1) : 0;
                 baseMarginHtml = `
-                                    <div style="font-size:10px; color:var(--text-muted); opacity:0.8; text-shadow:0 1px 1px rgba(0,0,0,0.1); margin-top:2px; text-align:right;">
-                                        M: Rp${parseFloat(basePkg.buy_price || 0).toLocaleString('id-ID')} | P: Rp${baseMarginAmt.toLocaleString('id-ID')} (${baseMarginPct}%)
-                                    </div>`;
+                    <div style="font-size:10px; color:var(--text-muted); opacity:0.8; text-shadow:0 1px 1px rgba(0,0,0,0.1); margin-top:2px; text-align:right;">
+                        M: Rp${parseFloat(basePkg.buy_price || 0).toLocaleString('id-ID')} | P: Rp${baseMarginAmt.toLocaleString('id-ID')} (${baseMarginPct}%)
+                    </div>`;
             }
 
             html += `
@@ -903,43 +933,44 @@ async function doOfflineSearch(query) {
             </div>`;
         });
         
-        // Update product list and count
         container.innerHTML = html;
         const totalText = document.getElementById('totalProductsText');
-        if (totalText) totalText.textContent = `${items.length} produk (Offline)`;
-        
-        // Intercept link clicks if offline
-        const links = container.querySelectorAll('.product-card-link');
-        links.forEach(link => {
-            link.addEventListener('click', function(e) {
-                if (!navigator.onLine) {
-                    e.preventDefault();
-                    showToast('Detail produk penuh tidak tersedia offline. Gunakan tombol Pensil untuk Edit Cepat.', 'info');
-                }
-            });
-        });
+        if (totalText) {
+            totalText.textContent = `${items.length} produk${!navigator.onLine ? ' (Offline)' : ''}`;
+        }
 
         // Re-attach long press listeners for newly rendered items
         if (typeof attachProductCardListeners === 'function') attachProductCardListeners();
         
     } catch (e) {
-        console.error(e);
-        container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--danger);">Terjadi kesalahan saat memuat data offline.</div>';
+        console.error('doOfflineSearch error:', e);
+        if (container.querySelectorAll('.product-card').length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--danger);">Gagal memuat produk. Silakan muat ulang.</div>';
+        }
     }
 }
 
-// Auto-run offline search jika tidak ada koneksi internet, DB offline, atau data PHP kosong
+// Auto-run offline / instant render jika kartu server kosong atau offline
 document.addEventListener('DOMContentLoaded', async () => {
     if (typeof OfflineDB !== 'undefined') {
-        await OfflineDB.init();
-        const hasServerCards = document.querySelectorAll('#productListContainer .product-card, #productListContainer [data-id]').length > 0;
-        if (!navigator.onLine || window.IS_DB_OFFLINE || !hasServerCards) {
-            const urlParams = new URLSearchParams(window.location.search);
-            const q = urlParams.get('q') || '';
+        try { await OfflineDB.init(); } catch(e) {}
+        const serverCards = document.querySelectorAll('#productListContainer .product-card');
+        const urlParams = new URLSearchParams(window.location.search);
+        const q = urlParams.get('q') || '';
+        
+        if (!navigator.onLine || window.IS_DB_OFFLINE || serverCards.length === 0) {
             doOfflineSearch(q);
+        } else {
+            // Background sync silent to ensure Dexie cache stays fresh
+            setTimeout(() => {
+                if (typeof OfflineDB.syncProductsFromServer === 'function') {
+                    OfflineDB.syncProductsFromServer().catch(() => {});
+                }
+            }, 3000);
         }
     }
 });
+
 
 // =====================================================
 // QUICK TOGGLE AVAILABILITY
