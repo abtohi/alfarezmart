@@ -466,16 +466,36 @@ function resetFilter() {
         </div>`;
 }
 
-// ===== Main: Apply Filter & Fetch =====
+// ===== Main: Apply Filter & Fetch (with Instant Stale-While-Revalidate Caching) =====
 async function applyFilter() {
     const dateFrom    = document.getElementById('filterDateFrom').value;
     const dateTo      = document.getElementById('filterDateTo').value;
     const customerId  = document.getElementById('filterCustomerId').value;
 
     const container = document.getElementById('salesListContainer');
-    container.innerHTML = `<div class="elegant-loader" style="margin:30px auto;"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
-    document.getElementById('summaryCard').style.display = 'none';
-    document.getElementById('customerRankingSection').style.display = 'none';
+    const cacheKey = `sales_analytics_${dateFrom || 'all'}_${dateTo || 'all'}_${customerId || 'all'}`;
+
+    // 1. Instant 0ms cache check
+    let hasRenderedCache = false;
+    try {
+        const cachedRaw = localStorage.getItem(cacheKey) || sessionStorage.getItem(cacheKey);
+        if (cachedRaw) {
+            const cachedData = JSON.parse(cachedRaw);
+            if (cachedData && cachedData.summary && cachedData.transactions) {
+                _currentData = cachedData;
+                renderSummary(cachedData.summary);
+                renderCustomerRanking(cachedData.customer_ranking);
+                renderGroupedSales(cachedData.transactions);
+                hasRenderedCache = true;
+            }
+        }
+    } catch(ce) {}
+
+    if (!hasRenderedCache) {
+        container.innerHTML = `<div class="elegant-loader" style="margin:30px auto;"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+        document.getElementById('summaryCard').style.display = 'none';
+        document.getElementById('customerRankingSection').style.display = 'none';
+    }
 
     try {
         const params = new URLSearchParams();
@@ -485,23 +505,37 @@ async function applyFilter() {
 
         let res;
         if (typeof api === 'function') {
-            res = await api(`${BASE_URL}api/sales/analytics?${params.toString()}`);
+            res = await api(`${BASE_URL}api/sales/analytics?${params.toString()}`, { silent: true, timeout: 15000 });
         } else {
-            const fetchRes = await fetch(`${BASE_URL}api/sales/analytics?${params.toString()}`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            const fetchRes = await fetch(`${BASE_URL}api/sales/analytics?${params.toString()}`, { signal: controller.signal });
+            clearTimeout(timeoutId);
             if (!fetchRes.ok) throw new Error('Gagal mengambil data dari server');
             res = await fetchRes.json();
         }
 
-        if (!res.success) throw new Error(res.error || 'Gagal memuat data');
+        if (res && res.success && res.data) {
+            _currentData = res.data;
+            renderSummary(res.data.summary);
+            renderCustomerRanking(res.data.customer_ranking);
+            renderGroupedSales(res.data.transactions);
 
-        _currentData = res.data;
-        renderSummary(res.data.summary);
-        renderCustomerRanking(res.data.customer_ranking);
-        renderGroupedSales(res.data.transactions);
+            // Save fresh data to local cache
+            try {
+                const serialized = JSON.stringify(res.data);
+                localStorage.setItem(cacheKey, serialized);
+            } catch(e) {}
+        } else if (!hasRenderedCache) {
+            throw new Error(res?.error || 'Gagal memuat data');
+        }
     } catch(e) {
-        container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><h3>Error</h3><p>${e.message}</p></div>`;
+        if (!hasRenderedCache) {
+            container.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><h3>Error</h3><p>${e.message}</p></div>`;
+        }
     }
 }
+
 
 // ===== Render Summary =====
 function renderSummary(summary) {
