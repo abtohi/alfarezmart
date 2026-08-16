@@ -80,9 +80,9 @@
     <div>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div class="section-title" style="margin-bottom: 0;">Daftar Transaksi</div>
-            <div class="dropdown" style="width:auto; min-width:120px;">
-                <button id="filterPostBtn" class="btn btn-dark dropdown-toggle form-select-dark-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center;">
-                    <span>Semua Pos</span>
+            <div class="dropdown" style="width:auto; min-width:140px;">
+                <button id="filterPostBtn" class="btn-dropdown-modern dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="padding:6px 12px; font-size:11.5px;">
+                    <span><i class="bi bi-wallet2 me-1 text-primary"></i>Semua Pos</span>
                 </button>
                 <ul id="filterPostMenu" class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
                     <!-- Options akan digenerate disini -->
@@ -202,18 +202,23 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     async function refreshMasterDataFromServer() {
+        // Don't attempt server refresh when offline — prevents false-positive error log spam
+        if (!navigator.onLine) return;
         try {
-            const accRes = await api(`${BASE_URL}api/finance/accounts`);
-            if (accRes.success) accountsData = accRes.data;
+            const accRes = await api(`${BASE_URL}api/finance/accounts`, { silent: true, noOfflineQueue: true });
+            if (accRes && accRes.success) accountsData = accRes.data;
 
-            const catRes = await api(`${BASE_URL}api/finance/categories`);
-            if (catRes.success) categoriesData = catRes.data;
+            const catRes = await api(`${BASE_URL}api/finance/categories`, { silent: true, noOfflineQueue: true });
+            if (catRes && catRes.success) categoriesData = catRes.data;
 
             renderPosGrid();
             updateFilterOptions();
             updateCategoryDatalist();
         } catch (e) {
-            console.error("Gagal refresh data master dari server:", e);
+            // Silently fail — stale local data is used as fallback
+            if (navigator.onLine) {
+                console.warn("Gagal refresh data master dari server:", e.message || e);
+            }
         }
     }
 
@@ -1221,12 +1226,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <input type="text" id="newCatName" class="form-control-dark" placeholder="Nama Kategori (Misal: Uang Makan)" style="width: 100%;">
                     <div style="display:flex; gap: 8px; align-items:center;">
                         <div class="dropdown" style="flex:1;">
-                            <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:6px 10px; font-size:11px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
-                                <span>Pengeluaran</span>
+                            <button class="btn-dropdown-modern dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="padding:6px 10px; font-size:11px;">
+                                <span><i class="bi bi-arrow-down-circle-fill me-1 text-danger"></i>Pengeluaran</span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:11px; min-width:100%;">
-                                <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Pemasukan'; dp.querySelector('button span').textContent='Pemasukan'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Pemasukan</a></li>
-                                <li><a class="dropdown-item active" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Pengeluaran'; dp.querySelector('button span').textContent='Pengeluaran'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Pengeluaran</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Pemasukan'; dp.querySelector('button span').innerHTML='<i class=\'bi bi-arrow-up-circle-fill me-1 text-success\'></i>Pemasukan'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');"><i class="bi bi-arrow-up-circle-fill me-1 text-success"></i>Pemasukan</a></li>
+                                <li><a class="dropdown-item active" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Pengeluaran'; dp.querySelector('button span').innerHTML='<i class=\'bi bi-arrow-down-circle-fill me-1 text-danger\'></i>Pengeluaran'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');"><i class="bi bi-arrow-down-circle-fill me-1 text-danger"></i>Pengeluaran</a></li>
                             </ul>
                             <input type="hidden" id="newCatType" value="Pengeluaran">
                         </div>
@@ -1239,12 +1244,12 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border-color);">
                         <div style="flex: 1; display:flex; gap: 5px; align-items: center;">
                             <div class="dropdown" style="width:auto;">
-                                <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="text-align:left; display:flex; justify-content:space-between; align-items:center; padding:4px 8px; font-size:11px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
-                                    <span>${cat.type}</span>
+                                <button class="btn-dropdown-modern dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="padding:4px 8px; font-size:11px;">
+                                    <span><i class="bi ${cat.type === 'Pemasukan' ? 'bi-arrow-up-circle-fill text-success' : 'bi-arrow-down-circle-fill text-danger'} me-1"></i>${cat.type}</span>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:11px; min-width:100%;">
-                                    <li><a class="dropdown-item ${cat.type === 'Pemasukan' ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Pemasukan'; dp.querySelector('button span').textContent='Pemasukan'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Pemasukan</a></li>
-                                    <li><a class="dropdown-item ${cat.type === 'Pengeluaran' ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Pengeluaran'; dp.querySelector('button span').textContent='Pengeluaran'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Pengeluaran</a></li>
+                                    <li><a class="dropdown-item ${cat.type === 'Pemasukan' ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Pemasukan'; dp.querySelector('button span').innerHTML='<i class=\'bi bi-arrow-up-circle-fill text-success me-1\'></i>Pemasukan'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');"><i class="bi bi-arrow-up-circle-fill text-success me-1"></i>Pemasukan</a></li>
+                                    <li><a class="dropdown-item ${cat.type === 'Pengeluaran' ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Pengeluaran'; dp.querySelector('button span').innerHTML='<i class=\'bi bi-arrow-down-circle-fill text-danger me-1\'></i>Pengeluaran'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');"><i class="bi bi-arrow-down-circle-fill text-danger me-1"></i>Pengeluaran</a></li>
                                 </ul>
                                 <input type="hidden" id="editCatType_${cat.id}" value="${cat.type}">
                             </div>

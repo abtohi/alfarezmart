@@ -147,13 +147,17 @@ class ProductModel extends Model
     {
         // Trim and remove all spaces from the input barcode
         $barcode = str_replace(' ', '', trim($barcode));
-        
-        $whereSql = "(REPLACE(pp.barcode, ' ', '') = :barcode 
-               OR p.code = :barcode
-               OR REPLACE(pp.barcode, ' ', '') = CONCAT('0', :barcode)
-               OR CONCAT('0', REPLACE(pp.barcode, ' ', '')) = :barcode
-               OR REPLACE(pp.barcode, ' ', '') = CONCAT('00', :barcode)
-               OR CONCAT('00', REPLACE(pp.barcode, ' ', '')) = :barcode)";
+
+        // Use positional params (?) because PDO does NOT allow the same named
+        // parameter to appear more than once in a single query (SQLSTATE HY093).
+        $whereSql = "(REPLACE(pp.barcode, ' ', '') = ?
+               OR p.code = ?
+               OR REPLACE(pp.barcode, ' ', '') = CONCAT('0', ?)
+               OR CONCAT('0', REPLACE(pp.barcode, ' ', '')) = ?
+               OR REPLACE(pp.barcode, ' ', '') = CONCAT('00', ?)
+               OR CONCAT('00', REPLACE(pp.barcode, ' ', '')) = ?)";
+
+        $params = [$barcode, $barcode, $barcode, $barcode, $barcode, $barcode];
 
         if ($forPos) {
             $whereSql .= " AND p.is_available = 1";
@@ -172,9 +176,10 @@ class ProductModel extends Model
             ORDER BY pp.level ASC
             LIMIT 1
         ");
-        $stmt->execute([':barcode' => $barcode]);
+        $stmt->execute($params);
         return $stmt->fetch();
     }
+
 
     /**
      * Cek apakah tabel tier harga ada (tanpa DDL — aman saat transaksi DB aktif).

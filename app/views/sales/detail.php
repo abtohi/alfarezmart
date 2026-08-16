@@ -128,13 +128,12 @@
 
 </div>
 
-<script src="<?= BASE_URL ?>public/js/printer_v3.js"></script>
 <script>
     const STORE_SETTINGS = <?= json_encode($storeSettings) ?>;
     const SALE_DATA = <?= json_encode($sale) ?>;
 
-    // Use shared instance if available (from layout), else create local one
-    const tp = window.thermalPrinter || new ThermalPrinter();
+    // Use shared instance from layout (printer_v3.js already loaded by app.php)
+    const tp = window.thermalPrinter || (typeof ThermalPrinter !== 'undefined' ? new ThermalPrinter() : null);
     tp.setStoreSettings(STORE_SETTINGS);
 
     // ── UI helpers ──────────────────────────────────────────────────────────

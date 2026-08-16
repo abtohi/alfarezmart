@@ -601,18 +601,17 @@ class InvoiceScanService
 
         set_time_limit(120);
 
-        // Fast, high-accuracy free and preview vision models on OpenRouter
+        // Fast, high-accuracy free vision models on OpenRouter (updated 2026-08)
+        // Ordered by speed + accuracy for invoice OCR tasks
         $FREE_VISION_MODELS = [
-            'google/gemini-2.0-flash-exp:free',
-            'meta-llama/llama-3.2-11b-vision-instruct:free',
-            'mistralai/pixtral-12b:free',
-            'qwen/qwen-2-vl-72b-instruct:free',
-            'google/gemma-3-27b-it:free',
-            'google/gemma-4-31b-it:free',
-            'google/gemma-4-26b-a4b-it:free',
-            'nvidia/nemotron-nano-12b-v2-vl:free',
-            'openrouter/free',
+            'google/gemini-2.5-flash-lite-preview-06-17:free', // Fastest Gemini, best for structured data
+            'google/gemini-2.0-flash-exp:free',                // Reliable fallback
+            'google/gemini-2.5-flash:free',                    // Higher quality, slower
+            'meta-llama/llama-3.2-90b-vision-instruct:free',   // Strong vision model
+            'qwen/qwen2-vl-72b-instruct:free',                 // Good at table/invoice parsing
+            'meta-llama/llama-3.2-11b-vision-instruct:free',   // Fast, good accuracy
         ];
+
 
         // Determine list of models to try in order
         if (empty($model) || in_array($model, ['openrouter/auto', 'auto'])) {
@@ -657,7 +656,7 @@ class InvoiceScanService
                 'X-Title: AlfarezMart Invoice Scanner'
             ]);
 
-            curl_setopt($ch, CURLOPT_TIMEOUT, 25); // Fast 25s timeout per attempt
+            curl_setopt($ch, CURLOPT_TIMEOUT, 45); // 45s per model — enough for large invoice images
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);
@@ -679,6 +678,11 @@ class InvoiceScanService
                 $this->recordRateLimitError();
                 error_log("SCAN_AI_TRACE: Model {$tryModel} hit rate limit 429 (count: {$rateLimitCount}), trying next model...");
                 $lastError = "Model {$tryModel} terkena rate limit (429).";
+                // Early exit after 3 consecutive rate limits to avoid long waits
+                if ($rateLimitCount >= 3) {
+                    error_log("SCAN_AI_TRACE: 3 consecutive rate limits — stopping early to avoid timeout");
+                    break;
+                }
                 continue;
             }
 
