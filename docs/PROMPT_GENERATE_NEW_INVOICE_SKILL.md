@@ -11,15 +11,15 @@
 Berikut adalah batasan teknis mutlak yang **TIDAK BOLEH DILANGGAR**:
 
 ### ⚡ Kecepatan & Timeout
-1. **Timeout cURL per Model Max 20 Detik**:  
-   Jangan pernah menyetel `CURLOPT_TIMEOUT` lebih dari 20-25 detik per percobaan model. Model vision seperti Gemini normalnya merespons dalam **3–8 detik**. Jika dalam 20 detik tidak ada balasan, model sedang macet/antre di provider, sehingga sistem harus langsung beralih ke model fallback.
-2. **Total Waktu Scan Harus < 40 Detik**:  
-   Dengan timeout 20s x 2 percobaan = max 40 detik. Frontend browser (`utils.js`) memiliki timeout `AbortController` 120s, sehingga batas 40s menjamin tidak akan pernah terjadi `AbortError: signal is aborted without reason`.
+1. **Timeout cURL per Model Max 15 Detik**:  
+   Jangan pernah menyetel `CURLOPT_TIMEOUT` lebih dari 15 detik per percobaan model. Model vision seperti Gemini normalnya merespons dalam **3–6 detik**. Jika dalam 15 detik tidak ada balasan, model sedang macet/antre di provider, sehingga sistem harus langsung beralih ke model fallback.
+2. **Total Percobaan Model Maksimal 2 Model (Total Waktu < 30 Detik)**:  
+   Dengan timeout 15s x max 2 percobaan = max 30 detik total eksekusi. Frontend browser (`utils.js`) memiliki timeout `AbortController` 120s, sehingga batas 30s menjamin tidak akan pernah terjadi `AbortError: signal is aborted without reason`.
 3. **Prioritas Model Vision Khusus (Bukan Text Meta-Router)**:  
-   - Prioritas 1: `google/gemini-2.0-flash-exp:free` atau `google/gemini-2.0-flash:free` (Sangat cepat, 3-7s, OCR tabel akurat).
-   - Prioritas 2: `google/gemini-2.5-flash:free` (Kualitas tinggi, fallback stabil).
-   - **DILARANG** meletakkan `openrouter/free` di urutan pertama karena meta-router ini sering merutekan ke text-only model yang akan hang/stuck saat dikirimi gambar base64 besar!
-   - `openrouter/free` hanya boleh menjadi fallback terakhir jika semua model spesifik gagal.
+   - Prioritas 1: `google/gemini-2.0-flash-exp:free` (Sangat cepat, 3-6s, OCR tabel akurat).
+   - Prioritas 2: `google/gemini-2.5-flash:free` (Kualitas tinggi, fallback stabil 5-10s).
+   - **DILARANG** mencoba lebih dari 2 model atau memasukkan `openrouter/free` di urutan pertama karena meta-router ini sering merutekan ke text-only model yang akan hang/stuck saat dikirimi gambar base64 besar!
+
 
 ### 🖼️ Kompresi Gambar & Payload
 1. **Frontend Compression**:  

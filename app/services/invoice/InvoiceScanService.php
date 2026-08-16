@@ -223,10 +223,10 @@ class InvoiceScanService
                 $userMessageText .= "\n\n" . $userHints;
             }
 
-            // DYNAMIC LEARNING: Inject learned alias context for this supplier into the AI prompt
+            // DYNAMIC LEARNING: Inject learned alias context for this supplier into the AI prompt (max 20 items for low latency)
             require_once __DIR__ . '/InvoiceLearningService.php';
             $learningService = new InvoiceLearningService($this->db);
-            $learnedAliases = $learningService->getLearnedAliasesForPrompt($resolvedSupplierId, 50);
+            $learnedAliases = $learningService->getLearnedAliasesForPrompt($resolvedSupplierId, 20);
 
             $contextLines = [];
             if (!empty($learnedAliases)) {
@@ -243,7 +243,7 @@ class InvoiceScanService
                 }
             } elseif (!empty($supplierProducts)) {
                 $contextLines[] = "\n## REFERENSI PRODUK SUPPLIER INI (Gunakan kode/nama jika cocok):";
-                foreach (array_slice($supplierProducts, 0, 40) as $sp) {
+                foreach (array_slice($supplierProducts, 0, 20) as $sp) {
                     $c = trim($sp['supplier_product_code'] ?? $sp['code'] ?? '');
                     $n = trim($sp['full_name'] ?? '');
                     if ($c || $n) {
@@ -254,6 +254,7 @@ class InvoiceScanService
             if (!empty($contextLines)) {
                 $userMessageText .= implode("\n", $contextLines);
             }
+
 
             // Make AI Vision Call
             $aiResponse = $this->callOpenRouter($systemPrompt, $userMessageText, $imageB64, $imageInfo['format'], null, null, $metrics);
@@ -599,29 +600,22 @@ class InvoiceScanService
             throw new \Exception('API Key AI Scanner belum diatur di Pengaturan Sistem & AI.');
         }
 
-        set_time_limit(120);
+        set_time_limit(60);
 
-        // MODEL SELECTION STRATEGY:
-        // 1. Prioritize fast, dedicated vision models that return responses in 3-8s.
-        // 2. DO NOT put meta-router 'openrouter/free' at the top because it frequently routes
-        //    to text-only models that stall on base64 vision payloads.
-        // 3. Keep per-model timeout strictly at 20s to ensure total failover takes <40s (well below 120s browser abort).
+        // ULTRA-FAST MODEL STRATEGY:
+        // 1. Try at most 2 models (max 15s each = total max 30s, far below 120s browser abort).
+        // 2. Only use dedicated, high-speed vision models.
         $FREE_VISION_MODELS = [
-            'google/gemini-2.0-flash-exp:free',  // Super fast (3-6s), high OCR accuracy
-            'google/gemini-2.5-flash:free',      // High quality Google Vision fallback
-            'google/gemini-2.0-flash:free',      // Alternative flash endpoint
-            'meta-llama/llama-3.2-90b-vision-instruct:free',
-            'openrouter/free',                   // Fallback router if specific models are unavailable
+            'google/gemini-2.0-flash-exp:free',  // Primary: Ultra-fast OCR (3-6s)
+            'google/gemini-2.5-flash:free',      // Secondary fallback (5-10s)
         ];
 
-        // Determine list of models to try in order
-        if (empty($model) || in_array($model, ['openrouter/auto', 'auto'])) {
+        // Determine list of models to try (strictly capped at 2 models)
+        if (empty($model) || in_array($model, ['openrouter/auto', 'auto', 'openrouter/free'])) {
             $modelsToTry = $FREE_VISION_MODELS;
-        } elseif ($model === 'openrouter/free') {
-            $modelsToTry = array_unique(array_merge(['openrouter/free'], $FREE_VISION_MODELS));
         } else {
-            // User configured a specific model — try that first, then fast fallbacks
-            $modelsToTry = array_unique(array_merge([$model], $FREE_VISION_MODELS));
+            // User configured custom model -> custom first, then gemini-2.0-flash-exp as fallback
+            $modelsToTry = array_unique([$model, 'google/gemini-2.0-flash-exp:free']);
         }
 
         $imageBlock   = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
@@ -644,7 +638,7 @@ class InvoiceScanService
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => 4000,
+                'max_tokens'  => 3000,
             ];
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
@@ -658,9 +652,9 @@ class InvoiceScanService
                 'X-Title: AlfarezMart Invoice Scanner',
             ]);
 
-            // 20s timeout per model: fast failover to keep total turnaround < 30s
-            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+            // 15s timeout per model: ensures total turnaround < 30s
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);
@@ -673,7 +667,7 @@ class InvoiceScanService
 
             if ($err) {
                 error_log("SCAN_AI_TRACE: Model {$tryModel} curl error: {$err}");
-                $lastError = "Koneksi ke OpenRouter gagal: " . $err;
+                $lastError = "Koneksi ke OpenRouter gagal ({$tryModel}): " . $err;
                 continue;
             }
 
@@ -681,13 +675,10 @@ class InvoiceScanService
                 $rateLimitCount++;
                 $this->recordRateLimitError();
                 error_log("SCAN_AI_TRACE: Model {$tryModel} rate limited 429 ({$rateLimitCount}x)");
-                $lastError = "Semua model AI sedang sibuk (rate limit). Coba lagi sebentar.";
-                if ($rateLimitCount >= 2) {
-                    error_log("SCAN_AI_TRACE: 2 rate limits — stopping early to avoid long wait");
-                    break;
-                }
+                $lastError = "AI Scanner sedang sibuk (rate limit). Coba lagi sebentar.";
                 continue;
             }
+
 
             if ($httpCode !== 200) {
                 $errData = json_decode($response, true);
