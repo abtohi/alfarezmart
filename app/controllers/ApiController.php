@@ -2598,27 +2598,21 @@ class ApiController extends Controller
                 throw new \Exception('Keranjang belanja kosong.');
             }
 
-            // 2. Delete old transaction (reverses stock, finance, movements)
-            $model->deleteSale($id);
-
-            // 3. Re-create with same invoice number and original created_at
+            // Update atomic with rollback protection
             $headerData = [
-                'invoice_number' => $old['invoice_number'],
                 'customer_id'    => $jsonBody['customer_id'] ?? $old['customer_id'],
                 'sale_mode'      => $jsonBody['sale_mode'] ?? $old['sale_mode'],
                 'total_amount'   => $jsonBody['total_amount'] ?? 0,
                 'payment_method' => $jsonBody['payment_method'] ?? $old['payment_method'],
                 'payment_status' => $jsonBody['payment_status'] ?? $old['payment_status'],
                 'notes'          => $jsonBody['notes'] ?? ($old['notes'] ?? ''),
-                'created_at'     => $old['created_at'] ?? date('Y-m-d H:i:s'),
             ];
 
-            $newId = $model->createWithDetails($headerData, $items);
-
+            $updatedId = $model->updateWithDetails($id, $headerData, $items);
 
             $this->json([
                 'success' => true,
-                'id'      => $newId,
+                'id'      => $updatedId,
                 'invoice' => $old['invoice_number'],
                 'message' => 'Transaksi berhasil diperbarui'
             ]);

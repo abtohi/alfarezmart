@@ -127,16 +127,7 @@ class DebtModel extends Model
         try {
             $this->beginTransaction();
 
-            // Insert payment record
-            $stmt = $this->db->prepare("INSERT INTO customer_debt_payments (debt_id, amount, payment_date, notes) VALUES (:debt_id, :amount, :payment_date, :notes)");
-            $stmt->execute([
-                ':debt_id' => $debtId,
-                ':amount' => $amount,
-                ':payment_date' => $date,
-                ':notes' => $notes
-            ]);
-
-            // Fetch the current debt
+            // 1. Fetch and lock the current debt first
             $stmt = $this->db->prepare("SELECT amount, remaining_amount FROM customer_debts WHERE id = :id FOR UPDATE");
             $stmt->execute([':id' => $debtId]);
             $debt = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -145,11 +136,20 @@ class DebtModel extends Model
                 throw new Exception("Hutang tidak ditemukan");
             }
 
-            // Calculate new remaining amount
+            // 2. Insert payment record
+            $stmt = $this->db->prepare("INSERT INTO customer_debt_payments (debt_id, amount, payment_date, notes) VALUES (:debt_id, :amount, :payment_date, :notes)");
+            $stmt->execute([
+                ':debt_id' => $debtId,
+                ':amount' => $amount,
+                ':payment_date' => $date,
+                ':notes' => $notes
+            ]);
+
+            // 3. Calculate new remaining amount
             $newRemaining = max(0, $debt['remaining_amount'] - $amount);
             $status = ($newRemaining <= 0) ? 'lunas' : 'belum_lunas';
 
-            // Update debt record
+            // 4. Update debt record
             $stmt = $this->db->prepare("UPDATE customer_debts SET remaining_amount = :remaining, status = :status WHERE id = :id");
             $stmt->execute([
                 ':remaining' => $newRemaining,
@@ -216,8 +216,17 @@ class DebtModel extends Model
      */
     public function deleteCustomerDebt(int|string $id)
     {
-        $stmt = $this->db->prepare("DELETE FROM customer_debts WHERE id = :id");
-        return $stmt->execute([':id' => $id]);
+        try {
+            $this->beginTransaction();
+            $this->db->prepare("DELETE FROM customer_debt_payments WHERE debt_id = :id")->execute([':id' => $id]);
+            $stmt = $this->db->prepare("DELETE FROM customer_debts WHERE id = :id");
+            $res = $stmt->execute([':id' => $id]);
+            $this->commit();
+            return $res;
+        } catch (Exception $e) {
+            $this->rollback();
+            throw $e;
+        }
     }
 
 
@@ -343,16 +352,7 @@ class DebtModel extends Model
         try {
             $this->beginTransaction();
 
-            // Insert payment record
-            $stmt = $this->db->prepare("INSERT INTO shop_debt_payments (debt_id, amount, payment_date, notes) VALUES (:debt_id, :amount, :payment_date, :notes)");
-            $stmt->execute([
-                ':debt_id' => $debtId,
-                ':amount' => $amount,
-                ':payment_date' => $date,
-                ':notes' => $notes
-            ]);
-
-            // Fetch current debt
+            // 1. Fetch and lock current debt first
             $stmt = $this->db->prepare("SELECT amount, remaining_amount FROM shop_debts WHERE id = :id FOR UPDATE");
             $stmt->execute([':id' => $debtId]);
             $debt = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -361,11 +361,20 @@ class DebtModel extends Model
                 throw new Exception("Hutang tidak ditemukan");
             }
 
-            // Calculate new remaining amount
+            // 2. Insert payment record
+            $stmt = $this->db->prepare("INSERT INTO shop_debt_payments (debt_id, amount, payment_date, notes) VALUES (:debt_id, :amount, :payment_date, :notes)");
+            $stmt->execute([
+                ':debt_id' => $debtId,
+                ':amount' => $amount,
+                ':payment_date' => $date,
+                ':notes' => $notes
+            ]);
+
+            // 3. Calculate new remaining amount
             $newRemaining = max(0, $debt['remaining_amount'] - $amount);
             $status = ($newRemaining <= 0) ? 'lunas' : 'belum_lunas';
 
-            // Update debt record
+            // 4. Update debt record
             $stmt = $this->db->prepare("UPDATE shop_debts SET remaining_amount = :remaining, status = :status WHERE id = :id");
             $stmt->execute([
                 ':remaining' => $newRemaining,
@@ -434,8 +443,17 @@ class DebtModel extends Model
      */
     public function deleteShopDebt(int|string $id)
     {
-        $stmt = $this->db->prepare("DELETE FROM shop_debts WHERE id = :id");
-        return $stmt->execute([':id' => $id]);
+        try {
+            $this->beginTransaction();
+            $this->db->prepare("DELETE FROM shop_debt_payments WHERE debt_id = :id")->execute([':id' => $id]);
+            $stmt = $this->db->prepare("DELETE FROM shop_debts WHERE id = :id");
+            $res = $stmt->execute([':id' => $id]);
+            $this->commit();
+            return $res;
+        } catch (Exception $e) {
+            $this->rollback();
+            throw $e;
+        }
     }
 
 

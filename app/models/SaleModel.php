@@ -450,11 +450,170 @@ class SaleModel extends Model
             $this->db->prepare("DELETE FROM finance_logs WHERE reference_type = 'sale' AND reference_id = :id")
                      ->execute([':id' => $id]);
 
-            // 5. Hapus sale_items dulu (foreign key), lalu sale_transactions
+            // 5. Lepaskan relasi sale_id di customer_debts sebelum menghapus transaksi (mencegah FK error)
+            $this->db->prepare("UPDATE customer_debts SET sale_id = NULL WHERE sale_id = :id")
+                     ->execute([':id' => $id]);
+
+            // 6. Hapus sale_items dulu (foreign key), lalu sale_transactions
             $this->db->prepare("DELETE FROM sale_items WHERE transaction_id = :id")->execute([':id' => $id]);
             $this->db->prepare("DELETE FROM sale_transactions WHERE id = :id")->execute([':id' => $id]);
 
             $this->db->commit();
+        } catch (\Exception $e) {
+            if ($this->db->inTransaction()) $this->db->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Update transaksi penjualan secara atomik dalam 1 database transaction.
+     * Mencegah data loss jika salah satu item baru gagal diproses.
+     */
+    public function updateWithDetails(int $id, array $headerData, array $items): int
+    {
+        $this->db->beginTransaction();
+        try {
+            // 1. Ambil detail items lama untuk kembalikan stok lama
+            $stmtOldItems = $this->db->prepare("
+                SELECT si.product_id, si.packaging_id, si.quantity, si.custom_name,
+                       pp.base_qty
+                FROM sale_items si
+                LEFT JOIN product_packagings pp ON si.packaging_id = pp.id
+                WHERE si.transaction_id = :tid
+            ");
+            $stmtOldItems->execute([':tid' => $id]);
+            $oldItems = $stmtOldItems->fetchAll();
+
+            $stmtRevertStock = $this->db->prepare("
+                UPDATE stock SET current_qty_base = current_qty_base + :qty
+                WHERE product_id = :pid
+            ");
+            foreach ($oldItems as $oItem) {
+                $stmtCheck = $this->db->prepare("SELECT code FROM products WHERE id = :pid LIMIT 1");
+                $stmtCheck->execute([':pid' => $oItem['product_id']]);
+                $prodCode = $stmtCheck->fetchColumn();
+                if ($oItem['custom_name'] !== null || $prodCode === 'CUSTOM') continue;
+
+                $baseQty = (int)($oItem['base_qty'] ?: 1);
+                $qty = $oItem['quantity'] * $baseQty;
+                $stmtRevertStock->execute([':qty' => $qty, ':pid' => $oItem['product_id']]);
+            }
+
+            // 2. Hapus stock movements & finance logs lama terkait transaksi ini
+            $this->db->prepare("DELETE FROM stock_movements WHERE reference_type = 'sale' AND reference_id = :id")
+                     ->execute([':id' => $id]);
+            $this->db->prepare("DELETE FROM finance_logs WHERE reference_type = 'sale' AND reference_id = :id")
+                     ->execute([':id' => $id]);
+
+            // 3. Hapus sale_items lama
+            $this->db->prepare("DELETE FROM sale_items WHERE transaction_id = :id")
+                     ->execute([':id' => $id]);
+
+            // 4. Update Header Transaksi
+            $stmtUpdateHeader = $this->db->prepare("
+                UPDATE sale_transactions 
+                SET customer_id = :cust, 
+                    sale_mode = :mode, 
+                    total_amount = :total, 
+                    payment_method = :pay_method, 
+                    payment_status = :status, 
+                    notes = :notes
+                WHERE id = :id
+            ");
+            $stmtUpdateHeader->execute([
+                ':cust'       => $headerData['customer_id'] ?? null,
+                ':mode'       => $headerData['sale_mode'] ?? 'retail',
+                ':total'      => $headerData['total_amount'] ?? 0,
+                ':pay_method' => $headerData['payment_method'] ?? 'Cash',
+                ':status'     => $headerData['payment_status'] ?? 'Lunas',
+                ':notes'      => $headerData['notes'] ?? '',
+                ':id'         => $id
+            ]);
+
+            // 5. Insert Items Baru & Kurangi Stok Baru
+            $stmtItem = $this->db->prepare("
+                INSERT INTO sale_items (transaction_id, product_id, packaging_id, quantity, unit_price, total_price, profit, custom_name, custom_unit)
+                VALUES (:tid, :prod_id, :pkg_id, :qty, :price, :total, :profit, :custom_name, :custom_unit)
+            ");
+
+            $stmtUpdateStock = $this->db->prepare("
+                UPDATE stock 
+                SET current_qty_base = current_qty_base - :qty
+                WHERE product_id = :id
+            ");
+
+            $stmtMovement = $this->db->prepare("
+                INSERT INTO stock_movements (product_id, movement_type, quantity, reference_type, reference_id, notes)
+                VALUES (:prod_id, 'out', :qty, 'sale', :ref, :notes)
+            ");
+
+            foreach ($items as $item) {
+                if (!empty($item['is_custom'])) {
+                    $placeholder = $this->getPlaceholderProductAndPackaging();
+                    $productId = $placeholder['product_id'];
+                    $pkgId = $placeholder['packaging_id'];
+                    $customName = $item['custom_name'] ?? 'Barang Custom';
+                    $customUnit = $item['custom_unit'] ?? 'Pcs';
+                    $profit = $item['quantity'] * $item['unit_price'];
+
+                    $stmtItem->execute([
+                        ':tid' => $id,
+                        ':prod_id' => $productId,
+                        ':pkg_id' => $pkgId,
+                        ':qty' => $item['quantity'],
+                        ':price' => $item['unit_price'],
+                        ':total' => $item['quantity'] * $item['unit_price'],
+                        ':profit' => $profit,
+                        ':custom_name' => $customName,
+                        ':custom_unit' => $customUnit
+                    ]);
+                    continue;
+                }
+
+                $pkg = $this->resolvePackagingForSale(
+                    (int)$item['product_id'],
+                    (int)$item['level']
+                );
+
+                if (!$pkg) {
+                    throw new Exception("Kemasan level {$item['level']} tidak ditemukan untuk produk {$item['product_id']}");
+                }
+                $multiplier = (int)$pkg['base_qty'];
+                $pkgId = $pkg['id'];
+                
+                $buyPrice = $pkg['buy_price'];
+                $profit = ($item['unit_price'] - $buyPrice) * $item['quantity'];
+
+                $stmtItem->execute([
+                    ':tid' => $id,
+                    ':prod_id' => $item['product_id'],
+                    ':pkg_id' => $pkgId,
+                    ':qty' => $item['quantity'],
+                    ':price' => $item['unit_price'],
+                    ':total' => $item['quantity'] * $item['unit_price'],
+                    ':profit' => $profit,
+                    ':custom_name' => null,
+                    ':custom_unit' => null
+                ]);
+
+                // Update Stock
+                $baseQty = $item['quantity'] * $multiplier;
+                $stmtUpdateStock->execute([
+                    ':qty' => $baseQty,
+                    ':id' => $item['product_id']
+                ]);
+
+                // Movement Log
+                $stmtMovement->execute([
+                    ':prod_id' => $item['product_id'],
+                    ':qty' => $baseQty,
+                    ':ref' => $id,
+                    ':notes' => 'Edit Penjualan'
+                ]);
+            }
+
+            $this->db->commit();
+            return $id;
         } catch (\Exception $e) {
             if ($this->db->inTransaction()) $this->db->rollBack();
             throw $e;

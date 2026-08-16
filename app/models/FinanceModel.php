@@ -130,7 +130,10 @@ class FinanceModel extends Model
     public function addLog(array $data)
     {
         $period = date('Ym', strtotime($data['log_date']));
-        $this->db->beginTransaction();
+        $isOuterTx = $this->db->inTransaction();
+        if (!$isOuterTx) {
+            $this->db->beginTransaction();
+        }
 
         try {
             // Check if balance_type has a dependency account
@@ -200,7 +203,9 @@ class FinanceModel extends Model
                 }
                 
                 $lastId = $this->db->lastInsertId();
-                $this->db->commit();
+                if (!$isOuterTx) {
+                    $this->db->commit();
+                }
                 return $lastId;
             }
 
@@ -222,11 +227,15 @@ class FinanceModel extends Model
             ]);
             
             $lastId = $this->db->lastInsertId();
-            $this->db->commit();
+            if (!$isOuterTx) {
+                $this->db->commit();
+            }
             return $lastId;
             
         } catch (Exception $e) {
-            $this->db->rollBack();
+            if (!$isOuterTx && $this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
             throw $e;
         }
     }

@@ -804,7 +804,8 @@ function findMatchedLevelForBarcode(product, q) {
         return 1;
     }
     if (!q) {
-        return product.packagings[0].level || 1;
+        const firstLvl = parseInt(product.packagings[0]?.level, 10);
+        return (!isNaN(firstLvl) && firstLvl > 0) ? firstLvl : 1;
     }
     const cleanQ = String(q).replace(/\s+/g, '').toLowerCase();
     if (!cleanQ) return 1;
@@ -817,17 +818,22 @@ function findMatchedLevelForBarcode(product, q) {
     });
 
     if (matchedPkg && matchedPkg.level != null) {
-        return parseInt(matchedPkg.level, 10);
+        const parsed = parseInt(matchedPkg.level, 10);
+        if (!isNaN(parsed) && parsed > 0) return parsed;
     }
 
     // 2. Fallback if findByBarcode attached level to root product object
     if (product.level != null) {
-        return parseInt(product.level, 10);
+        const parsed = parseInt(product.level, 10);
+        if (!isNaN(parsed) && parsed > 0) return parsed;
     }
 
     // 3. Fallback to level 1 or first packaging level
-    const lvl1 = product.packagings.find(p => p.level == 1);
-    return lvl1 ? 1 : (parseInt(product.packagings[0].level, 10) || 1);
+    const lvl1 = product.packagings.find(p => p && (p.level == 1 || p.level === '1'));
+    if (lvl1) return 1;
+
+    const fallbackLvl = parseInt(product.packagings[0]?.level, 10);
+    return (!isNaN(fallbackLvl) && fallbackLvl > 0) ? fallbackLvl : 1;
 }
 
 async function processBarcodeScan(q, inpEl, sugEl, fromScanner) {
