@@ -88,6 +88,32 @@ class SupplierDetector
                     ];
                 }
             }
+
+            // Check text signatures for CV. Indoberas
+            $indoberasSignatures = [
+                'indoberas',
+                'cv. indoberas',
+                'cv indoberas',
+                '8235907999',
+                'sga1995',
+                'ib5-',
+                'sb1-',
+                'quantity [isi]',
+                'sisa kredit'
+            ];
+
+            foreach ($indoberasSignatures as $sig) {
+                if (strpos($textLower, $sig) !== false) {
+                    $foundId = $supplierId ?: $this->findSupplierIdByNamePattern('Indoberas');
+                    return [
+                        'skill_key'        => 'indoberas',
+                        'supplier_id'      => $foundId,
+                        'supplier_name'    => 'CV. Indoberas',
+                        'confidence'       => 0.98,
+                        'detection_method' => 'text_signature'
+                    ];
+                }
+            }
         }
 
         // 2. Check Supplier Name from Database using $supplierId
@@ -112,6 +138,16 @@ class SupplierDetector
                     if (strpos($sName, 'budi jaya') !== false || strpos($sName, 'mayora') !== false) {
                         return [
                             'skill_key'        => 'budi_jaya',
+                            'supplier_id'      => (int)$supplier['id'],
+                            'supplier_name'    => $supplier['name'],
+                            'confidence'       => 0.95,
+                            'detection_method' => 'selected_supplier'
+                        ];
+                    }
+
+                    if (strpos($sName, 'indoberas') !== false || strpos($sName, 'indo beras') !== false) {
+                        return [
+                            'skill_key'        => 'indoberas',
                             'supplier_id'      => (int)$supplier['id'],
                             'supplier_name'    => $supplier['name'],
                             'confidence'       => 0.95,
