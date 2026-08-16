@@ -132,22 +132,31 @@
     const STORE_SETTINGS = <?= json_encode($storeSettings) ?>;
     const SALE_DATA = <?= json_encode($sale) ?>;
 
-    // Use shared instance from layout (printer_v3.js already loaded by app.php)
-    const tp = window.thermalPrinter || (typeof ThermalPrinter !== 'undefined' ? new ThermalPrinter() : null);
-    tp.setStoreSettings(STORE_SETTINGS);
+    // Safe helper to obtain ThermalPrinter instance (ready even if loaded asynchronously)
+    function getPrinter() {
+        if (window.thermalPrinter) return window.thermalPrinter;
+        if (typeof ThermalPrinter !== 'undefined') {
+            window.thermalPrinter = new ThermalPrinter();
+            window.thermalPrinter.setStoreSettings(STORE_SETTINGS);
+            return window.thermalPrinter;
+        }
+        return null;
+    }
 
     // ── UI helpers ──────────────────────────────────────────────────────────
     function updatePrinterBtn() {
         const btn = document.getElementById('btnConnectPrinter');
         if (!btn) return;
+        const tp = getPrinter();
+        if (!tp) return;
 
-        if (tp.isConnected()) {
+        if (tp.isConnected && tp.isConnected()) {
             btn.innerHTML = `<i class="bi bi-bluetooth-fill"></i> ${tp.device?.name || 'Terhubung'}`;
             btn.style.background = 'var(--success-bg)';
             btn.style.color = 'var(--success)';
             btn.style.borderColor = 'var(--success)';
             btn.title = 'Klik untuk putuskan koneksi';
-        } else if (tp.hasSavedDevice()) {
+        } else if (tp.hasSavedDevice && tp.hasSavedDevice()) {
             btn.innerHTML = `<i class="bi bi-bluetooth"></i> ${tp.lastConnectedDevice?.name || 'Printer Tersimpan'}`;
             btn.style.background = 'var(--warning-bg)';
             btn.style.color = 'var(--warning)';
@@ -162,11 +171,13 @@
         }
     }
 
+
     // ── Auto-reconnect on page load ─────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
         updatePrinterBtn();
 
-        if (!tp.isIOS && tp.hasBluetoothAPI && (tp.device || tp.hasSavedDevice()) && !tp.isConnected()) {
+        const tp = getPrinter();
+        if (tp && !tp.isIOS && tp.hasBluetoothAPI && (tp.device || (tp.hasSavedDevice && tp.hasSavedDevice())) && !tp.isConnected()) {
             const btn = document.getElementById('btnConnectPrinter');
             if (btn) {
                 btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menghubungkan...';
@@ -183,6 +194,12 @@
 
     // ── Connect / disconnect toggle ─────────────────────────────────────────
     async function connectPrinter() {
+        const tp = getPrinter();
+        if (!tp) {
+            showToast('Modul printer belum siap. Silakan refresh halaman.', 'warning');
+            return;
+        }
+
         if (tp.isIOS || !tp.hasBluetoothAPI) {
             showToast('Perangkat ini menggunakan cetak via Browser/AirPrint.', 'info');
             return;
@@ -203,7 +220,7 @@
                 if (typeof window.openPrinterChooser === 'function') {
                     ok = await window.openPrinterChooser(tp);
                 } else {
-                    ok = (tp.device || tp.hasSavedDevice()) ? await tp.tryAutoReconnect() : false;
+                    ok = (tp.device || (tp.hasSavedDevice && tp.hasSavedDevice())) ? await tp.tryAutoReconnect() : false;
                     if (!ok) { await tp.connect(); ok = tp.isConnected(); }
                 }
                 if (ok) showToast(`Printer terhubung: ${tp.device?.name || 'Bluetooth'}`, 'success');
@@ -219,12 +236,18 @@
 
     // ── Print receipt ───────────────────────────────────────────────────────
     async function printReceipt() {
-        const cartData = SALE_DATA.items.map(i => ({
+        const tp = getPrinter();
+        if (!tp) {
+            window.print();
+            return;
+        }
+
+        const cartData = (SALE_DATA.items || []).map(i => ({
             name: i.invoice_name || i.full_name || 'Item',
             print_name: i.invoice_name || i.full_name || 'Item',
-            quantity: parseFloat(i.quantity),
-            unit_price: parseFloat(i.unit_price),
-            total: parseFloat(i.total_price),
+            quantity: parseFloat(i.quantity) || 1,
+            unit_price: parseFloat(i.unit_price) || 0,
+            total: parseFloat(i.total_price) || 0,
             unit_name: i.unit_name || 'pcs'
         }));
 
@@ -242,7 +265,7 @@
                 // Try to use Bluetooth thermal printer
                 if (!tp.isConnected()) {
                     // 1. Try silent auto-reconnect
-                    const ok = (tp.device || tp.hasSavedDevice()) ? await tp.tryAutoReconnect() : false;
+                    const ok = (tp.device || (tp.hasSavedDevice && tp.hasSavedDevice())) ? await tp.tryAutoReconnect() : false;
                     if (!ok) {
                         // 2. Show picker if needed
                         await tp.connect();
@@ -271,5 +294,6 @@
             if (btnPrint) { btnPrint.innerHTML = prevHTML; btnPrint.disabled = false; }
         }
     }
+
 </script>
 

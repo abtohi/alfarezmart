@@ -50,14 +50,47 @@ const QtyPricing = {
         let qty = parseFloat(quantity) || 0;
         if (qty <= 0) return result;
 
-        if (!allPackagings || !Array.isArray(allPackagings) || allPackagings.length === 0) {
-            allPackagings = [pkg];
+        // 1. Check for active tier pricing specific to this packaging level
+        const activeTier = this.getActiveTier(pkg, saleMode, qty);
+        if (activeTier) {
+            const tierUnitPrice = parseFloat(activeTier.unit_price) || 0;
+            const lineTotal = Math.round(tierUnitPrice * qty);
+            result.total = lineTotal;
+            result.breakdown.push({
+                note: `${qty} ${pkg.unit_name || 'Unit'} (Tier ${activeTier.min_qty}+ @${tierUnitPrice.toLocaleString('id-ID')})`,
+                price: lineTotal
+            });
+            return result;
+        }
+
+        // 2. If packaging level > 1 (e.g. Renceng, Pack, Karton, Sak), ALWAYS use its explicit unit price
+        // This ensures selecting Level 2/3/4 never gets degraded or mistakenly computed as Level 1
+        const pkgLevel = parseInt(pkg?.level || 1, 10);
+        if (pkgLevel > 1) {
+            const basePrice = this.getBaseUnitPrice(pkg, saleMode);
+            const lineTotal = Math.round(basePrice * qty);
+            result.total = lineTotal;
+            result.breakdown.push({
+                note: `${qty} ${pkg.unit_name || 'Unit'} (@${basePrice.toLocaleString('id-ID')})`,
+                price: lineTotal
+            });
+            return result;
+        }
+
+        // 3. For Base Level 1 (e.g. Pcs): Check if bundle upgrade across larger packagings is applicable
+        if (!allPackagings || !Array.isArray(allPackagings) || allPackagings.length <= 1) {
+            const basePrice = this.getBaseUnitPrice(pkg, saleMode);
+            const lineTotal = Math.round(basePrice * qty);
+            result.total = lineTotal;
+            result.breakdown.push({ note: `${qty} ${pkg.unit_name || 'Unit'}`, price: lineTotal });
+            return result;
         }
 
         const targetBaseQty = qty * (parseFloat(pkg.base_qty) || 1);
         let remainingBaseQty = targetBaseQty;
         
         let chunks = [];
+
         allPackagings.forEach(p => {
             const pBaseQty = parseFloat(p.base_qty) || 1;
             const basePrice = this.getBaseUnitPrice(p, saleMode);

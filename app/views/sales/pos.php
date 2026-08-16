@@ -1134,10 +1134,11 @@ function updateQty(id, delta) {
 
 function changeLevel(id, newLevel) {
     const item = cart.find(i => i.id == id);
-    if (!item) return;
-    const pkg = item.packagings.find(p => p.level == newLevel);
+    if (!item || !item.packagings) return;
+    const targetLevel = parseInt(newLevel, 10);
+    const pkg = item.packagings.find(p => parseInt(p.level, 10) === targetLevel);
     if (pkg) {
-        item.level = parseInt(newLevel, 10);
+        item.level = targetLevel;
         item.unit_name = pkg.unit_name;
         item.unit_abbr = pkg.unit_abbr;
         item.use_custom_price = false;
@@ -1147,6 +1148,7 @@ function changeLevel(id, newLevel) {
         renderCart();
     }
 }
+
 
 function calculateTotal() {
     let sum = 0;

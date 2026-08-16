@@ -400,9 +400,8 @@ if ($userLevel === 'staff') {
                 <button class="header-btn" id="btnTurboClean" aria-label="Bersihkan Cache &amp; Turbo" onclick="window.AppCleaner && window.AppCleaner.cleanAll()" title="Bersihkan Cache &amp; Percepat Aplikasi" style="color:#eab308; background:rgba(234,179,8,0.12); border-radius:8px;">
                     <i class="bi bi-lightning-charge-fill"></i>
                 </button>
-                <button class="header-btn" id="btnNotif" aria-label="Notifikasi">
-                    <i class="bi bi-bell"></i>
-                    <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+                <button class="header-btn" id="btnFixProducts" aria-label="Perbaiki &amp; Sinkronkan Produk" onclick="fixAndSyncProducts()" title="Perbaiki &amp; Sinkronkan Data Produk, Barcode, &amp; Kemasan Bertingkat" style="color:#38bdf8; background:rgba(56,189,248,0.12); border-radius:8px;">
+                    <i class="bi bi-tools"></i>
                 </button>
                 <?php if (isset($currentUser)): ?>
                 <div class="header-user" style="display:flex;align-items:center;gap:6px;margin-left:4px;">
@@ -411,6 +410,7 @@ if ($userLevel === 'staff') {
                     </div>
                 </div>
                 <?php endif; ?>
+
             </div>
         </div>
     </header>
@@ -594,9 +594,72 @@ if ($userLevel === 'staff') {
     <script src="<?= BASE_URL ?>public/js/app.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/instant-nav.js<?= $v ?>"></script>
 
+    <!-- Global Product & Packaging Repair / Sync Tool -->
+    <script>
+    window.fixAndSyncProducts = async function() {
+        const btn = document.getElementById('btnFixProducts');
+        const icon = btn ? btn.querySelector('i') : null;
+        if (icon) icon.className = 'spinner-border spinner-border-sm';
+        showToast('Memperbaiki & mensinkronkan data produk, kemasan & harga...', 'info');
+
+        try {
+            // 1. Clear local cached catalogs
+            localStorage.removeItem('pos_catalog_cache');
+            localStorage.removeItem('cached_products');
+            
+            // 2. Fetch latest fresh products catalog with all packaging levels from server
+            const res = await fetch(`${BASE_URL}api/products/sync?pos=1&_t=` + Date.now(), { cache: 'no-store' });
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.products && Array.isArray(data.products)) {
+                    // Update in-memory catalog
+                    window._posProductsCatalog = data.products;
+                    
+                    // Update IndexedDB (Dexie / OfflineDB)
+                    if (typeof db !== 'undefined' && db.products) {
+                        await db.products.clear();
+                        await db.products.bulkPut(data.products);
+                    }
+                    
+                    // Re-save to localStorage
+                    try {
+                        const serialized = JSON.stringify(data.products);
+                        if (serialized.length < 1500000) {
+                            localStorage.setItem('pos_catalog_cache', serialized);
+                        }
+                    } catch(e) {}
+                    
+                    // If on POS page, re-calculate and re-render cart
+                    if (typeof renderCart === 'function' && typeof cart !== 'undefined' && Array.isArray(cart)) {
+                        cart.forEach(item => {
+                            const fresh = data.products.find(p => p.id == item.product_id);
+                            if (fresh && fresh.packagings) {
+                                item.packagings = fresh.packagings;
+                            }
+                            if (typeof recalcItemPrice === 'function') recalcItemPrice(item);
+                        });
+                        renderCart();
+                    }
+
+                    showToast(`✅ Sukses! ${data.products.length} produk & seluruh level kemasan berhasil disinkronkan & diperbaiki.`, 'success', 4000);
+                } else {
+                    showToast('Katalog produk diperbarui.', 'success');
+                }
+            } else {
+                showToast('Gagal terhubung ke server untuk sinkronisasi produk.', 'error');
+            }
+        } catch(err) {
+            showToast('Gagal sinkronisasi produk: ' + err.message, 'error');
+        } finally {
+            if (icon) icon.className = 'bi bi-tools';
+        }
+    };
+    </script>
+
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '15.95'; // Update this to force client reloads
+    const APP_VERSION = '15.96'; // Update this to force client reloads
+
     
     // Self-healing cache buster
     if (localStorage.getItem('app_version') !== APP_VERSION) {
