@@ -3280,7 +3280,7 @@ function renderSellerRecommendations(products) {
             </div>
             <!-- Right: Filter Select Dropdown -->
             <div class="flex-shrink-0" style="min-width: 170px;">
-                <select class="form-select form-select-sm" id="seller-filter-select" onchange="applySellerFilter(this.value)" style="border-radius: 10px; font-size: 11px; font-weight: 600; background-color: var(--surface-1); color: var(--text-primary); border-color: var(--border-color);">
+                <select class="form-select-dark-sm" id="seller-filter-select" onchange="applySellerFilter(this.value)" style="width:100%;">
                     ${optionsHtml}
                 </select>
             </div>

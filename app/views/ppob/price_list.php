@@ -413,21 +413,21 @@ table.dataTable tbody td {
                 </div>
             </div>
             <div class="col-md-3 col-6">
-                <select id="brandFilterSelect" class="form-select glass-input rounded-pill" style="font-size: 0.85rem;" onchange="applyCustomFilters()">
+                <select id="brandFilterSelect" class="form-select-dark rounded-pill" style="font-size: 0.82rem;" onchange="applyCustomFilters()">
                     <option value="">Semua Brand / Provider</option>
                 </select>
             </div>
             <div class="col-md-2 col-6">
-                <select id="typeFilterSelect" class="form-select glass-input rounded-pill" style="font-size: 0.85rem;" onchange="applyCustomFilters()">
+                <select id="typeFilterSelect" class="form-select-dark rounded-pill" style="font-size: 0.82rem;" onchange="applyCustomFilters()">
                     <option value="">Semua Tipe</option>
-                    <option value="prepaid">Prabayar</option>
-                    <option value="postpaid">Pascabayar</option>
+                    <option value="prepaid">⚡ Prabayar</option>
+                    <option value="postpaid">📄 Pascabayar</option>
                 </select>
             </div>
             <div class="col-md-2 col-12 ms-auto text-end">
                 <div class="d-flex align-items-center justify-content-end gap-2">
-                    <span class="small text-muted" style="font-size: 0.75rem;">Tampilkan:</span>
-                    <select id="pageLengthSelect" class="form-select glass-input rounded-pill w-auto py-1 px-3" style="font-size: 0.8rem;" onchange="changePageLength(this.value)">
+                    <span class="small text-muted" style="font-size: 0.75rem;">Baris:</span>
+                    <select id="pageLengthSelect" class="form-select-dark-sm rounded-pill w-auto py-1 px-3" onchange="changePageLength(this.value)">
                         <option value="15">15</option>
                         <option value="25" selected>25</option>
                         <option value="50">50</option>

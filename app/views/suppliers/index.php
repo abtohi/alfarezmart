@@ -250,8 +250,8 @@ function getSupplierFormHTML(s = {}) {
         <div class="modal-form-group">
             <label>Jenis Supplier</label>
             <div class="dropdown" style="width:100%;">
-                <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:10px; font-size:12px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
-                    <span>${activeTypeName}</span>
+                <button class="btn-dropdown-modern dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span><i class="bi bi-tag-fill me-2 text-primary"></i>${activeTypeName}</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
                     ${typeOptionsHtml}
@@ -468,12 +468,12 @@ function getSalesRepFormHTML(sr = {}) {
         <div class="modal-form-group">
             <label>Status</label>
             <div class="dropdown" style="width:100%;">
-                <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:10px; font-size:12px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
-                    <span>${sr.status === 'Non-Aktif' ? 'Non-Aktif' : 'Aktif'}</span>
+                <button class="btn-dropdown-modern dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span><i class="bi bi-circle-fill me-2 ${sr.status === 'Non-Aktif' ? 'text-danger' : 'text-success'}" style="font-size:8px;"></i>${sr.status === 'Non-Aktif' ? 'Non-Aktif' : 'Aktif'}</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
-                    <li><a class="dropdown-item ${sr.status !== 'Non-Aktif' ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Aktif'; dp.querySelector('button span').textContent='Aktif'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Aktif</a></li>
-                    <li><a class="dropdown-item ${sr.status === 'Non-Aktif' ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Non-Aktif'; dp.querySelector('button span').textContent='Non-Aktif'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Non-Aktif</a></li>
+                    <li><a class="dropdown-item ${sr.status !== 'Non-Aktif' ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Aktif'; dp.querySelector('button span').innerHTML='<i class=\'bi bi-circle-fill me-2 text-success\' style=\'font-size:8px;\'></i>Aktif'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');"><i class="bi bi-check-circle me-2 text-success"></i>Aktif</a></li>
+                    <li><a class="dropdown-item ${sr.status === 'Non-Aktif' ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Non-Aktif'; dp.querySelector('button span').innerHTML='<i class=\'bi bi-circle-fill me-2 text-danger\' style=\'font-size:8px;\'></i>Non-Aktif'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');"><i class="bi bi-x-circle me-2 text-danger"></i>Non-Aktif</a></li>
                 </ul>
                 <input type="hidden" id="modalSalesStatus" value="${sr.status === 'Non-Aktif' ? 'Non-Aktif' : 'Aktif'}">
             </div>

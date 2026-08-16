@@ -20,7 +20,7 @@
                 <i class="bi bi-search" style="color:var(--text-muted);"></i>
             </div>
             
-            <div id="historySearchResults" style="position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:var(--shadow-lg); z-index:1000; display:none; max-height:300px; overflow-y:auto;">
+            <div id="historySearchResults" style="position:absolute; top:calc(100% + 4px); left:0; right:0; background:var(--surface-1); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:0 12px 36px rgba(0,0,0,0.35); z-index:1000; display:none; max-height:300px; overflow-y:auto; scrollbar-width:thin;">
                 <!-- Populated via JS -->
             </div>
         </div>

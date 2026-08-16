@@ -424,10 +424,10 @@ async function openAddUserModal() {
             <div class="modal-form-group"><label>No HP</label><input type="text" class="form-control-dark" id="mu_phone" placeholder="08xx..."></div>
             <div class="modal-form-group"><label>Password *</label><input type="password" class="form-control-dark" id="mu_password" placeholder="Min 6 karakter" required></div>
             <div class="modal-form-group"><label>Level Akses *</label>
-                <select class="form-control-dark" id="mu_level" onchange="toggleScheduleUI(this.value)">
-                    <option value="staff">Staff</option>
-                    <option value="admin">Admin</option>
-                    <option value="superadmin">Superadmin</option>
+                <select class="form-select-dark" id="mu_level" onchange="toggleScheduleUI(this.value)">
+                    <option value="staff">👤 Staff</option>
+                    <option value="admin">🛡️ Admin</option>
+                    <option value="superadmin">👑 Superadmin</option>
                 </select>
             </div>
             <div id="schedule_section" class="schedule-card">
@@ -600,10 +600,10 @@ async function openEditUserModal(u) {
             <div class="modal-form-group"><label>Email</label><input type="email" class="form-control-dark" id="eu_email" value="${u.email||''}"></div>
             <div class="modal-form-group"><label>No HP</label><input type="text" class="form-control-dark" id="eu_phone" value="${u.phone||''}"></div>
             <div class="modal-form-group"><label>Level Akses *</label>
-                <select class="form-control-dark" id="eu_level" onchange="toggleScheduleUI(this.value)">
-                    <option value="staff" ${u.user_level==='staff'?'selected':''}>Staff</option>
-                    <option value="admin" ${u.user_level==='admin'?'selected':''}>Admin</option>
-                    <option value="superadmin" ${u.user_level==='superadmin'?'selected':''}>Superadmin</option>
+                <select class="form-select-dark" id="eu_level" onchange="toggleScheduleUI(this.value)">
+                    <option value="staff" ${u.user_level==='staff'?'selected':''}>👤 Staff</option>
+                    <option value="admin" ${u.user_level==='admin'?'selected':''}>🛡️ Admin</option>
+                    <option value="superadmin" ${u.user_level==='superadmin'?'selected':''}>👑 Superadmin</option>
                 </select>
             </div>
             <div id="schedule_section" class="schedule-card" style="display:${u.user_level==='staff'?'block':'none'}">

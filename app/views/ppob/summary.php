@@ -211,23 +211,23 @@
         <div class="row g-3 align-items-end">
             <div class="col-md-4 col-sm-6">
                 <label class="form-label text-muted fw-bold" style="font-size: 11px; text-transform: uppercase;">Rentang Waktu</label>
-                <select id="filter-range" class="form-select form-control-dark">
-                    <option value="today">Hari Ini</option>
-                    <option value="yesterday">Kemarin</option>
-                    <option value="7days">7 Hari Terakhir</option>
-                    <option value="this_month" selected>Bulan Ini</option>
-                    <option value="all">Semua Waktu</option>
+                <select id="filter-range" class="form-select-dark">
+                    <option value="today">📅 Hari Ini</option>
+                    <option value="yesterday">📅 Kemarin</option>
+                    <option value="7days">📅 7 Hari Terakhir</option>
+                    <option value="this_month" selected>📅 Bulan Ini</option>
+                    <option value="all">📅 Semua Waktu</option>
                 </select>
             </div>
             <div class="col-md-4 col-sm-6">
                 <label class="form-label text-muted fw-bold" style="font-size: 11px; text-transform: uppercase;">Kategori Produk</label>
-                <select id="filter-category" class="form-select form-control-dark">
+                <select id="filter-category" class="form-select-dark">
                     <option value="all">Semua Kategori</option>
-                    <option value="Pulsa">Pulsa</option>
-                    <option value="Data">Paket Data</option>
-                    <option value="Games">Games</option>
-                    <option value="E-Money">E-Money</option>
-                    <option value="PLN">Token PLN</option>
+                    <option value="Pulsa">📱 Pulsa</option>
+                    <option value="Data">🌐 Paket Data</option>
+                    <option value="Games">🎮 Games</option>
+                    <option value="E-Money">💳 E-Money</option>
+                    <option value="PLN">⚡ Token PLN</option>
                 </select>
             </div>
             <div class="col-md-4 col-sm-12">

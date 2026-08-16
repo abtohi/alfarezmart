@@ -56,7 +56,7 @@ $autoPrintCheckout = $settingModel->get('auto_print_checkout', '1');
             
             <div style="margin-bottom:14px;">
                 <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Mode Driver Printer (Garansi Konek Otomatis)</label>
-                <select id="printer_driver" name="printer_driver" class="form-select" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);">
+                <select id="printer_driver" name="printer_driver" class="form-select-dark">
                     <option value="rawbt" <?= $printerDriver == 'rawbt' ? 'selected' : '' ?>>📱 Android RawBT Service (100% DIJAMIN Otomatis Tanpa Dialog Bluetooth)</option>
                     <option value="web_bluetooth" <?= $printerDriver == 'web_bluetooth' ? 'selected' : '' ?>>⚡ Web Bluetooth Direct Chrome (Auto-Reconnect & Keep-Alive)</option>
                     <option value="browser" <?= $printerDriver == 'browser' ? 'selected' : '' ?>>🌐 Cetak Web / AirPrint (iOS & Browser Standard)</option>
@@ -68,7 +68,7 @@ $autoPrintCheckout = $settingModel->get('auto_print_checkout', '1');
 
             <div style="margin-bottom:14px;">
                 <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Cetak Struk Otomatis saat Klik "BAYAR"</label>
-                <select id="auto_print_checkout" name="auto_print_checkout" class="form-select" style="width:100%; padding:10px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);">
+                <select id="auto_print_checkout" name="auto_print_checkout" class="form-select-dark">
                     <option value="1" <?= $autoPrintCheckout == '1' ? 'selected' : '' ?>>⚡ Ya, Cetak Otomatis Begitu Transaksi Selesai</option>
                     <option value="0" <?= $autoPrintCheckout == '0' ? 'selected' : '' ?>>✋ Tidak, Harus Klik Tombol Cetak Manual</option>
                 </select>
@@ -77,12 +77,12 @@ $autoPrintCheckout = $settingModel->get('auto_print_checkout', '1');
             <div>
                 <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Lebar Paper Printer (mm)</label>
                 <div class="dropdown" style="width:100%;">
-                    <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:10px; font-size:var(--font-size-sm); background:var(--bg-primary); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-sm);">
-                        <span><?= $printerWidth == '80' ? '80mm (48 karakter)' : '58mm (32 karakter)' ?></span>
+                    <button class="btn-dropdown-modern dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span><i class="bi bi-receipt me-2 text-primary"></i><?= $printerWidth == '80' ? '80mm (48 karakter)' : '58mm (32 karakter)' ?></span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:var(--font-size-sm); min-width:100%;">
-                        <li><a class="dropdown-item <?= $printerWidth == '58' ? 'active' : '' ?>" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='58'; dp.querySelector('button span').textContent='58mm (32 karakter)'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">58mm (32 karakter)</a></li>
-                        <li><a class="dropdown-item <?= $printerWidth == '80' ? 'active' : '' ?>" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='80'; dp.querySelector('button span').textContent='80mm (48 karakter)'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">80mm (48 karakter)</a></li>
+                        <li><a class="dropdown-item <?= $printerWidth == '58' ? 'active' : '' ?>" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='58'; dp.querySelector('button span').innerHTML='<i class=\'bi bi-receipt me-2 text-primary\'></i>58mm (32 karakter)'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');"><i class="bi bi-check2 me-2"></i>58mm (32 karakter)</a></li>
+                        <li><a class="dropdown-item <?= $printerWidth == '80' ? 'active' : '' ?>" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='80'; dp.querySelector('button span').innerHTML='<i class=\'bi bi-receipt me-2 text-primary\'></i>80mm (48 karakter)'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');"><i class="bi bi-check2 me-2"></i>80mm (48 karakter)</a></li>
                     </ul>
                     <input type="hidden" id="thermal_printer_width" name="thermal_printer_width" value="<?= htmlspecialchars($printerWidth) ?>">
                 </div>

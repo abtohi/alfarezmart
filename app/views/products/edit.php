@@ -1280,7 +1280,7 @@ function addQtyTierRow(listEl, data = {}) {
         </div>
         <div><label style="font-size:9px;color:var(--text-muted);">Mode</label>
             <div class="dropdown" style="width:100%;">
-                <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:6px; font-size:11px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
+                <button class="btn-dropdown-modern dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="padding:6px 8px; font-size:11px;">
                     <span>${selectedModeObj.l}</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:11px; min-width:100%;">

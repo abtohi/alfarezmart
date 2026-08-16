@@ -108,19 +108,19 @@
                     </div>
                 </div>
                 <!-- Customer Dropdown Panel -->
-                <div id="customerDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:200;background:var(--surface-1);border:1px solid var(--primary);border-radius:var(--radius-md);box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;">
-                    <div style="padding:10px 12px;border-bottom:1px solid var(--border-color);">
-                        <div style="display:flex;align-items:center;gap:8px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:0 10px;">
+                <div id="customerDropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:200;background:var(--surface-1);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border-color);border-radius:var(--radius-lg);box-shadow:0 12px 36px rgba(0,0,0,0.35);overflow:hidden;">
+                    <div style="padding:10px 12px;border-bottom:1px solid var(--border-color);background:var(--surface-2);">
+                        <div style="display:flex;align-items:center;gap:8px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:0 12px;">
                             <i class="bi bi-search" style="color:var(--text-muted);font-size:0.9rem;"></i>
                             <input type="text" id="customerSearchInput"
                                    placeholder="Ketik nama atau nomor HP..."
                                    autocomplete="off" autocorrect="off" spellcheck="false"
-                                   style="flex:1;border:none;background:transparent;padding:10px 4px;color:var(--text-primary);font-size:16px;outline:none;font-family:var(--font-family);"
+                                   style="flex:1;border:none;background:transparent;padding:10px 4px;color:var(--text-primary);font-size:14px;outline:none;font-family:var(--font-family);"
                                    oninput="onCustomerSearch(this.value)">
                             <i class="bi bi-x-circle" style="color:var(--text-muted);font-size:0.9rem;cursor:pointer;" onclick="document.getElementById('customerSearchInput').value='';onCustomerSearch('');"></i>
                         </div>
                     </div>
-                    <div id="customerResults" style="max-height:220px;overflow-y:auto;padding:6px 0;">
+                    <div id="customerResults" style="max-height:240px;overflow-y:auto;padding:6px 0;scrollbar-width:thin;">
                         <!-- populated by JS -->
                     </div>
                 </div>
@@ -2821,8 +2821,8 @@ function getCustomerFormHTML(c = {}) {
         <div class="modal-form-group">
             <label>Level Kategori Pelanggan</label>
             <div class="dropdown" style="width:100%;">
-                <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:10px; font-size:12px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
-                    <span>${activeTypeName}</span>
+                <button class="btn-dropdown-modern dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span><i class="bi bi-tag-fill me-2 text-primary"></i>${activeTypeName}</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
                     ${optionsListHtml}

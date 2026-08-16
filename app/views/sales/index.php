@@ -131,8 +131,9 @@
                 </div>
                 <div id="custFilterDropdown"
                      style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:300;
-                            background:var(--surface-1);border:1px solid var(--primary);border-radius:var(--radius-md);
-                            box-shadow:0 12px 40px rgba(0,0,0,0.35);overflow:hidden;max-height:240px;overflow-y:auto;">
+                            background:var(--surface-1);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+                            border:1px solid var(--border-color);border-radius:var(--radius-lg);
+                            box-shadow:0 12px 40px rgba(0,0,0,0.35);overflow:hidden;max-height:240px;overflow-y:auto;scrollbar-width:thin;">
                     <div id="custFilterList" style="padding:4px 0;"></div>
                 </div>
             </div>

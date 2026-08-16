@@ -1781,8 +1781,8 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="modal-form-group">
                 <label>Level Kategori Pelanggan</label>
                 <div class="dropdown" style="width:100%;">
-                    <button class="btn btn-dark dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:10px; font-size:12px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
-                        <span>${activeTypeName}</span>
+                    <button class="btn-dropdown-modern dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span><i class="bi bi-tag-fill me-2 text-primary"></i>${activeTypeName}</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
                         ${optionsListHtml}
