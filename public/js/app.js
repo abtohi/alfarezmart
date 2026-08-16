@@ -425,13 +425,11 @@ async function syncPendingChanges() {
 
     try {
         const changes = await window.OfflineDB.getPendingChanges();
-        if (changes.length === 0) {
+        if (!changes || changes.length === 0) {
             updateSyncBadge();
             return;
         }
 
-        showToast('Menyinkronkan data offline...', 'info');
-        
         // Show spinning icon
         const syncIcon = document.getElementById('syncIcon');
         if (syncIcon) {
@@ -439,23 +437,24 @@ async function syncPendingChanges() {
             syncIcon.style.animation = 'spin 1s linear infinite';
         }
 
+        // Dapatkan CSRF Token segar dari DOM saat ini
+        const activeCsrf = document.getElementById('csrfToken')?.value ||
+                           document.getElementById('globalCsrfToken')?.value ||
+                           document.querySelector('input[name="csrf_token"]')?.value || '';
+
         let successCount = 0;
         let failCount = 0;
 
         for (const change of changes) {
-            const failKey = `sync_fail_${change.id}`;
-            let retries = parseInt(localStorage.getItem(failKey) || '0');
-
-            // Discard invalid / non-queueable endpoints (like AI scan, export, logs)
+            // Abaikan hanya endpoint yang jelas-jelas bukan mutasi bisnis
             const rawEp = String(change.endpoint || '').toLowerCase();
-            if (rawEp.includes('/ai/') || rawEp.includes('/scan-invoice') || rawEp.includes('/export') || rawEp.includes('/sync') || rawEp.includes('/activity/log') || retries >= 5) {
+            if (rawEp.includes('/ai/') || rawEp.includes('/scan-ai') || rawEp.includes('/activity/log')) {
                 await window.OfflineDB.removePendingChange(change.id);
-                localStorage.removeItem(failKey);
                 continue;
             }
 
             try {
-                // Ensure endpoint is normalized using BASE_URL if relative
+                // Normalisasi URL endpoint
                 let endpoint = change.endpoint;
                 if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
                     const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
@@ -466,24 +465,35 @@ async function syncPendingChanges() {
                     }
                 }
 
+                // Siapkan payload dan perbarui CSRF token ke token yang masih segar
+                let payload = change.payload;
+                if (payload && typeof payload === 'object') {
+                    if (activeCsrf) {
+                        payload.csrf_token = activeCsrf;
+                    }
+                }
+
                 const config = {
                     method: change.method || 'POST',
                     headers: {}
                 };
-                
-                // Prefer CSRF from stored payload, fallback to DOM
-                const csrfFromPayload = change.payload && (change.payload.csrf_token || change.payload['X-CSRF-Token']);
-                const csrfFromDom = document.getElementById('csrfToken') ? document.getElementById('csrfToken').value : '';
-                const csrfToken = csrfFromPayload || csrfFromDom || '';
-                if (csrfToken) config.headers['X-CSRF-Token'] = csrfToken;
-                
-                if (change.payload) {
-                    config.headers['Content-Type'] = 'application/json';
-                    config.body = JSON.stringify(change.payload);
+
+                if (activeCsrf) {
+                    config.headers['X-CSRF-Token'] = activeCsrf;
                 }
 
+                if (payload) {
+                    config.headers['Content-Type'] = 'application/json';
+                    config.body = JSON.stringify(payload);
+                }
+
+                // Gunakan timeout abort controller agar tidak hanging saat koneksi lelet
+                const ctrl = new AbortController();
+                const timeoutId = setTimeout(() => ctrl.abort(), 12000);
+                config.signal = ctrl.signal;
+
                 const response = await fetch(endpoint, config);
-                const status = response.status;
+                clearTimeout(timeoutId);
 
                 let isSuccess = response.ok;
                 let errorMsg = '';
@@ -492,107 +502,53 @@ async function syncPendingChanges() {
                     const resText = await response.text();
                     if (resText && resText.trim().length > 0) {
                         const json = JSON.parse(resText);
-                        if (json && json.success === false) {
+                        if (json && (json.success === false || json.status === 'error')) {
                             isSuccess = false;
-                            errorMsg = json.error || 'Server error';
+                            errorMsg = json.error || json.message || 'Server error';
                         }
                     }
                 } catch(pe) {
-                    // Ignored JSON parse error
+                    // Jika respons bukan JSON tapi HTTP 200 (misal redirect), anggap sukses
+                    if (!response.ok) isSuccess = false;
                 }
 
                 if (isSuccess) {
+                    // HANYA HAPUS DARI ANTREAN KETIKA BENAR-BENAR SUKSES
                     await window.OfflineDB.removePendingChange(change.id);
-                    localStorage.removeItem(failKey);
+                    localStorage.removeItem(`sync_fail_${change.id}`);
                     successCount++;
                 } else {
-                    retries += 1;
-                    localStorage.setItem(failKey, retries);
-
-                    // ===== PERBAIKAN KRITIS =====
-                    // SEBELUMNYA: hapus data permanen saat 4xx/retry>=3 → DATA HILANG DIAM-DIAM
-                    // SEKARANG: simpan ke backup localStorage, beri tahu user dengan banner merah
-                    if ((status >= 400 && status < 500) || retries >= 3) {
-                        // Backup payload ke localStorage — data TIDAK hilang
-                        try {
-                            const failedBackup = JSON.parse(localStorage.getItem('sync_failed_backup') || '[]');
-                            failedBackup.push({
-                                id: change.id,
-                                endpoint: change.endpoint,
-                                method: change.method,
-                                payload: change.payload,
-                                fail_reason: status >= 400 && status < 500
-                                    ? `Server menolak (HTTP ${status}): ${errorMsg}`
-                                    : `Gagal ${retries}x: ${errorMsg}`,
-                                failed_at: new Date().toISOString()
-                            });
-                            localStorage.setItem('sync_failed_backup', JSON.stringify(failedBackup.slice(-30)));
-                        } catch(backupErr) {}
-                        // Hapus dari antrian setelah di-backup
-                        await window.OfflineDB.removePendingChange(change.id);
-                        localStorage.removeItem(failKey);
-                        failCount++;
-                        console.warn(`[Sync] ⚠️ Data ID ${change.id} gagal (${status >= 400 && status < 500 ? 'HTTP ' + status : 'Gagal ' + retries + 'x'}): ${errorMsg} — di-backup ke localStorage`);
-                    } else {
-                        failCount++;
-                        console.warn(`[Sync] Gagal ID: ${change.id} (percobaan ${retries}) HTTP ${status} — akan dicoba lagi`);
-                    }
+                    // GAGAL: TETAP SIMPAN DI ANTREAN LOKAL, JANGAN HAPUS!
+                    failCount++;
+                    console.warn(`[Sync] Gagal mengirim data ID ${change.id} (HTTP ${response.status}: ${errorMsg}) — tetap aman tersimpan di antrean lokal`);
                 }
             } catch (e) {
-                // If it's a network error (e.g. Failed to fetch), do not increment retries and DO NOT delete
-                const isNetworkError = e instanceof TypeError || (e.message && e.message.toLowerCase().includes('fetch'));
-                
-                if (isNetworkError) {
-                    console.warn("Network error saat sinkron data ID:", change.id, e.message, "(Akan dicoba lagi nanti)");
-                    failCount++;
-                } else {
-                    console.error('[Sync] Exception untuk ID:', change.id, e);
-                    retries += 1;
-                    localStorage.setItem(failKey, retries);
-
-                    if (retries >= 3) {
-                        // Backup ke localStorage, JANGAN hapus tanpa backup
-                        try {
-                            const failedBackup = JSON.parse(localStorage.getItem('sync_failed_backup') || '[]');
-                            failedBackup.push({
-                                id: change.id,
-                                endpoint: change.endpoint,
-                                method: change.method,
-                                payload: change.payload,
-                                fail_reason: `Exception: ${e.message}`,
-                                failed_at: new Date().toISOString()
-                            });
-                            localStorage.setItem('sync_failed_backup', JSON.stringify(failedBackup.slice(-30)));
-                        } catch(backupErr) {}
-                        await window.OfflineDB.removePendingChange(change.id);
-                        localStorage.removeItem(failKey);
-                        failCount++;
-                        console.warn(`[Sync] ⚠️ Data ID ${change.id} di-backup setelah ${retries}x exception`);
-                    } else {
-                        failCount++;
-                    }
-                }
+                // Exception / Network Error / Timeout: TETAP SIMPAN DI ANTREAN LOKAL
+                failCount++;
+                console.warn(`[Sync] Koneksi belum stabil untuk data ID ${change.id} (${e.message}) — tetap aman tersimpan di antrean lokal`);
             }
-            updateSyncBadge(); // Update UI badge live
+
+            // Perbarui counter badge secara real-time
+            updateSyncBadge();
         }
 
         updateSyncBadge();
         if (syncIcon) syncIcon.style.animation = '';
 
-        if (failCount === 0) {
-            showToast(`✅ Sinkronisasi selesai (${successCount} data tersimpan)`, 'success');
+        if (failCount === 0 && successCount > 0) {
+            showToast(`✅ Sinkronisasi berhasil! ${successCount} data tersimpan ke server.`, 'success', 4000);
             if (typeof OfflineDB.syncAllDataFromServer === 'function') {
-                OfflineDB.syncAllDataFromServer().catch(e => console.log('Gagal update cache master', e));
+                OfflineDB.syncAllDataFromServer().catch(() => {});
             } else if (typeof OfflineDB.syncProductsFromServer === 'function') {
-                OfflineDB.syncProductsFromServer().catch(e => console.log('Gagal update cache produk', e));
+                OfflineDB.syncProductsFromServer().catch(() => {});
             }
-        } else {
-            // Notifikasi merah persisten — data TIDAK hilang, ada di backup localStorage
-            showToast(`⚠️ ${successCount} berhasil. ${failCount} gagal sync — data TIDAK hilang, lihat banner merah`, 'warning', 8000);
-            _showSyncFailedBanner(failCount);
+        } else if (successCount > 0 && failCount > 0) {
+            showToast(`ℹ️ ${successCount} data tersinkron. ${failCount} data masih di antrean lokal menunggu koneksi stabil.`, 'warning', 6000);
+        } else if (successCount === 0 && failCount > 0) {
+            showToast(`⚠️ Koneksi belum stabil. ${failCount} data tetap aman di antrean lokal.`, 'warning', 5000);
         }
     } catch (e) {
-        console.error("Sync process failed", e);
+        console.error("Sync process error", e);
         updateSyncBadge();
     }
 }
@@ -996,7 +952,7 @@ window.AppCleaner = {
                 iconAccent: '#eab308',
                 bodyHTML: `
                     <div style="font-size:var(--font-size-sm); color:var(--text-secondary); margin-bottom:16px;">
-                        Fitur ini akan membersihkan cache lama, mereset memori browser, membersihkan antrean gagal, dan menyegarkan sistem agar aplikasi kembali <strong>ringan, cepat, dan bebas error</strong>.
+                        Fitur ini akan membersihkan cache lama, mereset memori browser, dan menyegarkan sistem agar aplikasi kembali <strong>ringan, cepat, dan bebas error</strong>. <strong style="color:var(--warning);">Data antrian sinkronisasi yang belum terkirim akan tetap aman.</strong>
                     </div>
                     <div id="cleaner-progress-box" style="background:var(--surface-2); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px; margin-bottom:12px; font-size:var(--font-size-xs);">
                         <div id="step-cache" style="margin-bottom:8px; display:flex; align-items:center; gap:8px;">
@@ -1005,7 +961,7 @@ window.AppCleaner = {
                         </div>
                         <div id="step-storage" style="margin-bottom:8px; display:flex; align-items:center; gap:8px;">
                             <span id="icon-step-storage"><i class="bi bi-circle" style="color:var(--text-muted);"></i></span>
-                            <span>Membersihkan Sampah Storage &amp; Antrean Gagal</span>
+                            <span>Membersihkan Sampah Storage &amp; Retry Counter</span>
                         </div>
                         <div id="step-ram" style="margin-bottom:8px; display:flex; align-items:center; gap:8px;">
                             <span id="icon-step-ram"><i class="bi bi-circle" style="color:var(--text-muted);"></i></span>
@@ -1053,7 +1009,7 @@ window.AppCleaner = {
                         setStep('step-cache', 'done');
 
                         // Step 2: Bersihkan LocalStorage sampah & antrean gagal
-                        setStep('step-storage', 'running', 'Membersihkan antrean sync & storage usang...');
+                        setStep('step-storage', 'running', 'Membersihkan retry counter & storage usang...');
                         await new Promise(r => setTimeout(r, 200));
                         
                         const keysToRemove = [];
@@ -1066,11 +1022,10 @@ window.AppCleaner = {
                         keysToRemove.forEach(k => localStorage.removeItem(k));
                         sessionStorage.clear();
 
-                        if (typeof db !== 'undefined' && db.pending_changes) {
-                            try {
-                                await db.pending_changes.clear();
-                            } catch(e) {}
-                        }
+                        // CATATAN PENTING: pending_changes (IndexedDB) TIDAK dihapus di sini.
+                        // Data antrian sinkronisasi adalah data bisnis yang belum terkirim
+                        // dan harus tetap ada sampai berhasil sinkron ke server.
+                        // Yang dihapus hanya sync_fail_ counter (metadata retry) di localStorage.
                         setStep('step-storage', 'done');
 
                         // Step 3: Reset RAM In-Memory Cache
