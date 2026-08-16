@@ -125,9 +125,11 @@ class ProductController extends Controller
             'product' => $product,
             'packagings' => $packagings,
             'suppliers' => $suppliers,
-            'salesReps' => $salesReps
+            'salesReps' => $salesReps,
+            'csrfToken' => (new Security())->getCSRFToken()
         ]);
     }
+
 
     public function edit(string $id)
     {
