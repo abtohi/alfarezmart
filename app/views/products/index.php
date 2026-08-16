@@ -770,22 +770,42 @@ async function doOfflineSearch(query) {
             if (typeof OfflineDB !== 'undefined') {
                 items = await OfflineDB.getAllProducts();
             }
+            // 1b. Fallback ke memory / localStorage jika IndexedDB belum siap
+            if ((!items || items.length === 0) && window._posProductsCatalog && window._posProductsCatalog.length > 0) {
+                items = window._posProductsCatalog;
+            }
+            if ((!items || items.length === 0)) {
+                try {
+                    const localCached = localStorage.getItem('pos_catalog_cache');
+                    if (localCached) items = JSON.parse(localCached);
+                } catch(e) {}
+            }
         } else {
             // 2. Cari produk dari IndexedDB
             if (typeof OfflineDB !== 'undefined') {
                 items = await OfflineDB.searchProducts(cleanQ);
             }
+            // 2b. Fallback cari di memory / localStorage
+            if ((!items || items.length === 0) && window._posProductsCatalog && window._posProductsCatalog.length > 0) {
+                const words = cleanQ.toLowerCase().split(/\s+/);
+                items = window._posProductsCatalog.filter(p => {
+                    const str = `${p.full_name || ''} ${p.short_label || ''} ${p.brand_name || ''} ${p.code || ''}`.toLowerCase();
+                    return words.every(w => str.includes(w));
+                });
+            }
         }
 
-        // 3. Emergency Sync Fallback jika IndexedDB lokal masih kosong
+        // 3. Emergency Sync Fallback jika data lokal masih kosong
         if ((!items || items.length === 0) && navigator.onLine) {
             try {
                 const syncData = await api(`${BASE_URL}api/products/sync?_t=` + Date.now(), { timeout: 8000, silent: true, noOfflineQueue: true });
                 if (syncData && Array.isArray(syncData.products) && syncData.products.length > 0) {
+                    window._posProductsCatalog = syncData.products;
                     if (typeof db !== 'undefined' && db.products) {
                         await db.products.clear();
                         await db.products.bulkPut(syncData.products);
                     }
+                    try { localStorage.setItem('pos_catalog_cache', JSON.stringify(syncData.products)); } catch(e){}
                     items = cleanQ 
                         ? (typeof OfflineDB !== 'undefined' ? await OfflineDB.searchProducts(cleanQ) : syncData.products)
                         : syncData.products;
@@ -820,10 +840,15 @@ async function doOfflineSearch(query) {
 
         if (!items || items.length === 0) {
             container.innerHTML = `
-                <div class="empty-state">
-                    <i class="bi bi-box-seam"></i>
-                    <h3>Produk Tidak Ditemukan</h3>
-                    <p>${cleanQ ? `Tidak ada produk yang cocok dengan pencarian "${cleanQ}".` : 'Belum ada produk tersimpan di perangkat.'}</p>
+                <div class="empty-state" style="padding:48px 24px;">
+                    <i class="bi bi-box-seam" style="font-size:2.8rem;opacity:0.6;color:var(--text-muted);"></i>
+                    <h3 style="margin-top:14px;font-size:1.1rem;color:var(--text-primary);">Produk Tidak Ditemukan</h3>
+                    <p style="color:var(--text-muted);font-size:13px;margin-top:6px;max-width:320px;margin-left:auto;margin-right:auto;">
+                        ${cleanQ ? `Tidak ada produk yang cocok dengan "${cleanQ}".` : 'Data katalog di perangkat ini belum disinkronkan dari server.'}
+                    </p>
+                    <button onclick="fixAndSyncProducts()" class="btn-primary-custom" style="margin-top:16px;padding:8px 18px;font-size:12px;display:inline-flex;align-items:center;gap:6px;">
+                        <i class="bi bi-arrow-repeat"></i> Sinkronkan Produk Sekarang
+                    </button>
                 </div>
             `;
             const totalText = document.getElementById('totalProductsText');

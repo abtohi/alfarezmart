@@ -110,22 +110,18 @@ if ($userLevel === 'staff') {
         const btn = document.getElementById('btnFixProducts');
         const icon = btn ? btn.querySelector('i') : null;
         if (icon) icon.className = 'spinner-border spinner-border-sm';
-        if (typeof showToast === 'function') showToast('Memperbaiki & mensinkronkan data produk, kemasan & harga...', 'info');
+        if (typeof showToast === 'function') showToast('Menghubungi server untuk sinkronisasi produk...', 'info');
 
         try {
-            // 1. Clear local cached catalogs
-            localStorage.removeItem('pos_catalog_cache');
-            localStorage.removeItem('cached_products');
-            
-            // 2. Fetch latest fresh products catalog with all packaging levels from server
+            // Fetch latest fresh products catalog with all packaging levels from server
             const res = await fetch('<?= BASE_URL ?>api/products/sync?pos=1&_t=' + Date.now(), { cache: 'no-store' });
             if (res.ok) {
                 const data = await res.json();
-                if (data && data.products && Array.isArray(data.products)) {
+                if (data && data.products && Array.isArray(data.products) && data.products.length > 0) {
                     // Update in-memory catalog
                     window._posProductsCatalog = data.products;
                     
-                    // Update IndexedDB (Dexie / OfflineDB)
+                    // Update IndexedDB (Dexie / OfflineDB) aman
                     if (typeof db !== 'undefined' && db.products) {
                         try {
                             await db.products.clear();
@@ -133,7 +129,7 @@ if ($userLevel === 'staff') {
                         } catch(dbErr) {}
                     }
                     
-                    // Re-save to localStorage
+                    // Update localStorage
                     try {
                         const serialized = JSON.stringify(data.products);
                         if (serialized.length < 1500000) {
@@ -154,20 +150,26 @@ if ($userLevel === 'staff') {
                     }
 
                     if (typeof showToast === 'function') {
-                        showToast(`✅ Sukses! ${data.products.length} produk & seluruh kemasan berhasil disinkronkan & diperbaiki.`, 'success', 4000);
+                        showToast(`✅ Sukses! ${data.products.length} produk & seluruh kemasan berhasil disinkronkan.`, 'success', 4000);
                     }
                 } else {
-                    if (typeof showToast === 'function') showToast('Katalog produk diperbarui.', 'success');
+                    // Server mengembalikan 0 produk (kemungkinan MySQL limit / offline fallback)
+                    // JANGAN HAPUS data lokal!
+                    const localCount = (window._posProductsCatalog && window._posProductsCatalog.length) || 0;
+                    if (typeof showToast === 'function') {
+                        showToast(`⚠️ Server mengembalikan 0 produk. Menggunakan data lokal (${localCount} produk aktif).`, 'warning', 5000);
+                    }
                 }
             } else {
-                if (typeof showToast === 'function') showToast('Gagal terhubung ke server untuk sinkronisasi produk.', 'error');
+                if (typeof showToast === 'function') showToast('Server belum dapat dijangkau. Tetap menggunakan data lokal.', 'warning');
             }
         } catch(err) {
-            if (typeof showToast === 'function') showToast('Gagal sinkronisasi produk: ' + err.message, 'error');
+            if (typeof showToast === 'function') showToast('Koneksi lambat. Menggunakan data offline lokal.', 'warning');
         } finally {
             if (icon) icon.className = 'bi bi-tools';
         }
     };
+
     </script>
 </head>
 <body>
