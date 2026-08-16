@@ -1,76 +1,123 @@
-# 📋 Template Prompt Tambah Skill Supplier Baru (AlfarezMart)
+# 📘 PANDUAN UTAMA, REGISTRY ANTI-REGRESI, & TEMPLATE SKILL INVOICE ALFAREZ本来 (PROMPT GENERATOR)
 
-Dokumen ini berisi **Template Prompt Siap Pakai** yang bisa Anda copy-paste langsung ke chat AI kapan saja Anda mengupload contoh invoice dari supplier baru.
+> **⚠️ PERINGATAN WAJIB UNTUK SELURUH AI AGENT / DEVELOPER:**  
+> Sebelum melakukan perbaikan, modifikasi, atau penambahan kode terkait **AI Invoice Scanner**, Anda **WAJIB MEMBACA SELURUH DOKUMEN INI**.  
+> Dokumen ini berisi **Aturan Emas Arsitektur (Golden Architecture Rules)**, **Daftar Kesalahan Masa Lalu (Past Mistakes Registry)** yang **DILARANG DIULANGI**, serta **Template Prompt Siap Pakai** untuk generate/update skill faktur supplier.
 
 ---
 
-## 🚀 Template Prompt Utama: "Generate Skill Invoice Supplier Baru"
+## 🏛️ 1. ATURAN EMAS ARSITEKTUR SCANNER (GOLDEN ARCHITECTURE RULES)
 
-> **Cara Penggunaan:**
-> 1. Upload 1 atau beberapa foto faktur/invoice dari supplier baru tersebut.
-> 2. Copy teks prompt di bawah ini.
-> 3. Isi bagian di dalam tanda kurung siku `[...]` sesuai data supplier jika Anda tahu (atau biarkan AI mendeteksi otomatis dari gambar).
-> 4. Kirim ke AI.
+Berikut adalah batasan teknis mutlak yang **TIDAK BOLEH DILANGGAR**:
 
+### ⚡ Kecepatan & Timeout
+1. **Timeout cURL per Model Max 20 Detik**:  
+   Jangan pernah menyetel `CURLOPT_TIMEOUT` lebih dari 20-25 detik per percobaan model. Model vision seperti Gemini normalnya merespons dalam **3–8 detik**. Jika dalam 20 detik tidak ada balasan, model sedang macet/antre di provider, sehingga sistem harus langsung beralih ke model fallback.
+2. **Total Waktu Scan Harus < 40 Detik**:  
+   Dengan timeout 20s x 2 percobaan = max 40 detik. Frontend browser (`utils.js`) memiliki timeout `AbortController` 120s, sehingga batas 40s menjamin tidak akan pernah terjadi `AbortError: signal is aborted without reason`.
+3. **Prioritas Model Vision Khusus (Bukan Text Meta-Router)**:  
+   - Prioritas 1: `google/gemini-2.0-flash-exp:free` atau `google/gemini-2.0-flash:free` (Sangat cepat, 3-7s, OCR tabel akurat).
+   - Prioritas 2: `google/gemini-2.5-flash:free` (Kualitas tinggi, fallback stabil).
+   - **DILARANG** meletakkan `openrouter/free` di urutan pertama karena meta-router ini sering merutekan ke text-only model yang akan hang/stuck saat dikirimi gambar base64 besar!
+   - `openrouter/free` hanya boleh menjadi fallback terakhir jika semua model spesifik gagal.
+
+### 🖼️ Kompresi Gambar & Payload
+1. **Frontend Compression**:  
+   Gambar nota dari kamera/file wajib dikompresi di browser (`compressImageForAI`) ke max resolusi **1600px–1800px** dan kualitas **0.80–0.85** (ukuran file ~50KB–150KB). Jangan kirim gambar raw > 2MB ke server karena akan membuang bandwidth dan memperlambat upload.
+2. **Prompt Context Ringkas**:  
+   Jangan menyuntikkan ratusan produk database ke dalam prompt AI. Cukup berikan **20–30 produk supplier teratas** atau alias yang sudah dipelajari. Terlalu banyak token context membuat pemrosesan AI lambat dan rawan terpotong (max_tokens).
+
+### 🗄️ Database & Backend Anti-Crash
+1. **PDO Named Parameter Unik**:  
+   Dalam query PDO MySQL/SQLite, jangan pernah mengulang nama named parameter (misal `:barcode` diulang 6x dalam `WHERE`). PDO akan melempar error fatal `SQLSTATE[HY093]: Invalid parameter number`. Selalu gunakan positional parameter `?` dengan array nilai yang sesuai, atau beri nama unik (`:b1`, `:b2`, dll).
+2. **ScanCache (Image Hash Caching)**:  
+   Invoice yang gambarnya sama persis (hash MD5 sama) wajib langsung disajikan dari `ScanCache` (0.01 detik / 0 AI cost).
+
+### 🌐 Network & Offline Resilience
+1. **Pengecekan Sinyal yang Akurat (Anti False-Positive)**:  
+   Probe RTT tidak boleh mendownload asset besar (>5KB) dengan threshold < 1000ms karena koneksi mobile normal akan disalahartikan sebagai "Sinyal Lemah". Gunakan asset ultra-ringan (`splash_icon.svg` ~1.6KB) dengan threshold RTT realistis (>2500ms).
+2. **Silent Sync saat Offline**:  
+   Fungsi background refresh (seperti `refreshMasterDataFromServer` di Finance) wajib memiliki guard `if (!navigator.onLine) return;` dan flag `silent: true`, `noOfflineQueue: true` agar tidak mencemari Error Logger dengan `TypeError: Failed to fetch`.
+
+---
+
+## 🚫 2. DAFTAR KESALAHAN MASA LALU YANG DILARANG DIULANGI (PAST MISTAKES REGISTRY)
+
+| No | Gejala / Pesan Error | Akar Masalah (Root Cause) | Solusi Permanen yang Harus Dijaga |
+|:---|:---|:---|:---|
+| **M-01** | `AbortError: signal is aborted without reason` (Elapsed ~120s) | Timeout cURL per model diset 50s dan `openrouter/free` berada di urutan pertama (hang/stuck pada base64 payload). 3 model x 50s = 150s, melewati batas browser 120s. | Set timeout cURL max 20s per model. Prioritaskan model Gemini Flash langsung. Batasi percobaan max 2-3 model agar total < 40s. |
+| **M-02** | `No endpoints found for meta-llama/llama-3.2-11b-vision-instruct:free` | Hardcoded model ID yang sudah dihapus/dinonaktifkan oleh provider OpenRouter. | Gunakan model Google Gemini yang stabil. Tangani error "No endpoints found" secara silent failover ke model berikutnya tanpa melempar error langsung ke user. |
+| **M-03** | `SyntaxError: Identifier 'ThermalPrinter' has already been declared` | File `printer_v3.js` di-include dua kali (di `layouts/app.php` dan di `views/sales/detail.php`). | `printer_v3.js` sudah di-load secara global di `layouts/app.php`. Jangan pernah menambahkan `<script src="printer_v3.js">` lagi di view individual. Gunakan guard `window.thermalPrinter \|\| (typeof ThermalPrinter !== 'undefined' ? new ThermalPrinter() : null)`. |
+| **M-04** | `HTTP 500 - SQLSTATE[HY093]: Invalid parameter number` saat scan barcode POS | Named parameter `:barcode` ditulis 6 kali dalam klausa `WHERE (pp.barcode = :barcode OR p.code = :barcode ...)` pada `ProductModel::findByBarcode`. | Gunakan placeholder positional `?` dan kirimkan array `[$barcode, $barcode, $barcode, $barcode, $barcode, $barcode]` ke `$stmt->execute()`. |
+| **M-05** | Spam `TypeError: Failed to fetch` di halaman Keuangan/Finance saat offline | `refreshMasterDataFromServer()` dipanggil tanpa memeriksa `navigator.onLine`, dan API call tidak diberi flag `silent: true`. | Selalu pasang `if (!navigator.onLine) return;` di awal pemanggilan API master data background, serta set `{ silent: true, noOfflineQueue: true }`. |
+| **M-06** | Alert kuning "Sinyal Lemah" sering muncul padahal koneksi WiFi/4G kencang | Pengecekan sinyal mendownload `Icon.png` (85KB) setiap 30 detik dengan threshold RTT 800ms. Download 85KB di mobile seringkali >800ms sehingga salah memicu alert. | Ganti probe ke asset 1.6KB (`splash_icon.svg`) dan naikkan threshold RTT ke 2500ms dengan timeout 4000ms. |
+
+---
+
+## 📋 3. TEMPLATE PROMPT GENERATE SKILL SUPPLIER BARU
+
+Gunakan template di bawah ini saat menambahkan dukungan format nota untuk supplier baru:
+
+### 🚀 Template 1: Generate Skill Supplier Baru
 ```markdown
-Tolong pelajari gambar contoh faktur supplier yang saya upload ini, dan buatkan file skill invoice baru untuk supplier ini sesuai dengan panduan di docs/AI_INVOICE_SKILL_GUIDELINES.md.
+Tolong pelajari gambar contoh faktur supplier yang saya upload ini, dan buatkan file skill invoice baru untuk supplier ini sesuai dengan panduan arsitektur AlfarezMart.
 
-Informasi Supplier (jika ada):
-- Nama Supplier: [Contoh: PT Indomarco Adi Prima / PT Unilever Indonesia / dll]
-- Brand Produk Utama: [Contoh: Indofood, Indomie / Unilever, Lifebuoy / Mayora / dll]
-- Key Skill: [Contoh: indomarco / unilever / mayora / dll (huruf kecil tanpa spasi)]
+Informasi Supplier:
+- Nama Supplier: [Contoh: PT Indomarco Adi Prima / CV Sinar Mandiri / dll]
+- Brand Produk Utama: [Contoh: Indofood, Indomie, Bimoli / Unilever / dll]
+- Key Skill: [Contoh: indomarco / sinarmandiri (huruf kecil tanpa spasi)]
 
-Tolong lakukan hal-hal berikut:
-1. Analisis tata letak tabel invoice (posisi kolom Quantity, Kode Barang, Nama Barang, Harga Satuan, Diskon/Promo, dan Total Jumlah akhir).
+Tolong lakukan langkah-langkah berikut:
+1. Analisis struktur tabel nota (posisi kolom Kode, Nama Barang, Qty, Satuan/Kemasan, Harga Satuan, Diskon, dan Total).
 2. Buat file skill baru di `app/services/invoice/skills/[NamaSupplier]InvoiceSkill.php` yang mengimplementasikan `InvoiceSkillInterface`.
-   - Pastikan menyertakan daftar singkatan umum (ABBREVIATIONS) dan daftar merk (KNOWN_BRANDS) supplier ini.
-   - Pastikan parser cerdas mengekstrak merk, varian, berat/volume, dan jenis kemasan (sachet, karton, botol, dll).
-   - Pastikan logika penentuan level kemasan (Price Distance & Unit matching) presisi.
-3. Daftarkan skill baru tersebut di `app/services/invoice/skills/SkillManager.php`.
-4. Tambahkan kata kunci pengenal (kata kunci header, nama PT, atau nomor rekening) di `app/services/invoice/SupplierDetector.php` agar faktur ini otomatis terdeteksi.
+   - Cantumkan daftar singkatan umum (ABBREVIATIONS) dan daftar merk (KNOWN_BRANDS).
+   - Buat parser cerdas untuk mendeteksi varian rasa, berat/gramatur, dan kemasan bertingkat (Pcs, Renceng, Dus).
+   - Terapkan logika Price Distance Matching untuk menentukan level kemasan secara presisi.
+3. Daftarkan class skill tersebut di `app/services/invoice/skills/SkillManager.php`.
+4. Daftarkan kata kunci pengenal (nama PT, header faktur, nomor rekening) di `app/services/invoice/SupplierDetector.php`.
 5. Uji sintaks PHP dan pastikan bebas error.
-6. Commit dan push perubahannya ke GitHub repository.
+6. Commit dan push ke repository GitHub.
 ```
 
 ---
 
-## 🔧 Template Prompt Variasi 2: "Koreksi / Penyesuaian Skill yang Sudah Ada"
-
-Gunakan template ini jika ada supplier yang sudah memiliki skill (misal MDR), namun ada format nota baru atau ada produk yang belum terbaca dengan sempurna.
-
+### 🔧 Template 2: Koreksi / Update Skill Supplier yang Sudah Ada
 ```markdown
-Tolong evaluasi hasil scan invoice untuk supplier [Nama Supplier, misal: MDR / Wings Group] berdasarkan gambar yang saya upload ini.
+Tolong evaluasi hasil scan invoice untuk supplier [Nama Supplier, misal: MDR / Wings Group] berdasarkan gambar nota yang saya upload ini.
 
-Catatan Masalah:
-- Total item di nota ada: [Contoh: 12 item]
-- Masalah yang terjadi: [Contoh: Baris ke-8 dan ke-9 tidak terbaca / varian rasa tertentu salah terpetakan / kolom diskon belum memotong harga]
+Catatan Masalah yang Ditemukan:
+- Total item di nota ada: [Contoh: 15 item]
+- Masalah: [Contoh: Baris ke-5 dan ke-6 terlewat / Satuan Renceng terbaca Pcs / Diskon persen belum memotong harga beli]
 
-Tolong:
-1. Analisis letak perbedaan atau baris yang terlewat pada gambar ini.
-2. Perbarui file skill di `app/services/invoice/skills/[NamaSupplier]InvoiceSkill.php` atau `ProductMatcher.php`.
-3. Pastikan 100% item pada nota terbaca lengkap dan terpetakan dengan tepat ke database.
-4. Uji sintaks, lalu commit dan push ke GitHub repository.
+Tolong lakukan:
+1. Periksa `app/services/invoice/skills/[NamaSupplier]InvoiceSkill.php` dan `ProductMatcher.php`.
+2. Sesuaikan pola regex atau logika parsing agar 100% item pada nota terbaca akurat.
+3. Pastikan auto-learning tetap mencatat alias baru ke tabel `supplier_products`.
+4. Uji sintaks PHP, commit, dan push perubahannya.
 ```
 
 ---
 
-## 📦 Template Prompt Variasi 3: "Generate Multi-Supplier Sekaligus"
-
-Gunakan template ini jika Anda mengupload beberapa foto nota dari berbagai supplier berbeda sekaligus (misal 3 supplier berbeda).
-
+### 📦 Template 3: Multi-Supplier Batching
 ```markdown
-Saya telah mengupload beberapa invoice dari supplier yang berbeda-beda.
-Tolong pelajari masing-masing invoice tersebut sesuai panduan di `docs/AI_INVOICE_SKILL_GUIDELINES.md`:
-
-1. Identifikasi tiap supplier dari header / footer / nomor rekeningnya.
-2. Buatkan file skill terpisah untuk masing-masing supplier di `app/services/invoice/skills/`.
-3. Daftarkan seluruh skill di `SkillManager.php` dan perbarui `SupplierDetector.php`.
-4. Pastikan semua skill kompatibel dengan model AI vision gratisan (Gemma 4 / Nemotron) dan mendukung sistem auto-learning.
-5. Jalankan pengecekan sintaks PHP, lalu commit dan push hasilnya.
+Saya mengupload beberapa invoice dari supplier yang berbeda sekaligus.
+Tolong pelajari invoice-invoice ini:
+1. Deteksi identitas masing-masing supplier dari header, footer, atau stempel nota.
+2. Buatkan file skill terpisah di `app/services/invoice/skills/` untuk masing-masing supplier.
+3. Daftarkan seluruh skill di `SkillManager.php` dan `SupplierDetector.php`.
+4. Pastikan pipeline scan tetap cepat (<10 detik) dan mematuhi batas timeout 20s.
+5. Uji sintaks PHP, lalu commit dan push ke GitHub.
 ```
 
 ---
 
-### 💡 Tips Agar Hasil Scan Maksimal:
-- **Foto Tegak & Jelas**: Pastikan tabel faktur dari header kolom sampai garis `End Of Document` atau footer terlihat utuh.
-- **Sistem Pembelajaran Otomatis**: Setiap kali Anda menyimpan pembelian di aplikasi, sistem akan otomatis mempelajari alias nota produk tersebut sehingga scan berikutnya semakin instan dan akurat.
+## 🎯 4. CHECKLIST PRA-COMMIT SETIAP KALI MEMPERBAIKI SCANNER
+
+Sebelum melakukan `git commit` dan `git push` untuk perbaikan scanner invoice:
+- [ ] Apakah timeout cURL per model **<= 20 detik**?
+- [ ] Apakah model prioritas adalah model vision cepat (`gemini-2.0-flash-exp:free` / `gemini-2.5-flash:free`)?
+- [ ] Apakah `openrouter/free` TIDAK ditaruh di urutan paling atas?
+- [ ] Apakah query database bebas dari named parameter duplikat?
+- [ ] Apakah tidak ada script duplikat di view?
+- [ ] Apakah fitur auto-learning (`InvoiceLearningService` & `LearnedAliasLookup`) tetap berjalan?
+- [ ] Apakah sintaks PHP valid (`php -l`)?

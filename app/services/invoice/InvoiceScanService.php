@@ -601,23 +601,26 @@ class InvoiceScanService
 
         set_time_limit(120);
 
-        // PRIMARY: openrouter/free — auto-selects ANY available free vision model.
-        // This is the most reliable option because OpenRouter rotates free models
-        // constantly and specific model IDs frequently become unavailable ("No endpoints found").
-        //
-        // FALLBACKS: Specific Gemini models that tend to be more stable.
-        // DO NOT hardcode llama/mistral/qwen vision models — they frequently have no endpoints.
+        // MODEL SELECTION STRATEGY:
+        // 1. Prioritize fast, dedicated vision models that return responses in 3-8s.
+        // 2. DO NOT put meta-router 'openrouter/free' at the top because it frequently routes
+        //    to text-only models that stall on base64 vision payloads.
+        // 3. Keep per-model timeout strictly at 20s to ensure total failover takes <40s (well below 120s browser abort).
         $FREE_VISION_MODELS = [
-            'openrouter/free',                   // AUTO-ROUTER: picks any available free vision model
-            'google/gemini-2.0-flash-exp:free',  // Usually stable, good invoice reading
-            'google/gemini-2.5-flash:free',      // Higher quality fallback
+            'google/gemini-2.0-flash-exp:free',  // Super fast (3-6s), high OCR accuracy
+            'google/gemini-2.5-flash:free',      // High quality Google Vision fallback
+            'google/gemini-2.0-flash:free',      // Alternative flash endpoint
+            'meta-llama/llama-3.2-90b-vision-instruct:free',
+            'openrouter/free',                   // Fallback router if specific models are unavailable
         ];
 
         // Determine list of models to try in order
-        if (empty($model) || in_array($model, ['openrouter/auto', 'auto', 'openrouter/free'])) {
+        if (empty($model) || in_array($model, ['openrouter/auto', 'auto'])) {
             $modelsToTry = $FREE_VISION_MODELS;
+        } elseif ($model === 'openrouter/free') {
+            $modelsToTry = array_unique(array_merge(['openrouter/free'], $FREE_VISION_MODELS));
         } else {
-            // User configured a specific model — try that first, then auto-router as fallback
+            // User configured a specific model — try that first, then fast fallbacks
             $modelsToTry = array_unique(array_merge([$model], $FREE_VISION_MODELS));
         }
 
@@ -655,7 +658,9 @@ class InvoiceScanService
                 'X-Title: AlfarezMart Invoice Scanner',
             ]);
 
-            curl_setopt($ch, CURLOPT_TIMEOUT, 50); // 50s per model
+            // 20s timeout per model: fast failover to keep total turnaround < 30s
+            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);
@@ -677,8 +682,8 @@ class InvoiceScanService
                 $this->recordRateLimitError();
                 error_log("SCAN_AI_TRACE: Model {$tryModel} rate limited 429 ({$rateLimitCount}x)");
                 $lastError = "Semua model AI sedang sibuk (rate limit). Coba lagi sebentar.";
-                if ($rateLimitCount >= 3) {
-                    error_log("SCAN_AI_TRACE: 3 rate limits — stopping early");
+                if ($rateLimitCount >= 2) {
+                    error_log("SCAN_AI_TRACE: 2 rate limits — stopping early to avoid long wait");
                     break;
                 }
                 continue;
