@@ -6,13 +6,14 @@ let deferredInstallPrompt = null;
 // Auto-login from localStorage if available
 function checkAutoLogin() {
     const loggedIn = localStorage.getItem('alfarezmart_logged_in');
+    const cachedUser = localStorage.getItem('alfarezmart_user');
     const onLoginPage = window.location.pathname.includes('/login');
 
     // Skenario 1: di halaman normal, sudah login → lanjut
     if (loggedIn === 'true' && !onLoginPage) return;
 
     // Skenario 2: di halaman login tapi flag bilang sudah login
-    if (loggedIn === 'true' && onLoginPage) {
+    if (loggedIn === 'true' && cachedUser && onLoginPage) {
         if (!navigator.onLine) {
             // Offline: SW akan serve cache, langsung redirect ke dashboard
             window.location.href = BASE_URL;
@@ -417,16 +418,18 @@ async function updateSyncBadge() {
             console.error(e);
         }
     }
-}
+let _isSyncing = false;
 
 async function syncPendingChanges() {
-    if (!navigator.onLine) return;
+    if (_isSyncing || !navigator.onLine) return;
     if (typeof window.OfflineDB === 'undefined') return;
 
+    _isSyncing = true;
     try {
         const changes = await window.OfflineDB.getPendingChanges();
         if (!changes || changes.length === 0) {
             updateSyncBadge();
+            _isSyncing = false;
             return;
         }
 
@@ -437,10 +440,30 @@ async function syncPendingChanges() {
             syncIcon.style.animation = 'spin 1s linear infinite';
         }
 
-        // Dapatkan CSRF Token segar dari DOM saat ini
-        const activeCsrf = document.getElementById('csrfToken')?.value ||
-                           document.getElementById('globalCsrfToken')?.value ||
-                           document.querySelector('input[name="csrf_token"]')?.value || '';
+        // 1. Dapatkan CSRF Token segar langsung dari server (mencegah 403 saat session refresh)
+        let activeCsrf = '';
+        try {
+            const baseUrl = typeof BASE_URL !== 'undefined' ? BASE_URL : '/';
+            const csrfRes = await fetch(`${baseUrl}api/csrf-token?_t=` + Date.now(), { credentials: 'same-origin' });
+            if (csrfRes.ok) {
+                const csrfData = await csrfRes.json();
+                if (csrfData && csrfData.csrf_token) {
+                    activeCsrf = csrfData.csrf_token;
+                    // Update juga ke input hidden DOM jika ada
+                    const domCsrf = document.getElementById('csrfToken');
+                    if (domCsrf) domCsrf.value = activeCsrf;
+                }
+            }
+        } catch(csrfErr) {
+            console.warn('[Sync] Gagal refresh CSRF dari server, fallback ke DOM:', csrfErr);
+        }
+
+        // Fallback ke DOM jika gagal fetch
+        if (!activeCsrf) {
+            activeCsrf = document.getElementById('csrfToken')?.value ||
+                         document.getElementById('globalCsrfToken')?.value ||
+                         document.querySelector('input[name="csrf_token"]')?.value || '';
+        }
 
         let successCount = 0;
         let failCount = 0;
@@ -550,6 +573,8 @@ async function syncPendingChanges() {
     } catch (e) {
         console.error("Sync process error", e);
         updateSyncBadge();
+    } finally {
+        _isSyncing = false;
     }
 }
 

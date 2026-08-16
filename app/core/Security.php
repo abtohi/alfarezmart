@@ -43,8 +43,10 @@ if (!class_exists('Security')) {
          */
         public static function sanitize($input)
         {
-            if (is_null($input)) return '';
+            if (is_null($input)) return null;
+            if (is_bool($input)) return $input;
             if (is_numeric($input)) return $input;
+            if (!is_string($input)) return $input;
             // Strip tags first, then decode HTML entities to preserve special chars like &
             $stripped = trim(strip_tags($input));
             return html_entity_decode($stripped, ENT_QUOTES, 'UTF-8');

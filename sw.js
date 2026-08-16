@@ -9,8 +9,8 @@
  * They are cached on first request via the Cache-First fetch handler.
  * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v33.0';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v33.0';
+const CACHE_NAME = 'alfarezmart-cache-v34.0';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v34.0';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     // HTML navigation pages only — NOT versioned JS/CSS (those are cached on first use)
@@ -79,12 +79,12 @@ self.addEventListener('fetch', event => {
 
     const url = new URL(event.request.url);
 
-    // Bypass API products sync from SW interception with graceful fallback
-    if (url.pathname.includes('/api/products/sync')) {
+    // Bypass API products sync and CSRF from SW interception
+    if (url.pathname.includes('/api/products/sync') || url.pathname.includes('/api/csrf-token')) {
         event.respondWith(
-            fetch(event.request, { cache: 'no-cache' }).catch(() => {
+            fetch(event.request, { cache: 'no-cache', credentials: 'same-origin' }).catch(() => {
                 return new Response(
-                    JSON.stringify({ offline: true, products: [] }),
+                    JSON.stringify({ offline: true, error: 'Offline' }),
                     { status: 200, headers: { 'Content-Type': 'application/json' } }
                 );
             })
@@ -95,7 +95,7 @@ self.addEventListener('fetch', event => {
     // ── 1. API Requests: Network First with Fast Cache Fallback ──
     if (url.pathname.includes('/api/')) {
         event.respondWith(
-            fetch(event.request, { cache: 'no-cache' })
+            fetch(event.request, { cache: 'no-cache', credentials: 'same-origin' })
                 .then(response => {
                     if (response && response.ok && event.request.method === 'GET') {
                         const clone = response.clone();
@@ -115,11 +115,25 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // ── 2. Auth Pages: Always bypass cache for CSRF freshness ──
-    const authPaths = ['/login', '/logout', '/register'];
-    const isAuthPage = authPaths.some(p => url.pathname === BASE_URL.replace(/\/$/, '') + p || url.pathname.endsWith(p));
-    if (isAuthPage) {
-        event.respondWith(fetch(event.request, { cache: 'no-cache', credentials: 'same-origin' }));
+    // ── 2. Auth & Critical Live Pages: Always Network First for CSRF Freshness ──
+    const liveFreshPages = ['/login', '/logout', '/register', '/sales/pos', '/purchases/create', '/products/create'];
+    const isLiveFreshPage = liveFreshPages.some(p => url.pathname === BASE_URL.replace(/\/$/, '') + p || url.pathname.endsWith(p));
+    if (isLiveFreshPage) {
+        event.respondWith(
+            fetch(event.request, { cache: 'no-cache', credentials: 'same-origin' })
+                .then(response => {
+                    if (response && response.ok) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
+                    }
+                    return response;
+                })
+                .catch(async () => {
+                    const cached = await caches.match(event.request, { ignoreSearch: true });
+                    if (cached) return cached;
+                    return new Response('Offline: Halaman belum tersedia di cache', { status: 503, headers: { 'Content-Type': 'text/plain' } });
+                })
+        );
         return;
     }
 

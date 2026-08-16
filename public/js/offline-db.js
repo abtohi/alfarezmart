@@ -168,10 +168,10 @@ window.OfflineDB = (function() {
                 return;
             }
 
-            // Products: preserve pending local records
-            const txRead = db.transaction([storeName], 'readonly');
-            const stRead = txRead.objectStore(storeName);
-            const reqAll = stRead.getAll();
+            // Products: single atomic readwrite transaction to preserve pending local records
+            const tx = db.transaction([storeName], 'readwrite');
+            const st = tx.objectStore(storeName);
+            const reqAll = st.getAll();
 
             reqAll.onsuccess = () => {
                 const existing = reqAll.result || [];
@@ -182,17 +182,14 @@ window.OfflineDB = (function() {
                     !serverIds.has(p.id)
                 );
 
-                const txWrite = db.transaction([storeName], 'readwrite');
-                const stWrite = txWrite.objectStore(storeName);
-                stWrite.clear();
-                items.forEach(item => stWrite.put(item));
+                st.clear();
+                items.forEach(item => st.put(item));
                 // Re-insert pending local items (new products not yet on server)
-                pendingLocals.forEach(item => stWrite.put(item));
-
-                txWrite.oncomplete = () => resolve();
-                txWrite.onerror = (e) => reject(e.target.error);
+                pendingLocals.forEach(item => st.put(item));
             };
-            reqAll.onerror = (e) => reject(e.target.error);
+
+            tx.oncomplete = () => resolve();
+            tx.onerror = (e) => reject(e.target.error);
         });
     }
 

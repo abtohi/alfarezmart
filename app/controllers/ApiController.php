@@ -12,6 +12,12 @@ class ApiController extends Controller
         $this->db = Database::getInstance()->getConnection();
     }
 
+    public function getCsrfToken()
+    {
+        $token = $this->security->getCSRFToken();
+        $this->json(['success' => true, 'csrf_token' => $token]);
+    }
+
     public function exportProducts()
     {
         try {
@@ -1017,11 +1023,9 @@ class ApiController extends Controller
         $this->validateCSRF();
         $model = new ProductModel();
 
-        if (empty($_POST)) {
-            $jsonBody = json_decode(file_get_contents('php://input'), true);
-            if (is_array($jsonBody)) {
-                $_POST = array_merge($_POST, $jsonBody);
-            }
+        $jsonBody = json_decode(file_get_contents('php://input'), true);
+        if (is_array($jsonBody)) {
+            $_POST = array_merge($jsonBody, $_POST);
         }
 
         try {
@@ -1073,52 +1077,107 @@ class ApiController extends Controller
             ];
 
             $packagings = [];
-            $unitIds = $_POST['unit_id'] ?? [];
-            if (empty($unitIds)) {
-                throw new Exception("Minimal harus ada 1 satuan terkecil.");
+            $unitIds = $_POST['unit_id'] ?? ($jsonBody['unit_id'] ?? []);
+            
+            // Support direct 'packagings' array format if sent from offline sync
+            if (empty($unitIds) && !empty($jsonBody['packagings']) && is_array($jsonBody['packagings'])) {
+                foreach ($jsonBody['packagings'] as $idx => $pkg) {
+                    $uId = $pkg['unit_id'] ?? null;
+                    if (!$uId && !empty($pkg['unit_name'])) {
+                        // Look up or create unit by name
+                        try {
+                            $uModel = new UnitModel();
+                            $existingU = $uModel->findByName($pkg['unit_name']);
+                            $uId = $existingU['id'] ?? $uModel->create(['name' => $pkg['unit_name']]);
+                        } catch (\Throwable $ue) {}
+                    }
+                    if (!$uId) continue;
+
+                    $level = (int)($pkg['level'] ?? ($idx + 1));
+                    $barcode = trim($pkg['barcode'] ?? '');
+                    if (empty($barcode) && $level == 1) {
+                        $barcode = Helper::generateBarcode();
+                    }
+
+                    $packagings[] = [
+                        'level' => $level,
+                        'unit_id' => $uId,
+                        'contained_qty' => (float)($pkg['contained_qty'] ?? 1),
+                        'barcode' => $barcode,
+                        'buy_price' => (float)($pkg['buy_price'] ?? 0),
+                        'sell_price_retail' => (float)($pkg['sell_price_retail'] ?? 0),
+                        'margin_retail' => (float)($pkg['margin_retail'] ?? 0),
+                        'sell_price_wholesale' => (float)($pkg['sell_price_wholesale'] ?? 0),
+                        'margin_wholesale' => (float)($pkg['margin_wholesale'] ?? 0),
+                        'qty_prices' => $pkg['qty_prices'] ?? [],
+                    ];
+                }
+            } else {
+                if (empty($unitIds)) {
+                    throw new Exception("Minimal harus ada 1 satuan terkecil.");
+                }
+
+                $containedQties = $_POST['contained_qty'] ?? ($jsonBody['contained_qty'] ?? []);
+                $buyPrices      = $_POST['buy_price'] ?? ($jsonBody['buy_price'] ?? []);
+                $retailPrices   = $_POST['sell_price_retail'] ?? ($jsonBody['sell_price_retail'] ?? []);
+                $wholesalePrices= $_POST['sell_price_wholesale'] ?? ($jsonBody['sell_price_wholesale'] ?? []);
+                $barcodes       = $_POST['barcode'] ?? ($jsonBody['barcode'] ?? []);
+                $ppnPcts        = $_POST['ppn_pct'] ?? ($jsonBody['ppn_pct'] ?? []);
+                $discountModes  = $_POST['discount_mode'] ?? ($jsonBody['discount_mode'] ?? []);
+                $discountValues = $_POST['discount_value'] ?? ($jsonBody['discount_value'] ?? []);
+                $qtyPricesJsons = $_POST['qty_prices_json'] ?? ($jsonBody['qty_prices_json'] ?? []);
+
+                foreach ($unitIds as $i => $unitId) {
+                    if (empty($unitId)) continue;
+                    
+                    $level = $i + 1;
+                    $cqty = isset($containedQties[$i]) ? (float)$containedQties[$i] : 1;
+                    $buy = (float)($buyPrices[$i] ?? 0);
+                    $retail = (float)($retailPrices[$i] ?? 0);
+                    $wholesale = (float)($wholesalePrices[$i] ?? 0);
+
+                    $barcode = trim($barcodes[$i] ?? '');
+                    if (empty($barcode) && $level == 1) {
+                        $barcode = Helper::generateBarcode();
+                    }
+                    if (!empty($barcode) && Helper::barcodeExists($barcode)) {
+                        throw new Exception("Barcode \"{$barcode}\" sudah digunakan produk lain.");
+                    }
+
+                    // Terapkan PPN & Diskon langsung ke harga modal
+                    $ppnPct       = (float)($ppnPcts[$i] ?? 0);
+                    $discountMode  = $discountModes[$i] ?? 'rp';
+                    $discountValue = (float)($discountValues[$i] ?? 0);
+                    $buyAfterPpn   = $buy * (1 + $ppnPct / 100);
+                    if ($discountMode === 'pct') {
+                        $finalBuy = $buyAfterPpn * (1 - $discountValue / 100);
+                    } else {
+                        $finalBuy = $buyAfterPpn - $discountValue;
+                    }
+                    $finalBuy = max(0, round($finalBuy, 2));
+
+                    $qtyPrices = [];
+                    if (!empty($qtyPricesJsons[$i])) {
+                        $qtyPrices = is_array($qtyPricesJsons[$i]) ? $qtyPricesJsons[$i] : (json_decode($qtyPricesJsons[$i], true) ?: []);
+                    }
+
+                    $packagings[] = [
+                        'level' => $level,
+                        'unit_id' => $unitId,
+                        'contained_qty' => $cqty,
+                        'barcode' => $barcode,
+                        'buy_price' => $finalBuy,
+                        'sell_price_retail' => $retail,
+                        'margin_retail' => $retail > 0 ? Helper::calculateMargin($finalBuy, $retail) : 0,
+                        'sell_price_wholesale' => $wholesale,
+                        'margin_wholesale' => $wholesale > 0 ? Helper::calculateMargin($finalBuy, $wholesale) : 0,
+                        'qty_prices' => $qtyPrices,
+                    ];
+                }
             }
 
-            foreach ($unitIds as $i => $unitId) {
-                if (empty($unitId)) continue;
-                
-                $level = $i + 1;
-                $cqty = isset($_POST['contained_qty'][$i]) ? (float)$_POST['contained_qty'][$i] : 1;
-                $buy = (float)($_POST['buy_price'][$i] ?? 0);
-                $retail = $_POST['sell_price_retail'][$i] ?? 0;
-                $wholesale = $_POST['sell_price_wholesale'][$i] ?? 0;
-
-                $barcode = trim($_POST['barcode'][$i] ?? '');
-                if (empty($barcode) && $level == 1) {
-                    $barcode = Helper::generateBarcode();
-                }
-                if (!empty($barcode) && Helper::barcodeExists($barcode)) {
-                    throw new Exception("Barcode \"{$barcode}\" sudah digunakan produk lain.");
-                }
-
-                // Terapkan PPN & Diskon langsung ke harga modal
-                $ppnPct       = (float)($_POST['ppn_pct'][$i] ?? 0);
-                $discountMode  = $_POST['discount_mode'][$i] ?? 'rp';
-                $discountValue = (float)($_POST['discount_value'][$i] ?? 0);
-                $buyAfterPpn   = $buy * (1 + $ppnPct / 100);
-                if ($discountMode === 'pct') {
-                    $finalBuy = $buyAfterPpn * (1 - $discountValue / 100);
-                } else {
-                    $finalBuy = $buyAfterPpn - $discountValue;
-                }
-                $finalBuy = max(0, round($finalBuy, 2));
-
-                $packagings[] = [
-                    'level' => $level,
-                    'unit_id' => $unitId,
-                    'contained_qty' => $cqty,
-                    'barcode' => $barcode,
-                    'buy_price' => $finalBuy,
-                    'sell_price_retail' => $retail,
-                    'margin_retail' => $retail > 0 ? Helper::calculateMargin($finalBuy, $retail) : 0,
-                    'sell_price_wholesale' => $wholesale,
-                    'margin_wholesale' => $wholesale > 0 ? Helper::calculateMargin($finalBuy, $wholesale) : 0,
-                    'qty_prices' => json_decode($_POST['qty_prices_json'][$i] ?? '[]', true) ?: [],
-                ];
+            if (empty($packagings)) {
+                throw new Exception("Minimal harus ada 1 satuan kemasan valid.");
             }
 
             $id = $model->createWithDetails($productData, $packagings);
@@ -1622,7 +1681,7 @@ class ApiController extends Controller
         $this->validateCSRF();
         try {
             $id = (int)$id;
-            $totalQty = (int)$this->input('total_qty', 0);
+            $totalQty = max(0, (int)$this->input('total_qty', 0));
             $notes = $this->input('notes', 'Manual Update');
             
             $db = Database::getInstance()->getConnection();
@@ -2021,10 +2080,15 @@ class ApiController extends Controller
                 throw new Exception("Daftar barang tidak boleh kosong.");
             }
 
-            // Format data
-            $date = date('ymd');
-            $random = str_pad(mt_rand(1, 9999), 4, '0', STR_PAD_LEFT);
-            $invoiceNumber = "PUR-{$date}-{$random}";
+            // Format data with collision-proof invoice number
+            $clientPurchaseCode = trim($jsonBody['purchase_code'] ?? ($jsonBody['idempotency_key'] ?? ''));
+            if (!empty($clientPurchaseCode) && str_starts_with($clientPurchaseCode, 'PUR-')) {
+                $invoiceNumber = $clientPurchaseCode;
+            } else {
+                $date = date('ymd');
+                $uniqueSuffix = strtoupper(substr(bin2hex(random_bytes(3)), 0, 5));
+                $invoiceNumber = "PUR-{$date}-" . date('His') . "-{$uniqueSuffix}";
+            }
             
             $photoPath = null;
             if (!empty($jsonBody['invoice_photo_base64'])) {
@@ -2411,19 +2475,41 @@ class ApiController extends Controller
         $this->validateCSRF();
         try {
             $model = new SaleModel();
-            
-            // Format data
-            $date = date('ymd');
-            $random = str_pad(mt_rand(1, 99999), 5, '0', STR_PAD_LEFT);
-            $invoiceNumber = "INV-{$date}-{$random}";
-            
             $jsonBody = json_decode(file_get_contents('php://input'), true);
+            if (!is_array($jsonBody)) {
+                $jsonBody = [];
+            }
             $items = $jsonBody['items'] ?? [];
             
             if (empty($items)) {
                 throw new Exception("Keranjang belanja kosong.");
             }
 
+            // Check for client-provided invoice or idempotency key to prevent double transaction
+            $clientInvoice = trim($jsonBody['invoice_number'] ?? ($jsonBody['idempotency_key'] ?? ''));
+            if (!empty($clientInvoice)) {
+                $existing = $model->findByInvoice($clientInvoice);
+                if ($existing) {
+                    $this->json([
+                        'success' => true,
+                        'id' => $existing['id'],
+                        'invoice' => $existing['invoice_number'],
+                        'message' => 'Transaksi sudah tersimpan sebelumnya',
+                        'duplicate_prevented' => true
+                    ]);
+                    return;
+                }
+            }
+
+            // Generate collision-proof invoice number if not provided by client
+            if (!empty($clientInvoice) && str_starts_with($clientInvoice, 'INV-')) {
+                $invoiceNumber = $clientInvoice;
+            } else {
+                $date = date('ymd');
+                $uniqueSuffix = strtoupper(substr(bin2hex(random_bytes(3)), 0, 5));
+                $invoiceNumber = "INV-{$date}-" . date('His') . "-{$uniqueSuffix}";
+            }
+            
             $headerData = [
                 'invoice_number' => $invoiceNumber,
                 'customer_id' => $jsonBody['customer_id'] ?? null,
@@ -2435,7 +2521,12 @@ class ApiController extends Controller
             ];
 
             $id = $model->createWithDetails($headerData, $items);
-            $this->json(['success' => true, 'id' => $id, 'invoice' => $invoiceNumber, 'message' => 'Transaksi berhasil disimpan']);
+            $this->json([
+                'success' => true, 
+                'id' => $id, 
+                'invoice' => $invoiceNumber, 
+                'message' => 'Transaksi berhasil disimpan'
+            ]);
         } catch (Exception $e) {
             $this->json(['error' => $e->getMessage()], 500);
         }

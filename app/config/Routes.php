@@ -86,6 +86,9 @@ $router->post('/api/ppob/webhook', 'DigiflazzController@webhook');
 // API ROUTES (Returns JSON — auth required)
 // ============================================
 
+// Core & Auth API
+$router->get('/api/csrf-token', 'ApiController@getCsrfToken');
+
 // Products API
 $router->get('/api/sync/all', 'ApiController@syncAllData');
 $router->get('/api/products/sync', 'ApiController@syncProducts');

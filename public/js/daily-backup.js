@@ -244,24 +244,30 @@ window.DailyBackup = (function () {
             serialized = JSON.stringify(data);
         }
 
-        // Save to localStorage
+        // Save to localStorage with progressive eviction if full
+        let isSaved = false;
         try {
             localStorage.setItem(PREFIX_KEY + today, serialized);
+            isSaved = true;
         } catch(e) {
-            // localStorage full
-            // Try to free space by removing oldest backup
-            const oldIndex = _getIndex();
-            if (oldIndex.length > 0) {
-                const oldest = oldIndex[0];
+            // localStorage full — progressively free space by removing oldest backups
+            let oldIndex = _getIndex();
+            while (!isSaved && oldIndex.length > 0) {
+                // Sort asc to get oldest
+                oldIndex.sort((a, b) => a.date.localeCompare(b.date));
+                const oldest = oldIndex.shift();
                 try { localStorage.removeItem(PREFIX_KEY + oldest.date); } catch(er) {}
-                oldIndex.shift();
                 _saveIndex(oldIndex);
+                try {
+                    localStorage.setItem(PREFIX_KEY + today, serialized);
+                    isSaved = true;
+                } catch(retryErr) {
+                    // Still full, try removing next oldest
+                }
             }
-            // Retry
-            try {
-                localStorage.setItem(PREFIX_KEY + today, serialized);
-            } catch(e2) {
-                console.error('[DailyBackup] localStorage full, could not save backup:', e2);
+
+            if (!isSaved) {
+                console.error('[DailyBackup] localStorage full, could not save backup after eviction');
                 return { skipped: true, error: 'storage_full' };
             }
         }

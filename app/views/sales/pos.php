@@ -636,10 +636,31 @@ async function preloadPosCatalog() {
                             await db.products.bulkPut(data.products);
                         } catch(dbErr) {}
                     }
-                    // Update localStorage cache (cap at 1.5MB to avoid quota errors)
+                    // Update localStorage cache with slim payload (strip photos/heavy fields to protect mobile RAM)
                     try {
-                        const serialized = JSON.stringify(availProducts);
-                        if (serialized.length < 1500000) {
+                        const slimCatalog = availProducts.map(p => ({
+                            id: p.id,
+                            full_name: p.full_name,
+                            short_label: p.short_label,
+                            code: p.code,
+                            is_available: p.is_available,
+                            photo: (p.photo && !p.photo.startsWith('data:')) ? p.photo : null,
+                            packagings: (p.packagings || []).map(pkg => ({
+                                level: pkg.level,
+                                unit_name: pkg.unit_name,
+                                unit_abbr: pkg.unit_abbr,
+                                barcode: pkg.barcode,
+                                sell_price_retail: pkg.sell_price_retail,
+                                sell_price_wholesale: pkg.sell_price_wholesale,
+                                buy_price: pkg.buy_price || 0,
+                                ppn_pct: pkg.ppn_pct || 0,
+                                discount_mode: pkg.discount_mode || 'rp',
+                                discount_value: pkg.discount_value || 0,
+                                qty_prices: pkg.qty_prices || []
+                            }))
+                        }));
+                        const serialized = JSON.stringify(slimCatalog);
+                        if (serialized.length < 2500000) {
                             localStorage.setItem('pos_catalog_cache', serialized);
                         }
                     } catch(e) {}
@@ -1597,8 +1618,21 @@ async function proceedCheckout() {
     btnCheckout.innerHTML = '<i class="spinner-border spinner-border-sm"></i> MEMPROSES...';
     btnCheckout.disabled = true;
 
+    // Generate consistent client invoice & idempotency key for this checkout attempt
+    const checkoutDate = new Date();
+    const dateStr = checkoutDate.getFullYear().toString().slice(-2) + 
+                    String(checkoutDate.getMonth() + 1).padStart(2, '0') + 
+                    String(checkoutDate.getDate()).padStart(2, '0');
+    const timeStr = String(checkoutDate.getHours()).padStart(2, '0') + 
+                    String(checkoutDate.getMinutes()).padStart(2, '0') + 
+                    String(checkoutDate.getSeconds()).padStart(2, '0');
+    const rndSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const clientInvoice = `INV-${dateStr}-${timeStr}-${rndSuffix}`;
+
     const payload = {
         csrf_token: document.getElementById('csrfToken')?.value || '',
+        invoice_number: clientInvoice,
+        idempotency_key: clientInvoice,
         sale_mode: saleMode,
         total_amount: calculateTotal(),
         payment_method: 'Cash',
