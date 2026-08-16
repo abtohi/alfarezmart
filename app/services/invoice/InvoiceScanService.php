@@ -601,32 +601,31 @@ class InvoiceScanService
 
         set_time_limit(120);
 
-        // Fast, high-accuracy free vision models on OpenRouter (updated 2026-08)
-        // Ordered by speed + accuracy for invoice OCR tasks
+        // PRIMARY: openrouter/free — auto-selects ANY available free vision model.
+        // This is the most reliable option because OpenRouter rotates free models
+        // constantly and specific model IDs frequently become unavailable ("No endpoints found").
+        //
+        // FALLBACKS: Specific Gemini models that tend to be more stable.
+        // DO NOT hardcode llama/mistral/qwen vision models — they frequently have no endpoints.
         $FREE_VISION_MODELS = [
-            'google/gemini-2.5-flash-lite-preview-06-17:free', // Fastest Gemini, best for structured data
-            'google/gemini-2.0-flash-exp:free',                // Reliable fallback
-            'google/gemini-2.5-flash:free',                    // Higher quality, slower
-            'meta-llama/llama-3.2-90b-vision-instruct:free',   // Strong vision model
-            'qwen/qwen2-vl-72b-instruct:free',                 // Good at table/invoice parsing
-            'meta-llama/llama-3.2-11b-vision-instruct:free',   // Fast, good accuracy
+            'openrouter/free',                   // AUTO-ROUTER: picks any available free vision model
+            'google/gemini-2.0-flash-exp:free',  // Usually stable, good invoice reading
+            'google/gemini-2.5-flash:free',      // Higher quality fallback
         ];
 
-
         // Determine list of models to try in order
-        if (empty($model) || in_array($model, ['openrouter/auto', 'auto'])) {
+        if (empty($model) || in_array($model, ['openrouter/auto', 'auto', 'openrouter/free'])) {
             $modelsToTry = $FREE_VISION_MODELS;
-        } elseif ($model === 'openrouter/free') {
-            $modelsToTry = array_unique(array_merge($FREE_VISION_MODELS, ['openrouter/free']));
         } else {
-            // User configured a specific model (e.g. Gemini 2.0 Flash / Pro / Claude) — try that first
+            // User configured a specific model — try that first, then auto-router as fallback
             $modelsToTry = array_unique(array_merge([$model], $FREE_VISION_MODELS));
         }
 
-        $imageBlock = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
-        $lastError  = null;
+        $imageBlock   = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
+        $lastError    = null;
         $requestCount = 0;
-        $rateLimitCount = 0;
+        $rateLimitCount   = 0;
+        $noEndpointCount  = 0;
 
         foreach ($modelsToTry as $tryModel) {
             error_log("SCAN_AI_TRACE: Attempting OpenRouter model: {$tryModel}");
@@ -653,10 +652,10 @@ class InvoiceScanService
                 'Authorization: Bearer ' . $apiKey,
                 'Content-Type: application/json',
                 'HTTP-Referer: ' . (defined('BASE_URL') ? BASE_URL : 'https://alfarezmart.com/'),
-                'X-Title: AlfarezMart Invoice Scanner'
+                'X-Title: AlfarezMart Invoice Scanner',
             ]);
 
-            curl_setopt($ch, CURLOPT_TIMEOUT, 45); // 45s per model — enough for large invoice images
+            curl_setopt($ch, CURLOPT_TIMEOUT, 50); // 50s per model
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);
@@ -669,18 +668,17 @@ class InvoiceScanService
 
             if ($err) {
                 error_log("SCAN_AI_TRACE: Model {$tryModel} curl error: {$err}");
-                $lastError = "Koneksi ke OpenRouter gagal ({$tryModel}): " . $err;
+                $lastError = "Koneksi ke OpenRouter gagal: " . $err;
                 continue;
             }
 
             if ($httpCode === 429) {
                 $rateLimitCount++;
                 $this->recordRateLimitError();
-                error_log("SCAN_AI_TRACE: Model {$tryModel} hit rate limit 429 (count: {$rateLimitCount}), trying next model...");
-                $lastError = "Model {$tryModel} terkena rate limit (429).";
-                // Early exit after 3 consecutive rate limits to avoid long waits
+                error_log("SCAN_AI_TRACE: Model {$tryModel} rate limited 429 ({$rateLimitCount}x)");
+                $lastError = "Semua model AI sedang sibuk (rate limit). Coba lagi sebentar.";
                 if ($rateLimitCount >= 3) {
-                    error_log("SCAN_AI_TRACE: 3 consecutive rate limits — stopping early to avoid timeout");
+                    error_log("SCAN_AI_TRACE: 3 rate limits — stopping early");
                     break;
                 }
                 continue;
@@ -690,7 +688,16 @@ class InvoiceScanService
                 $errData = json_decode($response, true);
                 $msg = $errData['error']['message'] ?? "HTTP $httpCode";
                 error_log("SCAN_AI_TRACE: Model {$tryModel} error ($httpCode): $msg");
-                $lastError = "OpenRouter ({$tryModel}): $msg";
+
+                // "No endpoints found" = model not available right now — skip silently
+                if (stripos($msg, 'no endpoints') !== false || stripos($msg, 'not found') !== false) {
+                    $noEndpointCount++;
+                    $lastError = "Model AI tidak tersedia saat ini. Mencoba model lain...";
+                    error_log("SCAN_AI_TRACE: Model {$tryModel} has no endpoints, trying next...");
+                    continue;
+                }
+
+                $lastError = "OpenRouter error: $msg";
                 continue;
             }
 
@@ -717,7 +724,15 @@ class InvoiceScanService
         }
 
         $metrics['ai_request_count'] = $requestCount;
-        throw new \Exception($lastError ?: 'AI gagal membaca gambar invoice setelah mencoba model yang tersedia. Pastikan gambar jelas dan coba kembali.');
+
+        // Build a helpful final error message
+        if ($noEndpointCount > 0 && $rateLimitCount === 0) {
+            throw new \Exception('Model AI gratis sedang tidak tersedia di OpenRouter saat ini. Coba lagi dalam beberapa menit, atau atur model AI di Pengaturan → AI Scanner.');
+        }
+        if ($rateLimitCount >= 3) {
+            throw new \Exception('AI Scanner sedang overload (terlalu banyak request). Tunggu 1-2 menit lalu coba lagi.');
+        }
+        throw new \Exception($lastError ?: 'AI gagal membaca gambar invoice. Pastikan gambar jelas dan koneksi internet stabil, lalu coba lagi.');
     }
 
     /**
