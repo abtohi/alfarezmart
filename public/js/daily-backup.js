@@ -568,6 +568,92 @@ window.DailyBackup = (function () {
     }
 
     /* ─────────────────────────────────────────────────
+       PUBLIC: Download Backup File to Phone/Disk (.json)
+    ───────────────────────────────────────────────── */
+
+    async function downloadBackup(dateStr) {
+        if (!dateStr) dateStr = _todayStr();
+        let data = await _getBackupData(dateStr);
+        if (!data) {
+            // If today doesn't exist yet, run backup first
+            if (dateStr === _todayStr()) {
+                const res = await runManualBackup();
+                if (res && res.success) {
+                    data = await _getBackupData(dateStr);
+                }
+            }
+        }
+
+        if (!data) {
+            throw new Error(`Data backup tanggal ${dateStr} tidak ditemukan`);
+        }
+
+        const jsonStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `AlfarezMart_Backup_${dateStr}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        return true;
+    }
+
+    /* ─────────────────────────────────────────────────
+       PUBLIC: Import & Restore Backup from File (.json)
+    ───────────────────────────────────────────────── */
+
+    async function importFromFile(file) {
+        return new Promise((resolve, reject) => {
+            if (!file) return reject(new Error('Pilih file backup .json terlebih dahulu'));
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const content = e.target.result;
+                    const parsed = JSON.parse(content);
+                    if (!parsed || (!parsed.products && !parsed.suppliers && !parsed.categories)) {
+                        return reject(new Error('Format file backup tidak valid. Pastikan file berformat .json dari AlfarezMart.'));
+                    }
+
+                    const today = _todayStr();
+                    const dateStr = (parsed.collected_at ? parsed.collected_at.split('T')[0] : today) + '_import';
+                    
+                    // Save to IDB
+                    await _saveToIDB(dateStr, parsed);
+
+                    // Add to index
+                    const finalSize = new Blob([content]).size;
+                    const index = _getIndex();
+                    const updatedIndex = index.filter(x => x.date !== dateStr);
+                    updatedIndex.unshift({
+                        date: dateStr,
+                        label: '📁 File Impor (' + _formatDateDisplay(dateStr.replace('_import', '')) + ')',
+                        size: finalSize,
+                        size_label: _formatBytes(finalSize),
+                        counts: {
+                            products: (parsed.products || []).length,
+                            suppliers: (parsed.suppliers || []).length,
+                            categories: (parsed.categories || []).length
+                        },
+                        ts: Date.now()
+                    });
+                    _saveIndex(updatedIndex);
+
+                    // Automatically restore to OfflineDB
+                    const res = await restoreFromBackup(dateStr);
+                    resolve(res);
+                } catch(err) {
+                    reject(new Error('Gagal membaca file JSON: ' + err.message));
+                }
+            };
+            reader.onerror = () => reject(new Error('Gagal membaca file'));
+            reader.readAsText(file);
+        });
+    }
+
+    /* ─────────────────────────────────────────────────
        EXPOSE helpers for UI page
     ───────────────────────────────────────────────── */
 
@@ -580,6 +666,8 @@ window.DailyBackup = (function () {
         getActiveRestore,
         getStorageStats,
         deleteAllBackups,
+        downloadBackup,
+        importFromFile,
         // Used by OfflineDB restore path
         _formatDateDisplay,
         _formatBytes,

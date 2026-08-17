@@ -8,7 +8,7 @@
                 <i class="bi bi-shield-lock-fill" style="color:#6366f1; margin-right:8px;"></i>Backup Data Harian
             </h2>
             <p style="font-size:var(--font-size-xs); color:var(--text-muted);">
-                Snapshot data darurat offline &mdash; disimpan di browser, maks. <strong>14 hari</strong>
+                Snapshot data darurat offline &mdash; disimpan di IndexedDB browser (kapasitas besar, unlimited) atau unduh ke HP/PC
             </p>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -18,6 +18,26 @@
             <button id="btn-refresh-backup" onclick="loadBackupPage()" class="btn-outline-custom" style="padding:8px 14px; font-size:var(--font-size-xs); display:flex; align-items:center; gap:6px;">
                 <i class="bi bi-arrow-clockwise"></i> Refresh
             </button>
+        </div>
+    </div>
+
+    <!-- Export & Import Card -->
+    <div style="background:linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(16,185,129,0.03) 100%); border:1px solid rgba(16,185,129,0.25); border-radius:var(--radius-lg); padding:14px 16px; margin-bottom:18px;">
+        <div style="font-weight:700; font-size:var(--font-size-xs); color:#10b981; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+            <i class="bi bi-phone-fill"></i> Simpan / Muat File ke HP atau PC
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button id="btn-download-today" onclick="doDownloadToday()" style="flex:1; min-width:140px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:#10b981; padding:10px 12px; border-radius:var(--radius-md); font-size:var(--font-size-xs); font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <i class="bi bi-download"></i> Unduh Backup (.json)
+            </button>
+            <label for="input-import-file" style="flex:1; min-width:140px; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); color:#818cf8; padding:10px 12px; border-radius:var(--radius-md); font-size:var(--font-size-xs); font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; margin:0;">
+                <i class="bi bi-upload"></i> Impor dari File (.json)
+            </label>
+            <input id="input-import-file" type="file" accept=".json,application/json" style="display:none" onchange="doImportFile(this)">
+        </div>
+        <div style="margin-top:8px; font-size:10px; color:var(--text-muted); line-height:1.6;">
+            📥 <strong>Unduh</strong>: Simpan file backup hari ini (.json) langsung ke memori HP/PC — bisa dipindahkan ke perangkat lain.<br>
+            📤 <strong>Impor</strong>: Muat file .json backup yang sebelumnya diunduh untuk restore data.
         </div>
     </div>
 
@@ -71,10 +91,11 @@
         </div>
         <ul style="margin:0; padding-left:16px; font-size:var(--font-size-xs); color:var(--text-muted); line-height:1.9;">
             <li>Backup otomatis berjalan <strong>sekali sehari</strong> saat aplikasi dibuka</li>
-            <li>Data disimpan di <strong>browser lokal</strong> (bukan server) &mdash; 100% offline</li>
+            <li>Data disimpan di <strong>IndexedDB browser</strong> (kapasitas besar, tidak ada limit storage) — 100% offline</li>
             <li>Menyimpan data <strong>produk, supplier, dan kategori</strong> aktif</li>
             <li>Backup <strong>tidak akan terhapus</strong> oleh fitur "Bersihkan Cache &amp; Turbo" ⚡</li>
             <li>History dijaga selama <strong>2 minggu (14 hari)</strong>, lebih lama otomatis dihapus</li>
+            <li>Klik <strong>"Unduh"</strong> untuk menyimpan file backup .json ke memori HP atau PC</li>
             <li>Klik <strong>"Restore"</strong> pada backup tertentu untuk menggunakannya saat koneksi database bermasalah</li>
         </ul>
     </div>
@@ -160,6 +181,49 @@
 <script>
 var _backupList = [];
 var _activeRestore = null;
+
+async function doDownloadToday() {
+    if (typeof window.DailyBackup === 'undefined') { showToast('Modul backup tidak tersedia', 'error'); return; }
+    const btn = document.getElementById('btn-download-today');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyiapkan...'; }
+    try {
+        await DailyBackup.downloadBackup();
+        showToast('✅ File backup berhasil diunduh ke HP/PC', 'success', 4000);
+        loadBackupPage();
+    } catch(e) {
+        showToast('Gagal unduh: ' + (e.message || 'Error'), 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-download"></i> Unduh Backup (.json)'; }
+    }
+}
+
+async function doImportFile(input) {
+    if (!input || !input.files || !input.files[0]) return;
+    const file = input.files[0];
+    if (typeof window.DailyBackup === 'undefined') { showToast('Modul backup tidak tersedia', 'error'); return; }
+    const label = document.querySelector('label[for="input-import-file"]');
+    if (label) { label.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Mengimpor...'; }
+    try {
+        const result = await DailyBackup.importFromFile(file);
+        showToast(`✅ Impor berhasil! ${result.counts.products} produk dimuat ke mode offline.`, 'success', 5000);
+        loadBackupPage();
+    } catch(e) {
+        showToast('Gagal impor: ' + (e.message || 'Format tidak valid'), 'error');
+    } finally {
+        input.value = '';
+        if (label) { label.innerHTML = '<i class="bi bi-upload"></i> Impor dari File (.json)'; }
+    }
+}
+
+async function doDownloadEntry(dateStr) {
+    if (typeof window.DailyBackup === 'undefined') return;
+    try {
+        await DailyBackup.downloadBackup(dateStr);
+        showToast('✅ File backup berhasil diunduh', 'success', 3000);
+    } catch(e) {
+        showToast('Gagal unduh: ' + (e.message || 'Error'), 'error');
+    }
+}
 
 function loadBackupPage() {
     if (typeof window.DailyBackup === 'undefined') {
@@ -290,6 +354,9 @@ function renderBackupList() {
             : '<button onclick="doRestore(\'' + entry.date + '\')" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);color:#818cf8;padding:6px 10px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;">' +
               '<i class="bi bi-cloud-upload"></i> Restore</button>';
 
+        const downloadBtn = '<button onclick="doDownloadEntry(\'' + entry.date + '\')" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);color:#10b981;padding:6px 10px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;">' +
+            '<i class="bi bi-download"></i> Unduh</button>';
+
         html +=
             '<div class="' + entryClass + '">' +
             '<div class="backup-entry-inner">' +
@@ -302,7 +369,7 @@ function renderBackupList() {
             '<span class="backup-count-chip"><i class="bi bi-hdd"></i> ' + (entry.size_label || '-') + '</span>' +
             '</div>' +
             '</div>' +
-            '<div class="backup-actions">' + restoreBtn + '</div>' +
+            '<div class="backup-actions">' + downloadBtn + restoreBtn + '</div>' +
             '</div>' +
             '</div>';
     });
