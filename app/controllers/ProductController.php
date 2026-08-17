@@ -79,11 +79,57 @@ class ProductController extends Controller
 
     public function show(string $id)
     {
+        $id = trim($id);
+        $product = null;
+
+        // 1. Try finding by primary product ID
         try {
             $product = $this->productModel->findWithDetails($id);
         } catch (\Throwable $e) {
             $product = null;
         }
+
+        // 2. If not found, try resolving if $id is a packaging ID
+        if (!$product) {
+            try {
+                $db = Database::getInstance()->getConnection();
+                $stmt = $db->prepare("SELECT product_id FROM product_packagings WHERE id = :id LIMIT 1");
+                $stmt->execute([':id' => $id]);
+                $pkgRow = $stmt->fetch();
+                if ($pkgRow && !empty($pkgRow['product_id'])) {
+                    header('Location: ' . BASE_URL . 'products/' . (int)$pkgRow['product_id']);
+                    exit;
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        // 3. If not found, try resolving by barcode
+        if (!$product) {
+            try {
+                $byBarcode = $this->productModel->findByBarcode($id);
+                if ($byBarcode && !empty($byBarcode['id'])) {
+                    header('Location: ' . BASE_URL . 'products/' . (int)$byBarcode['id']);
+                    exit;
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        // 4. If not found, try resolving by product code or supplier product code
+        if (!$product) {
+            try {
+                $db = Database::getInstance()->getConnection();
+                $stmt = $db->prepare("SELECT id FROM products WHERE code = :code OR supplier_product_code = :scode LIMIT 1");
+                $stmt->execute([':code' => $id, ':scode' => $id]);
+                $codeRow = $stmt->fetch();
+                if ($codeRow && !empty($codeRow['id'])) {
+                    header('Location: ' . BASE_URL . 'products/' . (int)$codeRow['id']);
+                    exit;
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        $productFound = ($product !== null);
+
         if (!$product) {
             $product = [
                 'id' => (int)$id,
@@ -94,12 +140,16 @@ class ProductController extends Controller
                 'weight_value' => '',
                 'weight_unit' => '',
                 'current_qty_base' => 0,
-                'photo' => ''
+                'photo' => '',
+                'code' => '',
+                'supplier_product_code' => '',
+                'supplier_invoice_name' => '',
+                'is_available' => 1
             ];
         }
 
         try {
-            $packagings = $this->productModel->getPackagings($id) ?: [];
+            $packagings = $this->productModel->getPackagings($product['id']) ?: [];
         } catch (\Throwable $e) {
             $packagings = [];
         }
@@ -108,7 +158,7 @@ class ProductController extends Controller
         $salesRepModel = new SalesRepModel();
         
         try {
-            $suppliers = $supplierProductModel->getProductSuppliers($id) ?: [];
+            $suppliers = $supplierProductModel->getProductSuppliers($product['id']) ?: [];
             $salesReps = [];
             if (!empty($suppliers)) {
                 $supplierIds = array_column($suppliers, 'id');
@@ -123,6 +173,7 @@ class ProductController extends Controller
             'title' => $product['short_label'] ?: $product['full_name'],
             'activeNav' => 'products',
             'product' => $product,
+            'productFound' => $productFound,
             'packagings' => $packagings,
             'suppliers' => $suppliers,
             'salesReps' => $salesReps,
@@ -134,11 +185,41 @@ class ProductController extends Controller
     public function edit(string $id)
     {
         $this->blockStaffMutations('mengedit');
+        $id = trim($id);
+        $product = null;
+
+        // 1. Try finding by primary product ID
         try {
             $product = $this->productModel->findWithDetails($id);
         } catch (\Throwable $e) {
             $product = null;
         }
+
+        // 2. If not found, try resolving if $id is packaging ID
+        if (!$product) {
+            try {
+                $db = Database::getInstance()->getConnection();
+                $stmt = $db->prepare("SELECT product_id FROM product_packagings WHERE id = :id LIMIT 1");
+                $stmt->execute([':id' => $id]);
+                $pkgRow = $stmt->fetch();
+                if ($pkgRow && !empty($pkgRow['product_id'])) {
+                    header('Location: ' . BASE_URL . 'products/' . (int)$pkgRow['product_id'] . '/edit');
+                    exit;
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        // 3. If not found, try resolving by barcode
+        if (!$product) {
+            try {
+                $byBarcode = $this->productModel->findByBarcode($id);
+                if ($byBarcode && !empty($byBarcode['id'])) {
+                    header('Location: ' . BASE_URL . 'products/' . (int)$byBarcode['id'] . '/edit');
+                    exit;
+                }
+            } catch (\Throwable $e) {}
+        }
+
         if (!$product) {
             $product = [
                 'id' => (int)$id,
@@ -161,7 +242,7 @@ class ProductController extends Controller
         }
 
         try {
-            $packagings = $this->productModel->getPackagings($id) ?: [];
+            $packagings = $this->productModel->getPackagings($product['id']) ?: [];
         } catch (\Throwable $e) {
             $packagings = [];
         }
