@@ -54,14 +54,14 @@
     --gradient-glass: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
 
     /* Borders */
-    --border-color: rgba(255, 255, 255, 0.06);
-    --border-active: rgba(230, 57, 70, 0.4);
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-active: rgba(79, 142, 247, 0.45);
 
     /* Shadows */
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
-    --shadow-glow: 0 0 20px rgba(230, 57, 70, 0.3);
+    --shadow-glow: 0 0 16px rgba(79, 142, 247, 0.2);
 
     /* Spacing */
     --header-height: 56px;

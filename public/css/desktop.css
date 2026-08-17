@@ -1162,8 +1162,8 @@
         transition: border-color 0.2s, box-shadow 0.2s !important;
     }
     .page-section .search-input-wrapper:focus-within {
-        border-color: var(--primary) !important;
-        box-shadow: 0 4px 24px rgba(230,57,70,0.2) !important;
+        border-color: var(--border-active) !important;
+        box-shadow: 0 4px 20px rgba(79, 142, 247, 0.15) !important;
     }
     .page-section .search-input-wrapper .bi-upc-scan:hover {
         transform: scale(1.15);
