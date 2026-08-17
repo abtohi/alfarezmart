@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=19.00'; ?>
+    <?php $v = '?v=20.00'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -591,7 +591,7 @@ if ($userLevel === 'staff') {
     <!-- App JS -->
     <script>
         const BASE_URL = '<?= BASE_URL ?>';
-        const version = '19.00';
+        const version = '20.00';
         window.IS_DB_OFFLINE = <?= (class_exists('Database') && Database::getInstance()->isOffline()) ? 'true' : 'false' ?>;
     </script>
     <script src="<?= BASE_URL ?>public/js/utils.js<?= $v ?>"></script>
@@ -661,7 +661,7 @@ if ($userLevel === 'staff') {
 
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '19.00'; // Update this to force client reloads
+    const APP_VERSION = '20.00'; // Update this to force client reloads
 
     // Self-healing cache buster
     // PERF FIX: Added sessionStorage guard to prevent infinite reload loop.
