@@ -337,6 +337,10 @@ if ($userLevel === 'staff') {
             </a>
             <?php endif; ?>
             <div class="sidebar-separator"></div>
+            <a href="<?= BASE_URL ?>settings/backup" class="sidebar-item <?= ($activeNav ?? '') === 'backup' ? 'active' : '' ?>" title="Backup Data Harian Offline">
+                <i class="bi bi-shield-lock"></i>
+                <span>Backup Harian</span>
+            </a>
             <a href="<?= BASE_URL ?>settings" class="sidebar-item">
                 <i class="bi bi-gear"></i>
                 <span>Pengaturan</span>

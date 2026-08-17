@@ -79,7 +79,7 @@ class SettingController extends Controller
     {
         $this->view('settings.backup', [
             'title'     => 'Backup Data Harian',
-            'activeNav' => 'home',
+            'activeNav' => 'backup',
         ]);
     }
 
