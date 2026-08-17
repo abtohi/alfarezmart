@@ -1,5 +1,5 @@
 /**
- * AlfarezMart PWA - Service Worker v36.0
+ * AlfarezMart PWA - Service Worker v37.0
  * Cache Strategy:
  * - CSS/JS versioned assets: Cache First with EXACT URL match (no ignoreSearch)
  * - Navigation / HTML: Fast Network Race (350ms Timeout) with Stale-While-Revalidate
@@ -9,8 +9,8 @@
  * They are cached on first request via the Cache-First fetch handler.
  * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v36.0';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v36.0';
+const CACHE_NAME = 'alfarezmart-cache-v37.0';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v37.0';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     // HTML navigation pages only — NOT versioned JS/CSS (those are cached on first use)

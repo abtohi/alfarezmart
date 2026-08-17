@@ -597,6 +597,11 @@ function scanProductBarcode() {
 
 // Initialize Category Filter SearchBox
 document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('categoryFilterSearchBox');
+    if (!el) return;
+    const SB = typeof SearchBox !== 'undefined' ? SearchBox : (window.SearchBox || null);
+    if (!SB) return;
+
     const categoriesData = [
         { value: '', label: '📂 Semua Kategori' },
         <?php foreach ($categories as $cat): ?>
@@ -604,7 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <?php endforeach; ?>
     ];
     
-    new SearchBox(document.getElementById('categoryFilterSearchBox'), {
+    new SB(el, {
         options: categoriesData,
         placeholder: '📂 Semua Kategori',
         value: '<?= htmlspecialchars($selectedCategory ?? '') ?>',

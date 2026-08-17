@@ -200,7 +200,7 @@ const AppModal = {
         });
     }
 };
-
+window.AppModal = AppModal;
 
 /* ============================================
    SearchBox — Searchable combobox
@@ -715,6 +715,7 @@ class SearchBox {
         this.container.classList.remove('searchbox-wrapper');
     }
 }
+window.SearchBox = SearchBox;
 
 // Initialize modal on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {

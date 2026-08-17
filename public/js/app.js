@@ -418,6 +418,8 @@ async function updateSyncBadge() {
             console.error(e);
         }
     }
+}
+
 let _isSyncing = false;
 
 async function syncPendingChanges() {
