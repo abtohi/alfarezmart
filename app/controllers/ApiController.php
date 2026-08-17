@@ -668,6 +668,41 @@ class ApiController extends Controller
     {
         $model = new ProductModel();
         $product = $model->findWithDetails($id);
+
+        // Fallback 1: try resolving as a packaging ID
+        if (!$product) {
+            try {
+                $stmt = $this->db->prepare("SELECT product_id FROM product_packagings WHERE id = :id LIMIT 1");
+                $stmt->execute([':id' => $id]);
+                $pkgRow = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($pkgRow && !empty($pkgRow['product_id'])) {
+                    $product = $model->findWithDetails((int)$pkgRow['product_id']);
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        // Fallback 2: try resolving as a barcode
+        if (!$product) {
+            try {
+                $byBarcode = $model->findByBarcode((string)$id);
+                if ($byBarcode && !empty($byBarcode['id'])) {
+                    $product = $model->findWithDetails((int)$byBarcode['id']);
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        // Fallback 3: try resolving as SKU/product code
+        if (!$product) {
+            try {
+                $stmt = $this->db->prepare("SELECT id FROM products WHERE code = :code OR supplier_product_code = :scode LIMIT 1");
+                $stmt->execute([':code' => (string)$id, ':scode' => (string)$id]);
+                $codeRow = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($codeRow && !empty($codeRow['id'])) {
+                    $product = $model->findWithDetails((int)$codeRow['id']);
+                }
+            } catch (\Throwable $e) {}
+        }
+
         if (!$product) {
             $this->json(['error' => 'Produk tidak ditemukan'], 404);
             return;

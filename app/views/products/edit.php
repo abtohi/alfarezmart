@@ -17,10 +17,18 @@ $brandsJson = json_encode(array_map(fn($b) => ['value'=>(string)$b['id'],'label'
 $catsJson = json_encode(array_map(fn($c) => ['value'=>(string)$c['id'],'label'=>$c['name']], $categories), JSON_UNESCAPED_UNICODE);
 $pkgsJson = json_encode($packagings, JSON_UNESCAPED_UNICODE);
 ?>
+<?php
+$productFound = $productFound ?? true;
+?>
 <div class="page-section">
-    <a href="<?= BASE_URL ?>products/<?= $product['id'] ?>" style="color:var(--text-muted);text-decoration:none;font-size:var(--font-size-sm);display:inline-flex;align-items:center;gap:4px;margin-bottom:16px;">
-        <i class="bi bi-arrow-left"></i> Kembali ke Detail
-    </a>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <a href="<?= BASE_URL ?>products/<?= $product['id'] ?>" style="color:var(--text-muted);text-decoration:none;font-size:var(--font-size-sm);display:inline-flex;align-items:center;gap:6px;">
+            <i class="bi bi-arrow-left"></i> Kembali ke Detail
+        </a>
+        <div id="editHydrationBadge" style="display:none;font-size:11px;padding:3px 8px;border-radius:12px;background:var(--success-bg);color:var(--success);border:1px solid var(--success);">
+            <i class="bi bi-cloud-check"></i> <span id="hydrationStatusText">Data Dimuat</span>
+        </div>
+    </div>
     <h2 style="font-size:var(--font-size-lg);font-weight:700;margin-bottom:20px;">Edit Produk</h2>
 
     <!-- Mode Varian dari Referensi -->
@@ -269,15 +277,38 @@ let deletedPkgIds = [];
 // ===== SearchBox Instances =====
 let brandSB, categorySB, weightUnitSB;
 
+const serverProductFound = <?= !empty($productFound) ? 'true' : 'false' ?>;
+const isPlaceholderProduct = <?= (strpos($product['full_name'] ?? '', 'Produk #') === 0 && empty($product['brand_id']) && empty($product['category_id'])) ? 'true' : 'false' ?>;
+
 document.addEventListener('DOMContentLoaded', async () => {
-        brandsData = <?= $brandsJson ?>;
-        categoriesData = <?= $catsJson ?>;
-        unitsData = <?= $unitsJson ?>;
-        weightUnitOptions = unitsData.map(u => {
-            const abbr = u.abbreviation || u.label;
-            const wLabel = u.abbreviation ? `${u.label} (${u.abbreviation})` : u.label;
-            return { value: abbr, label: wLabel };
-        });
+    brandsData = <?= $brandsJson ?>;
+    categoriesData = <?= $catsJson ?>;
+    unitsData = <?= $unitsJson ?>;
+    
+    // Master data fallback from OfflineDB if PHP lists are empty
+    if ((brandsData.length === 0 || categoriesData.length === 0 || unitsData.length === 0) && typeof OfflineDB !== 'undefined') {
+        try {
+            if (brandsData.length === 0 && OfflineDB.getBrands) {
+                const b = await OfflineDB.getBrands();
+                if (b && b.length) brandsData = b.map(x => ({ value: String(x.id), label: x.name }));
+            }
+            if (categoriesData.length === 0 && OfflineDB.getCategories) {
+                const c = await OfflineDB.getCategories();
+                if (c && c.length) categoriesData = c.map(x => ({ value: String(x.id), label: x.name }));
+            }
+            if (unitsData.length === 0 && OfflineDB.getUnits) {
+                const u = await OfflineDB.getUnits();
+                if (u && u.length) unitsData = u.map(x => ({ value: String(x.id), label: x.name, abbreviation: x.abbreviation || '' }));
+            }
+        } catch (e) {}
+    }
+
+    weightUnitOptions = unitsData.map(u => {
+        const abbr = u.abbreviation || u.label;
+        const wLabel = u.abbreviation ? `${u.label} (${u.abbreviation})` : u.label;
+        return { value: abbr, label: wLabel };
+    });
+
     brandSB = new SearchBox(document.getElementById('brandSearchBox'), {
         options: brandsData,
         placeholder: 'Cari atau pilih brand...',
@@ -368,8 +399,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Removed redundant isLabelEdited initialization
-
     document.getElementById('isCustomLabel')?.addEventListener('change', (e) => {
         isLabelEdited = e.target.checked;
         const manualLabel = document.getElementById('manualLabel');
@@ -406,7 +435,227 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+
+    // Check and hydrate product data if server returned fallback / not found
+    if (!serverProductFound || isPlaceholderProduct || packagingsData.length === 0) {
+        tryHydrateProduct(productId);
+    }
 });
+
+// ===== Hydration Logic for Edit Form =====
+async function tryHydrateProduct(idOrCode) {
+    const badge = document.getElementById('editHydrationBadge');
+    const badgeText = document.getElementById('hydrationStatusText');
+    if (badge) {
+        badge.style.display = 'inline-flex';
+        badge.style.background = 'var(--info-bg)';
+        badge.style.borderColor = 'var(--info)';
+        badge.style.color = 'var(--info)';
+        if (badgeText) badgeText.textContent = 'Memeriksa database...';
+    }
+
+    let productData = null;
+
+    // 1. Try OfflineDB
+    if (typeof OfflineDB !== 'undefined') {
+        try {
+            const numId = parseInt(idOrCode);
+            if (!isNaN(numId) && OfflineDB.getProductById) {
+                productData = await OfflineDB.getProductById(numId);
+            }
+            if (!productData && OfflineDB.getAllProducts) {
+                const all = await OfflineDB.getAllProducts();
+                if (Array.isArray(all)) {
+                    const strVal = String(idOrCode).trim();
+                    for (const p of all) {
+                        if (String(p.id) === strVal || String(p.code) === strVal || String(p.supplier_product_code) === strVal) {
+                            productData = p;
+                            break;
+                        }
+                        if (Array.isArray(p.packagings)) {
+                            for (const pkg of p.packagings) {
+                                if (String(pkg.id) === strVal || String(pkg.barcode) === strVal) {
+                                    productData = p;
+                                    break;
+                                }
+                            }
+                        }
+                        if (productData) break;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('OfflineDB hydrate error:', e);
+        }
+    }
+
+    // 2. Try Server API if online and not found yet
+    if (!productData && navigator.onLine) {
+        try {
+            const res = await fetch(`${BASE_URL}api/products/${encodeURIComponent(idOrCode)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data && !data.error && data.id) {
+                    productData = data;
+                }
+            }
+        } catch (e) {
+            console.warn('API hydrate error:', e);
+        }
+    }
+
+    if (productData) {
+        hydrateProductForm(productData);
+        if (badge) {
+            badge.style.background = 'var(--success-bg)';
+            badge.style.borderColor = 'var(--success)';
+            badge.style.color = 'var(--success)';
+            if (badgeText) badgeText.textContent = 'Data Terhubung';
+        }
+        if (typeof showToast === 'function') {
+            showToast('Data produk berhasil disinkronkan.', 'success');
+        }
+    } else {
+        if (badge) {
+            badge.style.background = 'var(--warning-bg)';
+            badge.style.borderColor = 'var(--warning)';
+            badge.style.color = 'var(--warning)';
+            if (badgeText) badgeText.textContent = 'Data Baru/Lokal';
+        }
+    }
+}
+
+function hydrateProductForm(p) {
+    if (!p) return;
+
+    // 1. Multivariant vs Single
+    const hasMulti = !!(p.brand_id || p.brand_name || p.product_type || p.variant);
+    isMultivariant = hasMulti;
+    const mvCheck = document.getElementById('isMultivariant');
+    if (mvCheck) {
+        mvCheck.checked = hasMulti;
+    }
+    toggleMultivariant(hasMulti);
+
+    // 2. Form values
+    if (!hasMulti) {
+        const singleInp = document.getElementById('singleNameInput');
+        if (singleInp) singleInp.value = p.full_name || p.short_label || '';
+    }
+
+    const typeInp = document.getElementById('productTypeInput');
+    if (typeInp) typeInp.value = p.product_type || '';
+
+    const varInp = document.getElementById('variantInput');
+    if (varInp) varInp.value = p.variant || '';
+
+    // 3. Brand SearchBox
+    if (brandSB) {
+        if (p.brand_id) {
+            brandSB.select(String(p.brand_id), p.brand_name || '');
+        } else if (p.brand_name) {
+            const found = brandSB.options.find(o => o.label.toLowerCase() === String(p.brand_name).toLowerCase());
+            if (found) {
+                brandSB.select(found.value, found.label);
+            } else {
+                brandSB.addOption(p.brand_name, p.brand_name, true);
+            }
+        }
+    }
+
+    // 4. Category SearchBox
+    if (categorySB) {
+        if (p.category_id) {
+            categorySB.select(String(p.category_id), p.category_name || '');
+        } else if (p.category_name) {
+            const found = categorySB.options.find(o => o.label.toLowerCase() === String(p.category_name).toLowerCase());
+            if (found) {
+                categorySB.select(found.value, found.label);
+            } else {
+                categorySB.addOption(p.category_name, p.category_name, true);
+            }
+        }
+    }
+
+    // 5. Weight & Satuan
+    const wVal = document.querySelector('[name="weight_value"]');
+    if (wVal) wVal.value = (p.weight_value !== null && p.weight_value !== undefined) ? p.weight_value : '';
+
+    if (weightUnitSB && p.weight_unit) {
+        weightUnitSB.select(p.weight_unit, p.weight_unit);
+    }
+
+    // 6. Foto
+    if (p.photo) {
+        const preview = document.getElementById('photoPreview');
+        const icon = document.getElementById('photoIcon');
+        if (preview && icon) {
+            preview.src = p.photo.startsWith('http') || p.photo.startsWith('data:') ? p.photo : (BASE_URL + p.photo);
+            preview.style.display = 'block';
+            icon.style.display = 'none';
+        }
+    }
+
+    // 7. Supplier info
+    const supCode = document.getElementById('supplierProductCode');
+    if (supCode) supCode.value = p.supplier_product_code || '';
+    const supName = p.supplier_invoice_name || p.invoice_name || '';
+    if (typeof initInvoiceNameList === 'function') initInvoiceNameList(supName);
+    if ((p.supplier_product_code || supName) && typeof toggleSupplierInfo === 'function') {
+        const supPanel = document.getElementById('supplierInfoPanel');
+        if (supPanel && supPanel.style.display === 'none') {
+            toggleSupplierInfo();
+        }
+    }
+
+    // 8. Custom label & Available
+    if (p.is_custom_label == 1) {
+        isLabelEdited = true;
+        const chk = document.getElementById('isCustomLabel');
+        if (chk) chk.checked = true;
+        const manualLabel = document.getElementById('manualLabel');
+        if (manualLabel) {
+            manualLabel.disabled = false;
+            manualLabel.value = p.short_label || '';
+        }
+    } else {
+        isLabelEdited = false;
+        const chk = document.getElementById('isCustomLabel');
+        if (chk) chk.checked = false;
+        const manualLabel = document.getElementById('manualLabel');
+        if (manualLabel) {
+            manualLabel.disabled = true;
+            manualLabel.value = p.short_label || '';
+        }
+    }
+
+    // 9. Packaging Levels
+    if (Array.isArray(p.packagings) && p.packagings.length > 0) {
+        const container = document.getElementById('packagingContainer');
+        if (container) container.innerHTML = '';
+        levelCount = 0;
+        const sorted = [...p.packagings].sort((a, b) => a.level - b.level);
+        sorted.forEach(pk => addPackagingLevel({
+            pkgId: pk.id,
+            unit_id: String(pk.unit_id || ''),
+            unit_name: pk.unit_name || '',
+            contained_qty: pk.contained_qty,
+            base_qty: pk.base_qty,
+            buy_price: pk.buy_price,
+            sell_price_retail: pk.sell_price_retail,
+            sell_price_wholesale: pk.sell_price_wholesale,
+            barcode: pk.barcode || '',
+            ppn_pct: 0,
+            discount_mode: 'rp',
+            discount_value: 0,
+            qty_prices: pk.qty_prices || []
+        }));
+        updateBaseQtyInfo();
+        if (typeof PackagingPriceSync !== 'undefined') PackagingPriceSync.init();
+    }
+
+    updateNamePreview();
+}
 
 function toggleMultivariant(checked) {
     isMultivariant = checked;

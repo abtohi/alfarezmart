@@ -220,6 +220,22 @@ class ProductController extends Controller
             } catch (\Throwable $e) {}
         }
 
+        // 4. If not found, try resolving by product code or supplier product code
+        if (!$product) {
+            try {
+                $db = Database::getInstance()->getConnection();
+                $stmt = $db->prepare("SELECT id FROM products WHERE code = :code OR supplier_product_code = :scode LIMIT 1");
+                $stmt->execute([':code' => $id, ':scode' => $id]);
+                $codeRow = $stmt->fetch();
+                if ($codeRow && !empty($codeRow['id'])) {
+                    header('Location: ' . BASE_URL . 'products/' . (int)$codeRow['id'] . '/edit');
+                    exit;
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        $productFound = ($product !== null);
+
         if (!$product) {
             $product = [
                 'id' => (int)$id,
@@ -266,10 +282,12 @@ class ProductController extends Controller
             'title' => 'Edit Produk',
             'activeNav' => 'products',
             'product' => $product,
+            'productFound' => $productFound,
             'packagings' => $packagings,
             'brands' => $brands,
             'categories' => $categories,
             'units' => $units,
+            'csrfToken' => (new Security())->getCSRFToken()
         ]);
     }
 }
