@@ -644,7 +644,6 @@ class ApiController extends Controller
         }
     }
 
-
     public function getByBarcode(string $code)
     {
         $code = trim(urldecode($code));
@@ -653,6 +652,12 @@ class ApiController extends Controller
         $product = $model->findByBarcode($code, $isPos);
         if (!$product) {
             $this->json(['error' => 'Produk tidak ditemukan'], 404);
+            return;
+        }
+        if ($isPos) {
+            // Fast path for POS: load packagings directly without heavy supplier purchase history
+            $product['packagings'] = $model->getPackagings((int)$product['id']);
+            $this->json($product);
             return;
         }
         $product = $this->enrichProductDetailData($product);

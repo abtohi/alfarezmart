@@ -83,11 +83,8 @@ class ProductModel extends Model
                 $p_bar   = ":kw_{$idx}_bar";
                 $p_inv   = ":kw_{$idx}_inv";
                 $p_sinv  = ":kw_{$idx}_sinv";
-                $p_pr1   = ":kw_{$idx}_pr1";
-                $p_pr2   = ":kw_{$idx}_pr2";
-                $p_pr3   = ":kw_{$idx}_pr3";
                 
-                $whereClauses[] = "(p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR b.name LIKE $p_brand OR c.name LIKE $p_cat OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND (pp.barcode LIKE $p_bar OR pp.sell_price_retail LIKE $p_pr1 OR pp.sell_price_wholesale LIKE $p_pr2 OR pp.buy_price LIKE $p_pr3)))";
+                $whereClauses[] = "(p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR b.name LIKE $p_brand OR c.name LIKE $p_cat OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
                 
                 $like = "%{$word}%";
                 $params[$p_name]  = $like;
@@ -99,28 +96,18 @@ class ProductModel extends Model
                 $params[$p_bar]   = $like;
                 $params[$p_inv]   = $like;
                 $params[$p_sinv]  = $like;
-                $params[$p_pr1]   = $like;
-                $params[$p_pr2]   = $like;
-                $params[$p_pr3]   = $like;
             }
             $whereSql .= ' AND ' . implode(' AND ', $whereClauses);
         }
 
         $orderSql = "ORDER BY COALESCE(p.updated_at, p.created_at) DESC, COALESCE(NULLIF(TRIM(p.short_label), ''), p.full_name) ASC";
         if (!empty($words)) {
-            $params[':raw_kw1']  = $rawKeyword;
-            $params[':raw_kw2']  = $rawKeyword;
-            $params[':raw_kw3']  = $rawKeyword;
             $params[':pref_kw1'] = $rawKeyword . '%';
             $params[':pref_kw2'] = $rawKeyword . '%';
-            $params[':pref_kw3'] = $rawKeyword . '%';
             $orderSql = "ORDER BY (
                 CASE 
-                    WHEN EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode = :raw_kw1) THEN 1
-                    WHEN p.code = :raw_kw2 OR p.supplier_product_code = :raw_kw3 THEN 2
-                    WHEN p.short_label LIKE :pref_kw1 OR p.full_name LIKE :pref_kw2 THEN 3
-                    WHEN b.name LIKE :pref_kw3 THEN 4
-                    ELSE 5
+                    WHEN p.short_label LIKE :pref_kw1 OR p.full_name LIKE :pref_kw2 THEN 1
+                    ELSE 2
                 END
             ) ASC, COALESCE(NULLIF(TRIM(p.short_label), ''), p.full_name) ASC";
         }
@@ -370,10 +357,8 @@ class ProductModel extends Model
                     $p_code  = ":s_{$idx}_code";
                     $p_scode = ":s_{$idx}_scode";
                     $p_sinv  = ":s_{$idx}_sinv";
-                    $p_pr1   = ":s_{$idx}_pr1";
-                    $p_pr2   = ":s_{$idx}_pr2";
                     
-                    $where .= " AND (p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR b.name LIKE $p_brand OR c.name LIKE $p_cat OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND (pp.barcode LIKE $p_bar OR pp.sell_price_retail LIKE $p_pr1 OR pp.sell_price_wholesale LIKE $p_pr2)))";
+                    $where .= " AND (p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR b.name LIKE $p_brand OR c.name LIKE $p_cat OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar))";
                     
                     $like = "%{$word}%";
                     $params[$p_name]  = $like;
@@ -385,8 +370,6 @@ class ProductModel extends Model
                     $params[$p_brand] = $like;
                     $params[$p_cat]   = $like;
                     $params[$p_bar]   = $like;
-                    $params[$p_pr1]   = $like;
-                    $params[$p_pr2]   = $like;
                 }
             }
             if ($categoryId) {

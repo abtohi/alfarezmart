@@ -619,7 +619,7 @@ async function preloadPosCatalog() {
     if (navigator.onLine && shouldFetch) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const timeoutId = setTimeout(() => controller.abort(), 20000);
             const res = await fetch(`${BASE_URL}api/products/sync?pos=1&_t=` + Date.now(), { signal: controller.signal });
             clearTimeout(timeoutId);
             if (res.ok) {
@@ -880,10 +880,10 @@ async function processBarcodeScan(q, inpEl, sugEl, fromScanner) {
         return;
     }
 
-    // 2. Fallback network search with 2s timeout
+    // 2. Fallback network search with 5s timeout
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
         const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}?pos=1`, { signal: controller.signal });
         clearTimeout(timeoutId);
         if (resp.ok) {
@@ -973,7 +973,7 @@ async function performSearch(q) {
     }
     
     try {
-        const fetchTimeout = isWeak ? 400 : 900;
+        const fetchTimeout = isWeak ? 2500 : 6000;
         const timeoutId = setTimeout(() => {
             if (window.posSearchAbortController) window.posSearchAbortController.abort();
         }, fetchTimeout);
