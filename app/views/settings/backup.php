@@ -100,7 +100,113 @@
         </ul>
     </div>
 
-    <!-- Delete All -->
+    <!-- Tutorial Penggunaan Saat Server Mati -->
+    <div style="margin-top:14px; border-radius:var(--radius-lg); overflow:hidden; border:1px solid rgba(239,68,68,0.25);">
+
+        <!-- Header Collapsible -->
+        <div id="tutorial-header" onclick="toggleTutorial()" style="background:linear-gradient(135deg, rgba(239,68,68,0.1) 0%, rgba(239,68,68,0.04) 100%); padding:12px 16px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; user-select:none;">
+            <div style="display:flex; align-items:center; gap:8px; font-weight:700; font-size:var(--font-size-xs); color:#f87171;">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                🆘 Tutorial: Cara Pakai Backup Saat Server/Koneksi Mati
+            </div>
+            <i id="tutorial-chevron" class="bi bi-chevron-down" style="color:#f87171; font-size:12px; transition:transform 200ms;"></i>
+        </div>
+
+        <!-- Content -->
+        <div id="tutorial-body" style="display:none; background:var(--surface-0); padding:16px;">
+
+            <!-- Skenario A -->
+            <div style="margin-bottom:18px;">
+                <div style="font-weight:700; font-size:var(--font-size-xs); color:var(--text-primary); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                    <span style="width:22px; height:22px; border-radius:50%; background:#6366f1; color:#fff; font-size:10px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">A</span>
+                    Backup sudah ada di HP ini (kasus paling umum)
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px; padding-left:30px;">
+                    <div style="display:flex; align-items:flex-start; gap:10px; font-size:var(--font-size-xs); color:var(--text-muted);">
+                        <span style="min-width:20px; height:20px; border-radius:50%; background:var(--surface-2); border:1.5px solid #6366f1; color:#818cf8; font-size:9px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">1</span>
+                        <span>Tetap buka aplikasi di halaman ini (<strong>/settings/backup</strong>)</span>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:10px; font-size:var(--font-size-xs); color:var(--text-muted);">
+                        <span style="min-width:20px; height:20px; border-radius:50%; background:var(--surface-2); border:1.5px solid #6366f1; color:#818cf8; font-size:9px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">2</span>
+                        <span>Lihat daftar riwayat backup — pilih tanggal terbaru</span>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:10px; font-size:var(--font-size-xs); color:var(--text-muted);">
+                        <span style="min-width:20px; height:20px; border-radius:50%; background:var(--surface-2); border:1.5px solid #6366f1; color:#818cf8; font-size:9px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">3</span>
+                        <span>Klik tombol <strong style="color:#818cf8;">🔄 Restore</strong> pada backup tersebut → konfirmasi</span>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:10px; font-size:var(--font-size-xs); color:var(--text-muted);">
+                        <span style="min-width:20px; height:20px; border-radius:50%; background:var(--surface-2); border:1.5px solid #6366f1; color:#818cf8; font-size:9px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">4</span>
+                        <span>Banner kuning <strong>⚠ Mode Data Backup Aktif</strong> akan muncul di atas halaman</span>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:10px; font-size:var(--font-size-xs); color:var(--text-muted);">
+                        <span style="min-width:20px; height:20px; border-radius:50%; background:var(--surface-2); border:1.5px solid #6366f1; color:#818cf8; font-size:9px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">5</span>
+                        <span>Buka <strong>Kasir POS</strong> → produk & harga tersedia → transaksi bisa berjalan seperti biasa</span>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:10px; font-size:var(--font-size-xs); color:var(--text-muted);">
+                        <span style="min-width:20px; height:20px; border-radius:50%; background:var(--surface-2); border:1.5px solid #6366f1; color:#818cf8; font-size:9px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">6</span>
+                        <span>Saat server pulih → kembali ke halaman ini → klik <strong style="color:var(--success);">Kembali ke Data Live</strong> → transaksi offline otomatis tersinkron</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="border-top:1px solid var(--border-color); margin-bottom:18px;"></div>
+
+            <!-- Skenario B -->
+            <div style="margin-bottom:18px;">
+                <div style="font-weight:700; font-size:var(--font-size-xs); color:var(--text-primary); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                    <span style="width:22px; height:22px; border-radius:50%; background:#f59e0b; color:#fff; font-size:10px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">B</span>
+                    Ganti HP / browser baru (backup belum ada, punya file .json)
+                </div>
+                <div style="display:flex; flex-direction:column; gap:8px; padding-left:30px;">
+                    <div style="display:flex; align-items:flex-start; gap:10px; font-size:var(--font-size-xs); color:var(--text-muted);">
+                        <span style="min-width:20px; height:20px; border-radius:50%; background:var(--surface-2); border:1.5px solid #f59e0b; color:#f59e0b; font-size:9px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">1</span>
+                        <span>Transfer file <code style="background:var(--surface-2); padding:1px 4px; border-radius:4px;">AlfarezMart_Backup_YYYY-MM-DD.json</code> ke HP baru (via WhatsApp, Drive, USB, dll.)</span>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:10px; font-size:var(--font-size-xs); color:var(--text-muted);">
+                        <span style="min-width:20px; height:20px; border-radius:50%; background:var(--surface-2); border:1.5px solid #f59e0b; color:#f59e0b; font-size:9px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">2</span>
+                        <span>Buka <strong>/settings/backup</strong> di HP baru</span>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:10px; font-size:var(--font-size-xs); color:var(--text-muted);">
+                        <span style="min-width:20px; height:20px; border-radius:50%; background:var(--surface-2); border:1.5px solid #f59e0b; color:#f59e0b; font-size:9px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">3</span>
+                        <span>Klik <strong style="color:#818cf8;">📤 Impor dari File (.json)</strong> → pilih file backup tersebut</span>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:10px; font-size:var(--font-size-xs); color:var(--text-muted);">
+                        <span style="min-width:20px; height:20px; border-radius:50%; background:var(--surface-2); border:1.5px solid #f59e0b; color:#f59e0b; font-size:9px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;">4</span>
+                        <span>Data otomatis di-restore → kasir siap digunakan</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="border-top:1px solid var(--border-color); margin-bottom:14px;"></div>
+
+            <!-- Tips Proaktif -->
+            <div style="background:linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(16,185,129,0.03) 100%); border:1px solid rgba(16,185,129,0.2); border-radius:var(--radius-md); padding:12px 14px;">
+                <div style="font-weight:700; font-size:var(--font-size-xs); color:#10b981; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                    <i class="bi bi-lightbulb-fill"></i> Tips: Lakukan Ini Setiap Minggu
+                </div>
+                <ol style="margin:0; padding-left:16px; font-size:var(--font-size-xs); color:var(--text-muted); line-height:1.9;">
+                    <li>Buka halaman ini setiap <strong>awal minggu</strong></li>
+                    <li>Klik <strong style="color:#10b981;">📥 Unduh Backup (.json)</strong> untuk simpan file ke HP</li>
+                    <li>Upload file ke <strong>Google Drive / WhatsApp Saved</strong> sebagai cadangan ekstra</li>
+                    <li>Jika ada HP lain yang digunakan kasir, lakukan impor ke HP tersebut juga</li>
+                </ol>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+    function toggleTutorial() {
+        const body = document.getElementById('tutorial-body');
+        const chevron = document.getElementById('tutorial-chevron');
+        if (!body) return;
+        const isOpen = body.style.display !== 'none';
+        body.style.display = isOpen ? 'none' : 'block';
+        if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+    }
+    </script>
+
+
     <button onclick="doDeleteAllBackups()" class="btn-outline-custom" style="width:100%; padding:10px; text-align:center; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:600; margin-top:16px; color:var(--danger); border-color:var(--danger); font-size:var(--font-size-xs);">
         <i class="bi bi-trash"></i> Hapus Semua Backup
     </button>
