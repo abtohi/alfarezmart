@@ -1,7 +1,7 @@
 /**
- * AlfarezMart PWA - Service Worker v42.0
+ * AlfarezMart PWA - Service Worker v43.0
  * Cache Strategy:
- * - CSS/JS versioned assets: Cache First with EXACT URL match (no ignoreSearch)
+ * - CSS/JS versioned assets: Cache First with EXACT URL match & safe offline fallback
  * - Navigation / HTML: Fast Network Race (350ms Timeout) with Stale-While-Revalidate
  * - API GET: Network First with Fast Fallback to Cache
  *
@@ -9,8 +9,8 @@
  * They are cached on first request via the Cache-First fetch handler.
  * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v42.0';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v42.0';
+const CACHE_NAME = 'alfarezmart-cache-v43.0';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v43.0';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     // HTML navigation pages only — NOT versioned JS/CSS (those are cached on first use)
@@ -33,7 +33,7 @@ const STATIC_ASSETS = [
     BASE_URL + 'public/images/mobile_icon.png',
     BASE_URL + 'public/images/mobile_icon_192.png',
     BASE_URL + 'public/images/mobile_icon_512.png',
-    BASE_URL + 'public/images/splash_logo.png',
+    BASE_URL + 'public/images/Icon.png',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/fonts/bootstrap-icons.woff2?856008caa5eb66df68595e734e59580d',
@@ -64,9 +64,9 @@ self.addEventListener('install', event => {
 
 // Activate - clean old caches
 self.addEventListener('activate', event => {
+    const keepCaches = [CACHE_NAME, DYNAMIC_CACHE];
     event.waitUntil(
         caches.keys().then(keys => {
-            const keepCaches = [CACHE_NAME, DYNAMIC_CACHE];
             return Promise.all(keys.filter(key => !keepCaches.includes(key)).map(key => caches.delete(key)));
         })
     );
@@ -157,14 +157,14 @@ self.addEventListener('fetch', event => {
                 }).catch(() => {
                     return new Response('', { status: 404, statusText: 'Image Offline' });
                 });
+            }).catch(() => {
+                return new Response('', { status: 404, statusText: 'Image Offline' });
             })
         );
         return;
     }
 
-    // ── 4. Styles, Scripts, Fonts: Cache First (Instant 0ms execution) ──
-    // NOTE: Do NOT use ignoreSearch:true — versioned URLs (?v=X.Y) must bypass old unversioned cache entries.
-    // We do an exact URL match first, then fall through to network.
+    // ── 4. Styles, Scripts, Fonts: Cache First with Safe Catch Fallback ──
     if (event.request.destination === 'style' || event.request.destination === 'script' || event.request.destination === 'font') {
         event.respondWith(
             caches.match(event.request).then(cached => {
@@ -176,16 +176,24 @@ self.addEventListener('fetch', event => {
                     const clone = response.clone();
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone).catch(() => {}));
                     return response;
+                }).catch(async () => {
+                    // Safe fallback: search cache ignoring query string (?v=...)
+                    const fallback = await caches.match(event.request, { ignoreSearch: true });
+                    if (fallback) return fallback;
+                    const mime = event.request.destination === 'style' ? 'text/css' :
+                                 event.request.destination === 'script' ? 'application/javascript' : 'font/woff2';
+                    return new Response('', { status: 200, headers: { 'Content-Type': mime } });
                 });
+            }).catch(async () => {
+                const fallback = await caches.match(event.request, { ignoreSearch: true });
+                if (fallback) return fallback;
+                return new Response('', { status: 200, headers: { 'Content-Type': 'text/plain' } });
             })
         );
         return;
     }
 
     // ── 5. HTML/Navigation Requests: Ultra-Fast Race Strategy (350ms) ──
-    // If cached page exists, race network with 350ms timeout.
-    // If network is slow (>350ms) or offline, serve cached page INSTANTLY (0-20ms)
-    // while quietly updating the cache in the background!
     event.respondWith(
         caches.match(event.request, { ignoreSearch: true }).then(cachedResponse => {
             // Background fetcher helper
@@ -217,6 +225,10 @@ self.addEventListener('fetch', event => {
 
             // Not in cache yet: await network fetch directly
             return fetchPromise;
+        }).catch(async () => {
+            const baseCached = await caches.match(BASE_URL);
+            if (baseCached) return baseCached;
+            return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
         })
     );
 });
