@@ -77,7 +77,7 @@ class Database
             // Raised from 3s → 5s: 3s is too aggressive for remote connections
             // on slower mobile/home networks causing false offline fallback.
             PDO::ATTR_TIMEOUT            => 5,
-            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone='+07:00'",
+            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone='+07:00', SESSION wait_timeout=30, SESSION interactive_timeout=30",
         ];
 
         $this->pdo = new PDO($dsn, $user, $pass, $options);
@@ -545,6 +545,14 @@ class Database
     public function __wakeup()
     {
         throw new \Exception("Cannot unserialize singleton");
+    }
+
+    /**
+     * Explicitly close PDO connection upon object destruction
+     */
+    public function __destruct()
+    {
+        $this->pdo = null;
     }
 }
 
