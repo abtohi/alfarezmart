@@ -271,14 +271,22 @@
 
     /* --- 2.3 Header adjustments for desktop --- */
     .app-header {
-        left: var(--sidebar-width, 260px);
-        height: var(--header-height, 64px);
+        left: var(--sidebar-width, 260px) !important;
+        right: 0 !important;
+        width: calc(100% - var(--sidebar-width, 260px)) !important;
+        height: var(--header-height, 64px) !important;
+        background: var(--bg-secondary) !important;
+        backdrop-filter: blur(20px) !important;
+        border-bottom: 1px solid var(--border-color) !important;
+        z-index: 100 !important;
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
     .header-content {
         padding: 0 28px;
     }
     .header-title {
         font-size: 1.1rem;
+        color: var(--text-primary) !important;
     }
     /* Hide top header logo on desktop to eliminate duplicate logos (logo is in sidebar) */
     .header-left .header-logo {
@@ -288,23 +296,25 @@
         width: 42px;
         height: 42px;
         font-size: 1.25rem;
+        color: var(--text-primary) !important;
     }
     .header-btn:hover {
-        background: rgba(255,255,255,0.1);
+        background: var(--surface-2) !important;
     }
 
     /* Status bar overlay shifted */
     .status-bar-overlay {
-        left: var(--sidebar-width, 260px);
+        left: var(--sidebar-width, 260px) !important;
     }
 
     /* --- 2.4 Main content area --- */
     .app-content {
         margin-left: var(--sidebar-width, 260px) !important;
         max-width: none !important;
-        padding-top: calc(var(--header-height, 64px) + var(--safe-area-top));
+        padding-top: calc(var(--header-height, 64px) + var(--safe-area-top)) !important;
         padding-bottom: 32px !important;
-        min-height: 100vh;
+        min-height: 100vh !important;
+        transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
     .page-section {

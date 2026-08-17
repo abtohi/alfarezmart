@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=22.00'; ?>
+    <?php $v = '?v=24.00'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -61,7 +61,20 @@ if ($userLevel === 'staff') {
             .desktop-sidebar, .sidebar-collapse-btn, .desktop-scanner-hint { display: none !important; }
         }
         @media (min-width: 1024px) {
-            .desktop-sidebar { display: flex !important; }
+            .desktop-sidebar {
+                display: flex !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                bottom: 0 !important;
+                width: var(--sidebar-width, 260px) !important;
+                background: var(--bg-secondary) !important;
+                border-right: 1px solid var(--border-color) !important;
+                z-index: 105 !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            }
             .sidebar-brand {
                 height: 64px !important;
                 min-height: 64px !important;
@@ -73,12 +86,58 @@ if ($userLevel === 'staff') {
                 align-items: center !important;
                 justify-content: space-between !important;
                 border-bottom: 1px solid var(--border-color) !important;
+                background: var(--bg-secondary) !important;
             }
             .app-header {
+                position: fixed !important;
+                top: 0 !important;
+                left: var(--sidebar-width, 260px) !important;
+                right: 0 !important;
+                width: calc(100% - var(--sidebar-width, 260px)) !important;
                 height: 64px !important;
                 min-height: 64px !important;
                 max-height: 64px !important;
                 box-sizing: border-box !important;
+                background: var(--bg-secondary) !important;
+                backdrop-filter: blur(20px) !important;
+                border-bottom: 1px solid var(--border-color) !important;
+                z-index: 100 !important;
+                transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            }
+            .app-header .header-logo {
+                display: none !important;
+            }
+            .app-header .header-title {
+                color: var(--text-primary) !important;
+                font-size: 1.1rem !important;
+                margin: 0 !important;
+            }
+            .app-header .header-btn {
+                color: var(--text-primary) !important;
+            }
+            .app-header .header-btn:hover {
+                background: var(--surface-2) !important;
+            }
+            [data-theme="light"] .header-ai-btn,
+            html[data-theme="light"] .header-ai-btn {
+                background: rgba(99, 102, 241, 0.1) !important;
+                border: 1px solid rgba(99, 102, 241, 0.3) !important;
+                color: #4f46e5 !important;
+            }
+            [data-theme="light"] .header-ai-btn i,
+            html[data-theme="light"] .header-ai-btn i {
+                color: #4f46e5 !important;
+            }
+            .app-content {
+                margin-left: var(--sidebar-width, 260px) !important;
+                max-width: none !important;
+                padding-top: calc(64px + var(--safe-area-top)) !important;
+                padding-bottom: 32px !important;
+                min-height: 100vh !important;
+                transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            }
+            .bottom-nav {
+                display: none !important;
             }
             .sidebar-collapse-btn {
                 display: flex !important;
@@ -99,6 +158,49 @@ if ($userLevel === 'staff') {
                 margin: 0 !important;
             }
             .desktop-scanner-hint { display: flex !important; }
+
+            /* Collapsed Sidebar */
+            body.sidebar-collapsed .desktop-sidebar,
+            .desktop-sidebar.collapsed {
+                width: 70px !important;
+            }
+            body.sidebar-collapsed .app-header {
+                left: 70px !important;
+                width: calc(100% - 70px) !important;
+            }
+            body.sidebar-collapsed .app-content {
+                margin-left: 70px !important;
+            }
+            body.sidebar-collapsed .desktop-sidebar .sidebar-brand span,
+            body.sidebar-collapsed .desktop-sidebar .sidebar-item span,
+            body.sidebar-collapsed .desktop-sidebar .sidebar-user-info,
+            .desktop-sidebar.collapsed .sidebar-brand span,
+            .desktop-sidebar.collapsed .sidebar-item span,
+            .desktop-sidebar.collapsed .sidebar-user-info {
+                display: none !important;
+            }
+            body.sidebar-collapsed .desktop-sidebar .sidebar-brand,
+            .desktop-sidebar.collapsed .sidebar-brand {
+                justify-content: center !important;
+                padding: 0 !important;
+            }
+            body.sidebar-collapsed .desktop-sidebar .sidebar-collapse-btn,
+            .desktop-sidebar.collapsed .sidebar-collapse-btn {
+                display: none !important;
+            }
+            body.sidebar-collapsed .desktop-sidebar .sidebar-item,
+            .desktop-sidebar.collapsed .sidebar-item {
+                justify-content: center !important;
+                padding: 12px 0 !important;
+            }
+            body.sidebar-collapsed .desktop-sidebar .sidebar-item i,
+            .desktop-sidebar.collapsed .sidebar-item i {
+                margin: 0 !important;
+            }
+            body.sidebar-collapsed .desktop-sidebar .sidebar-user,
+            .desktop-sidebar.collapsed .sidebar-user {
+                justify-content: center !important;
+            }
         }
     </style>
 
@@ -591,7 +693,7 @@ if ($userLevel === 'staff') {
     <!-- App JS -->
     <script>
         const BASE_URL = '<?= BASE_URL ?>';
-        const version = '22.00';
+        const version = '24.00';
         window.IS_DB_OFFLINE = <?= (class_exists('Database') && Database::getInstance()->isOffline()) ? 'true' : 'false' ?>;
     </script>
     <script src="<?= BASE_URL ?>public/js/utils.js<?= $v ?>"></script>
@@ -661,7 +763,7 @@ if ($userLevel === 'staff') {
 
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '22.00'; // Update this to force client reloads
+    const APP_VERSION = '24.00'; // Update this to force client reloads
 
     // Self-healing cache buster
     // PERF FIX: Added sessionStorage guard to prevent infinite reload loop.
