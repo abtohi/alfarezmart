@@ -137,12 +137,13 @@ class ProductModel extends Model
 
         // Use positional params (?) because PDO does NOT allow the same named
         // parameter to appear more than once in a single query (SQLSTATE HY093).
-        $whereSql = "(REPLACE(pp.barcode, ' ', '') = ?
-               OR p.code = ?
-               OR REPLACE(pp.barcode, ' ', '') = CONCAT('0', ?)
-               OR CONCAT('0', REPLACE(pp.barcode, ' ', '')) = ?
-               OR REPLACE(pp.barcode, ' ', '') = CONCAT('00', ?)
-               OR CONCAT('00', REPLACE(pp.barcode, ' ', '')) = ?)";
+        // COLLATE utf8mb4_unicode_ci prevents MySQL Error 1267 (Illegal mix of collations).
+        $whereSql = "(REPLACE(pp.barcode, ' ', '') COLLATE utf8mb4_unicode_ci = ?
+               OR p.code COLLATE utf8mb4_unicode_ci = ?
+               OR REPLACE(pp.barcode, ' ', '') COLLATE utf8mb4_unicode_ci = CONCAT('0', ?)
+               OR CONCAT('0', REPLACE(pp.barcode, ' ', '')) COLLATE utf8mb4_unicode_ci = ?
+               OR REPLACE(pp.barcode, ' ', '') COLLATE utf8mb4_unicode_ci = CONCAT('00', ?)
+               OR CONCAT('00', REPLACE(pp.barcode, ' ', '')) COLLATE utf8mb4_unicode_ci = ?)";
 
         $params = [$barcode, $barcode, $barcode, $barcode, $barcode, $barcode];
 

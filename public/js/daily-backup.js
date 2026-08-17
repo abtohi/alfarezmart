@@ -223,25 +223,46 @@ window.DailyBackup = (function () {
             return { skipped: true, reason: 'no_data_available' };
         }
 
+        // Optimize product snapshot size (strip photos, description, and heavy blobs)
+        // This drops JSON size from ~6MB to ~600KB so it never hits localStorage quota
+        if (data.products && Array.isArray(data.products)) {
+            data.products = data.products.map(p => ({
+                id: p.id,
+                code: p.code || '',
+                full_name: p.full_name || '',
+                short_label: p.short_label || '',
+                brand_id: p.brand_id,
+                brand_name: p.brand_name || '',
+                category_id: p.category_id,
+                category_name: p.category_name || '',
+                product_type: p.product_type || '',
+                variant: p.variant || '',
+                weight_value: p.weight_value,
+                weight_unit: p.weight_unit,
+                is_available: p.is_available ?? 1,
+                is_active: p.is_active ?? 1,
+                packagings: (p.packagings || []).map(pkg => ({
+                    id: pkg.id,
+                    level: pkg.level,
+                    unit_id: pkg.unit_id,
+                    unit_name: pkg.unit_name || '',
+                    base_qty: pkg.base_qty || 1,
+                    contained_qty: pkg.contained_qty || 1,
+                    barcode: pkg.barcode || '',
+                    buy_price: pkg.buy_price || 0,
+                    sell_price_retail: pkg.sell_price_retail || 0,
+                    sell_price_wholesale: pkg.sell_price_wholesale || 0,
+                    is_default_scan: pkg.is_default_scan || 0
+                }))
+            }));
+        }
+
         // Serialize and size-check
         let serialized;
         try {
             serialized = JSON.stringify(data);
         } catch(e) {
             return { skipped: true, error: 'serialization_failed' };
-        }
-
-        const sizeBytes = new Blob([serialized]).size;
-
-        // Warn if data is very large (> 4MB), trim products photos if needed
-        if (sizeBytes > 4 * 1024 * 1024) {
-            // Strip photo data to reduce size
-            data.products = (data.products || []).map(p => {
-                const slim = Object.assign({}, p);
-                if (slim.photo && slim.photo.startsWith('data:')) delete slim.photo;
-                return slim;
-            });
-            serialized = JSON.stringify(data);
         }
 
         // Save to localStorage with progressive eviction if full
@@ -267,7 +288,7 @@ window.DailyBackup = (function () {
             }
 
             if (!isSaved) {
-                console.error('[DailyBackup] localStorage full, could not save backup after eviction');
+                console.warn('[DailyBackup] localStorage penuh bahkan setelah pembersihan');
                 return { skipped: true, error: 'storage_full' };
             }
         }
