@@ -602,21 +602,26 @@ class InvoiceScanService
 
         set_time_limit(60);
 
-        // ULTRA-FAST MODEL STRATEGY:
-        // 1. Try at most 2 models (max 15s each = total max 30s, far below 120s browser abort).
-        // 2. Only use dedicated, high-speed vision models.
-        $FREE_VISION_MODELS = [
-            'google/gemini-2.0-flash-exp:free',  // Primary: Ultra-fast OCR (3-6s)
-            'google/gemini-2.5-flash:free',      // Secondary fallback (5-10s)
+        // ROBUST VISION MODEL STRATEGY:
+        // Respects model configured in Settings (Pengaturan Sistem & AI) as primary choice,
+        // and falls back gracefully to active OpenRouter vision models if unavailable.
+        $DEFAULT_VISION_MODELS = [
+            'google/gemini-2.0-flash-001',
+            'google/gemini-2.0-flash-lite-001',
+            'meta-llama/llama-3.2-11b-vision-instruct:free',
+            'qwen/qwen-2.5-vl-72b-instruct:free',
+            'openrouter/auto',
         ];
 
-        // Determine list of models to try (strictly capped at 2 models)
         if (empty($model) || in_array($model, ['openrouter/auto', 'auto', 'openrouter/free'])) {
-            $modelsToTry = $FREE_VISION_MODELS;
+            $modelsToTry = $DEFAULT_VISION_MODELS;
         } else {
-            // User configured custom model -> custom first, then gemini-2.0-flash-exp as fallback
-            $modelsToTry = array_unique([$model, 'google/gemini-2.0-flash-exp:free']);
+            // User configured specific model -> try user's choice FIRST, followed by robust fallbacks
+            $modelsToTry = array_unique(array_merge([$model], $DEFAULT_VISION_MODELS));
         }
+
+        // Limit to max 3 attempts to keep overall latency responsive
+        $modelsToTry = array_slice($modelsToTry, 0, 3);
 
         $imageBlock   = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
         $lastError    = null;
@@ -722,11 +727,11 @@ class InvoiceScanService
         $metrics['ai_request_count'] = $requestCount;
 
         // Build a helpful final error message
-        if ($noEndpointCount > 0 && $rateLimitCount === 0) {
-            throw new \Exception('Model AI gratis sedang tidak tersedia di OpenRouter saat ini. Coba lagi dalam beberapa menit, atau atur model AI di Pengaturan → AI Scanner.');
+        if ($noEndpointCount >= count($modelsToTry) && $rateLimitCount === 0) {
+            throw new \Exception('Model AI yang dipilih sedang offline/tidak tersedia di OpenRouter saat ini. Silakan pilih model lain di menu Pengaturan → AI Scanner.');
         }
-        if ($rateLimitCount >= 3) {
-            throw new \Exception('AI Scanner sedang overload (terlalu banyak request). Tunggu 1-2 menit lalu coba lagi.');
+        if ($rateLimitCount >= 2) {
+            throw new \Exception('AI Scanner sedang overload (rate limit). Tunggu 1-2 menit lalu coba lagi, atau gunakan model kustom di Pengaturan.');
         }
         throw new \Exception($lastError ?: 'AI gagal membaca gambar invoice. Pastikan gambar jelas dan koneksi internet stabil, lalu coba lagi.');
     }

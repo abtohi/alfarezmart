@@ -449,6 +449,10 @@ window.OfflineDB = (function() {
         return db.pending_changes.count();
     }
 
+    function clearPending() {
+        return db.pending_changes.clear();
+    }
+
     function saveAuth(key, data) {
         return db.auth_cache.put({ key, data, timestamp: Date.now() });
     }
@@ -485,6 +489,7 @@ window.OfflineDB = (function() {
         getPendingChanges,
         removePendingChange,
         countPending,
+        clearPending,
         saveAuth,
         getAuth
     };
