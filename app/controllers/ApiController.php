@@ -133,14 +133,29 @@ class ApiController extends Controller
 
     public function syncAllData()
     {
-        $limit = 500; // Limit payload size
-        
+        // PERF FIX: Give this heavy sync endpoint enough resources to finish
+        // without PHP killing it mid-way on large datasets.
+        @set_time_limit(120);
+        @ini_set('memory_limit', '256M');
+
+        $limit = 500; // Limit for sales / purchases payload
+        // PERF FIX: 999999 was effectively "load everything into PHP memory".
+        // Cap products at 5000 — more than enough for any normal store.
+        $productLimit = 5000;
+
         // Products
         $productModel = new ProductModel();
-        $productsResult = $productModel->getProductsWithPrices(1, 999999, '', null);
+        $productsResult = $productModel->getProductsWithPrices(1, $productLimit, '', null);
         $products = [];
         if (isset($productsResult['data'])) {
             foreach ($productsResult['data'] as $p) {
+                // Strip base64-encoded photos from sync payload — they bloat the
+                // JSON by MB and crash mobile browsers. Photos are served via
+                // their own URL endpoint and cached by the Service Worker.
+                $photo = $p['photo'] ?? null;
+                if ($photo && strlen($photo) > 500) {
+                    $photo = null; // Drop embedded base64 blobs
+                }
                 $products[] = [
                     'id'                   => (int)$p['id'],
                     'short_label'          => $p['short_label'],
@@ -158,7 +173,7 @@ class ApiController extends Controller
                     'is_custom_label'      => (int)($p['is_custom_label'] ?? 0),
                     'code'                 => $p['code'],
                     'is_available'         => (int)($p['is_available'] ?? 1),
-                    'photo'                => $p['photo'] ?? null,
+                    'photo'                => $photo,
                     'updated_at'           => $p['updated_at'] ?? null,
                     'created_at'           => $p['created_at'] ?? null,
                     'packagings'           => $p['packagings']
@@ -204,7 +219,7 @@ class ApiController extends Controller
 
         // Fetch recent finance logs (last 30 days) for offline use
         $db = Database::getInstance()->getConnection();
-        $stmt = $db->prepare("SELECT * FROM finance_logs WHERE log_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) ORDER BY log_date DESC, id DESC");
+        $stmt = $db->prepare("SELECT * FROM finance_logs WHERE log_date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY) ORDER BY log_date DESC, id DESC LIMIT 500");
         $stmt->execute();
         $financeLogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -215,7 +230,6 @@ class ApiController extends Controller
 
         // Supplier-Product mappings for offline supplier-aware search
         require_once __DIR__ . '/../models/SupplierProductModel.php';
-        $spModel = new SupplierProductModel();
         $spStmt = $db->prepare("
             SELECT id, supplier_id, product_id, sales_rep_id, last_buy_price, purchase_count
             FROM supplier_products
@@ -256,18 +270,30 @@ class ApiController extends Controller
 
     public function syncProducts()
     {
-        $model = new ProductModel();
-        // Fetch all active products (up to a large limit)
-        $result = $model->getProductsWithPrices(1, 999999, '', null);
-        
+        // PERF FIX: Give enough time/memory for large product datasets
+        @set_time_limit(90);
+        @ini_set('memory_limit', '256M');
+
         $forPos = isset($_GET['pos']) && $_GET['pos'] == 1;
-        
+        // PERF FIX: 999999 was loading EVERYTHING into PHP memory.
+        // Cap at 5000 — sufficient for any single-store setup.
+        $productLimit = 5000;
+
+        $model = new ProductModel();
+        $result = $model->getProductsWithPrices(1, $productLimit, '', null);
+
         // Return only what is needed for OfflineDB to keep payload small
         $products = [];
         foreach ($result['data'] as $p) {
             $isAvail = (int)($p['is_available'] ?? 1);
             if ($forPos && $isAvail !== 1) {
                 continue;
+            }
+            // Strip base64-encoded photos — they bloat the payload enormously.
+            // The POS search catalog does not need photos in the sync response.
+            $photo = $p['photo'] ?? null;
+            if ($photo && strlen($photo) > 500) {
+                $photo = null;
             }
             $products[] = [
                 'id'                    => (int)$p['id'],
@@ -286,13 +312,13 @@ class ApiController extends Controller
                 'is_custom_label'       => (int)($p['is_custom_label'] ?? 0),
                 'code'                  => $p['code'],
                 'is_available'          => $isAvail,
-                'photo'                 => $p['photo'] ?? null,
+                'photo'                 => $photo,
                 'updated_at'            => $p['updated_at'] ?? null,
                 'created_at'            => $p['created_at'] ?? null,
                 'packagings'            => $p['packagings']
             ];
         }
-        
+
         $this->json([
             'success' => true,
             'products' => $products,
@@ -583,20 +609,28 @@ class ApiController extends Controller
                 $results = [];
             }
             
-            // Add stock info to each result
+            // PERF FIX: Batch-load stock quantities in ONE query instead of
+            // firing a separate "SELECT stock WHERE product_id = ?" for each
+            // result (classic N+1 problem: 15 results → 15 extra queries).
             if (count($results) > 0) {
                 $db = Database::getInstance()->getConnection();
-                foreach ($results as &$r) {
-                    try {
-                        $stmt = $db->prepare("SELECT current_qty_base FROM stock WHERE product_id = :id LIMIT 1");
-                        $stmt->execute([':id' => $r['id']]);
-                        $r['current_qty_base'] = (int)($stmt->fetchColumn() ?: 0);
-                    } catch (Exception $e) {
-                        // If stock lookup fails, default to 0
-                        $r['current_qty_base'] = 0;
+                $ids = array_map('intval', array_column($results, 'id'));
+                $in  = implode(',', $ids);
+                try {
+                    $stockStmt = $db->query("SELECT product_id, current_qty_base FROM stock WHERE product_id IN ($in)");
+                    $stockMap  = [];
+                    foreach ($stockStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                        $stockMap[(int)$row['product_id']] = (int)$row['current_qty_base'];
                     }
+                    foreach ($results as &$r) {
+                        $r['current_qty_base'] = $stockMap[(int)$r['id']] ?? 0;
+                    }
+                    unset($r);
+                } catch (Exception $e) {
+                    // If stock lookup fails, default to 0 for all
+                    foreach ($results as &$r) { $r['current_qty_base'] = 0; }
+                    unset($r);
                 }
-                unset($r); // Break reference
             }
             
             // Add packagings so POS can read tier pricing (qty_prices)

@@ -659,25 +659,43 @@ if ($userLevel === 'staff') {
     <script>
     const APP_VERSION = '16.01'; // Update this to force client reloads
 
-
-    
     // Self-healing cache buster
-    if (localStorage.getItem('app_version') !== APP_VERSION) {
-        console.log('New version detected! Clearing caches...');
-        if ('caches' in window) {
-            caches.keys().then(names => {
-                for (let name of names) caches.delete(name);
-            });
+    // PERF FIX: Added sessionStorage guard to prevent infinite reload loop.
+    // Previously: async cache.delete() + SW unregister could fail silently
+    // but still trigger reload, causing a reload→mismatch→reload loop.
+    // Now: we mark the session as "already reloaded for this version" using
+    // sessionStorage so the reload only fires ONCE per browser tab.
+    (function() {
+        const storedVersion = localStorage.getItem('app_version');
+        const reloadedForVersion = sessionStorage.getItem('reloaded_for_version');
+        if (storedVersion !== APP_VERSION && reloadedForVersion !== APP_VERSION) {
+            console.log('[AlfarezMart] New version detected (' + APP_VERSION + ')! Clearing caches...');
+            // Save version FIRST before async operations to avoid re-entry
+            localStorage.setItem('app_version', APP_VERSION);
+            sessionStorage.setItem('reloaded_for_version', APP_VERSION);
+
+            const doReload = function() {
+                window.location.reload(true);
+            };
+
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    return Promise.all(names.map(function(n) { return caches.delete(n); }));
+                }).then(function() {
+                    if (navigator.serviceWorker) {
+                        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                            return Promise.all(registrations.map(function(r) { return r.unregister(); }));
+                        }).then(doReload).catch(doReload);
+                    } else {
+                        doReload();
+                    }
+                }).catch(doReload);
+            } else {
+                doReload();
+            }
+            return; // Stop here — page is about to reload
         }
-        localStorage.setItem('app_version', APP_VERSION);
-        if (navigator.serviceWorker) {
-            navigator.serviceWorker.getRegistrations().then(registrations => {
-                for (let registration of registrations) registration.unregister();
-            });
-        }
-        // Force reload from server
-        setTimeout(() => window.location.reload(true), 500);
-    }
+    })();
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('<?= BASE_URL ?>sw.js?v=' + APP_VERSION, { updateViaCache: 'none' })

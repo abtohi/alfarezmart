@@ -209,9 +209,9 @@ $router = new Router();
 
 // Load routes
 $routesPath = APP_PATH . '/config/Routes.php';
-if (function_exists('opcache_invalidate')) {
-    opcache_invalidate($routesPath, true);
-}
+// PERF FIX: Removed per-request opcache_invalidate for Routes.php.
+// Routes rarely change; invalidating OPcache every request defeats caching.
+// If you update routes, restart Apache or clear OPcache once manually.
 require_once $routesPath;
 
 // Release session lock for GET API requests to prevent hanging/timeouts

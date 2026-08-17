@@ -66,17 +66,23 @@ class Database
 
         $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
         $options = [
-            PDO::ATTR_PERSISTENT         => true, // Menggunakan connection pooling agar tidak membuat ratusan koneksi baru per jam
+            // PERF FIX: Persistent connections to a REMOTE MySQL host (Hostinger)
+            // from a local XAMPP server are harmful — stale connections can hang
+            // and trigger unnecessary fallback-to-SQLite on every request.
+            // Non-persistent connections are far more stable for remote hosts.
+            PDO::ATTR_PERSISTENT         => false,
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
-            PDO::ATTR_TIMEOUT            => 3,
+            // Raised from 3s → 5s: 3s is too aggressive for remote connections
+            // on slower mobile/home networks causing false offline fallback.
+            PDO::ATTR_TIMEOUT            => 5,
+            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone='+07:00'",
         ];
 
         $this->pdo = new PDO($dsn, $user, $pass, $options);
-        $this->pdo->exec("SET time_zone = '+07:00'");
-
     }
+
 
     private function connectSQLite(): void
     {
