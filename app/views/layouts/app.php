@@ -347,6 +347,9 @@ if ($userLevel === 'staff') {
     </script>
 </head>
 <body>
+    <!-- Accessibility: Skip to Main Content for Screen Readers & Keyboard Navigation -->
+    <a href="#appContent" class="skip-to-content">Lewati ke Konten Utama</a>
+
 <?php $__globalCsrf = (new Security())->getCSRFToken(); ?>
 <input type="hidden" id="csrfToken" value="<?= $__globalCsrf ?>">
 
