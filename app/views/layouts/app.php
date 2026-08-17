@@ -49,7 +49,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=24.00'; ?>
+    <?php $v = '?v=25.00'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -58,7 +58,7 @@ if ($userLevel === 'staff') {
     <!-- Desktop/Mobile Sidebar Responsive Protection (Bypasses Stale CSS Caches) -->
     <style>
         @media (max-width: 1023px) {
-            .desktop-sidebar, .sidebar-collapse-btn, .desktop-scanner-hint { display: none !important; }
+            .desktop-sidebar, .sidebar-collapse-btn, .desktop-scanner-hint, .header-search-bar, .header-user-pill { display: none !important; }
         }
         @media (min-width: 1024px) {
             .desktop-sidebar {
@@ -127,6 +127,78 @@ if ($userLevel === 'staff') {
             [data-theme="light"] .header-ai-btn i,
             html[data-theme="light"] .header-ai-btn i {
                 color: #4f46e5 !important;
+            }
+            .header-search-bar {
+                display: flex !important;
+                align-items: center;
+                gap: 10px;
+                background: var(--surface-2);
+                border: 1px solid var(--border-color);
+                border-radius: 20px;
+                padding: 6px 14px;
+                min-width: 260px;
+                max-width: 360px;
+                cursor: pointer;
+                color: var(--text-muted);
+                font-size: 0.82rem;
+                transition: all 0.2s ease;
+            }
+            .header-search-bar:hover {
+                border-color: var(--primary);
+                background: var(--surface-1);
+            }
+            .header-search-bar kbd {
+                background: var(--surface-1);
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                font-size: 10px;
+                padding: 1px 5px;
+                color: var(--text-muted);
+                margin-left: auto;
+            }
+            .header-user-pill {
+                display: flex !important;
+                align-items: center;
+                gap: 8px;
+                padding: 4px 10px 4px 4px;
+                border-radius: 20px;
+                background: var(--surface-2);
+                border: 1px solid var(--border-color);
+                margin-left: 6px;
+            }
+            .header-user-avatar {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #6366f1, #4f46e5);
+                color: #ffffff;
+                font-weight: 800;
+                font-size: 11px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 6px rgba(99,102,241,0.3);
+                flex-shrink: 0;
+            }
+            .header-user-info {
+                display: flex;
+                flex-direction: column;
+                line-height: 1.1;
+                text-align: left;
+            }
+            .header-user-name {
+                font-size: 11px;
+                font-weight: 700;
+                color: var(--text-primary);
+                white-space: nowrap;
+                max-width: 110px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .header-user-role {
+                font-size: 9px;
+                color: var(--text-muted);
+                text-transform: capitalize;
             }
             .app-content {
                 margin-left: var(--sidebar-width, 260px) !important;
@@ -543,12 +615,20 @@ if ($userLevel === 'staff') {
 
     <!-- App Header -->
     <header class="app-header" id="appHeader">
-        <div class="header-content">
-            <div class="header-left">
+        <div class="header-content d-flex align-items-center justify-content-between">
+            <div class="header-left d-flex align-items-center gap-2">
                 <img src="<?= BASE_URL ?>public/images/Icon.png" alt="AlfarezMart" class="header-logo" width="48" height="48">
-                <h1 class="header-title"><?= htmlspecialchars($title ?? 'AlfarezMart') ?></h1>
+                <h1 class="header-title mb-0"><?= htmlspecialchars($title ?? 'AlfarezMart') ?></h1>
             </div>
-            <div class="header-right">
+
+            <!-- Desktop Search Bar -->
+            <div class="header-search-bar" onclick="document.getElementById('searchOverlay') && (document.getElementById('searchOverlay').classList.add('active'), document.getElementById('globalSearch').focus())" title="Tekan F2 untuk Cari Cepat">
+                <i class="bi bi-search"></i>
+                <span class="header-search-text">Cari produk, brand, barcode...</span>
+                <kbd>F2</kbd>
+            </div>
+
+            <div class="header-right d-flex align-items-center gap-1 gap-md-2">
                 <a href="<?= BASE_URL ?>chat" class="header-ai-btn" title="AlfarezMart AI Assistant">
                     <i class="bi bi-stars"></i>
                     <span class="header-ai-text">Tanya AI</span>
@@ -570,9 +650,13 @@ if ($userLevel === 'staff') {
                     <i class="bi bi-tools"></i>
                 </button>
                 <?php if (isset($currentUser)): ?>
-                <div class="header-user" style="display:flex;align-items:center;gap:6px;margin-left:4px;">
-                    <div style="width:28px;height:28px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--primary);border:1px solid var(--primary);">
+                <div class="header-user-pill">
+                    <div class="header-user-avatar">
                         <?= strtoupper(substr($currentUser['name'] ?? 'U', 0, 1)) ?>
+                    </div>
+                    <div class="header-user-info">
+                        <span class="header-user-name"><?= htmlspecialchars($currentUser['name'] ?? '') ?></span>
+                        <span class="header-user-role"><?= ucfirst($currentUser['level'] ?? 'user') ?></span>
                     </div>
                 </div>
                 <?php endif; ?>
@@ -693,7 +777,7 @@ if ($userLevel === 'staff') {
     <!-- App JS -->
     <script>
         const BASE_URL = '<?= BASE_URL ?>';
-        const version = '24.00';
+        const version = '25.00';
         window.IS_DB_OFFLINE = <?= (class_exists('Database') && Database::getInstance()->isOffline()) ? 'true' : 'false' ?>;
     </script>
     <script src="<?= BASE_URL ?>public/js/utils.js<?= $v ?>"></script>
@@ -763,7 +847,7 @@ if ($userLevel === 'staff') {
 
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '24.00'; // Update this to force client reloads
+    const APP_VERSION = '25.00'; // Update this to force client reloads
 
     // Self-healing cache buster
     // PERF FIX: Added sessionStorage guard to prevent infinite reload loop.

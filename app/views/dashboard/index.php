@@ -9,6 +9,139 @@
     padding-bottom: 90px;
 }
 
+/* User Welcome & Store Status Banner */
+.dash-welcome-card {
+    background: var(--gradient-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+.dash-welcome-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+.dash-welcome-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #ffffff;
+    font-size: 1.25rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+    flex-shrink: 0;
+}
+.dash-welcome-title {
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.dash-welcome-title strong {
+    font-weight: 800;
+    color: var(--text-primary);
+}
+.dash-welcome-sub {
+    font-size: var(--font-size-xs);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+.dash-welcome-badge {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+.badge-superadmin {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.badge-admin {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.dash-welcome-live {
+    color: var(--success);
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.dash-welcome-live i {
+    font-size: 6px;
+}
+.dash-welcome-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.dash-quick-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-xs);
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+.dash-quick-btn-primary {
+    background: var(--primary);
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(230, 57, 70, 0.25);
+}
+.dash-quick-btn-primary:hover {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+}
+.dash-quick-btn-secondary {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary) !important;
+}
+.dash-quick-btn-secondary:hover {
+    border-color: var(--primary);
+    background: var(--surface-1);
+    transform: translateY(-1px);
+}
+.dash-logout-btn {
+    color: var(--danger);
+    background: var(--danger-bg);
+    border-radius: var(--radius-md);
+    padding: 7px 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+.dash-logout-btn:hover {
+    background: var(--danger);
+    color: #ffffff;
+}
+
 /* KPI Cards Responsive Grid */
 .dash-kpi-grid {
     display: grid;
@@ -25,8 +158,8 @@
     flex-direction: column;
     justify-content: space-between;
     min-height: 94px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-    transition: transform 0.2s, border-color 0.2s;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
     text-decoration: none;
     color: inherit;
     min-width: 0;
@@ -35,6 +168,7 @@
 .dash-kpi-card:hover {
     border-color: var(--primary);
     transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 .dash-kpi-header {
     display: flex;
@@ -158,63 +292,87 @@
     flex-shrink: 0;
 }
 
-/* Desktop Layout Adjustments */
-@media (min-width: 992px) {
+/* Desktop Layout Adjustments (min-width: 1024px) */
+@media (min-width: 1024px) {
     .dash-kpi-grid {
-        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(5, 1fr) !important;
+        gap: 16px !important;
+        margin-bottom: 24px !important;
     }
     .dash-kpi-card {
-        padding: 16px 18px;
-        min-height: 106px;
+        padding: 16px 18px !important;
+        min-height: 108px !important;
     }
     .dash-kpi-icon {
-        width: 38px;
-        height: 38px;
-        font-size: 1.15rem;
-        border-radius: 10px;
+        width: 38px !important;
+        height: 38px !important;
+        font-size: 1.15rem !important;
+        border-radius: 10px !important;
     }
     .dash-kpi-value {
-        font-size: 1.15rem;
-        margin-top: 6px;
+        font-size: 1.15rem !important;
+        margin-top: 6px !important;
     }
     .dash-charts-grid {
-        grid-template-columns: 1.6fr 1fr;
-        gap: 20px;
+        grid-template-columns: 1.6fr 1fr !important;
+        gap: 20px !important;
     }
     .dash-bottom-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 20px !important;
     }
     .dash-quick-grid {
-        grid-template-columns: repeat(6, 1fr);
-        gap: 12px;
+        grid-template-columns: repeat(6, 1fr) !important;
+        gap: 14px !important;
     }
     .dash-reports-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 12px;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 14px !important;
+    }
+}
+@media (min-width: 1400px) {
+    .dash-quick-grid {
+        grid-template-columns: repeat(7, 1fr) !important;
     }
 }
 </style>
 
 <div class="page-section dash-container">
-    <!-- User Profile & Welcome Banner -->
+    <!-- User Welcome & Store Status Banner -->
     <?php if (isset($currentUser)): ?>
-    <div style="background:var(--gradient-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:20px;display:flex;align-items:center;gap:16px;box-shadow:0 4px 20px rgba(0,0,0,0.12);">
-        <div style="width:52px;height:52px;border-radius:50%;background:var(--primary-bg);display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:800;color:var(--primary);border:2px solid var(--primary);flex-shrink:0;">
-            <?= strtoupper(substr($currentUser['name'] ?? 'U', 0, 1)) ?>
+    <div class="dash-welcome-card">
+        <div class="dash-welcome-left">
+            <div class="dash-welcome-avatar">
+                <?= strtoupper(substr($currentUser['name'] ?? 'U', 0, 1)) ?>
+            </div>
+            <div>
+                <div class="dash-welcome-title">
+                    Selamat Datang, <strong><?= htmlspecialchars($currentUser['name'] ?? '') ?></strong> 👋
+                </div>
+                <div class="dash-welcome-sub">
+                    <span><?= htmlspecialchars($currentUser['email'] ?? '') ?></span>
+                    <span class="dash-welcome-badge <?= $currentUser['level'] === 'superadmin' ? 'badge-superadmin' : 'badge-admin' ?>">
+                        <?= ucfirst($currentUser['level'] ?? 'user') ?>
+                    </span>
+                    <span class="dash-welcome-live"><i class="bi bi-circle-fill"></i> Toko Aktif</span>
+                </div>
+            </div>
         </div>
-        <div style="flex:1;min-width:0;">
-            <div style="font-weight:800;font-size:var(--font-size-md);color:var(--text-primary);"><?= htmlspecialchars($currentUser['name'] ?? '') ?></div>
-            <div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-top:2px;"><?= htmlspecialchars($currentUser['email'] ?? '') ?></div>
-            <span class="badge-custom <?= $currentUser['level'] === 'superadmin' ? 'badge-danger' : ($currentUser['level'] === 'admin' ? 'badge-success' : 'badge-info') ?>" style="margin-top:4px;display:inline-block;font-size:10px;">
-                <?= ucfirst($currentUser['level'] ?? 'user') ?>
-            </span>
+        <div class="dash-welcome-actions">
+            <a href="<?= BASE_URL ?>sales/pos" class="dash-quick-btn dash-quick-btn-primary">
+                <i class="bi bi-receipt"></i> Kasir POS
+            </a>
+            <a href="<?= BASE_URL ?>scanner" class="dash-quick-btn dash-quick-btn-secondary">
+                <i class="bi bi-search-heart"></i> Cek Harga
+            </a>
+            <a href="<?= BASE_URL ?>purchases/create" class="dash-quick-btn dash-quick-btn-secondary">
+                <i class="bi bi-cart-plus"></i> Barang Masuk
+            </a>
+            <a href="<?= BASE_URL ?>logout" onclick="localStorage.removeItem('alfarezmart_logged_in'); localStorage.removeItem('alfarezmart_user');" class="dash-logout-btn" title="Logout">
+                <i class="bi bi-box-arrow-right"></i>
+            </a>
         </div>
-        <a href="<?= BASE_URL ?>logout" onclick="localStorage.removeItem('alfarezmart_logged_in'); localStorage.removeItem('alfarezmart_user');" style="color:var(--danger);font-size:1.2rem;padding:8px;background:var(--danger-bg);border-radius:10px;display:flex;align-items:center;justify-content:center;" title="Logout">
-            <i class="bi bi-box-arrow-right"></i>
-        </a>
     </div>
     <?php endif; ?>
 
