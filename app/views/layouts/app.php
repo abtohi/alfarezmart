@@ -40,16 +40,18 @@ if ($userLevel === 'staff') {
     <link rel="icon" type="image/png" href="<?= BASE_URL ?>public/images/mobile_icon.png">
     <link rel="apple-touch-icon" href="<?= BASE_URL ?>public/images/mobile_icon.png">
     
-    <!-- Bootstrap 5.3 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Bootstrap 5.3 (Local) -->
+    <link href="<?= BASE_URL ?>public/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preload" href="<?= BASE_URL ?>public/css/fonts/bootstrap-icons.woff2" as="font" type="font/woff2" crossorigin>
+    <link href="<?= BASE_URL ?>public/css/bootstrap-icons.min.css" rel="stylesheet">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=25.00'; ?>
+    <?php $v = '?v=25.01'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -774,13 +776,13 @@ if ($userLevel === 'staff') {
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS (Local) -->
+    <script src="<?= BASE_URL ?>public/js/bootstrap.bundle.min.js"></script>
     
     <!-- App JS -->
     <script>
         const BASE_URL = '<?= BASE_URL ?>';
-        const version = '25.00';
+        const version = '25.01';
         window.IS_DB_OFFLINE = <?= (class_exists('Database') && Database::getInstance()->isOffline()) ? 'true' : 'false' ?>;
     </script>
     <script src="<?= BASE_URL ?>public/js/utils.js<?= $v ?>"></script>
@@ -850,7 +852,7 @@ if ($userLevel === 'staff') {
 
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '25.00'; // Update this to force client reloads
+    const APP_VERSION = '25.01'; // Update this to force client reloads
 
     // Self-healing cache buster
     // PERF FIX: Added sessionStorage guard to prevent infinite reload loop.
