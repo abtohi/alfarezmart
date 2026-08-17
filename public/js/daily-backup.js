@@ -1,20 +1,18 @@
 /**
- * AlfarezMart — Daily Auto-Backup Engine
+ * AlfarezMart — Daily Auto-Backup Engine (IndexedDB Edition)
  *
- * Menyimpan snapshot data harian ke localStorage untuk keperluan darurat offline.
- * Backup TIDAK disimpan di server/database, hanya di browser lokal.
- * Backup TIDAK akan dihapus oleh AppCleaner (kunci & petir).
+ * Menyimpan snapshot data harian ke IndexedDB untuk keperluan darurat offline.
+ * - Penyimpanan data menggunakan IndexedDB (Kapasitas Gigabytes, tidak ada limit 5MB localStorage).
+ * - Index metadata ringan (date, size, counts) disimpan untuk UI.
+ * - Backup TIDAK disimpan di server/database, hanya di browser lokal.
+ * - Backup TIDAK akan dihapus oleh AppCleaner.
  *
  * Aturan:
  *   - Backup otomatis 1x per hari saat aplikasi dibuka
- *   - Menyimpan produk, suppliers, dan categories
+ *   - Menyimpan produk, suppliers, categories, brands, units
  *   - Riwayat maksimal 14 hari (2 minggu)
  *   - Backup per hari tidak pernah di-overwrite (kecuali force=true)
  *   - Backup lebih dari 14 hari otomatis dihapus
- *
- * localStorage keys:
- *   alfarezmart_daily_backup_index     → metadata index [{date, size, counts, ts}]
- *   alfarezmart_daily_backup_YYYY-MM-DD → data snapshot per hari
  */
 
 window.DailyBackup = (function () {
@@ -23,6 +21,120 @@ window.DailyBackup = (function () {
     const PREFIX_KEY   = 'alfarezmart_daily_backup_';
     const INDEX_KEY    = 'alfarezmart_daily_backup_index';
     const MAX_DAYS     = 14;
+
+    const IDB_NAME     = 'AlfarezMartDailyBackupDB';
+    const IDB_STORE    = 'daily_snapshots';
+
+    /* ─────────────────────────────────────────────────
+       INDEXEDDB STORAGE ENGINE (Unlimited Quota)
+    ───────────────────────────────────────────────── */
+
+    function _openIDB() {
+        return new Promise((resolve, reject) => {
+            if (!('indexedDB' in window)) {
+                return reject(new Error('IndexedDB tidak didukung oleh browser ini'));
+            }
+            const req = indexedDB.open(IDB_NAME, 1);
+            req.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains(IDB_STORE)) {
+                    db.createObjectStore(IDB_STORE, { keyPath: 'date' });
+                }
+            };
+            req.onsuccess = (e) => resolve(e.target.result);
+            req.onerror = (e) => reject(e.target.error);
+        });
+    }
+
+    async function _saveToIDB(dateStr, data) {
+        try {
+            const db = await _openIDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(IDB_STORE, 'readwrite');
+                const store = tx.objectStore(IDB_STORE);
+                const req = store.put({ date: dateStr, data: data, updatedAt: Date.now() });
+                req.onsuccess = () => resolve(true);
+                req.onerror = (e) => reject(e.target.error);
+            });
+        } catch(e) {
+            console.warn('[DailyBackup] Gagal simpan ke IndexedDB:', e);
+            throw e;
+        }
+    }
+
+    async function _getFromIDB(dateStr) {
+        try {
+            const db = await _openIDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(IDB_STORE, 'readonly');
+                const store = tx.objectStore(IDB_STORE);
+                const req = store.get(dateStr);
+                req.onsuccess = () => {
+                    const record = req.result;
+                    resolve(record ? record.data : null);
+                };
+                req.onerror = (e) => reject(e.target.error);
+            });
+        } catch(e) {
+            console.warn('[DailyBackup] Gagal membaca dari IndexedDB:', e);
+            return null;
+        }
+    }
+
+    async function _removeFromIDB(dateStr) {
+        try {
+            const db = await _openIDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(IDB_STORE, 'readwrite');
+                const store = tx.objectStore(IDB_STORE);
+                const req = store.delete(dateStr);
+                req.onsuccess = () => resolve(true);
+                req.onerror = (e) => reject(e.target.error);
+            });
+        } catch(e) {}
+    }
+
+    async function _clearAllIDB() {
+        try {
+            const db = await _openIDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(IDB_STORE, 'readwrite');
+                const store = tx.objectStore(IDB_STORE);
+                const req = store.clear();
+                req.onsuccess = () => resolve(true);
+                req.onerror = (e) => reject(e.target.error);
+            });
+        } catch(e) {}
+    }
+
+    /* ─────────────────────────────────────────────────
+       CLEANUP & MIGRATE LEGACY LOCALSTORAGE
+    ───────────────────────────────────────────────── */
+    (function _cleanupLegacyLocalStorage() {
+        try {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && k.startsWith(PREFIX_KEY) && k !== INDEX_KEY) {
+                    keysToRemove.push(k);
+                }
+            }
+            keysToRemove.forEach(k => {
+                try {
+                    // Try to migrate into IDB if possible
+                    const raw = localStorage.getItem(k);
+                    if (raw) {
+                        const dateStr = k.replace(PREFIX_KEY, '');
+                        try {
+                            const parsed = JSON.parse(raw);
+                            _saveToIDB(dateStr, parsed).catch(() => {});
+                        } catch(pe) {}
+                    }
+                    localStorage.removeItem(k);
+                } catch(e) {}
+            });
+        } catch(e) {}
+    })();
 
     /* ─────────────────────────────────────────────────
        HELPERS
@@ -65,11 +177,16 @@ window.DailyBackup = (function () {
         try {
             localStorage.setItem(INDEX_KEY, JSON.stringify(index));
         } catch(e) {
-            console.warn('[DailyBackup] Failed to save index:', e);
+            console.warn('[DailyBackup] Gagal menyimpan index metadata:', e);
         }
     }
 
-    function _getBackupData(dateStr) {
+    async function _getBackupData(dateStr) {
+        // 1. Baca dari IndexedDB
+        const fromIDB = await _getFromIDB(dateStr);
+        if (fromIDB) return fromIDB;
+
+        // 2. Fallback jika masih ada di legacy localStorage
         try {
             const raw = localStorage.getItem(PREFIX_KEY + dateStr);
             return raw ? JSON.parse(raw) : null;
@@ -166,7 +283,6 @@ window.DailyBackup = (function () {
         const index = _getIndex();
         if (!index.length) return;
 
-        const today = _todayStr();
         const cutoff = new Date();
         cutoff.setDate(cutoff.getDate() - MAX_DAYS);
         const cutoffStr = cutoff.getFullYear() + '-'
@@ -175,7 +291,8 @@ window.DailyBackup = (function () {
 
         const surviving = index.filter(entry => {
             if (entry.date < cutoffStr) {
-                // Remove data for this old backup
+                // Remove data from IDB & legacy localStorage
+                _removeFromIDB(entry.date).catch(() => {});
                 try { localStorage.removeItem(PREFIX_KEY + entry.date); } catch(e) {}
                 return false;
             }
@@ -204,7 +321,6 @@ window.DailyBackup = (function () {
         const todayEntry = index.find(e => e.date === today);
 
         if (todayEntry && !force) {
-            // Already backed up today
             return { skipped: true, date: today, reason: 'already_backed_up' };
         }
 
@@ -224,7 +340,6 @@ window.DailyBackup = (function () {
         }
 
         // Optimize product snapshot size (strip photos, description, and heavy blobs)
-        // This drops JSON size from ~6MB to ~600KB so it never hits localStorage quota
         if (data.products && Array.isArray(data.products)) {
             data.products = data.products.map(p => ({
                 id: p.id,
@@ -257,44 +372,23 @@ window.DailyBackup = (function () {
             }));
         }
 
-        // Serialize and size-check
-        let serialized;
+        // Estimate size
+        let finalSize = 0;
         try {
-            serialized = JSON.stringify(data);
+            finalSize = new Blob([JSON.stringify(data)]).size;
         } catch(e) {
-            return { skipped: true, error: 'serialization_failed' };
+            finalSize = 500000;
         }
 
-        // Save to localStorage with progressive eviction if full
-        let isSaved = false;
+        // Save snapshot to IndexedDB (No quota limit)
         try {
-            localStorage.setItem(PREFIX_KEY + today, serialized);
-            isSaved = true;
-        } catch(e) {
-            // localStorage full — progressively free space by removing oldest backups
-            let oldIndex = _getIndex();
-            while (!isSaved && oldIndex.length > 0) {
-                // Sort asc to get oldest
-                oldIndex.sort((a, b) => a.date.localeCompare(b.date));
-                const oldest = oldIndex.shift();
-                try { localStorage.removeItem(PREFIX_KEY + oldest.date); } catch(er) {}
-                _saveIndex(oldIndex);
-                try {
-                    localStorage.setItem(PREFIX_KEY + today, serialized);
-                    isSaved = true;
-                } catch(retryErr) {
-                    // Still full, try removing next oldest
-                }
-            }
-
-            if (!isSaved) {
-                console.warn('[DailyBackup] localStorage penuh bahkan setelah pembersihan');
-                return { skipped: true, error: 'storage_full' };
-            }
+            await _saveToIDB(today, data);
+        } catch(idbErr) {
+            console.error('[DailyBackup] Gagal menyimpan snapshot ke IndexedDB:', idbErr);
+            return { skipped: true, error: 'idb_save_failed' };
         }
 
-        // Update index
-        const finalSize = new Blob([serialized]).size;
+        // Update lightweight index in localStorage
         const newEntry = {
             date: today,
             label: _formatDateDisplay(today),
@@ -319,6 +413,7 @@ window.DailyBackup = (function () {
         if (updatedIndex.length > MAX_DAYS) {
             const removed = updatedIndex.splice(MAX_DAYS);
             removed.forEach(e => {
+                _removeFromIDB(e.date).catch(() => {});
                 try { localStorage.removeItem(PREFIX_KEY + e.date); } catch(er) {}
             });
         }
@@ -350,7 +445,7 @@ window.DailyBackup = (function () {
     async function restoreFromBackup(dateStr) {
         if (!dateStr) throw new Error('Tanggal backup tidak valid');
 
-        const data = _getBackupData(dateStr);
+        const data = await _getBackupData(dateStr);
         if (!data) throw new Error(`Backup tanggal ${dateStr} tidak ditemukan`);
 
         if (typeof OfflineDB === 'undefined') {
@@ -462,7 +557,8 @@ window.DailyBackup = (function () {
        PUBLIC: Delete all backups (manual)
     ───────────────────────────────────────────────── */
 
-    function deleteAllBackups() {
+    async function deleteAllBackups() {
+        await _clearAllIDB();
         const index = _getIndex();
         index.forEach(entry => {
             try { localStorage.removeItem(PREFIX_KEY + entry.date); } catch(e) {}
