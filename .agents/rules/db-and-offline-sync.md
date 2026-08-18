@@ -65,12 +65,40 @@ Aplikasi memiliki mekanisme hybrid: jika MySQL Hostinger tidak dapat dijangkau (
 
 ---
 
-## 5. Ringkasan File yang Dilindungi Terkait Aturan Ini
+## 5. Aturan Integritas Antrean Sinkronisasi Offline (Offline Sync Queue & Payload Integrity)
+
+Mekanisme antrean offline (`window.OfflineDB.addPendingChange` & `syncPendingChanges()`) dirancang untuk menjaga integritas data saat user bekerja tanpa internet atau saat sinyal terputus.
+
+### ⚠️ Larangan & Kewajiban:
+1. **Pemisahan Error Jaringan Murni vs Error Validasi Server (Pencegahan False "Sinyal Lemah")**:
+   - Fungsi `api()` di `utils.js` serta blok `catch` pada form (seperti `products/create.php`, `products/edit.php`, `purchases/create.php`, dll.) **HANYA BOLEH** mengalihkan data ke antrean offline jika terjadi **kegagalan jaringan murni** (`!navigator.onLine`, `AbortError` timeout, `TypeError: Failed to fetch`).
+   - ❌ **DILARANG KERAS** menangkap respons error dari server (HTTP 4xx seperti 400 Bad Request, 422 Validasi Gagal, 404, atau 500) lalu keliru menampilkannya sebagai notifikasi *"Sinyal Lemah"* dan memasukkannya ke antrean offline.
+   - ✅ **WAJIB** menandai `err.isHttpError = true` pada respons server non-OK dan menampilkan pesan kesalahan validasi asli kepada user (`showToast(err.message, 'error')`).
+
+2. **Normalisasi Kunci Payload Form (`[]` vs Clean Keys)**:
+   - Saat mengubah `FormData` menjadi objek JSON untuk disimpan ke IndexedDB / antrean offline, **WAJIB** membersihkan akhiran tanda kurung siku array (`key.replace(/\[\]$/, '')`), sehingga `unit_id[]` menjadi `unit_id`, `buy_price[]` menjadi `buy_price`, dll.
+   - Di `app.js` pada `syncPendingChanges()`, objek payload sebelum di-`JSON.stringify()` harus selalu dinormalisasi agar semua key bersih dari `[]`.
+   - Di backend (`ApiController.php`), method mutasi data (`createProduct`, `updateProduct`, dll.) **WAJIB** mendukung parsing ganda (baik `unit_id` maupun `unit_id[]`), serta meng-cast nilai tunggal ke array: `if (!is_array($unitIds)) $unitIds = [$unitIds];`.
+
+3. **Penanganan Bentrok Barcode saat Sinkronisasi Offline**:
+   - Jika sebuah produk dibuat saat offline dengan barcode auto-generated Level 1 dan saat sinkronisasi barcode tersebut ternyata sudah dipakai di server, backend **WAJIB** men-generate barcode unik baru otomatis (`Helper::generateBarcode()`) agar sinkronisasi tidak gagal dan tidak memacetkan antrean.
+
+4. **Penanganan Data Ditolak Server (HTTP 4xx Auto-Purge)**:
+   - Pada `syncPendingChanges()`, jika server merespons dengan status permanen HTTP 4xx (misal data rusak/validasi fatal), antrean harus dicoba maksimal 2 kali. Jika tetap ditolak, item harus dibersihkan dari antrean lokal dan tampilkan pesan penolakan server agar antrean tidak macet selamanya.
+
+---
+
+## 6. Ringkasan File yang Dilindungi Terkait Aturan Ini
 
 | File | Komponen Kritis yang Dilindungi |
 |------|---------------------------------|
 | [`app/config/Database.php`](file:///c:/xampp/htdocs/AlfarezMart/app/config/Database.php) | `PDO::ATTR_PERSISTENT => true`, validasi `SELECT 1`, hybrid fallback SQLite |
 | [`sw.js`](file:///c:/xampp/htdocs/AlfarezMart/sw.js) | `STATIC_ASSETS` hanya file statis, runtime dynamic caching |
+| [`public/js/utils.js`](file:///c:/xampp/htdocs/AlfarezMart/public/js/utils.js) | `err.isHttpError`, proteksi false offline routing |
+| [`public/js/app.js`](file:///c:/xampp/htdocs/AlfarezMart/public/js/app.js) | `syncPendingChanges()`, normalisasi payload key, penanganan 4xx |
+| [`app/controllers/ApiController.php`](file:///c:/xampp/htdocs/AlfarezMart/app/controllers/ApiController.php) | Support bracketed & unbracketed JSON keys, auto barcode conflict resolution |
+| [`app/views/products/create.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/products/create.php) | Payload clean key formatting, pemisahan error server vs offline |
+| [`app/views/products/edit.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/products/edit.php) | Pemisahan error server vs offline |
 | [`app/views/products/index.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/products/index.php) | Live search non-destructive update, fallback IndexedDB |
 | [`app/views/sales/pos.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/sales/pos.php) | Instant 0ms memory search, non-destructive background fetch |
 | [`app/views/layouts/app.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/layouts/app.php) | `fixAndSyncProducts()`, proteksi data lokal jika server return 0 |
