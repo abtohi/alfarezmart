@@ -83,9 +83,11 @@ class ProductModel extends Model
                 $p_bar   = ":kw_{$idx}_bar";
                 $p_inv   = ":kw_{$idx}_inv";
                 $p_sinv  = ":kw_{$idx}_sinv";
-                $p_price = ":kw_{$idx}_price";
+                $p_price_r = ":kw_{$idx}_price_r";
+                $p_price_w = ":kw_{$idx}_price_w";
+                $p_price_b = ":kw_{$idx}_price_b";
                 
-                $whereClauses[] = "(p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR b.name LIKE $p_brand OR c.name LIKE $p_cat OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND (pp.barcode LIKE $p_bar OR CAST(ROUND(pp.sell_price_retail) AS CHAR) LIKE $p_price OR CAST(ROUND(pp.sell_price_wholesale) AS CHAR) LIKE $p_price OR CAST(ROUND(pp.buy_price) AS CHAR) LIKE $p_price)))";
+                $whereClauses[] = "(p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR b.name LIKE $p_brand OR c.name LIKE $p_cat OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND (pp.barcode LIKE $p_bar OR CAST(ROUND(pp.sell_price_retail) AS CHAR) LIKE $p_price_r OR CAST(ROUND(pp.sell_price_wholesale) AS CHAR) LIKE $p_price_w OR CAST(ROUND(pp.buy_price) AS CHAR) LIKE $p_price_b)))";
                 
                 $like = "%{$word}%";
                 $params[$p_name]  = $like;
@@ -99,7 +101,10 @@ class ProductModel extends Model
                 $params[$p_sinv]  = $like;
                 
                 $cleanNum = preg_replace('/[^\d]/', '', $word);
-                $params[$p_price] = !empty($cleanNum) ? "%{$cleanNum}%" : $like;
+                $priceVal = !empty($cleanNum) ? "%{$cleanNum}%" : $like;
+                $params[$p_price_r] = $priceVal;
+                $params[$p_price_w] = $priceVal;
+                $params[$p_price_b] = $priceVal;
             }
             $whereSql .= ' AND ' . implode(' AND ', $whereClauses);
         }
@@ -114,9 +119,13 @@ class ProductModel extends Model
             foreach ($words as $idx => $word) {
                 $cleanNum = preg_replace('/[^\d]/', '', $word);
                 if (!empty($cleanNum) && is_numeric($cleanNum)) {
-                    $pExact = ":ord_price_{$idx}";
-                    $params[$pExact] = (int)$cleanNum;
-                    $priceBoostSql .= " + (CASE WHEN EXISTS (SELECT 1 FROM product_packagings pp2 WHERE pp2.product_id = p.id AND (ROUND(pp2.sell_price_retail) = $pExact OR ROUND(pp2.sell_price_wholesale) = $pExact OR ROUND(pp2.buy_price) = $pExact)) THEN 0 ELSE 10 END)";
+                    $pR = ":ord_pr_{$idx}_r";
+                    $pW = ":ord_pr_{$idx}_w";
+                    $pB = ":ord_pr_{$idx}_b";
+                    $params[$pR] = (int)$cleanNum;
+                    $params[$pW] = (int)$cleanNum;
+                    $params[$pB] = (int)$cleanNum;
+                    $priceBoostSql .= " + (CASE WHEN EXISTS (SELECT 1 FROM product_packagings pp2 WHERE pp2.product_id = p.id AND (ROUND(pp2.sell_price_retail) = $pR OR ROUND(pp2.sell_price_wholesale) = $pW OR ROUND(pp2.buy_price) = $pB)) THEN 0 ELSE 10 END)";
                 }
             }
             
@@ -374,9 +383,11 @@ class ProductModel extends Model
                     $p_code  = ":s_{$idx}_code";
                     $p_scode = ":s_{$idx}_scode";
                     $p_sinv  = ":s_{$idx}_sinv";
-                    $p_price = ":s_{$idx}_price";
+                    $p_price_r = ":s_{$idx}_price_r";
+                    $p_price_w = ":s_{$idx}_price_w";
+                    $p_price_b = ":s_{$idx}_price_b";
                     
-                    $where .= " AND (p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR b.name LIKE $p_brand OR c.name LIKE $p_cat OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND (pp.barcode LIKE $p_bar OR CAST(ROUND(pp.sell_price_retail) AS CHAR) LIKE $p_price OR CAST(ROUND(pp.sell_price_wholesale) AS CHAR) LIKE $p_price OR CAST(ROUND(pp.buy_price) AS CHAR) LIKE $p_price)))";
+                    $where .= " AND (p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR b.name LIKE $p_brand OR c.name LIKE $p_cat OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND (pp.barcode LIKE $p_bar OR CAST(ROUND(pp.sell_price_retail) AS CHAR) LIKE $p_price_r OR CAST(ROUND(pp.sell_price_wholesale) AS CHAR) LIKE $p_price_w OR CAST(ROUND(pp.buy_price) AS CHAR) LIKE $p_price_b)))";
                     
                     $like = "%{$word}%";
                     $params[$p_name]  = $like;
@@ -390,7 +401,10 @@ class ProductModel extends Model
                     $params[$p_bar]   = $like;
                     
                     $cleanNum = preg_replace('/[^\d]/', '', $word);
-                    $params[$p_price] = !empty($cleanNum) ? "%{$cleanNum}%" : $like;
+                    $priceVal = !empty($cleanNum) ? "%{$cleanNum}%" : $like;
+                    $params[$p_price_r] = $priceVal;
+                    $params[$p_price_w] = $priceVal;
+                    $params[$p_price_b] = $priceVal;
                 }
             }
             if ($categoryId) {

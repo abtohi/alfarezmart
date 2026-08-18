@@ -76,9 +76,11 @@ class SupplierProductModel extends Model
                 $p_bar   = ":kw_{$idx}_bar";
                 $p_inv   = ":kw_{$idx}_inv";
                 $p_sinv  = ":kw_{$idx}_sinv";
-                $p_price = ":kw_{$idx}_price";
+                $p_price_r = ":kw_{$idx}_price_r";
+                $p_price_w = ":kw_{$idx}_price_w";
+                $p_price_b = ":kw_{$idx}_price_b";
                 
-                $whereClauses[] = "(p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR b.name LIKE $p_brand OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND (pp.barcode LIKE $p_bar OR CAST(ROUND(pp.sell_price_retail) AS CHAR) LIKE $p_price OR CAST(ROUND(pp.sell_price_wholesale) AS CHAR) LIKE $p_price OR CAST(ROUND(pp.buy_price) AS CHAR) LIKE $p_price)))";
+                $whereClauses[] = "(p.full_name LIKE $p_name OR p.short_label LIKE $p_label OR b.name LIKE $p_brand OR p.code LIKE $p_code OR p.supplier_product_code LIKE $p_scode OR p.invoice_name LIKE $p_inv OR p.supplier_invoice_name LIKE $p_sinv OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND (pp.barcode LIKE $p_bar OR CAST(ROUND(pp.sell_price_retail) AS CHAR) LIKE $p_price_r OR CAST(ROUND(pp.sell_price_wholesale) AS CHAR) LIKE $p_price_w OR CAST(ROUND(pp.buy_price) AS CHAR) LIKE $p_price_b)))";
                 
                 $like = "%{$word}%";
                 $params[$p_name]  = $like;
@@ -91,7 +93,10 @@ class SupplierProductModel extends Model
                 $params[$p_sinv]  = $like;
                 
                 $cleanNum = preg_replace('/[^\d]/', '', $word);
-                $params[$p_price] = !empty($cleanNum) ? "%{$cleanNum}%" : $like;
+                $priceVal = !empty($cleanNum) ? "%{$cleanNum}%" : $like;
+                $params[$p_price_r] = $priceVal;
+                $params[$p_price_w] = $priceVal;
+                $params[$p_price_b] = $priceVal;
             }
             $whereSql .= ' AND ' . implode(' AND ', $whereClauses);
         }
