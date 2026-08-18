@@ -601,7 +601,7 @@ class InvoiceScanService
             throw new \Exception('API Key AI Scanner belum diatur di Pengaturan Sistem & AI.');
         }
 
-        set_time_limit(120);
+        set_time_limit(180);
 
         // ROBUST 100% FREE VISION MODEL STRATEGY:
         // Respects model configured in Settings (Pengaturan Sistem & AI) as primary choice,
@@ -609,9 +609,8 @@ class InvoiceScanService
         $DEFAULT_VISION_MODELS = [
             'google/gemma-4-26b-a4b-it:free',
             'google/gemma-4-31b-it:free',
-            'openrouter/auto',
-            'nvidia/nemotron-nano-12b-v2-vl:free',
             'dots-studio/dots-3-note-preview:free',
+            'nvidia/nemotron-nano-12b-v2-vl:free',
         ];
 
         if (empty($model) || in_array($model, ['openrouter/auto', 'auto', 'openrouter/free'])) {
@@ -621,8 +620,8 @@ class InvoiceScanService
             $modelsToTry = array_unique(array_merge([$model], $DEFAULT_VISION_MODELS));
         }
 
-        // Try up to 4 models if needed to guarantee successful invoice extraction
-        $modelsToTry = array_slice($modelsToTry, 0, 4);
+        // Try up to 3 models if needed to guarantee successful invoice extraction
+        $modelsToTry = array_slice($modelsToTry, 0, 3);
 
         $imageBlock   = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
         $lastError    = null;
@@ -631,6 +630,7 @@ class InvoiceScanService
         $noEndpointCount  = 0;
 
         foreach ($modelsToTry as $tryModel) {
+            set_time_limit(90);
             error_log("SCAN_AI_TRACE: Attempting OpenRouter model: {$tryModel}");
             $requestCount++;
 
@@ -658,9 +658,9 @@ class InvoiceScanService
                 'X-Title: AlfarezMart Invoice Scanner',
             ]);
 
-            // 90s timeout per model: vision extraction on large invoices typically takes 20-65s
-            curl_setopt($ch, CURLOPT_TIMEOUT, 90);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+            // 50s timeout per model attempt: fast failover to next model
+            curl_setopt($ch, CURLOPT_TIMEOUT, 50);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);
