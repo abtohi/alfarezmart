@@ -9,26 +9,11 @@
  * They are cached on first request via the Cache-First fetch handler.
  * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v44.0';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v44.0';
+const CACHE_NAME = 'alfarezmart-cache-v44.1';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v44.1';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
-    // HTML navigation pages only — NOT versioned JS/CSS (those are cached on first use)
-    BASE_URL,
-    BASE_URL + 'sales',
-    BASE_URL + 'sales/pos',
-    BASE_URL + 'scanner',
-    BASE_URL + 'products',
-    BASE_URL + 'products/create',
-    BASE_URL + 'suppliers',
-    BASE_URL + 'purchases',
-    BASE_URL + 'purchases/create',
-    BASE_URL + 'debts',
-    BASE_URL + 'finance',
-    BASE_URL + 'reports',
-    BASE_URL + 'settings',
-    BASE_URL + 'ppob',
-    BASE_URL + 'chat',
+    // Static app shell assets only — dynamic PHP pages are cached at runtime upon navigation
     BASE_URL + 'manifest.json',
     BASE_URL + 'public/images/mobile_icon.png',
     BASE_URL + 'public/images/mobile_icon_192.png',

@@ -710,8 +710,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (res.ok && input.value.trim() === q) {
                         const items = await res.json();
                         if (Array.isArray(items)) {
-                            fetchedItems = items;
-                            renderResults(items, q);
+                            if (items.length > 0) {
+                                fetchedItems = items;
+                                renderResults(items, q);
+                                return;
+                            } else if (!localFound) {
+                                // Only show empty results if local search also didn't find anything
+                                fetchedItems = items;
+                                renderResults([], q);
+                                return;
+                            }
+                            // If local search found items, keep displaying local items
                             return;
                         }
                     }
@@ -724,10 +733,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (input.value.trim() === q && !fetchedItems && typeof OfflineDB !== 'undefined') {
                 try {
                     const fallback = await OfflineDB.searchProducts(q);
-                    if (input.value.trim() === q) renderResults(fallback, q);
+                    if (input.value.trim() === q && fallback && fallback.length > 0) {
+                        renderResults(fallback, q);
+                    }
                 } catch(e) {}
             }
-        }, 200);
+        }, 300);
     });
 
     input.addEventListener('keypress', e => {

@@ -23,20 +23,38 @@ class Database
 
         if ($configDriver === 'mysql') {
             // Attempt MySQL first; fall back to SQLite on any failure
-            try {
-                $this->connectMySQL();
-                $this->activeDriver = 'mysql';
-                return;
-            } catch (\Throwable $e) {
-                // MySQL unreachable (offline / server down / connection limit / high load)
-                error_log('[AlfarezMart] MySQL connection failed: ' . $e->getMessage() . '. Falling back to SQLite/Offline mode.');
+            // Retry up to 2 times to handle transient errors (e.g. stale persistent conn)
+            $lastError = null;
+            for ($attempt = 1; $attempt <= 2; $attempt++) {
                 try {
-                    $this->connectSQLite();
-                    $this->activeDriver = 'sqlite';
+                    $this->connectMySQL();
+                    // Validate connection is alive (persistent connections may be stale)
+                    $this->pdo->query('SELECT 1');
+                    $this->activeDriver = 'mysql';
                     return;
-                } catch (\Throwable $sqe) {
-                    error_log('[AlfarezMart] SQLite fallback also failed: ' . $sqe->getMessage());
+                } catch (\Throwable $e) {
+                    $lastError = $e;
+                    $msg = $e->getMessage();
+                    // If connection limit hit, no point retrying immediately
+                    if (strpos($msg, 'max_connections_per_hour') !== false ||
+                        strpos($msg, 'max_user_connections') !== false) {
+                        break;
+                    }
+                    // For stale persistent connections, retry once
+                    $this->pdo = null;
+                    if ($attempt < 2) {
+                        usleep(100000); // 100ms pause before retry
+                    }
                 }
+            }
+            // MySQL unreachable — fall back to SQLite
+            error_log('[AlfarezMart] MySQL connection failed: ' . ($lastError ? $lastError->getMessage() : 'Unknown') . '. Falling back to SQLite/Offline mode.');
+            try {
+                $this->connectSQLite();
+                $this->activeDriver = 'sqlite';
+                return;
+            } catch (\Throwable $sqe) {
+                error_log('[AlfarezMart] SQLite fallback also failed: ' . $sqe->getMessage());
             }
         }
 
@@ -66,18 +84,18 @@ class Database
 
         $dsn = "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4";
         $options = [
-            // PERF FIX: Persistent connections to a REMOTE MySQL host (Hostinger)
-            // from a local XAMPP server are harmful — stale connections can hang
-            // and trigger unnecessary fallback-to-SQLite on every request.
-            // Non-persistent connections are far more stable for remote hosts.
-            PDO::ATTR_PERSISTENT         => false,
+            // PERSISTENT CONNECTIONS: Critical for Hostinger hosting which has
+            // max_connections_per_hour=500 limit. Without persistent connections,
+            // each HTTP request opens a NEW MySQL connection, quickly exhausting
+            // the hourly limit and causing all queries to fail.
+            // With persistent=true, PHP reuses existing connections from its pool,
+            // drastically reducing the number of new connections opened per hour.
+            PDO::ATTR_PERSISTENT         => true,
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
-            // Raised from 3s → 5s: 3s is too aggressive for remote connections
-            // on slower mobile/home networks causing false offline fallback.
             PDO::ATTR_TIMEOUT            => 5,
-            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone='+07:00', SESSION wait_timeout=30, SESSION interactive_timeout=30",
+            PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone='+07:00', SESSION wait_timeout=300, SESSION interactive_timeout=300",
         ];
 
         $this->pdo = new PDO($dsn, $user, $pass, $options);
@@ -548,10 +566,13 @@ class Database
     }
 
     /**
-     * Explicitly close PDO connection upon object destruction
+     * Explicitly close PDO connection upon object destruction.
+     * For persistent connections, PHP manages the pool — we only
+     * null the reference, the underlying connection stays in the pool.
      */
     public function __destruct()
     {
+        // Let PHP handle persistent connection cleanup via its internal pool
         $this->pdo = null;
     }
 }
