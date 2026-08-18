@@ -217,20 +217,19 @@ class InvoiceScanService
             $systemPrompt = $skill->getSystemPrompt();
             $userHints = $skill->getUserPromptHints();
 
-            $userPromptSetting = trim($this->settingModel->get('ai_invoice_prompt', ''));
-            $userMessageText = $userPromptSetting ?: 'Baca gambar invoice ini dan ekstrak semua item barang ke dalam format JSON.';
+            $userMessageText = 'Ekstrak semua baris item barang/produk pada gambar faktur/nota ini ke dalam format JSON array.';
             if (!empty($userHints)) {
-                $userMessageText .= "\n\n" . $userHints;
+                $userMessageText .= "\n\nPetunjuk: " . $userHints;
             }
 
-            // DYNAMIC LEARNING: Inject learned alias context for this supplier into the AI prompt (max 20 items for low latency)
+            // DYNAMIC LEARNING: Inject learned alias context for this supplier into the AI prompt (max 15 items for fast token efficiency)
             require_once __DIR__ . '/InvoiceLearningService.php';
             $learningService = new InvoiceLearningService($this->db);
-            $learnedAliases = $learningService->getLearnedAliasesForPrompt($resolvedSupplierId, 20);
+            $learnedAliases = $learningService->getLearnedAliasesForPrompt($resolvedSupplierId, 15);
 
             $contextLines = [];
             if (!empty($learnedAliases)) {
-                $contextLines[] = "\n## MEMORI POLA PRODUK SUPPLIER (Alias nota yang sudah dipelajari):";
+                $contextLines[] = "\n## MEMORI POLA PRODUK SUPPLIER:";
                 foreach ($learnedAliases as $la) {
                     $invAliases = trim((string)($la['supplier_invoice_name'] ?? ''));
                     $code = trim((string)($la['supplier_product_code'] ?? ''));
@@ -242,8 +241,8 @@ class InvoiceScanService
                     $contextLines[] = $line;
                 }
             } elseif (!empty($supplierProducts)) {
-                $contextLines[] = "\n## REFERENSI PRODUK SUPPLIER INI (Gunakan kode/nama jika cocok):";
-                foreach (array_slice($supplierProducts, 0, 20) as $sp) {
+                $contextLines[] = "\n## REFERENSI PRODUK SUPPLIER:";
+                foreach (array_slice($supplierProducts, 0, 15) as $sp) {
                     $c = trim($sp['supplier_product_code'] ?? $sp['code'] ?? '');
                     $n = trim($sp['full_name'] ?? '');
                     if ($c || $n) {
@@ -254,7 +253,6 @@ class InvoiceScanService
             if (!empty($contextLines)) {
                 $userMessageText .= implode("\n", $contextLines);
             }
-
 
             // Make AI Vision Call
             $aiResponse = $this->callOpenRouter($systemPrompt, $userMessageText, $imageB64, $imageInfo['format'], null, null, $metrics);
@@ -603,17 +601,17 @@ class InvoiceScanService
             throw new \Exception('API Key AI Scanner belum diatur di Pengaturan Sistem & AI.');
         }
 
-        set_time_limit(60);
+        set_time_limit(120);
 
-        // ROBUST VISION MODEL STRATEGY:
+        // ROBUST 100% FREE VISION MODEL STRATEGY:
         // Respects model configured in Settings (Pengaturan Sistem & AI) as primary choice,
-        // and falls back gracefully to active OpenRouter vision models if unavailable.
+        // and falls back gracefully to active OpenRouter 100% free vision models if unavailable.
         $DEFAULT_VISION_MODELS = [
-            'google/gemini-2.0-flash-001',
-            'google/gemini-2.0-flash-lite-001',
-            'meta-llama/llama-3.2-11b-vision-instruct:free',
-            'qwen/qwen-2.5-vl-72b-instruct:free',
+            'google/gemma-4-26b-a4b-it:free',
+            'google/gemma-4-31b-it:free',
             'openrouter/auto',
+            'nvidia/nemotron-nano-12b-v2-vl:free',
+            'dots-studio/dots-3-note-preview:free',
         ];
 
         if (empty($model) || in_array($model, ['openrouter/auto', 'auto', 'openrouter/free'])) {
@@ -623,8 +621,8 @@ class InvoiceScanService
             $modelsToTry = array_unique(array_merge([$model], $DEFAULT_VISION_MODELS));
         }
 
-        // Limit to max 3 attempts to keep overall latency responsive
-        $modelsToTry = array_slice($modelsToTry, 0, 3);
+        // Try up to 4 models if needed to guarantee successful invoice extraction
+        $modelsToTry = array_slice($modelsToTry, 0, 4);
 
         $imageBlock   = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
         $lastError    = null;
@@ -646,7 +644,7 @@ class InvoiceScanService
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => 3000,
+                'max_tokens'  => 2000,
             ];
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
@@ -660,9 +658,9 @@ class InvoiceScanService
                 'X-Title: AlfarezMart Invoice Scanner',
             ]);
 
-            // 15s timeout per model: ensures total turnaround < 30s
-            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+            // 90s timeout per model: vision extraction on large invoices typically takes 20-65s
+            curl_setopt($ch, CURLOPT_TIMEOUT, 90);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);

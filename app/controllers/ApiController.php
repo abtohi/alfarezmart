@@ -3899,7 +3899,7 @@ class ApiController extends Controller
     public function scanInvoiceAI()
     {
         $this->validateCSRF();
-        set_time_limit(120); // Prevent timeout for long AI requests
+        set_time_limit(180); // Prevent timeout for long AI requests
         
         // Custom shutdown handler to catch silent crashes (OOM, Timeouts)
         register_shutdown_function(function() {

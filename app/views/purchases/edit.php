@@ -329,8 +329,8 @@ function savePhotoPreview() {
     showToast('Foto berhasil disiapkan', 'success');
 }
 
-// Helper to safely optimize any high-res image down to perfect OCR dimensions (< 500KB)
-async function compressImageForAI(dataUrl, maxDimension = 1800, quality = 0.85) {
+// Helper to safely optimize any high-res image down to perfect OCR dimensions (< 400KB)
+async function compressImageForAI(dataUrl, maxDimension = 1500, quality = 0.82) {
     if (!dataUrl || !dataUrl.startsWith('data:image')) return dataUrl;
     return new Promise((resolve) => {
         const img = new Image();
