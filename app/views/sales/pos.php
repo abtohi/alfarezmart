@@ -1439,18 +1439,31 @@ function renderCart() {
     autoSaveCart();
 }
 
-// Auto-save cart to prevent data loss
+// Auto-save cart & selected customer to prevent data loss across page navigation
 function autoSaveCart() {
     try {
-        localStorage.setItem('pos_autosave', JSON.stringify({ cart, saleMode, mixDefaultPrice, ts: Date.now() }));
+        localStorage.setItem('pos_autosave', JSON.stringify({ 
+            cart, 
+            saleMode, 
+            mixDefaultPrice, 
+            customer: selectedCustomer, 
+            ts: Date.now() 
+        }));
     } catch(e) {}
 }
+
 function autoRestoreCart() {
     try {
         const saved = JSON.parse(localStorage.getItem('pos_autosave') || 'null');
-        if (saved && saved.cart && saved.cart.length > 0) {
-            // Only restore if saved within last 12 hours
-            if (Date.now() - saved.ts < 12 * 60 * 60 * 1000) {
+        if (saved && saved.ts && Date.now() - saved.ts < 12 * 60 * 60 * 1000) {
+            // 1. Restore selected customer
+            if (saved.customer && (saved.customer.id || saved.customer.name)) {
+                selectedCustomer = saved.customer;
+                if (typeof updateCustomerUI === 'function') updateCustomerUI();
+            }
+
+            // 2. Restore cart items & modes
+            if (saved.cart && saved.cart.length > 0) {
                 cart = saved.cart;
                 if (saved.mixDefaultPrice) mixDefaultPrice = saved.mixDefaultPrice;
                 if (saved.saleMode) setSaleMode(saved.saleMode);
@@ -1460,19 +1473,20 @@ function autoRestoreCart() {
         }
     } catch(e) {}
 }
+
 function clearAutoSave() {
     try { localStorage.removeItem('pos_autosave'); } catch(e) {}
 }
 
 window.clearCartConfirm = async function() {
-    if (cart.length === 0) {
+    if (cart.length === 0 && !selectedCustomer) {
         showToast('Keranjang sudah kosong', 'info');
         return;
     }
     const confirmed = await AppModal.show({
         title: 'Kosongkan Keranjang?',
         subtitle: 'Hapus Semua Produk',
-        bodyHTML: '<div style="text-align:center; padding:10px 0;"><i class="bi bi-trash3" style="font-size:3rem; color:var(--danger); display:block; margin-bottom:12px;"></i><p style="font-size:14px; margin-bottom:8px;">Anda yakin ingin menghapus semua produk dari keranjang?</p><p style="font-size:13px; color:var(--text-muted);">Tindakan ini tidak dapat dibatalkan.</p></div>',
+        bodyHTML: '<div style="text-align:center; padding:10px 0;"><i class="bi bi-trash3" style="font-size:3rem; color:var(--danger); display:block; margin-bottom:12px;"></i><p style="font-size:14px; margin-bottom:8px;">Anda yakin ingin menghapus semua produk dari keranjang dan mereset pilihan pelanggan?</p><p style="font-size:13px; color:var(--text-muted);">Tindakan ini tidak dapat dibatalkan.</p></div>',
         icon: 'bi-trash3',
         iconColor: 'var(--danger-bg)',
         iconAccent: 'var(--danger)',
@@ -1484,6 +1498,7 @@ window.clearCartConfirm = async function() {
         cart = [];
         currentDraftId = null;
         if (editSaleId) editSaleId = null;
+        clearCustomer();
         clearAutoSave();
         renderCart();
         
@@ -1530,6 +1545,7 @@ function saveDraft() {
                 name: draftName || `Draft ${new Date().toLocaleTimeString('id-ID')}`,
                 date: new Date().toISOString(),
                 saleMode,
+                customer: selectedCustomer ? { ...selectedCustomer } : null,
                 total: calculateTotal(),
                 cart: [...cart]
             };
@@ -1541,6 +1557,7 @@ function saveDraft() {
             showToast('Draft berhasil disimpan', 'success');
             cart = [];
             currentDraftId = null;
+            clearCustomer();
             clearAutoSave();
             renderCart();
             return true;
@@ -1564,6 +1581,7 @@ function openDrafts() {
 
     const listHtml = drafts.map(d => {
         const total = d.total || d.cart.reduce((s, i) => s + (i.total || 0), 0);
+        const custName = d.customer ? (d.customer.name || 'Pelanggan') : null;
         return `
         <div style="background:var(--surface-2);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;border:1px solid var(--border-color);transition:all 0.2s;">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
@@ -1572,6 +1590,7 @@ function openDrafts() {
                     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                         <span style="font-size:var(--font-size-xs);color:var(--text-muted);"><i class="bi bi-clock"></i> ${new Date(d.date).toLocaleString('id-ID', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</span>
                         <span style="display:inline-flex;align-items:center;gap:3px;background:${d.saleMode === 'retail' ? 'var(--info-bg)' : 'var(--warning-bg)'};color:${d.saleMode === 'retail' ? 'var(--info)' : 'var(--warning)'};padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;">${d.saleMode === 'retail' ? 'Ecer' : 'Grosir'}</span>
+                        ${custName ? `<span style="display:inline-flex;align-items:center;gap:3px;background:var(--primary-bg);color:var(--primary);padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;"><i class="bi bi-person"></i> ${escapeHtml(custName)}</span>` : ''}
                     </div>
                 </div>
                 <div style="text-align:right;">
@@ -1621,6 +1640,11 @@ window.loadDraft = async function(id) {
     }));
     setSaleMode(d.saleMode);
     currentDraftId = d.id;
+    if (d.customer && (d.customer.id || d.customer.name)) {
+        selectCustomer(d.customer);
+    } else {
+        clearCustomer();
+    }
     cart.forEach(it => recalcItemPrice(it));
     renderCart();
     AppModal.close();
@@ -1770,6 +1794,7 @@ async function proceedCheckout() {
 
             cart = [];
             currentDraftId = null;
+            clearCustomer();
             clearAutoSave();
             renderCart();
             btnCheckout.innerHTML = 'BAYAR SEKARANG';
@@ -3277,11 +3302,13 @@ function selectCustomer(customer) {
     }
     updateCustomerUI();
     closeCustomerDropdown();
+    if (typeof autoSaveCart === 'function') autoSaveCart();
 }
 
 function clearCustomer() {
     selectedCustomer = null;
     updateCustomerUI();
+    if (typeof autoSaveCart === 'function') autoSaveCart();
 }
 
 function updateCustomerUI() {
