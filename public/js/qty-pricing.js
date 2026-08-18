@@ -38,6 +38,49 @@ const QtyPricing = {
         return this.getBaseUnitPrice(pkg, saleMode);
     },
 
+    /**
+     * Recursively apply tiered pricing:
+     * - Find the best (highest) tier for the current qty
+     * - Apply that tier price to floor(qty / min_qty) * min_qty items
+     * - Recurse on the remainder with lower tiers, or use base price
+     */
+    _applyTieredPricing(pkg, saleMode, qty, basePrice, result) {
+        if (qty <= 0) return;
+
+        const tier = this.getActiveTier(pkg, saleMode, qty);
+        if (!tier) {
+            // No tier applies: charge remainder at base price
+            const total = Math.round(basePrice * qty);
+            result.total += total;
+            result.breakdown.push({
+                note: `${qty} ${pkg.unit_name || 'Unit'} (@${basePrice.toLocaleString('id-ID')})`,
+                price: total
+            });
+            return;
+        }
+
+        const tierMinQty = parseFloat(tier.min_qty) || 0;
+        const tierUnitPrice = parseFloat(tier.unit_price) || 0;
+
+        // How many full tier bundles fit
+        const tierBundles = Math.floor(qty / tierMinQty);
+        const tierQty = tierBundles * tierMinQty;
+        const remainderQty = qty - tierQty;
+
+        // Apply tier price to the bundled quantity
+        const tierTotal = Math.round(tierUnitPrice * tierQty);
+        result.total += tierTotal;
+        result.breakdown.push({
+            note: `${tierQty} ${pkg.unit_name || 'Unit'} (Tier ${tierMinQty}+ @${tierUnitPrice.toLocaleString('id-ID')})`,
+            price: tierTotal
+        });
+
+        // Recursively price the remainder
+        if (remainderQty > 0) {
+            this._applyTieredPricing(pkg, saleMode, remainderQty, basePrice, result);
+        }
+    },
+
     getPricingBreakdown(pkg, saleMode, quantity, useCustom, customLineTotal, allPackagings = null) {
         let result = { total: 0, breakdown: [] };
         if (useCustom) {
@@ -51,15 +94,12 @@ const QtyPricing = {
         if (qty <= 0) return result;
 
         // 1. Check for active tier pricing specific to this packaging level
+        //    Tier price applies only to the max multiple of min_qty that fits.
+        //    Remainder is recursively priced through lower tiers or base price.
         const activeTier = this.getActiveTier(pkg, saleMode, qty);
         if (activeTier) {
-            const tierUnitPrice = parseFloat(activeTier.unit_price) || 0;
-            const lineTotal = Math.round(tierUnitPrice * qty);
-            result.total = lineTotal;
-            result.breakdown.push({
-                note: `${qty} ${pkg.unit_name || 'Unit'} (Tier ${activeTier.min_qty}+ @${tierUnitPrice.toLocaleString('id-ID')})`,
-                price: lineTotal
-            });
+            const basePrice = this.getBaseUnitPrice(pkg, saleMode);
+            this._applyTieredPricing(pkg, saleMode, qty, basePrice, result);
             return result;
         }
 
