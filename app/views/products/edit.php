@@ -1962,8 +1962,15 @@ async function submitProduct(e) {
         setTimeout(() => window.location.href = `${BASE_URL}products`, 1000);
 
     } catch (err) {
+        if (err.isHttpError) {
+            showToast('Gagal mengupdate produk: ' + (err.message || 'Ditolak server'), 'error');
+            btn.innerHTML = prevText;
+            btn.disabled = false;
+            return;
+        }
+
         // Network error / timeout on weak signal
-        console.warn('API edit produk gagal, menyimpan ke antrian offline:', err);
+        console.warn('API edit produk gagal karena kendala jaringan, menyimpan ke antrian offline:', err);
         if (typeof OfflineDB !== 'undefined') {
             try {
                 await queueOfflineProductChanges();

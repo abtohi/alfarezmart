@@ -1151,7 +1151,8 @@ class ApiController extends Controller
             ];
 
             $packagings = [];
-            $unitIds = $_POST['unit_id'] ?? ($jsonBody['unit_id'] ?? []);
+            $unitIds = $_POST['unit_id'] ?? ($jsonBody['unit_id'] ?? ($_POST['unit_id[]'] ?? ($jsonBody['unit_id[]'] ?? [])));
+            if (!is_array($unitIds) && !empty($unitIds)) $unitIds = [$unitIds];
             
             // Support direct 'packagings' array format if sent from offline sync
             if (empty($unitIds) && !empty($jsonBody['packagings']) && is_array($jsonBody['packagings'])) {
@@ -1191,15 +1192,24 @@ class ApiController extends Controller
                     throw new Exception("Minimal harus ada 1 satuan terkecil.");
                 }
 
-                $containedQties = $_POST['contained_qty'] ?? ($jsonBody['contained_qty'] ?? []);
-                $buyPrices      = $_POST['buy_price'] ?? ($jsonBody['buy_price'] ?? []);
-                $retailPrices   = $_POST['sell_price_retail'] ?? ($jsonBody['sell_price_retail'] ?? []);
-                $wholesalePrices= $_POST['sell_price_wholesale'] ?? ($jsonBody['sell_price_wholesale'] ?? []);
-                $barcodes       = $_POST['barcode'] ?? ($jsonBody['barcode'] ?? []);
-                $ppnPcts        = $_POST['ppn_pct'] ?? ($jsonBody['ppn_pct'] ?? []);
-                $discountModes  = $_POST['discount_mode'] ?? ($jsonBody['discount_mode'] ?? []);
-                $discountValues = $_POST['discount_value'] ?? ($jsonBody['discount_value'] ?? []);
-                $qtyPricesJsons = $_POST['qty_prices_json'] ?? ($jsonBody['qty_prices_json'] ?? []);
+                $containedQties = $_POST['contained_qty'] ?? ($jsonBody['contained_qty'] ?? ($_POST['contained_qty[]'] ?? ($jsonBody['contained_qty[]'] ?? [])));
+                if (!is_array($containedQties)) $containedQties = [$containedQties];
+                $buyPrices      = $_POST['buy_price'] ?? ($jsonBody['buy_price'] ?? ($_POST['buy_price[]'] ?? ($jsonBody['buy_price[]'] ?? [])));
+                if (!is_array($buyPrices)) $buyPrices = [$buyPrices];
+                $retailPrices   = $_POST['sell_price_retail'] ?? ($jsonBody['sell_price_retail'] ?? ($_POST['sell_price_retail[]'] ?? ($jsonBody['sell_price_retail[]'] ?? [])));
+                if (!is_array($retailPrices)) $retailPrices = [$retailPrices];
+                $wholesalePrices= $_POST['sell_price_wholesale'] ?? ($jsonBody['sell_price_wholesale'] ?? ($_POST['sell_price_wholesale[]'] ?? ($jsonBody['sell_price_wholesale[]'] ?? [])));
+                if (!is_array($wholesalePrices)) $wholesalePrices = [$wholesalePrices];
+                $barcodes       = $_POST['barcode'] ?? ($jsonBody['barcode'] ?? ($_POST['barcode[]'] ?? ($jsonBody['barcode[]'] ?? [])));
+                if (!is_array($barcodes)) $barcodes = [$barcodes];
+                $ppnPcts        = $_POST['ppn_pct'] ?? ($jsonBody['ppn_pct'] ?? ($_POST['ppn_pct[]'] ?? ($jsonBody['ppn_pct[]'] ?? [])));
+                if (!is_array($ppnPcts)) $ppnPcts = [$ppnPcts];
+                $discountModes  = $_POST['discount_mode'] ?? ($jsonBody['discount_mode'] ?? ($_POST['discount_mode[]'] ?? ($jsonBody['discount_mode[]'] ?? [])));
+                if (!is_array($discountModes)) $discountModes = [$discountModes];
+                $discountValues = $_POST['discount_value'] ?? ($jsonBody['discount_value'] ?? ($_POST['discount_value[]'] ?? ($jsonBody['discount_value[]'] ?? [])));
+                if (!is_array($discountValues)) $discountValues = [$discountValues];
+                $qtyPricesJsons = $_POST['qty_prices_json'] ?? ($jsonBody['qty_prices_json'] ?? ($_POST['qty_prices_json[]'] ?? ($jsonBody['qty_prices_json[]'] ?? [])));
+                if (!is_array($qtyPricesJsons)) $qtyPricesJsons = [$qtyPricesJsons];
 
                 foreach ($unitIds as $i => $unitId) {
                     if (empty($unitId)) continue;
@@ -1215,7 +1225,11 @@ class ApiController extends Controller
                         $barcode = Helper::generateBarcode();
                     }
                     if (!empty($barcode) && Helper::barcodeExists($barcode)) {
-                        throw new Exception("Barcode \"{$barcode}\" sudah digunakan produk lain.");
+                        if ($level == 1) {
+                            $barcode = Helper::generateBarcode();
+                        } else {
+                            throw new Exception("Barcode \"{$barcode}\" sudah digunakan produk lain.");
+                        }
                     }
 
                     // Terapkan PPN & Diskon langsung ke harga modal

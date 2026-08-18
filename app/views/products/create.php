@@ -1282,11 +1282,12 @@ async function submitProduct(e) {
         // ── Build local product snapshot for IndexedDB ──────────────────────
         const payload = {};
         updatedData.forEach((value, key) => {
-            if (payload[key]) {
-                if (!Array.isArray(payload[key])) payload[key] = [payload[key]];
-                payload[key].push(value);
+            const cleanKey = key.replace(/\[\]$/, '');
+            if (payload[cleanKey]) {
+                if (!Array.isArray(payload[cleanKey])) payload[cleanKey] = [payload[cleanKey]];
+                payload[cleanKey].push(value);
             } else {
-                payload[key] = value;
+                payload[cleanKey] = value;
             }
         });
 
@@ -1372,8 +1373,16 @@ async function submitProduct(e) {
                 btn.disabled = false;
             }
         } catch (err) {
-            // Network error / timeout while navigator.onLine was true (weak signal)
-            console.warn('API gagal, menyimpan ke antrian offline:', err);
+            if (err.isHttpError) {
+                // Server responded with an actual error response (validation/duplicate/etc.)
+                showToast('Gagal menyimpan produk: ' + (err.message || 'Ditolak server'), 'error');
+                btn.innerHTML = prevText;
+                btn.disabled = false;
+                return;
+            }
+
+            // True network error / timeout while navigator.onLine was true (weak signal)
+            console.warn('API gagal karena kendala jaringan, menyimpan ke antrian offline:', err);
             if (savedLocally && typeof OfflineDB !== 'undefined') {
                 try {
                     await OfflineDB.addPendingChange(`${BASE_URL}api/products`, 'POST', payload);

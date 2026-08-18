@@ -493,6 +493,14 @@ async function syncPendingChanges() {
                 // Siapkan payload dan perbarui CSRF token ke token yang masih segar
                 let payload = change.payload;
                 if (payload && typeof payload === 'object') {
+                    // Normalisasi key (buang akhiran [] dari form serialize agar sesuai controller)
+                    const normalizedPayload = {};
+                    for (const [k, v] of Object.entries(payload)) {
+                        const cleanK = k.replace(/\[\]$/, '');
+                        normalizedPayload[cleanK] = v;
+                    }
+                    payload = normalizedPayload;
+
                     if (activeCsrf) {
                         payload.csrf_token = activeCsrf;
                     }
