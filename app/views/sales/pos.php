@@ -946,10 +946,39 @@ async function performSearch(q) {
                 const brandMatch = p.brand_name && p.brand_name.toLowerCase().includes(word);
                 const codeMatch = p.code && p.code.toLowerCase().includes(word);
                 let barcodeMatch = false;
+                let priceMatch = false;
+
+                const cleanWord = word.replace(/[^\d]/g, '');
+                const numWord = cleanWord ? parseFloat(cleanWord) : NaN;
+                const isNumWord = !isNaN(numWord);
+
                 if (p.packagings && Array.isArray(p.packagings)) {
-                    barcodeMatch = p.packagings.some(pkg => pkg.barcode && pkg.barcode.toLowerCase().includes(word));
+                    for (let k = 0; k < p.packagings.length; k++) {
+                        const pkg = p.packagings[k];
+                        if (pkg.barcode && pkg.barcode.toLowerCase().includes(word)) {
+                            barcodeMatch = true;
+                        }
+                        if (isNumWord) {
+                            const pRetail = Math.round(parseFloat(pkg.sell_price_retail) || 0);
+                            const pWhole  = Math.round(parseFloat(pkg.sell_price_wholesale) || 0);
+                            const pBuy    = Math.round(parseFloat(pkg.buy_price) || 0);
+                            if (pRetail === numWord || String(pRetail).includes(cleanWord)) priceMatch = true;
+                            if (pWhole === numWord || String(pWhole).includes(cleanWord)) priceMatch = true;
+                            if (pBuy === numWord || String(pBuy).includes(cleanWord)) priceMatch = true;
+                        }
+                    }
                 }
-                return nameMatch || brandMatch || codeMatch || barcodeMatch;
+                if (isNumWord && !priceMatch) {
+                    if (p.price_small_retail != null) {
+                        const pSmall = Math.round(parseFloat(p.price_small_retail) || 0);
+                        if (pSmall === numWord || String(pSmall).includes(cleanWord)) priceMatch = true;
+                    }
+                    if (p.price_small_wholesale != null) {
+                        const pSmallW = Math.round(parseFloat(p.price_small_wholesale) || 0);
+                        if (pSmallW === numWord || String(pSmallW).includes(cleanWord)) priceMatch = true;
+                    }
+                }
+                return nameMatch || brandMatch || codeMatch || barcodeMatch || priceMatch;
             });
         }).slice(0, 50);
     }
