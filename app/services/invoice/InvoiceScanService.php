@@ -404,8 +404,11 @@ class InvoiceScanService
 
     /**
      * Extract raw items array from AI response (handles various envelope shapes).
+     *
+     * @param mixed $aiResponse
+     * @return array
      */
-    private function extractRawItems($aiResponse): array
+    private function extractRawItems(mixed $aiResponse): array
     {
         $rawItems = [];
         if (is_array($aiResponse)) {
@@ -665,9 +668,6 @@ class InvoiceScanService
             $response = curl_exec($ch);
             $err      = curl_error($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            if (PHP_VERSION_ID < 80500) {
-                @curl_close($ch);
-            }
             unset($ch);
 
             if ($err) {

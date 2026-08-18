@@ -453,30 +453,13 @@ if ($currentStock <= 0) {
     </div>
 </div>
 
-<!-- STICKY MOBILE FLOATING ACTION BAR -->
-<div class="mobile-sticky-action-bar">
-    <div class="action-bar-inner">
-        <?php if (!$isStaffShow): ?>
-        <a href="<?= BASE_URL ?>products/<?= (int)$product['id'] ?>/edit" class="mobile-btn-edit" id="btnMobileStickyEdit">
-            <i class="bi bi-pencil-square"></i> <span>Edit</span>
-        </a>
-        <?php endif; ?>
-        <button type="button" class="mobile-btn-opname" onclick="openUpdateStockModal()">
-            <i class="bi bi-box-seam"></i> <span>Opname Stok</span>
-        </button>
-        <button type="button" class="mobile-btn-menu" onclick="toggleProductMenu(event)">
-            <i class="bi bi-three-dots"></i> <span>Menu</span>
-        </button>
-    </div>
-</div>
-
 <!-- STYLES -->
 <style>
 /* CSS Reset & Variables for Product Detail */
 .product-detail-container {
     max-width: 1100px;
     margin: 0 auto;
-    padding-bottom: 80px;
+    padding-bottom: 24px;
 }
 
 /* Top Bar */
@@ -1263,74 +1246,6 @@ if ($currentStock <= 0) {
     border-top: 1px solid var(--border-color);
 }
 
-/* Mobile Sticky Action Bar */
-.mobile-sticky-action-bar {
-    display: none;
-    position: fixed;
-    bottom: 60px; /* above bottom navigation */
-    left: 0;
-    right: 0;
-    background: rgba(18, 24, 38, 0.92);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-top: 1px solid var(--border-color);
-    padding: 8px 16px;
-    z-index: 998;
-    box-shadow: 0 -4px 16px rgba(0,0,0,0.3);
-}
-.action-bar-inner {
-    max-width: 600px;
-    margin: 0 auto;
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-.mobile-btn-edit {
-    flex: 1.2;
-    background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%);
-    color: #fff !important;
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 10px 12px;
-    border-radius: var(--radius-md);
-    font-size: 13px;
-    font-weight: 700;
-    box-shadow: 0 2px 8px rgba(59,130,246,0.3);
-}
-.mobile-btn-opname {
-    flex: 1.2;
-    background: var(--success);
-    color: #fff;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    padding: 10px 12px;
-    border-radius: var(--radius-md);
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-}
-.mobile-btn-menu {
-    flex: 0.6;
-    background: var(--surface-2);
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 10px 8px;
-    border-radius: var(--radius-md);
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
 /* Responsive Breakpoints */
 @media (max-width: 900px) {
     .insight-grid-container {
@@ -1379,9 +1294,6 @@ if ($currentStock <= 0) {
     }
     .insight-value {
         font-size: 12px;
-    }
-    .mobile-sticky-action-bar {
-        display: block;
     }
     .product-bottom-desktop-actions {
         display: none;
@@ -1791,44 +1703,62 @@ async function generateAndPrintBarcodeShow(packagingId, title, unit, buyPrice, r
 
 // Photo Handlers
 function choosePhotoMethod() {
+    const hasPhoto = !!document.getElementById('productHeroImg');
+    const deleteBtnHtml = hasPhoto ? `
+        <button type="button" class="btn-outline-custom text-danger" style="padding:12px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;border-color:var(--danger);" onclick="deleteProductPhoto()">
+            <i class="bi bi-trash"></i> Hapus Foto
+        </button>
+    ` : '';
+
     AppModal.show({
         title: 'Pilih Foto Produk',
         hideFooter: true,
         bodyHTML: `
-            <div style="display:flex;flex-direction:column;gap:12px;padding:8px 0;">
-                <button type="button" class="btn-primary-custom" style="padding:14px;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="AppModal.close(); document.getElementById('productPhotoInputCamera').click()">
+            <div style="display:flex;flex-direction:column;gap:10px;padding:6px 0;">
+                <button type="button" class="btn-primary-custom" style="padding:12px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="AppModal.close(); document.getElementById('productPhotoInputCamera').click()">
                     <i class="bi bi-camera"></i> Buka Kamera
                 </button>
-                <button type="button" class="btn-outline-custom" style="padding:14px;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="AppModal.close(); document.getElementById('productPhotoInputGallery').click()">
+                <button type="button" class="btn-outline-custom" style="padding:12px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="AppModal.close(); document.getElementById('productPhotoInputGallery').click()">
                     <i class="bi bi-image"></i> Pilih dari Galeri
                 </button>
+                ${deleteBtnHtml}
             </div>
         `
     });
 }
 
-function compressImage(file, maxSize) {
-    return new Promise((resolve) => {
+function compressImage(file, maxSize = 1000) {
+    return new Promise((resolve, reject) => {
         const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Gagal membaca file gambar'));
         reader.onload = function(e) {
             const img = new Image();
+            img.onerror = () => reject(new Error('Gagal memuat format gambar'));
             img.onload = function() {
                 const canvas = document.createElement('canvas');
                 let width = img.width;
                 let height = img.height;
                 if (width > height) {
-                    if (width > maxSize) { height *= maxSize / width; width = maxSize; }
+                    if (width > maxSize) { height = Math.round(height * (maxSize / width)); width = maxSize; }
                 } else {
-                    if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+                    if (height > maxSize) { width = Math.round(width * (maxSize / height)); height = maxSize; }
                 }
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
+                // Ensure transparent background is preserved
                 ctx.clearRect(0, 0, width, height);
                 ctx.drawImage(img, 0, 0, width, height);
-                const isTransparent = file.type === 'image/png' || file.type === 'image/webp' || file.type === 'image/gif' || file.type === 'image/svg+xml' || (file.name && /\.png$/i.test(file.name));
+
+                // Preserve alpha transparency for PNG, WebP, GIF, SVG
+                const isTransparent = file.type === 'image/png' || 
+                                      file.type === 'image/webp' || 
+                                      file.type === 'image/gif' || 
+                                      file.type === 'image/svg+xml' || 
+                                      /\.(png|webp|gif|svg)$/i.test(file.name || '');
+
                 const outputType = isTransparent ? 'image/png' : 'image/jpeg';
-                resolve(canvas.toDataURL(outputType, 0.9));
+                resolve(canvas.toDataURL(outputType, 0.92));
             };
             img.src = e.target.result;
         };
@@ -1836,44 +1766,61 @@ function compressImage(file, maxSize) {
     });
 }
 
-function dataURLtoBlob(dataurl) {
-    let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-        bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-    while(n--){ u8arr[n] = bstr.charCodeAt(n); }
-    return new Blob([u8arr], {type:mime});
-}
-
 async function handleProductPhoto(event) {
-    const file = event.target.files[0];
+    const file = event.target.files && event.target.files[0];
     if (!file) return;
 
     showToast('Memproses & mengunggah foto...', 'info');
 
     try {
-        const compressedDataUrl = await compressImage(file, 800);
-        let finalBlob = dataURLtoBlob(compressedDataUrl);
+        const base64DataUrl = await compressImage(file, 1000);
+        const csrfToken = document.getElementById('csrfToken')?.value || '';
+        const res = await api(`${BASE_URL}api/products/${currentProductId}/photo`, 'POST', {
+            csrf_token: csrfToken,
+            photo_base64: base64DataUrl
+        });
+        if (res && res.success) {
+            showToast('Foto berhasil diperbarui', 'success');
+            setTimeout(() => window.location.reload(), 600);
+        } else {
+            showToast(res?.error || 'Gagal mengunggah foto', 'error');
+        }
+    } catch (err) {
+        console.error('Upload photo error:', err);
+        showToast(err.message || 'Terjadi kesalahan saat memproses gambar', 'error');
+    } finally {
+        event.target.value = '';
+    }
+}
 
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const base64 = e.target.result;
+async function deleteProductPhoto() {
+    AppModal.close();
+    const confirmed = await AppModal.show({
+        title: 'Hapus Foto Produk',
+        icon: 'bi-trash',
+        iconColor: 'var(--danger-bg)',
+        iconAccent: 'var(--danger)',
+        bodyHTML: '<p style="color:var(--text-secondary);font-size:var(--font-size-sm);line-height:1.5;">Yakin ingin menghapus foto produk ini?</p>',
+        submitText: 'Ya, Hapus Foto',
+        cancelText: 'Batal',
+        onSubmit: async () => {
             try {
-                const csrfToken = document.getElementById('csrfToken').value;
+                const csrfToken = document.getElementById('csrfToken')?.value || '';
                 const res = await api(`${BASE_URL}api/products/${currentProductId}/photo`, 'POST', {
                     csrf_token: csrfToken,
-                    photo_base64: base64
+                    delete_photo: 1
                 });
-                if (res.success) {
-                    showToast('Foto berhasil diperbarui', 'success');
-                    setTimeout(() => window.location.reload(), 800);
+                if (res && res.success) {
+                    showToast('Foto berhasil dihapus', 'success');
+                    setTimeout(() => window.location.reload(), 600);
+                    return true;
                 }
             } catch (err) {
-                showToast(err.message || 'Gagal mengupload foto', 'error');
+                showToast(err.message || 'Gagal menghapus foto', 'error');
             }
-        };
-        reader.readAsDataURL(finalBlob);
-    } catch (err) {
-        showToast('Terjadi kesalahan saat memproses gambar', 'error');
-    }
+            return false;
+        }
+    });
 }
 
 // Opname Modal (Stock Physical Update)
@@ -2081,7 +2028,7 @@ function hideProductMenu() {
     if (menu) menu.style.display = 'none';
 }
 document.addEventListener('click', (e) => {
-    if (!e.target.closest('#productDropdownMenu') && !e.target.closest('.btn-action-more') && !e.target.closest('.mobile-btn-menu')) {
+    if (!e.target.closest('#productDropdownMenu') && !e.target.closest('.btn-action-more')) {
         hideProductMenu();
     }
 });
