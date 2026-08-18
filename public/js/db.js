@@ -339,7 +339,13 @@ window.OfflineDB = (function() {
                 const suppCode = (p.supplier_product_code || '').toLowerCase();
 
                 let allMatch = true;
+                let score = 0;
+                const displayLabel = (shortLabel || fullName).toLowerCase();
+                if (displayLabel.startsWith(rawQuery)) score += 60;
+                else if (displayLabel.includes(rawQuery)) score += 40;
+
                 for (let j = 0; j < words.length; j++) {
+                    const word = words[j];
                     const cleanWord = word.replace(/[^\d]/g, '');
                     const numWord = cleanWord ? parseFloat(cleanWord) : NaN;
                     const isNumWord = !isNaN(numWord);
@@ -383,15 +389,43 @@ window.OfflineDB = (function() {
                         allMatch = false;
                         break;
                     }
+
+                    if (nameMatch) score += 30;
+                    if (brandMatch || catMatch) score += 20;
+                    if (codeMatch || barcodeMatch) score += 15;
+                    if (priceMatch) {
+                        // Exact price match gets a big boost
+                        let exactPriceMatch = false;
+                        if (isNumWord && p.packagings && Array.isArray(p.packagings)) {
+                            for (let k = 0; k < p.packagings.length; k++) {
+                                const pkg = p.packagings[k];
+                                if (Math.round(parseFloat(pkg.sell_price_retail) || 0) === numWord ||
+                                    Math.round(parseFloat(pkg.sell_price_wholesale) || 0) === numWord ||
+                                    Math.round(parseFloat(pkg.buy_price) || 0) === numWord) {
+                                    exactPriceMatch = true;
+                                    break;
+                                }
+                            }
+                        }
+                        score += exactPriceMatch ? 50 : 15;
+                    }
                 }
 
                 if (allMatch) {
-                    matched.push(p);
-                    if (matched.length >= 60) break; // Capped for UI responsiveness
+                    matched.push({ item: p, score });
+                    if (matched.length >= 60) break;
                 }
             }
 
-            return matched;
+            // Sort by score descending, then alphabetically
+            matched.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                const la = (a.item.short_label && a.item.short_label.trim() !== '') ? a.item.short_label : (a.item.full_name || '');
+                const lb = (b.item.short_label && b.item.short_label.trim() !== '') ? b.item.short_label : (b.item.full_name || '');
+                return la.localeCompare(lb, 'id', { sensitivity: 'base' });
+            });
+
+            return matched.map(r => r.item);
         } catch (e) {
             console.error("Offline search failed", e);
             return [];

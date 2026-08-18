@@ -108,12 +108,24 @@ class ProductModel extends Model
         if (!empty($words)) {
             $params[':pref_kw1'] = $rawKeyword . '%';
             $params[':pref_kw2'] = $rawKeyword . '%';
+            
+            // Check if any word is numeric (price-like) for price-match boost
+            $priceBoostSql = '';
+            foreach ($words as $idx => $word) {
+                $cleanNum = preg_replace('/[^\d]/', '', $word);
+                if (!empty($cleanNum) && is_numeric($cleanNum)) {
+                    $pExact = ":ord_price_{$idx}";
+                    $params[$pExact] = (int)$cleanNum;
+                    $priceBoostSql .= " + (CASE WHEN EXISTS (SELECT 1 FROM product_packagings pp2 WHERE pp2.product_id = p.id AND (ROUND(pp2.sell_price_retail) = $pExact OR ROUND(pp2.sell_price_wholesale) = $pExact OR ROUND(pp2.buy_price) = $pExact)) THEN 0 ELSE 10 END)";
+                }
+            }
+            
             $orderSql = "ORDER BY (
                 CASE 
                     WHEN p.short_label LIKE :pref_kw1 OR p.full_name LIKE :pref_kw2 THEN 1
                     ELSE 2
                 END
-            ) ASC, COALESCE(NULLIF(TRIM(p.short_label), ''), p.full_name) ASC";
+            ){$priceBoostSql} ASC, COALESCE(NULLIF(TRIM(p.short_label), ''), p.full_name) ASC";
         }
 
         $stmt = $this->db->prepare("

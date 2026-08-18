@@ -936,9 +936,18 @@ async function performSearch(q) {
     // ── STEP 1: Search In-Memory / IndexedDB Catalog INSTANTLY (0 Milidetik) ─────────
     let items = [];
     if (window._posProductsCatalog && window._posProductsCatalog.length > 0) {
-        items = window._posProductsCatalog.filter(p => {
-            if (p.is_available == 0 || p.is_available === '0' || p.is_available === false) return false;
-            return words.every(word => {
+        const scored = [];
+        for (let i = 0; i < window._posProductsCatalog.length; i++) {
+            const p = window._posProductsCatalog[i];
+            if (p.is_available == 0 || p.is_available === '0' || p.is_available === false) continue;
+            let allMatch = true;
+            let score = 0;
+            const label = ((p.short_label && p.short_label.trim()) || p.full_name || '').toLowerCase();
+            if (label.startsWith(q)) score += 60;
+            else if (label.includes(q)) score += 40;
+
+            for (let j = 0; j < words.length; j++) {
+                const word = words[j];
                 const nameMatch = (p.full_name && p.full_name.toLowerCase().includes(word)) ||
                                   (p.short_label && p.short_label.toLowerCase().includes(word)) ||
                                   (p.invoice_name && p.invoice_name.toLowerCase().includes(word)) ||
@@ -978,9 +987,40 @@ async function performSearch(q) {
                         if (pSmallW === numWord || String(pSmallW).includes(cleanWord)) priceMatch = true;
                     }
                 }
-                return nameMatch || brandMatch || codeMatch || barcodeMatch || priceMatch;
-            });
-        }).slice(0, 50);
+                if (!(nameMatch || brandMatch || codeMatch || barcodeMatch || priceMatch)) {
+                    allMatch = false;
+                    break;
+                }
+                if (nameMatch) score += 30;
+                if (brandMatch) score += 20;
+                if (codeMatch || barcodeMatch) score += 15;
+                if (priceMatch) {
+                    let exactPriceMatch = false;
+                    if (isNumWord && p.packagings && Array.isArray(p.packagings)) {
+                        for (let k = 0; k < p.packagings.length; k++) {
+                            const pkg = p.packagings[k];
+                            if (Math.round(parseFloat(pkg.sell_price_retail) || 0) === numWord ||
+                                Math.round(parseFloat(pkg.sell_price_wholesale) || 0) === numWord ||
+                                Math.round(parseFloat(pkg.buy_price) || 0) === numWord) {
+                                exactPriceMatch = true;
+                                break;
+                            }
+                        }
+                    }
+                    score += exactPriceMatch ? 50 : 15;
+                }
+            }
+            if (allMatch) {
+                scored.push({ item: p, score });
+            }
+        }
+        scored.sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            const la = ((a.item.short_label && a.item.short_label.trim()) || a.item.full_name || '');
+            const lb = ((b.item.short_label && b.item.short_label.trim()) || b.item.full_name || '');
+            return la.localeCompare(lb, 'id', { sensitivity: 'base' });
+        });
+        items = scored.slice(0, 50).map(r => r.item);
     }
 
     // Render local results IMMEDIATELY (0ms delay!)

@@ -329,7 +329,22 @@ window.OfflineDB = (function() {
 
                     if (nameMatch) score += 30;
                     if (brandMatch || catMatch) score += 20;
-                    if (codeMatch || barcodeMatch || priceMatch) score += 15;
+                    if (codeMatch || barcodeMatch) score += 15;
+                    if (priceMatch) {
+                        // Exact price match gets a big boost to sort to the top
+                        let exactPriceMatch = false;
+                        if (isNumWord && p.packagings && Array.isArray(p.packagings)) {
+                            for (const pkg of p.packagings) {
+                                if (Math.round(parseFloat(pkg.sell_price_retail) || 0) === numWord ||
+                                    Math.round(parseFloat(pkg.sell_price_wholesale) || 0) === numWord ||
+                                    Math.round(parseFloat(pkg.buy_price) || 0) === numWord) {
+                                    exactPriceMatch = true;
+                                    break;
+                                }
+                            }
+                        }
+                        score += exactPriceMatch ? 50 : 15;
+                    }
                 }
 
                 if (matchesAllWords) {
