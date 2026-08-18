@@ -543,9 +543,21 @@ async function syncPendingChanges() {
                     localStorage.removeItem(`sync_fail_${change.id}`);
                     successCount++;
                 } else {
-                    // GAGAL: TETAP SIMPAN DI ANTREAN LOKAL, JANGAN HAPUS!
                     failCount++;
-                    console.warn(`[Sync] Gagal mengirim data ID ${change.id} (HTTP ${response.status}: ${errorMsg}) — tetap aman tersimpan di antrean lokal`);
+                    const failKey = `sync_fail_${change.id}`;
+                    let failTimes = parseInt(localStorage.getItem(failKey) || '0', 10) + 1;
+                    localStorage.setItem(failKey, failTimes.toString());
+
+                    // Jika server menolak data secara permanen (HTTP 4xx seperti 400 Bad Request / 422 Validasi / 404)
+                    // dan sudah dicoba ulang, bersihkan dari antrian agar tidak membuat antrian macet selamanya
+                    if (response.status >= 400 && response.status < 500 && failTimes >= 2) {
+                        await window.OfflineDB.removePendingChange(change.id);
+                        localStorage.removeItem(failKey);
+                        console.error(`[Sync] Data ID ${change.id} dibatalkan dari antrean karena ditolak server: ${errorMsg}`);
+                        showToast(`Data ditolak server (${response.status}): ${errorMsg || 'Validasi gagal'}`, 'error', 6000);
+                    } else {
+                        console.warn(`[Sync] Gagal mengirim data ID ${change.id} (HTTP ${response.status}: ${errorMsg}) — tetap aman tersimpan di antrean lokal`);
+                    }
                 }
             } catch (e) {
                 // Exception / Network Error / Timeout: TETAP SIMPAN DI ANTREAN LOKAL

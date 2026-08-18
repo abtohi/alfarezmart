@@ -38,57 +38,63 @@ class ProductMatcher
      * Common abbreviations used in Indonesian supplier invoices.
      */
     const ABBREVIATIONS = [
-        'bsr'  => 'besar',
-        'tgh'  => 'tengah',
-        'kcl'  => 'kecil',
-        'ctn'  => 'karton',
-        'dus'  => 'karton',
-        'krt'  => 'karton',
-        'btl'  => 'botol',
-        'bks'  => 'bungkus',
-        'scht' => 'sachet',
-        'sct'  => 'sachet',
-        'lbr'  => 'lembar',
-        'klg'  => 'kaleng',
-        'dz'   => 'lusin',
-        'pcs'  => 'pcs',
-        'mie'  => 'mi',
-        'mi'   => 'mie',
-        'snk'  => 'snack',
-        'choc' => 'chocolate',
-        'chk'  => 'chocolate',
-        'bis'  => 'biscuit',
-        'bsc'  => 'biscuit',
-        'kopi' => 'coffee',
-        'teh'  => 'tea',
-        'air'  => 'water',
-        'mnu'  => 'minuman',
-        'mkn'  => 'makanan',
-        'det'  => 'detergent',
-        'spc'  => 'special',
-        'chkn' => 'chicken',
-        'prem' => 'premium',
-        'orig' => 'original',
-        'reg'  => 'regular',
-        'liq'  => 'liquid',
-        'pwdr' => 'powder',
-        'cln'  => 'clean',
-        'frsh' => 'fresh',
-        'spcy' => 'spicy',
-        'flr'  => 'floor',
-        'clnr' => 'cleaner',
-        'wht'  => 'white',
-        'grn'  => 'green',
-        'blu'  => 'blue',
+        'bsr'   => 'besar',
+        'tgh'   => 'tengah',
+        'kcl'   => 'kecil',
+        'ctn'   => 'karton',
+        'dus'   => 'karton',
+        'krt'   => 'karton',
+        'crt'   => 'karton',
+        'btl'   => 'botol',
+        'bks'   => 'bungkus',
+        'scht'  => 'sachet',
+        'sct'   => 'sachet',
+        'sch'   => 'sachet',
+        'saset' => 'sachet',
+        'lbr'   => 'lembar',
+        'klg'   => 'kaleng',
+        'can'   => 'kaleng',
+        'pch'   => 'pouch',
+        'dz'    => 'lusin',
+        'pcs'   => 'pcs',
+        'mie'   => 'mi',
+        'mi'    => 'mie',
+        'snk'   => 'snack',
+        'choc'  => 'cokelat',
+        'chk'   => 'cokelat',
+        'coklat'=> 'cokelat',
+        'chocolate' => 'cokelat',
+        'bis'   => 'biscuit',
+        'bsc'   => 'biscuit',
+        'kopi'  => 'coffee',
+        'teh'   => 'tea',
+        'air'   => 'water',
+        'mnu'   => 'minuman',
+        'mkn'   => 'makanan',
+        'det'   => 'detergent',
+        'spc'   => 'special',
+        'chkn'  => 'chicken',
+        'prem'  => 'premium',
+        'orig'  => 'original',
+        'reg'   => 'regular',
+        'liq'   => 'liquid',
+        'pwdr'  => 'powder',
+        'cln'   => 'clean',
+        'frsh'  => 'fresh',
+        'spcy'  => 'spicy',
+        'flr'   => 'floor',
+        'clnr'  => 'cleaner',
+        'wht'   => 'putih',
+        'white' => 'putih',
+        'grn'   => 'green',
+        'blu'   => 'blue',
     ];
 
     /**
-     * Tokens to SKIP during token overlap matching (packaging/unit terms, not meaningful for identity).
+     * Tokens to SKIP during token overlap matching (only non-differentiating filler words).
      */
     const SKIP_TOKENS = [
-        'bag', 'sct', 'cup', 'btl', 'isi', 'prg', 'box', 'pcs',
-        'sachet', 'bungkus', 'botol', 'karton', 'pack', 'pouch',
-        'x', 'ml', 'gr', 'g', 'kg', 'l', 'oz', 'cc',
+        'isi', 'prg', 'x', 'dan', 'yang', 'dgn', 'dg',
     ];
 
     /** @var LayoutAnalyzer */
@@ -280,6 +286,27 @@ class ProductMatcher
                                 $strategy = 'expanded_invoice_match';
                             }
                         }
+                    }
+                }
+
+                // -- STRATEGY 10: Price Proximity Boost (Distinguish variants/sizes sharing same brand) --
+                if ($unitPrice > 0 && !empty($p['packagings'])) {
+                    $bestPriceDiffPct = 999;
+                    foreach ($p['packagings'] as $pkg) {
+                        $bp = (float)($pkg['buy_price'] ?? 0);
+                        if ($bp > 0) {
+                            $diff = abs($bp - $unitPrice) / max($bp, $unitPrice);
+                            if ($diff < $bestPriceDiffPct) {
+                                $bestPriceDiffPct = $diff;
+                            }
+                        }
+                    }
+                    if ($bestPriceDiffPct <= 0.05) {
+                        // Exact/very close packaging buy price match (within 5%)
+                        $score += 30;
+                    } elseif ($bestPriceDiffPct <= 0.15) {
+                        // Close price match (within 15%)
+                        $score += 15;
                     }
                 }
 

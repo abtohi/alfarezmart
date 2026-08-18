@@ -188,13 +188,27 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
             throw new Error('Respons server tidak valid (bukan JSON)');
         }
         
-        if (!response.ok) throw new Error(jsonData.error || 'Request failed');
+        if (!response.ok) {
+            const serverMsg = (jsonData && (jsonData.error || jsonData.message)) ? (jsonData.error || jsonData.message) : `Request failed (${response.status})`;
+            const err = new Error(serverMsg);
+            err.status = response.status;
+            err.isHttpError = true;
+            throw err;
+        }
         return jsonData;
     } catch (error) {
         clearTimeout(timeoutId);
         
-        // Fallback for network error / weak signal timeout
-        if (['POST', 'PUT', 'DELETE'].includes(method)) {
+        // Fallback for TRUE network error / offline / weak signal timeout only (NOT HTTP 4xx validation errors)
+        const isNetworkFailure = (!error.isHttpError) && (
+            error.name === 'AbortError' || 
+            !navigator.onLine || 
+            error instanceof TypeError ||
+            String(error.message || '').includes('Failed to fetch') ||
+            String(error.message || '').includes('NetworkError')
+        );
+
+        if (isNetworkFailure && ['POST', 'PUT', 'DELETE'].includes(method)) {
             const offlineRes = await fallbackOfflineQueue();
             if (offlineRes) return offlineRes;
         }

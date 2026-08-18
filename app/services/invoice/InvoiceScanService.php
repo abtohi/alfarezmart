@@ -433,7 +433,7 @@ class InvoiceScanService
     {
         try {
             $stmt = $this->db->prepare("
-                SELECT pp.id, pp.level, pp.base_qty, pp.buy_price, pp.sell_price, pp.barcode,
+                SELECT pp.id, pp.level, pp.contained_qty, pp.base_qty, pp.buy_price, pp.sell_price_retail, pp.sell_price_wholesale, pp.barcode,
                        u.name as unit_name
                 FROM product_packagings pp
                 LEFT JOIN units u ON pp.unit_id = u.id
@@ -460,7 +460,25 @@ class InvoiceScanService
         ");
         $products = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-        $this->productModel->attachPackagingsForProductList($products);
+        // Attach full packagings with unit names and prices
+        $pkgStmt = $this->db->query("
+            SELECT pp.id, pp.product_id, pp.level, pp.unit_id, u.name as unit_name, 
+                   pp.contained_qty, pp.base_qty, pp.barcode, pp.buy_price, 
+                   pp.sell_price_retail, pp.sell_price_wholesale
+            FROM product_packagings pp
+            LEFT JOIN units u ON pp.unit_id = u.id
+            ORDER BY pp.product_id, pp.level ASC
+        ");
+        $allPkgs = $pkgStmt->fetchAll(\PDO::FETCH_ASSOC);
+        $pkgsByProduct = [];
+        foreach ($allPkgs as $pkg) {
+            $pkgsByProduct[$pkg['product_id']][] = $pkg;
+        }
+        foreach ($products as &$p) {
+            $p['packagings'] = $pkgsByProduct[$p['id']] ?? [];
+        }
+        unset($p);
+
         return $products;
     }
 

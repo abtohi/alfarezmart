@@ -57,44 +57,138 @@
                     </label>
 
                     <?php
-                    $presetScannerModels = [
-                        'openrouter/auto',
-                        'google/gemma-4-26b-a4b-it:free',
-                        'google/gemma-4-31b-it:free',
-                        'nvidia/nemotron-nano-12b-v2-vl:free',
-                        'dots-studio/dots-3-note-preview:free',
+                    $scannerModelsList = [
+                        [
+                            'id' => 'openrouter/auto',
+                            'name' => 'Auto Vision (OpenRouter)',
+                            'icon' => '⚡',
+                            'icon_bg' => 'linear-gradient(135deg, #f59e0b, #d97706)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Pilih otomatis model vision gratis tercepat & terbaik'
+                        ],
+                        [
+                            'id' => 'google/gemma-4-26b-a4b-it:free',
+                            'name' => 'Google: Gemma 4 26B A4B Vision',
+                            'icon' => '🌟',
+                            'icon_bg' => 'linear-gradient(135deg, #4285F4, #34A853)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Multimodal vision terbaru Google, sangat cepat & akurat'
+                        ],
+                        [
+                            'id' => 'google/gemma-4-31b-it:free',
+                            'name' => 'Google: Gemma 4 31B Vision',
+                            'icon' => '💎',
+                            'icon_bg' => 'linear-gradient(135deg, #0ea5e9, #2563eb)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model kapasitas tinggi untuk scan nota teks panjang & padat'
+                        ],
+                        [
+                            'id' => 'nvidia/nemotron-nano-12b-v2-vl:free',
+                            'name' => 'NVIDIA: Nemotron Nano 12B VL',
+                            'icon' => '🟢',
+                            'icon_bg' => 'linear-gradient(135deg, #10b981, #059669)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Vision multimodal berkecepatan tinggi dari NVIDIA'
+                        ],
+                        [
+                            'id' => 'dots-studio/dots-3-note-preview:free',
+                            'name' => 'Dots Studio: Dots3-Note Preview',
+                            'icon' => '🟣',
+                            'icon_bg' => 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Spesialis OCR & ekstraksi dokumen / faktur pembelian'
+                        ],
+                        [
+                            'id' => 'custom',
+                            'name' => 'Model Kustom OpenRouter',
+                            'icon' => '⚙️',
+                            'icon_bg' => 'linear-gradient(135deg, #64748b, #475569)',
+                            'badge' => 'KUSTOM',
+                            'badge_class' => 'model-badge-pro',
+                            'desc' => 'Ketik manual identifier model OpenRouter spesifik Anda'
+                        ],
                     ];
+                    $presetIds = array_column($scannerModelsList, 'id');
                     $currentScannerModel = $aiModel ?? 'openrouter/auto';
-                    $isScannerCustom = !empty($currentScannerModel) && !in_array($currentScannerModel, $presetScannerModels);
+                    $isScannerCustom = !empty($currentScannerModel) && !in_array($currentScannerModel, $presetIds);
+                    
+                    // Find active model details
+                    $activeItem = null;
+                    if ($isScannerCustom) {
+                        $activeItem = [
+                            'id' => 'custom',
+                            'name' => 'Model Kustom: ' . $currentScannerModel,
+                            'icon' => '⚙️',
+                            'icon_bg' => 'linear-gradient(135deg, #64748b, #475569)',
+                            'badge' => 'KUSTOM',
+                            'badge_class' => 'model-badge-pro',
+                            'desc' => 'Model kustom yang sedang digunakan'
+                        ];
+                    } else {
+                        foreach ($scannerModelsList as $m) {
+                            if ($m['id'] === $currentScannerModel) {
+                                $activeItem = $m;
+                                break;
+                            }
+                        }
+                        if (!$activeItem) $activeItem = $scannerModelsList[0];
+                    }
                     ?>
                     <input type="hidden" id="ai_model" name="ai_model" value="<?= htmlspecialchars($currentScannerModel) ?>">
 
-                    <div style="margin-bottom:10px;">
-                        <select id="ai_model_select" class="form-select" style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm); font-weight:600; cursor:pointer;" onchange="onModelSelectChange(this.value)">
-                            <option value="openrouter/auto" <?= ($currentScannerModel === 'openrouter/auto' || !$currentScannerModel) ? 'selected' : '' ?>>
-                                ⚡ Auto (Otomatis Vision Terbaik) — Gratis &amp; Cerdas
-                            </option>
-                            <option value="google/gemma-4-26b-a4b-it:free" <?= $currentScannerModel === 'google/gemma-4-26b-a4b-it:free' ? 'selected' : '' ?>>
-                                🌟 Google: Gemma 4 26B A4B Vision (Gratis — Cepat &amp; Akurat)
-                            </option>
-                            <option value="google/gemma-4-31b-it:free" <?= $currentScannerModel === 'google/gemma-4-31b-it:free' ? 'selected' : '' ?>>
-                                💎 Google: Gemma 4 31B Vision (Gratis — Kualitas Tinggi)
-                            </option>
-                            <option value="nvidia/nemotron-nano-12b-v2-vl:free" <?= $currentScannerModel === 'nvidia/nemotron-nano-12b-v2-vl:free' ? 'selected' : '' ?>>
-                                🟢 NVIDIA: Nemotron Nano 12B VL (Gratis — Multimodal)
-                            </option>
-                            <option value="dots-studio/dots-3-note-preview:free" <?= $currentScannerModel === 'dots-studio/dots-3-note-preview:free' ? 'selected' : '' ?>>
-                                🟣 Dots Studio: Dots3-Note Preview (Gratis)
-                            </option>
-                            <option value="custom" <?= $isScannerCustom ? 'selected' : '' ?>>
-                                ⚙️ Model Kustom (Ketik Nama Model Manual)
-                            </option>
-                        </select>
-
-                        <div id="ai_model_custom_wrap" style="margin-top:10px; display:<?= $isScannerCustom ? 'block' : 'none' ?>;">
-                            <label style="display:block; font-size:var(--font-size-xs); color:var(--text-secondary); margin-bottom:4px;">Nama Model OpenRouter Kustom</label>
-                            <input id="ai_model_custom" type="text" value="<?= $isScannerCustom ? htmlspecialchars($currentScannerModel) : '' ?>" style="width:100%; padding:9px 12px; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm);" placeholder="contoh: google/gemma-4-26b-a4b-it:free" oninput="onCustomModelInput(this.value)" />
+                    <!-- Elegant Custom Dropdown Component -->
+                    <div class="custom-dropdown-container" id="scanner-model-dropdown-container">
+                        <div class="custom-dropdown-trigger" id="scanner-dropdown-trigger" onclick="toggleScannerDropdown(event)">
+                            <div class="custom-dropdown-icon" id="scanner-selected-icon" style="background:<?= $activeItem['icon_bg'] ?>;">
+                                <?= $activeItem['icon'] ?>
+                            </div>
+                            <div class="custom-dropdown-info">
+                                <div class="custom-dropdown-title-row">
+                                    <span class="custom-dropdown-name" id="scanner-selected-name"><?= htmlspecialchars($activeItem['name']) ?></span>
+                                    <span class="model-badge <?= $activeItem['badge_class'] ?>" id="scanner-selected-badge"><?= $activeItem['badge'] ?></span>
+                                </div>
+                                <div class="custom-dropdown-desc" id="scanner-selected-desc"><?= htmlspecialchars($activeItem['desc']) ?></div>
+                            </div>
+                            <div class="custom-dropdown-chevron">
+                                <i class="bi bi-chevron-down" id="scanner-dropdown-chevron-icon"></i>
+                            </div>
                         </div>
+
+                        <!-- Dropdown Menu List -->
+                        <div class="custom-dropdown-menu" id="scanner-dropdown-menu">
+                            <?php foreach ($scannerModelsList as $item): 
+                                $isSelected = (!$isScannerCustom && $item['id'] === $currentScannerModel) || ($isScannerCustom && $item['id'] === 'custom');
+                            ?>
+                            <div class="custom-dropdown-option <?= $isSelected ? 'selected' : '' ?>" 
+                                 onclick="selectScannerModel('<?= $item['id'] ?>', '<?= htmlspecialchars(addslashes($item['name'])) ?>', '<?= $item['icon'] ?>', '<?= $item['icon_bg'] ?>', '<?= $item['badge'] ?>', '<?= $item['badge_class'] ?>', '<?= htmlspecialchars(addslashes($item['desc'])) ?>', event)">
+                                <div class="custom-dropdown-icon" style="background:<?= $item['icon_bg'] ?>;">
+                                    <?= $item['icon'] ?>
+                                </div>
+                                <div class="custom-dropdown-info">
+                                    <div class="custom-dropdown-title-row">
+                                        <span class="custom-dropdown-name"><?= htmlspecialchars($item['name']) ?></span>
+                                        <span class="model-badge <?= $item['badge_class'] ?>"><?= $item['badge'] ?></span>
+                                    </div>
+                                    <div class="custom-dropdown-desc"><?= htmlspecialchars($item['desc']) ?></div>
+                                </div>
+                                <div class="custom-dropdown-check">
+                                    <i class="bi bi-check2"></i>
+                                </div>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <div id="ai_model_custom_wrap" style="margin-top:12px; display:<?= $isScannerCustom ? 'block' : 'none' ?>;">
+                        <label style="display:block; font-size:var(--font-size-xs); font-weight:600; color:var(--text-secondary); margin-bottom:6px;">
+                            <i class="bi bi-terminal" style="color:var(--primary); margin-right:4px;"></i> Masukkan Model Identifier OpenRouter:
+                        </label>
+                        <input id="ai_model_custom" type="text" value="<?= $isScannerCustom ? htmlspecialchars($currentScannerModel) : '' ?>" style="width:100%; padding:10px 14px; border:1px solid var(--border-color); border-radius:var(--radius-md); background:var(--bg-primary); color:var(--text-primary); font-size:var(--font-size-sm); font-family:monospace;" placeholder="contoh: google/gemma-4-26b-a4b-it:free" oninput="onCustomModelInput(this.value)" />
                     </div>
                 </div>
 
@@ -317,37 +411,217 @@
 }
 .model-badge-free { background: rgba(46,196,182,0.15); color: var(--success); }
 .model-badge-pro  { background: rgba(76,201,240,0.15); color: var(--info); }
+
+/* Custom Elegant Dropdown for AI Scanner */
+.custom-dropdown-container {
+    position: relative;
+    width: 100%;
+}
+.custom-dropdown-trigger {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg-primary);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.custom-dropdown-trigger:hover {
+    border-color: var(--primary);
+    background: var(--surface-2);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.custom-dropdown-trigger.open {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(230,57,70,0.18);
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+.custom-dropdown-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+}
+.custom-dropdown-info {
+    flex: 1;
+    min-width: 0;
+}
+.custom-dropdown-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+.custom-dropdown-name {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.custom-dropdown-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.custom-dropdown-chevron {
+    color: var(--text-muted);
+    font-size: 14px;
+    transition: transform 0.25s ease;
+    flex-shrink: 0;
+}
+.custom-dropdown-trigger.open .custom-dropdown-chevron {
+    transform: rotate(180deg);
+    color: var(--primary);
+}
+.custom-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.1);
+    z-index: 1000;
+    overflow: hidden;
+    padding: 6px;
+    animation: dropDownFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(12px);
+}
+.custom-dropdown-menu.show {
+    display: block;
+}
+@keyframes dropDownFadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.custom-dropdown-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+}
+.custom-dropdown-option:hover {
+    background: var(--surface-2);
+    border-color: rgba(230,57,70,0.15);
+}
+.custom-dropdown-option.selected {
+    background: rgba(230,57,70,0.08);
+    border-color: rgba(230,57,70,0.3);
+}
+.custom-dropdown-check {
+    color: var(--primary);
+    font-size: 18px;
+    font-weight: bold;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+.custom-dropdown-option.selected .custom-dropdown-check {
+    opacity: 1;
+}
 </style>
 
 <script>
     const csrfToken = document.getElementById('csrfToken').value;
 
-    function onModelSelectChange(val) {
+    function toggleScannerDropdown(e) {
+        if (e) e.stopPropagation();
+        const trigger = document.getElementById('scanner-dropdown-trigger');
+        const menu = document.getElementById('scanner-dropdown-menu');
+        if (!trigger || !menu) return;
+        const isOpen = menu.classList.contains('show');
+        if (isOpen) {
+            menu.classList.remove('show');
+            trigger.classList.remove('open');
+        } else {
+            menu.classList.add('show');
+            trigger.classList.add('open');
+        }
+    }
+
+    function selectScannerModel(modelId, modelName, icon, iconBg, badge, badgeClass, desc, e) {
+        if (e) e.stopPropagation();
+        
+        // Update trigger UI
+        const nameEl = document.getElementById('scanner-selected-name');
+        const badgeEl = document.getElementById('scanner-selected-badge');
+        const descEl = document.getElementById('scanner-selected-desc');
+        const iconEl = document.getElementById('scanner-selected-icon');
+        const hiddenInput = document.getElementById('ai_model');
         const customWrap = document.getElementById('ai_model_custom_wrap');
         const customInput = document.getElementById('ai_model_custom');
-        
-        if (val === 'custom') {
+
+        if (nameEl) nameEl.textContent = modelName;
+        if (badgeEl) {
+            badgeEl.textContent = badge;
+            badgeEl.className = 'model-badge ' + badgeClass;
+        }
+        if (descEl) descEl.textContent = desc;
+        if (iconEl) {
+            iconEl.innerHTML = icon;
+            iconEl.style.background = iconBg;
+        }
+
+        // Update selected option class in menu
+        document.querySelectorAll('#scanner-dropdown-menu .custom-dropdown-option').forEach(opt => {
+            opt.classList.remove('selected');
+        });
+        if (e && e.currentTarget) {
+            e.currentTarget.classList.add('selected');
+        }
+
+        // Close menu
+        const trigger = document.getElementById('scanner-dropdown-trigger');
+        const menu = document.getElementById('scanner-dropdown-menu');
+        if (menu) menu.classList.remove('show');
+        if (trigger) trigger.classList.remove('open');
+
+        // Handle custom input visibility
+        if (modelId === 'custom') {
             if (customWrap) customWrap.style.display = 'block';
             if (customInput) {
                 customInput.focus();
-                document.getElementById('ai_model').value = customInput.value.trim() || 'openrouter/auto';
+                if (hiddenInput) hiddenInput.value = customInput.value.trim() || 'openrouter/auto';
             }
         } else {
             if (customWrap) customWrap.style.display = 'none';
-            document.getElementById('ai_model').value = val;
+            if (hiddenInput) hiddenInput.value = modelId;
         }
     }
 
-    function selectModel(modelId, cardEl) {
-        const sel = document.getElementById('ai_model_select');
-        if (sel) {
-            sel.value = modelId;
-            onModelSelectChange(modelId);
+    // Close dropdown on click outside
+    document.addEventListener('click', function(e) {
+        const container = document.getElementById('scanner-model-dropdown-container');
+        if (container && !container.contains(e.target)) {
+            const trigger = document.getElementById('scanner-dropdown-trigger');
+            const menu = document.getElementById('scanner-dropdown-menu');
+            if (menu) menu.classList.remove('show');
+            if (trigger) trigger.classList.remove('open');
         }
-    }
+    });
 
     function onCustomModelInput(val) {
-        document.getElementById('ai_model').value = val.trim() || 'openrouter/auto';
+        const hiddenInput = document.getElementById('ai_model');
+        if (hiddenInput) hiddenInput.value = val.trim() || 'openrouter/auto';
     }
 
     function selectChatModel(modelId, cardEl) {
