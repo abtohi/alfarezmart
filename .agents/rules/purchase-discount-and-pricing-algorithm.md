@@ -76,3 +76,18 @@ Ketika produk memiliki beberapa level kemasan (contoh: Level 1 = PCS isi 1, Leve
      - `total_price`: Menyimpan total tagihan baris (`quantity * nett_price`).
    - Update ke tabel `product_packagings`:
      - Kolom `buy_price` **harus diupdate dengan harga modal NETT** (setelah PPN dan Diskon), tidak boleh menjadi 0 selama harga modal nett > 0.
+
+---
+
+## 6. Format Tampilan Modal Nett & Rincian Diskon di UI (`buildMiniPricingTableHtml` & `buildNettInfo`)
+
+1. **Dilarang keras menampilkan label generik tanpa nominal** (misal hanya `-Disc`).
+2. **Format Rincian Diskon per Kemasan**:
+   - Jika mode `pct`: Tampilkan `−[nilai]%` (contoh: `−10%`).
+   - Jika mode `rp`: Tampilkan nominal rupiah diskon spesifik untuk kemasan tersebut: `−Rp[nominal_per_kemasan]` (contoh: `−Rp400` untuk pcs, `−Rp9.600` untuk karton).
+3. **Format PPN**:
+   - Hanya tampilkan PPN jika `ppn > 0` (contoh: `+11%PPN`). Jika `ppn == 0`, jangan tampilkan `+0%PPN`.
+4. **Contoh Tampilan Kolom Modal Nett**:
+   - Diskon saja: `Rp5.100` dengan sub-label `(−Rp400)`
+   - PPN + Diskon: `Rp5.705` dengan sub-label `(+11%PPN −Rp400)`
+   - Tanpa PPN & Diskon: `Rp5.500` (tanpa sub-label)

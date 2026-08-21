@@ -981,6 +981,12 @@ function initPurchaseProductSearch() {
 
     // Live typing for text keyword search
     searchInput.addEventListener('input', function() {
+        const q = this.value.trim();
+        if (q.length < 2) {
+            _searchVersion++;
+            if (suggestionsDiv) suggestionsDiv.innerHTML = '';
+            return;
+        }
         runSearch();
     });
 
@@ -1127,17 +1133,29 @@ async function processPurchaseBarcodeOrSearch(rawQuery) {
     performProductSearch();
 }
 
+// Version counter to prevent stale API results from overwriting newer local results
+let _searchVersion = 0;
+
 async function performProductSearch() {
     const q = searchInput ? searchInput.value.trim() : '';
     if (q.length < 2) {
+        _searchVersion++;
         if (suggestionsDiv) suggestionsDiv.innerHTML = '';
         return;
     }
+
+    const thisSearchVersion = ++_searchVersion;
 
     try {
         let data = [];
         if (!filterBySupplierSales && typeof OfflineDB !== 'undefined') {
             data = await OfflineDB.searchProducts(q);
+        }
+
+        const check1 = searchInput ? searchInput.value.trim() : '';
+        if (check1.length < 2 || thisSearchVersion !== _searchVersion) {
+            if (suggestionsDiv && check1.length < 2) suggestionsDiv.innerHTML = '';
+            return;
         }
 
         if ((!data || data.length === 0) || filterBySupplierSales) {
@@ -1154,6 +1172,12 @@ async function performProductSearch() {
             } catch (e) {
                 if (typeof OfflineDB !== 'undefined') data = await OfflineDB.searchProducts(q);
             }
+        }
+
+        const check2 = searchInput ? searchInput.value.trim() : '';
+        if (check2.length < 2 || thisSearchVersion !== _searchVersion) {
+            if (suggestionsDiv && check2.length < 2) suggestionsDiv.innerHTML = '';
+            return;
         }
 
         if (!Array.isArray(data) || data.length === 0) {
@@ -1187,13 +1211,17 @@ async function performProductSearch() {
         }).join('');
     } catch (e) {
         console.error("Product Search Error:", e);
-        suggestionsDiv.innerHTML = `<div style="padding:12px;text-align:center;color:var(--danger);font-size:12px;">Pencarian gagal: ${e.message}</div>`;
+        const checkErr = searchInput ? searchInput.value.trim() : '';
+        if (thisSearchVersion === _searchVersion && checkErr.length >= 2) {
+            suggestionsDiv.innerHTML = `<div style="padding:12px;text-align:center;color:var(--danger);font-size:12px;">Pencarian gagal: ${e.message}</div>`;
+        }
     }
 }
 
 async function selectProduct(productSummary, defaultLevel = null) {
-    searchInput.value = '';
-    suggestionsDiv.innerHTML = '';
+    _searchVersion++; // Cancel any pending async search responses
+    if (searchInput) searchInput.value = '';
+    if (suggestionsDiv) suggestionsDiv.innerHTML = '';
     try {
         let data = null;
         if (typeof OfflineDB !== 'undefined') {
@@ -2377,6 +2405,28 @@ function buildMiniPricingTableHtml(item) {
         const cW = mW !== null ? (mW >= 5  ? 'var(--success)' : mW >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
         const isSelected = (pkg.level == item.level);
 
+        let breakdownParts = [];
+        if (ppn > 0) {
+            breakdownParts.push(`+${ppn}%PPN`);
+        }
+        if (dv > 0) {
+            if (dm === 'pct') {
+                breakdownParts.push(`−${dv}%`);
+            } else {
+                const selPkg = item.packagings.find(p => p.level == item.level);
+                const selBq = parseFloat(selPkg?.base_qty) || 1;
+                const bq = parseFloat(pkg.base_qty) || 1;
+                const q = parseFloat(item.quantity) || 1;
+                const totalPcs = q * selBq;
+                const discPerPcs = totalPcs > 0 ? (dv / totalPcs) : 0;
+                const discForPkg = discPerPcs * bq;
+                breakdownParts.push(`−Rp${Math.round(discForPkg).toLocaleString('id-ID')}`);
+            }
+        }
+        const breakdownHtml = breakdownParts.length > 0 
+            ? `<div style="font-size:8px;color:var(--text-muted);">(${breakdownParts.join(' ')})</div>` 
+            : '';
+
         return `<tr style="${isSelected ? 'background:rgba(230,57,70,0.08);' : ''}">
             <td style="padding:5px 6px;font-size:10px;font-weight:600;color:${isSelected ? 'var(--primary)' : 'var(--text-muted)'}">
                 ${isSelected ? '<i class="bi bi-arrow-right-short"></i>' : ''} ${pkg.unit_name}
@@ -2384,7 +2434,7 @@ function buildMiniPricingTableHtml(item) {
             </td>
             <td style="padding:5px 6px;font-size:10px;text-align:right;">
                 <span style="font-weight:700;">${nett > 0 ? 'Rp' + Math.round(nett).toLocaleString('id-ID') : '—'}</span>
-                ${ppn > 0 || dv > 0 ? `<div style="font-size:8px;color:var(--text-muted);">(+${ppn}%PPN${dv > 0 ? ' −Disc' : ''})</div>` : ''}
+                ${breakdownHtml}
             </td>
             <td style="padding:5px 6px;font-size:10px;text-align:right;">
                 <span style="color:var(--success);font-weight:600;">${ret > 0 ? 'Rp' + ret.toLocaleString('id-ID') : '—'}</span>

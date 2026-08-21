@@ -1005,6 +1005,12 @@ function initPurchaseProductSearch() {
 
     // Live typing for text keyword search
     searchInput.addEventListener('input', function() {
+        const q = this.value.trim();
+        if (q.length < 2) {
+            _searchVersion++;
+            if (suggestionsDiv) suggestionsDiv.innerHTML = '';
+            return;
+        }
         runSearch();
     });
 
@@ -1157,6 +1163,7 @@ let _searchVersion = 0;
 async function performProductSearch() {
     const q = searchInput ? searchInput.value.trim() : '';
     if (q.length < 2) {
+        _searchVersion++;
         if (suggestionsDiv) suggestionsDiv.innerHTML = '';
         return;
     }
@@ -1176,8 +1183,14 @@ async function performProductSearch() {
             }
         }
 
+        const currentCheck1 = searchInput ? searchInput.value.trim() : '';
+        if (currentCheck1.length < 2 || thisSearchVersion !== _searchVersion) {
+            if (suggestionsDiv && currentCheck1.length < 2) suggestionsDiv.innerHTML = '';
+            return;
+        }
+
         // Render local results immediately (no waiting for network!)
-        if (thisSearchVersion === _searchVersion && Array.isArray(data) && data.length > 0) {
+        if (Array.isArray(data) && data.length > 0) {
             renderSearchResults(data);
         } else if (navigator.onLine && suggestionsDiv) {
             suggestionsDiv.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:12px;"><div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>Mencari produk...</div>';
@@ -1197,8 +1210,14 @@ async function performProductSearch() {
                 }
                 apiData = await api(url, { silent: true });
 
-                // Only update if this is still the latest search
-                if (thisSearchVersion === _searchVersion && Array.isArray(apiData) && apiData.length > 0) {
+                const currentCheck2 = searchInput ? searchInput.value.trim() : '';
+                if (currentCheck2.length < 2 || thisSearchVersion !== _searchVersion) {
+                    if (suggestionsDiv && currentCheck2.length < 2) suggestionsDiv.innerHTML = '';
+                    return;
+                }
+
+                // Only update if this is still the latest search and input is still populated
+                if (Array.isArray(apiData) && apiData.length > 0) {
                     // Merge: add API results that weren't in local results
                     const localIds = new Set((data || []).map(p => p.id));
                     const newFromApi = apiData.filter(p => !localIds.has(p.id));
@@ -1217,8 +1236,14 @@ async function performProductSearch() {
             }
         }
 
+        const currentCheck3 = searchInput ? searchInput.value.trim() : '';
+        if (currentCheck3.length < 2 || thisSearchVersion !== _searchVersion) {
+            if (suggestionsDiv && currentCheck3.length < 2) suggestionsDiv.innerHTML = '';
+            return;
+        }
+
         // ========== STEP 3: Show empty state if nothing found ==========
-        if (thisSearchVersion === _searchVersion && (!data || data.length === 0) && (!apiData || apiData.length === 0)) {
+        if ((!data || data.length === 0) && (!apiData || apiData.length === 0)) {
             suggestionsDiv.innerHTML = `
                 <div style="padding:12px;text-align:center;">
                     <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Produk tidak ditemukan</div>
@@ -1229,13 +1254,19 @@ async function performProductSearch() {
         }
     } catch (e) {
         console.error("Product Search Error:", e);
-        if (thisSearchVersion === _searchVersion) {
+        const currentCheckErr = searchInput ? searchInput.value.trim() : '';
+        if (thisSearchVersion === _searchVersion && currentCheckErr.length >= 2) {
             suggestionsDiv.innerHTML = `<div style="padding:12px;text-align:center;color:var(--danger);font-size:12px;">Pencarian gagal: ${e.message}</div>`;
         }
     }
 }
 
 function renderSearchResults(data) {
+    const curQ = searchInput ? searchInput.value.trim() : '';
+    if (curQ.length < 2) {
+        if (suggestionsDiv) suggestionsDiv.innerHTML = '';
+        return;
+    }
     if (!Array.isArray(data) || data.length === 0) return;
     suggestionsDiv.innerHTML = data.map(p => {
         const isSupplierProduct = filterBySupplierSales && p.is_supplier_product ? 1 : 0;
@@ -1295,8 +1326,9 @@ function renderSearchResults(data) {
 }
 
 async function selectProduct(productSummary, defaultLevel = null) {
-    searchInput.value = '';
-    suggestionsDiv.innerHTML = '';
+    _searchVersion++; // Cancel any pending async search responses
+    if (searchInput) searchInput.value = '';
+    if (suggestionsDiv) suggestionsDiv.innerHTML = '';
     try {
         let data = null;
         if (typeof OfflineDB !== 'undefined') {
@@ -2575,6 +2607,28 @@ function buildMiniPricingTableHtml(item) {
         const cW = mW !== null ? (mW >= 5  ? 'var(--success)' : mW >= 0 ? 'var(--warning)' : 'var(--danger)') : 'var(--text-muted)';
         const isSelected = (pkg.level == item.level);
 
+        let breakdownParts = [];
+        if (ppn > 0) {
+            breakdownParts.push(`+${ppn}%PPN`);
+        }
+        if (dv > 0) {
+            if (dm === 'pct') {
+                breakdownParts.push(`−${dv}%`);
+            } else {
+                const selPkg = item.packagings.find(p => p.level == item.level);
+                const selBq = parseFloat(selPkg?.base_qty) || 1;
+                const bq = parseFloat(pkg.base_qty) || 1;
+                const q = parseFloat(item.quantity) || 1;
+                const totalPcs = q * selBq;
+                const discPerPcs = totalPcs > 0 ? (dv / totalPcs) : 0;
+                const discForPkg = discPerPcs * bq;
+                breakdownParts.push(`−Rp${Math.round(discForPkg).toLocaleString('id-ID')}`);
+            }
+        }
+        const breakdownHtml = breakdownParts.length > 0 
+            ? `<div style="font-size:8px;color:var(--text-muted);">(${breakdownParts.join(' ')})</div>` 
+            : '';
+
         return `<tr style="${isSelected ? 'background:rgba(230,57,70,0.08);' : ''}">
             <td style="padding:5px 6px;font-size:10px;font-weight:600;color:${isSelected ? 'var(--primary)' : 'var(--text-muted)'}">
                 ${isSelected ? '<i class="bi bi-arrow-right-short"></i>' : ''} ${pkg.unit_name}
@@ -2582,7 +2636,7 @@ function buildMiniPricingTableHtml(item) {
             </td>
             <td style="padding:5px 6px;font-size:10px;text-align:right;">
                 <span style="font-weight:700;">${nett > 0 ? 'Rp' + Math.round(nett).toLocaleString('id-ID') : '—'}</span>
-                ${ppn > 0 || dv > 0 ? `<div style="font-size:8px;color:var(--text-muted);">(+${ppn}%PPN${dv > 0 ? ' −Disc' : ''})</div>` : ''}
+                ${breakdownHtml}
             </td>
             <td style="padding:5px 6px;font-size:10px;text-align:right;">
                 <span style="color:var(--success);font-weight:600;">${ret > 0 ? 'Rp' + ret.toLocaleString('id-ID') : '—'}</span>
