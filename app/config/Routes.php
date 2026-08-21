@@ -122,6 +122,7 @@ $router->post('/api/settings/app', 'ApiController@saveAppSettings');
 
 // AI Agent API
 $router->post('/api/ai/scan-invoice', 'ApiController@scanInvoiceAI');
+$router->post('/api/ai/learn-alias', 'ApiController@learnAliasAI');
 
 // PPOB API
 $router->get('/api/ppob/balance', 'DigiflazzController@apiGetBalance');

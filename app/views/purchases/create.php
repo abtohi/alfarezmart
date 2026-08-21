@@ -341,7 +341,7 @@ function savePhotoPreview() {
     showToast('Foto berhasil disiapkan', 'success');
 }
 
-// Helper to safely optimize any high-res image down to perfect OCR dimensions (< 400KB)
+// Helper to safely optimize any high-res image down to perfect OCR dimensions (< 300KB JPEG)
 async function compressImageForAI(dataUrl, maxDimension = 1500, quality = 0.82) {
     if (!dataUrl || !dataUrl.startsWith('data:image')) return dataUrl;
     return new Promise((resolve) => {
@@ -364,13 +364,108 @@ async function compressImageForAI(dataUrl, maxDimension = 1500, quality = 0.82) 
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, w, h);
             try {
-                resolve(canvas.toDataURL('image/webp', quality));
-            } catch(e) {
                 resolve(canvas.toDataURL('image/jpeg', quality));
+            } catch(e) {
+                resolve(dataUrl);
             }
         };
         img.onerror = () => resolve(dataUrl);
         img.src = dataUrl;
+    });
+}
+
+/**
+ * Display a stunning, modern pop-up modal summarizing AI scan parsing results.
+ */
+function showScanResultModal(items, elapsedSec, metadata = {}) {
+    const matched = items.filter(i => i.is_matched && i.product_id);
+    const unmatched = items.filter(i => !i.is_matched || !i.product_id);
+    const totalCount = items.length;
+    
+    let totalNominal = 0;
+    items.forEach(i => {
+        const q = parseFloat(i.qty) || 1;
+        const p = parseFloat(i.unit_price) || 0;
+        const t = parseFloat(i.total_price) || (q * p);
+        totalNominal += t;
+    });
+
+    let itemsListHtml = '';
+    items.forEach((item, idx) => {
+        const isM = !!(item.is_matched && item.product_id);
+        const invName = escapeHtml(item.original_name || item.supplier_code || 'Item Tanpa Nama');
+        const masterName = isM ? escapeHtml(item.product_data?.full_name || item.product_data?.short_label || item.product_data?.name || 'Produk Master') : '';
+        const qty = parseFloat(item.qty) || 1;
+        const unit = escapeHtml(item.unit || 'PCS');
+        const price = parseFloat(item.unit_price) || 0;
+        const total = parseFloat(item.total_price) || (qty * price);
+
+        itemsListHtml += `
+            <div style="background:var(--surface-2); border:1px solid ${isM ? 'rgba(46,204,113,0.25)' : 'rgba(245,158,11,0.3)'}; border-radius:var(--radius-md); padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px;">
+                        <span style="font-size:10px; font-weight:700; background:${isM ? 'rgba(46,204,113,0.15)' : 'rgba(245,158,11,0.15)'}; color:${isM ? '#2ecc71' : '#f59e0b'}; padding:2px 6px; border-radius:4px;">#${idx + 1} ${isM ? 'COCOK' : 'DRAFT'}</span>
+                        <span style="font-size:12px; font-weight:700; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${invName}</span>
+                    </div>
+                    <div style="font-size:11px; color:${isM ? 'var(--text-muted)' : '#f59e0b'}; display:flex; align-items:center; gap:4px;">
+                        <i class="bi ${isM ? 'bi-check-circle-fill text-success' : 'bi-exclamation-triangle-fill text-warning'}" style="font-size:10px;"></i>
+                        ${isM ? `Master: <strong style="color:var(--text-primary);">${masterName}</strong>` : `<em>Belum terhubung — klik tombol 'Hubungkan Produk' di keranjang</em>`}
+                    </div>
+                </div>
+                <div style="text-align:right; white-space:nowrap;">
+                    <div style="font-size:11px; font-weight:600; color:var(--text-muted);">${qty} ${unit} &times; ${formatRupiah(price)}</div>
+                    <div style="font-size:12px; font-weight:800; color:var(--info);">${formatRupiah(total)}</div>
+                </div>
+            </div>
+        `;
+    });
+
+    const bodyHTML = `
+        <div style="margin-bottom:14px;">
+            <!-- Summary Stats Cards -->
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-bottom:14px;">
+                <div style="background:var(--surface-2); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px; text-align:center;">
+                    <div style="font-size:10px; color:var(--text-muted); text-transform:uppercase; font-weight:600;">Total Item</div>
+                    <div style="font-size:18px; font-weight:800; color:var(--text-primary);">${totalCount} <span style="font-size:11px; font-weight:500;">Baris</span></div>
+                </div>
+                <div style="background:rgba(46,204,113,0.08); border:1px solid rgba(46,204,113,0.25); border-radius:var(--radius-md); padding:10px; text-align:center;">
+                    <div style="font-size:10px; color:#2ecc71; text-transform:uppercase; font-weight:600;">Cocok Otomatis</div>
+                    <div style="font-size:18px; font-weight:800; color:#2ecc71;">${matched.length}</div>
+                </div>
+                <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:var(--radius-md); padding:10px; text-align:center;">
+                    <div style="font-size:10px; color:#f59e0b; text-transform:uppercase; font-weight:600;">Draft Item</div>
+                    <div style="font-size:18px; font-weight:800; color:#f59e0b;">${unmatched.length}</div>
+                </div>
+            </div>
+
+            <!-- Total Amount Info -->
+            <div style="background:var(--surface-1); border:1px dashed var(--border-color); border-radius:var(--radius-md); padding:8px 12px; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+                <span style="color:var(--text-muted);">Estimasi Total Nilai Nota:</span>
+                <strong style="color:var(--success); font-size:14px;">${formatRupiah(totalNominal)}</strong>
+            </div>
+
+            <!-- Items List -->
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">Rincian Item Hasil Ekstraksi:</div>
+            <div style="max-height:280px; overflow-y:auto; padding-right:4px;">
+                ${itemsListHtml}
+            </div>
+        </div>
+    `;
+
+    AppModal.show({
+        title: 'Hasil Scan AI Invoice',
+        subtitle: `${totalCount} item berhasil diekstrak dalam ${elapsedSec} detik`,
+        icon: 'bi-stars',
+        iconColor: 'rgba(230,57,70,0.15)',
+        iconAccent: 'var(--primary)',
+        bodyHTML: bodyHTML,
+        submitText: '<i class="bi bi-cart-check"></i> Lihat di Keranjang',
+        cancelText: 'Tutup',
+        onSubmit: () => {
+            AppModal.close();
+            const el = document.getElementById('purchaseItems');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }
     });
 }
 
@@ -388,11 +483,11 @@ async function scanInvoiceWithAI() {
         btn.disabled = true;
         btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Memproses AI...';
         
-        // Auto-optimize image resolution safely
+        // Auto-optimize image resolution safely (fast JPEG encoding)
         let imageToSend = invoicePhotoBase64;
         let imageSizeKb = 0;
         try {
-            imageToSend = await compressImageForAI(invoicePhotoBase64, 1800, 0.85);
+            imageToSend = await compressImageForAI(invoicePhotoBase64, 1500, 0.82);
             imageSizeKb = Math.round((imageToSend.length * 3 / 4) / 1024);
         } catch(ce) {
             console.warn('Image pre-compression bypassed:', ce);
@@ -438,8 +533,6 @@ async function scanInvoiceWithAI() {
         if (result.success && result.data && result.data.length > 0) {
             const matched   = result.data.filter(i => i.is_matched && i.product_id);
             const unmatched = result.data.filter(i => !i.is_matched || !i.product_id);
-
-            showToast(`AI: ${matched.length} item cocok, ${unmatched.length} tidak dikenali (${elapsedSec}s)`, matched.length > 0 ? 'success' : 'warning');
 
             // Log AI scan result summary to ErrorLogger for optimization
             if (window.ErrorLogger && (unmatched.length > 0 || meta.avg_confidence < 70)) {
@@ -589,9 +682,9 @@ async function scanInvoiceWithAI() {
 
             renderCart();
             calculateTotal();
-            if (unmatched.length > 0) {
-                showToast(`AI: ${matched.length} cocok otomatis, ${unmatched.length} masuk sebagai draft (perlu hubungkan produk). Total: ${result.data.length} item.`, 'info', 5000);
-            }
+
+            // Display modern, elegant result modal popup
+            showScanResultModal(result.data, elapsedSec, meta);
         } else {
             const elapsedSecEnd = ((Date.now() - _scanStart) / 1000).toFixed(1);
             // Log zero-result scan to ErrorLogger
@@ -1384,7 +1477,7 @@ async function selectProductToLink(tempId, productId) {
             }).catch(() => {});
         }
 
-        AppModal.hide();
+        AppModal.close();
         renderCart();
         calculateTotal();
         showToast(`Item berhasil dihubungkan ke "${item.name}"`, 'success');

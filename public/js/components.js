@@ -105,6 +105,7 @@ const AppModal = {
 
         body.innerHTML = config.bodyHTML || '';
         submitBtn.innerHTML = config.submitText || 'Simpan';
+        submitBtn.style.display = config.hideSubmit ? 'none' : 'inline-flex';
         cancelBtn.textContent = config.cancelText || 'Batal';
 
         if (extraBtn) {
@@ -171,7 +172,7 @@ const AppModal = {
     },
 
     /**
-     * Close modal
+     * Close/hide modal
      * @param {*} result — Value to resolve promise with
      */
     close(result) {
@@ -183,6 +184,10 @@ const AppModal = {
             this._resolve(result);
             this._resolve = null;
         }
+    },
+
+    hide(result) {
+        this.close(result);
     },
 
     /**

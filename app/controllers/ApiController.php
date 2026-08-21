@@ -3982,6 +3982,44 @@ class ApiController extends Controller
         }
     }
 
+    /**
+     * Learn and link product alias from invoice scan directly to product master.
+     */
+    public function learnAliasAI()
+    {
+        $this->validateCSRF();
+        try {
+            $rawInput = file_get_contents('php://input');
+            $data = json_decode($rawInput, true) ?: [];
+            $supplierId = !empty($data['supplier_id']) ? (int)$data['supplier_id'] : null;
+            $productId = !empty($data['product_id']) ? (int)$data['product_id'] : null;
+            $invoiceName = trim((string)($data['supplier_invoice_name'] ?? ''));
+            $supplierCode = trim((string)($data['supplier_product_code'] ?? ''));
+
+            if (!$productId || empty($invoiceName)) {
+                $this->json(['error' => 'Product ID dan nama alias invoice wajib diisi'], 400);
+                return;
+            }
+
+            require_once __DIR__ . '/../services/invoice/InvoiceLearningService.php';
+            $learner = new \InvoiceLearningService($this->db);
+            $learner->learnFromPurchase($supplierId, [[
+                'product_id'            => $productId,
+                'supplier_invoice_name' => $invoiceName,
+                'supplier_code'         => $supplierCode,
+                'buy_price'             => 0
+            ]]);
+
+            $this->json([
+                'success' => true,
+                'message' => 'Alias invoice berhasil dipelajari dan dihubungkan ke produk master'
+            ]);
+        } catch (\Throwable $e) {
+            error_log("learnAliasAI error: " . $e->getMessage());
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     // ===== DEBT SOURCES =====
     public function getDebtSources()
     {
