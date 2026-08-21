@@ -443,30 +443,29 @@ async function scanInvoiceWithAI() {
             }
 
             for (const item of result.data) {
+                const scanUnitPrice = parseFloat(item.unit_price) || 0;
+                const scanQty = parseFloat(item.qty) || 1;
+                const scanTotal = parseFloat(item.total_price) || (scanQty * scanUnitPrice);
+                const scanUnit = (item.unit || 'PCS').trim();
+                const invName = (item.original_name || item.supplier_code || 'Item Tanpa Nama').trim();
+
                 if (item.is_matched && item.product_id) {
                     try {
                         const productData = item.product_data || await api(`${BASE_URL}api/products/${item.product_id}`);
                         if (productData && productData.packagings && productData.packagings.length > 0) {
                             const targetLevel = item.packaging_level || 1;
                             let selectedPkg = productData.packagings.find(p => p.level == targetLevel);
-                            if (!selectedPkg) {
-                                let targetUnit = (item.unit || '').toLowerCase().trim();
-                                if (targetUnit) {
-                                    selectedPkg = productData.packagings.find(p => p.unit_name && p.unit_name.toLowerCase().includes(targetUnit));
-                                }
+                            if (!selectedPkg && scanUnit) {
+                                selectedPkg = productData.packagings.find(p => p.unit_name && p.unit_name.toLowerCase().includes(scanUnit.toLowerCase()));
                             }
                             if (!selectedPkg) selectedPkg = productData.packagings[0];
-
-                            const scanUnitPrice = parseFloat(item.unit_price) || 0;
-                            const scanQty = parseFloat(item.qty) || 1;
-                            const scanTotal = parseFloat(item.total_price) || (scanQty * scanUnitPrice);
 
                             const existingIndex = purchaseItems.findIndex(i => i.product_id == productData.id && i.level == selectedPkg.level);
                             if (existingIndex > -1) {
                                 const existing = purchaseItems[existingIndex];
-                                existing.quantity = scanQty;
+                                existing.quantity = (parseFloat(existing.quantity) || 0) + scanQty;
                                 if (scanUnitPrice > 0) existing.buy_price = scanUnitPrice;
-                                existing.total = scanTotal;
+                                existing.total = (parseFloat(existing.total) || 0) + scanTotal;
                                 propagateFromMainInputs(existing);
                                 syncSellPricesWhenBuyPriceChanges(existing);
                             } else {
@@ -476,6 +475,8 @@ async function scanInvoiceWithAI() {
                                     addedItem.quantity  = scanQty;
                                     if (scanUnitPrice > 0) addedItem.buy_price = scanUnitPrice;
                                     addedItem.total     = scanTotal;
+                                    addedItem.original_invoice_name = invName;
+                                    addedItem.supplier_code = item.supplier_code || '';
                                     propagateFromMainInputs(addedItem);
                                     syncSellPricesWhenBuyPriceChanges(addedItem);
                                 }
@@ -485,11 +486,52 @@ async function scanInvoiceWithAI() {
                         console.error('Failed to add AI mapped item', e);
                     }
                 } else {
-                    showToast('Item "' + (item.original_name || item.supplier_code || '-') + '" belum cocok, input manual.', 'warning');
+                    // GUARANTEED CART ENTRY: Add unmatched item as draft
+                    const tempUid = Date.now() + Math.floor(Math.random() * 100000);
+                    const unitPriceVal = scanUnitPrice > 0 ? scanUnitPrice : (scanQty > 0 ? scanTotal / scanQty : 0);
+                    
+                    purchaseItems.unshift({
+                        id: tempUid,
+                        product_id: null,
+                        is_unmatched: true,
+                        name: invName,
+                        original_invoice_name: invName,
+                        supplier_code: item.supplier_code || '',
+                        is_collapsed: false,
+                        is_manual_price: true,
+                        packagings: [{
+                            level: 1,
+                            unit_name: scanUnit || 'PCS',
+                            buy_price: unitPriceVal,
+                            sell_price_retail: 0,
+                            sell_price_wholesale: 0,
+                            contained_qty: 1,
+                            base_qty: 1,
+                            ppn_pct: 0,
+                            diskon_mode: 'rp',
+                            diskon_value: 0,
+                            harga_nett: unitPriceVal
+                        }],
+                        level: 1,
+                        unit_name: scanUnit || 'PCS',
+                        quantity: scanQty,
+                        buy_price: unitPriceVal,
+                        sell_price_retail: 0,
+                        sell_price_wholesale: 0,
+                        last_buy_price: 0,
+                        total: scanTotal,
+                        ppn_pct: 0,
+                        diskon_mode: 'rp',
+                        diskon_value: 0,
+                        harga_nett: unitPriceVal
+                    });
                 }
             }
             renderCart();
             calculateTotal();
+            if (unmatched.length > 0) {
+                showToast(`AI: ${matched.length} cocok otomatis, ${unmatched.length} masuk sebagai draft (perlu hubungkan produk).`, 'info', 5000);
+            }
         } else {
             const elapsedSecEnd = ((Date.now() - _scanStart) / 1000).toFixed(1);
             if (window.ErrorLogger) {
@@ -1129,8 +1171,153 @@ async function processPurchaseBarcodeOrSearch(rawQuery) {
     }
 
     // Text Keyword Search
-    if (searchInput) searchInput.value = q;
-    performProductSearch();
+}
+
+/**
+ * Modal to connect an unmatched AI scan draft item to a master product.
+ */
+function openLinkProductModal(tempId) {
+    const item = purchaseItems.find(i => i.id == tempId);
+    if (!item) return;
+
+    const initialKeyword = (item.original_invoice_name || item.name || '').replace(/[^a-zA-Z0-9\s]/g, ' ').trim().split(/\s+/).slice(0, 3).join(' ');
+
+    AppModal.show({
+        title: 'Hubungkan Item Scan ke Produk Master',
+        icon: 'bi-link-45deg',
+        iconColor: 'var(--primary-bg)',
+        iconAccent: 'var(--primary)',
+        bodyHTML: `
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
+                Item Nota: <strong style="color:var(--text-primary);">${escapeHtml(item.name)}</strong><br>
+                Qty: <strong>${item.quantity} ${item.unit_name}</strong> | Total: <strong>${formatRupiah(item.total)}</strong>
+            </div>
+            <div class="modal-form-group" style="margin-bottom:10px;">
+                <label>Cari Produk di Master Database</label>
+                <div style="display:flex;gap:6px;">
+                    <input type="text" id="linkProductSearchInput" class="form-control-dark" style="flex:1;" placeholder="Ketik nama atau kode produk..." value="${escapeHtml(initialKeyword)}" autocomplete="off">
+                    <button type="button" class="btn btn-primary" onclick="doLinkProductSearch(${tempId})" style="padding:6px 14px;font-size:12px;">
+                        <i class="bi bi-search"></i> Cari
+                    </button>
+                </div>
+            </div>
+            <div id="linkProductResults" style="max-height:260px;overflow-y:auto;border:1px solid var(--border-color);border-radius:var(--radius-md);background:var(--bg-input);padding:6px;">
+                <div style="text-align:center;padding:12px;color:var(--text-muted);font-size:11px;">Ketik kata kunci untuk mencari produk...</div>
+            </div>
+        `,
+        hideSubmit: true,
+        cancelText: 'Tutup',
+        onShown: () => {
+            const input = document.getElementById('linkProductSearchInput');
+            if (input) {
+                input.focus();
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        doLinkProductSearch(tempId);
+                    }
+                });
+                if (initialKeyword) {
+                    doLinkProductSearch(tempId);
+                }
+            }
+        }
+    });
+}
+
+async function doLinkProductSearch(tempId) {
+    const input = document.getElementById('linkProductSearchInput');
+    const container = document.getElementById('linkProductResults');
+    if (!input || !container) return;
+    const q = input.value.trim();
+    if (!q) return;
+
+    container.innerHTML = '<div style="text-align:center;padding:12px;color:var(--text-muted);font-size:11px;"><i class="bi bi-hourglass-split"></i> Mencari produk...</div>';
+
+    try {
+        let products = [];
+        if (typeof OfflineDB !== 'undefined') {
+            products = await OfflineDB.searchProducts(q);
+        }
+        if ((!products || products.length === 0) && navigator.onLine) {
+            products = await api(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`);
+        }
+
+        if (!Array.isArray(products) || products.length === 0) {
+            container.innerHTML = `<div style="text-align:center;padding:12px;color:var(--danger);font-size:11px;"><i class="bi bi-exclamation-circle"></i> Tidak ada produk yang cocok dengan "${escapeHtml(q)}".</div>`;
+            return;
+        }
+
+        let html = '';
+        products.slice(0, 15).forEach(p => {
+            const pkgs = p.packagings || [];
+            const pkgLabels = pkgs.map(pkg => `${pkg.unit_name} (x${pkg.base_qty})`).join(', ');
+            html += `
+                <div style="padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;cursor:pointer;border-radius:4px;transition:background 0.15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'" onclick="selectProductToLink(${tempId}, ${p.id})">
+                    <div>
+                        <div style="font-weight:600;font-size:12px;color:var(--text-primary);">${escapeHtml(p.full_name || p.name || p.short_label)}</div>
+                        <div style="font-size:10px;color:var(--text-muted);">Kode: ${escapeHtml(p.code || '-')} | Kemasan: ${escapeHtml(pkgLabels || '1 kemasan')}</div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary" style="font-size:10px;padding:3px 8px;">Pilih</button>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    } catch(err) {
+        container.innerHTML = `<div style="text-align:center;padding:12px;color:var(--danger);font-size:11px;">Gagal memuat produk: ${escapeHtml(err.message || 'Error')}</div>`;
+    }
+}
+
+async function selectProductToLink(tempId, productId) {
+    const item = purchaseItems.find(i => i.id == tempId);
+    if (!item) return;
+
+    try {
+        let productData = null;
+        if (typeof OfflineDB !== 'undefined') {
+            productData = await OfflineDB.getProductById(productId);
+        }
+        if (!productData && navigator.onLine) {
+            productData = await api(`${BASE_URL}api/products/${productId}`);
+        }
+        if (!productData || !productData.packagings || productData.packagings.length === 0) {
+            showToast('Data produk tidak lengkap', 'error');
+            return;
+        }
+
+        // Link product to draft item
+        item.product_id = productData.id;
+        item.name = productData.full_name || productData.short_label || productData.name;
+        item.packagings = productData.packagings;
+        item.is_unmatched = false;
+        item.last_buy_price = productData.last_buy_price ? parseFloat(productData.last_buy_price) : 0;
+
+        // Pick matching packaging level
+        let selectedPkg = productData.packagings.find(p => p.unit_name && item.unit_name && p.unit_name.toLowerCase().includes(item.unit_name.toLowerCase()));
+        if (!selectedPkg) selectedPkg = productData.packagings[0];
+        item.level = selectedPkg.level;
+        item.unit_name = selectedPkg.unit_name;
+
+        // Auto learn alias to backend memory
+        if (item.original_invoice_name && currentSupplierId) {
+            api(`${BASE_URL}api/ai/learn-alias`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    supplier_id: currentSupplierId,
+                    product_id: productData.id,
+                    supplier_invoice_name: item.original_invoice_name,
+                    supplier_product_code: item.supplier_code || ''
+                })
+            }).catch(() => {});
+        }
+
+        AppModal.hide();
+        renderCart();
+        calculateTotal();
+        showToast(`Item berhasil dihubungkan ke "${item.name}"`, 'success');
+    } catch(e) {
+        showToast('Gagal menghubungkan produk: ' + e.message, 'error');
+    }
 }
 
 // Version counter to prevent stale API results from overwriting newer local results
@@ -3022,8 +3209,10 @@ function renderCart() {
             </div>`;
         }
 
+        const isUnmatched = !!(item.is_unmatched || !item.product_id);
+
         html += `
-        <div class="item-card" id="item_card_${item.id}" data-ppn="${item.ppn_pct || 0}" style="background:var(--surface-1);border-radius:var(--radius-lg);padding:${isCollapsed ? '10px 14px' : '16px'};margin-bottom:12px;border:1px solid var(--border-color);position:relative;">
+        <div class="item-card" id="item_card_${item.id}" data-ppn="${item.ppn_pct || 0}" style="background:var(--surface-1);border-radius:var(--radius-lg);padding:${isCollapsed ? '10px 14px' : '16px'};margin-bottom:12px;border:1px solid ${isUnmatched ? 'rgba(245,158,11,0.5)' : 'var(--border-color)'};position:relative;${isUnmatched ? 'box-shadow:0 0 0 1px rgba(245,158,11,0.15);' : ''}">
             <!-- Top Bar Actions -->
             <div style="position:absolute;top:10px;right:14px;display:flex;align-items:center;gap:8px;">
                 ${collapseToggleBtn}
@@ -3031,10 +3220,18 @@ function renderCart() {
                 <input type="checkbox" class="item-select-chk" value="${item.id}" style="width:18px;height:18px;accent-color:var(--danger);cursor:pointer;margin-left:4px;" onchange="updateMassSelect()">
             </div>
 
-            <!-- Product Name -->
-            <div style="font-weight:700;font-size:var(--font-size-sm);margin-bottom:${isCollapsed ? '4px' : '12px'};padding-right:160px;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+            <!-- Product Name & Status -->
+            <div style="font-weight:700;font-size:var(--font-size-sm);margin-bottom:${isCollapsed ? '4px' : '10px'};padding-right:160px;color:var(--text-primary);display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
                 ${item.name}
-                ${hasPkgs ? `<span style="font-size:9px;background:var(--info-bg);color:var(--info);padding:2px 6px;border-radius:8px;white-space:nowrap;">${item.packagings.length} kemasan</span>` : ''}
+                ${isUnmatched ? `
+                    <span style="font-size:9.5px;background:rgba(245,158,11,0.18);color:#f59e0b;padding:2px 8px;border-radius:6px;border:1px solid rgba(245,158,11,0.3);font-weight:600;display:inline-flex;align-items:center;gap:4px;">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Hasil Scan (Draft)
+                    </span>
+                    <button type="button" onclick="openLinkProductModal(${item.id})" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:3px 8px;font-size:10.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                        <i class="bi bi-link-45deg"></i> Hubungkan Produk
+                    </button>
+                ` : ''}
+                ${hasPkgs && !isUnmatched ? `<span style="font-size:9px;background:var(--info-bg);color:var(--info);padding:2px 6px;border-radius:8px;white-space:nowrap;">${item.packagings.length} kemasan</span>` : ''}
             </div>
 
             ${isCollapsed ? collapsedSummaryHtml : `
@@ -3230,6 +3427,12 @@ async function submitPurchase() {
     }
     if (purchaseItems.length === 0) {
         showToast('Daftar barang masih kosong');
+        return;
+    }
+
+    const unlinkedItems = purchaseItems.filter(i => !i.product_id || i.is_unmatched);
+    if (unlinkedItems.length > 0) {
+        showToast(`Ada ${unlinkedItems.length} item hasil scan yang belum dihubungkan ke produk master. Klik 'Hubungkan Produk' pada item bertanda kuning.`, 'warning', 6000);
         return;
     }
 

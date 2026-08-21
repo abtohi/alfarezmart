@@ -1,56 +1,69 @@
-# 🔒 ATURAN WAJIB: AI Invoice Scanner & Pemilihan Model OpenRouter (JANGAN DIUBAH)
+# 🔒 ATURAN WAJIB: AI Invoice Scanner & Pembacaan Faktur AlfarezMart (PERMANEN)
 
-> **PERINGATAN KERAS**: Aturan ini mengatur integrasi AI Invoice Scanner dengan OpenRouter API (`app/services/invoice/InvoiceScanService.php` dan `app/views/settings/app.php`). **DILARANG KERAS** memasukkan model berbayar atau model usang tanpa endpoint ke dalam pilihan scanner.
-
----
-
-## 1. Aturan Model AI Scanner (100% Full Free Tanpa Biaya)
-
-Untuk menjamin fitur AI Scan Invoice selalu dapat digunakan tanpa saldo berbayar dan tanpa error limit/endpoint:
-
-### ⚠️ Daftar Model Wajib (100% Free Multimodal Vision):
-1. **`google/gemma-4-26b-a4b-it:free`** : Google Gemma 4 26B A4B Vision (Rekomendasi Utama — Cepat, Akurat & Cerdas OCR Faktur).
-2. **`google/gemma-4-31b-it:free`** : Google Gemma 4 31B Vision (Kualitas Tinggi).
-3. **`openrouter/auto`** : OpenRouter Auto Router (Gratis).
-4. **`nvidia/nemotron-nano-12b-v2-vl:free`** : NVIDIA Nemotron Nano 12B VL (Multimodal Vision).
-5. **`dots-studio/dots-3-note-preview:free`** : Dots Studio Dots3 Note Preview (Gratis).
-
-### ❌ DILARANG KERAS:
-- Dilarang memasukkan model berbayar (seperti `google/gemini-2.0-flash-001`, `google/gemini-2.0-flash-lite-001`, Claude, GPT-4o) ke dalam daftar model default AI Scanner jika akun pengguna menggunakan kunci gratis (0 balance).
-- Dilarang memasukkan model yang sudah ditutup/deprecated di OpenRouter (seperti `meta-llama/llama-3.2-11b-vision-instruct:free`, `qwen/qwen-2.5-vl-72b-instruct:free`).
+> **PERINGATAN KERAS UNTUK SELURUH AGENT & PENGEMBANG**:
+> Aturan ini mengatur seluruh arsitektur pemindaian faktur/nota AI (`app/services/invoice/`, `app/views/purchases/create.php`, `app/views/purchases/edit.php`, dan `app/views/settings/app.php`).
+> **DILARANG KERAS MENGUBAH ATAU MENGURANGI ATURAN INI TANPA PERSETUJUAN EKSPLISIT DARI USER.**
 
 ---
 
-## 2. Aturan Tampilan di Pengaturan Sistem & AI (`app/views/settings/app.php`)
+## 1. Aturan Model AI Scanner (OpenRouter Vision)
 
-1. **Format Tampilan Model**:
-   - Bagian *1. AI Invoice Scanner* **WAJIB** menggunakan **Dropdown List (`<select id="ai_model_select">`)** yang rapi dan mudah dipilih oleh pengguna.
-   - Sediakan opsi model free di atas dan opsi `custom` ("Model Kustom (Ketik Nama Model Manual)") di paling bawah dropdown.
-   - Jika opsi `custom` dipilih, tampilkan input box text `#ai_model_custom_wrap` untuk mengetik model kustom.
-2. **Sinkronisasi Form**:
-   - Nilai pilihan model harus otomatis terhubung ke input hidden `#ai_model` dan tersimpan ke tabel `app_settings` dengan kunci `ai_model`.
-
----
-
-## 3. Aturan Failover & Timeout di Backend (`InvoiceScanService.php`)
-
-1. **Daftar Failover Otomatis**:
-   - Backend `InvoiceScanService.php` **WAJIB** memiliki `$DEFAULT_VISION_MODELS` berisi list model 100% free yang aktif.
-   - Jika user memilih model tertentu, sistem mencoba model tersebut terlebih dahulu. Jika gagal (rate-limit / offline), sistem otomatis beralih ke model free berikutnya tanpa crash.
-2. **Batas Waktu (Timeout)**:
-   - cURL timeout per model diatur minimal **65-90 detik** (`CURLOPT_TIMEOUT => 90`) karena pemrosesan gambar OCR faktur di tier free membutuhkan waktu 15-45 detik.
-   - `set_time_limit(180)` pada controller API (`ApiController@scanInvoiceAI`) untuk mencegah fatal timeout server.
+1. **Model Utama (Default & Recommended)**:
+   - **`openrouter/auto`**: Router multimodal otomatis cerdas OpenRouter yang mengarahkan ke model vision tercanggih dan tercepat (seperti Claude 3.5/3.7 Sonnet / Haiku / GPT-5 / Gemini).
+2. **Fallback Model (100% Free Multimodal Vision)**:
+   - `google/gemma-4-31b-it:free`
+   - `google/gemma-4-26b-a4b-it:free`
+   - `nvidia/nemotron-nano-12b-v2-vl:free`
+   - `meta-llama/llama-3.2-11b-vision-instruct:free`
+3. **Timeout & Failover**:
+   - Batas waktu cURL per attempt disetel **45 detik** dengan *fast failover*.
+   - Waktu scan invoice dijaga agar selesai dalam **10–25 detik** dan tidak boleh mengalami *timeout* atau *circuit breaker crash*.
 
 ---
 
-## 4. Ringkasan File yang Dilindungi
+## 2. Aturan Matching Produk Multi-Tiered (Kecerdasan Ekstraksi)
 
-| File | Komponen Kritis yang Dilindungi |
-|------|---------------------------------|
-| [`app/services/invoice/InvoiceScanService.php`](file:///c:/xampp/htdocs/AlfarezMart/app/services/invoice/InvoiceScanService.php) | `$DEFAULT_VISION_MODELS`, `callOpenRouter()`, prompt cleaner, timeout 90s |
-| [`app/views/settings/app.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/settings/app.php) | Dropdown selector `ai_model_select`, `onModelSelectChange()`, custom model input |
-| [`app/controllers/ApiController.php`](file:///c:/xampp/htdocs/AlfarezMart/app/controllers/ApiController.php) | `scanInvoiceAI()` time limit 180s |
+Setiap item yang dibaca dari invoice dicocokkan ke database produk dengan hierarki prioritas:
+1. **Tier 1 — Exact Kode Produk Supplier (`supplier_product_code`) (Skor 200 / Instant Match)**:
+   - Sanitasi string: hilangkan spasi, tanda hubung (`-`), titik, dan *leading zeros* (`03066` ↔ `3066`).
+   - Pencocokan langsung dengan `supplier_product_code`, `products.code`, dan `product_packagings.barcode`.
+2. **Tier 2 — Multi-Line Alias Invoice (`supplier_invoice_name`) (Skor 160–195)**:
+   - Mendukung multi-baris alias per produk untuk multi-supplier.
+   - Kamus singkatan FMCG Indonesia lengkap (`KCP` → Kecap, `MNS` → Manis, `SAM EP` → Sambal Extra Pedas, `TOM` → Tomat, `PET` → Botol, `PCH` → Pouch, `BSR/TGH/KCL`, dll.).
+3. **Tier 3 — Komposit Brand + Varian + Ukuran/Gramatur + Estimasi Harga (Price Proximity)**:
+   - Toleransi fluktuasi gramatur pabrik (*shrinkflation*) 10–20%.
+   - Pencocokan harga satuan terhadap harga beli kemasan (`buy_price`) untuk menentukan level kemasan (Karton vs Pack/Renceng vs PCS) secara presisi.
 
 ---
 
-*Aturan ini dibuat pada 18 Agustus 2026 dan berlaku permanen di seluruh sesi pengembangan.*
+## 3. ATURAN WAJIB 100% ITEM MASUK KE KERANJANG (Cart Ingestion)
+
+> **PRINSIP UTAMA**: Jumlah item yang berhasil diidentifikasi oleh AI harus **100% SAMA** dengan jumlah item yang tampil di keranjang/tabel pembelian. **TIDAK BOLEH ADA ITEM YANG HILANG ATAU DIBUANG.**
+
+1. **Item yang Cocok (`is_matched = true`)**:
+   - Dimasukkan langsung ke keranjang dengan kemasan (`packaging_level`) yang sesuai.
+   - Jika item dengan level tersebut sudah ada di keranjang, jumlah kuantitas dan totalnya diakumulasikan (`quantity += scanQty`, `total += scanTotal`).
+2. **Item yang Belum Cocok (`is_matched = false` / Unmatched)**:
+   - **WAJIB TETAP DIMASUKKAN KE KERANJANG** sebagai *Draft Item* (`is_unmatched: true`, `product_id: null`).
+   - Kuantitas, satuan (`unit`), harga satuan (`unit_price`), dan total harga (`total_price`) hasil scan AI wajib dipertahankan utuh sehingga total rupiah faktur tetap 100% akurat.
+   - Di antarmuka keranjang, item ditandai badge kuning `⚠️ Hasil Scan (Draft)` dan disediakan tombol **"Hubungkan Produk"**.
+3. **Modal Hubungkan Produk (`openLinkProductModal`)**:
+   - Memungkinkan kasir/admin mencari dan memilih produk master dalam 1 klik.
+   - Saat produk dipilih, sistem mengikat `product_id`, menyesuaikan kemasan, dan otomatis menyimpan alias nota tersebut ke `learned_aliases` via endpoint `/api/ai/learn-alias` untuk pemindaian berikutnya.
+
+---
+
+## 4. Ringkasan File Kritis yang Dilindungi
+
+| File | Komponen Kritis |
+|------|-----------------|
+| [`app/services/invoice/InvoiceScanService.php`](file:///c:/xampp/htdocs/AlfarezMart/app/services/invoice/InvoiceScanService.php) | Multi-model routing, prompt builder, timeout 45s, auto-reconnect MySQL |
+| [`app/services/invoice/ProductMatcher.php`](file:///c:/xampp/htdocs/AlfarezMart/app/services/invoice/ProductMatcher.php) | Kamus FMCG, exact code matching, composite brand/variant boost |
+| [`app/services/invoice/LearnedAliasLookup.php`](file:///c:/xampp/htdocs/AlfarezMart/app/services/invoice/LearnedAliasLookup.php) | In-memory indexing multi-baris alias, supplier codes, & product master |
+| [`app/views/purchases/create.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/purchases/create.php) | 100% item insertion loop, unmatched card rendering, `openLinkProductModal` |
+| [`app/views/purchases/edit.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/purchases/edit.php) | 100% item insertion loop, unmatched card rendering, `openLinkProductModal` |
+| [`app/views/settings/app.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/settings/app.php) | Dropdown model AI Scanner vision yang aktif dan terverifikasi |
+
+---
+
+*Aturan ini diperbarui permanen pada 21 Agustus 2026 dan wajib dipatuhi oleh seluruh agent dan sesi pengembangan di masa mendatang.*
