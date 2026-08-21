@@ -1690,11 +1690,13 @@ function syncPricesFromLevel1(item) {
 function calcItemNett(buy, ppn_pct, diskon_mode, diskon_value, qty = 1) {
     buy = parseFloat(buy) || 0;
     const ppn_amt = buy * ((parseFloat(ppn_pct) || 0) / 100);
+    const validQty = parseFloat(qty) > 0 ? parseFloat(qty) : 1;
     
-    // For Rp mode: diskon_value is total discount, divide by qty for per-unit discount
+    // For Rp mode: diskon_value is total discount for the quantity purchased
+    // For pct mode: percentage is applied to buy price directly
     const diskon_amt = diskon_mode === 'pct'
         ? buy * ((parseFloat(diskon_value) || 0) / 100)
-        : ((parseFloat(diskon_value) || 0) / (parseFloat(qty) || 1));
+        : ((parseFloat(diskon_value) || 0) / validQty);
         
     return Math.max(0, buy + ppn_amt - diskon_amt);
 }
@@ -1708,11 +1710,11 @@ function buildNettInfo(item) {
     const nett = item.harga_nett || buy;
     if (ppn === 0 && diskon === 0) return '<span style="font-size:9px;color:var(--text-muted);"><i class="bi bi-info-circle"></i> Isi PPN atau Diskon untuk melihat Harga Nett</span>';
     const ppn_amt = buy * (ppn / 100);
-    const diskon_amt = diskonMode === 'pct' ? buy * (diskon / 100) : diskon;
+    const diskon_amt = diskonMode === 'pct' ? buy * (diskon / 100) : (diskon / (parseFloat(item.quantity) || 1));
     let html = `<div style="background:rgba(0,0,0,0.25);border-radius:4px;padding:5px 7px;font-size:10px;">`;
     html += `<span style="color:var(--text-muted);">Modal: Rp${Math.round(buy).toLocaleString('id-ID')}</span>`;
     if (ppn > 0) html += ` <span style="color:var(--warning);">+PPN(${ppn}%): Rp${Math.round(ppn_amt).toLocaleString('id-ID')}</span>`;
-    if (diskon > 0) html += ` <span style="color:var(--success);">−Total Diskon: Rp${Math.round(diskon_amt).toLocaleString('id-ID')}</span>`;
+    if (diskon > 0) html += ` <span style="color:var(--success);">−Diskon: Rp${Math.round(diskon_amt).toLocaleString('id-ID')}${diskonMode === 'rp' ? '/unit' : ''}</span>`;
     html += ` → <strong style="color:var(--info);">Nett: Rp${Math.round(nett).toLocaleString('id-ID')}</strong>`;
     html += `</div>`;
     return html;
@@ -2318,6 +2320,7 @@ function propagateFromMainInputs(item) {
     const selBaseQty = parseFloat(selPkg.base_qty) || 1;
     const buyPrice   = parseFloat(item.buy_price) || 0;
     const buyPerPcs  = buyPrice / selBaseQty;
+    const qty        = parseFloat(item.quantity) || 1;
 
     item.packagings.forEach(pkg => {
         const bq = parseFloat(pkg.base_qty) || 1;
@@ -2330,18 +2333,20 @@ function propagateFromMainInputs(item) {
         // --- PPN (uniform) ---
         pkg.ppn_pct = item.ppn_pct || 0;
 
-        // --- Diskon ---
+        // --- Diskon & Nett ---
         if (item.diskon_mode === 'pct') {
             pkg.diskon_mode  = 'pct';
             pkg.diskon_value = item.diskon_value || 0;
+            pkg.harga_nett   = calcItemNett(pkg.buy_price, pkg.ppn_pct, 'pct', pkg.diskon_value, 1);
         } else {
-            // Rupiah: scale proportionally by base_qty ratio
             pkg.diskon_mode  = 'rp';
-            pkg.diskon_value = (item.diskon_value || 0) * (bq / selBaseQty);
+            pkg.diskon_value = item.diskon_value || 0;
+            const totalPcs = qty * selBaseQty;
+            const discPerPcs = totalPcs > 0 ? ((parseFloat(item.diskon_value) || 0) / totalPcs) : 0;
+            const discForPkg = discPerPcs * bq;
+            const ppnAmt = pkg.buy_price * ((parseFloat(pkg.ppn_pct) || 0) / 100);
+            pkg.harga_nett = Math.max(0, pkg.buy_price + ppnAmt - discForPkg);
         }
-
-        // --- Nett ---
-        pkg.harga_nett = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
 
         // --- Do not modify sell prices ---
         // (Harga jual tetap seperti di database, jangan diubah)
@@ -2465,7 +2470,7 @@ function buildDrawerRowHtml(item, prefix) {
         const ppn       = parseFloat(pkg.ppn_pct) || 0;
         const dm        = pkg.diskon_mode || 'rp';
         const dv        = parseFloat(pkg.diskon_value) || 0;
-        const nett      = calcItemNett(buy, ppn, dm, dv);
+        const nett      = pkg.harga_nett || calcItemNett(buy, ppn, dm, dv, item.quantity);
         const ret       = parseFloat(pkg.sell_price_retail) || 0;
         const who       = parseFloat(pkg.sell_price_wholesale) || 0;
         const origBuy   = parseFloat(pkg._orig_buy) || 0;
@@ -3200,19 +3205,24 @@ async function submitPurchase() {
             grand_total: currentGrandTotal,
             invoice_photo_base64: invoicePhotoBase64,
             items: purchaseItems.map(i => {
-                const itemNett = calcItemNett(parseFloat(i.buy_price) || 0, parseFloat(i.ppn_pct) || 0, i.diskon_mode || 'rp', parseFloat(i.diskon_value) || 0);
+                const selPkg = (i.packagings || []).find(p => p.level == i.level) || {};
+                const itemNett = parseFloat(selPkg.harga_nett) || parseFloat(i.harga_nett) || parseFloat(i.buy_price) || 0;
+                const buyGross = parseFloat(i.buy_price) || 0;
                 return {
                     product_id: i.product_id,
                     level: i.level,
                     quantity: i.quantity,
-                    buy_price: itemNett, 
+                    buy_price: buyGross, 
                     sell_price_retail: parseFloat(i.sell_price_retail) || 0,
                     sell_price_wholesale: parseFloat(i.sell_price_wholesale) || 0,
                     ppn_pct: parseFloat(i.ppn_pct) || 0,
                     diskon_mode: i.diskon_mode || 'rp',
                     diskon_value: parseFloat(i.diskon_value) || 0,
-                    packagings: i.packagings.map(p => {
-                        const pkgNett = calcItemNett(parseFloat(p.buy_price) || 0, parseFloat(p.ppn_pct) || 0, p.diskon_mode || 'rp', parseFloat(p.diskon_value) || 0);
+                    harga_nett: itemNett,
+                    packagings: (i.packagings || []).map(p => {
+                        const pkgNett = (parseFloat(p.harga_nett) > 0)
+                            ? parseFloat(p.harga_nett)
+                            : calcItemNett(parseFloat(p.buy_price) || 0, parseFloat(p.ppn_pct) || 0, p.diskon_mode || 'rp', parseFloat(p.diskon_value) || 0, i.quantity);
                         return {
                             level: p.level,
                             buy_price: pkgNett,
@@ -3221,6 +3231,7 @@ async function submitPurchase() {
                             ppn_pct: parseFloat(p.ppn_pct) || 0,
                             diskon_mode: p.diskon_mode || 'rp',
                             diskon_value: parseFloat(p.diskon_value) || 0,
+                            harga_nett: pkgNett,
                             qty_prices: p.qty_prices || []
                         };
                     })
@@ -3506,6 +3517,7 @@ async function openBulkInputModal() {
                 propagateFromMainInputs(bulkItem);
 
                 const selPkgFinal = bulkItem.packagings.find(p => p.level == selLevel);
+                const finalNett = selPkgFinal?.harga_nett || calcItemNett(bulkItem.buy_price, ppn, dm, dv, qty);
                 const existingItem = purchaseItems.find(i => i.product_id === bulkItem.product_id && i.level == selLevel);
                 if (existingItem) {
                     existingItem.quantity              += qty;
@@ -3517,7 +3529,7 @@ async function openBulkInputModal() {
                     existingItem.ppn_pct               = ppn;
                     existingItem.diskon_mode            = dm;
                     existingItem.diskon_value           = dv;
-                    existingItem.harga_nett             = calcItemNett(existingItem.buy_price, ppn, dm, dv);
+                    existingItem.harga_nett             = finalNett;
                 } else {
                     purchaseItems.unshift({
                         id:                   Date.now() + Math.random(),
@@ -3535,7 +3547,7 @@ async function openBulkInputModal() {
                         ppn_pct:              ppn,
                         diskon_mode:          dm,
                         diskon_value:         dv,
-                        harga_nett:           calcItemNett(bulkItem.buy_price, ppn, dm, dv)
+                        harga_nett:           finalNett
                     });
                 }
                 addedCount++;

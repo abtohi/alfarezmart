@@ -85,22 +85,28 @@ class PurchaseModel extends Model
                 $ppn_pct = isset($item['ppn_pct']) ? (float)$item['ppn_pct'] : 0.0;
                 $disc_pct = 0.0;
                 $disc_amt = 0.0;
+                $itemQty = max(0.001, (float)($item['quantity'] ?? 1));
+                $buyGross = (float)($item['buy_price'] ?? 0);
                 
                 if (isset($item['diskon_mode'])) {
                     if ($item['diskon_mode'] === 'pct') {
                         $disc_pct = (float)($item['diskon_value'] ?? 0);
-                        $disc_amt = round(($item['buy_price'] * $disc_pct / 100), 2);
+                        $disc_amt = round(($buyGross * $disc_pct / 100), 2);
                     } else {
-                        $disc_amt = (float)($item['diskon_value'] ?? 0);
-                        if ($item['buy_price'] > 0) {
-                            $disc_pct = round(($disc_amt / $item['buy_price'] * 100), 2);
+                        // Diskon rupiah adalah total untuk baris produk ini, jadi diskon per unit dibagi itemQty
+                        $totalDiscRp = (float)($item['diskon_value'] ?? 0);
+                        $disc_amt = round(($totalDiscRp / $itemQty), 2);
+                        if ($buyGross > 0) {
+                            $disc_pct = round(($disc_amt / $buyGross * 100), 2);
                         }
                     }
                 }
                 
-                $ppn_amt = $item['buy_price'] * ($ppn_pct / 100);
-                $nett_price = max(0, $item['buy_price'] + $ppn_amt - $disc_amt);
-                $total_price = $item['quantity'] * $nett_price;
+                $ppn_amt = $buyGross * ($ppn_pct / 100);
+                $nett_price = isset($item['harga_nett']) && (float)$item['harga_nett'] > 0
+                    ? (float)$item['harga_nett']
+                    : max(0, $buyGross + $ppn_amt - $disc_amt);
+                $total_price = round($item['quantity'] * $nett_price, 2);
 
                 // Insert purchase item
                 $stmtItem->execute([
@@ -108,7 +114,7 @@ class PurchaseModel extends Model
                     ':prod_id' => $item['product_id'],
                     ':pkg_id' => $pkgId,
                     ':qty' => $item['quantity'],
-                    ':buy' => $item['buy_price'],
+                    ':buy' => $buyGross,
                     ':ppn' => $ppn_pct,
                     ':disc_pct' => $disc_pct,
                     ':disc_amt' => $disc_amt,
@@ -123,10 +129,17 @@ class PurchaseModel extends Model
                         // Match with existing packagings from DB to get ID
                         foreach ($packagings as $pDb) {
                             if ($pDb['level'] == $pUpdate['level']) {
-                                $m_r = $pUpdate['sell_price_retail'] > 0 ? Helper::calculateMargin($pUpdate['buy_price'], $pUpdate['sell_price_retail']) : 0;
-                                $m_w = $pUpdate['sell_price_wholesale'] > 0 ? Helper::calculateMargin($pUpdate['buy_price'], $pUpdate['sell_price_wholesale']) : 0;
+                                $pkgNettBuy = (float)($pUpdate['buy_price'] ?? 0);
+                                if ($pkgNettBuy <= 0 && isset($pUpdate['harga_nett']) && (float)$pUpdate['harga_nett'] > 0) {
+                                    $pkgNettBuy = (float)$pUpdate['harga_nett'];
+                                }
+                                if ($pkgNettBuy <= 0 && $pDb['level'] == $item['level'] && $nett_price > 0) {
+                                    $pkgNettBuy = $nett_price;
+                                }
+                                $m_r = $pUpdate['sell_price_retail'] > 0 ? Helper::calculateMargin($pkgNettBuy, $pUpdate['sell_price_retail']) : 0;
+                                $m_w = $pUpdate['sell_price_wholesale'] > 0 ? Helper::calculateMargin($pkgNettBuy, $pUpdate['sell_price_wholesale']) : 0;
                                 $stmtUpdatePrice->execute([
-                                    ':buy' => $pUpdate['buy_price'],
+                                    ':buy' => $pkgNettBuy,
                                     ':retail' => $pUpdate['sell_price_retail'],
                                     ':wholesale' => $pUpdate['sell_price_wholesale'],
                                     ':margin_r' => $m_r,
@@ -143,11 +156,11 @@ class PurchaseModel extends Model
                     }
                 } else {
                     // Fallback to old behavior
-                    $margin_r = $item['sell_price_retail'] > 0 ? Helper::calculateMargin($item['buy_price'], $item['sell_price_retail']) : 0;
-                    $margin_w = $item['sell_price_wholesale'] > 0 ? Helper::calculateMargin($item['buy_price'], $item['sell_price_wholesale']) : 0;
+                    $margin_r = $item['sell_price_retail'] > 0 ? Helper::calculateMargin($nett_price, $item['sell_price_retail']) : 0;
+                    $margin_w = $item['sell_price_wholesale'] > 0 ? Helper::calculateMargin($nett_price, $item['sell_price_wholesale']) : 0;
                     
                     $stmtUpdatePrice->execute([
-                        ':buy' => $item['buy_price'],
+                        ':buy' => $nett_price,
                         ':retail' => $item['sell_price_retail'],
                         ':wholesale' => $item['sell_price_wholesale'],
                         ':margin_r' => $margin_r,
@@ -517,30 +530,36 @@ class PurchaseModel extends Model
                 $marginR = $item['sell_price_retail'] > 0 ? (($item['sell_price_retail'] - $item['buy_price']) / $item['sell_price_retail'] * 100) : 0;
                 $marginW = $item['sell_price_wholesale'] > 0 ? (($item['sell_price_wholesale'] - $item['buy_price']) / $item['sell_price_wholesale'] * 100) : 0;
 
+                $itemQty = max(0.001, (float)($item['quantity'] ?? 1));
+                $buyGross = (float)($item['buy_price'] ?? 0);
+
                 // PPN & Discount
                 $ppn = $item['ppn_pct'] ?? 0;
                 $discMode = $item['diskon_mode'] ?? 'rp';
-                $discVal = $item['diskon_value'] ?? 0;
+                $discVal = (float)($item['diskon_value'] ?? 0);
 
                 $discAmt = 0;
                 $discPct = 0;
                 if ($discMode === 'pct') {
                     $discPct = $discVal;
-                    $discAmt = $item['buy_price'] * ($discPct / 100);
+                    $discAmt = round(($buyGross * ($discPct / 100)), 2);
                 } else {
-                    $discAmt = $discVal;
-                    $discPct = $item['buy_price'] > 0 ? ($discAmt / $item['buy_price'] * 100) : 0;
+                    $discAmt = round(($discVal / $itemQty), 2);
+                    $discPct = $buyGross > 0 ? round(($discAmt / $buyGross * 100), 2) : 0;
                 }
 
-                $nettPrice = $item['buy_price'] + ($item['buy_price'] * ($ppn / 100)) - $discAmt;
-                $totalPriceItem = $nettPrice * $item['quantity'];
+                $ppnAmt = $buyGross * ($ppn / 100);
+                $nettPrice = isset($item['harga_nett']) && (float)$item['harga_nett'] > 0
+                    ? (float)$item['harga_nett']
+                    : max(0, $buyGross + $ppnAmt - $discAmt);
+                $totalPriceItem = round($nettPrice * $item['quantity'], 2);
 
                 $stmtItem->execute([
                     ':pid' => $id,
                     ':prod_id' => $item['product_id'],
                     ':pkg_id' => $pkg['id'],
                     ':qty' => $item['quantity'],
-                    ':buy' => $item['buy_price'],
+                    ':buy' => $buyGross,
                     ':ppn' => $ppn,
                     ':disc_pct' => $discPct,
                     ':disc_amt' => $discAmt,
@@ -554,10 +573,17 @@ class PurchaseModel extends Model
                     foreach ($item['packagings'] as $pUpdate) {
                         foreach ($packagings as $pDb) {
                             if ($pDb['level'] == $pUpdate['level']) {
-                                $m_r = $pUpdate['sell_price_retail'] > 0 ? Helper::calculateMargin($pUpdate['buy_price'], $pUpdate['sell_price_retail']) : 0;
-                                $m_w = $pUpdate['sell_price_wholesale'] > 0 ? Helper::calculateMargin($pUpdate['buy_price'], $pUpdate['sell_price_wholesale']) : 0;
+                                $pkgNettBuy = (float)($pUpdate['buy_price'] ?? 0);
+                                if ($pkgNettBuy <= 0 && isset($pUpdate['harga_nett']) && (float)$pUpdate['harga_nett'] > 0) {
+                                    $pkgNettBuy = (float)$pUpdate['harga_nett'];
+                                }
+                                if ($pkgNettBuy <= 0 && $pDb['level'] == $item['level'] && $nettPrice > 0) {
+                                    $pkgNettBuy = $nettPrice;
+                                }
+                                $m_r = $pUpdate['sell_price_retail'] > 0 ? Helper::calculateMargin($pkgNettBuy, $pUpdate['sell_price_retail']) : 0;
+                                $m_w = $pUpdate['sell_price_wholesale'] > 0 ? Helper::calculateMargin($pkgNettBuy, $pUpdate['sell_price_wholesale']) : 0;
                                 $stmtUpdatePrice->execute([
-                                    ':buy' => $pUpdate['buy_price'],
+                                    ':buy' => $pkgNettBuy,
                                     ':retail' => $pUpdate['sell_price_retail'],
                                     ':wholesale' => $pUpdate['sell_price_wholesale'],
                                     ':margin_r' => $m_r,
@@ -572,8 +598,10 @@ class PurchaseModel extends Model
                         }
                     }
                 } else {
+                    $marginR = $item['sell_price_retail'] > 0 ? Helper::calculateMargin($nettPrice, $item['sell_price_retail']) : 0;
+                    $marginW = $item['sell_price_wholesale'] > 0 ? Helper::calculateMargin($nettPrice, $item['sell_price_wholesale']) : 0;
                     $stmtUpdatePrice->execute([
-                        ':buy' => $item['buy_price'],
+                        ':buy' => $nettPrice,
                         ':retail' => $item['sell_price_retail'],
                         ':wholesale' => $item['sell_price_wholesale'],
                         ':margin_r' => $marginR,
