@@ -35,9 +35,27 @@ class ProductMatcher
     const SCORE_EXACT_NAME = 90;
 
     /**
-     * Common abbreviations used in Indonesian supplier invoices.
+     * Common abbreviations used in Indonesian FMCG & supplier invoices.
      */
     const ABBREVIATIONS = [
+        'kcp'   => 'kecap',
+        'mns'   => 'manis',
+        'pds'   => 'pedas',
+        'pds.'  => 'pedas',
+        'sam'   => 'sambal',
+        'smbl'  => 'sambal',
+        'ep'    => 'extra pedas',
+        'tom'   => 'tomat',
+        'pet'   => 'botol',
+        'btl'   => 'botol',
+        'pch'   => 'pouch',
+        'sch'   => 'sachet',
+        'scht'  => 'sachet',
+        'sct'   => 'sachet',
+        'saset' => 'sachet',
+        'rcg'   => 'renceng',
+        'rtg'   => 'renceng',
+        'renteng'=> 'renceng',
         'bsr'   => 'besar',
         'tgh'   => 'tengah',
         'kcl'   => 'kecil',
@@ -45,17 +63,14 @@ class ProductMatcher
         'dus'   => 'karton',
         'krt'   => 'karton',
         'crt'   => 'karton',
-        'btl'   => 'botol',
+        'ktn'   => 'karton',
         'bks'   => 'bungkus',
-        'scht'  => 'sachet',
-        'sct'   => 'sachet',
-        'sch'   => 'sachet',
-        'saset' => 'sachet',
+        'bgk'   => 'bungkus',
         'lbr'   => 'lembar',
         'klg'   => 'kaleng',
         'can'   => 'kaleng',
-        'pch'   => 'pouch',
         'dz'    => 'lusin',
+        'lsn'   => 'lusin',
         'pcs'   => 'pcs',
         'mie'   => 'mi',
         'mi'    => 'mie',
@@ -64,16 +79,16 @@ class ProductMatcher
         'chk'   => 'cokelat',
         'coklat'=> 'cokelat',
         'chocolate' => 'cokelat',
-        'bis'   => 'biscuit',
-        'bsc'   => 'biscuit',
+        'bis'   => 'biskuit',
+        'bsc'   => 'biskuit',
         'kopi'  => 'coffee',
         'teh'   => 'tea',
         'air'   => 'water',
         'mnu'   => 'minuman',
         'mkn'   => 'makanan',
         'det'   => 'detergent',
-        'spc'   => 'special',
-        'chkn'  => 'chicken',
+        'spc'   => 'spesial',
+        'chkn'  => 'ayam',
         'prem'  => 'premium',
         'orig'  => 'original',
         'reg'   => 'regular',
@@ -88,13 +103,19 @@ class ProductMatcher
         'white' => 'putih',
         'grn'   => 'green',
         'blu'   => 'blue',
+        'kcg'   => 'kacang',
+        'hju'   => 'hijau',
+        'kcg hju' => 'kacang hijau',
+        'syb'   => 'sayur',
+        'bdr'   => 'bandar',
+        'st'    => 'siantar top',
     ];
 
     /**
      * Tokens to SKIP during token overlap matching (only non-differentiating filler words).
      */
     const SKIP_TOKENS = [
-        'isi', 'prg', 'x', 'dan', 'yang', 'dgn', 'dg',
+        'isi', 'prg', 'x', 'dan', 'yang', 'dgn', 'dg', 'gt250', '2408', '2506',
     ];
 
     /** @var LayoutAnalyzer */
@@ -135,24 +156,29 @@ class ProductMatcher
         $name               = $item['name']                 ?? '';
         $supplierInvName    = $item['supplier_invoice_name'] ?? $name;
         $expandedName       = $item['expanded_name']         ?? '';
-        $extractedCode      = trim($item['supplier_code']   ?? '');
-        $extractedBarcode   = trim($item['barcode']         ?? '');
-        $extractedBrand     = trim($item['brand']           ?? '');
-        $extractedVariant   = trim($item['variant']         ?? '');
+        $extractedCode      = trim((string)($item['supplier_code'] ?? $item['supplier_product_code'] ?? $item['code'] ?? ''));
+        $extractedBarcode   = trim((string)($item['barcode'] ?? ''));
+        $extractedBrand     = trim((string)($item['brand'] ?? ''));
+        $extractedVariant   = trim((string)($item['variant'] ?? ''));
         $unitPrice          = (float)($item['unit_price']   ?? 0);
         $unit               = $item['unit']                 ?? '';
         $weightVal          = isset($item['weight']) ? (is_numeric($item['weight']) ? (float)$item['weight'] : null) : null;
         $weightUnit         = $item['weight_unit']          ?? '';
 
-        // ---- STRATEGY 1: Exact supplier product code (Highest Priority) ----
-        if (!empty($extractedCode)) {
-            $cleanExtCode = ltrim($extractedCode, '0');
-            foreach ($allProducts as $p) {
-                $dbCode     = trim($p['supplier_product_code'] ?? '');
-                $dbProdCode = trim($p['code'] ?? '');
+        // Clean extracted code for comparison
+        $cleanExtCode = !empty($extractedCode) ? preg_replace('/[^a-zA-Z0-9]/', '', ltrim($extractedCode, '0')) : '';
 
-                if ((!empty($dbCode) && (strcasecmp($extractedCode, $dbCode) === 0 || ltrim($dbCode, '0') === $cleanExtCode)) ||
-                    (!empty($dbProdCode) && (strcasecmp($extractedCode, $dbProdCode) === 0 || ltrim($dbProdCode, '0') === $cleanExtCode))) {
+        // ---- STRATEGY 1: Exact supplier product code (Highest Priority Exact Match) ----
+        if (!empty($extractedCode)) {
+            foreach ($allProducts as $p) {
+                $dbCode     = trim((string)($p['supplier_product_code'] ?? ''));
+                $dbProdCode = trim((string)($p['code'] ?? ''));
+
+                $cleanDbCode     = !empty($dbCode) ? preg_replace('/[^a-zA-Z0-9]/', '', ltrim($dbCode, '0')) : '';
+                $cleanDbProdCode = !empty($dbProdCode) ? preg_replace('/[^a-zA-Z0-9]/', '', ltrim($dbProdCode, '0')) : '';
+
+                if ((!empty($dbCode) && (strcasecmp($extractedCode, $dbCode) === 0 || ($cleanDbCode !== '' && $cleanDbCode === $cleanExtCode))) ||
+                    (!empty($dbProdCode) && (strcasecmp($extractedCode, $dbProdCode) === 0 || ($cleanDbProdCode !== '' && $cleanDbProdCode === $cleanExtCode)))) {
                     $bestMatch    = $p;
                     $highestScore = self::SCORE_EXACT_CODE;
                     $bestStrategy = 'exact_code';
@@ -163,69 +189,73 @@ class ProductMatcher
 
         // ---- STRATEGY 2-10: Score-based matching if no exact code match ----
         if (!$bestMatch) {
+            $normExtracted   = $this->normalize($name);
+            $normSuppInvName = $this->normalize($supplierInvName);
+            $expandedMatchName = !empty($expandedName) ? $expandedName : $this->expandAbbreviations($name);
+            $normExpanded    = $this->normalize($expandedMatchName);
+
             foreach ($allProducts as $p) {
                 $score    = 0;
                 $strategy = 'score';
 
-                // -- Supplier affinity boost (+25) --
+                // -- Supplier affinity boost (+20) --
                 if (!empty($supplierProductIds) && in_array($p['id'], $supplierProductIds, false)) {
-                    $score += 25;
+                    $score += 20;
                 }
 
-                // -- STRATEGY 2: Normalized name exact match --
-                $normExtracted = $this->normalize($name);
-                $normFull      = $this->normalize($p['full_name'] ?? '');
-                $normShort     = $this->normalize($p['short_label'] ?? '');
-                $normInvoice   = $this->normalize($p['invoice_name'] ?? '');
+                $normFull    = $this->normalize($p['full_name'] ?? '');
+                $normShort   = $this->normalize($p['short_label'] ?? '');
+                $normInvoice = $this->normalize($p['invoice_name'] ?? '');
 
-                if ($normExtracted && ($normExtracted === $normFull || $normExtracted === $normShort || $normExtracted === $normInvoice)) {
-                    $score    += self::SCORE_EXACT_NAME;
-                    $strategy  = 'exact_name';
-                }
-
-                // -- STRATEGY 3: Supplier invoice name match (multi-name) --
+                // -- STRATEGY 2: Multi-line supplier_invoice_name match (High Priority) --
                 if (!empty($p['supplier_invoice_name'])) {
                     $invEntries = preg_split('/[\n\r,;]+/', $p['supplier_invoice_name']);
                     foreach ($invEntries as $entry) {
-                        $normEntry    = $this->normalize($entry);
-                        $normSuppInv  = $this->normalize($supplierInvName);
-                        $normNameNorm = $this->normalize($name);
+                        $normEntry = $this->normalize($entry);
+                        if (empty($normEntry)) continue;
 
-                        if (!empty($normEntry)) {
-                            if (!empty($normSuppInv) && $normSuppInv === $normEntry) {
-                                $score    = max($score, $score + self::SCORE_EXACT_INVOICE_NAME);
-                                $strategy = 'exact_invoice_name';
-                            } elseif (!empty($normNameNorm) && $normNameNorm === $normEntry) {
-                                $score    = max($score, $score + 88);
-                                $strategy = 'exact_invoice_name_via_name';
-                            } elseif (!empty($normSuppInv) && $this->partialMatch($normSuppInv, $normEntry)) {
-                                $score += 30;
-                            } elseif (!empty($normNameNorm) && $this->partialMatch($normNameNorm, $normEntry)) {
-                                $score += 25;
-                            }
+                        if ($normSuppInvName === $normEntry || $normExtracted === $normEntry) {
+                            $score    = max($score, self::SCORE_EXACT_INVOICE_NAME + 10);
+                            $strategy = 'exact_supplier_invoice_name';
+                            break;
+                        }
+
+                        $expandedEntry = $this->normalize($this->expandAbbreviations($entry));
+                        if ($normExpanded === $expandedEntry || $normExpanded === $normEntry) {
+                            $score    = max($score, self::SCORE_EXACT_INVOICE_NAME + 5);
+                            $strategy = 'expanded_invoice_alias_match';
+                            break;
+                        }
+
+                        if ($this->partialMatch($normSuppInvName, $normEntry) || $this->partialMatch($normExtracted, $normEntry)) {
+                            $score = max($score, 75);
+                            if ($strategy === 'score') $strategy = 'partial_invoice_alias';
                         }
                     }
                 }
 
-                // -- STRATEGY 4: Abbreviation expansion & exact rematch --
-                $expandedMatchName = !empty($expandedName) ? $expandedName : $this->expandAbbreviations($name);
-                $normExpanded = $this->normalize($expandedMatchName);
-                if ($normExpanded === $normFull || $normExpanded === $normShort) {
-                    $score    += 80;
-                    $strategy  = 'abbreviation_expand';
+                // -- STRATEGY 3: Normalized name exact match (invoice_name, short_label, full_name) --
+                if ($normExtracted && ($normExtracted === $normInvoice || $normExtracted === $normShort || $normExtracted === $normFull)) {
+                    $score    = max($score, self::SCORE_EXACT_NAME);
+                    $strategy = 'exact_name';
                 }
 
-                // -- STRATEGY 5: Smart Token Overlap Match (with weight awareness) --
+                // -- STRATEGY 4: Abbreviation expansion match --
+                if ($normExpanded === $normFull || $normExpanded === $normShort || $normExpanded === $normInvoice) {
+                    $score    = max($score, 88);
+                    $strategy = 'abbreviation_expand';
+                }
+
+                // -- STRATEGY 5: Smart Token Overlap Match (with brand/variant/weight awareness) --
                 $tokenScore = $this->calculateTokenOverlapScore($normExpanded, $normFull, $normShort, $normInvoice, $p);
                 if ($tokenScore > 0 && $tokenScore > $score) {
                     $score    = $tokenScore;
                     $strategy = 'token_overlap';
                 }
 
-                // -- STRATEGY 6: Fuzzy match via similar_text (only if no higher score) --
+                // -- STRATEGY 6: Fuzzy match via similar_text (if no strong score yet) --
                 if ($score < 65) {
                     $similarities = [];
-
                     similar_text(strtolower($name), strtolower($p['full_name'] ?? ''), $simFull);
                     $similarities[] = $simFull;
 
@@ -237,8 +267,6 @@ class ProductMatcher
                         similar_text(strtolower($name), strtolower($p['invoice_name']), $simInv);
                         $similarities[] = $simInv;
                     }
-
-                    // Also fuzzy against expanded name
                     if (!empty($expandedMatchName)) {
                         similar_text(strtolower($expandedMatchName), strtolower($p['full_name'] ?? ''), $simExpFull);
                         $similarities[] = $simExpFull;
@@ -257,10 +285,11 @@ class ProductMatcher
                 // -- STRATEGY 7: Barcode match --
                 if (!empty($extractedBarcode) && !empty($p['packagings'])) {
                     foreach ($p['packagings'] as $pkg) {
-                        $dbBarcode = trim($pkg['barcode'] ?? '');
+                        $dbBarcode = trim((string)($pkg['barcode'] ?? ''));
                         if (!empty($dbBarcode) && strcasecmp($extractedBarcode, $dbBarcode) === 0) {
                             $score    += 150;
                             $strategy  = 'barcode';
+                            break;
                         }
                     }
                 }
@@ -269,27 +298,12 @@ class ProductMatcher
                 $compositeBoost = $this->calculateCompositeBoost($extractedBrand, $extractedVariant, $weightVal, $weightUnit, $p);
                 if ($compositeBoost > 0) {
                     $score += $compositeBoost;
-                    if ($compositeBoost >= 30 && $strategy === 'score') {
+                    if ($compositeBoost >= 25 && $strategy === 'score') {
                         $strategy = 'brand_variant_weight';
                     }
                 }
 
-                // -- STRATEGY 9: Expanded name match against supplier_invoice_name --
-                if (!empty($expandedMatchName) && !empty($p['supplier_invoice_name'])) {
-                    $normExpandedLower = $this->normalize($expandedMatchName);
-                    $invEntries = preg_split('/[\n\r,;]+/', $p['supplier_invoice_name']);
-                    foreach ($invEntries as $entry) {
-                        $normEntry = $this->normalize($entry);
-                        if (!empty($normEntry) && !empty($normExpandedLower)) {
-                            if ($normExpandedLower === $normEntry) {
-                                $score = max($score, 92);
-                                $strategy = 'expanded_invoice_match';
-                            }
-                        }
-                    }
-                }
-
-                // -- STRATEGY 10: Price Proximity Boost (Distinguish variants/sizes sharing same brand) --
+                // -- STRATEGY 9: Price Proximity Boost (Distinguish sizes/packaging levels) --
                 if ($unitPrice > 0 && !empty($p['packagings'])) {
                     $bestPriceDiffPct = 999;
                     foreach ($p['packagings'] as $pkg) {
@@ -302,11 +316,9 @@ class ProductMatcher
                         }
                     }
                     if ($bestPriceDiffPct <= 0.05) {
-                        // Exact/very close packaging buy price match (within 5%)
-                        $score += 30;
+                        $score += 30; // Within 5% of packaging buy price
                     } elseif ($bestPriceDiffPct <= 0.15) {
-                        // Close price match (within 15%)
-                        $score += 15;
+                        $score += 15; // Within 15% of packaging buy price
                     }
                 }
 

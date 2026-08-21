@@ -60,30 +60,48 @@
                     $scannerModelsList = [
                         [
                             'id' => 'openrouter/auto',
-                            'name' => 'Auto Vision (OpenRouter)',
+                            'name' => 'Auto Vision (OpenRouter) - Rekomendasi',
                             'icon' => '⚡',
                             'icon_bg' => 'linear-gradient(135deg, #f59e0b, #d97706)',
-                            'badge' => 'GRATIS',
+                            'badge' => 'TERBAIK',
                             'badge_class' => 'model-badge-free',
-                            'desc' => 'Pilih otomatis model vision gratis tercepat & terbaik'
+                            'desc' => 'Routing otomatis ke model vision multimodal tercerdas & tercepat'
                         ],
                         [
-                            'id' => 'google/gemma-4-26b-a4b-it:free',
-                            'name' => 'Google: Gemma 4 26B A4B Vision',
+                            'id' => 'google/gemini-2.0-flash-001',
+                            'name' => 'Google: Gemini 2.0 Flash Vision',
                             'icon' => '🌟',
                             'icon_bg' => 'linear-gradient(135deg, #4285F4, #34A853)',
+                            'badge' => 'ULTRA CEPAT',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Multimodal vision cerdas tingkat tinggi dari Google, sangat detail'
+                        ],
+                        [
+                            'id' => 'google/gemini-flash-1.5',
+                            'name' => 'Google: Gemini 1.5 Flash Vision',
+                            'icon' => '💎',
+                            'icon_bg' => 'linear-gradient(135deg, #0ea5e9, #2563eb)',
+                            'badge' => 'STABIL',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model stabil berkecepatan tinggi untuk scan nota panjang'
+                        ],
+                        [
+                            'id' => 'meta-llama/llama-3.2-11b-vision-instruct:free',
+                            'name' => 'Meta: Llama 3.2 11B Vision',
+                            'icon' => '🦙',
+                            'icon_bg' => 'linear-gradient(135deg, #0668E1, #0084FF)',
                             'badge' => 'GRATIS',
                             'badge_class' => 'model-badge-free',
-                            'desc' => 'Multimodal vision terbaru Google, sangat cepat & akurat'
+                            'desc' => 'Vision multimodal open-source dari Meta'
                         ],
                         [
                             'id' => 'google/gemma-4-31b-it:free',
                             'name' => 'Google: Gemma 4 31B Vision',
-                            'icon' => '💎',
-                            'icon_bg' => 'linear-gradient(135deg, #0ea5e9, #2563eb)',
+                            'icon' => '🟣',
+                            'icon_bg' => 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
                             'badge' => 'GRATIS',
                             'badge_class' => 'model-badge-free',
-                            'desc' => 'Model kapasitas tinggi untuk scan nota teks panjang & padat'
+                            'desc' => 'Model kapasitas tinggi untuk teks faktur padat'
                         ],
                         [
                             'id' => 'nvidia/nemotron-nano-12b-v2-vl:free',
@@ -93,15 +111,6 @@
                             'badge' => 'GRATIS',
                             'badge_class' => 'model-badge-free',
                             'desc' => 'Vision multimodal berkecepatan tinggi dari NVIDIA'
-                        ],
-                        [
-                            'id' => 'dots-studio/dots-3-note-preview:free',
-                            'name' => 'Dots Studio: Dots3-Note Preview',
-                            'icon' => '🟣',
-                            'icon_bg' => 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
-                            'badge' => 'GRATIS',
-                            'badge_class' => 'model-badge-free',
-                            'desc' => 'Spesialis OCR & ekstraksi dokumen / faktur pembelian'
                         ],
                         [
                             'id' => 'custom',

@@ -74,23 +74,32 @@ class GeneralInvoiceSkill implements InvoiceSkillInterface
 
     public function parseItem(array $rawItem): array
     {
-        $name = trim($rawItem['name'] ?? $rawItem['product_name'] ?? '');
-        $code = trim($rawItem['supplier_code'] ?? $rawItem['code'] ?? '');
+        $name = trim($rawItem['name'] ?? $rawItem['product_name'] ?? $rawItem['nama_barang'] ?? $rawItem['nama_produk'] ?? $rawItem['deskripsi'] ?? '');
+        $code = trim($rawItem['supplier_product_code'] ?? $rawItem['supplier_code'] ?? $rawItem['code'] ?? $rawItem['kode_barang'] ?? $rawItem['item_code'] ?? '');
         
-        $rawQty = $rawItem['qty'] ?? 1;
+        $rawQty = $rawItem['qty'] ?? $rawItem['jumlah'] ?? $rawItem['quantity'] ?? 1;
         $qty = is_numeric($rawQty) ? max(1, (float)$rawQty) : 1;
         
         // Handle BSR/TGH/KCL
-        $qtyBsr = (float)($rawItem['qty_bsr'] ?? 0);
-        $qtyTgh = (float)($rawItem['qty_tgh'] ?? 0);
-        $qtyKcl = (float)($rawItem['qty_kcl'] ?? 0);
-        if (($qtyBsr + $qtyTgh + $qtyKcl) > 0) {
-            $qty = max($qty, $qtyBsr + $qtyTgh + $qtyKcl);
-        }
-
-        $unit = trim($rawItem['unit'] ?? '');
+        $qtyBsr = (float)($rawItem['qty_bsr'] ?? $rawItem['bsr'] ?? 0);
+        $qtyTgh = (float)($rawItem['qty_tgh'] ?? $rawItem['tgh'] ?? 0);
+        $qtyKcl = (float)($rawItem['qty_kcl'] ?? $rawItem['kcl'] ?? 0);
         
-        $rawTotal = $rawItem['total_price'] ?? $rawItem['total'] ?? 0;
+        $unit = trim($rawItem['unit'] ?? $rawItem['satuan'] ?? '');
+
+        // Prioritize BSR / TGH / KCL if provided
+        if ($qtyBsr > 0) {
+            $qty = $qtyBsr;
+            if (empty($unit) || in_array(strtolower($unit), ['pcs', 'unit', 'satuan'])) $unit = 'Karton';
+        } elseif ($qtyTgh > 0) {
+            $qty = $qtyTgh;
+            if (empty($unit) || in_array(strtolower($unit), ['pcs', 'unit', 'satuan'])) $unit = 'Pack';
+        } elseif ($qtyKcl > 0) {
+            $qty = $qtyKcl;
+            if (empty($unit)) $unit = 'PCS';
+        }
+        
+        $rawTotal = $rawItem['total_price'] ?? $rawItem['total'] ?? $rawItem['neto_ket'] ?? $rawItem['neto'] ?? $rawItem['subtotal'] ?? 0;
         if (is_string($rawTotal)) {
             $cleaned = preg_replace('/[^0-9,]/', '', str_replace('.', '', $rawTotal));
             $cleaned = str_replace(',', '.', $cleaned);
@@ -99,12 +108,19 @@ class GeneralInvoiceSkill implements InvoiceSkillInterface
             $totalPrice = (float)$rawTotal;
         }
 
-        $unitPrice = $qty > 0 ? round($totalPrice / $qty, 2) : $totalPrice;
+        $rawUnitPrice = $rawItem['unit_price'] ?? $rawItem['harga_satuan'] ?? null;
+        if ($rawUnitPrice !== null && is_numeric($rawUnitPrice) && (float)$rawUnitPrice > 0 && $totalPrice == 0) {
+            $unitPrice = (float)$rawUnitPrice;
+            $totalPrice = round($unitPrice * $qty, 2);
+        } else {
+            $unitPrice = $qty > 0 ? round($totalPrice / $qty, 2) : $totalPrice;
+        }
 
         return [
             'name'                 => $name,
             'supplier_invoice_name'=> $name,
             'supplier_code'        => $code,
+            'supplier_product_code'=> $code,
             'qty'                  => $qty,
             'qty_bsr'              => $qtyBsr,
             'qty_tgh'              => $qtyTgh,
@@ -112,6 +128,12 @@ class GeneralInvoiceSkill implements InvoiceSkillInterface
             'unit'                 => $unit,
             'total_price'          => $totalPrice,
             'unit_price'           => $unitPrice,
+            'brand'                => trim($rawItem['brand'] ?? $rawItem['merk'] ?? ''),
+            'variant'              => trim($rawItem['variant'] ?? $rawItem['rasa'] ?? ''),
+            'weight'               => $rawItem['weight'] ?? $rawItem['gramasi'] ?? $rawItem['size'] ?? null,
+            'weight_unit'          => trim($rawItem['weight_unit'] ?? ''),
+            'barcode'              => trim($rawItem['barcode'] ?? ''),
+            'discount'             => (float)($rawItem['discount'] ?? $rawItem['diskon'] ?? 0),
             'skill_used'           => 'general'
         ];
     }

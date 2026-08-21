@@ -130,74 +130,98 @@ class LearnedAliasLookup
     private function loadFromProductAliases(?int $supplierId): void
     {
         try {
+            // Load all active products with supplier codes and invoice aliases
             $sql = "
                 SELECT p.id as product_id, p.full_name, p.code, p.supplier_invoice_name,
-                       p.short_label, p.invoice_name, p.brand_id,
+                       p.short_label, p.invoice_name, p.brand_id, p.variant,
                        b.name as brand_name,
-                       sp.supplier_product_code, sp.last_buy_price
+                       COALESCE(
+                           (SELECT sp.supplier_product_code FROM supplier_products sp WHERE sp.product_id = p.id " . ($supplierId ? "AND sp.supplier_id = " . (int)$supplierId : "") . " AND sp.supplier_product_code IS NOT NULL AND sp.supplier_product_code != '' LIMIT 1),
+                           (SELECT sp2.supplier_product_code FROM supplier_products sp2 WHERE sp2.product_id = p.id AND sp2.supplier_product_code IS NOT NULL AND sp2.supplier_product_code != '' LIMIT 1)
+                       ) as supplier_product_code,
+                       (SELECT sp3.last_buy_price FROM supplier_products sp3 WHERE sp3.product_id = p.id " . ($supplierId ? "AND sp3.supplier_id = " . (int)$supplierId : "") . " ORDER BY sp3.id DESC LIMIT 1) as last_buy_price
                 FROM products p
                 LEFT JOIN brands b ON p.brand_id = b.id
-                LEFT JOIN supplier_products sp ON p.id = sp.product_id
+                WHERE p.is_active = 1
             ";
-            $params = [];
 
-            if ($supplierId && $supplierId > 0) {
-                $sql .= " AND sp.supplier_id = ?";
-                $params[] = $supplierId;
-            }
-
-            $sql .= " WHERE p.is_active = 1 
-                       AND (p.supplier_invoice_name IS NOT NULL AND p.supplier_invoice_name != '')";
-
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute($params);
+            $stmt = $this->db->query($sql);
             $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
             foreach ($rows as $row) {
                 $productData = [
-                    'product_id'   => (int)$row['product_id'],
-                    'full_name'    => $row['full_name'],
-                    'code'         => $row['code'],
-                    'brand_name'   => $row['brand_name'],
+                    'product_id'     => (int)$row['product_id'],
+                    'full_name'      => $row['full_name'],
+                    'code'           => $row['code'],
+                    'brand_name'     => $row['brand_name'],
                     'last_buy_price' => $row['last_buy_price'] ? (float)$row['last_buy_price'] : null,
                 ];
 
-                // Index by each alias line
-                $aliases = preg_split('/[\n\r,;]+/', $row['supplier_invoice_name']);
-                foreach ($aliases as $alias) {
-                    $alias = trim($alias);
-                    if (empty($alias) || strlen($alias) < 3) continue;
-
-                    $normAlias = $this->normalize($alias);
-                    if (!empty($normAlias)) {
-                        $this->aliasMap[$normAlias] = $productData;
-
-                        // Also index stripped version
-                        $stripped = $this->stripPackagingTokens($normAlias);
-                        if ($stripped !== $normAlias && !empty($stripped)) {
-                            if (!isset($this->aliasMap[$stripped])) {
-                                $this->aliasMap[$stripped] = $productData;
-                            }
-                        }
-                    }
-                }
-
-                // Index by supplier product code
+                // 1. Index by supplier product code (Highest Priority Exact Match)
                 if (!empty($row['supplier_product_code'])) {
                     $codeNorm = $this->normalize($row['supplier_product_code']);
                     $this->aliasMap['code:' . $codeNorm] = $productData;
                     // Also without leading zeros
                     $codeStripped = ltrim($codeNorm, '0');
-                    if ($codeStripped !== $codeNorm) {
+                    if ($codeStripped !== $codeNorm && !empty($codeStripped)) {
                         $this->aliasMap['code:' . $codeStripped] = $productData;
                     }
                 }
 
-                // Index by product code
+                // 2. Index by internal product code
                 if (!empty($row['code'])) {
                     $prodCode = $this->normalize($row['code']);
                     if (!isset($this->aliasMap['code:' . $prodCode])) {
                         $this->aliasMap['code:' . $prodCode] = $productData;
+                    }
+                    $codeStripped = ltrim($prodCode, '0');
+                    if ($codeStripped !== $prodCode && !empty($codeStripped)) {
+                        $this->aliasMap['code:' . $codeStripped] = $productData;
+                    }
+                }
+
+                // 3. Index by multi-line supplier_invoice_name aliases
+                if (!empty($row['supplier_invoice_name'])) {
+                    $aliases = preg_split('/[\n\r,;]+/', $row['supplier_invoice_name']);
+                    foreach ($aliases as $alias) {
+                        $alias = trim($alias);
+                        if (empty($alias) || strlen($alias) < 2) continue;
+
+                        $normAlias = $this->normalize($alias);
+                        if (!empty($normAlias)) {
+                            $this->aliasMap[$normAlias] = $productData;
+
+                            $stripped = $this->stripPackagingTokens($normAlias);
+                            if ($stripped !== $normAlias && !empty($stripped)) {
+                                if (!isset($this->aliasMap[$stripped])) {
+                                    $this->aliasMap[$stripped] = $productData;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. Index by invoice_name
+                if (!empty($row['invoice_name'])) {
+                    $normInv = $this->normalize($row['invoice_name']);
+                    if (!empty($normInv) && !isset($this->aliasMap[$normInv])) {
+                        $this->aliasMap[$normInv] = $productData;
+                    }
+                }
+
+                // 5. Index by short_label
+                if (!empty($row['short_label'])) {
+                    $normShort = $this->normalize($row['short_label']);
+                    if (!empty($normShort) && !isset($this->aliasMap[$normShort])) {
+                        $this->aliasMap[$normShort] = $productData;
+                    }
+                }
+
+                // 6. Index by normalized full_name
+                if (!empty($row['full_name'])) {
+                    $normFull = $this->normalize($row['full_name']);
+                    if (!empty($normFull) && !isset($this->aliasMap[$normFull])) {
+                        $this->aliasMap[$normFull] = $productData;
                     }
                 }
             }

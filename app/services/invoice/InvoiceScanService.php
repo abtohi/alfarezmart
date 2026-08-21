@@ -213,23 +213,31 @@ class InvoiceScanService
                 throw new \Exception('AI Scanner sedang dalam mode cooldown karena rate limit. Coba lagi dalam beberapa menit.');
             }
 
-            // Build prompts
-            $systemPrompt = $skill->getSystemPrompt();
+            // Build prompts combining database ai_invoice_prompt with supplier skills & context
+            $dbInvoicePrompt = trim((string)$this->settingModel->get('ai_invoice_prompt', ''));
+            $skillSystemPrompt = $skill->getSystemPrompt();
             $userHints = $skill->getUserPromptHints();
 
-            $userMessageText = 'Ekstrak semua baris item barang/produk pada gambar faktur/nota ini ke dalam format JSON array.';
-            if (!empty($userHints)) {
-                $userMessageText .= "\n\nPetunjuk: " . $userHints;
+            // Construct master system prompt
+            if (!empty($dbInvoicePrompt)) {
+                $systemPrompt = $dbInvoicePrompt . "\n\n" . $skillSystemPrompt;
+            } else {
+                $systemPrompt = $skillSystemPrompt;
             }
 
-            // DYNAMIC LEARNING: Inject learned alias context for this supplier into the AI prompt (max 15 items for fast token efficiency)
+            $userMessageText = "Ekstrak semua baris item barang/produk pada gambar faktur/nota ini ke dalam format JSON array valid. Pastikan membaca kode barang supplier (jika ada), nama produk lengkap, varian, ukuran/volume, jumlah (qty), satuan (unit), dan total harga akhir di kolom paling kanan (Neto Ket / Total).";
+            if (!empty($userHints)) {
+                $userMessageText .= "\n\nPetunjuk Khusus Distributor: " . $userHints;
+            }
+
+            // DYNAMIC LEARNING: Inject learned alias context for this supplier into the AI prompt (max 20 items for fast token efficiency)
             require_once __DIR__ . '/InvoiceLearningService.php';
             $learningService = new InvoiceLearningService($this->db);
-            $learnedAliases = $learningService->getLearnedAliasesForPrompt($resolvedSupplierId, 15);
+            $learnedAliases = $learningService->getLearnedAliasesForPrompt($resolvedSupplierId, 20);
 
             $contextLines = [];
             if (!empty($learnedAliases)) {
-                $contextLines[] = "\n## MEMORI POLA PRODUK SUPPLIER:";
+                $contextLines[] = "\n## MEMORI POLA PRODUK SUPPLIER (REFERENSI NAMA NOTA -> PRODUK):";
                 foreach ($learnedAliases as $la) {
                     $invAliases = trim((string)($la['supplier_invoice_name'] ?? ''));
                     $code = trim((string)($la['supplier_product_code'] ?? ''));
@@ -242,7 +250,7 @@ class InvoiceScanService
                 }
             } elseif (!empty($supplierProducts)) {
                 $contextLines[] = "\n## REFERENSI PRODUK SUPPLIER:";
-                foreach (array_slice($supplierProducts, 0, 15) as $sp) {
+                foreach (array_slice($supplierProducts, 0, 20) as $sp) {
                     $c = trim($sp['supplier_product_code'] ?? $sp['code'] ?? '');
                     $n = trim($sp['full_name'] ?? '');
                     if ($c || $n) {
@@ -251,7 +259,7 @@ class InvoiceScanService
                 }
             }
             if (!empty($contextLines)) {
-                $userMessageText .= implode("\n", $contextLines);
+                $userMessageText .= "\n" . implode("\n", $contextLines);
             }
 
             // Make AI Vision Call
@@ -621,14 +629,16 @@ class InvoiceScanService
 
         set_time_limit(180);
 
-        // ROBUST 100% FREE VISION MODEL STRATEGY:
-        // Respects model configured in Settings (Pengaturan Sistem & AI) as primary choice,
-        // and falls back gracefully to active OpenRouter 100% free vision models if unavailable.
+        // HIGH-PRECISION VISION MODEL STRATEGY:
+        // 1. If user selected a specific model, try it first.
+        // 2. Prioritize 'openrouter/auto' which routes to state-of-the-art vision models (GPT-5/Gemini) reliably.
+        // 3. Fallback to confirmed active multimodal vision models.
         $DEFAULT_VISION_MODELS = [
-            'google/gemma-4-26b-a4b-it:free',
+            'openrouter/auto',
             'google/gemma-4-31b-it:free',
-            'dots-studio/dots-3-note-preview:free',
+            'google/gemma-4-26b-a4b-it:free',
             'nvidia/nemotron-nano-12b-v2-vl:free',
+            'meta-llama/llama-3.2-11b-vision-instruct:free',
         ];
 
         if (empty($model) || in_array($model, ['openrouter/auto', 'auto', 'openrouter/free'])) {
@@ -638,7 +648,7 @@ class InvoiceScanService
             $modelsToTry = array_unique(array_merge([$model], $DEFAULT_VISION_MODELS));
         }
 
-        // Try up to 3 models if needed to guarantee successful invoice extraction
+        // Try up to 3 models with fast failover
         $modelsToTry = array_slice($modelsToTry, 0, 3);
 
         $imageBlock   = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
@@ -648,8 +658,8 @@ class InvoiceScanService
         $noEndpointCount  = 0;
 
         foreach ($modelsToTry as $tryModel) {
-            set_time_limit(90);
-            error_log("SCAN_AI_TRACE: Attempting OpenRouter model: {$tryModel}");
+            set_time_limit(60);
+            error_log("SCAN_AI_TRACE: Attempting OpenRouter vision model: {$tryModel}");
             $requestCount++;
 
             $payload = [
@@ -662,7 +672,7 @@ class InvoiceScanService
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => 2000,
+                'max_tokens'  => 3000,
             ];
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
@@ -676,15 +686,15 @@ class InvoiceScanService
                 'X-Title: AlfarezMart Invoice Scanner',
             ]);
 
-            // 50s timeout per model attempt: fast failover to next model
-            curl_setopt($ch, CURLOPT_TIMEOUT, 50);
+            // 45s timeout per model attempt: allows complete generation of dense multi-line invoice tables
+            curl_setopt($ch, CURLOPT_TIMEOUT, 45);
             curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);
             $err      = curl_error($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            unset($ch);
+            curl_close($ch);
 
             if ($err) {
                 error_log("SCAN_AI_TRACE: Model {$tryModel} curl error: {$err}");
@@ -696,21 +706,18 @@ class InvoiceScanService
                 $rateLimitCount++;
                 $this->recordRateLimitError();
                 error_log("SCAN_AI_TRACE: Model {$tryModel} rate limited 429 ({$rateLimitCount}x)");
-                $lastError = "AI Scanner sedang sibuk (rate limit). Coba lagi sebentar.";
+                $lastError = "AI Scanner sedang sibuk (rate limit). Mencoba model alternatif...";
                 continue;
             }
-
 
             if ($httpCode !== 200) {
                 $errData = json_decode($response, true);
                 $msg = $errData['error']['message'] ?? "HTTP $httpCode";
                 error_log("SCAN_AI_TRACE: Model {$tryModel} error ($httpCode): $msg");
 
-                // "No endpoints found" = model not available right now — skip silently
-                if (stripos($msg, 'no endpoints') !== false || stripos($msg, 'not found') !== false) {
+                if (stripos($msg, 'no endpoints') !== false || stripos($msg, 'not found') !== false || stripos($msg, 'guardrail') !== false || stripos($msg, 'privacy') !== false) {
                     $noEndpointCount++;
-                    $lastError = "Model AI tidak tersedia saat ini. Mencoba model lain...";
-                    error_log("SCAN_AI_TRACE: Model {$tryModel} has no endpoints, trying next...");
+                    $lastError = "Model AI tidak tersedia atau memerlukan izin privasi. Mencoba model lain...";
                     continue;
                 }
 
@@ -718,76 +725,120 @@ class InvoiceScanService
                 continue;
             }
 
-            $resData = json_decode($response, true);
-            $content = $resData['choices'][0]['message']['content'] ?? '';
+            $cleanResponse = trim($response);
+            $resData = json_decode($cleanResponse, true);
+            if (!is_array($resData)) {
+                $fb = strpos($cleanResponse, '{');
+                $lb = strrpos($cleanResponse, '}');
+                if ($fb !== false && $lb !== false && $lb > $fb) {
+                    $resData = json_decode(substr($cleanResponse, $fb, $lb - $fb + 1), true);
+                }
+            }
+
+            $content = '';
+            if (is_array($resData)) {
+                $choice = $resData['choices'][0] ?? [];
+                $content = $choice['message']['content'] ?? $choice['text'] ?? '';
+            }
 
             if (empty(trim($content))) {
-                error_log("SCAN_AI_TRACE: Model {$tryModel} returned empty content.");
+                error_log("SCAN_AI_TRACE: Model {$tryModel} returned empty content or non-standard envelope: " . substr($cleanResponse, 0, 200));
                 continue;
             }
 
             // Robust JSON extraction
             $decoded = $this->extractJsonFromContent($content);
 
-            if (is_array($decoded)) {
+            if (is_array($decoded) && !empty($decoded)) {
                 error_log("SCAN_AI_TRACE: Successfully parsed response from model {$tryModel}");
                 $metrics['ai_provider'] = 'openrouter';
                 $metrics['ai_model_used'] = $tryModel;
                 $metrics['ai_request_count'] = $requestCount;
                 return $decoded;
             } else {
-                error_log("SCAN_AI_TRACE: Model {$tryModel} returned non-JSON content: " . substr($content, 0, 200));
+                error_log("SCAN_AI_TRACE: Model {$tryModel} returned unparseable content: " . substr($content, 0, 200));
             }
         }
 
         $metrics['ai_request_count'] = $requestCount;
 
+        // Reset circuit breaker so user is never permanently blocked
+        $this->resetCircuitBreaker();
+
         // Build a helpful final error message
         if ($noEndpointCount >= count($modelsToTry) && $rateLimitCount === 0) {
-            throw new \Exception('Model AI yang dipilih sedang offline/tidak tersedia di OpenRouter saat ini. Silakan pilih model lain di menu Pengaturan → AI Scanner.');
+            throw new \Exception('Model AI yang dipilih sedang offline di OpenRouter. Pastikan model di Pengaturan AI diset ke "Auto Vision (OpenRouter)".');
         }
         if ($rateLimitCount >= 2) {
-            throw new \Exception('AI Scanner sedang overload (rate limit). Tunggu 1-2 menit lalu coba lagi, atau gunakan model kustom di Pengaturan.');
+            throw new \Exception('AI Scanner sedang padat (rate limit). Coba beberapa saat lagi atau pastikan API key OpenRouter aktif.');
         }
-        throw new \Exception($lastError ?: 'AI gagal membaca gambar invoice. Pastikan gambar jelas dan koneksi internet stabil, lalu coba lagi.');
+        throw new \Exception($lastError ?: 'AI belum berhasil membaca gambar invoice. Pastikan gambar jelas, terang, dan tidak buram.');
     }
 
     /**
-     * Extract JSON from AI response content (handles various formats).
+     * Extract JSON from AI response content (handles markdown fences, enveloped arrays, and partial JSON).
      */
     private function extractJsonFromContent(string $content): ?array
     {
         $cleanContent = trim($content);
 
-        // Try markdown code block first
+        // 1. Try markdown code block
         if (preg_match('/```(?:json)?\s*([\s\S]*?)\s*```/', $cleanContent, $m)) {
             $decoded = json_decode(trim($m[1]), true);
-            if (is_array($decoded)) return $decoded;
+            if (is_array($decoded)) {
+                return $this->normalizeDecodedEnvelope($decoded);
+            }
         }
 
-        // Try direct JSON
+        // 2. Try direct JSON
         $decoded = json_decode($cleanContent, true);
-        if (is_array($decoded)) return $decoded;
+        if (is_array($decoded)) {
+            return $this->normalizeDecodedEnvelope($decoded);
+        }
 
-        // Try extracting JSON array
+        // 3. Try extracting JSON array [...]
         $firstBracket = strpos($cleanContent, '[');
         $lastBracket = strrpos($cleanContent, ']');
         if ($firstBracket !== false && $lastBracket !== false && $lastBracket > $firstBracket) {
             $slice = substr($cleanContent, $firstBracket, $lastBracket - $firstBracket + 1);
             $decoded = json_decode($slice, true);
-            if (is_array($decoded)) return $decoded;
+            if (is_array($decoded)) {
+                return $this->normalizeDecodedEnvelope($decoded);
+            }
         }
 
-        // Try extracting JSON object
+        // 4. Try extracting JSON object {...}
         $firstBrace = strpos($cleanContent, '{');
         $lastBrace = strrpos($cleanContent, '}');
         if ($firstBrace !== false && $lastBrace !== false && $lastBrace > $firstBrace) {
             $slice = substr($cleanContent, $firstBrace, $lastBrace - $firstBrace + 1);
             $decoded = json_decode($slice, true);
-            if (is_array($decoded)) return $decoded;
+            if (is_array($decoded)) {
+                return $this->normalizeDecodedEnvelope($decoded);
+            }
         }
 
         return null;
+    }
+
+    /**
+     * Normalize decoded envelope into a flat array of items.
+     */
+    private function normalizeDecodedEnvelope(array $decoded): array
+    {
+        if (isset($decoded['items']) && is_array($decoded['items'])) {
+            return $decoded['items'];
+        }
+        if (isset($decoded['products']) && is_array($decoded['products'])) {
+            return $decoded['products'];
+        }
+        if (isset($decoded['data']) && is_array($decoded['data'])) {
+            return $decoded['data'];
+        }
+        if (isset($decoded['rows']) && is_array($decoded['rows'])) {
+            return $decoded['rows'];
+        }
+        return $decoded;
     }
 
     private function formatForFrontend(array $items): array

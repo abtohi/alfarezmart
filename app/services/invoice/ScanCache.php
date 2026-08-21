@@ -87,20 +87,15 @@ class ScanCache
 
     /**
      * Store a scan result in cache.
-     *
-     * @param string $imageHash
-     * @param int|null $supplierId
-     * @param array $result Scan result data
-     * @param int $ttlHours TTL in hours
      */
     public function set(string $imageHash, ?int $supplierId, array $result, int $ttlHours = self::DEFAULT_TTL_HOURS): void
     {
         $this->ensureTable();
 
-        try {
-            $resultJson = json_encode($result, JSON_UNESCAPED_UNICODE);
-            $itemCount = isset($result['data']) ? count($result['data']) : 0;
+        $resultJson = json_encode($result, JSON_UNESCAPED_UNICODE);
+        $itemCount = isset($result['data']) ? count($result['data']) : 0;
 
+        try {
             // Use REPLACE INTO for upsert (MySQL compatible)
             $stmt = $this->db->prepare("
                 REPLACE INTO ai_scan_cache 
@@ -108,6 +103,23 @@ class ScanCache
                 VALUES (?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? HOUR))
             ");
             $stmt->execute([$imageHash, $supplierId, $resultJson, $itemCount, $ttlHours]);
+        } catch (\PDOException $e) {
+            // Auto-reconnect if MySQL connection timed out during AI processing
+            if (strpos($e->getMessage(), '2006') !== false || strpos($e->getMessage(), 'gone away') !== false) {
+                try {
+                    $this->db = Database::getInstance()->reconnect();
+                    $stmt = $this->db->prepare("
+                        REPLACE INTO ai_scan_cache 
+                        (image_hash, supplier_id, result_json, item_count, created_at, expires_at)
+                        VALUES (?, ?, ?, ?, NOW(), DATE_ADD(NOW(), INTERVAL ? HOUR))
+                    ");
+                    $stmt->execute([$imageHash, $supplierId, $resultJson, $itemCount, $ttlHours]);
+                } catch (\Throwable $e2) {
+                    error_log("ScanCache::set reconnect retry error: " . $e2->getMessage());
+                }
+            } else {
+                error_log("ScanCache::set error: " . $e->getMessage());
+            }
         } catch (\Throwable $e) {
             error_log("ScanCache::set error: " . $e->getMessage());
         }
