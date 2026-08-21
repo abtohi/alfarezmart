@@ -142,6 +142,9 @@
             <span id="itemCountBadge" class="badge-custom badge-info" style="font-size:11px; padding:3px 8px; border-radius:12px; font-weight:700;">0 Item</span>
         </div>
         <div style="display:flex; align-items:center; gap:6px; flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; max-width:100%; padding-bottom:2px;">
+            <button type="button" class="btn-outline-custom" style="padding:5px 9px; font-size:11px; font-weight:600; color:var(--info); border-color:rgba(76,201,240,0.4); background:rgba(76,201,240,0.08); display:inline-flex; align-items:center; gap:4px; border-radius:6px; white-space:nowrap;" onclick="copyCartAsJson()" title="Salin Data Keranjang ke Clipboard dalam format JSON">
+                <i class="bi bi-clipboard-data"></i> Copy JSON
+            </button>
             <button type="button" class="btn-outline-custom" style="padding:5px 9px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px; border-radius:6px; white-space:nowrap;" onclick="expandAllItems()" title="Tampilkan Semua Detail Produk">
                 <i class="bi bi-arrows-angle-expand"></i> Expand All
             </button>
@@ -442,6 +445,9 @@ async function scanInvoiceWithAI() {
                 });
             }
 
+            // Clear previous scanned items if user wants a clean invoice scan or keep additive
+            const scannedItems = [];
+
             for (const item of result.data) {
                 const scanUnitPrice = parseFloat(item.unit_price) || 0;
                 const scanQty = parseFloat(item.qty) || 1;
@@ -451,7 +457,16 @@ async function scanInvoiceWithAI() {
 
                 if (item.is_matched && item.product_id) {
                     try {
-                        const productData = item.product_data || await api(`${BASE_URL}api/products/${item.product_id}`);
+                        let productData = item.product_data;
+                        if (!productData) {
+                            if (typeof OfflineDB !== 'undefined') {
+                                productData = await OfflineDB.getProductById(item.product_id);
+                            }
+                            if (!productData && navigator.onLine) {
+                                productData = await api(`${BASE_URL}api/products/${item.product_id}`);
+                            }
+                        }
+
                         if (productData && productData.packagings && productData.packagings.length > 0) {
                             const targetLevel = item.packaging_level || 1;
                             let selectedPkg = productData.packagings.find(p => p.level == targetLevel);
@@ -460,77 +475,111 @@ async function scanInvoiceWithAI() {
                             }
                             if (!selectedPkg) selectedPkg = productData.packagings[0];
 
-                            const existingIndex = purchaseItems.findIndex(i => i.product_id == productData.id && i.level == selectedPkg.level);
-                            if (existingIndex > -1) {
-                                const existing = purchaseItems[existingIndex];
-                                existing.quantity = (parseFloat(existing.quantity) || 0) + scanQty;
-                                if (scanUnitPrice > 0) existing.buy_price = scanUnitPrice;
-                                existing.total = (parseFloat(existing.total) || 0) + scanTotal;
-                                propagateFromMainInputs(existing);
-                                syncSellPricesWhenBuyPriceChanges(existing);
-                            } else {
-                                addProductToCart(productData, selectedPkg.level);
-                                const addedItem = purchaseItems[0];
-                                if (addedItem && addedItem.product_id == productData.id) {
-                                    addedItem.quantity  = scanQty;
-                                    if (scanUnitPrice > 0) addedItem.buy_price = scanUnitPrice;
-                                    addedItem.total     = scanTotal;
-                                    addedItem.original_invoice_name = invName;
-                                    addedItem.supplier_code = item.supplier_code || '';
-                                    propagateFromMainInputs(addedItem);
-                                    syncSellPricesWhenBuyPriceChanges(addedItem);
+                            // Direct 1-to-1 cart item object construction (never overwritten or merged)
+                            let runningBaseQty = 1;
+                            const clonePkgs = JSON.parse(JSON.stringify(productData.packagings));
+                            clonePkgs.sort((a, b) => a.level - b.level).forEach(p => {
+                                const cqty = parseFloat(p.contained_qty) || 1;
+                                if (p.level == 1) {
+                                    p.base_qty = 1;
+                                    p.contained_qty = 1;
+                                    runningBaseQty = 1;
+                                } else {
+                                    if (!p.base_qty || (p.base_qty <= 1 && cqty > 1)) {
+                                        p.base_qty = runningBaseQty * cqty;
+                                    } else if (!p.contained_qty || p.contained_qty <= 1) {
+                                        p.contained_qty = (runningBaseQty > 0) ? (p.base_qty / runningBaseQty) : p.base_qty;
+                                    }
+                                    runningBaseQty = parseFloat(p.base_qty) || runningBaseQty;
                                 }
-                            }
+                                if (p.ppn_pct === undefined) p.ppn_pct = 0;
+                                if (p.diskon_mode === undefined) p.diskon_mode = 'rp';
+                                if (p.diskon_value === undefined) p.diskon_value = 0;
+                                p.harga_nett = parseFloat(p.buy_price) || 0;
+                            });
+
+                            const unitPriceVal = scanUnitPrice > 0 ? scanUnitPrice : (scanQty > 0 ? scanTotal / scanQty : (parseFloat(selectedPkg.buy_price) || 0));
+                            const totalVal = scanTotal > 0 ? scanTotal : (scanQty * unitPriceVal);
+
+                            const newCartItem = {
+                                id: Date.now() + Math.floor(Math.random() * 1000000),
+                                product_id: productData.id,
+                                name: productData.full_name || productData.short_label || productData.name,
+                                original_invoice_name: invName,
+                                supplier_code: item.supplier_code || '',
+                                is_unmatched: false,
+                                is_collapsed: false,
+                                is_manual_price: scanUnitPrice > 0,
+                                packagings: clonePkgs,
+                                level: selectedPkg.level,
+                                unit_name: selectedPkg.unit_name,
+                                quantity: scanQty,
+                                buy_price: unitPriceVal,
+                                sell_price_retail: parseFloat(selectedPkg.sell_price_retail) || 0,
+                                sell_price_wholesale: parseFloat(selectedPkg.sell_price_wholesale) || 0,
+                                last_buy_price: productData.last_buy_price ? parseFloat(productData.last_buy_price) : (parseFloat(clonePkgs.find(p => p.level == 1)?.buy_price) || 0),
+                                total: totalVal,
+                                ppn_pct: 0,
+                                diskon_mode: 'rp',
+                                diskon_value: 0,
+                                harga_nett: unitPriceVal
+                            };
+                            scannedItems.push(newCartItem);
+                            continue;
                         }
                     } catch(e) {
-                        console.error('Failed to add AI mapped item', e);
+                        console.error('Failed to construct matched cart item', e);
                     }
-                } else {
-                    // GUARANTEED CART ENTRY: Add unmatched item as draft
-                    const tempUid = Date.now() + Math.floor(Math.random() * 100000);
-                    const unitPriceVal = scanUnitPrice > 0 ? scanUnitPrice : (scanQty > 0 ? scanTotal / scanQty : 0);
-                    
-                    purchaseItems.unshift({
-                        id: tempUid,
-                        product_id: null,
-                        is_unmatched: true,
-                        name: invName,
-                        original_invoice_name: invName,
-                        supplier_code: item.supplier_code || '',
-                        is_collapsed: false,
-                        is_manual_price: true,
-                        packagings: [{
-                            level: 1,
-                            unit_name: scanUnit || 'PCS',
-                            buy_price: unitPriceVal,
-                            sell_price_retail: 0,
-                            sell_price_wholesale: 0,
-                            contained_qty: 1,
-                            base_qty: 1,
-                            ppn_pct: 0,
-                            diskon_mode: 'rp',
-                            diskon_value: 0,
-                            harga_nett: unitPriceVal
-                        }],
+                }
+
+                // UNMATCHED OR FALLBACK CART ITEM (Guaranteed 100% insertion)
+                const tempUid = Date.now() + Math.floor(Math.random() * 1000000);
+                const unitPriceVal = scanUnitPrice > 0 ? scanUnitPrice : (scanQty > 0 ? scanTotal / scanQty : 0);
+                
+                scannedItems.push({
+                    id: tempUid,
+                    product_id: null,
+                    is_unmatched: true,
+                    name: invName,
+                    original_invoice_name: invName,
+                    supplier_code: item.supplier_code || '',
+                    is_collapsed: false,
+                    is_manual_price: true,
+                    packagings: [{
                         level: 1,
                         unit_name: scanUnit || 'PCS',
-                        quantity: scanQty,
                         buy_price: unitPriceVal,
                         sell_price_retail: 0,
                         sell_price_wholesale: 0,
-                        last_buy_price: 0,
-                        total: scanTotal,
+                        contained_qty: 1,
+                        base_qty: 1,
                         ppn_pct: 0,
                         diskon_mode: 'rp',
                         diskon_value: 0,
                         harga_nett: unitPriceVal
-                    });
-                }
+                    }],
+                    level: 1,
+                    unit_name: scanUnit || 'PCS',
+                    quantity: scanQty,
+                    buy_price: unitPriceVal,
+                    sell_price_retail: 0,
+                    sell_price_wholesale: 0,
+                    last_buy_price: 0,
+                    total: scanTotal,
+                    ppn_pct: 0,
+                    diskon_mode: 'rp',
+                    diskon_value: 0,
+                    harga_nett: unitPriceVal
+                });
             }
+
+            // Prepend all scanned items into purchaseItems
+            purchaseItems = [...scannedItems, ...purchaseItems];
+
             renderCart();
             calculateTotal();
             if (unmatched.length > 0) {
-                showToast(`AI: ${matched.length} cocok otomatis, ${unmatched.length} masuk sebagai draft (perlu hubungkan produk).`, 'info', 5000);
+                showToast(`AI: ${matched.length} cocok otomatis, ${unmatched.length} masuk sebagai draft (perlu hubungkan produk). Total: ${result.data.length} item.`, 'info', 5000);
             }
         } else {
             const elapsedSecEnd = ((Date.now() - _scanStart) / 1000).toFixed(1);
@@ -1318,6 +1367,65 @@ async function selectProductToLink(tempId, productId) {
     } catch(e) {
         showToast('Gagal menghubungkan produk: ' + e.message, 'error');
     }
+}
+
+/**
+ * Copy full cart content to clipboard in formatted JSON
+ */
+function copyCartAsJson() {
+    if (!purchaseItems || purchaseItems.length === 0) {
+        showToast('Keranjang masih kosong, belum ada data untuk disalin.', 'warning');
+        return;
+    }
+
+    const exportData = purchaseItems.map((item, idx) => {
+        const selPkg = (item.packagings || []).find(p => p.level == item.level) || item.packagings?.[0] || {};
+        return {
+            no: idx + 1,
+            product_id: item.product_id || null,
+            is_unmatched: !!(item.is_unmatched || !item.product_id),
+            supplier_product_code: item.supplier_code || '',
+            original_invoice_name: item.original_invoice_name || item.name || '',
+            product_name: item.name || '',
+            packaging_unit: item.unit_name || selPkg.unit_name || 'PCS',
+            packaging_level: item.level || 1,
+            quantity: parseFloat(item.quantity) || 0,
+            buy_price: parseFloat(item.buy_price) || 0,
+            total_price: parseFloat(item.total) || 0,
+            ppn_pct: parseFloat(item.ppn_pct) || 0,
+            diskon_mode: item.diskon_mode || 'rp',
+            diskon_value: parseFloat(item.diskon_value) || 0,
+            harga_nett: parseFloat(item.harga_nett) || (parseFloat(item.buy_price) || 0)
+        };
+    });
+
+    const jsonStr = JSON.stringify(exportData, null, 2);
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(jsonStr).then(() => {
+            showToast(`✅ Berhasil menyalin ${exportData.length} item keranjang (JSON) ke clipboard!`, 'success', 4000);
+        }).catch(() => {
+            fallbackCopyText(jsonStr, exportData.length);
+        });
+    } else {
+        fallbackCopyText(jsonStr, exportData.length);
+    }
+}
+
+function fallbackCopyText(text, count) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.top = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+        document.execCommand('copy');
+        showToast(`✅ Berhasil menyalin ${count} item keranjang (JSON) ke clipboard!`, 'success', 4000);
+    } catch(e) {
+        prompt('Salin JSON data keranjang secara manual:', text);
+    }
+    document.body.removeChild(ta);
 }
 
 // Version counter to prevent stale API results from overwriting newer local results
