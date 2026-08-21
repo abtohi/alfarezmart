@@ -68,9 +68,12 @@ Pencocokan teks invoice ke database produk master wajib mematuhi hierarki 3 tier
 2. **Tier 2 — Multi-Line Alias Invoice (`supplier_invoice_name`) (Skor 160–195)**:
    - Mendukung multi-baris alias per produk untuk multi-supplier.
    - Kamus singkatan FMCG Indonesia lengkap (`KCP` → Kecap, `MNS` → Manis, `SAM EP` → Sambal Extra Pedas, `TOM` → Tomat, `PET` → Botol, `PCH` → Pouch, `BSR/TGH/KCL`, dll.).
-3. **Tier 3 — Komposit Brand + Varian + Gramatur + Estimasi Harga (Price Proximity)**:
+3. **Tier 3 — Multi-Keywords Overlap & Token Similarity Matching**:
+   - **Algoritma Multi-Keywords**: Jika kode supplier tidak ditemukan dan exact alias belum ada, sistem membandingkan kata-kata pada teks invoice dengan nama produk di database (`full_name`, `short_label`, `invoice_name`, `brand_name`, `variant`, `packagings.unit_name`).
+   - Kata terbanyak yang memiliki kesamaan (*highest token overlap count & ratio*) akan dianggap match dengan skor proporsional.
+   - Pembobotan kata kunci relevan: Kata brand/varian/angka gramatur memiliki bobot lebih tinggi daripada kata umum (*generic category words*).
    - Toleransi *shrinkflation* (10–20% fluktuasi gramatur pabrik).
-   - Pencocokan harga beli kemasan (`buy_price`) untuk menentukan level kemasan (Karton vs Pack/Renceng vs PCS) secara presisi.
+   - Pencocokan harga beli kemasan (*Price Proximity*) untuk menentukan level kemasan secara presisi.
 
 ---
 
@@ -82,10 +85,11 @@ Pencocokan teks invoice ke database produk master wajib mematuhi hierarki 3 tier
    - Setiap baris hasil AI **dikonstruksi langsung sebagai 1 objek item keranjang tersendiri** di `purchaseItems`.
 2. **Item yang Cocok (`is_matched = true`)**:
    - Dimasukkan langsung dengan status aktif dan level kemasan yang sesuai.
+   - Tetap menampilkan tombol **"Ganti Produk"** (`openLinkProductModal`) agar kasir dapat mengoreksi jika ada salah pilih master produk.
 3. **Item yang Belum Cocok (`is_matched = false` / Unmatched)**:
    - **WAJIB TETAP DIMASUKKAN KE KERANJANG** sebagai *Draft Item* (`is_unmatched: true`, `product_id: null`).
    - Kuantitas, satuan, harga satuan, dan total harga nota wajib terjaga 100% utuh sehingga total rupiah invoice fisik dan sistem selalu sama.
-   - Ditandai badge kuning `⚠️ Hasil Scan (Draft)` dan tombol `Hubungkan Produk`.
+   - Ditandai badge kuning `⚠️ Hasil Scan (Draft)` dan tombol **"Hubungkan Produk"**.
 
 ---
 
@@ -99,16 +103,16 @@ Pencocokan teks invoice ke database produk master wajib mematuhi hierarki 3 tier
 
 ---
 
-## 6. Modal Hubungkan Produk & Pembelajaran Alias Otomatis
+## 6. Pembelajaran Alias Otomatis & Fitur "Ganti / Hubungkan Produk"
 
-1. **`openLinkProductModal(tempId)`**:
-   - Menampilkan modal pencarian produk master secara cepat (offline-first & online API).
-   - Menautkan `product_id`, `name`, `packagings`, dan level kemasan.
-   - Menutup modal via `AppModal.close()`.
-2. **Endpoint `/api/ai/learn-alias` & `InvoiceLearningService`**:
-   - Otomatis dipanggil saat produk dihubungkan.
-   - Menyimpan alias nota ke kolom `products.supplier_invoice_name` dan tabel `ai_invoice_learning_logs`.
-   - **Hasil**: Pada pemindaian faktur berikutnya dari supplier manapun, produk tersebut akan 100% otomatis cocok tanpa perlu input manual lagi.
+1. **Opsi Hubungkan / Ganti Produk di Setiap Kartu Item**:
+   - Setiap kartu item di keranjang memiliki tombol **"Hubungkan Produk"** (untuk draft) atau **"Ganti Produk"** (untuk item yang sudah terhubung).
+2. **Auto-Learning ke Kolom `supplier_invoice_name`**:
+   - Saat produk dipilih di modal `openLinkProductModal`:
+     - Data item di keranjang langsung terhubung ke produk master baru tersebut.
+     - Nama asli hasil scan AI (`original_invoice_name`) **otomatis disimpan ke kolom `products.supplier_invoice_name`** via endpoint `/api/ai/learn-alias` dan `InvoiceLearningService`.
+     - Jika kolom `products.invoice_name` masih kosong, sistem juga otomatis mengisinya.
+   - **Hasil**: Pada pemindaian faktur berikutnya, AI akan 100% otomatis mengenali produk tersebut tanpa perlu intervensi manual lagi.
 
 ---
 
@@ -123,14 +127,14 @@ Pencocokan teks invoice ke database produk master wajib mematuhi hierarki 3 tier
 | File | Komponen Kritis |
 |------|-----------------|
 | [`app/config/Routes.php`](file:///c:/xampp/htdocs/AlfarezMart/app/config/Routes.php) | Route `/api/ai/scan-invoice` dan `/api/ai/learn-alias` |
-| [`app/controllers/ApiController.php`](file:///c:/xampp/htdocs/AlfarezMart/app/controllers/ApiController.php) | Method `scanInvoiceAI()` dan `learnAliasAI()` |
+| [`app/controllers/ApiController.php`](file:///c:/xampp/htdocs/AlfarezMart/app/controllers/ApiController.php) | Method `scanInvoiceAI()` dan `learnAliasAI()` (auto-update `supplier_invoice_name`) |
 | [`app/services/invoice/InvoiceScanService.php`](file:///c:/xampp/htdocs/AlfarezMart/app/services/invoice/InvoiceScanService.php) | Routing multi-model OpenRouter, cURL 45s, auto-reconnect |
-| [`app/services/invoice/InvoiceLearningService.php`](file:///c:/xampp/htdocs/AlfarezMart/app/services/invoice/InvoiceLearningService.php) | Auto-learn alias & mapping supplier-product |
-| [`app/services/invoice/ProductMatcher.php`](file:///c:/xampp/htdocs/AlfarezMart/app/services/invoice/ProductMatcher.php) | Multi-tier matcher (exact code, alias, composite FMCG) |
+| [`app/services/invoice/InvoiceLearningService.php`](file:///c:/xampp/htdocs/AlfarezMart/app/services/invoice/InvoiceLearningService.php) | `appendProductInvoiceAlias` & auto-learn mapping |
+| [`app/services/invoice/ProductMatcher.php`](file:///c:/xampp/htdocs/AlfarezMart/app/services/invoice/ProductMatcher.php) | Multi-tier matcher + Multi-Keywords Overlap Matching |
 | [`public/js/components.js`](file:///c:/xampp/htdocs/AlfarezMart/public/js/components.js) | `AppModal.show()`, `AppModal.close()`, `AppModal.hide()` |
-| [`app/views/purchases/create.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/purchases/create.php) | `compressImageForAI`, `showScanResultModal`, direct cart ingestion, `copyCartAsJson`, `openLinkProductModal` |
-| [`app/views/purchases/edit.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/purchases/edit.php) | `compressImageForAI`, `showScanResultModal`, direct cart ingestion, `copyCartAsJson`, `openLinkProductModal` |
+| [`app/views/purchases/create.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/purchases/create.php) | `openLinkProductModal` (Link/Change), `selectProductToLink`, Ganti Produk button, `showScanResultModal`, direct cart ingestion |
+| [`app/views/purchases/edit.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/purchases/edit.php) | `openLinkProductModal` (Link/Change), `selectProductToLink`, Ganti Produk button, `showScanResultModal`, direct cart ingestion |
 
 ---
 
-*Dokumen aturan baku ini dikunci permanen pada 21 Agustus 2026. Setiap pengembangan baru wajib menjaga kompatibilitas 100% terhadap aturan ini.*
+*Dokumen aturan baku ini diperbarui pada 21 Agustus 2026 dan wajib dipatuhi oleh seluruh agent dan sesi pengembangan di masa mendatang.*

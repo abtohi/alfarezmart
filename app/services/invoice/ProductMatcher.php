@@ -441,17 +441,17 @@ class ProductMatcher
         $overlapRatio = $matchedWeight / $totalWeight;
         $tokenRatio = count($extractTokens) > 0 ? $matchedCount / count($extractTokens) : 0;
 
-        // Need at least 60% weighted match to be considered
-        if ($overlapRatio < 0.60) return 0;
+        // MULTI-KEYWORD OVERLAP: Match if >= 40% weighted overlap OR at least 2 distinct significant keywords match
+        if ($overlapRatio < 0.40 && $matchedCount < 2) return 0;
 
-        // Score: base 55 + up to 30 bonus based on overlap quality
-        $score = 55 + ($overlapRatio * 30);
+        // Score: Base 50 + up to 35 from weighted overlap + bonus for keyword count
+        $score = 50 + ($overlapRatio * 35) + min(15, $matchedCount * 3);
 
-        // Bonus for high token count matches (more tokens matched = more confident)
+        // Bonus for strong multi-keyword alignment
+        if ($matchedCount >= 3) $score += 5;
         if ($matchedCount >= 4) $score += 5;
-        if ($matchedCount >= 5) $score += 5;
 
-        return min($score, 88); // Cap at 88 (below exact match scores)
+        return min($score, 92); // Cap below exact supplier code / exact alias scores
     }
 
     /**

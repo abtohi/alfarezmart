@@ -1318,23 +1318,30 @@ async function processPurchaseBarcodeOrSearch(rawQuery) {
 }
 
 /**
- * Modal to connect an unmatched AI scan draft item to a master product.
+ * Modal to connect an unmatched AI scan draft item or change existing product to a master product.
  */
 function openLinkProductModal(tempId) {
     const item = purchaseItems.find(i => i.id == tempId);
     if (!item) return;
 
-    const initialKeyword = (item.original_invoice_name || item.name || '').replace(/[^a-zA-Z0-9\s]/g, ' ').trim().split(/\s+/).slice(0, 3).join(' ');
+    const isUnmatched = !!(item.is_unmatched || !item.product_id);
+    const invoiceText = item.original_invoice_name || item.name || '';
+    const initialKeyword = invoiceText.replace(/[^a-zA-Z0-9\s]/g, ' ').trim().split(/\s+/).slice(0, 3).join(' ');
 
     AppModal.show({
-        title: 'Hubungkan Item Scan ke Produk Master',
-        icon: 'bi-link-45deg',
+        title: isUnmatched ? 'Hubungkan Item Scan ke Produk Master' : 'Ganti Produk Master',
+        icon: isUnmatched ? 'bi-link-45deg' : 'bi-arrow-left-right',
         iconColor: 'var(--primary-bg)',
         iconAccent: 'var(--primary)',
         bodyHTML: `
-            <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">
-                Item Nota: <strong style="color:var(--text-primary);">${escapeHtml(item.name)}</strong><br>
-                Qty: <strong>${item.quantity} ${item.unit_name}</strong> | Total: <strong>${formatRupiah(item.total)}</strong>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;background:var(--surface-2);padding:10px 12px;border-radius:var(--radius-md);border:1px solid var(--border-color);">
+                <div style="margin-bottom:4px;">
+                    <i class="bi bi-receipt"></i> Teks Nota / Scan AI: <strong style="color:var(--text-primary);font-family:monospace;">${escapeHtml(invoiceText)}</strong>
+                </div>
+                ${!isUnmatched ? `<div style="margin-bottom:4px;color:var(--info);"><i class="bi bi-box-seam"></i> Produk Saat Ini: <strong>${escapeHtml(item.name)}</strong></div>` : ''}
+                <div style="font-size:11px;">
+                    Qty: <strong>${item.quantity} ${escapeHtml(item.unit_name)}</strong> | Total Nota: <strong style="color:var(--success);">${formatRupiah(item.total)}</strong>
+                </div>
             </div>
             <div class="modal-form-group" style="margin-bottom:10px;">
                 <label>Cari Produk di Master Database</label>
@@ -1429,7 +1436,7 @@ async function selectProductToLink(tempId, productId) {
             return;
         }
 
-        // Link product to draft item
+        // Link product to cart item
         item.product_id = productData.id;
         item.name = productData.full_name || productData.short_label || productData.name;
         item.packagings = productData.packagings;
@@ -1442,23 +1449,24 @@ async function selectProductToLink(tempId, productId) {
         item.level = selectedPkg.level;
         item.unit_name = selectedPkg.unit_name;
 
-        // Auto learn alias to backend memory
-        if (item.original_invoice_name && currentSupplierId) {
+        // Auto learn alias to backend memory (saves to products.supplier_invoice_name)
+        const invoiceAliasToLearn = (item.original_invoice_name || item.name || '').trim();
+        if (invoiceAliasToLearn) {
             api(`${BASE_URL}api/ai/learn-alias`, {
                 method: 'POST',
                 body: JSON.stringify({
-                    supplier_id: currentSupplierId,
+                    supplier_id: currentSupplierId || null,
                     product_id: productData.id,
-                    supplier_invoice_name: item.original_invoice_name,
+                    supplier_invoice_name: invoiceAliasToLearn,
                     supplier_product_code: item.supplier_code || ''
                 })
-            }).catch(() => {});
+            }).catch(e => console.warn('Auto-learn alias note:', e));
         }
 
         AppModal.close();
         renderCart();
         calculateTotal();
-        showToast(`Item berhasil dihubungkan ke "${item.name}"`, 'success');
+        showToast(`Produk berhasil dihubungkan ke "${item.name}" & alias nota telah disimpan!`, 'success', 4000);
     } catch(e) {
         showToast('Gagal menghubungkan produk: ' + e.message, 'error');
     }
@@ -3424,7 +3432,7 @@ function renderCart() {
             </div>
 
             <!-- Product Name & Status -->
-            <div style="font-weight:700;font-size:var(--font-size-sm);margin-bottom:${isCollapsed ? '4px' : '10px'};padding-right:160px;color:var(--text-primary);display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+            <div style="font-weight:700;font-size:var(--font-size-sm);margin-bottom:${isCollapsed ? '4px' : '6px'};padding-right:160px;color:var(--text-primary);display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
                 ${item.name}
                 ${isUnmatched ? `
                     <span style="font-size:9.5px;background:rgba(245,158,11,0.18);color:#f59e0b;padding:2px 8px;border-radius:6px;border:1px solid rgba(245,158,11,0.3);font-weight:600;display:inline-flex;align-items:center;gap:4px;">
@@ -3433,9 +3441,19 @@ function renderCart() {
                     <button type="button" onclick="openLinkProductModal(${item.id})" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:3px 8px;font-size:10.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
                         <i class="bi bi-link-45deg"></i> Hubungkan Produk
                     </button>
-                ` : ''}
+                ` : `
+                    <button type="button" onclick="openLinkProductModal(${item.id})" class="btn-outline-custom" style="padding:2px 7px;font-size:10px;font-weight:600;border-radius:6px;display:inline-flex;align-items:center;gap:4px;" title="Ganti ke produk master lain jika salah identifikasi">
+                        <i class="bi bi-arrow-left-right"></i> Ganti Produk
+                    </button>
+                `}
                 ${hasPkgs && !isUnmatched ? `<span style="font-size:9px;background:var(--info-bg);color:var(--info);padding:2px 6px;border-radius:8px;white-space:nowrap;">${item.packagings.length} kemasan</span>` : ''}
             </div>
+
+            ${item.original_invoice_name && item.original_invoice_name !== item.name ? `
+                <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:${isCollapsed ? '2px' : '8px'};display:flex;align-items:center;gap:4px;">
+                    <i class="bi bi-receipt"></i> Teks Nota: <span style="font-family:monospace;color:var(--text-primary);font-weight:600;">${escapeHtml(item.original_invoice_name)}</span>
+                </div>
+            ` : ''}
 
             ${isCollapsed ? collapsedSummaryHtml : `
                 ${priceSummary ? `<div style="margin-bottom:10px;">${priceSummary}</div>` : ''}

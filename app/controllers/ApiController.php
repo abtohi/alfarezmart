@@ -4010,6 +4010,22 @@ class ApiController extends Controller
                 'buy_price'             => 0
             ]]);
 
+            // Ensure direct append to supplier_invoice_name on products table
+            $learner->appendProductInvoiceAlias($productId, $invoiceName);
+
+            // If invoice_name is empty, populate it as well
+            try {
+                $checkStmt = $this->db->prepare("SELECT invoice_name FROM products WHERE id = ?");
+                $checkStmt->execute([$productId]);
+                $curProd = $checkStmt->fetch(\PDO::FETCH_ASSOC);
+                if ($curProd && empty(trim((string)$curProd['invoice_name']))) {
+                    $updInv = $this->db->prepare("UPDATE products SET invoice_name = ? WHERE id = ?");
+                    $updInv->execute([$invoiceName, $productId]);
+                }
+            } catch (\Throwable $e2) {
+                // Non-fatal
+            }
+
             $this->json([
                 'success' => true,
                 'message' => 'Alias invoice berhasil dipelajari dan dihubungkan ke produk master'
