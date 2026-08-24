@@ -940,76 +940,147 @@ async function performSearch(q) {
         for (let i = 0; i < window._posProductsCatalog.length; i++) {
             const p = window._posProductsCatalog[i];
             if (p.is_available == 0 || p.is_available === '0' || p.is_available === false) continue;
+
+            const fullName = (p.full_name || '').toLowerCase();
+            const shortLabel = (p.short_label || '').toLowerCase();
+            const invName = (p.invoice_name || '').toLowerCase();
+            const suppInvName = (p.supplier_invoice_name || '').toLowerCase();
+            const brandName = (p.brand_name || '').toLowerCase();
+            const categoryName = (p.category_name || '').toLowerCase();
+            const variant = (p.variant || '').toLowerCase();
+            const code = (p.code || '').toLowerCase();
+            const suppCode = (p.supplier_product_code || '').toLowerCase();
+            const weightStr = ((p.weight_value || '') + (p.weight_unit || '')).toLowerCase();
+
+            const displayLabel = ((p.short_label && p.short_label.trim()) || p.full_name || '').toLowerCase();
             let allMatch = true;
             let score = 0;
-            const label = ((p.short_label && p.short_label.trim()) || p.full_name || '').toLowerCase();
-            if (label.startsWith(q)) score += 60;
-            else if (label.includes(q)) score += 40;
 
+            // 1. Full Query Matching Boosts
+            if (displayLabel === q || fullName === q) score += 500;
+            else if (displayLabel.startsWith(q) || fullName.startsWith(q)) score += 250;
+            else if (displayLabel.includes(q) || fullName.includes(q)) score += 150;
+
+            if (code === q || suppCode === q) score += 600;
+            else if (code.startsWith(q) || suppCode.startsWith(q)) score += 350;
+            else if (code.includes(q) || suppCode.includes(q)) score += 200;
+
+            // 2. Per-Word Matching
             for (let j = 0; j < words.length; j++) {
                 const word = words[j];
-                const nameMatch = (p.full_name && p.full_name.toLowerCase().includes(word)) ||
-                                  (p.short_label && p.short_label.toLowerCase().includes(word)) ||
-                                  (p.invoice_name && p.invoice_name.toLowerCase().includes(word)) ||
-                                  (p.supplier_invoice_name && p.supplier_invoice_name.toLowerCase().includes(word));
-                const brandMatch = p.brand_name && p.brand_name.toLowerCase().includes(word);
-                const codeMatch = p.code && p.code.toLowerCase().includes(word);
-                let barcodeMatch = false;
-                let priceMatch = false;
+                const weightMatch = word.match(/^(\d+(?:[.,]\d+)?)\s*(g|gr|gram|kg|kilo|kilogram|ml|l|liter|ltr|oz|pcs|sachet|btg|kotak|dus|rcg|slp|pack|btl|cup)$/i);
+                const isPurePrice = /^(?:rp\.?\s*)?(\d{2,8})$/i.test(word) && !/[a-z]/i.test(word);
+                const isAlphaNumCode = /^(?=.*[a-z])(?=.*\d)[a-z0-9\-_#]+$/i.test(word);
 
-                const cleanWord = word.replace(/[^\d]/g, '');
-                const numWord = cleanWord ? parseFloat(cleanWord) : NaN;
-                const isNumWord = !isNaN(numWord);
+                let wordMatched = false;
 
+                // A. Product Code / Supplier Code
+                if (code.includes(word) || suppCode.includes(word)) {
+                    wordMatched = true;
+                    if (code === word || suppCode === word) score += 300;
+                    else if (code.startsWith(word) || suppCode.startsWith(word)) score += 180;
+                    else score += 100;
+                }
+
+                // B. Size / Weight / Volume Match (e.g. 800g, 4kg, 45g)
+                if (weightMatch) {
+                    const numPart = weightMatch[1].replace(',', '.');
+                    const unitPart = weightMatch[2].toLowerCase();
+                    let normUnit = unitPart;
+                    if (['gr', 'gram'].includes(unitPart)) normUnit = 'g';
+                    if (['kilo', 'kilogram'].includes(unitPart)) normUnit = 'kg';
+                    if (['ltr', 'liter'].includes(unitPart)) normUnit = 'l';
+
+                    const fullWeightNeedle = `${numPart}${normUnit}`;
+                    const spaceWeightNeedle = `${numPart} ${normUnit}`;
+                    const rawWeightNeedle = `${numPart}${unitPart}`;
+
+                    const nameHasWeight = fullName.includes(fullWeightNeedle) || fullName.includes(spaceWeightNeedle) || fullName.includes(rawWeightNeedle) ||
+                                          shortLabel.includes(fullWeightNeedle) || shortLabel.includes(spaceWeightNeedle) || shortLabel.includes(rawWeightNeedle) ||
+                                          variant.includes(fullWeightNeedle) || variant.includes(spaceWeightNeedle) ||
+                                          weightStr.includes(fullWeightNeedle) || (String(p.weight_value) === numPart);
+
+                    let convMatch = false;
+                    if (normUnit === 'kg') {
+                        const grams = parseFloat(numPart) * 1000;
+                        convMatch = fullName.includes(`${grams}g`) || fullName.includes(`${grams} g`) || weightStr.includes(`${grams}g`);
+                    } else if (normUnit === 'g' && parseFloat(numPart) >= 1000) {
+                        const kg = parseFloat(numPart) / 1000;
+                        convMatch = fullName.includes(`${kg}kg`) || fullName.includes(`${kg} kg`) || weightStr.includes(`${kg}kg`);
+                    }
+
+                    if (nameHasWeight || convMatch) {
+                        wordMatched = true;
+                        score += 350; // HUGE boost for matching size/weight/volume!
+                    } else {
+                        score -= 60;
+                    }
+                }
+
+                // C. Name, Short Label, Variant, Invoice Name Match
+                const nameMatch = fullName.includes(word) || shortLabel.includes(word) || invName.includes(word) || suppInvName.includes(word) || variant.includes(word);
+                if (nameMatch) {
+                    wordMatched = true;
+                    if (displayLabel.startsWith(word) || fullName.startsWith(word)) score += 90;
+                    else score += 50;
+                }
+
+                // D. Brand & Category Match
+                if (brandName.includes(word)) { wordMatched = true; score += 40; }
+                if (categoryName.includes(word)) { wordMatched = true; score += 25; }
+
+                // E. Barcode Match
                 if (p.packagings && Array.isArray(p.packagings)) {
                     for (let k = 0; k < p.packagings.length; k++) {
                         const pkg = p.packagings[k];
                         if (pkg.barcode && pkg.barcode.toLowerCase().includes(word)) {
-                            barcodeMatch = true;
-                        }
-                        if (isNumWord) {
-                            const pRetail = Math.round(parseFloat(pkg.sell_price_retail) || 0);
-                            const pWhole  = Math.round(parseFloat(pkg.sell_price_wholesale) || 0);
-                            const pBuy    = Math.round(parseFloat(pkg.buy_price) || 0);
-                            if (pRetail === numWord || String(pRetail).includes(cleanWord)) priceMatch = true;
-                            if (pWhole === numWord || String(pWhole).includes(cleanWord)) priceMatch = true;
-                            if (pBuy === numWord || String(pBuy).includes(cleanWord)) priceMatch = true;
+                            wordMatched = true;
+                            score += pkg.barcode.toLowerCase() === word ? 250 : 80;
                         }
                     }
                 }
-                if (isNumWord && !priceMatch) {
-                    if (p.price_small_retail != null) {
-                        const pSmall = Math.round(parseFloat(p.price_small_retail) || 0);
-                        if (pSmall === numWord || String(pSmall).includes(cleanWord)) priceMatch = true;
-                    }
-                    if (p.price_small_wholesale != null) {
-                        const pSmallW = Math.round(parseFloat(p.price_small_wholesale) || 0);
-                        if (pSmallW === numWord || String(pSmallW).includes(cleanWord)) priceMatch = true;
+
+                // F. Price Match (ONLY pure numeric price searches)
+                if (isPurePrice && !weightMatch && !isAlphaNumCode) {
+                    const purePriceNum = parseFloat(word.replace(/[^\d]/g, ''));
+                    if (!isNaN(purePriceNum) && purePriceNum > 0) {
+                        let isLevel1Match = false;
+                        let isOtherPriceMatch = false;
+
+                        if (p.packagings && Array.isArray(p.packagings)) {
+                            for (let k = 0; k < p.packagings.length; k++) {
+                                const pkg = p.packagings[k];
+                                const pRetail = Math.round(parseFloat(pkg.sell_price_retail) || 0);
+                                const pWhole  = Math.round(parseFloat(pkg.sell_price_wholesale) || 0);
+                                const pBuy    = Math.round(parseFloat(pkg.buy_price) || 0);
+                                const isLvl1  = (pkg.level == 1 || pkg.level === '1' || k === 0);
+
+                                if (isLvl1 && pRetail === purePriceNum) isLevel1Match = true;
+                                else if (pRetail === purePriceNum || pWhole === purePriceNum || pBuy === purePriceNum) isOtherPriceMatch = true;
+                                else if (word.length >= 3 && (String(pRetail).includes(word) || String(pWhole).includes(word))) isOtherPriceMatch = true;
+                            }
+                        }
+                        if (p.price_small_retail != null) {
+                            const pSmall = Math.round(parseFloat(p.price_small_retail) || 0);
+                            if (pSmall === purePriceNum) isLevel1Match = true;
+                        }
+
+                        if (isLevel1Match) {
+                            wordMatched = true;
+                            score += 400; // TOP PRIORITY: Level 1 Retail Price Match!
+                        } else if (isOtherPriceMatch) {
+                            wordMatched = true;
+                            score += 150;
+                        }
                     }
                 }
-                if (!(nameMatch || brandMatch || codeMatch || barcodeMatch || priceMatch)) {
+
+                if (!wordMatched) {
                     allMatch = false;
                     break;
                 }
-                if (nameMatch) score += 30;
-                if (brandMatch) score += 20;
-                if (codeMatch || barcodeMatch) score += 15;
-                if (priceMatch) {
-                    let exactPriceMatch = false;
-                    if (isNumWord && p.packagings && Array.isArray(p.packagings)) {
-                        for (let k = 0; k < p.packagings.length; k++) {
-                            const pkg = p.packagings[k];
-                            if (Math.round(parseFloat(pkg.sell_price_retail) || 0) === numWord ||
-                                Math.round(parseFloat(pkg.sell_price_wholesale) || 0) === numWord ||
-                                Math.round(parseFloat(pkg.buy_price) || 0) === numWord) {
-                                exactPriceMatch = true;
-                                break;
-                            }
-                        }
-                    }
-                    score += exactPriceMatch ? 50 : 15;
-                }
             }
+
             if (allMatch) {
                 scored.push({ item: p, score });
             }

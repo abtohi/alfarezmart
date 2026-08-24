@@ -172,6 +172,7 @@ class ApiController extends Controller
                     'variant'              => $p['variant'] ?? null,
                     'is_custom_label'      => (int)($p['is_custom_label'] ?? 0),
                     'code'                 => $p['code'],
+                    'supplier_product_code'=> $p['supplier_product_code'] ?? null,
                     'is_available'         => (int)($p['is_available'] ?? 1),
                     'photo'                => $photo,
                     'updated_at'           => $p['updated_at'] ?? null,

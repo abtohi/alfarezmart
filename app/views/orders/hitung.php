@@ -345,15 +345,29 @@
 
     async function doSearch(q) {
         try {
+            if (typeof OfflineDB !== 'undefined' && typeof OfflineDB.searchProducts === 'function') {
+                const local = await OfflineDB.searchProducts(q);
+                if (Array.isArray(local) && local.length > 0) {
+                    lastResults = local;
+                    renderResults(lastResults);
+                }
+            }
             const url = `<?= BASE_URL ?>api/products/search?q=${encodeURIComponent(q)}`;
             const res = await fetch(url, { credentials: 'same-origin' });
             const data = await res.json();
-            lastResults = Array.isArray(data) ? data : [];
-            renderResults(lastResults);
+            if (Array.isArray(data) && data.length > 0) {
+                lastResults = data;
+                renderResults(lastResults);
+            } else if (!lastResults || lastResults.length === 0) {
+                lastResults = [];
+                renderResults([]);
+            }
         } catch (err) {
             console.error('Search failed:', err);
-            elResults.innerHTML = '<div style="padding:12px; color:var(--text-muted); text-align:center; font-size:11px;">Gagal mencari. Coba lagi.</div>';
-            elResults.style.display = '';
+            if (!lastResults || lastResults.length === 0) {
+                elResults.innerHTML = '<div style="padding:12px; color:var(--text-muted); text-align:center; font-size:11px;">Gagal mencari. Coba lagi.</div>';
+                elResults.style.display = '';
+            }
         }
     }
 
