@@ -672,6 +672,14 @@
             <span class="action-label">Unduh Offline</span>
         </a>
         <?php endif; ?>
+        <?php if ($this->hasServiceAccess('savings')): ?>
+        <a href="<?= BASE_URL ?>savings" class="quick-action" title="Tabungan, Financial Goals & Alokasi Dana">
+            <div class="action-icon" style="background: linear-gradient(135deg, rgba(16,185,129,0.18), rgba(99,102,241,0.18)); color: #10b981;">
+                <i class="bi bi-piggy-bank-fill"></i>
+            </div>
+            <span class="action-label">Savings</span>
+        </a>
+        <?php endif; ?>
     </div>
 
     <!-- 3. LAPORAN & RIWAYAT -->

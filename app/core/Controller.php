@@ -203,11 +203,11 @@ if (!class_exists('Controller')) {
             'admin' => [
                 'finance', 'reports', 'debts', 'purchases', 'suppliers',
                 'customers', 'products', 'catalog', 'multivariant',
-                'product_history', 'supplier_analysis', 'export_data', 'order_estimate'
+                'product_history', 'supplier_analysis', 'export_data', 'order_estimate', 'savings'
             ],
             'staff' => [
                 'suppliers', 'customers', 'products', 'catalog',
-                'product_history', 'supplier_analysis', 'order_estimate'
+                'product_history', 'supplier_analysis', 'order_estimate', 'savings'
             ],
         ];
 

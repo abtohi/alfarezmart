@@ -1,0 +1,332 @@
+<?php
+/**
+ * SavingsController - Controller untuk Modul Tabungan, Financial Goals & Alokasi Penempatan Dana
+ */
+class SavingsController extends Controller
+{
+    private SavingsModel $savingsModel;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->savingsModel = new SavingsModel();
+    }
+
+    /**
+     * Halaman Utama Savings
+     */
+    public function index()
+    {
+        $this->requireService('savings');
+
+        $summary = $this->savingsModel->getOverallSummary();
+        $goals = $this->savingsModel->getGoals();
+
+        $this->view('savings.index', [
+            'title' => 'Savings & Goals Tabungan',
+            'activeNav' => 'home',
+            'summary' => $summary,
+            'goals' => $goals,
+        ]);
+    }
+
+    // ==========================================
+    // API ENDPOINTS
+    // ==========================================
+
+    /**
+     * API: Get Overall Summary
+     */
+    public function apiGetSummary()
+    {
+        $this->requireService('savings');
+        $summary = $this->savingsModel->getOverallSummary();
+        $this->json(['success' => true, 'data' => $summary]);
+    }
+
+    /**
+     * API: Get All Goals
+     */
+    public function apiGetGoals()
+    {
+        $this->requireService('savings');
+        $status = $this->query('status');
+        $goals = $this->savingsModel->getGoals($status);
+        $this->json(['success' => true, 'data' => $goals]);
+    }
+
+    /**
+     * API: Get Goal Detail by ID
+     */
+    public function apiGetGoalDetail($id)
+    {
+        $this->requireService('savings');
+        $goal = $this->savingsModel->getGoalById((int)$id);
+        if (!$goal) {
+            $this->json(['error' => 'Goal tidak ditemukan'], 404);
+        }
+        $this->json(['success' => true, 'data' => $goal]);
+    }
+
+    /**
+     * API: Create New Goal
+     */
+    public function apiCreateGoal()
+    {
+        $this->requireService('savings');
+        $this->validateCSRF();
+
+        $name = trim((string)$this->input('name', ''));
+        $targetAmount = (float)$this->input('target_amount', 0);
+        $targetDate = $this->input('target_date', null);
+        $category = trim((string)$this->input('category', 'Lainnya'));
+        $icon = trim((string)$this->input('icon', 'bi-piggy-bank-fill'));
+        $color = trim((string)$this->input('color', '#6366f1'));
+        $description = trim((string)$this->input('description', ''));
+
+        if (empty($name)) {
+            $this->json(['error' => 'Nama goal/tujuan tabungan wajib diisi'], 422);
+        }
+        if ($targetAmount <= 0) {
+            $this->json(['error' => 'Target nominal harus lebih dari 0'], 422);
+        }
+
+        try {
+            $goalId = $this->savingsModel->createGoal([
+                'name' => $name,
+                'target_amount' => $targetAmount,
+                'target_date' => !empty($targetDate) ? $targetDate : null,
+                'category' => $category,
+                'icon' => $icon,
+                'color' => $color,
+                'description' => $description,
+                'status' => 'in_progress',
+            ]);
+
+            // If initial allocations provided (e.g. array of {name, account_type, institution, amount})
+            $initialAllocations = $this->input('allocations', []);
+            if (is_array($initialAllocations)) {
+                foreach ($initialAllocations as $alloc) {
+                    $allocName = trim((string)($alloc['name'] ?? ''));
+                    $allocAmount = (float)($alloc['amount'] ?? 0);
+                    if (!empty($allocName)) {
+                        $this->savingsModel->createAllocation([
+                            'goal_id' => $goalId,
+                            'name' => $allocName,
+                            'account_type' => $alloc['account_type'] ?? 'Bank / Rekening',
+                            'institution' => $alloc['institution'] ?? null,
+                            'amount' => $allocAmount,
+                            'notes' => $alloc['notes'] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            $createdGoal = $this->savingsModel->getGoalById($goalId);
+            $this->json([
+                'success' => true,
+                'message' => 'Goal tabungan berhasil ditambahkan',
+                'data' => $createdGoal
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Gagal membuat goal: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Update Goal
+     */
+    public function apiUpdateGoal($id)
+    {
+        $this->requireService('savings');
+        $this->validateCSRF();
+
+        $goal = $this->savingsModel->getGoalById((int)$id);
+        if (!$goal) {
+            $this->json(['error' => 'Goal tidak ditemukan'], 404);
+        }
+
+        $name = trim((string)$this->input('name', $goal['name']));
+        $targetAmount = (float)$this->input('target_amount', $goal['target_amount']);
+        $targetDate = $this->input('target_date', $goal['target_date']);
+        $category = trim((string)$this->input('category', $goal['category']));
+        $icon = trim((string)$this->input('icon', $goal['icon']));
+        $color = trim((string)$this->input('color', $goal['color']));
+        $description = trim((string)$this->input('description', $goal['description'] ?? ''));
+        $status = trim((string)$this->input('status', $goal['status']));
+
+        if (empty($name)) {
+            $this->json(['error' => 'Nama goal tidak boleh kosong'], 422);
+        }
+        if ($targetAmount <= 0) {
+            $this->json(['error' => 'Target nominal harus lebih besar dari 0'], 422);
+        }
+
+        try {
+            $this->savingsModel->updateGoal((int)$id, [
+                'name' => $name,
+                'target_amount' => $targetAmount,
+                'target_date' => !empty($targetDate) ? $targetDate : null,
+                'category' => $category,
+                'icon' => $icon,
+                'color' => $color,
+                'description' => $description,
+                'status' => $status,
+            ]);
+
+            $updatedGoal = $this->savingsModel->getGoalById((int)$id);
+            $this->json([
+                'success' => true,
+                'message' => 'Goal berhasil diperbarui',
+                'data' => $updatedGoal
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Gagal memperbarui goal: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Delete Goal
+     */
+    public function apiDeleteGoal($id)
+    {
+        $this->requireService('savings');
+        $this->validateCSRF();
+
+        $goal = $this->savingsModel->getGoalById((int)$id);
+        if (!$goal) {
+            $this->json(['error' => 'Goal tidak ditemukan'], 404);
+        }
+
+        try {
+            $this->savingsModel->deleteGoal((int)$id);
+            $this->json(['success' => true, 'message' => 'Goal tabungan berhasil dihapus']);
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Gagal menghapus goal: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Save / Update Allocation Item (Pos Penempatan)
+     */
+    public function apiSaveAllocation()
+    {
+        $this->requireService('savings');
+        $this->validateCSRF();
+
+        $allocId = $this->input('id', null);
+        $goalId = (int)$this->input('goal_id', 0);
+        $name = trim((string)$this->input('name', ''));
+        $accountType = trim((string)$this->input('account_type', 'Bank / Rekening'));
+        $institution = trim((string)$this->input('institution', ''));
+        $amount = (float)$this->input('amount', 0);
+        $notes = trim((string)$this->input('notes', ''));
+
+        if ($goalId <= 0) {
+            $this->json(['error' => 'ID Goal tidak valid'], 422);
+        }
+        if (empty($name)) {
+            $this->json(['error' => 'Nama pos penempatan (misal: Bibit, Toko, SeaBank) wajib diisi'], 422);
+        }
+        if ($amount < 0) {
+            $this->json(['error' => 'Nominal tidak boleh negatif'], 422);
+        }
+
+        try {
+            if (!empty($allocId)) {
+                // Update existing allocation
+                $this->savingsModel->updateAllocation((int)$allocId, [
+                    'name' => $name,
+                    'account_type' => $accountType,
+                    'institution' => $institution,
+                    'amount' => $amount,
+                    'notes' => $notes,
+                ]);
+            } else {
+                // Create new allocation
+                $this->savingsModel->createAllocation([
+                    'goal_id' => $goalId,
+                    'name' => $name,
+                    'account_type' => $accountType,
+                    'institution' => $institution,
+                    'amount' => $amount,
+                    'notes' => $notes,
+                ]);
+            }
+
+            $updatedGoal = $this->savingsModel->getGoalById($goalId);
+            $this->json([
+                'success' => true,
+                'message' => 'Pos alokasi tabungan berhasil disimpan',
+                'data' => $updatedGoal
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Gagal menyimpan pos alokasi: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Delete Allocation Item
+     */
+    public function apiDeleteAllocation($id)
+    {
+        $this->requireService('savings');
+        $this->validateCSRF();
+
+        $alloc = $this->savingsModel->getAllocationById((int)$id);
+        if (!$alloc) {
+            $this->json(['error' => 'Pos alokasi tidak ditemukan'], 404);
+        }
+
+        try {
+            $goalId = (int)$alloc['goal_id'];
+            $this->savingsModel->deleteAllocation((int)$id);
+            $updatedGoal = $this->savingsModel->getGoalById($goalId);
+            $this->json([
+                'success' => true,
+                'message' => 'Pos alokasi berhasil dihapus',
+                'data' => $updatedGoal
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Gagal menghapus pos alokasi: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Record Mutation (Setoran / Penarikan Dana)
+     */
+    public function apiRecordMutation()
+    {
+        $this->requireService('savings');
+        $this->validateCSRF();
+
+        $goalId = (int)$this->input('goal_id', 0);
+        $allocationId = (int)$this->input('allocation_id', 0);
+        $type = trim((string)$this->input('type', 'deposit')); // 'deposit' or 'withdraw'
+        $amount = (float)$this->input('amount', 0);
+        $notes = trim((string)$this->input('notes', ''));
+        $logDate = $this->input('log_date', date('Y-m-d'));
+
+        if ($goalId <= 0 || $allocationId <= 0) {
+            $this->json(['error' => 'Goal dan Pos Alokasi harus dipilih'], 422);
+        }
+        if ($amount <= 0) {
+            $this->json(['error' => 'Nominal mutasi harus lebih besar dari 0'], 422);
+        }
+        if (!in_array($type, ['deposit', 'withdraw'])) {
+            $this->json(['error' => 'Tipe mutasi tidak valid (harus Setor atau Tarik)'], 422);
+        }
+
+        try {
+            $res = $this->savingsModel->recordMutation($goalId, $allocationId, $type, $amount, $notes, $logDate);
+            $updatedGoal = $this->savingsModel->getGoalById($goalId);
+            $this->json([
+                'success' => true,
+                'message' => ($type === 'deposit' ? 'Setoran' : 'Penarikan') . ' dana berhasil dicatat',
+                'data' => $updatedGoal
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['error' => $e->getMessage()], 422);
+        }
+    }
+}

@@ -483,6 +483,41 @@ class Database
                     type TEXT NOT NULL,
                     is_active INTEGER DEFAULT 1,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )",
+                "CREATE TABLE IF NOT EXISTS savings_goals (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    target_amount REAL NOT NULL DEFAULT 0,
+                    target_date DATE,
+                    category TEXT DEFAULT 'Lainnya',
+                    icon TEXT DEFAULT 'bi-piggy-bank-fill',
+                    color TEXT DEFAULT '#6366f1',
+                    description TEXT,
+                    status TEXT DEFAULT 'in_progress',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )",
+                "CREATE TABLE IF NOT EXISTS savings_allocations (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    goal_id INTEGER NOT NULL,
+                    name TEXT NOT NULL,
+                    account_type TEXT DEFAULT 'Bank / Rekening',
+                    institution TEXT,
+                    amount REAL NOT NULL DEFAULT 0,
+                    notes TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )",
+                "CREATE TABLE IF NOT EXISTS savings_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    goal_id INTEGER NOT NULL,
+                    allocation_id INTEGER,
+                    type TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    balance_after REAL NOT NULL,
+                    log_date DATE NOT NULL,
+                    notes TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )"
             ];
 

@@ -65,6 +65,18 @@ $router->get('/reports/product-history/export/{id}', 'ReportController@exportPro
 // Catalog
 $router->get('/catalog', 'CatalogController@index');
 
+// Savings & Goals (Tabungan & Target Keuangan)
+$router->get('/savings', 'SavingsController@index');
+$router->get('/api/savings/summary', 'SavingsController@apiGetSummary');
+$router->get('/api/savings/goals', 'SavingsController@apiGetGoals');
+$router->get('/api/savings/goals/{id}', 'SavingsController@apiGetGoalDetail');
+$router->post('/api/savings/goals', 'SavingsController@apiCreateGoal');
+$router->post('/api/savings/goals/{id}/update', 'SavingsController@apiUpdateGoal');
+$router->post('/api/savings/goals/{id}/delete', 'SavingsController@apiDeleteGoal');
+$router->post('/api/savings/allocations', 'SavingsController@apiSaveAllocation');
+$router->post('/api/savings/allocations/{id}/delete', 'SavingsController@apiDeleteAllocation');
+$router->post('/api/savings/mutations', 'SavingsController@apiRecordMutation');
+
 // ============================================
 // PPOB / Produk Digital (Digiflazz)
 // ============================================
