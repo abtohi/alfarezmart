@@ -599,12 +599,6 @@
     <!-- 2. AKSI CEPAT MENU -->
     <div class="section-title">Aksi Cepat Menu</div>
     <div class="dash-quick-grid">
-        <a href="<?= BASE_URL ?>settings/backup" class="quick-action" title="Backup & Restore Data Harian Darurat Offline">
-            <div class="action-icon" style="background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2)); color: #6366f1;">
-                <i class="bi bi-shield-lock-fill"></i>
-            </div>
-            <span class="action-label">Backup Harian</span>
-        </a>
         <?php if ($this->hasServiceAccess('ppob')): ?>
         <a href="<?= BASE_URL ?>ppob" class="quick-action">
             <div class="action-icon" style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15)); color: #818cf8;">
@@ -613,6 +607,12 @@
             <span class="action-label">Produk Digital</span>
         </a>
         <?php endif; ?>
+        <a href="<?= BASE_URL ?>settings/backup" class="quick-action" title="Backup & Restore Data Harian Darurat Offline">
+            <div class="action-icon" style="background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2)); color: #6366f1;">
+                <i class="bi bi-shield-lock-fill"></i>
+            </div>
+            <span class="action-label">Backup Harian</span>
+        </a>
         <a href="<?= BASE_URL ?>customers" class="quick-action">
             <div class="action-icon" style="background: var(--info-bg); color: var(--info);"><i class="bi bi-people-fill"></i></div>
             <span class="action-label">Pelanggan</span>
