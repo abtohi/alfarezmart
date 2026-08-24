@@ -12,24 +12,65 @@
     
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
-    <!-- Photo Preview Modal -->
-    <div id="photoPreviewModal" class="modal-backdrop" style="display:none; z-index:2000;">
-        <div class="modal-content" style="max-width:400px; padding:0; overflow:hidden; display:flex; flex-direction:column; height:90vh;">
-            <div style="padding:16px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="font-size:var(--font-size-md); margin:0;">Pratinjau Foto</h3>
-                <button class="btn-close-custom" onclick="closePhotoPreview()"><i class="bi bi-x-lg"></i></button>
+    <!-- Photo Preview Modal with Rotation & Document Enhancement -->
+    <div id="photoPreviewModal" class="modal-backdrop" style="display:none; z-index:2000; padding:16px; align-items:center; justify-content:center;">
+        <div class="modal-content" style="width:100%; max-width:680px; height:88vh; max-height:850px; padding:0; overflow:hidden; display:flex; flex-direction:column; background:var(--surface-1, #1e293b); border:1px solid var(--border-color); border-radius:var(--radius-xl, 16px); box-shadow:0 25px 60px -15px rgba(0,0,0,0.6);">
+            <!-- Modal Header -->
+            <div style="padding:14px 18px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; background:var(--surface-2, rgba(255,255,255,0.03));">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:32px; height:32px; border-radius:8px; background:rgba(var(--primary-rgb, 99, 102, 241), 0.15); display:flex; align-items:center; justify-content:center; color:var(--primary);">
+                        <i class="bi bi-file-earmark-image" style="font-size:16px;"></i>
+                    </div>
+                    <div>
+                        <h3 style="font-size:15px; font-weight:700; margin:0; color:var(--text-primary);">Pratinjau & Atur Posisi Foto</h3>
+                        <span style="font-size:11px; color:var(--text-muted);">Pastikan teks faktur tegak dan jelas sebelum scan</span>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span id="photoRotationBadge" style="font-size:11px; font-weight:600; padding:2px 8px; border-radius:12px; background:rgba(255,255,255,0.08); color:var(--text-secondary); border:1px solid var(--border-color);">0°</span>
+                    <button type="button" class="btn-close-custom" onclick="closePhotoPreview()" style="width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.05); border:none; color:var(--text-muted); cursor:pointer;"><i class="bi bi-x-lg"></i></button>
+                </div>
             </div>
-            <div style="flex:1; overflow:hidden; background:#111; position:relative; display:flex; align-items:center; justify-content:center;">
-                <canvas id="photoPreviewCanvas" style="max-width:100%; max-height:100%; object-fit:contain;"></canvas>
+
+            <!-- Canvas Viewport -->
+            <div style="flex:1; min-height:220px; overflow:auto; background:radial-gradient(circle at center, #182234 0%, #0a0e17 100%); position:relative; display:flex; align-items:center; justify-content:center; padding:16px;">
+                <canvas id="photoPreviewCanvas" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:6px; box-shadow:0 12px 35px rgba(0,0,0,0.65); transition:transform 0.15s ease-out;"></canvas>
             </div>
-            <div style="padding:16px; background:var(--surface-1);">
-                <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; cursor:pointer;">
-                    <input type="checkbox" id="chkEnhancePhoto" checked onchange="applyPhotoFilter()" style="width:18px;height:18px;accent-color:var(--primary);">
-                    <span style="font-size:13px; font-weight:600; color:var(--text-primary);">Mode Dokumen (Perjelas Teks)</span>
-                </label>
-                <div style="display:flex; gap:8px;">
-                    <button type="button" class="btn-outline-custom" style="flex:1;" onclick="closePhotoPreview()">Batal</button>
-                    <button type="button" class="btn-primary-custom" style="flex:1;" onclick="savePhotoPreview()">Gunakan Foto</button>
+
+            <!-- Control Toolbar -->
+            <div style="padding:14px 18px; background:var(--surface-1); border-top:1px solid var(--border-color); display:flex; flex-direction:column; gap:12px;">
+                <!-- Rotation & Filter Controls -->
+                <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px;">
+                    <!-- Rotation Buttons Group -->
+                    <div style="display:inline-flex; align-items:center; gap:6px;">
+                        <button type="button" class="btn-outline-custom" onclick="rotatePhotoPreview(-90)" style="padding:7px 12px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:5px; border-radius:8px;" title="Putar 90° Berlawanan Arah Jarum Jam">
+                            <i class="bi bi-arrow-counterclockwise" style="font-size:14px; color:var(--primary);"></i> Putar Kiri (-90°)
+                        </button>
+                        <button type="button" class="btn-outline-custom" onclick="rotatePhotoPreview(90)" style="padding:7px 12px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:5px; border-radius:8px;" title="Putar 90° Searah Jarum Jam">
+                            <i class="bi bi-arrow-clockwise" style="font-size:14px; color:var(--primary);"></i> Putar Kanan (+90°)
+                        </button>
+                        <button type="button" class="btn-outline-custom" onclick="resetPhotoPreview()" style="padding:7px 10px; font-size:12px; border-radius:8px;" title="Kembalikan Orientasi Awal">
+                            <i class="bi bi-arrow-repeat"></i> Reset
+                        </button>
+                    </div>
+
+                    <!-- Enhance Toggle Switch -->
+                    <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; user-select:none; margin:0; background:rgba(255,255,255,0.04); padding:6px 12px; border-radius:20px; border:1px solid var(--border-color);">
+                        <input type="checkbox" id="chkEnhancePhoto" checked onchange="applyPhotoFilter()" style="width:16px; height:16px; accent-color:var(--primary); cursor:pointer;">
+                        <span style="font-size:12px; font-weight:600; color:var(--text-primary); display:inline-flex; align-items:center; gap:5px;">
+                            <i class="bi bi-magic" style="color:var(--primary); font-size:13px;"></i> Mode Dokumen (Perjelas Teks)
+                        </span>
+                    </label>
+                </div>
+
+                <!-- Footer Action Buttons -->
+                <div style="display:flex; gap:10px; align-items:center; margin-top:2px;">
+                    <button type="button" class="btn-outline-custom" style="padding:10px 18px; font-size:13px; font-weight:600; border-radius:8px;" onclick="closePhotoPreview()">
+                        Batal
+                    </button>
+                    <button type="button" class="btn-primary-custom" style="flex:1; padding:10px 18px; font-size:13px; font-weight:700; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 14px rgba(var(--primary-rgb, 99, 102, 241), 0.35);" onclick="savePhotoPreview()">
+                        <i class="bi bi-check2-circle" style="font-size:16px;"></i> Gunakan Foto Ini
+                    </button>
                 </div>
             </div>
         </div>
@@ -251,6 +292,8 @@ let invoicePhotoBase64 = null;
 
 let originalPhotoImg = null;
 
+let photoRotationAngle = 0; // 0, 90, 180, 270
+
 function handlePhotoSelect(e, isCamera) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -259,6 +302,10 @@ function handlePhotoSelect(e, isCamera) {
     reader.onload = function(event) {
         originalPhotoImg = new Image();
         originalPhotoImg.onload = function() {
+            photoRotationAngle = 0;
+            const badge = document.getElementById('photoRotationBadge');
+            if (badge) badge.textContent = '0°';
+
             const modal = document.getElementById('photoPreviewModal');
             if (modal) modal.style.display = 'flex';
             const chk = document.getElementById('chkEnhancePhoto');
@@ -276,6 +323,24 @@ function handlePhotoSelect(e, isCamera) {
     reader.readAsDataURL(file);
 }
 
+function rotatePhotoPreview(delta) {
+    photoRotationAngle = (photoRotationAngle + delta + 360) % 360;
+    const badge = document.getElementById('photoRotationBadge');
+    if (badge) {
+        badge.textContent = photoRotationAngle + '°';
+    }
+    applyPhotoFilter();
+}
+
+function resetPhotoPreview() {
+    photoRotationAngle = 0;
+    const badge = document.getElementById('photoRotationBadge');
+    if (badge) badge.textContent = '0°';
+    const chk = document.getElementById('chkEnhancePhoto');
+    if (chk) chk.checked = true;
+    applyPhotoFilter();
+}
+
 function closePhotoPreview() {
     const modal = document.getElementById('photoPreviewModal');
     if (modal) modal.style.display = 'none';
@@ -288,34 +353,49 @@ function applyPhotoFilter() {
     const chk = document.getElementById('chkEnhancePhoto');
     const isEnhanced = chk ? chk.checked : true;
     
-    let width = originalPhotoImg.width;
-    let height = originalPhotoImg.height;
-    const max_size = 1200;
+    let origW = originalPhotoImg.naturalWidth || originalPhotoImg.width;
+    let origH = originalPhotoImg.naturalHeight || originalPhotoImg.height;
+    const max_size = 1600;
     
-    if (width > height) {
-        if (width > max_size) { height *= max_size / width; width = max_size; }
+    let targetW = origW;
+    let targetH = origH;
+    if (targetW > targetH) {
+        if (targetW > max_size) { targetH *= max_size / targetW; targetW = max_size; }
     } else {
-        if (height > max_size) { width *= max_size / height; height = max_size; }
+        if (targetH > max_size) { targetW *= max_size / targetH; targetH = max_size; }
     }
-    
-    canvas.width = width;
-    canvas.height = height;
+    targetW = Math.round(targetW);
+    targetH = Math.round(targetH);
+
+    const rad = (photoRotationAngle * Math.PI) / 180;
+    const isRotated90or270 = (photoRotationAngle === 90 || photoRotationAngle === 270);
+
+    // Set canvas dimensions according to orientation
+    canvas.width = isRotated90or270 ? targetH : targetW;
+    canvas.height = isRotated90or270 ? targetW : targetH;
     const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     if (isEnhanced) {
-        // Document mode: Grayscale, high contrast, slightly increased brightness
-        ctx.filter = 'grayscale(100%) contrast(150%) brightness(110%)';
+        // Document mode: crisp contrast and brightness for OCR text readability
+        ctx.filter = 'grayscale(100%) contrast(145%) brightness(108%)';
     } else {
         ctx.filter = 'none';
     }
     
-    ctx.drawImage(originalPhotoImg, 0, 0, width, height);
+    ctx.save();
+    // Center point translation
+    ctx.translate(canvas.width / 2, canvas.height / 2);
+    ctx.rotate(rad);
+    // Draw rotated image centered
+    ctx.drawImage(originalPhotoImg, -targetW / 2, -targetH / 2, targetW, targetH);
+    ctx.restore();
 }
 
 function savePhotoPreview() {
     const canvas = document.getElementById('photoPreviewCanvas');
     if (!canvas) return;
-    invoicePhotoBase64 = canvas.toDataURL('image/webp', 0.7);
+    invoicePhotoBase64 = canvas.toDataURL('image/jpeg', 0.85);
     
     const btnCam = document.getElementById('btnPhotoCam');
     const btnGal = document.getElementById('btnPhotoGal');
