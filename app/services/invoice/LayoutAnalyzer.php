@@ -226,14 +226,22 @@ class LayoutAnalyzer
         $unitRaw = $get('unit', ['satuan', 'kemasan', 'uom']);
         $unit    = is_string($unitRaw) ? trim($unitRaw) : '';
 
-        // --- Extract explicit BSR/TGH/KCL quantities (Overriding unit and qty if found) ---
+        // --- Extract explicit BSR/TGH/KCL or CRT/PCS quantities (Overriding unit and qty if found) ---
         $qtyBsr = $this->parseQty($get('qty_bsr', ['bsr']), 0);
         $qtyTgh = $this->parseQty($get('qty_tgh', ['tgh']), 0);
         $qtyKcl = $this->parseQty($get('qty_kcl', ['kcl']), 0);
+        $qtyCrt = $this->parseQty($get('qty_crt', ['crt', 'karton', 'dus', 'qty_crt']), 0);
+        $qtyPcs = $this->parseQty($get('qty_pcs', ['pcs', 'pecahan', 'qty_pcs']), 0);
 
         // Only override if they actually have a valid number > 0
         // And if the AI outputs exactly the number, we trust it more than the generic unit column
-        if ($qtyBsr > 0) {
+        if ($qtyCrt > 0 && $qtyPcs <= 0) {
+            $qty  = $qtyCrt;
+            $unit = 'CRT';
+        } elseif ($qtyPcs > 0 && $qtyCrt <= 0) {
+            $qty  = $qtyPcs;
+            $unit = 'PCS';
+        } elseif ($qtyBsr > 0) {
             $qty  = $qtyBsr;
             $unit = 'bsr';
         } elseif ($qtyTgh > 0) {

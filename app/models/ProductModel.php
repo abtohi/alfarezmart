@@ -464,11 +464,12 @@ class ProductModel extends Model
                     $p_bar   = ":s_{$idx}_bar";
                     $p_label = ":s_{$idx}_label";
                     $p_inv   = ":s_{$idx}_inv";
-                    $p_code  = ":s_{$idx}_code";
-                    $p_scode = ":s_{$idx}_scode";
-                    $p_sinv  = ":s_{$idx}_sinv";
-                    $p_var   = ":s_{$idx}_var";
-                    $p_wval  = ":s_{$idx}_wval";
+                    $p_code   = ":s_{$idx}_code";
+                    $p_scode1 = ":s_{$idx}_scode1";
+                    $p_scode2 = ":s_{$idx}_scode2";
+                    $p_sinv   = ":s_{$idx}_sinv";
+                    $p_var    = ":s_{$idx}_var";
+                    $p_wval   = ":s_{$idx}_wval";
 
                     $isPurePrice = (bool)preg_match('/^(?:rp\.?\s*)?(\d{2,8})$/i', $word);
                     $isWeightToken = (bool)preg_match('/^(\d+(?:[.,]\d+)?)\s*(g|gr|gram|kg|kilo|kilogram|ml|l|liter|ltr|oz|pcs|sachet|btg|kotak|dus|rcg|slp|pack|btl|cup)$/i', $word);

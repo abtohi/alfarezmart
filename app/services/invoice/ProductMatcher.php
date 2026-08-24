@@ -184,6 +184,19 @@ class ProductMatcher
                     $bestStrategy = 'exact_code';
                     break;
                 }
+
+                if (!empty($p['supplier_products']) && is_array($p['supplier_products'])) {
+                    foreach ($p['supplier_products'] as $sp) {
+                        $spCode = trim((string)($sp['supplier_product_code'] ?? ''));
+                        $cleanSpCode = !empty($spCode) ? preg_replace('/[^a-zA-Z0-9]/', '', ltrim($spCode, '0')) : '';
+                        if (!empty($spCode) && (strcasecmp($extractedCode, $spCode) === 0 || ($cleanSpCode !== '' && $cleanSpCode === $cleanExtCode))) {
+                            $bestMatch    = $p;
+                            $highestScore = self::SCORE_EXACT_CODE;
+                            $bestStrategy = 'exact_code';
+                            break 2;
+                        }
+                    }
+                }
             }
         }
 

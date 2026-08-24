@@ -114,6 +114,48 @@ class SupplierDetector
                     ];
                 }
             }
+
+            // Check text signatures for PT Alam Jaya Wirasentosa
+            $alamJayaSignatures = [
+                'alam jaya',
+                'alamjaya',
+                'wirasentosa',
+                'pt alam jaya',
+                'pt. alam jaya',
+                'pt alamjaya',
+                'pt. alamjaya wirasentosa',
+                'jumlah / carton',
+                'jumlah/carton',
+                'harga incl. ppn',
+                'incl. ppn',
+                'discount program',
+                'discount wbp',
+                'clnos65',
+                'bncm1',
+                'sbe1',
+                'cbeb19.5',
+                'clgpr65',
+                'ctfrn65',
+                'qbls',
+                'qtbb60',
+                'qtbbq20',
+            ];
+
+            foreach ($alamJayaSignatures as $sig) {
+                if (strpos($textLower, $sig) !== false) {
+                    $foundId = $supplierId ?: $this->findSupplierIdByNamePattern('Alam Jaya');
+                    if (!$foundId) {
+                        $foundId = $this->findSupplierIdByNamePattern('Alamjaya');
+                    }
+                    return [
+                        'skill_key'        => 'alam_jaya',
+                        'supplier_id'      => $foundId,
+                        'supplier_name'    => 'PT Alam Jaya Wirasentosa',
+                        'confidence'       => 0.98,
+                        'detection_method' => 'text_signature'
+                    ];
+                }
+            }
         }
 
         // 2. Check Supplier Name from Database using $supplierId
@@ -148,6 +190,16 @@ class SupplierDetector
                     if (strpos($sName, 'indoberas') !== false || strpos($sName, 'indo beras') !== false) {
                         return [
                             'skill_key'        => 'indoberas',
+                            'supplier_id'      => (int)$supplier['id'],
+                            'supplier_name'    => $supplier['name'],
+                            'confidence'       => 0.95,
+                            'detection_method' => 'selected_supplier'
+                        ];
+                    }
+
+                    if (strpos($sName, 'alam jaya') !== false || strpos($sName, 'alamjaya') !== false || strpos($sName, 'wirasentosa') !== false) {
+                        return [
+                            'skill_key'        => 'alam_jaya',
                             'supplier_id'      => (int)$supplier['id'],
                             'supplier_name'    => $supplier['name'],
                             'confidence'       => 0.95,
