@@ -200,6 +200,14 @@
                     'is_special' => true,
                     'note'  => 'Default: Hanya Superadmin'
                 ],
+                'savings' => [
+                    'title' => 'Savings & Target Keuangan',
+                    'desc'  => 'Pencatatan tabungan, target keuangan (goals), & pos alokasi dana',
+                    'icon'  => 'bi-piggy-bank-fill',
+                    'color' => '#10b981',
+                    'is_special' => true,
+                    'note'  => 'Default: Hanya Superadmin'
+                ],
                 'finance' => [
                     'title' => 'Keuangan & Dompet Toko',
                     'desc'  => 'Pencatatan kas masuk/keluar, saldo dompet & mutasi harian',

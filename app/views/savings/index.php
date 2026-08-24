@@ -1,6 +1,6 @@
 <?php
 /**
- * Savings & Financial Goals View (Modern Custom UI)
+ * Savings & Financial Goals View (Compact & Ultra-Modern Responsive UI)
  *
  * @var array $currentUser
  * @var array $summary
@@ -11,38 +11,53 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 ?>
 
 <style>
-/* ===== SAVINGS & GOALS ULTRA-MODERN STYLES ===== */
+/* ===== SAVINGS & GOALS ULTRA-MODERN COMPACT STYLES ===== */
 .savings-container {
+    width: 100%;
     max-width: 1400px;
     margin: 0 auto;
-    padding-bottom: 90px;
+    padding: 0 12px 90px 12px;
+    box-sizing: border-box;
+    overflow-x: hidden;
 }
 
+@media (min-width: 768px) {
+    .savings-container {
+        padding: 0 20px 90px 20px;
+    }
+}
+
+/* Header Card */
 .savings-header-card {
     background: var(--gradient-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    padding: 20px 24px;
-    margin-bottom: 22px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
     box-shadow: 0 4px 20px rgba(0,0,0,0.06);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
     flex-wrap: wrap;
+    width: 100%;
+    box-sizing: border-box;
 }
 
+/* KPI Summary Grid */
 .savings-kpi-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 @media (min-width: 992px) {
     .savings-kpi-grid {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
     }
 }
 
@@ -50,36 +65,98 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     background: var(--surface-1);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    padding: 16px 18px;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
-    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.04);
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
 }
 
 .savings-kpi-card:hover {
     border-color: var(--primary);
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
 
+.kpi-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+    min-width: 0;
+}
+
+.kpi-title-text {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex: 1;
+}
+
+.kpi-icon-box {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.kpi-value-text {
+    font-size: clamp(0.95rem, 3.8vw, 1.25rem);
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    margin: 2px 0;
+}
+
+.kpi-sub-text {
+    font-size: 9px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+/* Distribution Card */
 .savings-dist-card {
     background: var(--surface-1);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    padding: 18px 20px;
-    margin-bottom: 22px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.04);
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .dist-bar-wrapper {
-    height: 12px;
-    border-radius: 6px;
+    height: 9px;
+    border-radius: 5px;
     background: var(--surface-2);
     overflow: hidden;
     display: flex;
-    margin: 12px 0;
+    margin: 10px 0;
+    width: 100%;
 }
 
 .dist-bar-segment {
@@ -89,14 +166,17 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 
 .dist-pills-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-top: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 @media (min-width: 768px) {
     .dist-pills-grid {
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
     }
 }
 
@@ -104,15 +184,14 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     background: var(--surface-2);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
-    padding: 10px 14px;
+    padding: 8px 10px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    transition: border-color 0.2s;
-}
-
-.dist-pill-item:hover {
-    border-color: var(--primary);
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 /* Control Bar (Search & Filters) */
@@ -120,33 +199,38 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
-    gap: 12px;
+    margin-bottom: 14px;
+    gap: 10px;
     flex-wrap: wrap;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .savings-search-box {
     flex: 1;
-    min-width: 240px;
-    max-width: 380px;
+    min-width: 180px;
+    max-width: 360px;
 }
 
+/* Goals Grid */
 .savings-goals-grid {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 16px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
     margin-top: 6px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 @media (min-width: 768px) {
     .savings-goals-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
 @media (min-width: 1200px) {
     .savings-goals-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 
@@ -154,20 +238,23 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     background: var(--surface-1);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    padding: 20px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+    padding: 16px 18px;
+    box-shadow: 0 3px 14px rgba(0,0,0,0.05);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease, box-shadow 0.2s ease;
     position: relative;
     overflow: hidden;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .goal-card:hover {
     border-color: var(--primary);
-    transform: translateY(-3px);
-    box-shadow: 0 10px 28px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
 }
 
 .goal-card-top-accent {
@@ -175,44 +262,45 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     top: 0;
     left: 0;
     right: 0;
-    height: 4px;
+    height: 3.5px;
 }
 
 .goal-icon-badge {
-    width: 46px;
-    height: 46px;
-    border-radius: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.35rem;
+    font-size: 1.2rem;
     flex-shrink: 0;
 }
 
 .goal-progress-bar {
-    height: 9px;
+    height: 7px;
     background: var(--surface-2);
-    border-radius: 6px;
+    border-radius: 5px;
     overflow: hidden;
-    margin: 12px 0 8px 0;
+    margin: 8px 0 6px 0;
 }
 
 .goal-progress-fill {
     height: 100%;
-    border-radius: 6px;
+    border-radius: 5px;
     transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .alloc-pill {
     background: var(--surface-2);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 6px 10px;
-    font-size: 11px;
+    border-radius: 7px;
+    padding: 5px 9px;
+    font-size: 10.5px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 6px;
+    min-width: 0;
 }
 
 .alloc-pill-tag {
@@ -220,34 +308,303 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     color: var(--text-primary);
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+/* ======================================================== */
+/* COMPACT & STRUCTURED ALLOCATION CARDS (NO OVERLAPPING!)  */
+/* ======================================================== */
+.alloc-card-item {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 0;
+    overflow: hidden;
+}
+
+.alloc-card-item:hover {
+    border-color: var(--primary);
+}
+
+.alloc-card-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
+.alloc-card-left-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+
+.alloc-card-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    flex-shrink: 0;
+}
+
+.alloc-card-name-group {
+    min-width: 0;
+    flex: 1;
+}
+
+.alloc-card-name {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.25;
+}
+
+.alloc-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 2px;
+    flex-wrap: wrap;
+}
+
+.alloc-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.btn-alloc-mutate {
+    background: var(--primary);
+    color: #ffffff !important;
+    border: none;
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 6px rgba(230,57,70,0.25);
+    white-space: nowrap;
+}
+
+.btn-alloc-mutate:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.btn-alloc-icon-action {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-alloc-icon-action:hover {
+    border-color: var(--border-active);
+    background: var(--surface-3);
+}
+
+.btn-alloc-icon-action.btn-delete:hover {
+    border-color: var(--danger);
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+/* Allocation Card Body (Amount & Share Bar) */
+.alloc-card-bottom-row {
+    background: var(--bg-primary);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.alloc-amount-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.alloc-amount-val {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--success);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.alloc-card-item {
+.alloc-share-tag {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--text-muted);
     background: var(--surface-2);
+    padding: 2px 7px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.alloc-mini-bar {
+    height: 4px;
+    background: var(--surface-3);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.alloc-mini-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s ease;
+}
+
+.alloc-notes-text {
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+}
+
+/* ======================================================== */
+/* MODAL GOAL DETAIL RESPONSIVE BANNER & COMPACT STATS     */
+/* ======================================================== */
+.modal-goal-banner {
+    padding: 16px 18px;
+    background: var(--gradient-card);
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+}
+
+@media (min-width: 768px) {
+    .modal-goal-banner {
+        padding: 20px 24px;
+    }
+}
+
+.modal-stats-box {
+    background: var(--surface-1);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
-    padding: 14px 16px;
-    margin-bottom: 10px;
+    padding: 12px 14px;
+    margin-top: 12px;
+}
+
+.stats-collected-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.stats-sub-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color);
+}
+
+.stats-sub-item {
+    min-width: 0;
+}
+
+.stats-sub-label {
+    font-size: 9.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.stats-sub-val {
+    font-size: 0.92rem;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+/* Modern Segmented Navigation Tabs */
+.detail-segmented-tabs {
+    display: flex;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 3px;
+    gap: 4px;
+    margin-bottom: 14px;
+}
+
+.detail-tab-btn {
+    flex: 1;
+    text-align: center;
+    padding: 7px 12px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.15s ease;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
 }
 
-.alloc-card-item:hover {
-    border-color: var(--primary);
-    transform: translateY(-1px);
+.detail-tab-btn.active {
+    background: var(--primary);
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(230,57,70,0.3);
 }
 
+/* Timeline */
 .timeline-item {
     position: relative;
-    padding-left: 24px;
-    padding-bottom: 16px;
+    padding-left: 20px;
+    padding-bottom: 14px;
     border-left: 2px solid var(--border-color);
 }
 
@@ -258,29 +615,28 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 
 .timeline-dot {
     position: absolute;
-    left: -7px;
+    left: -6px;
     top: 2px;
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    background: var(--primary);
 }
 
 /* Custom Filter Buttons */
 .filter-btn-group .btn-filter {
-    padding: 7px 15px;
+    padding: 6px 13px;
     border-radius: var(--radius-md);
     border: 1px solid var(--border-color);
     background: var(--surface-1);
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    gap: 5px;
+    white-space: nowrap;
 }
 
 .filter-btn-group .btn-filter:hover {
@@ -296,9 +652,7 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     box-shadow: 0 2px 8px rgba(230,57,70,0.3);
 }
 
-/* ======================================================== */
-/* CUSTOM MODERN DROPDOWN PICKERS (NO NATIVE SELECTS)     */
-/* ======================================================== */
+/* Custom Select Dropdowns */
 .custom-select-picker {
     position: relative;
     width: 100%;
@@ -308,15 +662,14 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding: 9px 14px;
+    gap: 8px;
+    padding: 9px 12px;
     background: var(--bg-primary);
     border: 1.5px solid var(--border-color);
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .custom-select-trigger:hover {
@@ -332,24 +685,24 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 .custom-select-content {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     min-width: 0;
     flex: 1;
 }
 
 .custom-select-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 7px;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 13px;
     flex-shrink: 0;
 }
 
 .custom-select-label {
-    font-size: 12.5px;
+    font-size: 12px;
     font-weight: 700;
     color: var(--text-primary);
     white-space: nowrap;
@@ -358,7 +711,7 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 }
 
 .custom-select-sub {
-    font-size: 10.5px;
+    font-size: 10px;
     color: var(--text-muted);
     white-space: nowrap;
     overflow: hidden;
@@ -367,7 +720,7 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 
 .custom-select-chevron {
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: 11px;
     transition: transform 0.25s ease;
     flex-shrink: 0;
 }
@@ -380,17 +733,17 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 .custom-select-menu {
     display: none;
     position: absolute;
-    top: calc(100% + 6px);
+    top: calc(100% + 5px);
     left: 0;
     right: 0;
     background: var(--surface-1);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
-    box-shadow: 0 12px 36px rgba(0,0,0,0.3), 0 2px 6px rgba(0,0,0,0.1);
-    z-index: 1050;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.3);
+    z-index: 1060;
     overflow: hidden;
-    padding: 6px;
-    max-height: 270px;
+    padding: 5px;
+    max-height: 250px;
     overflow-y: auto;
     animation: customMenuFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     backdrop-filter: blur(14px);
@@ -401,24 +754,24 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 }
 
 @keyframes customMenuFade {
-    from { opacity: 0; transform: translateY(-8px); }
+    from { opacity: 0; transform: translateY(-6px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
 .custom-select-search {
-    padding: 6px 8px 8px 8px;
+    padding: 4px 6px 6px 6px;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 4px;
 }
 
 .custom-select-search input {
     width: 100%;
-    padding: 6px 10px;
+    padding: 6px 8px;
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     color: var(--text-primary);
-    font-size: 11.5px;
+    font-size: 11px;
     outline: none;
 }
 
@@ -430,41 +783,37 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding: 8px 12px;
+    gap: 8px;
+    padding: 7px 10px;
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all 0.15s ease;
-    border: 1px solid transparent;
 }
 
 .custom-select-option:hover {
     background: var(--surface-2);
-    border-color: rgba(230,57,70,0.15);
 }
 
 .custom-select-option.selected {
     background: rgba(230,57,70,0.08);
-    border-color: rgba(230,57,70,0.3);
 }
 
 .custom-select-check {
     color: var(--primary);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: bold;
     opacity: 0;
-    transition: opacity 0.15s ease;
 }
 
 .custom-select-option.selected .custom-select-check {
     opacity: 1;
 }
 
-/* Visual Icon Picker Grid */
+/* Icon Grid */
 .icon-picker-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
+    gap: 6px;
 }
 
 .icon-picker-item {
@@ -472,13 +821,13 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    padding: 8px 4px;
+    gap: 3px;
+    padding: 7px 3px;
     border-radius: var(--radius-md);
     border: 1.5px solid var(--border-color);
     background: var(--bg-primary);
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s ease;
     color: var(--text-muted);
 }
 
@@ -486,22 +835,20 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     border-color: var(--primary);
     background: var(--surface-2);
     color: var(--text-primary);
-    transform: translateY(-2px);
 }
 
 .icon-picker-item.selected {
     border-color: var(--primary);
     background: rgba(230,57,70,0.12);
     color: var(--primary);
-    box-shadow: 0 0 0 2px rgba(230,57,70,0.25);
 }
 
 .icon-picker-item i {
-    font-size: 1.25rem;
+    font-size: 1.15rem;
 }
 
 .icon-picker-item span {
-    font-size: 9.5px;
+    font-size: 9px;
     font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
@@ -512,22 +859,21 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 /* Color Swatches Grid */
 .color-picker-grid {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: wrap;
 }
 
 .color-swatch-item {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     color: #ffffff;
-    font-size: 14px;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    font-size: 13px;
+    transition: transform 0.15s ease;
     border: 2px solid transparent;
 }
 
@@ -538,53 +884,45 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 .color-swatch-item.selected {
     transform: scale(1.15);
     border-color: #ffffff;
-    box-shadow: 0 0 0 3px rgba(255,255,255,0.4);
+    box-shadow: 0 0 0 2.5px rgba(255,255,255,0.4);
 }
 
 .color-swatch-item i {
     opacity: 0;
-    transition: opacity 0.15s ease;
 }
 
 .color-swatch-item.selected i {
     opacity: 1;
 }
 
-/* Mutation Segmented Radio Cards */
+/* Mutation Segmented Cards */
 .mutation-type-segment {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    gap: 8px;
 }
 
 .mutation-type-card {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
+    gap: 8px;
+    padding: 10px 12px;
     border-radius: var(--radius-md);
     border: 1.5px solid var(--border-color);
     background: var(--bg-primary);
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s ease;
     user-select: none;
-}
-
-.mutation-type-card:hover {
-    border-color: var(--border-active);
-    background: var(--surface-2);
 }
 
 .mutation-type-card.selected-deposit {
     border-color: var(--success);
     background: rgba(16,185,129,0.12);
-    box-shadow: 0 0 0 2px rgba(16,185,129,0.25);
 }
 
 .mutation-type-card.selected-withdraw {
     border-color: var(--danger);
     background: rgba(239,68,68,0.12);
-    box-shadow: 0 0 0 2px rgba(239,68,68,0.25);
 }
 </style>
 
@@ -593,23 +931,25 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 
     <!-- Header Card -->
     <div class="savings-header-card">
-        <div style="display: flex; align-items: center; gap: 14px;">
-            <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(99,102,241,0.2)); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; box-shadow: 0 4px 12px rgba(16,185,129,0.25);">
+        <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+            <div style="width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(135deg, rgba(16,185,129,0.2), rgba(99,102,241,0.2)); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; flex-shrink: 0;">
                 <i class="bi bi-piggy-bank-fill"></i>
             </div>
-            <div>
-                <h4 style="font-weight: 800; font-size: 1.15rem; margin: 0; color: var(--text-primary);">Savings &amp; Target Keuangan</h4>
-                <p style="font-size: var(--font-size-xs); color: var(--text-muted); margin: 3px 0 0 0;">
-                    Pantau tabungan, investasi, uang toko berputar &amp; alokasi dana per target
+            <div style="min-width: 0;">
+                <h4 style="font-weight: 800; font-size: 1.1rem; margin: 0; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    Savings &amp; Target Keuangan
+                </h4>
+                <p style="font-size: 11px; color: var(--text-muted); margin: 2px 0 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    Pantau tabungan, investasi, uang toko &amp; alokasi dana per target
                 </p>
             </div>
         </div>
-        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <a href="<?= BASE_URL ?>" class="btn-primary-custom" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 8px 14px; border-radius: var(--radius-md); font-size: var(--font-size-xs); text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="<?= BASE_URL ?>" class="btn-primary-custom" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 7px 12px; border-radius: var(--radius-md); font-size: 11.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
                 <i class="bi bi-arrow-left"></i> Dashboard
             </a>
-            <button class="btn-primary-custom" onclick="openAddGoalModal()" style="padding: 8px 16px; border-radius: var(--radius-md); font-size: var(--font-size-xs); display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 10px rgba(230,57,70,0.3);">
-                <i class="bi bi-plus-circle-fill"></i> Tambah Goal Baru
+            <button class="btn-primary-custom" onclick="openAddGoalModal()" style="padding: 7px 14px; border-radius: var(--radius-md); font-size: 11.5px; display: inline-flex; align-items: center; gap: 5px;">
+                <i class="bi bi-plus-circle-fill"></i> Tambah Goal
             </button>
         </div>
     </div>
@@ -618,64 +958,62 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     <div class="savings-kpi-grid" id="kpiGridContainer">
         <!-- 1. Total Terkumpul -->
         <div class="savings-kpi-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <span style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Total Terkumpul</span>
-                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(16,185,129,0.12); color: var(--success); display: flex; align-items: center; justify-content: center; font-size: 1rem;">
+            <div class="kpi-title-row">
+                <span class="kpi-title-text">Total Terkumpul</span>
+                <div class="kpi-icon-box" style="background: rgba(16,185,129,0.12); color: var(--success);">
                     <i class="bi bi-cash-stack"></i>
                 </div>
             </div>
-            <div id="statTotalCollected" style="font-size: 1.25rem; font-weight: 800; color: var(--success); line-height: 1.2;">
+            <div id="statTotalCollected" class="kpi-value-text" style="color: var(--success);">
                 Rp <?= number_format($summary['total_collected'] ?? 0, 0, ',', '.') ?>
             </div>
-            <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">
-                Akumulasi seluruh alokasi
-            </div>
+            <div class="kpi-sub-text">Akumulasi seluruh alokasi</div>
         </div>
 
         <!-- 2. Total Target -->
         <div class="savings-kpi-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <span style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Total Target</span>
-                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(99,102,241,0.12); color: #818cf8; display: flex; align-items: center; justify-content: center; font-size: 1rem;">
+            <div class="kpi-title-row">
+                <span class="kpi-title-text">Total Target</span>
+                <div class="kpi-icon-box" style="background: rgba(99,102,241,0.12); color: #818cf8;">
                     <i class="bi bi-bullseye"></i>
                 </div>
             </div>
-            <div id="statTotalTarget" style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); line-height: 1.2;">
+            <div id="statTotalTarget" class="kpi-value-text" style="color: var(--text-primary);">
                 Rp <?= number_format($summary['total_target'] ?? 0, 0, ',', '.') ?>
             </div>
-            <div id="statTotalRemaining" style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">
+            <div id="statTotalRemaining" class="kpi-sub-text">
                 Sisa: <strong style="color: var(--primary);">Rp <?= number_format($summary['total_remaining'] ?? 0, 0, ',', '.') ?></strong>
             </div>
         </div>
 
         <!-- 3. Overall Progress -->
         <div class="savings-kpi-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <span style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Pencapaian (Progress)</span>
-                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(245,158,11,0.12); color: #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 1rem;">
+            <div class="kpi-title-row">
+                <span class="kpi-title-text">Pencapaian</span>
+                <div class="kpi-icon-box" style="background: rgba(245,158,11,0.12); color: #f59e0b;">
                     <i class="bi bi-graph-up-arrow"></i>
                 </div>
             </div>
-            <div id="statOverallProgress" style="font-size: 1.25rem; font-weight: 800; color: #f59e0b; line-height: 1.2;">
+            <div id="statOverallProgress" class="kpi-value-text" style="color: #f59e0b;">
                 <?= $summary['overall_progress'] ?? 0 ?>%
             </div>
-            <div class="goal-progress-bar" style="margin: 6px 0 0 0; height: 6px;">
+            <div class="goal-progress-bar" style="margin: 4px 0 0 0; height: 5px;">
                 <div id="statProgressBar" class="goal-progress-fill" style="width: <?= min(100, $summary['overall_progress'] ?? 0) ?>%; background: linear-gradient(90deg, #f59e0b, #10b981);"></div>
             </div>
         </div>
 
         <!-- 4. Goals Count -->
         <div class="savings-kpi-card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                <span style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Goals / Target</span>
-                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59,130,246,0.12); color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1rem;">
+            <div class="kpi-title-row">
+                <span class="kpi-title-text">Goals / Target</span>
+                <div class="kpi-icon-box" style="background: rgba(59,130,246,0.12); color: #3b82f6;">
                     <i class="bi bi-flag-fill"></i>
                 </div>
             </div>
-            <div id="statGoalsCount" style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); line-height: 1.2;">
+            <div id="statGoalsCount" class="kpi-value-text" style="color: var(--text-primary);">
                 <?= $summary['total_goals'] ?? 0 ?> Target
             </div>
-            <div id="statGoalsSub" style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">
+            <div id="statGoalsSub" class="kpi-sub-text">
                 <span style="color: var(--success); font-weight: 700;"><?= $summary['achieved_goals'] ?? 0 ?> Tercapai</span> &middot; <?= $summary['in_progress_goals'] ?? 0 ?> Berjalan
             </div>
         </div>
@@ -683,22 +1021,22 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 
     <!-- Distribusi Klasifikasi Penempatan Uang (Toko, Investasi, Bank, Piutang) -->
     <div class="savings-dist-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
             <div>
-                <div style="font-size: 13px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                <div style="font-size: 12.5px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
                     <i class="bi bi-pie-chart-fill" style="color: #6366f1;"></i>
                     <span>Klasifikasi Penempatan Dana (Grouping Uang)</span>
                 </div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 1px;">
                     Sebaran uang tabungan di Toko (uang berputar), Bibit (investasi), SeaBank/Bank, dll
                 </div>
             </div>
-            <span id="totalAllocationsBadge" class="badge-custom badge-primary" style="font-size: 11px;">
+            <span id="totalAllocationsBadge" class="badge-custom badge-primary" style="font-size: 10px;">
                 <?= count($summary['type_breakdown'] ?? []) ?> Kategori Akun
             </span>
         </div>
 
-        <!-- Distribution Multi-Segment Bar -->
+        <!-- Multi-Segment Bar -->
         <div class="dist-bar-wrapper" id="distBarContainer">
             <?php 
             $palette = ['#10b981', '#6366f1', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'];
@@ -713,10 +1051,10 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
             <?php endforeach; endif; ?>
         </div>
 
-        <!-- Distribution Pills Grid -->
+        <!-- Pills Grid -->
         <div class="dist-pills-grid" id="distPillsContainer">
             <?php if (empty($typeBreakdown)): ?>
-                <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: 11px; padding: 10px 0;">
+                <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: 11px; padding: 6px 0;">
                     Belum ada pos penempatan dana. Buat goal dan tambahkan alokasi uang (Toko, Bibit, Bank).
                 </div>
             <?php else:
@@ -729,14 +1067,14 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                     elseif (stripos($item['account_type'], 'piutang') !== false) $iconClass = 'bi-person-lines-fill';
             ?>
                 <div class="dist-pill-item">
-                    <div style="width: 32px; height: 32px; border-radius: 8px; background: <?= $bg ?>22; color: <?= $bg ?>; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
+                    <div style="width: 28px; height: 28px; border-radius: 7px; background: <?= $bg ?>22; color: <?= $bg ?>; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;">
                         <i class="bi <?= $iconClass ?>"></i>
                     </div>
                     <div style="min-width: 0; flex: 1;">
-                        <div style="font-size: 10px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; text-transform: uppercase;">
+                        <div style="font-size: 9.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; text-transform: uppercase;">
                             <?= htmlspecialchars($item['account_type']) ?>
                         </div>
-                        <div style="font-size: 12px; font-weight: 800; color: var(--text-primary);">
+                        <div style="font-size: 11.5px; font-weight: 800; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             Rp <?= number_format($item['total_amount'], 0, ',', '.') ?>
                         </div>
                         <div style="font-size: 9px; color: <?= $bg ?>; font-weight: 700;">
@@ -748,22 +1086,22 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
         </div>
     </div>
 
-    <!-- Modern Search & Filter Control Bar -->
+    <!-- Search & Filter Control Bar -->
     <div class="savings-control-bar">
-        <div class="section-title" style="margin-bottom: 0;">Daftar Target &amp; Goals Tabungan</div>
+        <div class="section-title" style="margin-bottom: 0;">Daftar Target &amp; Goals</div>
         
-        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
             <!-- Search Box -->
             <div class="search-input-wrapper savings-search-box">
                 <i class="bi bi-search"></i>
-                <input type="text" id="searchGoalsInput" placeholder="Cari nama target atau pos alokasi..." oninput="onSearchGoals(this.value)">
+                <input type="text" id="searchGoalsInput" placeholder="Cari nama target / pos uang..." oninput="onSearchGoals(this.value)">
                 <button type="button" id="btnClearSearch" onclick="clearSearchGoals()" style="display: none; background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 0 4px;">
                     <i class="bi bi-x-circle-fill"></i>
                 </button>
             </div>
 
             <!-- Filter Status Buttons -->
-            <div class="filter-btn-group" style="display: flex; gap: 6px;">
+            <div class="filter-btn-group" style="display: flex; gap: 5px;">
                 <button class="btn-filter active" onclick="filterGoals('all', this)"><i class="bi bi-grid"></i> Semua</button>
                 <button class="btn-filter" onclick="filterGoals('in_progress', this)"><i class="bi bi-hourglass-split"></i> Berjalan</button>
                 <button class="btn-filter" onclick="filterGoals('achieved', this)"><i class="bi bi-check2-circle"></i> Tercapai</button>
@@ -780,79 +1118,96 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 </div>
 
 <!-- ======================================================== -->
-<!-- MODAL 1: DETAIL GOAL & KELOLA POS ALOKASI (GROUPING)    -->
+<!-- MODAL 1: DETAIL GOAL & KELOLA POS ALOKASI (RESPONSIVE)   -->
 <!-- ======================================================== -->
 <div class="modal fade" id="modalGoalDetail" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content modal-content-custom" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden;">
             
-            <!-- Modal Header with Goal Banner -->
-            <div id="detailGoalBanner" style="padding: 20px 24px; background: var(--gradient-card); border-bottom: 1px solid var(--border-color); position: relative;">
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="position: absolute; right: 20px; top: 20px;"></button>
-                <div style="display: flex; align-items: center; gap: 14px;">
-                    <div id="detailGoalIconBadge" class="goal-icon-badge" style="background: rgba(99,102,241,0.15); color: #818cf8;">
-                        <i id="detailGoalIcon" class="bi bi-piggy-bank-fill"></i>
-                    </div>
-                    <div style="min-width: 0; flex: 1;">
-                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                            <h4 id="detailGoalName" style="font-weight: 800; font-size: 1.2rem; margin: 0; color: var(--text-primary);">Tabungan Mobil</h4>
-                            <span id="detailGoalCategory" class="badge-custom badge-primary" style="font-size: 10px;">Kendaraan</span>
-                            <span id="detailGoalStatusBadge" class="badge-custom" style="font-size: 10px;">Sedang Berjalan</span>
+            <!-- Modal Header Banner -->
+            <div class="modal-goal-banner" id="detailGoalBanner">
+                <!-- Top Row: Icon, Title & Close Button -->
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+                        <div id="detailGoalIconBadge" class="goal-icon-badge" style="background: rgba(99,102,241,0.15); color: #818cf8; width: 38px; height: 38px; font-size: 1.15rem;">
+                            <i id="detailGoalIcon" class="bi bi-piggy-bank-fill"></i>
                         </div>
-                        <p id="detailGoalDesc" style="font-size: var(--font-size-xs); color: var(--text-muted); margin: 4px 0 0 0;">Catatan target</p>
+                        <div style="min-width: 0; flex: 1;">
+                            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                <h4 id="detailGoalName" style="font-weight: 800; font-size: 1.15rem; margin: 0; color: var(--text-primary); line-height: 1.2;">
+                                    Tabungan Mobil
+                                </h4>
+                                <span id="detailGoalCategory" class="badge-custom badge-primary" style="font-size: 9.5px;">Kendaraan</span>
+                                <span id="detailGoalStatusBadge" class="badge-custom" style="font-size: 9.5px;">Sedang Berjalan</span>
+                            </div>
+                            <p id="detailGoalDesc" style="font-size: 11px; color: var(--text-muted); margin: 3px 0 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                Catatan target
+                            </p>
+                        </div>
                     </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="flex-shrink: 0; margin-top: 2px;"></button>
                 </div>
 
-                <!-- Goal Stats Strip -->
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border-color);">
-                    <div>
-                        <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Terkumpul</span>
-                        <div id="detailCollectedAmount" style="font-size: 1.15rem; font-weight: 800; color: var(--success);">Rp 0</div>
+                <!-- Main Stats Highlight Box (Compact & Never Overflows) -->
+                <div class="modal-stats-box">
+                    <div class="stats-collected-row">
+                        <div>
+                            <span style="font-size: 9.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Total Terkumpul</span>
+                            <div id="detailCollectedAmount" style="font-size: 1.25rem; font-weight: 800; color: var(--success); line-height: 1.2;">
+                                Rp 0
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span id="detailProgressText" class="badge-custom badge-primary" style="font-size: 10px; font-weight: 800;">
+                                0% Tercapai
+                            </span>
+                        </div>
                     </div>
-                    <div>
-                        <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Target Nominal</span>
-                        <div id="detailTargetAmount" style="font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">Rp 0</div>
-                    </div>
-                    <div>
-                        <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Sisa Kekurangan</span>
-                        <div id="detailRemainingAmount" style="font-size: 1.15rem; font-weight: 800; color: var(--primary);">Rp 0</div>
-                    </div>
-                </div>
 
-                <!-- Progress Bar -->
-                <div class="goal-progress-bar" style="margin-top: 12px; height: 8px;">
-                    <div id="detailProgressFill" class="goal-progress-fill" style="width: 0%; background: var(--success);"></div>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-top: 4px;">
-                    <span id="detailProgressText">Progress: 0%</span>
-                    <span id="detailDeadlineText"><i class="bi bi-calendar-event"></i> -</span>
+                    <!-- Progress Bar -->
+                    <div class="goal-progress-bar" style="margin: 4px 0 6px 0; height: 6px;">
+                        <div id="detailProgressFill" class="goal-progress-fill" style="width: 0%; background: var(--success);"></div>
+                    </div>
+
+                    <!-- Sub 2-Columns Grid -->
+                    <div class="stats-sub-grid">
+                        <div class="stats-sub-item">
+                            <span class="stats-sub-label">Target Nominal</span>
+                            <div id="detailTargetAmount" class="stats-sub-val" style="color: var(--text-primary);">Rp 0</div>
+                        </div>
+                        <div class="stats-sub-item" style="text-align: right;">
+                            <span class="stats-sub-label">Sisa Kekurangan</span>
+                            <div id="detailRemainingAmount" class="stats-sub-val" style="color: var(--primary);">Rp 0</div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: var(--text-muted); margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border-color);">
+                        <span id="detailDeadlineText"><i class="bi bi-calendar-event"></i> -</span>
+                        <span id="detailAllocCountText">0 Pos Alokasi</span>
+                    </div>
                 </div>
             </div>
 
             <!-- Modal Body -->
-            <div class="modal-body" style="padding: 20px 24px; max-height: 65vh; overflow-y: auto;">
+            <div class="modal-body" style="padding: 16px 18px; max-height: 60vh; overflow-y: auto;">
                 
-                <!-- Nav Tabs -->
-                <ul class="nav nav-pills mb-3 filter-btn-group" style="gap: 8px;">
-                    <li class="nav-item">
-                        <button class="btn-filter active" id="tabAllocationsBtn" onclick="switchDetailTab('allocations', this)" style="padding: 7px 16px;">
-                            <i class="bi bi-grid-fill"></i> Pos Penempatan Dana
-                        </button>
-                    </li>
-                    <li class="nav-item">
-                        <button class="btn-filter" id="tabLogsBtn" onclick="switchDetailTab('logs', this)" style="padding: 7px 16px;">
-                            <i class="bi bi-clock-history"></i> Riwayat Mutasi
-                        </button>
-                    </li>
-                </ul>
+                <!-- Modern Segmented Switch Tabs -->
+                <div class="detail-segmented-tabs">
+                    <button class="detail-tab-btn active" id="tabAllocationsBtn" onclick="switchDetailTab('allocations', this)">
+                        <i class="bi bi-grid-fill"></i> Pos Penempatan Dana
+                    </button>
+                    <button class="detail-tab-btn" id="tabLogsBtn" onclick="switchDetailTab('logs', this)">
+                        <i class="bi bi-clock-history"></i> Riwayat Mutasi
+                    </button>
+                </div>
 
                 <!-- TAB 1: POS ALOKASI (GROUPING UANG) -->
                 <div id="detailTabAllocations">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; flex-wrap: wrap;">
                         <div style="font-size: 12px; font-weight: 700; color: var(--text-primary);">
-                            Rincian Pembagian Uang Goal Ini:
+                            Rincian Pembagian Uang:
                         </div>
-                        <button class="btn-primary-custom" onclick="openAddAllocationModal()" style="padding: 6px 14px; border-radius: var(--radius-sm); font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+                        <button class="btn-primary-custom" onclick="openAddAllocationModal()" style="padding: 5px 12px; border-radius: var(--radius-sm); font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
                             <i class="bi bi-plus-lg"></i> Tambah Pos Uang
                         </button>
                     </div>
@@ -864,10 +1219,10 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 
                 <!-- TAB 2: RIWAYAT MUTASI -->
                 <div id="detailTabLogs" style="display: none;">
-                    <div style="font-size: 12px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">
-                        Log Penambahan &amp; Penarikan Dana:
+                    <div style="font-size: 12px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px;">
+                        Riwayat Mutasi Dana (Setor / Tarik):
                     </div>
-                    <div id="logsTimelineContainer" style="padding-left: 6px;">
+                    <div id="logsTimelineContainer" style="padding-left: 4px;">
                         <!-- Timeline injected by JS -->
                     </div>
                 </div>
@@ -875,11 +1230,11 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
             </div>
 
             <!-- Modal Footer -->
-            <div class="modal-footer" style="padding: 12px 24px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between;">
-                <button type="button" class="btn-primary-custom" onclick="openEditGoalModalFromDetail()" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); font-size: 11.5px; padding: 7px 14px;">
+            <div class="modal-footer" style="padding: 10px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between;">
+                <button type="button" class="btn-primary-custom" onclick="openEditGoalModalFromDetail()" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); font-size: 11.5px; padding: 6px 12px;">
                     <i class="bi bi-pencil-square me-1"></i> Edit Goal
                 </button>
-                <button type="button" class="btn-primary-custom" data-bs-dismiss="modal" style="background: var(--surface-3); color: var(--text-primary); font-size: 11.5px; padding: 7px 18px;">
+                <button type="button" class="btn-primary-custom" data-bs-dismiss="modal" style="background: var(--surface-3); color: var(--text-primary); font-size: 11.5px; padding: 6px 16px;">
                     Tutup
                 </button>
             </div>
@@ -891,10 +1246,10 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 <!-- MODAL 2: TAMBAH / EDIT GOAL (MODERN CUSTOM PICKERS)     -->
 <!-- ======================================================== -->
 <div class="modal fade" id="modalGoalForm" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content modal-content-custom" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 20px;">
-                <h5 class="modal-title" id="goalFormTitle" style="font-weight: 800; font-size: 1.05rem; color: var(--text-primary);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 14px 18px;">
+                <h5 class="modal-title" id="goalFormTitle" style="font-weight: 800; font-size: 1rem; color: var(--text-primary);">
                     Tambah Target / Goal Tabungan
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -906,14 +1261,14 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                 <input type="hidden" id="formGoalColor" value="#6366f1">
                 <input type="hidden" id="formGoalStatus" value="in_progress">
 
-                <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 16px; max-height: 75vh; overflow-y: auto;">
+                <div class="modal-body" style="padding: 16px 18px; display: flex; flex-direction: column; gap: 13px; max-height: 70vh; overflow-y: auto;">
                     
                     <!-- Goal Name -->
                     <div>
                         <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
                             Nama Target / Goal <span style="color: var(--primary);">*</span>
                         </label>
-                        <input type="text" id="formGoalName" class="form-control-custom" placeholder="Misal: Tabungan Mobil, Dana Darurat, Umroh" required style="width: 100%; padding: 10px 14px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 13px; font-weight: 600;">
+                        <input type="text" id="formGoalName" class="form-control-custom" placeholder="Misal: Tabungan Mobil, Dana Darurat, Umroh" required style="width: 100%; padding: 9px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 13px; font-weight: 600;">
                     </div>
 
                     <!-- Target Amount -->
@@ -921,16 +1276,16 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                         <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
                             Target Nominal (Rp) <span style="color: var(--primary);">*</span>
                         </label>
-                        <input type="text" id="formGoalTargetAmount" class="form-control-custom" placeholder="Misal: 50.000.000" required oninput="formatCurrencyInput(this)" style="width: 100%; padding: 10px 14px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 14px; font-weight: 800;">
+                        <input type="text" id="formGoalTargetAmount" class="form-control-custom" placeholder="Misal: 50.000.000" required oninput="formatCurrencyInput(this)" style="width: 100%; padding: 9px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 13.5px; font-weight: 800;">
                     </div>
 
                     <!-- Target Date & Category (Custom Dropdown) -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
                             <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
                                 Target Tanggal (Opsional)
                             </label>
-                            <input type="date" id="formGoalTargetDate" class="form-control-custom" style="width: 100%; padding: 9px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12.5px; color-scheme: dark;">
+                            <input type="date" id="formGoalTargetDate" class="form-control-custom" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 11.5px; color-scheme: dark;">
                         </div>
 
                         <!-- Custom Category Dropdown Picker -->
@@ -962,7 +1317,7 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 
                     <!-- Visual Icon Grid Picker -->
                     <div>
-                        <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; display: block;">
+                        <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; display: block;">
                             Pilihan Icon Target
                         </label>
                         <div class="icon-picker-grid" id="goalIconGrid">
@@ -972,7 +1327,7 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 
                     <!-- Visual Color Swatch Picker -->
                     <div>
-                        <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; display: block;">
+                        <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; display: block;">
                             Warna Aksen Kartu
                         </label>
                         <div class="color-picker-grid" id="goalColorGrid">
@@ -1035,15 +1390,15 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                         <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
                             Catatan / Keterangan
                         </label>
-                        <textarea id="formGoalDesc" rows="2" class="form-control-custom" placeholder="Catatan target atau motivasi menabung..." style="width: 100%; padding: 10px 14px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12.5px;"></textarea>
+                        <textarea id="formGoalDesc" rows="2" class="form-control-custom" placeholder="Catatan target atau motivasi menabung..." style="width: 100%; padding: 8px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px;"></textarea>
                     </div>
                 </div>
 
-                <div class="modal-footer" style="padding: 14px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" class="btn-primary-custom" data-bs-dismiss="modal" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 8px 16px; font-size: 12px;">
+                <div class="modal-footer" style="padding: 12px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn-primary-custom" data-bs-dismiss="modal" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 7px 14px; font-size: 11.5px;">
                         Batal
                     </button>
-                    <button type="submit" id="btnSubmitGoal" class="btn-primary-custom" style="padding: 8px 20px; font-size: 12px; box-shadow: 0 2px 10px rgba(230,57,70,0.3);">
+                    <button type="submit" id="btnSubmitGoal" class="btn-primary-custom" style="padding: 7px 18px; font-size: 11.5px;">
                         Simpan Goal
                     </button>
                 </div>
@@ -1056,10 +1411,10 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 <!-- MODAL 3: TAMBAH / EDIT POS PENEMPATAN (CUSTOM SELECT)   -->
 <!-- ======================================================== -->
 <div class="modal fade" id="modalAllocationForm" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content modal-content-custom" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 20px;">
-                <h5 class="modal-title" id="allocFormTitle" style="font-weight: 800; font-size: 1.05rem; color: var(--text-primary);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 14px 18px;">
+                <h5 class="modal-title" id="allocFormTitle" style="font-weight: 800; font-size: 1rem; color: var(--text-primary);">
                     Tambah Pos Penempatan Uang
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -1069,14 +1424,14 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                 <input type="hidden" id="formAllocGoalId" value="">
                 <input type="hidden" id="formAllocType" value="Bank / Rekening">
 
-                <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 15px;">
+                <div class="modal-body" style="padding: 16px 18px; display: flex; flex-direction: column; gap: 13px;">
                     
                     <!-- Allocation Name -->
                     <div>
                         <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
                             Nama Pos / Akun <span style="color: var(--primary);">*</span>
                         </label>
-                        <input type="text" id="formAllocName" class="form-control-custom" placeholder="Misal: Uang Toko (Berputar), Bibit Reksadana, SeaBank" required style="width: 100%; padding: 10px 14px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 13px; font-weight: 600;">
+                        <input type="text" id="formAllocName" class="form-control-custom" placeholder="Misal: Uang Toko (Berputar), Bibit Reksadana, SeaBank" required style="width: 100%; padding: 9px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 13px; font-weight: 600;">
                     </div>
 
                     <!-- Custom Account Type Dropdown -->
@@ -1106,18 +1461,18 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                     </div>
 
                     <!-- Institution & Amount (2 cols) -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
                             <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
                                 Platform / Lembaga
                             </label>
-                            <input type="text" id="formAllocInstitution" class="form-control-custom" placeholder="Toko, Bibit, SeaBank, BCA" style="width: 100%; padding: 10px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12.5px;">
+                            <input type="text" id="formAllocInstitution" class="form-control-custom" placeholder="Toko, Bibit, SeaBank" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px;">
                         </div>
                         <div>
                             <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
                                 Nominal Saldo (Rp) <span style="color: var(--primary);">*</span>
                             </label>
-                            <input type="text" id="formAllocAmount" class="form-control-custom" placeholder="3.000.000" required oninput="formatCurrencyInput(this)" style="width: 100%; padding: 10px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 13px; font-weight: 800;">
+                            <input type="text" id="formAllocAmount" class="form-control-custom" placeholder="3.000.000" required oninput="formatCurrencyInput(this)" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12.5px; font-weight: 800;">
                         </div>
                     </div>
 
@@ -1126,15 +1481,15 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                         <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
                             Catatan Pos (Opsional)
                         </label>
-                        <input type="text" id="formAllocNotes" class="form-control-custom" placeholder="Misal: No Rek / Portfolio Reksadana Obligasi" style="width: 100%; padding: 10px 14px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12.5px;">
+                        <input type="text" id="formAllocNotes" class="form-control-custom" placeholder="Misal: No Rek / Portfolio Reksadana Obligasi" style="width: 100%; padding: 8px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px;">
                     </div>
                 </div>
 
-                <div class="modal-footer" style="padding: 14px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" class="btn-primary-custom" data-bs-dismiss="modal" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 8px 16px; font-size: 12px;">
+                <div class="modal-footer" style="padding: 12px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn-primary-custom" data-bs-dismiss="modal" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 7px 14px; font-size: 11.5px;">
                         Batal
                     </button>
-                    <button type="submit" id="btnSubmitAlloc" class="btn-primary-custom" style="padding: 8px 20px; font-size: 12px; box-shadow: 0 2px 10px rgba(230,57,70,0.3);">
+                    <button type="submit" id="btnSubmitAlloc" class="btn-primary-custom" style="padding: 7px 18px; font-size: 11.5px;">
                         Simpan Pos
                     </button>
                 </div>
@@ -1147,10 +1502,10 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 <!-- MODAL 4: CATAT MUTASI (SETOR / TARIK SALDO POS)         -->
 <!-- ======================================================== -->
 <div class="modal fade" id="modalMutationForm" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content modal-content-custom" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 16px 20px;">
-                <h5 class="modal-title" style="font-weight: 800; font-size: 1.05rem; color: var(--text-primary);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 14px 18px;">
+                <h5 class="modal-title" style="font-weight: 800; font-size: 1rem; color: var(--text-primary);">
                     Catat Mutasi / Perubahan Saldo
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -1160,39 +1515,39 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                 <input type="hidden" id="formMutAllocId" value="">
                 <input type="hidden" id="formMutType" value="deposit">
 
-                <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 15px;">
+                <div class="modal-body" style="padding: 16px 18px; display: flex; flex-direction: column; gap: 13px;">
                     
                     <!-- Pos Info Pill -->
-                    <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px;">
-                        <div style="font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Pos Penempatan Target:</div>
-                        <div id="formMutAllocName" style="font-size: 13.5px; font-weight: 800; color: var(--text-primary); margin-top: 2px;">-</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                    <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 12px;">
+                        <div style="font-size: 9.5px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Pos Penempatan Target:</div>
+                        <div id="formMutAllocName" style="font-size: 13px; font-weight: 800; color: var(--text-primary); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+                        <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">
                             Saldo Saat Ini: <strong id="formMutCurrentBalance" style="color: var(--success);">Rp 0</strong>
                         </div>
                     </div>
 
                     <!-- Custom Mutation Segmented Card Selection -->
                     <div>
-                        <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; display: block;">
+                        <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 5px; display: block;">
                             Jenis Mutasi <span style="color: var(--primary);">*</span>
                         </label>
                         <div class="mutation-type-segment">
                             <div class="mutation-type-card selected-deposit" id="mutCardDeposit" onclick="selectMutationType('deposit')">
-                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(16,185,129,0.18); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                                <div style="width: 28px; height: 28px; border-radius: 7px; background: rgba(16,185,129,0.18); color: #10b981; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
                                     <i class="bi bi-plus-circle-fill"></i>
                                 </div>
-                                <div>
-                                    <div style="font-size: 12px; font-weight: 800; color: #10b981;">Tambah Setoran</div>
-                                    <div style="font-size: 9.5px; color: var(--text-muted);">Menambah saldo pos</div>
+                                <div style="min-width: 0;">
+                                    <div style="font-size: 11.5px; font-weight: 800; color: #10b981; line-height: 1.2;">Tambah Setor</div>
+                                    <div style="font-size: 9px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Menambah saldo</div>
                                 </div>
                             </div>
                             <div class="mutation-type-card" id="mutCardWithdraw" onclick="selectMutationType('withdraw')">
-                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(239,68,68,0.18); color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                                <div style="width: 28px; height: 28px; border-radius: 7px; background: rgba(239,68,68,0.18); color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0;">
                                     <i class="bi bi-dash-circle-fill"></i>
                                 </div>
-                                <div>
-                                    <div style="font-size: 12px; font-weight: 800; color: var(--text-muted);">Tarik Dana</div>
-                                    <div style="font-size: 9.5px; color: var(--text-muted);">Mengurangi saldo pos</div>
+                                <div style="min-width: 0;">
+                                    <div style="font-size: 11.5px; font-weight: 800; color: var(--text-muted); line-height: 1.2;">Tarik Dana</div>
+                                    <div style="font-size: 9px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Mengurangi saldo</div>
                                 </div>
                             </div>
                         </div>
@@ -1203,31 +1558,31 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                         <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
                             Nominal Mutasi (Rp) <span style="color: var(--primary);">*</span>
                         </label>
-                        <input type="text" id="formMutAmount" class="form-control-custom" placeholder="Misal: 500.000" required oninput="formatCurrencyInput(this)" style="width: 100%; padding: 10px 14px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 14px; font-weight: 800;">
+                        <input type="text" id="formMutAmount" class="form-control-custom" placeholder="Misal: 500.000" required oninput="formatCurrencyInput(this)" style="width: 100%; padding: 9px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 13.5px; font-weight: 800;">
                     </div>
 
                     <!-- Date & Notes -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
                             <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
                                 Tanggal Mutasi
                             </label>
-                            <input type="date" id="formMutDate" value="<?= date('Y-m-d') ?>" class="form-control-custom" style="width: 100%; padding: 9px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px; color-scheme: dark;">
+                            <input type="date" id="formMutDate" value="<?= date('Y-m-d') ?>" class="form-control-custom" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 11.5px; color-scheme: dark;">
                         </div>
                         <div>
                             <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
-                                Catatan / Keterangan
+                                Catatan
                             </label>
-                            <input type="text" id="formMutNotes" class="form-control-custom" placeholder="Misal: Untung toko bulan Mei" style="width: 100%; padding: 9px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px;">
+                            <input type="text" id="formMutNotes" class="form-control-custom" placeholder="Misal: Untung toko" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 11.5px;">
                         </div>
                     </div>
                 </div>
 
-                <div class="modal-footer" style="padding: 14px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px;">
-                    <button type="button" class="btn-primary-custom" data-bs-dismiss="modal" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 8px 16px; font-size: 12px;">
+                <div class="modal-footer" style="padding: 12px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn-primary-custom" data-bs-dismiss="modal" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 7px 14px; font-size: 11.5px;">
                         Batal
                     </button>
-                    <button type="submit" id="btnSubmitMut" class="btn-primary-custom" style="padding: 8px 20px; font-size: 12px; box-shadow: 0 2px 10px rgba(230,57,70,0.3);">
+                    <button type="submit" id="btnSubmitMut" class="btn-primary-custom" style="padding: 7px 18px; font-size: 11.5px;">
                         Simpan Mutasi
                     </button>
                 </div>
@@ -1295,7 +1650,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadGoals();
     loadSummary();
 
-    // Close any open custom dropdown when clicking outside
+    // Close dropdowns on outside click
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.custom-select-picker')) {
             document.querySelectorAll('.custom-select-menu.show').forEach(m => m.classList.remove('show'));
@@ -1329,7 +1684,7 @@ function getCsrfToken() {
 // INITIALIZE CUSTOM SELECTORS & PICKERS
 // ----------------------------------------------------
 function initCustomSelectPickers() {
-    // 1. Render Category Options
+    // 1. Category Options
     const catList = document.getElementById('categoryOptionsList');
     if (catList) {
         catList.innerHTML = CATEGORY_PRESETS.map(cat => `
@@ -1338,7 +1693,7 @@ function initCustomSelectPickers() {
                     <div class="custom-select-icon" style="background:${cat.bg};color:${cat.color};">
                         <i class="bi ${cat.icon}"></i>
                     </div>
-                    <div>
+                    <div style="min-width:0;">
                         <div class="custom-select-label">${cat.label}</div>
                         <div class="custom-select-sub">${cat.sub}</div>
                     </div>
@@ -1348,7 +1703,7 @@ function initCustomSelectPickers() {
         `).join('');
     }
 
-    // 2. Render Icon Grid
+    // 2. Icon Grid
     const iconGrid = document.getElementById('goalIconGrid');
     if (iconGrid) {
         iconGrid.innerHTML = ICON_PRESETS.map(item => `
@@ -1359,7 +1714,7 @@ function initCustomSelectPickers() {
         `).join('');
     }
 
-    // 3. Render Color Grid
+    // 3. Color Grid
     const colorGrid = document.getElementById('goalColorGrid');
     if (colorGrid) {
         colorGrid.innerHTML = COLOR_PRESETS.map(item => `
@@ -1369,7 +1724,7 @@ function initCustomSelectPickers() {
         `).join('');
     }
 
-    // 4. Render Allocation Type Options
+    // 4. Allocation Type Options
     const allocTypeList = document.getElementById('allocTypeOptionsList');
     if (allocTypeList) {
         allocTypeList.innerHTML = ALLOC_TYPE_PRESETS.map(type => `
@@ -1378,7 +1733,7 @@ function initCustomSelectPickers() {
                     <div class="custom-select-icon" style="background:${type.bg};color:${type.color};">
                         <i class="bi ${type.icon}"></i>
                     </div>
-                    <div>
+                    <div style="min-width:0;">
                         <div class="custom-select-label">${type.label}</div>
                         <div class="custom-select-sub">${type.sub}</div>
                     </div>
@@ -1396,7 +1751,6 @@ function toggleCustomDropdown(menuId, e) {
     const trigger = menu.previousElementSibling;
     const isOpen = menu.classList.contains('show');
 
-    // Close all other custom dropdowns
     document.querySelectorAll('.custom-select-menu.show').forEach(m => m.classList.remove('show'));
     document.querySelectorAll('.custom-select-trigger.open').forEach(t => t.classList.remove('open'));
 
@@ -1588,14 +1942,14 @@ function updateSummaryUI(summary) {
 
             return `
                 <div class="dist-pill-item">
-                    <div style="width:32px;height:32px;border-radius:8px;background:${bg}22;color:${bg};display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">
+                    <div style="width:28px;height:28px;border-radius:7px;background:${bg}22;color:${bg};display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;">
                         <i class="bi ${icon}"></i>
                     </div>
                     <div style="min-width:0;flex:1;">
-                        <div style="font-size:10px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;text-transform:uppercase;">
+                        <div style="font-size:9.5px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;text-transform:uppercase;">
                             ${item.account_type}
                         </div>
-                        <div style="font-size:12px;font-weight:800;color:var(--text-primary);">
+                        <div style="font-size:11.5px;font-weight:800;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                             ${formatRupiah(item.total_amount)}
                         </div>
                         <div style="font-size:9px;color:${bg};font-weight:700;">
@@ -1629,17 +1983,17 @@ function renderGoalsGrid() {
 
     if (filtered.length === 0) {
         container.innerHTML = `
-            <div style="grid-column:1/-1;text-align:center;padding:48px 20px;background:var(--surface-1);border:1px dashed var(--border-color);border-radius:var(--radius-lg);">
-                <div style="width:56px;height:56px;border-radius:50%;background:rgba(99,102,241,0.12);color:#818cf8;display:flex;align-items:center;justify-content:center;font-size:1.8rem;margin:0 auto 14px;">
+            <div style="grid-column:1/-1;text-align:center;padding:36px 18px;background:var(--surface-1);border:1px dashed var(--border-color);border-radius:var(--radius-lg);">
+                <div style="width:50px;height:50px;border-radius:50%;background:rgba(99,102,241,0.12);color:#818cf8;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin:0 auto 12px;">
                     <i class="bi bi-piggy-bank"></i>
                 </div>
-                <h5 style="font-weight:800;margin:0 0 6px 0;color:var(--text-primary);">
+                <h5 style="font-weight:800;font-size:1rem;margin:0 0 4px 0;color:var(--text-primary);">
                     ${searchKeyword ? 'Tidak ada target yang cocok' : 'Belum Ada Target Tabungan'}
                 </h5>
-                <p style="font-size:12px;color:var(--text-muted);max-width:420px;margin:0 auto 18px;">
+                <p style="font-size:11.5px;color:var(--text-muted);max-width:380px;margin:0 auto 16px;">
                     ${searchKeyword ? 'Coba cari dengan kata kunci lain atau bersihkan pencarian.' : 'Mulai rancang impian Anda seperti Tabungan Mobil, Dana Darurat, atau Modal Usaha dengan mengelompokkan uang di Toko, Bibit, Bank, dll.'}
                 </p>
-                <button class="btn-primary-custom" onclick="${searchKeyword ? 'clearSearchGoals()' : 'openAddGoalModal()'}" style="padding:9px 18px;border-radius:var(--radius-md);font-size:12px;display:inline-flex;align-items:center;gap:6px;">
+                <button class="btn-primary-custom" onclick="${searchKeyword ? 'clearSearchGoals()' : 'openAddGoalModal()'}" style="padding:8px 16px;border-radius:var(--radius-md);font-size:11.5px;display:inline-flex;align-items:center;gap:6px;">
                     <i class="bi ${searchKeyword ? 'bi-arrow-counterclockwise' : 'bi-plus-circle-fill'}"></i>
                     ${searchKeyword ? 'Reset Pencarian' : 'Buat Target Pertama Sekarang'}
                 </button>
@@ -1658,7 +2012,7 @@ function renderGoalsGrid() {
         // Preview allocations pills
         let allocPreviewHtml = '';
         if (allocations.length === 0) {
-            allocPreviewHtml = `<div style="font-size:11px;color:var(--text-muted);font-style:italic;">Belum ada pos penempatan uang</div>`;
+            allocPreviewHtml = `<div style="font-size:10.5px;color:var(--text-muted);font-style:italic;">Belum ada pos penempatan uang</div>`;
         } else {
             allocPreviewHtml = allocations.slice(0, 3).map(a => {
                 let iconClass = 'bi-wallet2';
@@ -1669,12 +2023,12 @@ function renderGoalsGrid() {
                 return `
                     <div class="alloc-pill">
                         <span class="alloc-pill-tag"><i class="bi ${iconClass}"></i> ${escapeHtml(a.name)}</span>
-                        <strong style="color:var(--text-primary);">${formatRupiah(a.amount)}</strong>
+                        <strong style="color:var(--text-primary);font-size:10.5px;flex-shrink:0;">${formatRupiah(a.amount)}</strong>
                     </div>
                 `;
             }).join('');
             if (allocations.length > 3) {
-                allocPreviewHtml += `<div style="font-size:10px;color:var(--text-muted);text-align:right;font-weight:700;">+ ${allocations.length - 3} pos lainnya</div>`;
+                allocPreviewHtml += `<div style="font-size:9.5px;color:var(--text-muted);text-align:right;font-weight:700;">+ ${allocations.length - 3} pos lainnya</div>`;
             }
         }
 
@@ -1684,18 +2038,18 @@ function renderGoalsGrid() {
                 
                 <div>
                     <!-- Header -->
-                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:14px;">
-                        <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:12px;">
+                        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1;">
                             <div class="goal-icon-badge" style="background:${color}22;color:${color};">
                                 <i class="bi ${icon}"></i>
                             </div>
                             <div style="min-width:0;flex:1;">
-                                <div style="font-size:14px;font-weight:800;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                <div style="font-size:13.5px;font-weight:800;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;">
                                     ${escapeHtml(goal.name)}
                                 </div>
-                                <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
-                                    <span class="badge-custom badge-primary" style="font-size:9.5px;">${escapeHtml(goal.category || 'Lainnya')}</span>
-                                    ${isAchieved ? '<span class="badge-custom badge-success" style="font-size:9.5px;">Tercapai 🎉</span>' : ''}
+                                <div style="display:flex;align-items:center;gap:5px;margin-top:2px;flex-wrap:wrap;">
+                                    <span class="badge-custom badge-primary" style="font-size:9px;">${escapeHtml(goal.category || 'Lainnya')}</span>
+                                    ${isAchieved ? '<span class="badge-custom badge-success" style="font-size:9px;">Tercapai 🎉</span>' : ''}
                                 </div>
                             </div>
                         </div>
@@ -1703,7 +2057,7 @@ function renderGoalsGrid() {
                         <!-- Dropdown Menu -->
                         <div class="dropdown">
                             <button class="btn btn-sm btn-link text-muted p-0" data-bs-toggle="dropdown" style="box-shadow:none;">
-                                <i class="bi bi-three-dots-vertical" style="font-size:1.1rem;"></i>
+                                <i class="bi bi-three-dots-vertical" style="font-size:1.05rem;"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow" style="font-size:12px;border:1px solid var(--border-color);border-radius:var(--radius-md);">
                                 <li><a class="dropdown-item" href="javascript:void(0)" onclick="openGoalDetail(${goal.id})"><i class="bi bi-eye me-2 text-info"></i> Buka Detail</a></li>
@@ -1715,14 +2069,18 @@ function renderGoalsGrid() {
                     </div>
 
                     <!-- Amounts Info -->
-                    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px;">
-                        <div>
-                            <span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;">Terkumpul</span>
-                            <span style="font-size:1.15rem;font-weight:800;color:var(--success);">${formatRupiah(goal.collected_amount)}</span>
+                    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:4px;gap:6px;">
+                        <div style="min-width:0;">
+                            <span style="font-size:9.5px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;">Terkumpul</span>
+                            <span style="font-size:1.1rem;font-weight:800;color:var(--success);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">
+                                ${formatRupiah(goal.collected_amount)}
+                            </span>
                         </div>
-                        <div style="text-align:right;">
-                            <span style="font-size:10px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;">Target</span>
-                            <span style="font-size:0.95rem;font-weight:800;color:var(--text-primary);">${formatRupiah(goal.target_amount)}</span>
+                        <div style="text-align:right;min-width:0;">
+                            <span style="font-size:9.5px;color:var(--text-muted);text-transform:uppercase;font-weight:700;display:block;">Target</span>
+                            <span style="font-size:0.9rem;font-weight:800;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">
+                                ${formatRupiah(goal.target_amount)}
+                            </span>
                         </div>
                     </div>
 
@@ -1731,23 +2089,23 @@ function renderGoalsGrid() {
                         <div class="goal-progress-fill" style="width:${progress}%;background:${isAchieved ? '#10b981' : color};"></div>
                     </div>
 
-                    <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted);margin-bottom:14px;">
+                    <div style="display:flex;justify-content:space-between;font-size:9.5px;color:var(--text-muted);margin-bottom:12px;gap:6px;">
                         <span style="font-weight:700;color:${isAchieved ? '#10b981' : 'var(--text-primary)'};">${progress}% Tercapai</span>
-                        <span>Sisa: <strong style="color:var(--primary);">${formatRupiah(goal.remaining_amount)}</strong></span>
+                        <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Sisa: <strong style="color:var(--primary);">${formatRupiah(goal.remaining_amount)}</strong></span>
                     </div>
 
                     <!-- Allocations Grouping Preview -->
-                    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
+                    <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:14px;">
                         ${allocPreviewHtml}
                     </div>
                 </div>
 
                 <!-- Footer Action Buttons -->
-                <div style="display:grid;grid-template-columns:1fr auto;gap:8px;padding-top:12px;border-top:1px solid var(--border-color);">
-                    <button class="btn-primary-custom" onclick="openGoalDetail(${goal.id})" style="padding:8px 12px;border-radius:var(--radius-sm);font-size:11.5px;display:flex;align-items:center;justify-content:center;gap:6px;">
-                        <i class="bi bi-folder2-open"></i> Detail &amp; Kelola Alokasi
+                <div style="display:grid;grid-template-columns:1fr auto;gap:7px;padding-top:10px;border-top:1px solid var(--border-color);">
+                    <button class="btn-primary-custom" onclick="openGoalDetail(${goal.id})" style="padding:7px 10px;border-radius:var(--radius-sm);font-size:11px;display:flex;align-items:center;justify-content:center;gap:5px;">
+                        <i class="bi bi-folder2-open"></i> Detail &amp; Alokasi
                     </button>
-                    <button class="btn-primary-custom" onclick="openAddAllocationModalDirect(${goal.id})" title="Tambah Pos Alokasi Uang" style="background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border-color);padding:8px 12px;border-radius:var(--radius-sm);font-size:11.5px;">
+                    <button class="btn-primary-custom" onclick="openAddAllocationModalDirect(${goal.id})" title="Tambah Pos Alokasi Uang" style="background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border-color);padding:7px 10px;border-radius:var(--radius-sm);font-size:11px;">
                         <i class="bi bi-plus-lg"></i>
                     </button>
                 </div>
@@ -1785,6 +2143,7 @@ function renderGoalDetailModal() {
     const icon = activeGoal.icon || 'bi-piggy-bank-fill';
     const progress = Math.min(100, activeGoal.progress_percent || 0);
     const isAchieved = activeGoal.status === 'achieved' || progress >= 100;
+    const allocations = activeGoal.allocations || [];
 
     document.getElementById('detailGoalIcon').className = `bi ${icon}`;
     document.getElementById('detailGoalIconBadge').style.background = `${color}22`;
@@ -1809,7 +2168,8 @@ function renderGoalDetailModal() {
     const progressFill = document.getElementById('detailProgressFill');
     progressFill.style.width = `${progress}%`;
     progressFill.style.background = isAchieved ? '#10b981' : color;
-    document.getElementById('detailProgressText').textContent = `Progress: ${progress}%`;
+    document.getElementById('detailProgressText').textContent = `${progress}% Tercapai`;
+    document.getElementById('detailAllocCountText').textContent = `${allocations.length} Pos Alokasi`;
 
     const deadlineEl = document.getElementById('detailDeadlineText');
     if (activeGoal.target_date) {
@@ -1831,7 +2191,7 @@ function renderGoalDetailModal() {
 }
 
 function switchDetailTab(tab, btnEl) {
-    document.querySelectorAll('#modalGoalDetail .btn-filter').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#modalGoalDetail .detail-tab-btn').forEach(b => b.classList.remove('active'));
     if (btnEl) btnEl.classList.add('active');
 
     document.getElementById('detailTabAllocations').style.display = tab === 'allocations' ? 'block' : 'none';
@@ -1844,11 +2204,11 @@ function renderAllocationsList() {
 
     if (allocations.length === 0) {
         container.innerHTML = `
-            <div style="text-align:center;padding:28px 10px;background:var(--surface-2);border-radius:var(--radius-md);border:1px dashed var(--border-color);">
-                <i class="bi bi-wallet2" style="font-size:1.6rem;color:var(--text-muted);display:block;margin-bottom:6px;"></i>
-                <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Belum ada pos penempatan uang</div>
-                <div style="font-size:11px;color:var(--text-muted);margin:2px 0 12px 0;">Contoh: Uang di Toko (3jt), di Bibit (4jt), di SeaBank (350rb)</div>
-                <button class="btn-primary-custom" onclick="openAddAllocationModal()" style="padding:7px 16px;border-radius:var(--radius-sm);font-size:11.5px;">
+            <div style="text-align:center;padding:24px 10px;background:var(--surface-2);border-radius:var(--radius-md);border:1px dashed var(--border-color);">
+                <i class="bi bi-wallet2" style="font-size:1.5rem;color:var(--text-muted);display:block;margin-bottom:6px;"></i>
+                <div style="font-size:12.5px;font-weight:700;color:var(--text-primary);">Belum ada pos penempatan uang</div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin:2px 0 10px 0;">Contoh: Uang di Toko (3jt), di Bibit (4jt), di SeaBank (350rb)</div>
+                <button class="btn-primary-custom" onclick="openAddAllocationModal()" style="padding:6px 14px;border-radius:var(--radius-sm);font-size:11px;">
                     <i class="bi bi-plus-lg"></i> Tambah Pos Uang Sekarang
                 </button>
             </div>
@@ -1861,44 +2221,69 @@ function renderAllocationsList() {
     container.innerHTML = allocations.map(alloc => {
         const pct = totalCollected > 0 ? Math.round((alloc.amount / totalCollected) * 100) : 0;
         let iconClass = 'bi-wallet2';
+        let iconBg = 'rgba(99,102,241,0.15)';
+        let iconColor = '#818cf8';
+
         const atLower = (alloc.account_type || '').toLowerCase();
-        if (atLower.includes('toko') || atLower.includes('kas')) iconClass = 'bi-shop';
-        else if (atLower.includes('investasi')) iconClass = 'bi-graph-up-arrow';
-        else if (atLower.includes('bank')) iconClass = 'bi-bank';
-        else if (atLower.includes('piutang')) iconClass = 'bi-person-lines-fill';
+        if (atLower.includes('toko') || atLower.includes('kas')) {
+            iconClass = 'bi-shop';
+            iconBg = 'rgba(245,158,11,0.15)';
+            iconColor = '#f59e0b';
+        } else if (atLower.includes('investasi')) {
+            iconClass = 'bi-graph-up-arrow';
+            iconBg = 'rgba(59,130,246,0.15)';
+            iconColor = '#3b82f6';
+        } else if (atLower.includes('bank')) {
+            iconClass = 'bi-bank';
+            iconBg = 'rgba(16,185,129,0.15)';
+            iconColor = '#10b981';
+        } else if (atLower.includes('piutang')) {
+            iconClass = 'bi-person-lines-fill';
+            iconBg = 'rgba(236,72,153,0.15)';
+            iconColor = '#ec4899';
+        }
 
         return `
             <div class="alloc-card-item">
-                <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1;">
-                    <div style="width:38px;height:38px;border-radius:10px;background:rgba(99,102,241,0.12);color:#818cf8;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;">
-                        <i class="bi ${iconClass}"></i>
-                    </div>
-                    <div style="min-width:0;flex:1;">
-                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                            <span style="font-size:13.5px;font-weight:800;color:var(--text-primary);">${escapeHtml(alloc.name)}</span>
-                            <span class="badge-custom badge-primary" style="font-size:9.5px;">${escapeHtml(alloc.account_type)}</span>
-                            ${alloc.institution ? `<span style="font-size:10.5px;color:var(--text-muted);">(${escapeHtml(alloc.institution)})</span>` : ''}
+                <!-- Top Row: Icon + Name & Type on Left; Action Buttons on Right -->
+                <div class="alloc-card-top-row">
+                    <div class="alloc-card-left-info">
+                        <div class="alloc-card-icon" style="background:${iconBg};color:${iconColor};">
+                            <i class="bi ${iconClass}"></i>
                         </div>
-                        ${alloc.notes ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;">${escapeHtml(alloc.notes)}</div>` : ''}
+                        <div class="alloc-card-name-group">
+                            <div class="alloc-card-name">${escapeHtml(alloc.name)}</div>
+                            <div class="alloc-card-meta">
+                                <span class="badge-custom badge-primary" style="font-size:9px;padding:2px 6px;">${escapeHtml(alloc.account_type)}</span>
+                                ${alloc.institution ? `<span style="font-size:9.5px;color:var(--text-muted);font-weight:600;">(${escapeHtml(alloc.institution)})</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="alloc-card-actions">
+                        <button class="btn-alloc-mutate" onclick="openMutationModal(${alloc.id}, '${escapeHtml(alloc.name)}', ${alloc.amount})" title="Tambah / Tarik Saldo">
+                            <i class="bi bi-arrow-left-right"></i> Mutasi
+                        </button>
+                        <button class="btn-alloc-icon-action" onclick="openEditAllocationModal(${alloc.id})" title="Edit Pos">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn-alloc-icon-action btn-delete" onclick="confirmDeleteAllocation(${alloc.id}, '${escapeHtml(alloc.name)}')" title="Hapus Pos">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </div>
                 </div>
 
-                <div style="text-align:right;flex-shrink:0;">
-                    <div style="font-size:13.5px;font-weight:800;color:var(--success);">${formatRupiah(alloc.amount)}</div>
-                    <div style="font-size:9.5px;color:var(--text-muted);font-weight:700;">${pct}% dari target terkumpul</div>
-                </div>
-
-                <!-- Action buttons -->
-                <div style="display:flex;gap:5px;flex-shrink:0;">
-                    <button class="btn-primary-custom" onclick="openMutationModal(${alloc.id}, '${escapeHtml(alloc.name)}', ${alloc.amount})" title="Tambah / Tarik Saldo" style="padding:6px 10px;border-radius:var(--radius-sm);font-size:11px;">
-                        <i class="bi bi-arrow-left-right"></i> Mutasi
-                    </button>
-                    <button class="btn-primary-custom" onclick="openEditAllocationModal(${alloc.id})" title="Edit Pos" style="background:var(--surface-3);color:var(--text-primary);padding:6px 9px;border-radius:var(--radius-sm);font-size:11px;">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn-primary-custom" onclick="confirmDeleteAllocation(${alloc.id}, '${escapeHtml(alloc.name)}')" title="Hapus Pos" style="background:var(--danger-bg);color:var(--danger);padding:6px 9px;border-radius:var(--radius-sm);font-size:11px;">
-                        <i class="bi bi-trash"></i>
-                    </button>
+                <!-- Bottom Row: Clean Amount & Share Info (Never Collides) -->
+                <div class="alloc-card-bottom-row">
+                    <div class="alloc-amount-line">
+                        <div class="alloc-amount-val">${formatRupiah(alloc.amount)}</div>
+                        <span class="alloc-share-tag">${pct}% dari goal</span>
+                    </div>
+                    <div class="alloc-mini-bar">
+                        <div class="alloc-mini-fill" style="width:${Math.min(100, pct)}%;background:${iconColor};"></div>
+                    </div>
+                    ${alloc.notes ? `<div class="alloc-notes-text"><i class="bi bi-info-circle me-1"></i>${escapeHtml(alloc.notes)}</div>` : ''}
                 </div>
             </div>
         `;
@@ -1910,7 +2295,7 @@ function renderLogsTimeline() {
     const logs = activeGoal.logs || [];
 
     if (logs.length === 0) {
-        container.innerHTML = `<div style="text-align:center;color:var(--text-muted);font-size:11px;padding:24px;">Belum ada riwayat mutasi dana.</div>`;
+        container.innerHTML = `<div style="text-align:center;color:var(--text-muted);font-size:11px;padding:20px;">Belum ada riwayat mutasi dana.</div>`;
         return;
     }
 
@@ -1923,17 +2308,17 @@ function renderLogsTimeline() {
         return `
             <div class="timeline-item">
                 <div class="timeline-dot" style="background:${color};"></div>
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
-                    <div>
-                        <div style="font-size:12px;font-weight:700;color:var(--text-primary);">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:11.5px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                             <i class="bi ${icon}" style="color:${color};"></i> ${isDeposit ? 'Setoran' : 'Penarikan'} (${escapeHtml(log.allocation_name || 'Pos')})
                         </div>
-                        <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">
+                        <div style="font-size:9.5px;color:var(--text-muted);margin-top:1px;">
                             ${log.log_date} &middot; Saldo akhir: ${formatRupiah(log.balance_after)}
                         </div>
-                        ${log.notes ? `<div style="font-size:10px;color:var(--text-primary);margin-top:2px;font-style:italic;">"${escapeHtml(log.notes)}"</div>` : ''}
+                        ${log.notes ? `<div style="font-size:9.5px;color:var(--text-primary);margin-top:2px;font-style:italic;">"${escapeHtml(log.notes)}"</div>` : ''}
                     </div>
-                    <div style="font-size:12px;font-weight:800;color:${color};white-space:nowrap;">
+                    <div style="font-size:11.5px;font-weight:800;color:${color};white-space:nowrap;flex-shrink:0;">
                         ${sign} ${formatRupiah(log.amount)}
                     </div>
                 </div>

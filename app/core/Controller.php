@@ -198,16 +198,16 @@ if (!class_exists('Controller')) {
             return true;
         }
 
-        // Default allowed services per role (PPOB is strictly OFF for admin & staff by default)
+        // Default allowed services per role (PPOB & Savings are strictly OFF for admin & staff by default)
         $defaults = [
             'admin' => [
                 'finance', 'reports', 'debts', 'purchases', 'suppliers',
                 'customers', 'products', 'catalog', 'multivariant',
-                'product_history', 'supplier_analysis', 'export_data', 'order_estimate', 'savings'
+                'product_history', 'supplier_analysis', 'export_data', 'order_estimate'
             ],
             'staff' => [
                 'suppliers', 'customers', 'products', 'catalog',
-                'product_history', 'supplier_analysis', 'order_estimate', 'savings'
+                'product_history', 'supplier_analysis', 'order_estimate'
             ],
         ];
 

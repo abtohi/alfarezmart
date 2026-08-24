@@ -515,6 +515,12 @@ if ($userLevel === 'staff') {
                 <span>Laporan</span>
             </a>
             <?php endif; ?>
+            <?php if ($this->hasServiceAccess('savings')): ?>
+            <a href="<?= BASE_URL ?>savings" class="sidebar-item <?= ($activeNav ?? '') === 'savings' ? 'active' : '' ?>">
+                <i class="bi bi-piggy-bank"></i>
+                <span>Savings &amp; Goals</span>
+            </a>
+            <?php endif; ?>
             <div class="sidebar-separator"></div>
             <a href="<?= BASE_URL ?>settings/backup" class="sidebar-item <?= ($activeNav ?? '') === 'backup' ? 'active' : '' ?>" title="Backup Data Harian Offline">
                 <i class="bi bi-shield-lock"></i>
