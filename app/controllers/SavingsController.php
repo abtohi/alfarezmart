@@ -57,8 +57,9 @@ class SavingsController extends Controller
 
     /**
      * API: Get Goal Detail by ID
+     * @param int|string $id
      */
-    public function apiGetGoalDetail($id)
+    public function apiGetGoalDetail(int|string $id)
     {
         $this->requireService('savings');
         $goal = $this->savingsModel->getGoalById((int)$id);
@@ -135,8 +136,9 @@ class SavingsController extends Controller
 
     /**
      * API: Update Goal
+     * @param int|string $id
      */
-    public function apiUpdateGoal($id)
+    public function apiUpdateGoal(int|string $id)
     {
         $this->requireService('savings');
         $this->validateCSRF();
@@ -187,8 +189,9 @@ class SavingsController extends Controller
 
     /**
      * API: Delete Goal
+     * @param int|string $id
      */
-    public function apiDeleteGoal($id)
+    public function apiDeleteGoal(int|string $id)
     {
         $this->requireService('savings');
         $this->validateCSRF();
@@ -267,8 +270,9 @@ class SavingsController extends Controller
 
     /**
      * API: Delete Allocation Item
+     * @param int|string $id
      */
-    public function apiDeleteAllocation($id)
+    public function apiDeleteAllocation(int|string $id)
     {
         $this->requireService('savings');
         $this->validateCSRF();
@@ -332,8 +336,9 @@ class SavingsController extends Controller
 
     /**
      * API: Get Daily Snapshot History & Analytics for a Goal
+     * @param int|string $id
      */
-    public function apiGetGoalHistory($id)
+    public function apiGetGoalHistory(int|string $id)
     {
         $this->requireService('savings');
         $goalId = (int)$id;
@@ -361,8 +366,9 @@ class SavingsController extends Controller
 
     /**
      * API: Capture Snapshot for a specific Goal
+     * @param int|string $id
      */
-    public function apiCaptureGoalSnapshot($id)
+    public function apiCaptureGoalSnapshot(int|string $id)
     {
         $this->requireService('savings');
         $this->validateCSRF();
@@ -378,6 +384,17 @@ class SavingsController extends Controller
         } catch (\Throwable $e) {
             $this->json(['error' => 'Gagal mencapture snapshot: ' . $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * API: Get All Snapshots across all goals
+     */
+    public function apiGetAllSnapshots()
+    {
+        $this->requireService('savings');
+        $this->savingsModel->autoTriggerDailySnapshot();
+        $snapshots = $this->savingsModel->getAllDailySnapshots(100);
+        $this->json(['success' => true, 'data' => $snapshots]);
     }
 
     /**

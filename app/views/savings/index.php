@@ -945,12 +945,18 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
             </div>
         </div>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <a href="<?= BASE_URL ?>" class="btn-primary-custom" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 7px 12px; border-radius: var(--radius-md); font-size: 11.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
-                <i class="bi bi-arrow-left"></i> Dashboard
-            </a>
+            <button class="btn-primary-custom" onclick="captureAllSnapshotsManual()" title="Simpan / Backup Snapshot Hari Ini" style="background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; border: none; padding: 7px 13px; border-radius: var(--radius-md); font-size: 11.5px; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 3px 10px rgba(16,185,129,0.25);">
+                <i class="bi bi-camera-fill"></i> Simpan History Hari Ini
+            </button>
+            <button class="btn-primary-custom" onclick="openGlobalHistoryModal()" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 7px 13px; border-radius: var(--radius-md); font-size: 11.5px; display: inline-flex; align-items: center; gap: 5px;">
+                <i class="bi bi-clock-history"></i> Riwayat Tabungan
+            </button>
             <button class="btn-primary-custom" onclick="openAddGoalModal()" style="padding: 7px 14px; border-radius: var(--radius-md); font-size: 11.5px; display: inline-flex; align-items: center; gap: 5px;">
                 <i class="bi bi-plus-circle-fill"></i> Tambah Goal
             </button>
+            <a href="<?= BASE_URL ?>" class="btn-primary-custom" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 7px 12px; border-radius: var(--radius-md); font-size: 11.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+                <i class="bi bi-arrow-left"></i> Dashboard
+            </a>
         </div>
     </div>
 
@@ -1624,6 +1630,67 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 </div>
 
 <!-- ======================================================== -->
+<!-- MODAL 5: RIWAYAT GLOBAL SELURUH TABUNGAN & SNAPSHOT     -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modalGlobalHistory" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content modal-content-custom" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden;">
+            <div class="modal-header modal-header-custom" style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 36px; height: 36px; border-radius: 9px; background: rgba(99,102,241,0.15); color: #818cf8; display: flex; align-items: center; justify-content: center; font-size: 1.15rem;">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title" style="font-size: 1.05rem; font-weight: 800; margin: 0; color: var(--text-primary);">
+                            Riwayat Snapshot &amp; Progress Tabungan
+                        </h5>
+                        <p style="font-size: 11px; color: var(--text-muted); margin: 2px 0 0 0;">
+                            Memantau pergerakan saldo naik / turun setiap hari per target
+                        </p>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body" style="padding: 16px 20px; max-height: 65vh; overflow-y: auto;">
+                <!-- Action & Filter Bar -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px;">
+                        <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); white-space: nowrap;">Filter Target:</span>
+                        <select id="globalHistoryGoalFilter" class="form-select-custom" onchange="filterGlobalSnapshots()" style="padding: 6px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 11.5px; font-weight: 600; flex: 1; max-width: 250px;">
+                            <option value="all">Semua Target Tabungan</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary-custom" onclick="captureAllSnapshotsManual()" style="background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; border: none; padding: 6px 14px; border-radius: var(--radius-md); font-size: 11px; display: inline-flex; align-items: center; gap: 5px;">
+                        <i class="bi bi-camera-fill"></i> Simpan History Hari Ini
+                    </button>
+                </div>
+
+                <!-- Info Pill -->
+                <div style="background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.25); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-primary);">
+                        <i class="bi bi-robot" style="color: #818cf8; font-size: 1.1rem;"></i>
+                        <span>Sistem otomatis mencapture data saldo tabungan setiap pukul <strong>23:00 WIB (GMT+7)</strong>.</span>
+                    </div>
+                    <span id="globalSnapshotCountBadge" class="badge-custom badge-primary" style="font-size: 10px;">0 Record</span>
+                </div>
+
+                <!-- Snapshot List Container -->
+                <div id="globalHistoryListContainer">
+                    <!-- Injected by JS -->
+                </div>
+            </div>
+
+            <div class="modal-footer" style="padding: 12px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+                <button type="button" class="btn-primary-custom" data-bs-dismiss="modal" style="background: var(--surface-2); color: var(--text-primary); font-size: 11.5px; padding: 6px 16px;">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
 <!-- JAVASCRIPT LOGIC & CUSTOM COMPONENT CONTROLLERS         -->
 <!-- ======================================================== -->
 <script>
@@ -2163,9 +2230,12 @@ function renderGoalsGrid() {
                 </div>
 
                 <!-- Footer Action Buttons -->
-                <div style="display:grid;grid-template-columns:1fr auto;gap:7px;padding-top:10px;border-top:1px solid var(--border-color);">
-                    <button class="btn-primary-custom" onclick="openGoalDetail(${goal.id})" style="padding:7px 10px;border-radius:var(--radius-sm);font-size:11px;display:flex;align-items:center;justify-content:center;gap:5px;">
-                        <i class="bi bi-folder2-open"></i> Detail &amp; Alokasi
+                <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;padding-top:10px;border-top:1px solid var(--border-color);">
+                    <button class="btn-primary-custom" onclick="openGoalDetail(${goal.id}, 'allocations')" style="padding:7px 8px;border-radius:var(--radius-sm);font-size:10.5px;display:flex;align-items:center;justify-content:center;gap:4px;">
+                        <i class="bi bi-folder2-open"></i> Alokasi
+                    </button>
+                    <button class="btn-primary-custom" onclick="openGoalDetail(${goal.id}, 'history')" style="background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border-color);padding:7px 8px;border-radius:var(--radius-sm);font-size:10.5px;display:flex;align-items:center;justify-content:center;gap:4px;">
+                        <i class="bi bi-graph-up-arrow"></i> Riwayat
                     </button>
                     <button class="btn-primary-custom" onclick="openAddAllocationModalDirect(${goal.id})" title="Tambah Pos Alokasi Uang" style="background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border-color);padding:7px 10px;border-radius:var(--radius-sm);font-size:11px;">
                         <i class="bi bi-plus-lg"></i>
@@ -2179,7 +2249,7 @@ function renderGoalsGrid() {
 // ----------------------------------------------------
 // DETAIL GOAL VIEW & TABS
 // ----------------------------------------------------
-async function openGoalDetail(goalId) {
+async function openGoalDetail(goalId, initialTab = 'allocations') {
     try {
         const res = await fetch(`<?= BASE_URL ?>api/savings/goals/${goalId}`);
         const json = await res.json();
@@ -2190,6 +2260,16 @@ async function openGoalDetail(goalId) {
 
         activeGoal = json.data;
         renderGoalDetailModal();
+        
+        // Switch to initial tab
+        if (initialTab === 'history') {
+            switchDetailTab('history', document.getElementById('tabHistoryBtn'));
+        } else if (initialTab === 'logs') {
+            switchDetailTab('logs', document.getElementById('tabLogsBtn'));
+        } else {
+            switchDetailTab('allocations', document.getElementById('tabAllocationsBtn'));
+        }
+
         const modal = new bootstrap.Modal(document.getElementById('modalGoalDetail'));
         modal.show();
     } catch (e) {
@@ -2942,6 +3022,194 @@ async function submitMutationForm(e) {
         btn.disabled = false;
         btn.textContent = 'Simpan Mutasi';
     }
+}
+
+// ----------------------------------------------------
+// GLOBAL SNAPSHOTS & HISTORY MODAL
+// ----------------------------------------------------
+let allGlobalSnapshots = [];
+
+async function captureAllSnapshotsManual() {
+    try {
+        const res = await fetch(`<?= BASE_URL ?>api/savings/snapshots/capture-all`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken()
+            },
+            body: JSON.stringify({ csrf_token: getCsrfToken() })
+        });
+        const json = await res.json();
+        if (json.success) {
+            const count = Array.isArray(json.data) ? json.data.length : 0;
+            // Success alert / feedback
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Snapshot Tersimpan!',
+                    text: `History progress hari ini untuk ${count} target tabungan berhasil dicapture & dibackup ke database.`,
+                    timer: 2500,
+                    showConfirmButton: false,
+                    background: 'var(--surface-1)',
+                    color: 'var(--text-primary)'
+                });
+            } else {
+                alert(`Snapshot Tersimpan! History hari ini untuk ${count} target tabungan berhasil dicapture.`);
+            }
+
+            // Reload current open modal if active
+            if (activeGoal) {
+                loadGoalHistory(activeGoal.id);
+            }
+            // Reload global history modal if open
+            const globalModal = document.getElementById('modalGlobalHistory');
+            if (globalModal && globalModal.classList.contains('show')) {
+                loadGlobalSnapshots();
+            }
+        } else {
+            alert(json.error || 'Gagal menyimpan snapshot');
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Terjadi kesalahan jaringan.');
+    }
+}
+
+async function openGlobalHistoryModal() {
+    // Populate Goal Filter dropdown
+    const filterSelect = document.getElementById('globalHistoryGoalFilter');
+    if (filterSelect) {
+        filterSelect.innerHTML = '<option value="all">Semua Target Tabungan</option>' + 
+            allGoals.map(g => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+    }
+
+    loadGlobalSnapshots();
+    const modal = new bootstrap.Modal(document.getElementById('modalGlobalHistory'));
+    modal.show();
+}
+
+async function loadGlobalSnapshots() {
+    const container = document.getElementById('globalHistoryListContainer');
+    const badge = document.getElementById('globalSnapshotCountBadge');
+    container.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:11px;padding:30px;"><i class="bi bi-arrow-repeat spin me-1"></i> Memuat riwayat seluruh target...</div>';
+
+    try {
+        const res = await fetch(`<?= BASE_URL ?>api/savings/snapshots/all`);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+            allGlobalSnapshots = json.data;
+            if (badge) badge.textContent = `${allGlobalSnapshots.length} Record`;
+            renderGlobalSnapshots(allGlobalSnapshots);
+        } else {
+            container.innerHTML = '<div style="text-align:center;color:var(--danger);font-size:11px;padding:20px;">Gagal memuat riwayat snapshot.</div>';
+        }
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div style="text-align:center;color:var(--danger);font-size:11px;padding:20px;">Koneksi terputus saat memuat riwayat.</div>';
+    }
+}
+
+function filterGlobalSnapshots() {
+    const filterVal = document.getElementById('globalHistoryGoalFilter')?.value || 'all';
+    if (filterVal === 'all') {
+        renderGlobalSnapshots(allGlobalSnapshots);
+    } else {
+        const filtered = allGlobalSnapshots.filter(s => String(s.goal_id) === String(filterVal));
+        renderGlobalSnapshots(filtered);
+    }
+}
+
+function renderGlobalSnapshots(snapshots) {
+    const container = document.getElementById('globalHistoryListContainer');
+    if (!container) return;
+
+    if (snapshots.length === 0) {
+        container.innerHTML = `
+            <div style="text-align:center;padding:30px 10px;background:var(--surface-2);border-radius:var(--radius-md);border:1px dashed var(--border-color);">
+                <i class="bi bi-clock-history" style="font-size:1.6rem;color:var(--text-muted);display:block;margin-bottom:6px;"></i>
+                <div style="font-size:12.5px;font-weight:700;color:var(--text-primary);">Belum Ada Riwayat Snapshot</div>
+                <div style="font-size:10.5px;color:var(--text-muted);margin:2px 0 12px 0;">Klik tombol di bawah untuk mencapture dan membackup saldo tabungan hari ini.</div>
+                <button class="btn-primary-custom" onclick="captureAllSnapshotsManual()" style="padding:6px 14px;border-radius:var(--radius-sm);font-size:11px;">
+                    <i class="bi bi-camera-fill me-1"></i> Simpan History Hari Ini
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = snapshots.map(snap => {
+        const changeAmt = snap.change_amount || 0;
+        const changePct = snap.change_percent || 0;
+        const isUp = changeAmt > 0;
+        const isDown = changeAmt < 0;
+
+        let badgeBg = 'var(--surface-3)';
+        let badgeColor = 'var(--text-muted)';
+        let badgeBorder = 'var(--border-color)';
+        let badgeIcon = 'bi-dash';
+        let badgeText = 'Stabil (0%)';
+
+        if (isUp) {
+            badgeBg = 'rgba(16,185,129,0.12)';
+            badgeColor = '#10b981';
+            badgeBorder = 'rgba(16,185,129,0.3)';
+            badgeIcon = 'bi-arrow-up-right';
+            badgeText = `+${formatRupiah(changeAmt)} (+${changePct}%)`;
+        } else if (isDown) {
+            badgeBg = 'rgba(239,68,68,0.12)';
+            badgeColor = '#ef4444';
+            badgeBorder = 'rgba(239,68,68,0.3)';
+            badgeIcon = 'bi-arrow-down-right';
+            badgeText = `-${formatRupiah(Math.abs(changeAmt))} (${changePct}%)`;
+        }
+
+        const dObj = new Date(snap.snapshot_date);
+        const dateFormatted = dObj.toLocaleDateString('id-ID', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+
+        const allocs = snap.allocations || [];
+        const allocsHtml = allocs.length > 0 ? `
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;padding-top:6px;border-top:1px dashed var(--border-color);">
+                ${allocs.map(a => `
+                    <span style="font-size:8.5px;background:var(--surface-3);border:1px solid var(--border-color);border-radius:4px;padding:1px 5px;color:var(--text-muted);">
+                        ${escapeHtml(a.name)}: <strong>${formatRupiah(a.amount)}</strong>
+                    </span>
+                `).join('')}
+            </div>
+        ` : '';
+
+        return `
+            <div style="background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:8px;transition:border-color 0.15s ease;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                    <div style="min-width:0;flex:1;">
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                            <span class="badge-custom" style="background:${snap.goal_color || '#6366f1'}22;color:${snap.goal_color || '#6366f1'};font-size:9.5px;font-weight:700;">
+                                <i class="bi ${snap.goal_icon || 'bi-piggy-bank-fill'} me-1"></i>${escapeHtml(snap.goal_name)}
+                            </span>
+                            <span style="font-size:10px;color:var(--text-muted);">
+                                <i class="bi bi-calendar-event me-1"></i>${dateFormatted}
+                            </span>
+                        </div>
+                        <div style="display:flex;align-items:baseline;gap:6px;margin-top:4px;">
+                            <span style="font-size:13px;font-weight:800;color:var(--text-primary);">
+                                ${formatRupiah(snap.total_collected)}
+                            </span>
+                            <span style="font-size:9.5px;font-weight:700;color:var(--primary);">
+                                (${snap.progress_percent}% dari target)
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style="text-align:right;flex-shrink:0;">
+                        <div style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:800;color:${badgeColor};background:${badgeBg};border:1px solid ${badgeBorder};padding:3px 8px;border-radius:var(--radius-sm);">
+                            <i class="bi ${badgeIcon}"></i> ${badgeText}
+                        </div>
+                    </div>
+                </div>
+
+                ${allocsHtml}
+            </div>
+        `;
+    }).join('');
 }
 
 function escapeHtml(text) {

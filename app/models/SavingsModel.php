@@ -816,6 +816,38 @@ class SavingsModel extends Model
     }
 
     /**
+     * Get all daily snapshots history across all goals
+     */
+    public function getAllDailySnapshots(int $limit = 60): array
+    {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT s.*, g.name as goal_name, g.icon as goal_icon, g.color as goal_color, g.category as goal_category
+                FROM savings_daily_snapshots s
+                JOIN savings_goals g ON s.goal_id = g.id
+                ORDER BY s.snapshot_date DESC, s.id DESC
+                LIMIT :limit
+            ");
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            foreach ($rows as &$r) {
+                $r['total_collected'] = (float)$r['total_collected'];
+                $r['target_amount'] = (float)$r['target_amount'];
+                $r['progress_percent'] = (float)$r['progress_percent'];
+                $r['change_amount'] = (float)$r['change_amount'];
+                $r['change_percent'] = (float)$r['change_percent'];
+                $r['allocations'] = !empty($r['allocations_breakdown']) ? json_decode($r['allocations_breakdown'], true) : [];
+            }
+            return $rows;
+        } catch (\Throwable $e) {
+            error_log('[SavingsModel] getAllDailySnapshots error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
      * Get daily snapshots history for a specific goal
      */
     public function getDailySnapshots(int $goalId, int $limit = 30): array
