@@ -518,6 +518,19 @@ class Database
                     log_date DATE NOT NULL,
                     notes TEXT,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )",
+                "CREATE TABLE IF NOT EXISTS savings_daily_snapshots (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    goal_id INTEGER NOT NULL,
+                    snapshot_date DATE NOT NULL,
+                    total_collected REAL NOT NULL DEFAULT 0,
+                    target_amount REAL NOT NULL DEFAULT 0,
+                    progress_percent REAL NOT NULL DEFAULT 0,
+                    change_amount REAL NOT NULL DEFAULT 0,
+                    change_percent REAL NOT NULL DEFAULT 0,
+                    allocations_breakdown TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(goal_id, snapshot_date)
                 )"
             ];
 

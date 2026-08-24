@@ -329,4 +329,74 @@ class SavingsController extends Controller
             $this->json(['error' => $e->getMessage()], 422);
         }
     }
+
+    /**
+     * API: Get Daily Snapshot History & Analytics for a Goal
+     */
+    public function apiGetGoalHistory($id)
+    {
+        $this->requireService('savings');
+        $goalId = (int)$id;
+
+        $goal = $this->savingsModel->getGoalById($goalId);
+        if (!$goal) {
+            $this->json(['error' => 'Goal tidak ditemukan'], 404);
+        }
+
+        // Auto trigger daily snapshot check
+        $this->savingsModel->autoTriggerDailySnapshot();
+
+        $snapshots = $this->savingsModel->getDailySnapshots($goalId, 60);
+        $analytics = $this->savingsModel->getGoalSnapshotAnalytics($goalId);
+
+        $this->json([
+            'success' => true,
+            'data' => [
+                'goal' => $goal,
+                'snapshots' => $snapshots,
+                'analytics' => $analytics,
+            ]
+        ]);
+    }
+
+    /**
+     * API: Capture Snapshot for a specific Goal
+     */
+    public function apiCaptureGoalSnapshot($id)
+    {
+        $this->requireService('savings');
+        $this->validateCSRF();
+        $goalId = (int)$id;
+
+        try {
+            $snapshot = $this->savingsModel->captureDailySnapshot($goalId);
+            $this->json([
+                'success' => true,
+                'message' => 'Snapshot progress harian berhasil dicapture',
+                'data' => $snapshot
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Gagal mencapture snapshot: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Capture Snapshots for all Goals
+     */
+    public function apiCaptureAllSnapshots()
+    {
+        $this->requireService('savings');
+        $this->validateCSRF();
+
+        try {
+            $results = $this->savingsModel->captureAllGoalsSnapshot();
+            $this->json([
+                'success' => true,
+                'message' => 'Snapshot seluruh target berhasil disimpan',
+                'data' => $results
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Gagal mencapture snapshot seluruh target: ' . $e->getMessage()], 500);
+        }
+    }
 }

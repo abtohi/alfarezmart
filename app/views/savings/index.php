@@ -1194,10 +1194,13 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                 <!-- Modern Segmented Switch Tabs -->
                 <div class="detail-segmented-tabs">
                     <button class="detail-tab-btn active" id="tabAllocationsBtn" onclick="switchDetailTab('allocations', this)">
-                        <i class="bi bi-grid-fill"></i> Pos Penempatan Dana
+                        <i class="bi bi-grid-fill"></i> Pos Penempatan
                     </button>
                     <button class="detail-tab-btn" id="tabLogsBtn" onclick="switchDetailTab('logs', this)">
                         <i class="bi bi-clock-history"></i> Riwayat Mutasi
+                    </button>
+                    <button class="detail-tab-btn" id="tabHistoryBtn" onclick="switchDetailTab('history', this)">
+                        <i class="bi bi-graph-up-arrow"></i> Progress Harian
                     </button>
                 </div>
 
@@ -1224,6 +1227,35 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                     </div>
                     <div id="logsTimelineContainer" style="padding-left: 4px;">
                         <!-- Timeline injected by JS -->
+                    </div>
+                </div>
+
+                <!-- TAB 3: PROGRESS HARIAN & HISTORY SNAPSHOT (AUTO 23:00 GMT+7) -->
+                <div id="detailTabHistory" style="display: none;">
+                    <!-- Analytics Summary Box -->
+                    <div id="historyAnalyticsBox" style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 12px;">
+                        <!-- Injected by JS -->
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; flex-wrap: wrap;">
+                        <div>
+                            <div style="font-size: 12px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                                <span>Riwayat Snapshot Harian</span>
+                                <span class="badge" style="font-size: 9px; background: rgba(99,102,241,0.15); color: #818cf8; border: 1px solid rgba(99,102,241,0.3); font-weight: 600; padding: 2px 6px;">
+                                    <i class="bi bi-clock-history me-1"></i> Auto 23:00 WIB
+                                </span>
+                            </div>
+                            <div style="font-size: 10px; color: var(--text-muted); margin-top: 1px;">
+                                Memantau kenaikan / penurunan saldo &amp; persentase progress per hari
+                            </div>
+                        </div>
+                        <button class="btn-primary-custom" onclick="captureGoalSnapshotManual()" style="padding: 5px 12px; border-radius: var(--radius-sm); font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="bi bi-camera-fill"></i> Snapshot Hari Ini
+                        </button>
+                    </div>
+
+                    <div id="historyTimelineContainer">
+                        <!-- Injected by JS -->
                     </div>
                 </div>
 
@@ -1649,6 +1681,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initCustomSelectPickers();
     loadGoals();
     loadSummary();
+    scheduleNightlySnapshot();
 
     // Close dropdowns on outside click
     document.addEventListener('click', (e) => {
@@ -1658,6 +1691,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Nightly Snapshot Automation at 23:00 WIB (GMT+7)
+function scheduleNightlySnapshot() {
+    try {
+        const now = new Date();
+        const target = new Date();
+        target.setHours(23, 0, 0, 0);
+
+        let diff = target.getTime() - now.getTime();
+        // If current time is 23:00 or later, trigger once if needed and schedule tomorrow
+        if (diff <= 0) {
+            target.setDate(target.getDate() + 1);
+            diff = target.getTime() - now.getTime();
+        }
+
+        setTimeout(async () => {
+            try {
+                await fetch('<?= BASE_URL ?>api/savings/snapshots/capture-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken() },
+                    body: JSON.stringify({ csrf_token: getCsrfToken() })
+                });
+            } catch(e) {}
+            scheduleNightlySnapshot();
+        }, diff);
+    } catch(e) {
+        console.warn('Auto-snapshot scheduler error:', e);
+    }
+}
 
 // Format Rupiah helpers
 function formatRupiah(number) {
@@ -2196,6 +2258,209 @@ function switchDetailTab(tab, btnEl) {
 
     document.getElementById('detailTabAllocations').style.display = tab === 'allocations' ? 'block' : 'none';
     document.getElementById('detailTabLogs').style.display = tab === 'logs' ? 'block' : 'none';
+    document.getElementById('detailTabHistory').style.display = tab === 'history' ? 'block' : 'none';
+
+    if (tab === 'history' && activeGoal) {
+        loadGoalHistory(activeGoal.id);
+    }
+}
+
+// ----------------------------------------------------
+// DAILY PROGRESS HISTORY & SNAPSHOTS ENGINE
+// ----------------------------------------------------
+async function loadGoalHistory(goalId) {
+    const analyticsBox = document.getElementById('historyAnalyticsBox');
+    const timelineBox = document.getElementById('historyTimelineContainer');
+    
+    analyticsBox.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:11px;padding:8px;"><i class="bi bi-arrow-repeat spin me-1"></i> Memuat analytics progress...</div>';
+    timelineBox.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:11px;padding:16px;"><i class="bi bi-arrow-repeat spin me-1"></i> Memuat log snapshot harian...</div>';
+
+    try {
+        const res = await fetch(`<?= BASE_URL ?>api/savings/goals/${goalId}/history`);
+        const json = await res.json();
+        if (!json.success || !json.data) {
+            analyticsBox.innerHTML = '<div style="text-align:center;color:var(--danger);font-size:11px;">Gagal memuat riwayat progress.</div>';
+            timelineBox.innerHTML = '';
+            return;
+        }
+
+        renderGoalHistory(json.data);
+    } catch (e) {
+        console.error(e);
+        analyticsBox.innerHTML = '<div style="text-align:center;color:var(--danger);font-size:11px;">Koneksi terputus saat memuat history.</div>';
+        timelineBox.innerHTML = '';
+    }
+}
+
+function renderGoalHistory(data) {
+    const analyticsBox = document.getElementById('historyAnalyticsBox');
+    const timelineBox = document.getElementById('historyTimelineContainer');
+    const analytics = data.analytics || {};
+    const snapshots = data.snapshots || [];
+
+    // 1. Render Analytics Overview
+    const net7 = analytics.net_change_7d || 0;
+    const pct7 = analytics.pct_change_7d || 0;
+    const net30 = analytics.net_change_30d || 0;
+    const pct30 = analytics.pct_change_30d || 0;
+    const trend = analytics.trend || 'neutral';
+    const totalDays = analytics.total_days_tracked || 0;
+
+    let trendLabel = '⏸️ Stabil';
+    let trendColor = 'var(--text-muted)';
+    let trendBg = 'var(--surface-3)';
+    if (trend === 'up') {
+        trendLabel = '📈 Kenaikan Konsisten';
+        trendColor = '#10b981';
+        trendBg = 'rgba(16,185,129,0.12)';
+    } else if (trend === 'down') {
+        trendLabel = '📉 Mengalami Penurunan';
+        trendColor = '#ef4444';
+        trendBg = 'rgba(239,68,68,0.12)';
+    }
+
+    analyticsBox.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-primary);">
+                Tren Pertumbuhan Tabungan (${totalDays} Hari Terdata):
+            </div>
+            <span style="font-size: 10px; font-weight: 800; color: ${trendColor}; background: ${trendBg}; padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid ${trendColor}33;">
+                ${trendLabel}
+            </span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px 10px;">
+                <div style="font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Perubahan 7 Hari</div>
+                <div style="font-size: 12.5px; font-weight: 800; color: ${net7 >= 0 ? 'var(--success)' : 'var(--danger)'}; margin-top: 1px;">
+                    ${net7 >= 0 ? '+' : ''}${formatRupiah(net7)}
+                </div>
+                <div style="font-size: 9px; color: ${net7 >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight: 700;">
+                    ${pct7 >= 0 ? '+' : ''}${pct7}%
+                </div>
+            </div>
+            <div style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 8px 10px;">
+                <div style="font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Perubahan 30 Hari</div>
+                <div style="font-size: 12.5px; font-weight: 800; color: ${net30 >= 0 ? 'var(--success)' : 'var(--danger)'}; margin-top: 1px;">
+                    ${net30 >= 0 ? '+' : ''}${formatRupiah(net30)}
+                </div>
+                <div style="font-size: 9px; color: ${net30 >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight: 700;">
+                    ${pct30 >= 0 ? '+' : ''}${pct30}%
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 2. Render Timeline Snapshots
+    if (snapshots.length === 0) {
+        timelineBox.innerHTML = `
+            <div style="text-align:center;padding:24px 10px;background:var(--surface-2);border-radius:var(--radius-md);border:1px dashed var(--border-color);">
+                <i class="bi bi-clock-history" style="font-size:1.5rem;color:var(--text-muted);display:block;margin-bottom:6px;"></i>
+                <div style="font-size:12px;font-weight:700;color:var(--text-primary);">Belum ada snapshot harian</div>
+                <div style="font-size:10px;color:var(--text-muted);margin:2px 0 10px 0;">Sistem akan otomatis mencapture setiap pukul 23:00 WIB, atau Anda dapat mengambil snapshot manual sekarang.</div>
+                <button class="btn-primary-custom" onclick="captureGoalSnapshotManual()" style="padding:6px 14px;border-radius:var(--radius-sm);font-size:11px;">
+                    <i class="bi bi-camera-fill me-1"></i> Capture Snapshot Sekarang
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    timelineBox.innerHTML = snapshots.map((snap, idx) => {
+        const changeAmt = snap.change_amount || 0;
+        const changePct = snap.change_percent || 0;
+        const isUp = changeAmt > 0;
+        const isDown = changeAmt < 0;
+        const isNeutral = changeAmt === 0;
+
+        let badgeBg = 'var(--surface-3)';
+        let badgeColor = 'var(--text-muted)';
+        let badgeBorder = 'var(--border-color)';
+        let badgeIcon = 'bi-dash';
+        let badgeText = 'Stabil (0%)';
+
+        if (isUp) {
+            badgeBg = 'rgba(16,185,129,0.12)';
+            badgeColor = '#10b981';
+            badgeBorder = 'rgba(16,185,129,0.3)';
+            badgeIcon = 'bi-arrow-up-right';
+            badgeText = `+${formatRupiah(changeAmt)} (+${changePct}%)`;
+        } else if (isDown) {
+            badgeBg = 'rgba(239,68,68,0.12)';
+            badgeColor = '#ef4444';
+            badgeBorder = 'rgba(239,68,68,0.3)';
+            badgeIcon = 'bi-arrow-down-right';
+            badgeText = `-${formatRupiah(Math.abs(changeAmt))} (${changePct}%)`;
+        }
+
+        // Format Date Indonesian
+        const dObj = new Date(snap.snapshot_date);
+        const dateFormatted = dObj.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+
+        const allocs = snap.allocations || [];
+        const allocsHtml = allocs.length > 0 ? `
+            <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border-color);">
+                ${allocs.map(a => `
+                    <span style="font-size: 8.5px; background: var(--surface-3); border: 1px solid var(--border-color); border-radius: 4px; padding: 1px 5px; color: var(--text-muted);">
+                        ${escapeHtml(a.name)}: <strong>${formatRupiah(a.amount)}</strong>
+                    </span>
+                `).join('')}
+            </div>
+        ` : '';
+
+        return `
+            <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                    <div style="min-width: 0; flex: 1;">
+                        <div style="font-size: 11px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 5px;">
+                            <i class="bi bi-calendar-check" style="color: #818cf8;"></i>
+                            <span>${dateFormatted}</span>
+                            ${idx === 0 ? '<span class="badge badge-primary" style="font-size: 8px; padding: 1px 4px;">Terbaru</span>' : ''}
+                        </div>
+                        <div style="display: flex; align-items: baseline; gap: 6px; margin-top: 3px;">
+                            <div style="font-size: 13px; font-weight: 800; color: var(--text-primary);">
+                                ${formatRupiah(snap.total_collected)}
+                            </div>
+                            <span style="font-size: 9.5px; font-weight: 700; color: var(--primary);">
+                                (${snap.progress_percent}% dari target)
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Growth Badge -->
+                    <div style="text-align: right; flex-shrink: 0;">
+                        <div style="display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 800; color: ${badgeColor}; background: ${badgeBg}; border: 1px solid ${badgeBorder}; padding: 3px 8px; border-radius: var(--radius-sm);">
+                            <i class="bi ${badgeIcon}"></i> ${badgeText}
+                        </div>
+                    </div>
+                </div>
+
+                ${allocsHtml}
+            </div>
+        `;
+    }).join('');
+}
+
+async function captureGoalSnapshotManual() {
+    if (!activeGoal) return;
+    try {
+        const res = await fetch(`<?= BASE_URL ?>api/savings/goals/${activeGoal.id}/snapshot`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken()
+            },
+            body: JSON.stringify({ csrf_token: getCsrfToken() })
+        });
+        const json = await res.json();
+        if (json.success) {
+            loadGoalHistory(activeGoal.id);
+        } else {
+            alert(json.error || 'Gagal mengambil snapshot');
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Terjadi kesalahan koneksi.');
+    }
 }
 
 function renderAllocationsList() {

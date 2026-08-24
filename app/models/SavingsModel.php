@@ -58,6 +58,19 @@ class SavingsModel extends Model
                         log_date DATE NOT NULL,
                         notes TEXT,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )",
+                    "CREATE TABLE IF NOT EXISTS savings_daily_snapshots (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        goal_id INTEGER NOT NULL,
+                        snapshot_date DATE NOT NULL,
+                        total_collected REAL NOT NULL DEFAULT 0,
+                        target_amount REAL NOT NULL DEFAULT 0,
+                        progress_percent REAL NOT NULL DEFAULT 0,
+                        change_amount REAL NOT NULL DEFAULT 0,
+                        change_percent REAL NOT NULL DEFAULT 0,
+                        allocations_breakdown TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(goal_id, snapshot_date)
                     )"
                 ];
             } else {
@@ -98,6 +111,21 @@ class SavingsModel extends Model
                         notes TEXT NULL,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         INDEX idx_goal_log (goal_id)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+                    "CREATE TABLE IF NOT EXISTS savings_daily_snapshots (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        goal_id INT NOT NULL,
+                        snapshot_date DATE NOT NULL,
+                        total_collected DECIMAL(15,2) NOT NULL DEFAULT 0,
+                        target_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+                        progress_percent DECIMAL(5,2) NOT NULL DEFAULT 0,
+                        change_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+                        change_percent DECIMAL(5,2) NOT NULL DEFAULT 0,
+                        allocations_breakdown TEXT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE KEY unique_goal_snapshot (goal_id, snapshot_date),
+                        INDEX idx_snapshot_date (snapshot_date),
+                        INDEX idx_goal_snapshot (goal_id)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
                 ];
             }
@@ -648,6 +676,249 @@ class SavingsModel extends Model
                 'overall_progress' => 0,
                 'type_breakdown' => [],
             ];
+        }
+    }
+
+    // ==========================================
+    // DAILY HISTORY & PROGRESS SNAPSHOT ENGINE
+    // ==========================================
+
+    /**
+     * Capture daily snapshot for a single goal
+     */
+    public function captureDailySnapshot(int $goalId, ?string $date = null): array
+    {
+        $date = $date ?: date('Y-m-d');
+        $goal = $this->getGoalById($goalId);
+        if (!$goal) {
+            throw new Exception('Goal tidak ditemukan.');
+        }
+
+        $totalCollected = (float)($goal['collected_amount'] ?? 0);
+        $targetAmount = (float)($goal['target_amount'] ?? 0);
+        $progressPercent = (float)($goal['progress_percent'] ?? 0);
+        $allocations = $goal['allocations'] ?? [];
+        $allocationsJson = json_encode($allocations);
+
+        // Find previous snapshot to calculate net change and growth rate
+        $prevStmt = $this->db->prepare("
+            SELECT total_collected 
+            FROM savings_daily_snapshots 
+            WHERE goal_id = :goal_id AND snapshot_date < :cur_date 
+            ORDER BY snapshot_date DESC 
+            LIMIT 1
+        ");
+        $prevStmt->bindValue(':goal_id', $goalId, PDO::PARAM_INT);
+        $prevStmt->bindValue(':cur_date', $date);
+        $prevStmt->execute();
+        $prevRow = $prevStmt->fetch(PDO::FETCH_ASSOC);
+
+        $changeAmount = 0.0;
+        $changePercent = 0.0;
+
+        if ($prevRow) {
+            $prevCollected = (float)$prevRow['total_collected'];
+            $changeAmount = round($totalCollected - $prevCollected, 2);
+            if ($prevCollected > 0) {
+                $changePercent = round(($changeAmount / $prevCollected) * 100, 2);
+            } elseif ($totalCollected > 0) {
+                $changePercent = 100.0;
+            }
+        }
+
+        $isSqlite = Database::getInstance()->isOffline() || Database::getInstance()->getDriver() === 'sqlite';
+
+        if ($isSqlite) {
+            $upsertSql = "
+                INSERT INTO savings_daily_snapshots (
+                    goal_id, snapshot_date, total_collected, target_amount, 
+                    progress_percent, change_amount, change_percent, allocations_breakdown
+                ) VALUES (
+                    :goal_id, :snapshot_date, :total_collected, :target_amount, 
+                    :progress_percent, :change_amount, :change_percent, :allocations_breakdown
+                )
+                ON CONFLICT(goal_id, snapshot_date) DO UPDATE SET
+                    total_collected = excluded.total_collected,
+                    target_amount = excluded.target_amount,
+                    progress_percent = excluded.progress_percent,
+                    change_amount = excluded.change_amount,
+                    change_percent = excluded.change_percent,
+                    allocations_breakdown = excluded.allocations_breakdown,
+                    created_at = CURRENT_TIMESTAMP
+            ";
+        } else {
+            $upsertSql = "
+                INSERT INTO savings_daily_snapshots (
+                    goal_id, snapshot_date, total_collected, target_amount, 
+                    progress_percent, change_amount, change_percent, allocations_breakdown
+                ) VALUES (
+                    :goal_id, :snapshot_date, :total_collected, :target_amount, 
+                    :progress_percent, :change_amount, :change_percent, :allocations_breakdown
+                )
+                ON DUPLICATE KEY UPDATE
+                    total_collected = VALUES(total_collected),
+                    target_amount = VALUES(target_amount),
+                    progress_percent = VALUES(progress_percent),
+                    change_amount = VALUES(change_amount),
+                    change_percent = VALUES(change_percent),
+                    allocations_breakdown = VALUES(allocations_breakdown),
+                    created_at = CURRENT_TIMESTAMP
+            ";
+        }
+
+        $stmt = $this->db->prepare($upsertSql);
+        $stmt->bindValue(':goal_id', $goalId, PDO::PARAM_INT);
+        $stmt->bindValue(':snapshot_date', $date);
+        $stmt->bindValue(':total_collected', $totalCollected);
+        $stmt->bindValue(':target_amount', $targetAmount);
+        $stmt->bindValue(':progress_percent', $progressPercent);
+        $stmt->bindValue(':change_amount', $changeAmount);
+        $stmt->bindValue(':change_percent', $changePercent);
+        $stmt->bindValue(':allocations_breakdown', $allocationsJson);
+        $stmt->execute();
+
+        return [
+            'goal_id' => $goalId,
+            'snapshot_date' => $date,
+            'total_collected' => $totalCollected,
+            'target_amount' => $targetAmount,
+            'progress_percent' => $progressPercent,
+            'change_amount' => $changeAmount,
+            'change_percent' => $changePercent,
+            'allocations' => $allocations,
+        ];
+    }
+
+    /**
+     * Capture snapshots for all active goals
+     */
+    public function captureAllGoalsSnapshot(?string $date = null): array
+    {
+        $date = $date ?: date('Y-m-d');
+        $goals = $this->getGoals();
+        $results = [];
+
+        foreach ($goals as $goal) {
+            try {
+                $results[] = $this->captureDailySnapshot((int)$goal['id'], $date);
+            } catch (\Throwable $e) {
+                error_log('[SavingsModel] captureAllGoalsSnapshot error for goal ' . $goal['id'] . ': ' . $e->getMessage());
+            }
+        }
+
+        try {
+            $settingModel = new SettingModel();
+            $settingModel->set('last_savings_snapshot_date', $date);
+            $settingModel->set('last_savings_snapshot_time', date('Y-m-d H:i:s'));
+        } catch (\Throwable $e) {}
+
+        return $results;
+    }
+
+    /**
+     * Get daily snapshots history for a specific goal
+     */
+    public function getDailySnapshots(int $goalId, int $limit = 30): array
+    {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT * FROM savings_daily_snapshots
+                WHERE goal_id = :goal_id
+                ORDER BY snapshot_date DESC
+                LIMIT :limit
+            ");
+            $stmt->bindValue(':goal_id', $goalId, PDO::PARAM_INT);
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            foreach ($rows as &$r) {
+                $r['total_collected'] = (float)$r['total_collected'];
+                $r['target_amount'] = (float)$r['target_amount'];
+                $r['progress_percent'] = (float)$r['progress_percent'];
+                $r['change_amount'] = (float)$r['change_amount'];
+                $r['change_percent'] = (float)$r['change_percent'];
+                $r['allocations'] = !empty($r['allocations_breakdown']) ? json_decode($r['allocations_breakdown'], true) : [];
+            }
+            return $rows;
+        } catch (\Throwable $e) {
+            error_log('[SavingsModel] getDailySnapshots error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get progress growth & trend analytics for a goal
+     */
+    public function getGoalSnapshotAnalytics(int $goalId): array
+    {
+        $snapshots = $this->getDailySnapshots($goalId, 30);
+        $totalSnapshots = count($snapshots);
+
+        if ($totalSnapshots === 0) {
+            return [
+                'total_days_tracked' => 0,
+                'net_change_7d' => 0.0,
+                'pct_change_7d' => 0.0,
+                'net_change_30d' => 0.0,
+                'pct_change_30d' => 0.0,
+                'trend' => 'neutral',
+                'latest_snapshot' => null,
+            ];
+        }
+
+        $latest = $snapshots[0];
+        $collectedLatest = (float)$latest['total_collected'];
+
+        // 7 days ago snapshot
+        $snap7 = isset($snapshots[6]) ? $snapshots[6] : end($snapshots);
+        $collected7 = (float)$snap7['total_collected'];
+        $net7 = $collectedLatest - $collected7;
+        $pct7 = $collected7 > 0 ? round(($net7 / $collected7) * 100, 2) : ($collectedLatest > 0 ? 100.0 : 0.0);
+
+        // 30 days ago snapshot
+        $snap30 = end($snapshots);
+        $collected30 = (float)$snap30['total_collected'];
+        $net30 = $collectedLatest - $collected30;
+        $pct30 = $collected30 > 0 ? round(($net30 / $collected30) * 100, 2) : ($collectedLatest > 0 ? 100.0 : 0.0);
+
+        $trend = 'neutral';
+        if ($net7 > 0) $trend = 'up';
+        elseif ($net7 < 0) $trend = 'down';
+
+        return [
+            'total_days_tracked' => $totalSnapshots,
+            'net_change_7d' => $net7,
+            'pct_change_7d' => $pct7,
+            'net_change_30d' => $net30,
+            'pct_change_30d' => $pct30,
+            'trend' => $trend,
+            'latest_snapshot' => $latest,
+        ];
+    }
+
+    /**
+     * Automation trigger: Automatically runs when time is >= 23:00 GMT+7 or if today has no snapshot
+     */
+    public function autoTriggerDailySnapshot(): void
+    {
+        try {
+            $today = date('Y-m-d');
+            $currentHour = (int)date('H'); // 0-23 in GMT+7 (Asia/Jakarta)
+
+            // If it is 23:00 or later, ensure today's snapshot is saved
+            if ($currentHour >= 23) {
+                $stmt = $this->db->prepare("SELECT COUNT(*) as cnt FROM savings_daily_snapshots WHERE snapshot_date = :today");
+                $stmt->bindValue(':today', $today);
+                $stmt->execute();
+                $res = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ((int)($res['cnt'] ?? 0) === 0) {
+                    $this->captureAllGoalsSnapshot($today);
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[SavingsModel] autoTriggerDailySnapshot warning: ' . $e->getMessage());
         }
     }
 }

@@ -76,6 +76,9 @@ $router->post('/api/savings/goals/{id}/delete', 'SavingsController@apiDeleteGoal
 $router->post('/api/savings/allocations', 'SavingsController@apiSaveAllocation');
 $router->post('/api/savings/allocations/{id}/delete', 'SavingsController@apiDeleteAllocation');
 $router->post('/api/savings/mutations', 'SavingsController@apiRecordMutation');
+$router->get('/api/savings/goals/{id}/history', 'SavingsController@apiGetGoalHistory');
+$router->post('/api/savings/goals/{id}/snapshot', 'SavingsController@apiCaptureGoalSnapshot');
+$router->post('/api/savings/snapshots/capture-all', 'SavingsController@apiCaptureAllSnapshots');
 
 // ============================================
 // PPOB / Produk Digital (Digiflazz)
