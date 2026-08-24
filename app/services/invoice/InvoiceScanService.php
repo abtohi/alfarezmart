@@ -629,16 +629,14 @@ class InvoiceScanService
 
         set_time_limit(180);
 
-        // HIGH-PRECISION VISION MODEL STRATEGY:
-        // 1. If user selected a specific model, try it first.
-        // 2. Prioritize 'openrouter/auto' which routes to state-of-the-art vision models (GPT-5/Gemini) reliably.
-        // 3. Fallback to confirmed active multimodal vision models.
+        // HIGH-PRECISION & ULTRA-FAST VISION MODEL STRATEGY:
+        // 1. google/gemini-2.5-flash: Ultra fast (~3-5s), native high-res multimodal OCR, top precision.
+        // 2. openrouter/auto: Auto-routes to best available vision model.
+        // 3. qwen/qwen-2.5-vl-72b-instruct: Deep vision specialist fallback.
         $DEFAULT_VISION_MODELS = [
+            'google/gemini-2.5-flash',
             'openrouter/auto',
-            'google/gemma-4-31b-it:free',
-            'google/gemma-4-26b-a4b-it:free',
-            'nvidia/nemotron-nano-12b-v2-vl:free',
-            'meta-llama/llama-3.2-11b-vision-instruct:free',
+            'qwen/qwen-2.5-vl-72b-instruct',
         ];
 
         if (empty($model) || in_array($model, ['openrouter/auto', 'auto', 'openrouter/free'])) {
@@ -658,7 +656,7 @@ class InvoiceScanService
         $noEndpointCount  = 0;
 
         foreach ($modelsToTry as $tryModel) {
-            set_time_limit(60);
+            set_time_limit(40);
             error_log("SCAN_AI_TRACE: Attempting OpenRouter vision model: {$tryModel}");
             $requestCount++;
 
@@ -672,7 +670,7 @@ class InvoiceScanService
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => 3000,
+                'max_tokens'  => 3500,
             ];
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
@@ -686,9 +684,9 @@ class InvoiceScanService
                 'X-Title: AlfarezMart Invoice Scanner',
             ]);
 
-            // 45s timeout per model attempt: allows complete generation of dense multi-line invoice tables
-            curl_setopt($ch, CURLOPT_TIMEOUT, 45);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+            // 25s timeout per model attempt: fast failover to prevent gateway 504 / connection timeout
+            curl_setopt($ch, CURLOPT_TIMEOUT, 25);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);
@@ -847,10 +845,16 @@ class InvoiceScanService
 
         foreach ($items as $item) {
             $formatted = [
+                'name'            => $item['product_name'] ?? $item['name'] ?? '',
+                'raw_name'        => $item['name'] ?? '',
                 'original_name'   => $item['name'] ?? '',
+                'supplier_invoice_name' => $item['supplier_invoice_name'] ?? $item['name'] ?? '',
                 'supplier_code'   => $item['supplier_code'] ?? '',
+                'supplier_product_code' => $item['supplier_code'] ?? '',
                 'qty'             => $item['qty'] ?? 1,
+                'quantity'        => $item['qty'] ?? 1,
                 'unit_price'      => $item['unit_price'] ?? 0,
+                'buy_price'       => $item['unit_price'] ?? 0,
                 'total_price'     => $item['total_price'] ?? 0,
                 'unit'            => $item['unit'] ?? '',
                 'is_matched'      => $item['is_matched'] ?? false,
@@ -858,6 +862,7 @@ class InvoiceScanService
                 'product_name'    => $item['product_name'] ?? null,
                 'match_score'     => $item['match_score'] ?? 0,
                 'packaging_level' => $item['matched_packaging_level'] ?? 1,
+                'level'           => $item['matched_packaging_level'] ?? 1,
                 'confidence'      => $item['confidence']['final'] ?? ($item['match_score'] ?? 0),
                 'match_strategy'  => $item['match_strategy'] ?? 'none',
                 'product_data'    => $item['product_data'] ?? null,
