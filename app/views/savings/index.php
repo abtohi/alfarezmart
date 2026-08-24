@@ -924,6 +924,99 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     border-color: var(--danger);
     background: rgba(239,68,68,0.12);
 }
+
+/* Ultra-Modern Custom Toasts & Notification Center */
+.savings-toast-container {
+    position: fixed;
+    top: 24px;
+    right: 20px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    max-width: 90vw;
+    width: 380px;
+}
+
+.savings-toast-item {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    pointer-events: auto;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    animation: savingsToastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.savings-toast-item.toast-leave {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.95);
+}
+
+.savings-toast-icon-box {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
+.savings-toast-content {
+    min-width: 0;
+    flex: 1;
+}
+
+.savings-toast-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+    line-height: 1.25;
+}
+
+.savings-toast-msg {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.35;
+}
+
+.savings-toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    transform-origin: left;
+    animation: savingsToastProgress 3s linear forwards;
+}
+
+@keyframes savingsToastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-24px) scale(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes savingsToastProgress {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+}
 </style>
 
 <div class="page-section savings-container">
@@ -1691,6 +1784,38 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 </div>
 
 <!-- ======================================================== -->
+<!-- MODAL 6: CUSTOM CONFIRMATION MODAL                      -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modalSavingsConfirm" tabindex="-1" aria-hidden="true" style="z-index: 100000;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 400px;">
+        <div class="modal-content modal-content-custom" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <div class="modal-body" style="padding: 24px 20px 18px 20px; text-align: center;">
+                <div id="confirmModalIconBox" style="width: 54px; height: 54px; border-radius: 50%; background: rgba(239,68,68,0.15); color: #ef4444; display: flex; align-items: center; justify-content: center; font-size: 1.65rem; margin: 0 auto 14px;">
+                    <i id="confirmModalIcon" class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <h5 id="confirmModalTitle" style="font-weight: 800; font-size: 1.1rem; margin: 0 0 6px 0; color: var(--text-primary);">
+                    Konfirmasi Tindakan
+                </h5>
+                <p id="confirmModalText" style="font-size: 12px; color: var(--text-muted); margin: 0 0 20px 0; line-height: 1.45;">
+                    Apakah Anda yakin ingin melanjutkan tindakan ini?
+                </p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button type="button" class="btn-primary-custom" data-bs-dismiss="modal" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 9px 16px; border-radius: var(--radius-md); font-size: 12px; font-weight: 700;">
+                        Batal
+                    </button>
+                    <button type="button" id="confirmModalActionBtn" class="btn-primary-custom" style="background: var(--danger); color: #ffffff; border: none; padding: 9px 16px; border-radius: var(--radius-md); font-size: 12px; font-weight: 700; box-shadow: 0 4px 12px rgba(239,68,68,0.3);">
+                        Ya, Lanjutkan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Toast Container -->
+<div id="savingsToastContainer" class="savings-toast-container"></div>
+
+<!-- ======================================================== -->
 <!-- JAVASCRIPT LOGIC & CUSTOM COMPONENT CONTROLLERS         -->
 <!-- ======================================================== -->
 <script>
@@ -1807,6 +1932,95 @@ function formatCurrencyInput(el) {
 
 function getCsrfToken() {
     return document.getElementById('csrfToken')?.value || '';
+}
+
+// ----------------------------------------------------
+// ULTRA-MODERN CUSTOM NOTIFICATIONS & DIALOGS
+// ----------------------------------------------------
+function showSavingsToast(title, message, type = 'success', duration = 3500) {
+    const container = document.getElementById('savingsToastContainer');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'savings-toast-item';
+
+    let icon = 'bi-check-circle-fill';
+    let iconBg = 'rgba(16,185,129,0.15)';
+    let iconColor = '#10b981';
+    let progressBg = '#10b981';
+
+    if (type === 'error') {
+        icon = 'bi-x-circle-fill';
+        iconBg = 'rgba(239,68,68,0.15)';
+        iconColor = '#ef4444';
+        progressBg = '#ef4444';
+    } else if (type === 'warning') {
+        icon = 'bi-exclamation-triangle-fill';
+        iconBg = 'rgba(245,158,11,0.15)';
+        iconColor = '#f59e0b';
+        progressBg = '#f59e0b';
+    } else if (type === 'info') {
+        icon = 'bi-info-circle-fill';
+        iconBg = 'rgba(99,102,241,0.15)';
+        iconColor = '#818cf8';
+        progressBg = '#818cf8';
+    } else if (type === 'camera') {
+        icon = 'bi-camera-fill';
+        iconBg = 'rgba(16,185,129,0.2)';
+        iconColor = '#10b981';
+        progressBg = 'linear-gradient(90deg, #10b981, #6366f1)';
+    }
+
+    toast.innerHTML = `
+        <div class="savings-toast-icon-box" style="background:${iconBg};color:${iconColor};">
+            <i class="bi ${icon}"></i>
+        </div>
+        <div class="savings-toast-content">
+            <div class="savings-toast-title">${escapeHtml(title)}</div>
+            <div class="savings-toast-msg">${escapeHtml(message)}</div>
+        </div>
+        <div class="savings-toast-progress" style="background:${progressBg};animation-duration:${duration}ms;"></div>
+    `;
+
+    container.appendChild(toast);
+
+    const timer = setTimeout(() => {
+        toast.classList.add('toast-leave');
+        setTimeout(() => toast.remove(), 300);
+    }, duration);
+
+    toast.addEventListener('click', () => {
+        clearTimeout(timer);
+        toast.classList.add('toast-leave');
+        setTimeout(() => toast.remove(), 300);
+    });
+}
+
+let pendingSavingsConfirmAction = null;
+function showSavingsConfirm({ title, text, icon = 'bi-trash-fill', iconColor = '#ef4444', iconBg = 'rgba(239,68,68,0.15)', confirmText = 'Ya, Hapus', confirmBtnColor = 'var(--danger)', onConfirm }) {
+    document.getElementById('confirmModalTitle').textContent = title || 'Konfirmasi Tindakan';
+    document.getElementById('confirmModalText').textContent = text || 'Apakah Anda yakin ingin melanjutkan?';
+    
+    const iconBox = document.getElementById('confirmModalIconBox');
+    iconBox.style.background = iconBg;
+    iconBox.style.color = iconColor;
+    document.getElementById('confirmModalIcon').className = `bi ${icon}`;
+
+    const actBtn = document.getElementById('confirmModalActionBtn');
+    actBtn.textContent = confirmText;
+    actBtn.style.background = confirmBtnColor;
+
+    pendingSavingsConfirmAction = onConfirm;
+    actBtn.onclick = () => {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modalSavingsConfirm'));
+        if (modal) modal.hide();
+        if (typeof pendingSavingsConfirmAction === 'function') {
+            pendingSavingsConfirmAction();
+        }
+    };
+
+    const modal = new bootstrap.Modal(document.getElementById('modalSavingsConfirm'));
+    modal.show();
 }
 
 // ----------------------------------------------------
@@ -2254,7 +2468,7 @@ async function openGoalDetail(goalId, initialTab = 'allocations') {
         const res = await fetch(`<?= BASE_URL ?>api/savings/goals/${goalId}`);
         const json = await res.json();
         if (!json.success || !json.data) {
-            alert(json.error || 'Gagal memuat detail goal');
+            showSavingsToast('Gagal Memuat Detail', json.error || 'Goal tidak ditemukan', 'error');
             return;
         }
 
@@ -2274,7 +2488,7 @@ async function openGoalDetail(goalId, initialTab = 'allocations') {
         modal.show();
     } catch (e) {
         console.error(e);
-        alert('Terjadi kesalahan saat memuat detail.');
+        showSavingsToast('Kesalahan Jaringan', 'Terjadi kesalahan saat memuat detail goal.', 'error');
     }
 }
 
@@ -2361,6 +2575,7 @@ async function loadGoalHistory(goalId) {
         if (!json.success || !json.data) {
             analyticsBox.innerHTML = '<div style="text-align:center;color:var(--danger);font-size:11px;">Gagal memuat riwayat progress.</div>';
             timelineBox.innerHTML = '';
+            showSavingsToast('Gagal Riwayat', json.error || 'Gagal memuat riwayat snapshot.', 'error');
             return;
         }
 
@@ -2369,6 +2584,7 @@ async function loadGoalHistory(goalId) {
         console.error(e);
         analyticsBox.innerHTML = '<div style="text-align:center;color:var(--danger);font-size:11px;">Koneksi terputus saat memuat history.</div>';
         timelineBox.innerHTML = '';
+        showSavingsToast('Koneksi Terputus', 'Gagal menghubungi server.', 'error');
     }
 }
 
@@ -2533,13 +2749,14 @@ async function captureGoalSnapshotManual() {
         });
         const json = await res.json();
         if (json.success) {
+            showSavingsToast('Snapshot Tersimpan!', `Snapshot progress hari ini untuk "${activeGoal.name}" berhasil dicapture.`, 'camera');
             loadGoalHistory(activeGoal.id);
         } else {
-            alert(json.error || 'Gagal mengambil snapshot');
+            showSavingsToast('Gagal Snapshot', json.error || 'Gagal mengambil snapshot', 'error');
         }
     } catch (e) {
         console.error(e);
-        alert('Terjadi kesalahan koneksi.');
+        showSavingsToast('Koneksi Terputus', 'Terjadi kesalahan koneksi server.', 'error');
     }
 }
 
@@ -2763,7 +2980,7 @@ async function submitGoalForm(e) {
     };
 
     if (payload.target_amount <= 0) {
-        alert('Nominal target harus lebih dari 0');
+        showSavingsToast('Validasi Nominal', 'Nominal target harus lebih besar dari 0', 'warning');
         return;
     }
 
@@ -2783,6 +3000,7 @@ async function submitGoalForm(e) {
         if (json.success) {
             const formModal = bootstrap.Modal.getInstance(document.getElementById('modalGoalForm'));
             if (formModal) formModal.hide();
+            showSavingsToast('Goal Disimpan!', isEdit ? 'Target tabungan berhasil diperbarui' : 'Target tabungan baru berhasil ditambahkan', 'success');
             await loadGoals();
             await loadSummary();
 
@@ -2790,11 +3008,11 @@ async function submitGoalForm(e) {
                 await openGoalDetail(goalId);
             }
         } else {
-            alert(json.error || 'Gagal menyimpan goal.');
+            showSavingsToast('Gagal Menyimpan Goal', json.error || 'Gagal menyimpan target.', 'error');
         }
     } catch (err) {
         console.error(err);
-        alert('Terjadi kesalahan jaringan.');
+        showSavingsToast('Koneksi Terputus', 'Terjadi kesalahan jaringan.', 'error');
     } finally {
         btn.disabled = false;
         btn.textContent = isEdit ? 'Perbarui Goal' : 'Simpan Goal';
@@ -2802,29 +3020,34 @@ async function submitGoalForm(e) {
 }
 
 async function confirmDeleteGoal(goalId, name) {
-    if (!confirm(`Yakin ingin menghapus target "${name}"?\nSeluruh pos alokasi uang dan riwayat mutasi target ini akan ikut terhapus.`)) {
-        return;
-    }
-
-    try {
-        const res = await fetch(`<?= BASE_URL ?>api/savings/goals/${goalId}/delete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken() },
-            body: JSON.stringify({ csrf_token: getCsrfToken() })
-        });
-        const json = await res.json();
-        if (json.success) {
-            const detailModal = bootstrap.Modal.getInstance(document.getElementById('modalGoalDetail'));
-            if (detailModal) detailModal.hide();
-            await loadGoals();
-            await loadSummary();
-        } else {
-            alert(json.error || 'Gagal menghapus goal');
+    showSavingsConfirm({
+        title: 'Hapus Target Tabungan?',
+        text: `Yakin ingin menghapus target "${name}"? Seluruh pos alokasi uang dan riwayat mutasi target ini akan ikut terhapus secara permanen.`,
+        icon: 'bi-trash-fill',
+        confirmText: 'Ya, Hapus Target',
+        onConfirm: async () => {
+            try {
+                const res = await fetch(`<?= BASE_URL ?>api/savings/goals/${goalId}/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken() },
+                    body: JSON.stringify({ csrf_token: getCsrfToken() })
+                });
+                const json = await res.json();
+                if (json.success) {
+                    const detailModal = bootstrap.Modal.getInstance(document.getElementById('modalGoalDetail'));
+                    if (detailModal) detailModal.hide();
+                    showSavingsToast('Target Dihapus', `Target tabungan "${name}" berhasil dihapus.`, 'success');
+                    await loadGoals();
+                    await loadSummary();
+                } else {
+                    showSavingsToast('Gagal Menghapus', json.error || 'Gagal menghapus goal', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                showSavingsToast('Koneksi Terputus', 'Terjadi kesalahan jaringan.', 'error');
+            }
         }
-    } catch (e) {
-        console.error(e);
-        alert('Terjadi kesalahan.');
-    }
+    });
 }
 
 // ----------------------------------------------------
@@ -2906,6 +3129,7 @@ async function submitAllocationForm(e) {
         if (json.success) {
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalAllocationForm'));
             if (modal) modal.hide();
+            showSavingsToast('Pos Disimpan!', allocId ? 'Pos penempatan uang berhasil diperbarui' : 'Pos penempatan uang baru berhasil ditambahkan', 'success');
             await loadGoals();
             await loadSummary();
 
@@ -2914,11 +3138,11 @@ async function submitAllocationForm(e) {
                 renderGoalDetailModal();
             }
         } else {
-            alert(json.error || 'Gagal menyimpan pos alokasi.');
+            showSavingsToast('Gagal Menyimpan Pos', json.error || 'Gagal menyimpan pos alokasi.', 'error');
         }
     } catch (err) {
         console.error(err);
-        alert('Terjadi kesalahan jaringan.');
+        showSavingsToast('Koneksi Terputus', 'Terjadi kesalahan jaringan.', 'error');
     } finally {
         btn.disabled = false;
         btn.textContent = allocId ? 'Perbarui Pos' : 'Simpan Pos';
@@ -2926,31 +3150,36 @@ async function submitAllocationForm(e) {
 }
 
 async function confirmDeleteAllocation(allocId, name) {
-    if (!confirm(`Hapus pos alokasi "${name}"? Saldo di pos ini tidak lagi terhitung dalam goal.`)) {
-        return;
-    }
-
-    try {
-        const res = await fetch(`<?= BASE_URL ?>api/savings/allocations/${allocId}/delete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken() },
-            body: JSON.stringify({ csrf_token: getCsrfToken() })
-        });
-        const json = await res.json();
-        if (json.success) {
-            await loadGoals();
-            await loadSummary();
-            if (json.data) {
-                activeGoal = json.data;
-                renderGoalDetailModal();
+    showSavingsConfirm({
+        title: 'Hapus Pos Alokasi?',
+        text: `Hapus pos penempatan "${name}"? Saldo di pos ini tidak lagi terhitung dalam target tabungan.`,
+        icon: 'bi-trash-fill',
+        confirmText: 'Ya, Hapus Pos',
+        onConfirm: async () => {
+            try {
+                const res = await fetch(`<?= BASE_URL ?>api/savings/allocations/${allocId}/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': getCsrfToken() },
+                    body: JSON.stringify({ csrf_token: getCsrfToken() })
+                });
+                const json = await res.json();
+                if (json.success) {
+                    showSavingsToast('Pos Dihapus', `Pos penempatan "${name}" berhasil dihapus.`, 'success');
+                    await loadGoals();
+                    await loadSummary();
+                    if (json.data) {
+                        activeGoal = json.data;
+                        renderGoalDetailModal();
+                    }
+                } else {
+                    showSavingsToast('Gagal Menghapus Pos', json.error || 'Gagal menghapus pos', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                showSavingsToast('Koneksi Terputus', 'Terjadi kesalahan jaringan.', 'error');
             }
-        } else {
-            alert(json.error || 'Gagal menghapus pos');
         }
-    } catch (e) {
-        console.error(e);
-        alert('Terjadi kesalahan.');
-    }
+    });
 }
 
 // ----------------------------------------------------
@@ -2986,7 +3215,7 @@ async function submitMutationForm(e) {
     };
 
     if (payload.amount <= 0) {
-        alert('Nominal mutasi harus lebih besar dari 0');
+        showSavingsToast('Validasi Mutasi', 'Nominal mutasi harus lebih besar dari 0', 'warning');
         return;
     }
 
@@ -3005,6 +3234,7 @@ async function submitMutationForm(e) {
         if (json.success) {
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalMutationForm'));
             if (modal) modal.hide();
+            showSavingsToast('Mutasi Berhasil Dicatat!', type === 'deposit' ? 'Setoran dana berhasil ditambahkan' : 'Penarikan dana berhasil dicatat', 'success');
             await loadGoals();
             await loadSummary();
 
@@ -3013,11 +3243,11 @@ async function submitMutationForm(e) {
                 renderGoalDetailModal();
             }
         } else {
-            alert(json.error || 'Gagal mencatat mutasi.');
+            showSavingsToast('Gagal Mencatat Mutasi', json.error || 'Gagal mencatat mutasi.', 'error');
         }
     } catch (err) {
         console.error(err);
-        alert('Terjadi kesalahan jaringan.');
+        showSavingsToast('Koneksi Terputus', 'Terjadi kesalahan jaringan.', 'error');
     } finally {
         btn.disabled = false;
         btn.textContent = 'Simpan Mutasi';
@@ -3042,20 +3272,12 @@ async function captureAllSnapshotsManual() {
         const json = await res.json();
         if (json.success) {
             const count = Array.isArray(json.data) ? json.data.length : 0;
-            // Success alert / feedback
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Snapshot Tersimpan!',
-                    text: `History progress hari ini untuk ${count} target tabungan berhasil dicapture & dibackup ke database.`,
-                    timer: 2500,
-                    showConfirmButton: false,
-                    background: 'var(--surface-1)',
-                    color: 'var(--text-primary)'
-                });
-            } else {
-                alert(`Snapshot Tersimpan! History hari ini untuk ${count} target tabungan berhasil dicapture.`);
-            }
+            showSavingsToast(
+                'Snapshot Berhasil Dicapture!',
+                `History progress hari ini untuk ${count} target tabungan berhasil dicapture & dibackup ke database.`,
+                'camera',
+                4500
+            );
 
             // Reload current open modal if active
             if (activeGoal) {
@@ -3067,11 +3289,11 @@ async function captureAllSnapshotsManual() {
                 loadGlobalSnapshots();
             }
         } else {
-            alert(json.error || 'Gagal menyimpan snapshot');
+            showSavingsToast('Gagal Menyimpan Snapshot', json.error || 'Gagal menyimpan snapshot', 'error');
         }
     } catch (e) {
         console.error(e);
-        alert('Terjadi kesalahan jaringan.');
+        showSavingsToast('Koneksi Terputus', 'Terjadi kesalahan jaringan.', 'error');
     }
 }
 
