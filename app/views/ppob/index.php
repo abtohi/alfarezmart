@@ -1319,17 +1319,106 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     }
 }
 
-/* Inquriy Result Box */
+/* Inquriy Result Box - Modern Glassmorphism */
 .inquiry-box {
     background: var(--surface-2);
-    border: 1px dashed var(--border-color);
-    border-radius: 12px;
-    padding: 20px;
-    margin-top: 15px;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    border-radius: 16px;
+    padding: 22px;
+    margin-top: 18px;
     display: none;
+    position: relative;
+    box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.1);
+    animation: customDropdownPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.inq-label { font-size: 12px; color: var(--text-muted); }
-.inq-value { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; }
+.inq-label { 
+    font-size: 11px; 
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted); 
+    margin-bottom: 3px;
+}
+.inq-value { 
+    font-size: 16px; 
+    font-weight: 800; 
+    color: var(--text-primary); 
+    margin-bottom: 12px; 
+}
+
+/* Custom Searchable Dropdown Styles */
+.custom-postpaid-dropdown-wrapper {
+    position: relative;
+    width: 100%;
+}
+.custom-dropdown-trigger {
+    border: 1px solid var(--border-color) !important;
+    border-radius: 14px !important;
+    background: var(--surface-2) !important;
+    color: var(--text-primary) !important;
+    padding: 12px 16px !important;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+}
+.custom-dropdown-trigger:hover, .custom-dropdown-trigger:focus {
+    border-color: var(--primary) !important;
+    background: var(--surface-1) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18) !important;
+}
+.custom-dropdown-trigger.open {
+    border-color: var(--primary) !important;
+    border-radius: 14px 14px 0 0 !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18) !important;
+}
+.custom-dropdown-trigger.open .custom-dropdown-chevron {
+    transform: rotate(180deg);
+    color: var(--primary) !important;
+}
+.custom-dropdown-menu-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 1060;
+    border-radius: 16px;
+    background: var(--surface-1, #ffffff);
+    border: 1px solid var(--border-color, rgba(0,0,0,0.1));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    animation: customDropdownPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.custom-dropdown-option-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    margin-bottom: 4px;
+    user-select: none;
+    border: 1px solid transparent;
+}
+.custom-dropdown-option-item:hover {
+    background: var(--surface-2, #f1f5f9);
+    border-color: var(--border-color);
+    transform: translateX(4px);
+}
+.custom-dropdown-option-item.active {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: rgba(99, 102, 241, 0.3);
+}
+.custom-dropdown-option-item.active .custom-option-title {
+    color: var(--primary) !important;
+    font-weight: 800 !important;
+}
+@keyframes customDropdownPop {
+    from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
 
 /* Custom Modal Animations & Styling */
 .modal-content {
@@ -1621,13 +1710,44 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
                 <input type="hidden" id="trx-type" value="prepaid">
                 <input type="hidden" id="trx-category" value="">
 
-                <!-- Postpaid Provider Selector (For Multifinance, PDAM, HP Pasca, TV, etc) -->
-                <div id="postpaid-provider-container" class="mb-3" style="display:none;">
-                    <label class="form-label fw-bold small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;" id="postpaid-provider-label">Pilih Penyedia / Perusahaan</label>
-                    <div style="border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-2); overflow: hidden;">
-                        <select class="form-select border-0 bg-transparent shadow-none fw-bold" id="postpaid-provider-select" onchange="onPostpaidProviderChange(this.value)" style="font-size: 14px; padding: 12px 16px; color: var(--text-primary); cursor: pointer;">
-                            <option value="">-- Pilih Penyedia Layanan --</option>
-                        </select>
+                <!-- Postpaid Provider Selector (Custom Searchable Dropdown) -->
+                <div id="postpaid-provider-container" class="mb-3 position-relative" style="display:none;">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <label class="form-label fw-bold small text-muted text-uppercase mb-0" style="letter-spacing: 0.5px; font-size: 11px;" id="postpaid-provider-label">Pilih Penyedia / Perusahaan</label>
+                        <span class="badge rounded-pill bg-primary bg-opacity-10 text-primary px-2 py-1" id="postpaid-provider-count" style="font-size: 10px; display:none;">0 Layanan</span>
+                    </div>
+                    
+                    <!-- Custom Dropdown Trigger Button -->
+                    <div class="custom-postpaid-dropdown-wrapper position-relative">
+                        <button type="button" class="btn w-100 d-flex align-items-center justify-content-between custom-dropdown-trigger" id="postpaid-dropdown-trigger" onclick="togglePostpaidDropdown(event)">
+                            <div class="d-flex align-items-center gap-3 overflow-hidden text-start">
+                                <div class="custom-dropdown-avatar rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" id="postpaid-selected-icon" style="width: 38px; height: 38px; background: linear-gradient(135deg, var(--primary), #818cf8); color: #fff; font-weight: 700; font-size: 14px; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.25);">
+                                    <i class="bi bi-building"></i>
+                                </div>
+                                <div class="overflow-hidden">
+                                    <div class="fw-bold text-truncate" id="postpaid-selected-title" style="font-size: 14px; color: var(--text-primary);">Pilih Penyedia Layanan...</div>
+                                    <div class="small text-muted text-truncate" id="postpaid-selected-subtitle" style="font-size: 11px;">Klik untuk memilih dari daftar</div>
+                                </div>
+                            </div>
+                            <i class="bi bi-chevron-down ms-2 fs-6 text-muted custom-dropdown-chevron" id="postpaid-dropdown-chevron" style="transition: transform 0.25s ease;"></i>
+                        </button>
+
+                        <!-- Custom Dropdown Menu Panel with Live Search -->
+                        <div class="custom-dropdown-menu-panel shadow-lg" id="postpaid-dropdown-menu" style="display: none;">
+                            <!-- Search Header -->
+                            <div class="p-3 border-bottom" style="border-color: var(--border-color) !important; background: var(--surface-2, #f8fafc);">
+                                <div class="d-flex align-items-center px-3 py-2" style="border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-1); box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                                    <i class="bi bi-search text-muted me-2"></i>
+                                    <input type="text" class="form-control border-0 bg-transparent shadow-none p-0" id="postpaid-search-input" placeholder="Cari nama leasing, PDAM, provider..." style="font-size: 13px; color: var(--text-primary);" oninput="filterPostpaidProviders(this.value)" autocomplete="off">
+                                    <button type="button" class="btn btn-sm text-muted p-0 ms-2" onclick="clearPostpaidSearch()" id="postpaid-clear-search" style="display:none;"><i class="bi bi-x-circle-fill"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Options List Container -->
+                            <div class="custom-dropdown-options-list p-2" id="postpaid-options-list" style="max-height: 260px; overflow-y: auto; scrollbar-width: thin;">
+                                <!-- Dynamically generated list items injected here -->
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -1966,16 +2086,21 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 </div>
 
 <!-- Custom Confirm Modal -->
-<div class="modal fade" id="confirmModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content" style="border-radius:20px;border:none;background:var(--surface-1);">
+<div class="modal fade" id="confirmModal" tabindex="-1" style="backdrop-filter: blur(8px);">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content" style="border-radius: 24px; border: 1px solid var(--border-color); background: var(--surface-1); box-shadow: 0 25px 60px rgba(0,0,0,0.35); overflow: hidden;">
             <div class="modal-body p-4 text-center">
-                <div class="mb-3"><i class="bi bi-question-circle text-primary" style="font-size:50px;"></i></div>
-                <h5 class="fw-bold mb-3" id="confirmTitle" style="color:var(--text-primary);">Konfirmasi</h5>
-                <p class="small mb-4" id="confirmMessage" style="color:var(--text-secondary);"></p>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-secondary flex-grow-1 rounded-pill" data-bs-dismiss="modal">Batal</button>
-                    <button class="btn btn-primary flex-grow-1 rounded-pill fw-bold" id="confirmBtnYes">Ya, Lanjutkan</button>
+                <div class="mb-3 d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 64px; height: 64px; background: rgba(99, 102, 241, 0.12); color: var(--primary);">
+                    <i class="bi bi-shield-check" style="font-size: 32px;"></i>
+                </div>
+                <h5 class="fw-bold mb-2" id="confirmTitle" style="color: var(--text-primary); font-size: 18px;">Konfirmasi Transaksi</h5>
+                <div class="text-start p-3 my-3 rounded-3" style="background: var(--surface-2); border: 1px solid var(--border-color); font-size: 13px; line-height: 1.6;" id="confirmMessage">
+                </div>
+                <div class="d-flex gap-2 mt-4">
+                    <button class="btn btn-secondary flex-grow-1 rounded-pill fw-bold py-2" data-bs-dismiss="modal" style="font-size: 14px;">Batal</button>
+                    <button class="btn btn-primary flex-grow-1 rounded-pill fw-bold py-2" id="confirmBtnYes" style="font-size: 14px; background: linear-gradient(135deg, var(--primary), #4f46e5); border: none; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
+                        <i class="bi bi-check-circle-fill me-1"></i> Ya, Lanjutkan
+                    </button>
                 </div>
             </div>
         </div>
@@ -2620,14 +2745,180 @@ async function fetchDepositHistory() {
     }
 }
 
-// Postpaid Provider Selection State
+// ─────────────────────────────────────────────────────────────
+// Postpaid Custom Searchable Dropdown Logic
+// ─────────────────────────────────────────────────────────────
 let selectedPostpaidSku = '';
+let postpaidProvidersData = [];
 
-function onPostpaidProviderChange(sku) {
+function togglePostpaidDropdown(event) {
+    if (event) event.stopPropagation();
+    const menu = document.getElementById('postpaid-dropdown-menu');
+    const trigger = document.getElementById('postpaid-dropdown-trigger');
+    if (!menu) return;
+    
+    const isOpen = menu.style.display === 'block';
+    if (isOpen) {
+        closePostpaidDropdown();
+    } else {
+        menu.style.display = 'block';
+        if (trigger) trigger.classList.add('open');
+        const searchInput = document.getElementById('postpaid-search-input');
+        if (searchInput) {
+            searchInput.value = '';
+            const clearBtn = document.getElementById('postpaid-clear-search');
+            if (clearBtn) clearBtn.style.display = 'none';
+            renderPostpaidDropdownList(postpaidProvidersData);
+            setTimeout(() => searchInput.focus(), 50);
+        }
+    }
+}
+
+function closePostpaidDropdown() {
+    const menu = document.getElementById('postpaid-dropdown-menu');
+    const trigger = document.getElementById('postpaid-dropdown-trigger');
+    if (menu) menu.style.display = 'none';
+    if (trigger) trigger.classList.remove('open');
+}
+
+// Close dropdown if user clicks outside
+document.addEventListener('click', function(e) {
+    const wrapper = document.querySelector('.custom-postpaid-dropdown-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+        closePostpaidDropdown();
+    }
+});
+
+function getProviderInitial(name) {
+    if (!name) return 'P';
+    const clean = name.replace(/^(PT\.?|CV\.?|PEMBAYARAN|ANGSURAN|TAGIHAN)\s+/i, '').trim();
+    const words = clean.split(/\s+/);
+    if (words.length >= 2) {
+        return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return clean.substring(0, 2).toUpperCase();
+}
+
+function getProviderColor(name) {
+    const colors = [
+        'linear-gradient(135deg, #4f46e5, #818cf8)',
+        'linear-gradient(135deg, #0284c7, #38bdf8)',
+        'linear-gradient(135deg, #059669, #34d399)',
+        'linear-gradient(135deg, #d97706, #fbbf24)',
+        'linear-gradient(135deg, #e11d48, #fb7185)',
+        'linear-gradient(135deg, #7c3aed, #a78bfa)',
+        'linear-gradient(135deg, #0d9488, #2dd4bf)',
+        'linear-gradient(135deg, #ea580c, #fb923c)'
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const idx = Math.abs(hash) % colors.length;
+    return colors[idx];
+}
+
+function renderPostpaidDropdownList(products) {
+    const list = document.getElementById('postpaid-options-list');
+    if (!list) return;
+    
+    if (!products || products.length === 0) {
+        list.innerHTML = `
+            <div class="text-center py-4 px-2">
+                <i class="bi bi-search text-muted fs-3 mb-2 d-block opacity-50"></i>
+                <div class="fw-bold small text-muted">Layanan tidak ditemukan</div>
+                <div class="text-muted" style="font-size:11px;">Coba kata kunci pencarian yang lain</div>
+            </div>
+        `;
+        return;
+    }
+
+    let html = '';
+    products.forEach(p => {
+        const isSelected = (p.buyer_sku_code === selectedPostpaidSku);
+        const activeClass = isSelected ? 'active' : '';
+        const initial = getProviderInitial(p.product_name);
+        const gradientBg = getProviderColor(p.product_name);
+        const checkIcon = isSelected 
+            ? '<i class="bi bi-check-circle-fill text-primary fs-5 ms-2 flex-shrink-0"></i>' 
+            : '<i class="bi bi-circle text-muted fs-6 ms-2 flex-shrink-0 opacity-25"></i>';
+        
+        const safeName = (p.product_name || '').replace(/'/g, "\\'");
+        const safeBrand = (p.brand || '').replace(/'/g, "\\'");
+        
+        html += `
+            <div class="custom-dropdown-option-item ${activeClass}" onclick="selectPostpaidProvider('${p.buyer_sku_code}', '${safeName}', '${safeBrand}')">
+                <div class="d-flex align-items-center gap-3 overflow-hidden">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px; background: ${gradientBg}; color: #fff; font-weight: 700; font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                        ${initial}
+                    </div>
+                    <div class="overflow-hidden">
+                        <div class="fw-bold text-truncate custom-option-title" style="font-size: 13.5px; color: var(--text-primary);">${p.product_name}</div>
+                        <div class="d-flex align-items-center gap-2 mt-1">
+                            <span class="badge bg-secondary bg-opacity-10 text-muted" style="font-size: 9.5px; font-family: monospace; padding: 2px 6px; border-radius: 4px;">${p.buyer_sku_code}</span>
+                            ${p.brand ? `<span class="text-muted" style="font-size: 11px;">&bull; ${p.brand}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                ${checkIcon}
+            </div>
+        `;
+    });
+    list.innerHTML = html;
+}
+
+function filterPostpaidProviders(query) {
+    const q = (query || '').trim().toLowerCase();
+    const clearBtn = document.getElementById('postpaid-clear-search');
+    if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+    
+    if (!q) {
+        renderPostpaidDropdownList(postpaidProvidersData);
+        return;
+    }
+    
+    const filtered = postpaidProvidersData.filter(p => {
+        const name = (p.product_name || '').toLowerCase();
+        const sku = (p.buyer_sku_code || '').toLowerCase();
+        const brand = (p.brand || '').toLowerCase();
+        return name.includes(q) || sku.includes(q) || brand.includes(q);
+    });
+    renderPostpaidDropdownList(filtered);
+}
+
+function clearPostpaidSearch() {
+    const searchInput = document.getElementById('postpaid-search-input');
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.focus();
+    }
+    const clearBtn = document.getElementById('postpaid-clear-search');
+    if (clearBtn) clearBtn.style.display = 'none';
+    renderPostpaidDropdownList(postpaidProvidersData);
+}
+
+function selectPostpaidProvider(sku, name, brand) {
     selectedPostpaidSku = sku;
+    
+    // Update trigger UI
+    const titleEl = document.getElementById('postpaid-selected-title');
+    const subTitleEl = document.getElementById('postpaid-selected-subtitle');
+    const iconEl = document.getElementById('postpaid-selected-icon');
+    
+    if (titleEl) titleEl.innerText = name;
+    if (subTitleEl) subTitleEl.innerText = `Kode: ${sku}` + (brand ? ` • ${brand}` : '');
+    if (iconEl) {
+        iconEl.innerHTML = getProviderInitial(name);
+        iconEl.style.background = getProviderColor(name);
+    }
+    
+    closePostpaidDropdown();
+    
     // Reset previous inquiry box if provider is changed
-    document.getElementById('inquiry-box').style.display = 'none';
-    document.getElementById('btn-pay-postpaid').style.display = 'none';
+    const inqBox = document.getElementById('inquiry-box');
+    if (inqBox) inqBox.style.display = 'none';
+    const payBtn = document.getElementById('btn-pay-postpaid');
+    if (payBtn) payBtn.style.display = 'none';
     selectedInqData = null;
 }
 
@@ -2642,6 +2933,7 @@ function openTrxModal(title, category, type) {
     currentType = type;
     selectedInqData = null;
     selectedPostpaidSku = '';
+    postpaidProvidersData = [];
 
     // Reset UI
     document.getElementById('inquiry-box').style.display = 'none';
@@ -2660,11 +2952,22 @@ function openTrxModal(title, category, type) {
     
     // Reset Postpaid Provider Container
     const postProvCont = document.getElementById('postpaid-provider-container');
-    const postProvSelect = document.getElementById('postpaid-provider-select');
+    const countBadge = document.getElementById('postpaid-provider-count');
     const postProvLabel = document.getElementById('postpaid-provider-label');
     const custNoLabel = document.getElementById('customer-no-label');
+    const titleEl = document.getElementById('postpaid-selected-title');
+    const subTitleEl = document.getElementById('postpaid-selected-subtitle');
+    const iconEl = document.getElementById('postpaid-selected-icon');
+    
     if (postProvCont) postProvCont.style.display = 'none';
-    if (postProvSelect) postProvSelect.innerHTML = '<option value="">-- Memuat Layanan... --</option>';
+    if (countBadge) countBadge.style.display = 'none';
+    if (titleEl) titleEl.innerText = 'Pilih Penyedia Layanan...';
+    if (subTitleEl) subTitleEl.innerText = 'Klik untuk memilih dari daftar';
+    if (iconEl) {
+        iconEl.innerHTML = '<i class="bi bi-building"></i>';
+        iconEl.style.background = 'linear-gradient(135deg, var(--primary), #818cf8)';
+    }
+    closePostpaidDropdown();
 
     if (type === 'postpaid') {
         // Tagihan Pasca: Set Label & Placeholder sesuai Kategori
@@ -2862,16 +3165,21 @@ async function loadProducts(category, type) {
                 }
             } else if (type === 'postpaid') {
                 // Postpaid products handling
+                postpaidProvidersData = data.data;
                 const postProvCont = document.getElementById('postpaid-provider-container');
-                const postProvSelect = document.getElementById('postpaid-provider-select');
+                const countBadge = document.getElementById('postpaid-provider-count');
+                
                 if (data.data.length > 1) {
                     if (postProvCont) postProvCont.style.display = 'block';
-                    if (postProvSelect) {
-                        postProvSelect.innerHTML = '<option value="">-- Pilih Penyedia Layanan --</option>' +
-                            data.data.map(p => `<option value="${p.buyer_sku_code}">${p.product_name}</option>`).join('');
-                        postProvSelect.value = data.data[0].buyer_sku_code;
-                        selectedPostpaidSku = data.data[0].buyer_sku_code;
+                    if (countBadge) {
+                        countBadge.innerText = `${data.data.length} Layanan`;
+                        countBadge.style.display = 'inline-block';
                     }
+                    
+                    // Render list and select first item
+                    renderPostpaidDropdownList(data.data);
+                    const first = data.data[0];
+                    selectPostpaidProvider(first.buyer_sku_code, first.product_name, first.brand || '');
                 } else if (data.data.length === 1) {
                     if (postProvCont) postProvCont.style.display = 'none';
                     selectedPostpaidSku = data.data[0].buyer_sku_code;
@@ -2886,6 +3194,7 @@ async function loadProducts(category, type) {
                 const postProvCont = document.getElementById('postpaid-provider-container');
                 if (postProvCont) postProvCont.style.display = 'none';
                 selectedPostpaidSku = '';
+                postpaidProvidersData = [];
             }
         }
     } catch(e) { console.error(e); }
@@ -4792,13 +5101,44 @@ async function confirmPurchase(product) {
 async function payPostpaid() {
     if(!selectedInqData) return;
     
-    showConfirm('Bayar Tagihan', `Yakin membayar tagihan sebesar <b>${formatRp(selectedInqData.selling_price)}</b>?`, () => {
+    const prodName = document.getElementById('postpaid-selected-title')?.innerText || (currentCategory ? currentCategory.toUpperCase() : 'Tagihan Pascabayar');
+    const custNo = selectedInqData.customer_no || document.getElementById('customer-no').value;
+    const custName = selectedInqData.customer_name || 'Pelanggan';
+    const totalPay = selectedInqData.selling_price || selectedInqData.price || 0;
+    const detailInfo = document.getElementById('inq-detail')?.innerText || '-';
+    
+    const confirmHtml = `
+        <div class="d-flex flex-column gap-2">
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <span class="text-muted small">Layanan / Produk</span>
+                <span class="fw-bold text-primary text-end small">${prodName}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <span class="text-muted small">No. Pelanggan / Kontrak</span>
+                <span class="fw-bold text-end small" style="font-family: monospace;">${custNo}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <span class="text-muted small">Nama Pelanggan</span>
+                <span class="fw-bold text-end small text-truncate" style="max-width: 220px;">${custName}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-start py-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <span class="text-muted small">Rincian Tagihan</span>
+                <span class="fw-bold text-end small" style="font-size: 11px; line-height: 1.4; max-width: 230px;">${detailInfo}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center pt-2 mt-1">
+                <span class="fw-bold" style="font-size: 13.5px;">Total Pembayaran</span>
+                <span class="fw-black text-success" style="font-size: 1.25rem;">${formatRp(totalPay)}</span>
+            </div>
+        </div>
+    `;
+    
+    showConfirm('Konfirmasi Pembayaran Tagihan', confirmHtml, () => {
         processTransaction({
             sku: selectedInqData.sku,
-            customer_no: selectedInqData.customer_no,
+            customer_no: custNo,
             ref_id: selectedInqData.ref_id, // Wajib dari inquiry
-            sell_price: selectedInqData.selling_price,
-            product_name: selectedInqData.customer_name
+            sell_price: totalPay,
+            product_name: selectedInqData.customer_name || prodName
         });
     });
 }
