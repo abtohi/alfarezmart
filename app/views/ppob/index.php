@@ -1368,7 +1368,7 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 }
 .custom-dropdown-trigger.open {
     border-color: var(--primary) !important;
-    border-radius: 14px 14px 0 0 !important;
+    border-radius: 14px !important;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18) !important;
 }
 .custom-dropdown-trigger.open .custom-dropdown-chevron {
@@ -1376,17 +1376,15 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     color: var(--primary) !important;
 }
 .custom-dropdown-menu-panel {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    right: 0;
-    z-index: 1060;
+    position: relative;
+    margin-top: 8px;
+    z-index: 10;
     border-radius: 16px;
     background: var(--surface-1, #ffffff);
     border: 1px solid var(--border-color, rgba(0,0,0,0.1));
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    box-shadow: 0 24px 50px -10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.2);
     overflow: hidden;
     animation: customDropdownPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
