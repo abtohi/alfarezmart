@@ -1620,9 +1620,20 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
             <div class="modal-body p-4">
                 <input type="hidden" id="trx-type" value="prepaid">
                 <input type="hidden" id="trx-category" value="">
-                                <!-- Input Section -->
+
+                <!-- Postpaid Provider Selector (For Multifinance, PDAM, HP Pasca, TV, etc) -->
+                <div id="postpaid-provider-container" class="mb-3" style="display:none;">
+                    <label class="form-label fw-bold small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;" id="postpaid-provider-label">Pilih Penyedia / Perusahaan</label>
+                    <div style="border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-2); overflow: hidden;">
+                        <select class="form-select border-0 bg-transparent shadow-none fw-bold" id="postpaid-provider-select" onchange="onPostpaidProviderChange(this.value)" style="font-size: 14px; padding: 12px 16px; color: var(--text-primary); cursor: pointer;">
+                            <option value="">-- Pilih Penyedia Layanan --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Input Section -->
                 <div class="mb-4">
-                    <label class="form-label fw-bold small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;">Nomor Tujuan / Pelanggan</label>
+                    <label class="form-label fw-bold small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;" id="customer-no-label">Nomor Tujuan / Pelanggan</label>
                     <div class="d-flex align-items-center w-100" style="border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-2); overflow: hidden; padding-right: 8px;">
                         <input type="text" class="form-control border-0 bg-transparent shadow-none flex-grow-1" id="customer-no" placeholder="Masukkan nomor..." style="font-size: 14px; padding: 14px 16px; min-width: 0; color: var(--text-primary);">
                         
@@ -2609,6 +2620,17 @@ async function fetchDepositHistory() {
     }
 }
 
+// Postpaid Provider Selection State
+let selectedPostpaidSku = '';
+
+function onPostpaidProviderChange(sku) {
+    selectedPostpaidSku = sku;
+    // Reset previous inquiry box if provider is changed
+    document.getElementById('inquiry-box').style.display = 'none';
+    document.getElementById('btn-pay-postpaid').style.display = 'none';
+    selectedInqData = null;
+}
+
 // 5. Open Transaction Modal
 function openTrxModal(title, category, type) {
     document.getElementById('trxModalTitle').innerText = title;
@@ -2619,6 +2641,7 @@ function openTrxModal(title, category, type) {
     currentCategory = category;
     currentType = type;
     selectedInqData = null;
+    selectedPostpaidSku = '';
 
     // Reset UI
     document.getElementById('inquiry-box').style.display = 'none';
@@ -2635,29 +2658,63 @@ function openTrxModal(title, category, type) {
     document.getElementById('product-list-container').style.display = 'block';
     document.getElementById('product-grid').innerHTML = '';
     
+    // Reset Postpaid Provider Container
+    const postProvCont = document.getElementById('postpaid-provider-container');
+    const postProvSelect = document.getElementById('postpaid-provider-select');
+    const postProvLabel = document.getElementById('postpaid-provider-label');
+    const custNoLabel = document.getElementById('customer-no-label');
+    if (postProvCont) postProvCont.style.display = 'none';
+    if (postProvSelect) postProvSelect.innerHTML = '<option value="">-- Memuat Layanan... --</option>';
+
     if (type === 'postpaid') {
-        // Tagihan Pasca: Harus Cek Dulu
-        document.getElementById('customer-no').placeholder = 'Masukkan ID Pelanggan';
+        // Tagihan Pasca: Set Label & Placeholder sesuai Kategori
+        if (category === 'multifinance') {
+            if (postProvLabel) postProvLabel.innerText = 'Pilih Perusahaan Leasing / Cicilan';
+            if (custNoLabel) custNoLabel.innerText = 'Nomor Kontrak / Pelanggan';
+            document.getElementById('customer-no').placeholder = 'Masukkan Nomor Kontrak...';
+        } else if (category === 'pdam') {
+            if (postProvLabel) postProvLabel.innerText = 'Pilih Wilayah / Penyedia PDAM';
+            if (custNoLabel) custNoLabel.innerText = 'Nomor Sambungan / Pelanggan';
+            document.getElementById('customer-no').placeholder = 'Masukkan Nomor Sambungan PDAM...';
+        } else if (category === 'hp') {
+            if (postProvLabel) postProvLabel.innerText = 'Pilih Operator Pascabayar';
+            if (custNoLabel) custNoLabel.innerText = 'Nomor HP Pascabayar';
+            document.getElementById('customer-no').placeholder = 'Contoh: 0811xxxx...';
+        } else if (category === 'tv') {
+            if (postProvLabel) postProvLabel.innerText = 'Pilih Provider Internet / TV';
+            if (custNoLabel) custNoLabel.innerText = 'Nomor Pelanggan Internet / TV';
+            document.getElementById('customer-no').placeholder = 'Masukkan ID Pelanggan...';
+        } else if (category === 'pln') {
+            if (custNoLabel) custNoLabel.innerText = 'ID Pelanggan PLN';
+            document.getElementById('customer-no').placeholder = 'Masukkan IDPEL PLN (53xxx...)';
+        } else if (category === 'bpjs') {
+            if (custNoLabel) custNoLabel.innerText = 'Nomor Kartu BPJS';
+            document.getElementById('customer-no').placeholder = 'Masukkan 13 Digit No BPJS';
+        } else {
+            if (custNoLabel) custNoLabel.innerText = 'ID Pelanggan';
+            document.getElementById('customer-no').placeholder = 'Masukkan ID Pelanggan';
+        }
+
         document.getElementById('btn-inquiry').style.display = 'block';
-        document.getElementById('product-list-container').style.display = 'none'; // Sembunyikan list produk
-        // Auto load products in background just to get SKU for inquiry
+        document.getElementById('btn-inquiry').innerText = 'Cek Tagihan';
+        document.getElementById('product-list-container').style.display = 'none'; // Sembunyikan list produk prabayar
+        // Auto load products in background to populate provider dropdown / SKU
         loadProducts(category, type); 
     } else if (category === 'pln') {
-        // PLN Prabayar: Opsional Cek Nama (Inquiry PLN)
+        if (custNoLabel) custNoLabel.innerText = 'Nomor Meter / IDPEL';
         document.getElementById('customer-no').placeholder = 'Masukkan Nomor Meter/IDPEL';
         document.getElementById('btn-inquiry').style.display = 'block';
         document.getElementById('btn-inquiry').innerText = 'Cek Nama';
-        // Auto load products to buy
         loadProducts(category, type);
     } else if (category === 'ewallet') {
+        if (custNoLabel) custNoLabel.innerText = 'Nomor HP / Akun';
         document.getElementById('customer-no').placeholder = 'Masukkan Nomor HP/Akun';
         document.getElementById('btn-inquiry').style.display = 'block';
         document.getElementById('btn-inquiry').innerText = 'Cek Nama';
         loadProducts(category, type);
     } else {
-        // Pulsa / Data biasa: Auto search on input
+        if (custNoLabel) custNoLabel.innerText = 'Nomor Tujuan';
         document.getElementById('customer-no').placeholder = 'Masukkan Nomor HP (0812...)';
-        // Auto load products to buy based on prefix logic
         loadProducts(category, type);
     }
 
@@ -2748,11 +2805,12 @@ function renderContacts(data) {
 
 document.getElementById('search-contact').addEventListener('input', function(e) {
     const q = e.target.value.toLowerCase();
-    const filtered = contactsData.filter(c => 
-        (c.customer_name && c.customer_name.toLowerCase().includes(q)) || 
-        (c.customer_no && c.customer_no.toLowerCase().includes(q)) ||
-        (c.pln_name && c.pln_name.toLowerCase().includes(q))
-    );
+    const filtered = contactsData.filter(c => {
+        const name = (c.customer_name || '').toLowerCase();
+        const no = (c.customer_no || '').toLowerCase();
+        const pln = (c.pln_name || '').toLowerCase();
+        return name.includes(q) || no.includes(q) || pln.includes(q);
+    });
     renderContacts(filtered);
 });
 
@@ -2760,12 +2818,15 @@ function selectContact(no) {
     document.getElementById('customer-no').value = no;
     getContactModal().hide();
     
-    // Trigger input event to re-evaluate provider badge / search products
+    // Trigger input event to simulate user typing
     const event = new Event('input', { bubbles: true });
     document.getElementById('customer-no').dispatchEvent(event);
+    
+    // Auto perform name check for PLN prepaid if number was selected
+    if(currentCategory === 'pln' && currentType === 'prepaid') {
+        performInquiry();
+    }
 }
-
-// 5. Load Product Categories based on Tab (Prepaid/Postpaid)
 
 // 5. Load Products
 let currentSelectedSellerFilter = '';
@@ -2799,11 +2860,33 @@ async function loadProducts(category, type) {
                     renderSellerRecommendations(data.data);
                     renderProducts(data.data);
                 }
+            } else if (type === 'postpaid') {
+                // Postpaid products handling
+                const postProvCont = document.getElementById('postpaid-provider-container');
+                const postProvSelect = document.getElementById('postpaid-provider-select');
+                if (data.data.length > 1) {
+                    if (postProvCont) postProvCont.style.display = 'block';
+                    if (postProvSelect) {
+                        postProvSelect.innerHTML = '<option value="">-- Pilih Penyedia Layanan --</option>' +
+                            data.data.map(p => `<option value="${p.buyer_sku_code}">${p.product_name}</option>`).join('');
+                        postProvSelect.value = data.data[0].buyer_sku_code;
+                        selectedPostpaidSku = data.data[0].buyer_sku_code;
+                    }
+                } else if (data.data.length === 1) {
+                    if (postProvCont) postProvCont.style.display = 'none';
+                    selectedPostpaidSku = data.data[0].buyer_sku_code;
+                }
             }
         } else {
             const recCont = document.getElementById('seller-recommendation-container');
             if (recCont) recCont.style.display = 'none';
-            document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3" style="grid-column: 1 / -1;">Produk tidak tersedia/belum disync.</div>`;
+            if (type === 'prepaid') {
+                document.getElementById('product-grid').innerHTML = `<div class="text-center text-muted w-100 py-3" style="grid-column: 1 / -1;">Produk tidak tersedia/belum disync.</div>`;
+            } else {
+                const postProvCont = document.getElementById('postpaid-provider-container');
+                if (postProvCont) postProvCont.style.display = 'none';
+                selectedPostpaidSku = '';
+            }
         }
     } catch(e) { console.error(e); }
 }
@@ -4582,30 +4665,60 @@ async function performInquiry() {
             }
         } else if (currentType === 'postpaid') {
             // Cek Tagihan Pascabayar
-            // Ambil SKU pertama dari currentProducts (asumsi 1 kategori 1 SKU utama untuk cek, atau user bisa pilih dulu. Di sini simplifikasi ambil index 0)
-            if(currentProducts.length === 0) { showAlert('⚠️ Produk pascabayar belum tersedia/sync.', 'warning'); btn.disabled=false; btn.innerHTML='Cek Detail'; return; }
+            const sku = selectedPostpaidSku || (currentProducts && currentProducts.length > 0 ? currentProducts[0].buyer_sku_code : '');
+            if(!sku || currentProducts.length === 0) { 
+                showAlert('⚠️ Produk pascabayar belum tersedia atau belum disinkronkan.', 'warning'); 
+                btn.disabled = false; btn.innerText = 'Cek Tagihan'; 
+                return; 
+            }
             
-            const sku = currentProducts[0].buyer_sku_code; // Usually generic SKU
             const res = await fetch('<?= BASE_URL ?>api/ppob/inquiry-pasca', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({sku: sku, customer_no: no})
             });
             const data = await res.json();
-            if(data.success && data.data && data.data.customer_name) {
+            if(data.success && data.data && (data.data.customer_name || data.data.selling_price || data.data.price)) {
                 selectedInqData = data.data; // Simpan data untuk dibayar
                 selectedInqData.sku = sku;
+                selectedInqData.customer_no = no;
                 
                 inqBox.style.display = 'block';
-                document.getElementById('inq-name').innerText = data.data.customer_name;
+                document.getElementById('inq-name').innerText = data.data.customer_name || 'Pelanggan';
                 document.getElementById('inq-detail-label').style.display = 'block';
                 document.getElementById('inq-detail').style.display = 'block';
-                document.getElementById('inq-detail').innerText = data.data.desc ? data.data.desc.detail[0].periode : '-';
-                document.getElementById('inq-price').innerText = formatRp(data.data.selling_price);
+                
+                // Format detail tagihan
+                let detailText = '';
+                if (data.data.desc && typeof data.data.desc === 'object') {
+                    const desc = data.data.desc;
+                    if (desc.detail && Array.isArray(desc.detail) && desc.detail.length > 0) {
+                        const d = desc.detail[0];
+                        detailText = `Periode: ${d.periode || '-'} | Tagihan: ${formatRp(d.nilai_tagihan || 0)} | Denda: ${formatRp(d.denda || 0)} | Admin: ${formatRp(d.admin || data.data.admin || 0)}`;
+                    } else {
+                        const parts = [];
+                        if (desc.tarif) parts.push(`Tarif: ${desc.tarif}`);
+                        if (desc.daya) parts.push(`Daya: ${desc.daya} VA`);
+                        if (desc.lembar_tagihan) parts.push(`Lembar: ${desc.lembar_tagihan}`);
+                        detailText = parts.length > 0 ? parts.join(' | ') : (data.data.message || '-');
+                    }
+                } else if (data.data.periode) {
+                    detailText = `Periode: ${data.data.periode}`;
+                } else {
+                    detailText = data.data.message || 'Tagihan siap dibayar';
+                }
+                document.getElementById('inq-detail').innerText = detailText;
+                
+                const finalPrice = data.data.selling_price || data.data.price || 0;
+                document.getElementById('inq-price').innerText = formatRp(finalPrice);
                 
                 document.getElementById('btn-pay-postpaid').style.display = 'inline-block';
-            } else { showAlert('❌ ' + (data.message || 'Tagihan tidak ditemukan atau sudah dibayar'), 'danger'); }
+            } else { 
+                showAlert('❌ ' + (data.message || 'Tagihan tidak ditemukan atau sudah dibayar'), 'danger'); 
+            }
         }
-    } catch(e) { showAlert('❌ Terjadi kesalahan jaringan', 'danger'); }
+    } catch(e) { 
+        showAlert('❌ Terjadi kesalahan jaringan saat mengecek tagihan', 'danger'); 
+    }
     
     btn.disabled = false; btn.innerText = (currentType==='prepaid') ? 'Cek Nama' : 'Cek Tagihan';
 }

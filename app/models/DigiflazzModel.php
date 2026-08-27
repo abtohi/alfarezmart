@@ -18,8 +18,15 @@ class DigiflazzModel {
                     $this->db->exec("ALTER TABLE digi_products ADD COLUMN is_custom_price TINYINT(1) NOT NULL DEFAULT 0 AFTER sell_price");
                 }
             }
+            // Auto repair legacy/generic 'pascabayar' category to proper specific categories
+            $this->db->exec("UPDATE digi_products SET category = 'multifinance' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) = 'multifinance' OR LOWER(product_name) LIKE '%finance%' OR LOWER(product_name) LIKE '%credit%' OR LOWER(product_name) LIKE '%angsuran%')");
+            $this->db->exec("UPDATE digi_products SET category = 'pln' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND LOWER(brand) = 'pln'");
+            $this->db->exec("UPDATE digi_products SET category = 'bpjs' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND LOWER(brand) LIKE '%bpjs%'");
+            $this->db->exec("UPDATE digi_products SET category = 'pdam' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) = 'pdam' OR LOWER(product_name) LIKE '%pdam%' OR LOWER(product_name) LIKE '%air%')");
+            $this->db->exec("UPDATE digi_products SET category = 'hp' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) IN ('hp', 'halo', 'matrix', 'xl prioritas') OR LOWER(product_name) LIKE '%pasca%')");
+            $this->db->exec("UPDATE digi_products SET category = 'tv' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) IN ('tv', 'internet', 'telkom', 'indihome') OR LOWER(product_name) LIKE '%indihome%' OR LOWER(product_name) LIKE '%telkom%')");
         } catch (\Exception $e) {
-            error_log("[DigiflazzModel] is_custom_price migration error: " . $e->getMessage());
+            error_log("[DigiflazzModel] init migration error: " . $e->getMessage());
         }
     }
 
@@ -185,9 +192,13 @@ class DigiflazzModel {
                     continue;
                 }
                 
-                // Determine normalized category
-                $category = $this->normalizeCategory($item['category'] ?? '');
-                $subCat = $this->determineSubCategory($category, $item['product_name'] ?? '');
+                $itemBrand = $item['brand'] ?? '';
+                $itemName  = $item['product_name'] ?? '';
+                $itemCat   = $item['category'] ?? '';
+
+                // Determine normalized category using category, brand, product_name, and type
+                $category = $this->normalizeCategory($itemCat, $itemBrand, $itemName, $type);
+                $subCat = $this->determineSubCategory($category, $itemName);
                 $price = $item['price'] ?? $item['admin'] ?? 0;
                 
                 $buyerStatus = filter_var($item['buyer_product_status'] ?? false, FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
@@ -200,10 +211,10 @@ class DigiflazzModel {
                 
                 $stmt->execute([
                     'sku' => $sku,
-                    'name' => $item['product_name'] ?? '',
+                    'name' => $itemName,
                     'category' => $category,
                     'sub_cat' => $subCat,
-                    'brand' => $item['brand'] ?? '',
+                    'brand' => $itemBrand,
                     'type' => $type,
                     'price' => $price,
                     'buyer_status' => $buyerStatus,
@@ -260,12 +271,26 @@ class DigiflazzModel {
         }
     }
 
-    private function normalizeCategory(string $apiCategory) {
-        $cat = strtolower(trim($apiCategory));
+    private function normalizeCategory(string $apiCategory, string $brand = '', string $productName = '', string $type = 'prepaid') {
+        $cat   = strtolower(trim($apiCategory));
+        $brd   = strtolower(trim($brand));
+        $pName = strtolower(trim($productName));
+        $combined = $cat . ' ' . $brd . ' ' . $pName;
 
-        // ─── Pascabayar-specific categories (from Digiflazz API pasca response)
-        // MUST come before generic 'data' check to prevent false positive:
-        // "hp pascabayar" contains substring "data" inside "pasca*ba*yar" ───
+        // ─── If Postpaid / Pascabayar, match by combined context ───
+        if ($type === 'postpaid' || strpos($cat, 'pasca') !== false || strpos($cat, 'postpaid') !== false) {
+            if (strpos($combined, 'multifinance') !== false || strpos($combined, 'finance') !== false || strpos($combined, 'leasing') !== false || strpos($combined, 'cicilan') !== false || strpos($combined, 'angsuran') !== false || strpos($combined, 'kredit') !== false || strpos($combined, 'fif') !== false || strpos($combined, 'baf') !== false || strpos($combined, 'wom') !== false || strpos($combined, 'oto') !== false || strpos($combined, 'adira') !== false || strpos($combined, 'columbia') !== false || strpos($combined, 'bima') !== false || strpos($combined, 'smart') !== false || strpos($combined, 'suzuki') !== false || strpos($combined, 'nsc') !== false) return 'multifinance';
+            if (strpos($combined, 'pln') !== false || strpos($combined, 'listrik') !== false || strpos($combined, 'nontaglis') !== false) return 'pln';
+            if (strpos($combined, 'bpjs') !== false || strpos($combined, 'kesehatan') !== false || strpos($combined, 'ketenagakerjaan') !== false || strpos($combined, 'bpjstk') !== false) return 'bpjs';
+            if (strpos($combined, 'pdam') !== false || strpos($combined, 'air') !== false || strpos($combined, 'aetra') !== false || strpos($combined, 'palyja') !== false || strpos($combined, 'tirta') !== false) return 'pdam';
+            if (strpos($combined, 'internet') !== false || strpos($combined, 'indihome') !== false || strpos($combined, 'telkom') !== false || strpos($combined, 'speedy') !== false || strpos($combined, 'cbn') !== false || strpos($combined, 'first media') !== false || strpos($combined, 'biznet') !== false || strpos($combined, 'mnc') !== false || strpos($combined, 'transvision') !== false || strpos($combined, 'k-vision') !== false || strpos($combined, 'tv') !== false) return 'tv';
+            if (strpos($combined, 'hp') !== false || strpos($combined, 'halo') !== false || strpos($combined, 'matrix') !== false || strpos($combined, 'prioritas') !== false || strpos($combined, 'kartu halo') !== false) return 'hp';
+            if (strpos($combined, 'samsat') !== false || strpos($combined, 'pkb') !== false) return 'samsat';
+            if (strpos($combined, 'pbb') !== false || strpos($combined, 'pajak') !== false) return 'pbb';
+            if (strpos($combined, 'gas') !== false || strpos($combined, 'pgn') !== false || strpos($combined, 'pertagas') !== false) return 'gas';
+        }
+
+        // ─── Pascabayar-specific categories from category name ───
         if (strpos($cat, 'hp pascabayar') !== false || strpos($cat, 'hp pasca') !== false) return 'hp';
         if (strpos($cat, 'internet pascabayar') !== false || strpos($cat, 'indihome') !== false || strpos($cat, 'telkom') !== false) return 'tv';
         if (strpos($cat, 'pdam') !== false) return 'pdam';
@@ -454,7 +479,9 @@ class DigiflazzModel {
             $params = ['type' => $type];
         } elseif ($catLower === 'tv' || $catLower === 'televisi') {
             $sql = "SELECT * FROM digi_products 
-                    WHERE (LOWER(category) IN ('tv', 'televisi', 'internet pascabayar', 'tv pascabayar')) 
+                    WHERE (LOWER(category) IN ('tv', 'televisi', 'internet pascabayar', 'tv pascabayar')
+                           OR (type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR LOWER(brand) IN ('tv', 'internet', 'telkom', 'indihome') OR LOWER(product_name) LIKE '%indihome%' OR LOWER(product_name) LIKE '%telkom%'))
+                           OR LOWER(brand) IN ('tv', 'internet', 'telkom', 'indihome')) 
                       AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
         } elseif ($catLower === 'sms_nelpon') {
@@ -464,27 +491,38 @@ class DigiflazzModel {
             $params = ['type' => $type];
         } elseif ($catLower === 'pdam') {
             $sql = "SELECT * FROM digi_products 
-                    WHERE LOWER(category) IN ('pdam') 
+                    WHERE (LOWER(category) IN ('pdam') 
+                           OR (type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR LOWER(brand) = 'pdam' OR LOWER(product_name) LIKE '%pdam%' OR LOWER(product_name) LIKE '%air%'))
+                           OR LOWER(brand) = 'pdam') 
                       AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
         } elseif ($catLower === 'hp') {
             $sql = "SELECT * FROM digi_products 
-                    WHERE LOWER(category) IN ('hp', 'hp pascabayar', 'hp pasca') 
+                    WHERE (LOWER(category) IN ('hp', 'hp pascabayar', 'hp pasca') 
+                           OR (type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR LOWER(brand) IN ('hp', 'halo', 'matrix', 'xl prioritas') OR LOWER(product_name) LIKE '%pasca%'))
+                           OR LOWER(brand) IN ('hp', 'halo', 'matrix', 'xl prioritas')) 
                       AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
         } elseif ($catLower === 'bpjs') {
             $sql = "SELECT * FROM digi_products 
-                    WHERE (LOWER(category) LIKE '%bpjs%') 
+                    WHERE (LOWER(category) LIKE '%bpjs%' 
+                           OR (type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR LOWER(brand) LIKE '%bpjs%'))
+                           OR LOWER(brand) LIKE '%bpjs%') 
                       AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
         } elseif ($catLower === 'multifinance') {
             $sql = "SELECT * FROM digi_products 
-                    WHERE (LOWER(category) IN ('multifinance') OR LOWER(category) LIKE '%finance%') 
+                    WHERE (LOWER(category) IN ('multifinance', 'finance', 'cicilan', 'angsuran') 
+                           OR (type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR LOWER(brand) = 'multifinance' OR LOWER(product_name) LIKE '%finance%' OR LOWER(product_name) LIKE '%credit%' OR LOWER(product_name) LIKE '%angsuran%'))
+                           OR LOWER(brand) = 'multifinance') 
                       AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
         } elseif ($catLower === 'pln') {
             $sql = "SELECT * FROM digi_products 
-                    WHERE (LOWER(category) IN ('pln', 'pln pascabayar', 'pln nontaglis') OR LOWER(category) LIKE '%pln%') 
+                    WHERE (LOWER(category) IN ('pln', 'pln pascabayar', 'pln nontaglis') 
+                           OR (type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR LOWER(brand) = 'pln'))
+                           OR LOWER(category) LIKE '%pln%' 
+                           OR LOWER(brand) = 'pln') 
                       AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
         } else {
@@ -498,7 +536,11 @@ class DigiflazzModel {
             $params['brand'] = $brand;
         }
         
-        $sql .= " ORDER BY sell_price ASC, seller_price ASC";
+        if ($type === 'postpaid') {
+            $sql .= " ORDER BY product_name ASC";
+        } else {
+            $sql .= " ORDER BY sell_price ASC, seller_price ASC";
+        }
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
