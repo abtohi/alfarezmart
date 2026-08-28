@@ -88,6 +88,7 @@ Invoice Image/PDF
 
 | Versi / Tanggal | Area | Ringkasan Perbaikan |
 |---|---|---|
+| **v15.98** (28 Agu 2026) | POS & Multi-Level Pricing | Menyempurnakan algoritma greedy cross-packaging upgrade & tier combination: input kuantitas Level 1 yang menyentuh Level 2/3/4 otomatis menerapkan harga kemasan atasnya, mengombinasikan tier perantara, auto-invalidation cache lokal POS, dan proteksi anti-regresi. |
 | **v15.97** (16 Agu 2026) | Sync & Sales | Memperbaiki bug kritis penghapusan data saat sync gagal, menambahkan banner merah fail-safe, auto-load fallback cache riwayat penjualan, dan presisi 100% load edit transaksi ke POS. |
 | **v15.96** (16 Agu 2026) | POS & Multi-Tier | Memperbaiki harga kemasan level 2/3/4 di POS tanpa chunking, deklarasi `fixAndSyncProducts` di `<head>`, modul cetak struk riwayat penjualan. |
 | **v15.95** (16 Agu 2026) | Invoice Scanner | Modularisasi skill CV Indoberas & guidelines registry anti-regresi invoice scanner. |

@@ -72,17 +72,32 @@ TOTAL = Rp210.000 + Rp54.500 = Rp264.500
 - Tier pricing memiliki field `sale_mode`: `'retail'`, `'wholesale'`, atau `'both'`.
 - Tier hanya berlaku jika `sale_mode === 'both'` ATAU `sale_mode === mode_penjualan_aktif`.
 
-## 4. Aturan untuk Kemasan Multi-Level (Cross-Packaging Bundle)
+## 4. Aturan Kemasan Multi-Level (Cross-Packaging Upgrade & Combined Tier)
 
-Ketika user membeli dalam **kemasan level 1 (pcs)** dan ada kemasan yang lebih besar (Pack, Karton, dll), sistem menerapkan **optimasi otomatis cross-packaging**:
+Ketika user menginput kuantitas dalam **kemasan level 1 (Pcs)** dan kuantitasnya menyentuh atau melebihi kemasan yang lebih tinggi (Pack, Renceng, Karton, Sak), sistem menerapkan **optimasi otomatis cross-packaging**:
 
-1. Konversi qty ke `base_qty` (satuan dasar).
-2. Kumpulkan semua "chunk" yang tersedia dari semua level kemasan + tier-nya.
-3. **Urutkan berdasarkan `price_per_base_unit` termurah** (ascending), lalu `chunk_size` terbesar.
-4. Terapkan secara **greedy**: gunakan chunk termurah dulu, lalu berikutnya, dst.
+1. Konversi qty input ke `targetBaseQty = qty * (base_qty || contained_qty)`.
+2. Kumpulkan semua "chunk" yang tersedia dari level kemasan $\ge$ level aktif beserta tier-nya masing-masing.
+3. **Urutkan berdasarkan `price_per_base_unit` termurah** (ascending), lalu `chunk_size` terbesar jika harga per unit dasarnya sama.
+4. Terapkan secara **greedy**: gunakan chunk termurah dulu (misal Karton), lalu chunk termurah berikutnya (misal Pack atau Tier), dan sisa dihitung dengan harga satuan dasar.
 5. Sisa pecahan (jika ada) dihitung proporsional dari chunk terkecil.
 
-**PENTING**: Kemasan **level > 1** (Pack, Renceng, Karton, Sak) **SELALU** menggunakan harga eksplisitnya sendiri, tidak pernah dihitung ulang dari level 1. Hanya level 1 yang boleh di-optimasi cross-packaging.
+### 💡 Contoh Kasus Wajib:
+
+- **Kasus A (1 Pcs = 7.000, 1 Karton isi 24 Pcs = 140.000):**
+  - Input `24 Pcs` &rarr; Otomatis = **Rp 140.000** (Harga 1 Karton).
+  - Input `25 Pcs` &rarr; Otomatis = **Rp 147.000** (`1 Karton @140.000 + 1 Pcs @7.000`).
+
+- **Kasus B (1 Pcs = 1.200 [ada Tier 20+ @1.200], 1 Karton isi 40 Pcs = 46.000):**
+  - Input `40 Pcs` &rarr; Otomatis = **Rp 46.000** (`1 Karton @46.000` / @1.150 per pcs), **BUKAN Rp 48.000** (`Tier 20+`).
+  - Input `20 Pcs` &rarr; Otomatis = **Rp 24.000** (`Tier 20+ @1.200`).
+
+- **Kasus C (1 Pcs = 7.000 [Tier 3 @6.800], 1 Pack isi 6 Pcs = 40.000):**
+  - Input `7 Pcs` &rarr; Otomatis = **Rp 47.000** (`1 Pack @40.000 + 1 Pcs @7.000`).
+  - Input `9 Pcs` &rarr; Otomatis = **Rp 60.400** (`1 Pack @40.000 + 3 Pcs Tier @6.800`).
+
+- **Kasus D (Level > 1 Dipilih Eksplisit):**
+  - Jika kasir memilih **Level 2 (Pack)** &rarr; hanya boleh di-upgrade ke level yang sama atau lebih tinggi (Level $\ge 2$, misal Karton jika mencapai kelipatan Karton), **TIDAK PERNAH** didegradasi ke Level 1.
 
 ## 5. Harga Custom
 
@@ -91,14 +106,22 @@ Jika user mengaktifkan **harga custom** (`useCustom = true`):
 - Harga yang digunakan adalah `customLineTotal` atau `customUnitPrice` yang diinput user.
 - Breakdown menampilkan "Harga custom".
 
-## 6. Lokasi Implementasi yang DILINDUNGI
+## 6. Cache Invalidation & Sinkronisasi Rasio Kemasan (`base_qty`)
+
+- Mapping `slimCatalog` di `pos.php` **WAJIB** menyertakan `base_qty: pkg.base_qty || pkg.contained_qty || 1`.
+- Setiap perubahan pada `qty-pricing.js` **WAJIB** menaikkan:
+  1. Parameter versi `$v = '?v=XX.XX'` di `app/views/layouts/app.php`
+  2. `CURRENT_POS_CACHE_VER = 'vXX.XX_...'` di `preloadPosCatalog()` pada `app/views/sales/pos.php` agar cache lokal browser ter-invaliasi secara otomatis.
+
+## 7. Lokasi Implementasi yang DILINDUNGI
 
 ### File Utama Algoritma
-- **`public/js/qty-pricing.js`** → `QtyPricing` object:
+- **`public/js/qty-pricing.js`** &rarr; `QtyPricing` object:
   - `getActiveTier()` — mencari tier tertinggi yang cocok
-  - `_applyTieredPricing()` — rekursif greedy tier pricing
-  - `getPricingBreakdown()` — perhitungan lengkap dengan cross-packaging
+  - `_applyTieredPricing()` — rekursif greedy tier pricing untuk single packaging
+  - `getPricingBreakdown()` — perhitungan lengkap dengan cross-packaging upgrade & tier combination
   - `calculateTotalPrice()` — wrapper untuk total harga
+  - `getPriceNote()` — keterangan breakdown otomatis yang rapi
   - `resolveUnitPrice()` — harga per unit (untuk display)
 
 ### File yang Menggunakan Algoritma
@@ -111,24 +134,25 @@ Jika user mengaktifkan **harga custom** (`useCustom = true`):
 - `app/views/purchases/create.php` & `edit.php` — Input barang (kelola tier)
 
 ### Backend
-- `app/models/ProductModel.php` — `saveQtyPricesForPackaging()`, `getPackagings()`
+- `app/models/ProductModel.php` — `saveQtyPricesForPackaging()`, `getPackagings()`, `attachPackagingsForProductList()`
 - `app/models/PurchaseModel.php` — Menyimpan tier saat input barang
 - `app/models/SaleModel.php` — Membaca tier saat proses transaksi
 
-## 7. Larangan Regresi
+## 8. Larangan Regresi
 
 Berikut hal-hal yang **DILARANG** dilakukan:
 
-1. ❌ Mengalikan semua qty dengan harga tier tertinggi yang cocok (harus greedy recursive)
-2. ❌ Menghapus logika recursive `_applyTieredPricing()`
-3. ❌ Mengubah logika cross-packaging bundle optimization
-4. ❌ Menghapus filter `sale_mode` pada tier matching
-5. ❌ Mengubah urutan prioritas: tier tertinggi yang cocok → rekursif ke bawah → harga dasar
-6. ❌ Membuat kemasan level > 1 dihitung ulang dari harga level 1
-7. ❌ Menghapus dukungan harga custom yang men-bypass tier
-8. ❌ Mengubah pembulatan hasil (`Math.round`) menjadi pembulatan lain
-9. ❌ Menghapus price breakdown yang menunjukkan rincian perhitungan tier ke user
+1. ❌ Mengalikan semua qty dengan harga tier tertinggi yang cocok (harus greedy recursive).
+2. ❌ Mengabaikan harga kemasan tingkat atas (Level 2/3/4) ketika kuantitas Level 1 menyentuh atau melebihi kelipatan kemasan atasnya.
+3. ❌ Mengabaikan tier yang ada di tengah-tengah sisa kuantitas setelah dikurangi kemasan atas.
+4. ❌ Menghapus filter `sale_mode` pada tier matching.
+5. ❌ Mengubah urutan prioritas: chunk termurah per base unit &rarr; chunk terbesar &rarr; sisa dasar/tier.
+6. ❌ Membuat kemasan level > 1 didegradasi ke harga level 1.
+7. ❌ Menghapus dukungan harga custom yang men-bypass tier.
+8. ❌ Menghapus properti `base_qty` / `contained_qty` dari cache POS.
+9. ❌ Mengubah pembulatan hasil (`Math.round`) menjadi pembulatan lain.
+10. ❌ Menghapus price breakdown yang menunjukkan rincian perhitungan tier ke user.
 
 ---
 
-*Aturan ini dibuat pada 18 Agustus 2026 dan berlaku permanen hingga ada persetujuan eksplisit dari pemilik proyek untuk mengubahnya.*
+*Aturan ini diperbarui secara permanen dan wajib dipatuhi oleh seluruh agent dalam pengembangan AlfarezMart.*
