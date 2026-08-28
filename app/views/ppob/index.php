@@ -1634,28 +1634,44 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     <h4 class="section-title mt-4">Tagihan Pascabayar (Bayar Nanti)</h4>
     <div class="cat-grid">
         <div class="cat-card" onclick="openTrxModal('PLN Pascabayar', 'pln', 'postpaid')">
-            <div class="cat-icon orange"><i class="bi bi-lightning"></i></div>
+            <div class="cat-icon orange"><i class="bi bi-lightning-charge-fill"></i></div>
             <div class="cat-name">PLN Pasca</div>
         </div>
-        <div class="cat-card" onclick="openTrxModal('BPJS', 'bpjs', 'postpaid')">
-            <div class="cat-icon green"><i class="bi bi-heart-pulse"></i></div>
+        <div class="cat-card" onclick="openTrxModal('BPJS Kesehatan & Ketenagakerjaan', 'bpjs', 'postpaid')">
+            <div class="cat-icon green"><i class="bi bi-heart-pulse-fill"></i></div>
             <div class="cat-name">BPJS</div>
         </div>
-        <div class="cat-card" onclick="openTrxModal('PDAM', 'pdam', 'postpaid')">
-            <div class="cat-icon blue"><i class="bi bi-droplet"></i></div>
+        <div class="cat-card" onclick="openTrxModal('Internet & TV Kabel', 'internet', 'postpaid')">
+            <div class="cat-icon blue"><i class="bi bi-router-fill"></i></div>
+            <div class="cat-name">Internet & TV</div>
+        </div>
+        <div class="cat-card" onclick="openTrxModal('E-Money Pascabayar (Bebas Nominal)', 'ewallet', 'postpaid')">
+            <div class="cat-icon purple"><i class="bi bi-wallet-fill"></i></div>
+            <div class="cat-name">E-Money Pasca</div>
+        </div>
+        <div class="cat-card" onclick="openTrxModal('SAMSAT (Pajak Kendaraan Bermotor)', 'samsat', 'postpaid')">
+            <div class="cat-icon red"><i class="bi bi-car-front-fill"></i></div>
+            <div class="cat-name">SAMSAT</div>
+        </div>
+        <div class="cat-card" onclick="openTrxModal('PBB (Pajak Bumi & Bangunan)', 'pbb', 'postpaid')">
+            <div class="cat-icon yellow"><i class="bi bi-houses-fill"></i></div>
+            <div class="cat-name">PBB</div>
+        </div>
+        <div class="cat-card" onclick="openTrxModal('Cicilan Multifinance', 'multifinance', 'postpaid')">
+            <div class="cat-icon purple"><i class="bi bi-cash-coin"></i></div>
+            <div class="cat-name">Cicilan / Leasing</div>
+        </div>
+        <div class="cat-card" onclick="openTrxModal('PDAM Air Bersih', 'pdam', 'postpaid')">
+            <div class="cat-icon blue"><i class="bi bi-droplet-fill"></i></div>
             <div class="cat-name">PDAM</div>
         </div>
-        <div class="cat-card" onclick="openTrxModal('Multifinance', 'multifinance', 'postpaid')">
-            <div class="cat-icon purple"><i class="bi bi-car-front"></i></div>
-            <div class="cat-name">Cicilan</div>
-        </div>
         <div class="cat-card" onclick="openTrxModal('HP Pascabayar', 'hp', 'postpaid')">
-            <div class="cat-icon blue"><i class="bi bi-phone-vibrate"></i></div>
+            <div class="cat-icon green"><i class="bi bi-phone-vibrate-fill"></i></div>
             <div class="cat-name">HP Pasca</div>
         </div>
-        <div class="cat-card" onclick="openTrxModal('TV & Internet', 'tv', 'postpaid')">
-            <div class="cat-icon orange"><i class="bi bi-router"></i></div>
-            <div class="cat-name">TV & Internet</div>
+        <div class="cat-card" onclick="openTrxModal('Gas Negara (PGN / Pertagas)', 'gas', 'postpaid')">
+            <div class="cat-icon orange"><i class="bi bi-fire"></i></div>
+            <div class="cat-name">Gas Negara</div>
         </div>
     </div><!-- end .cat-grid Pascabayar -->
 
@@ -1749,8 +1765,63 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
                     </div>
                 </div>
 
-                <!-- Input Section -->
-                <div class="mb-4">
+                <!-- SAMSAT Extra Input Container -->
+                <div id="samsat-extra-container" class="mb-3" style="display:none;">
+                    <div class="alert alert-info py-2 px-3 mb-2 rounded-3 small d-flex align-items-center gap-2" style="font-size:12px;">
+                        <i class="bi bi-info-circle-fill fs-6 flex-shrink-0"></i>
+                        <div>Masukkan <b>Kode Pembayaran</b> dari Signal / Sambara / e-Samsat dan <b>NIK KTP</b> Pemilik Kendaraan.</div>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-md-7">
+                            <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Kode Pembayaran (e-Samsat / Signal)</label>
+                            <input type="text" class="form-control rounded-3" id="samsat-kode-bayar" placeholder="Contoh: 9658548523568705" style="font-size: 13px; padding: 10px 14px; background: var(--surface-2); border-color: var(--border-color); color: var(--text-primary);">
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Nomor Identitas (NIK KTP)</label>
+                            <input type="text" class="form-control rounded-3" id="samsat-nik" placeholder="Contoh: 320101xxxxxxxxxx" style="font-size: 13px; padding: 10px 14px; background: var(--surface-2); border-color: var(--border-color); color: var(--text-primary);">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PBB Extra Input Container -->
+                <div id="pbb-extra-container" class="mb-3" style="display:none;">
+                    <div class="row g-2">
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Nomor Objek Pajak (NOP 18 Digit)</label>
+                            <input type="text" class="form-control rounded-3" id="pbb-nop" placeholder="Contoh: 327701000100100010" style="font-size: 13px; padding: 10px 14px; background: var(--surface-2); border-color: var(--border-color); color: var(--text-primary);">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Tahun Pajak (Opsional)</label>
+                            <select class="form-select rounded-3" id="pbb-year" style="font-size: 13px; padding: 10px 14px; background: var(--surface-2); border-color: var(--border-color); color: var(--text-primary);">
+                                <option value="">Semua / Tahun Berjalan</option>
+                                <option value="2026">2026</option>
+                                <option value="2025" selected>2025</option>
+                                <option value="2024">2024</option>
+                                <option value="2023">2023</option>
+                                <option value="2022">2022</option>
+                                <option value="2021">2021</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- E-Money Pascabayar (Bebas Nominal) Extra Input Container -->
+                <div id="emoney-amount-container" class="mb-3" style="display:none;">
+                    <label class="form-label fw-bold small text-muted text-uppercase mb-1" style="font-size: 11px;">Nominal Top Up Bebas (Rp)</label>
+                    <input type="number" class="form-control rounded-3 mb-2" id="emoney-amount-input" placeholder="Masukkan nominal (Contoh: 25000)" style="font-size: 14px; padding: 10px 14px; background: var(--surface-2); border-color: var(--border-color); color: var(--text-primary);">
+                    <div class="d-flex flex-wrap gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size:11px;" onclick="setEmoneyAmount(10000)">10.000</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size:11px;" onclick="setEmoneyAmount(20000)">20.000</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size:11px;" onclick="setEmoneyAmount(25000)">25.000</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size:11px;" onclick="setEmoneyAmount(50000)">50.000</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size:11px;" onclick="setEmoneyAmount(100000)">100.000</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size:11px;" onclick="setEmoneyAmount(200000)">200.000</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size:11px;" onclick="setEmoneyAmount(500000)">500.000</button>
+                    </div>
+                </div>
+
+                <!-- Input Section (Standard Customer No) -->
+                <div class="mb-4" id="standard-customer-no-container">
                     <label class="form-label fw-bold small text-muted text-uppercase" style="letter-spacing: 0.5px; font-size: 11px;" id="customer-no-label">Nomor Tujuan / Pelanggan</label>
                     <div class="d-flex align-items-center w-100" style="border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface-2); overflow: hidden; padding-right: 8px;">
                         <input type="text" class="form-control border-0 bg-transparent shadow-none flex-grow-1" id="customer-no" placeholder="Masukkan nomor..." style="font-size: 14px; padding: 14px 16px; min-width: 0; color: var(--text-primary);">
@@ -1787,17 +1858,22 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
 
                 <!-- Box Hasil Inquiry (Nama Pelanggan, Detail Tagihan) -->
                 <div id="inquiry-box" class="inquiry-box">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="inq-label">Nama Pelanggan</div>
-                            <div class="inq-value" id="inq-name">-</div>
-                            <div class="inq-label" id="inq-detail-label" style="display:none;">Detail Tagihan</div>
-                            <div class="inq-value" id="inq-detail" style="display:none; font-size:13px; font-weight:normal;">-</div>
+                    <div class="row align-items-center">
+                        <div class="col-md-7">
+                            <div class="inq-label" id="inq-title-label">Nama Pelanggan</div>
+                            <div class="inq-value fw-bold fs-5 text-dark" id="inq-name">-</div>
+                            <div id="inq-subtext" class="text-muted small mb-2" style="font-size:12px; display:none;"></div>
+                            
+                            <div class="inq-label mt-2" id="inq-detail-label" style="display:none;">Rincian Tagihan</div>
+                            <div class="inq-value mt-1" id="inq-detail" style="display:none; font-size:12.5px; font-weight:normal; background:rgba(0,0,0,0.03); padding:10px 14px; border-radius:10px; border:1px solid var(--border-color); line-height:1.6;">-</div>
                         </div>
-                        <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                        <div class="col-md-5 text-md-end mt-3 mt-md-0">
                             <div class="inq-label">Total Pembayaran</div>
-                            <div class="inq-value text-primary fs-3" id="inq-price">Rp 0</div>
-                            <button class="btn btn-success rounded-pill px-4 fw-bold mt-2" id="btn-pay-postpaid" style="display: none;" onclick="payPostpaid()">Bayar Tagihan Sekarang</button>
+                            <div class="inq-value text-success fw-black fs-2" id="inq-price">Rp 0</div>
+                            <div class="small text-muted mb-2" id="inq-admin-info" style="font-size:11px; display:none;"></div>
+                            <button class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm" id="btn-pay-postpaid" style="display: none;" onclick="payPostpaid()">
+                                <i class="bi bi-check-circle-fill me-1"></i> Bayar Tagihan Sekarang
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -2920,6 +2996,11 @@ function selectPostpaidProvider(sku, name, brand) {
     selectedInqData = null;
 }
 
+function setEmoneyAmount(val) {
+    const el = document.getElementById('emoney-amount-input');
+    if (el) el.value = val;
+}
+
 // 5. Open Transaction Modal
 function openTrxModal(title, category, type) {
     document.getElementById('trxModalTitle').innerText = title;
@@ -2948,6 +3029,30 @@ function openTrxModal(title, category, type) {
     document.getElementById('product-list-container').style.display = 'block';
     document.getElementById('product-grid').innerHTML = '';
     
+    // Reset Special Input Containers
+    const samsatCont = document.getElementById('samsat-extra-container');
+    const pbbCont = document.getElementById('pbb-extra-container');
+    const emoneyCont = document.getElementById('emoney-amount-container');
+    const standardNoCont = document.getElementById('standard-customer-no-container');
+    const inqSubtext = document.getElementById('inq-subtext');
+    const inqAdminInfo = document.getElementById('inq-admin-info');
+
+    if (samsatCont) samsatCont.style.display = 'none';
+    if (pbbCont) pbbCont.style.display = 'none';
+    if (emoneyCont) emoneyCont.style.display = 'none';
+    if (standardNoCont) standardNoCont.style.display = 'block';
+    if (inqSubtext) inqSubtext.style.display = 'none';
+    if (inqAdminInfo) inqAdminInfo.style.display = 'none';
+    
+    const samsatKode = document.getElementById('samsat-kode-bayar');
+    const samsatNik = document.getElementById('samsat-nik');
+    const pbbNop = document.getElementById('pbb-nop');
+    const emoneyInput = document.getElementById('emoney-amount-input');
+    if (samsatKode) samsatKode.value = '';
+    if (samsatNik) samsatNik.value = '';
+    if (pbbNop) pbbNop.value = '';
+    if (emoneyInput) emoneyInput.value = '';
+
     // Reset Postpaid Provider Container
     const postProvCont = document.getElementById('postpaid-provider-container');
     const countBadge = document.getElementById('postpaid-provider-count');
@@ -2975,22 +3080,41 @@ function openTrxModal(title, category, type) {
             document.getElementById('customer-no').placeholder = 'Masukkan Nomor Kontrak...';
         } else if (category === 'pdam') {
             if (postProvLabel) postProvLabel.innerText = 'Pilih Wilayah / Penyedia PDAM';
-            if (custNoLabel) custNoLabel.innerText = 'Nomor Sambungan / Pelanggan';
+            if (custNoLabel) custNoLabel.innerText = 'Nomor Sambungan / ID Pelanggan PDAM';
             document.getElementById('customer-no').placeholder = 'Masukkan Nomor Sambungan PDAM...';
         } else if (category === 'hp') {
             if (postProvLabel) postProvLabel.innerText = 'Pilih Operator Pascabayar';
             if (custNoLabel) custNoLabel.innerText = 'Nomor HP Pascabayar';
             document.getElementById('customer-no').placeholder = 'Contoh: 0811xxxx...';
-        } else if (category === 'tv') {
+        } else if (category === 'internet' || category === 'tv') {
             if (postProvLabel) postProvLabel.innerText = 'Pilih Provider Internet / TV';
-            if (custNoLabel) custNoLabel.innerText = 'Nomor Pelanggan Internet / TV';
-            document.getElementById('customer-no').placeholder = 'Masukkan ID Pelanggan...';
+            if (custNoLabel) custNoLabel.innerText = 'Nomor Pelanggan / ID Internet & TV';
+            document.getElementById('customer-no').placeholder = 'Masukkan ID Pelanggan (Contoh: 122xxx)...';
         } else if (category === 'pln') {
-            if (custNoLabel) custNoLabel.innerText = 'ID Pelanggan PLN';
+            if (postProvLabel) postProvLabel.innerText = 'Pilih Jenis Layanan PLN';
+            if (custNoLabel) custNoLabel.innerText = 'ID Pelanggan PLN / No. Meter';
             document.getElementById('customer-no').placeholder = 'Masukkan IDPEL PLN (53xxx...)';
         } else if (category === 'bpjs') {
-            if (custNoLabel) custNoLabel.innerText = 'Nomor Kartu BPJS';
-            document.getElementById('customer-no').placeholder = 'Masukkan 13 Digit No BPJS';
+            if (postProvLabel) postProvLabel.innerText = 'Pilih Program BPJS';
+            if (custNoLabel) custNoLabel.innerText = 'Nomor Kartu BPJS / NIK / ID Bayar';
+            document.getElementById('customer-no').placeholder = 'Masukkan 13 Digit No BPJS / NIK...';
+        } else if (category === 'samsat') {
+            if (postProvLabel) postProvLabel.innerText = 'Pilih Wilayah SAMSAT';
+            if (samsatCont) samsatCont.style.display = 'block';
+            if (standardNoCont) standardNoCont.style.display = 'none';
+        } else if (category === 'pbb') {
+            if (postProvLabel) postProvLabel.innerText = 'Pilih Wilayah / Daerah PBB';
+            if (pbbCont) pbbCont.style.display = 'block';
+            if (standardNoCont) standardNoCont.style.display = 'none';
+        } else if (category === 'ewallet') {
+            if (postProvLabel) postProvLabel.innerText = 'Pilih Akun E-Money';
+            if (custNoLabel) custNoLabel.innerText = 'Nomor HP / Akun E-Wallet';
+            document.getElementById('customer-no').placeholder = 'Contoh: 08123456789...';
+            if (emoneyCont) emoneyCont.style.display = 'block';
+        } else if (category === 'gas') {
+            if (postProvLabel) postProvLabel.innerText = 'Pilih Penyedia Gas Negara';
+            if (custNoLabel) custNoLabel.innerText = 'Nomor Pelanggan Gas (PGN / Pertagas)';
+            document.getElementById('customer-no').placeholder = 'Masukkan ID Pelanggan Gas...';
         } else {
             if (custNoLabel) custNoLabel.innerText = 'ID Pelanggan';
             document.getElementById('customer-no').placeholder = 'Masukkan ID Pelanggan';
@@ -4887,30 +5011,72 @@ async function fetchSellerHistory(page) {
         console.error(err);
         loading.style.display = 'none';
         content.style.display = 'block';
-        list.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger small">Gagal memuat riwayat.</td></tr>';
+        list.innerHTML = '<tr><td colspan="8" class="text-center py-4 text-danger small">Gagal memuat riwayat.</td></tr>';
     }
 }
 
-// 6. Inquiry (Cek Tagihan / Cek Nama PLN)
+// 6. Inquiry (Cek Tagihan / Cek Nama PLN / E-Wallet)
 async function performInquiry() {
-    const no = document.getElementById('customer-no').value;
-    if(!no) { showAlert('⚠️ Masukkan nomor tujuan/ID pelanggan!', 'warning'); return; }
-    
     const btn = document.getElementById('btn-inquiry');
-    btn.disabled = true; btn.innerHTML = 'Loading...';
-
     const inqBox = document.getElementById('inquiry-box');
     inqBox.style.display = 'none';
 
+    let no = document.getElementById('customer-no').value.trim();
+    let extraPayload = {};
+
+    if (currentType === 'postpaid') {
+        if (currentCategory === 'samsat') {
+            const kodeBayar = (document.getElementById('samsat-kode-bayar')?.value || '').trim();
+            const nik = (document.getElementById('samsat-nik')?.value || '').trim();
+            if (!kodeBayar || !nik) {
+                showAlert('⚠️ Masukkan Kode Pembayaran dan NIK KTP Pemilik Kendaraan!', 'warning');
+                return;
+            }
+            no = `${kodeBayar},${nik}`;
+        } else if (currentCategory === 'pbb') {
+            const nop = (document.getElementById('pbb-nop')?.value || '').trim();
+            const year = (document.getElementById('pbb-year')?.value || '').trim();
+            if (!nop) {
+                showAlert('⚠️ Masukkan Nomor Objek Pajak (NOP 18 digit)!', 'warning');
+                return;
+            }
+            no = nop;
+            if (year) extraPayload.year = parseInt(year);
+        } else if (currentCategory === 'ewallet') {
+            const amount = (document.getElementById('emoney-amount-input')?.value || '').trim();
+            if (!no) {
+                showAlert('⚠️ Masukkan nomor HP / akun E-Wallet!', 'warning');
+                return;
+            }
+            if (!amount || parseInt(amount) < 1000) {
+                showAlert('⚠️ Masukkan nominal top up (minimal Rp 1.000)!', 'warning');
+                return;
+            }
+            extraPayload.amount = parseInt(amount);
+        } else {
+            if (!no) {
+                showAlert('⚠️ Masukkan nomor tujuan / ID Pelanggan!', 'warning');
+                return;
+            }
+        }
+    } else {
+        if (!no) {
+            showAlert('⚠️ Masukkan nomor tujuan / ID Pelanggan!', 'warning');
+            return;
+        }
+    }
+    
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Cek...';
+
     try {
-        if(currentCategory === 'pln' && currentType === 'prepaid') {
+        if (currentCategory === 'pln' && currentType === 'prepaid') {
             // Cek Nama PLN Prabayar
             const res = await fetch('<?= BASE_URL ?>api/ppob/inquiry-pln', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({customer_no: no})
             });
             const data = await res.json();
-            if(data.success && data.data && data.data.name) {
+            if (data.success && data.data && data.data.name) {
                 window.currentPlnName = data.data.name;
                 window.currentPlnPower = data.data.segment_power;
                 inqBox.style.display = 'block';
@@ -4918,10 +5084,10 @@ async function performInquiry() {
                 document.getElementById('inq-price').innerText = data.data.segment_power || '-';
                 document.getElementById('inq-detail-label').style.display = 'none';
                 document.getElementById('inq-detail').style.display = 'none';
-                document.getElementById('btn-pay-postpaid').style.display = 'none'; // Prabayar pilih produk di bawah
+                document.getElementById('btn-pay-postpaid').style.display = 'none';
             } else { showAlert('❌ ' + (data.message || 'ID pelanggan PLN tidak ditemukan'), 'danger'); }
-        } else if (currentCategory === 'ewallet') {
-            // Cek Nama E-Wallet
+        } else if (currentCategory === 'ewallet' && currentType === 'prepaid') {
+            // Cek Nama E-Wallet Prabayar
             const activeBrandBtn = document.querySelector('#brand-filter-container .btn-primary');
             let brand = activeBrandBtn ? activeBrandBtn.innerText : '';
             if (brand === 'Semua' && typeof currentProducts !== 'undefined' && currentProducts.length > 0) {
@@ -4933,7 +5099,6 @@ async function performInquiry() {
                 return;
             }
             
-            // Map brand to account_bank
             const brandMap = {
                 'GOPAY': 'gopay', 'GO PAY': 'gopay',
                 'DANA': 'dana',
@@ -4971,133 +5136,162 @@ async function performInquiry() {
                 showAlert('❌ ' + (data.message || data.detail || 'Akun e-wallet tidak ditemukan'), 'danger');
             }
         } else if (currentType === 'postpaid') {
-            // Cek Tagihan Pascabayar
+            // Cek Tagihan Pascabayar (Semua Layanan)
             const sku = selectedPostpaidSku || (currentProducts && currentProducts.length > 0 ? currentProducts[0].buyer_sku_code : '');
-            if(!sku || currentProducts.length === 0) { 
+            if (!sku || currentProducts.length === 0) { 
                 showAlert('⚠️ Produk pascabayar belum tersedia atau belum disinkronkan.', 'warning'); 
                 btn.disabled = false; btn.innerText = 'Cek Tagihan'; 
                 return; 
             }
             
+            const payload = Object.assign({sku: sku, customer_no: no}, extraPayload);
             const res = await fetch('<?= BASE_URL ?>api/ppob/inquiry-pasca', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({sku: sku, customer_no: no})
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
-            if(data.success && data.data && (data.data.customer_name || data.data.selling_price || data.data.price)) {
+            if (data.success && data.data && (data.data.customer_name || data.data.selling_price || data.data.price)) {
                 selectedInqData = data.data; // Simpan data untuk dibayar
                 selectedInqData.sku = sku;
                 selectedInqData.customer_no = no;
+                if (extraPayload.amount) selectedInqData.amount = extraPayload.amount;
                 
                 inqBox.style.display = 'block';
-                document.getElementById('inq-name').innerText = data.data.customer_name || 'Pelanggan';
-                document.getElementById('inq-detail-label').style.display = 'block';
-                document.getElementById('inq-detail').style.display = 'block';
                 
-                // Format detail tagihan
-                let detailText = '';
-                if (data.data.desc && typeof data.data.desc === 'object') {
-                    const desc = data.data.desc;
-                    if (desc.detail && Array.isArray(desc.detail) && desc.detail.length > 0) {
-                        const d = desc.detail[0];
-                        detailText = `Periode: ${d.periode || '-'} | Tagihan: ${formatRp(d.nilai_tagihan || 0)} | Denda: ${formatRp(d.denda || 0)} | Admin: ${formatRp(d.admin || data.data.admin || 0)}`;
-                    } else {
-                        const parts = [];
-                        if (desc.tarif) parts.push(`Tarif: ${desc.tarif}`);
-                        if (desc.daya) parts.push(`Daya: ${desc.daya} VA`);
-                        if (desc.lembar_tagihan) parts.push(`Lembar: ${desc.lembar_tagihan}`);
-                        detailText = parts.length > 0 ? parts.join(' | ') : (data.data.message || '-');
-                    }
-                } else if (data.data.periode) {
-                    detailText = `Periode: ${data.data.periode}`;
-                } else {
-                    detailText = data.data.message || 'Tagihan siap dibayar';
+                const custName = data.data.customer_name || 'Pelanggan';
+                document.getElementById('inq-name').innerText = custName;
+                
+                const subtextEl = document.getElementById('inq-subtext');
+                if (subtextEl) {
+                    subtextEl.style.display = 'block';
+                    subtextEl.innerHTML = `<span class="badge bg-secondary bg-opacity-10 text-dark">ID/No: <b>${no}</b></span>`;
                 }
-                document.getElementById('inq-detail').innerText = detailText;
+
+                document.getElementById('inq-detail-label').style.display = 'block';
+                const detailEl = document.getElementById('inq-detail');
+                detailEl.style.display = 'block';
+                
+                // Format detail tagihan terstruktur berdasarkan desc
+                const desc = data.data.desc || {};
+                let detailHtml = '';
+                
+                if (currentCategory === 'pln') {
+                    let dArr = desc.detail && Array.isArray(desc.detail) && desc.detail.length > 0 ? desc.detail[0] : {};
+                    let standMeter = (dArr.meter_awal && dArr.meter_akhir) ? `${dArr.meter_awal} - ${dArr.meter_akhir}` : (desc.stand_meter || '-');
+                    detailHtml = `
+                        <div class="row g-2">
+                            <div class="col-6"><b>Tarif / Daya:</b> ${desc.tarif || '-'} / ${desc.daya ? desc.daya + ' VA' : '-'}</div>
+                            <div class="col-6"><b>Stand Meter:</b> ${standMeter}</div>
+                            <div class="col-6"><b>Lembar Tagihan:</b> ${desc.lembar_tagihan || 1} Bulan</div>
+                            <div class="col-6"><b>Periode:</b> ${data.data.periode || dArr.periode || '-'}</div>
+                            <div class="col-12 border-top pt-1 mt-1"><b>Tagihan Pokok:</b> ${formatRp(dArr.nilai_tagihan || data.data.price || 0)} | <b>Denda:</b> ${formatRp(dArr.denda || 0)} | <b>Admin:</b> ${formatRp(dArr.admin || data.data.admin || 0)}</div>
+                        </div>
+                    `;
+                } else if (currentCategory === 'bpjs') {
+                    let jmlPeserta = desc.jumlah_peserta ? `${desc.jumlah_peserta} Orang` : '-';
+                    detailHtml = `
+                        <div class="row g-2">
+                            <div class="col-6"><b>Program:</b> ${desc.kode_program || 'BPJS'}</div>
+                            <div class="col-6"><b>Jumlah Peserta:</b> ${jmlPeserta}</div>
+                            <div class="col-6"><b>Periode:</b> ${data.data.periode || '-'}</div>
+                            <div class="col-6"><b>Kantor Cabang:</b> ${desc.kantor_cabang || '-'}</div>
+                            ${desc.alamat ? `<div class="col-12 text-truncate"><b>Alamat:</b> ${desc.alamat}</div>` : ''}
+                            <div class="col-12 border-top pt-1 mt-1"><b>Iuran:</b> ${formatRp(data.data.price || 0)} | <b>Biaya Admin:</b> ${formatRp(data.data.admin || 0)}</div>
+                        </div>
+                    `;
+                } else if (currentCategory === 'samsat') {
+                    let noPol = desc.nomor_polisi || '-';
+                    let kendaraan = `${desc.merek_kb || ''} ${desc.model_kb || ''}`.trim() + (desc.tahun_buatan ? ` (${desc.tahun_buatan})` : '');
+                    let pkb = desc.biaya_pokok_pkb || 0;
+                    let swd = desc.biaya_pokok_swd || 0;
+                    let denda = (desc.biaya_denda_pkb || 0) + (desc.biaya_denda_swd || 0);
+                    let admStnk = (desc.biaya_admin_stnk || 0) + (desc.biaya_admin_tnkb || 0);
+                    detailHtml = `
+                        <div class="row g-2">
+                            <div class="col-6"><b>No. Polisi:</b> <span class="badge bg-dark">${noPol}</span></div>
+                            <div class="col-6"><b>Pemilik:</b> ${desc.milik_kenama || custName}</div>
+                            <div class="col-12"><b>Kendaraan:</b> ${kendaraan || '-'}</div>
+                            <div class="col-6"><b>PKB Pokok:</b> ${formatRp(pkb)}</div>
+                            <div class="col-6"><b>SWDKLLJ:</b> ${formatRp(swd)}</div>
+                            <div class="col-6"><b>Denda Pajak:</b> ${formatRp(denda)}</div>
+                            <div class="col-6"><b>Admin STNK/TNKB:</b> ${formatRp(admStnk)}</div>
+                            <div class="col-12 border-top pt-1 mt-1 text-muted small">Tgl Akhir Pajak Baru: ${desc.tgl_akhir_pajak_baru || '-'}</div>
+                        </div>
+                    `;
+                } else if (currentCategory === 'pbb') {
+                    let luas = `Tanah ${desc.luas_tanah || 0} m² / Bangunan ${desc.luas_gedung || 0} m²`;
+                    let lokasi = `${desc.alamat || ''}, ${desc.kelurahan || ''}, ${desc.kecamatan || ''}, ${desc.kab_kota || ''}`.replace(/^[\s,]+|[\s,]+$/g, '');
+                    detailHtml = `
+                        <div class="row g-2">
+                            <div class="col-6"><b>Wajib Pajak:</b> ${custName}</div>
+                            <div class="col-6"><b>Tahun Pajak:</b> ${desc.tahun_pajak || data.data.periode || '-'}</div>
+                            <div class="col-12"><b>Luas Objek:</b> ${luas}</div>
+                            ${lokasi ? `<div class="col-12 text-truncate"><b>Lokasi:</b> ${lokasi}</div>` : ''}
+                            <div class="col-12 border-top pt-1 mt-1"><b>Pokok PBB:</b> ${formatRp(data.data.price || 0)} | <b>Admin:</b> ${formatRp(data.data.admin || 0)}</div>
+                        </div>
+                    `;
+                } else if (currentCategory === 'multifinance') {
+                    let dArr = desc.detail && Array.isArray(desc.detail) && desc.detail.length > 0 ? desc.detail[0] : {};
+                    let angsuranKe = desc.angsuran_ke ? `Angsuran Ke-${desc.angsuran_ke}` : (desc.tenor ? `Tenor: ${desc.tenor}` : '-');
+                    let barang = desc.merek_kendaraan || desc.nama_barang || desc.keterangan || '-';
+                    detailHtml = `
+                        <div class="row g-2">
+                            <div class="col-6"><b>Perusahaan:</b> ${data.data.buyer_sku_code || 'Multifinance'}</div>
+                            <div class="col-6"><b>Angsuran:</b> ${angsuranKe}</div>
+                            ${barang !== '-' ? `<div class="col-12"><b>Barang / Unit:</b> ${barang}</div>` : ''}
+                            ${desc.nomor_polisi ? `<div class="col-6"><b>No. Polisi:</b> ${desc.nomor_polisi}</div>` : ''}
+                            ${desc.nomor_rangka ? `<div class="col-6"><b>No. Rangka:</b> ${desc.nomor_rangka}</div>` : ''}
+                            <div class="col-12 border-top pt-1 mt-1"><b>Nilai Tagihan:</b> ${formatRp(dArr.nilai_tagihan || data.data.price || 0)} | <b>Denda:</b> ${formatRp(desc.denda || dArr.denda || 0)} | <b>Admin:</b> ${formatRp(desc.admin || data.data.admin || 0)}</div>
+                        </div>
+                    `;
+                } else if (currentCategory === 'ewallet') {
+                    let nominalTopup = extraPayload.amount || data.data.price || 0;
+                    detailHtml = `
+                        <div class="row g-2">
+                            <div class="col-6"><b>Layanan:</b> ${sku}</div>
+                            <div class="col-6"><b>No. Akun:</b> ${no}</div>
+                            <div class="col-6"><b>Nominal Top Up:</b> ${formatRp(nominalTopup)}</div>
+                            <div class="col-6"><b>Biaya Admin:</b> ${formatRp(data.data.admin || 0)}</div>
+                        </div>
+                    `;
+                } else {
+                    let dArr = desc.detail && Array.isArray(desc.detail) && desc.detail.length > 0 ? desc.detail[0] : null;
+                    if (dArr) {
+                        detailHtml = `Periode: <b>${dArr.periode || '-'}</b> | Tagihan: <b>${formatRp(dArr.nilai_tagihan || 0)}</b> | Denda: <b>${formatRp(dArr.denda || 0)}</b> | Admin: <b>${formatRp(dArr.admin || data.data.admin || 0)}</b>`;
+                    } else if (desc.tarif || desc.daya) {
+                        detailHtml = `Tarif: <b>${desc.tarif || '-'}</b> | Daya: <b>${desc.daya || '-'} VA</b> | Lembar: <b>${desc.lembar_tagihan || 1}</b>`;
+                    } else {
+                        detailHtml = data.data.message || 'Tagihan terverifikasi siap dibayar.';
+                    }
+                }
+                
+                detailEl.innerHTML = detailHtml;
                 
                 const finalPrice = data.data.selling_price || data.data.price || 0;
                 document.getElementById('inq-price').innerText = formatRp(finalPrice);
                 
+                const adminInfoEl = document.getElementById('inq-admin-info');
+                if (adminInfoEl && data.data.admin) {
+                    adminInfoEl.style.display = 'block';
+                    adminInfoEl.innerText = `Sudah termasuk biaya admin ${formatRp(data.data.admin)}`;
+                }
+
                 document.getElementById('btn-pay-postpaid').style.display = 'inline-block';
             } else { 
-                showAlert('❌ ' + (data.message || 'Tagihan tidak ditemukan atau sudah dibayar'), 'danger'); 
+                showAlert('❌ ' + (data.message || 'Tagihan tidak ditemukan atau sudah dibayar.'), 'danger'); 
             }
         }
     } catch(e) { 
-        showAlert('❌ Terjadi kesalahan jaringan saat mengecek tagihan', 'danger'); 
+        console.error("Inquiry Error:", e);
+        showAlert('❌ Terjadi kesalahan jaringan saat mengecek tagihan.', 'danger'); 
     }
     
-    btn.disabled = false; btn.innerText = (currentType==='prepaid') ? 'Cek Nama' : 'Cek Tagihan';
-}
-
-async function confirmPurchase(product) {
-    const no = document.getElementById('customer-no').value;
-    if(!no) { showAlert('⚠️ Masukkan nomor HP/Tujuan terlebih dahulu!', 'warning'); return; }
-    
-    const customSellPrice = typeof getPpobSellPrice === 'function' ? getPpobSellPrice(product.buyer_sku_code) : null;
-    const finalPrice = customSellPrice && customSellPrice > 0 ? customSellPrice : (product.sell_price || product.seller_price);
-    const modalPrice = product.seller_price || product.price || 0;
-    const profit = finalPrice - modalPrice;
-    const markupPct = modalPrice > 0 ? ((profit / modalPrice) * 100).toFixed(1) : 0;
-    
-    const sellerName = product.seller_name || '-';
-    const successRate = (product.success_rate !== null && product.success_rate !== undefined) ? `${product.success_rate}%` : '-';
-    
-    let extraInfo = '';
-    
-    if (currentCategory === 'pln' && currentType === 'prepaid') {
-        const plnName = window.currentPlnName || document.getElementById('inq-name').innerText || '-';
-        const plnPower = window.currentPlnPower || document.getElementById('inq-price').innerText || '-';
-        
-        let nominal = 0;
-        const match = product.product_name.match(/(?:PLN|TOKEN)\s*(\d+)(?:\.000|RB|RIBU)?/i);
-        if (match) {
-            nominal = parseInt(match[1]);
-            if (product.product_name.toLowerCase().includes('000') || product.product_name.toLowerCase().includes('ribu') || product.product_name.toLowerCase().includes('rb')) {
-                nominal *= 1000;
-            } else if (nominal < 1000) {
-                nominal *= 1000;
-            }
-        } else {
-             const matchDigits = product.product_name.match(/\d+/g);
-             if (matchDigits) {
-                 const num = parseInt(matchDigits.join(''));
-                 nominal = num < 1000 ? num * 1000 : num;
-             }
-        }
-        
-        let estimasiKwh = '-';
-        if (nominal > 0) {
-            let tarif = 1444.70; 
-            if (plnPower.includes('450')) tarif = 415;
-            else if (plnPower.includes('900')) tarif = 1352;
-            
-            const dpp = nominal - 2000;
-            const netto = dpp - (dpp * 0.05);
-            const kwh = netto / tarif;
-            if (kwh > 0) estimasiKwh = `~${kwh.toFixed(1)} kWh`;
-        }
-        
-        extraInfo = `<br>Nama Meter: <b>${plnName}</b><br>Daya: <b>${plnPower}</b><br>Estimasi kWh: <b>${estimasiKwh}</b>`;
-    }
-    
-    const profitColor = profit >= 0 ? '#198754' : '#dc3545';
-    const prodSuccessRate = (product.product_success_rate !== null && product.product_success_rate !== undefined) ? `${product.product_success_rate}%` : '-';
-    showConfirm('Konfirmasi Transaksi', `Produk: <b>${product.product_name}</b><br>Nomor: <b>${no}</b>${extraInfo}<br><br>Harga Modal: <b>${formatRp(modalPrice)}</b><br>Harga Jual: <b style="color:var(--primary);">${formatRp(finalPrice)}</b><br>Profit/Margin: <b style="color:${profitColor};">${formatRp(profit)} (${markupPct}%)</b><br>Seller: <b>${sellerName}</b> (SR Seller: <b>${successRate}</b> | SR Produk: <b>${prodSuccessRate}</b>)`, () => {
-        processTransaction({
-            sku: product.buyer_sku_code,
-            customer_no: no,
-            sell_price: finalPrice,
-            product_name: product.product_name,
-            brand: product.brand,
-            customer_name: (currentCategory === 'ewallet' || currentCategory === 'pln') ? (document.getElementById('inq-name').innerText || '') : ''
-        });
-    });
+    btn.disabled = false; btn.innerText = (currentType === 'prepaid') ? 'Cek Nama' : 'Cek Tagihan';
 }
 
 // 8. Pay Postpaid
 async function payPostpaid() {
-    if(!selectedInqData) return;
+    if (!selectedInqData) return;
     
     const prodName = document.getElementById('postpaid-selected-title')?.innerText || (currentCategory ? currentCategory.toUpperCase() : 'Tagihan Pascabayar');
     const custNo = selectedInqData.customer_no || document.getElementById('customer-no').value;
@@ -5112,7 +5306,7 @@ async function payPostpaid() {
                 <span class="fw-bold text-primary text-end small">${prodName}</span>
             </div>
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: var(--border-color) !important;">
-                <span class="text-muted small">No. Pelanggan / Kontrak</span>
+                <span class="text-muted small">No. Pelanggan / ID</span>
                 <span class="fw-bold text-end small" style="font-family: monospace;">${custNo}</span>
             </div>
             <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: var(--border-color) !important;">
@@ -5120,7 +5314,7 @@ async function payPostpaid() {
                 <span class="fw-bold text-end small text-truncate" style="max-width: 220px;">${custName}</span>
             </div>
             <div class="d-flex justify-content-between align-items-start py-2 border-bottom" style="border-color: var(--border-color) !important;">
-                <span class="text-muted small">Rincian Tagihan</span>
+                <span class="text-muted small">Rincian</span>
                 <span class="fw-bold text-end small" style="font-size: 11px; line-height: 1.4; max-width: 230px;">${detailInfo}</span>
             </div>
             <div class="d-flex justify-content-between align-items-center pt-2 mt-1">
@@ -5136,7 +5330,8 @@ async function payPostpaid() {
             customer_no: custNo,
             ref_id: selectedInqData.ref_id, // Wajib dari inquiry
             sell_price: totalPay,
-            product_name: selectedInqData.customer_name || prodName
+            amount: selectedInqData.amount || null,
+            product_name: selectedInqData.customer_name ? `${prodName} (${selectedInqData.customer_name})` : prodName
         });
     });
 }

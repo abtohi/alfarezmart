@@ -12,7 +12,11 @@ function detectProductType(d) {
         if (name.includes('link aja') || name.includes('linkaja') || sku.includes('linkaja')) return 'linkaja';
         if (name.includes('bpjs') || sku.includes('bpjs')) return 'bpjs';
         if (name.includes('pdam') || sku.includes('pdam')) return 'pdam';
-        if (name.includes('telkom') || name.includes('indihome') || sku.includes('telkom')) return 'telkom';
+        if (name.includes('samsat') || sku.includes('samsat')) return 'samsat';
+        if (name.includes('pbb') || sku.includes('pbb')) return 'pbb';
+        if (name.includes('multifinance') || name.includes('leasing') || name.includes('fif') || name.includes('adira') || name.includes('baf') || name.includes('wom') || name.includes('acc') || name.includes('oto') || sku.includes('post73') || sku.includes('post72')) return 'multifinance';
+        if (name.includes('gas') || name.includes('pgn') || name.includes('pertagas') || sku.includes('gas')) return 'gas';
+        if (name.includes('telkom') || name.includes('indihome') || name.includes('biznet') || name.includes('cbn') || name.includes('first media') || name.includes('myrepublic') || sku.includes('telkom') || sku.includes('biznet') || sku.includes('cbn')) return 'telkom';
         if (name.includes('paket data') || name.includes('paket internet') || sku.includes('data')) return 'paket';
         if (name.includes('pulsa') || name.includes('prabayar') || /^(xl|tsel|isat|axis|tri|hnet|smartfren)/i.test(sku)) return 'pulsa';
         if (name.includes('voucher') || name.includes('game')) return 'voucher';
@@ -25,19 +29,23 @@ function detectProductType(d) {
      */
     function getProductTheme(type) {
         const themes = {
-            pln:     { accent:'#0073C6', accentLight:'#e8f4ff', accentDark:'#004f8b', gradient:'linear-gradient(135deg,#0073C6,#00b4d8)', label:'PLN Prepaid', icon:'⚡' },
-            dana:    { accent:'#118EEA', accentLight:'#e5f4ff', accentDark:'#0068c2', gradient:'linear-gradient(135deg,#118EEA,#42a5f5)', label:'DANA', icon:'💙' },
-            shopee:  { accent:'#EE4D2D', accentLight:'#fff1ee', accentDark:'#c73c21', gradient:'linear-gradient(135deg,#EE4D2D,#ff7043)', label:'ShopeePay', icon:'🧡' },
-            gopay:   { accent:'#00AED6', accentLight:'#e6f9ff', accentDark:'#0089ab', gradient:'linear-gradient(135deg,#00AED6,#00e5ff)', label:'GoPay', icon:'💚' },
-            ovo:     { accent:'#4C2A86', accentLight:'#f2eeff', accentDark:'#3a1f6a', gradient:'linear-gradient(135deg,#4C2A86,#7b5ea7)', label:'OVO', icon:'💜' },
-            linkaja: { accent:'#E8192C', accentLight:'#fff0f1', accentDark:'#b91422', gradient:'linear-gradient(135deg,#E8192C,#ff5252)', label:'LinkAja', icon:'❤️' },
-            bpjs:    { accent:'#00873C', accentLight:'#e6f7ee', accentDark:'#005c28', gradient:'linear-gradient(135deg,#00873C,#4caf50)', label:'BPJS Kesehatan', icon:'🏥' },
-            pdam:    { accent:'#1565C0', accentLight:'#e8eeff', accentDark:'#0d3d73', gradient:'linear-gradient(135deg,#1565C0,#1e88e5)', label:'PDAM Air', icon:'💧' },
-            telkom:  { accent:'#E40427', accentLight:'#fff0f1', accentDark:'#b4001e', gradient:'linear-gradient(135deg,#E40427,#f44336)', label:'Telkom/IndiHome', icon:'📡' },
-            paket:   { accent:'#0277BD', accentLight:'#e6f4ff', accentDark:'#01579b', gradient:'linear-gradient(135deg,#0277BD,#29b6f6)', label:'Paket Data', icon:'📶' },
-            pulsa:   { accent:'#2E7D32', accentLight:'#e8f5e9', accentDark:'#1b5e20', gradient:'linear-gradient(135deg,#2E7D32,#66bb6a)', label:'Pulsa', icon:'📱' },
-            voucher: { accent:'#6A1B9A', accentLight:'#f4e6ff', accentDark:'#4a0072', gradient:'linear-gradient(135deg,#6A1B9A,#ab47bc)', label:'Voucher / Game', icon:'🎮' },
-            other:   { accent:'#263238', accentLight:'#eceff1', accentDark:'#1a2327', gradient:'linear-gradient(135deg,#263238,#546e7a)', label:'Produk Digital', icon:'🔷' },
+            pln:          { accent:'#0073C6', accentLight:'#e8f4ff', accentDark:'#004f8b', gradient:'linear-gradient(135deg,#0073C6,#00b4d8)', label:'PLN', icon:'⚡' },
+            dana:         { accent:'#118EEA', accentLight:'#e5f4ff', accentDark:'#0068c2', gradient:'linear-gradient(135deg,#118EEA,#42a5f5)', label:'DANA', icon:'💙' },
+            shopee:       { accent:'#EE4D2D', accentLight:'#fff1ee', accentDark:'#c73c21', gradient:'linear-gradient(135deg,#EE4D2D,#ff7043)', label:'ShopeePay', icon:'🧡' },
+            gopay:        { accent:'#00AED6', accentLight:'#e6f9ff', accentDark:'#0089ab', gradient:'linear-gradient(135deg,#00AED6,#00e5ff)', label:'GoPay', icon:'💚' },
+            ovo:          { accent:'#4C2A86', accentLight:'#f2eeff', accentDark:'#3a1f6a', gradient:'linear-gradient(135deg,#4C2A86,#7b5ea7)', label:'OVO', icon:'💜' },
+            linkaja:      { accent:'#E8192C', accentLight:'#fff0f1', accentDark:'#b91422', gradient:'linear-gradient(135deg,#E8192C,#ff5252)', label:'LinkAja', icon:'❤️' },
+            bpjs:         { accent:'#00873C', accentLight:'#e6f7ee', accentDark:'#005c28', gradient:'linear-gradient(135deg,#00873C,#4caf50)', label:'BPJS', icon:'🏥' },
+            pdam:         { accent:'#1565C0', accentLight:'#e8eeff', accentDark:'#0d3d73', gradient:'linear-gradient(135deg,#1565C0,#1e88e5)', label:'PDAM Air', icon:'💧' },
+            samsat:       { accent:'#DC2626', accentLight:'#fee2e2', accentDark:'#991b1b', gradient:'linear-gradient(135deg,#DC2626,#f87171)', label:'SAMSAT PKB', icon:'🚗' },
+            pbb:          { accent:'#D97706', accentLight:'#fef3c7', accentDark:'#92400e', gradient:'linear-gradient(135deg,#D97706,#fbbf24)', label:'PBB Pajak', icon:'🏠' },
+            multifinance: { accent:'#7C3AED', accentLight:'#ede9fe', accentDark:'#5b21b6', gradient:'linear-gradient(135deg,#7C3AED,#a78bfa)', label:'Multifinance', icon:'💳' },
+            gas:          { accent:'#EA580C', accentLight:'#ffedd5', accentDark:'#9a3412', gradient:'linear-gradient(135deg,#EA580C,#fb923c)', label:'Gas Negara', icon:'🔥' },
+            telkom:       { accent:'#E40427', accentLight:'#fff0f1', accentDark:'#b4001e', gradient:'linear-gradient(135deg,#E40427,#f44336)', label:'Internet & TV', icon:'📡' },
+            paket:        { accent:'#0277BD', accentLight:'#e6f4ff', accentDark:'#01579b', gradient:'linear-gradient(135deg,#0277BD,#29b6f6)', label:'Paket Data', icon:'📶' },
+            pulsa:        { accent:'#2E7D32', accentLight:'#e8f5e9', accentDark:'#1b5e20', gradient:'linear-gradient(135deg,#2E7D32,#66bb6a)', label:'Pulsa', icon:'📱' },
+            voucher:      { accent:'#6A1B9A', accentLight:'#f4e6ff', accentDark:'#4a0072', gradient:'linear-gradient(135deg,#6A1B9A,#ab47bc)', label:'Voucher / Game', icon:'🎮' },
+            other:        { accent:'#263238', accentLight:'#eceff1', accentDark:'#1a2327', gradient:'linear-gradient(135deg,#263238,#546e7a)', label:'Produk Digital', icon:'🔷' },
         };
         return themes[type] || themes.other;
     }

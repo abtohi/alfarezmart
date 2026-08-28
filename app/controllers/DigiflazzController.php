@@ -457,22 +457,24 @@ class DigiflazzController extends Controller {
         AuthController::requireAuth();
         $data = json_decode(file_get_contents('php://input'), true);
         
-        $sku = $data['sku'] ?? '';
-        $customerNo = $data['customer_no'] ?? '';
+        $sku = trim($data['sku'] ?? '');
+        $customerNo = trim($data['customer_no'] ?? '');
+        $amount = isset($data['amount']) && (int)$data['amount'] > 0 ? (int)$data['amount'] : null;
+        $year = isset($data['year']) && (int)$data['year'] > 1900 ? (int)$data['year'] : null;
         
         if (empty($sku) || empty($customerNo)) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'SKU and Customer No required']);
+            echo json_encode(['success' => false, 'message' => 'SKU dan Nomor Pelanggan / Tujuan wajib diisi.']);
             exit;
         }
 
         $refId = 'INQ-' . date('YmdHis') . '-' . rand(1000, 9999);
-        $res = $this->digiService->inquiryPostpaid($sku, $customerNo, $refId);
+        $res = $this->digiService->inquiryPostpaid($sku, $customerNo, $refId, $amount, $year);
 
         $rc = $res['data']['rc'] ?? '';
         if ($res['success'] && $rc !== '00') {
             $res['success'] = false;
-            $res['message'] = $res['data']['message'] ?? 'Tagihan tidak ditemukan atau gagal dicek.';
+            $res['message'] = $res['data']['message'] ?? $res['message'] ?? 'Tagihan tidak ditemukan atau gagal dicek.';
         }
 
         if ($res['success'] && isset($res['data'])) {
@@ -500,9 +502,10 @@ class DigiflazzController extends Controller {
             }
         }
         
-        $sku = $data['sku'] ?? '';
-        $customerNo = $data['customer_no'] ?? '';
+        $sku = trim($data['sku'] ?? '');
+        $customerNo = trim($data['customer_no'] ?? '');
         $refIdPostpaid = $data['ref_id'] ?? null; // from inquiry
+        $amount = isset($data['amount']) && (int)$data['amount'] > 0 ? (int)$data['amount'] : null;
         
         if (empty($sku) || empty($customerNo)) {
             header('Content-Type: application/json');
@@ -528,7 +531,7 @@ class DigiflazzController extends Controller {
             'buyer_sku_code' => $sku,
             'customer_no' => $customerNo,
             'customer_name' => $data['customer_name'] ?? null,
-            'product_name' => $product['product_name'],
+            'product_name' => $data['product_name'] ?? $product['product_name'],
             'category' => $product['category'],
             'brand' => $product['brand'],
             'type' => $isPostpaid ? 'postpaid' : 'prepaid',
@@ -542,7 +545,7 @@ class DigiflazzController extends Controller {
 
         // Send request to Digiflazz
         if ($isPostpaid) {
-            $res = $this->digiService->payPostpaid($sku, $customerNo, $refId);
+            $res = $this->digiService->payPostpaid($sku, $customerNo, $refId, $amount);
         } else {
             $res = $this->digiService->createTransaction($sku, $customerNo, $refId);
         }

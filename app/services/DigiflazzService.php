@@ -124,8 +124,13 @@ class DigiflazzService {
 
     /**
      * Inquiry Postpaid Bill
+     * @param string $sku
+     * @param string $customerNo
+     * @param string $refId
+     * @param int|null $amount Denomination amount for e-money postpaid inquiry
+     * @param int|null $year Tax year for PBB inquiry
      */
-    public function inquiryPostpaid(string $sku, string $customerNo, string $refId) {
+    public function inquiryPostpaid(string $sku, string $customerNo, string $refId, ?int $amount = null, ?int $year = null) {
         $sign = md5($this->username . $this->apiKey . $refId);
         $payload = [
             'commands' => 'inq-pasca',
@@ -136,6 +141,14 @@ class DigiflazzService {
             'sign' => $sign
         ];
         
+        if ($amount !== null && $amount > 0) {
+            $payload['amount'] = (int)$amount;
+        }
+
+        if ($year !== null && $year > 1900) {
+            $payload['year'] = (int)$year;
+        }
+        
         if ($this->mode === 'development') {
             $payload['testing'] = true;
         }
@@ -145,8 +158,12 @@ class DigiflazzService {
 
     /**
      * Pay Postpaid Bill
+     * @param string $sku
+     * @param string $customerNo
+     * @param string $refId
+     * @param int|null $amount
      */
-    public function payPostpaid(string $sku, string $customerNo, string $refId) {
+    public function payPostpaid(string $sku, string $customerNo, string $refId, ?int $amount = null) {
         $sign = md5($this->username . $this->apiKey . $refId);
         $payload = [
             'commands' => 'pay-pasca',
@@ -157,6 +174,10 @@ class DigiflazzService {
             'sign' => $sign
         ];
         
+        if ($amount !== null && $amount > 0) {
+            $payload['amount'] = (int)$amount;
+        }
+
         if ($this->mode === 'development') {
             $payload['testing'] = true;
         }

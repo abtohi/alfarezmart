@@ -20,11 +20,17 @@ class DigiflazzModel {
             }
             // Auto repair legacy/generic 'pascabayar' category to proper specific categories
             $this->db->exec("UPDATE digi_products SET category = 'multifinance' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) = 'multifinance' OR LOWER(product_name) LIKE '%finance%' OR LOWER(product_name) LIKE '%credit%' OR LOWER(product_name) LIKE '%angsuran%')");
-            $this->db->exec("UPDATE digi_products SET category = 'pln' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND LOWER(brand) = 'pln'");
-            $this->db->exec("UPDATE digi_products SET category = 'bpjs' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND LOWER(brand) LIKE '%bpjs%'");
+            $this->db->exec("UPDATE digi_products SET category = 'pln' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) = 'pln' OR LOWER(product_name) LIKE '%pln%' OR LOWER(buyer_sku_code) LIKE 'pln%')");
+            $this->db->exec("UPDATE digi_products SET category = 'bpjs' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) LIKE '%bpjs%' OR LOWER(product_name) LIKE '%bpjs%' OR LOWER(buyer_sku_code) LIKE 'bpjs%')");
             $this->db->exec("UPDATE digi_products SET category = 'pdam' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) = 'pdam' OR LOWER(product_name) LIKE '%pdam%' OR LOWER(product_name) LIKE '%air%')");
             $this->db->exec("UPDATE digi_products SET category = 'hp' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) IN ('hp', 'halo', 'matrix', 'xl prioritas') OR LOWER(product_name) LIKE '%pasca%')");
-            $this->db->exec("UPDATE digi_products SET category = 'tv' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) IN ('tv', 'internet', 'telkom', 'indihome') OR LOWER(product_name) LIKE '%indihome%' OR LOWER(product_name) LIKE '%telkom%')");
+            $this->db->exec("UPDATE digi_products SET category = 'internet' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) IN ('tv', 'internet', 'telkom', 'indihome', 'biznet', 'cbn', 'first media', 'mnc') OR LOWER(product_name) LIKE '%indihome%' OR LOWER(product_name) LIKE '%telkom%' OR LOWER(product_name) LIKE '%internet%')");
+            $this->db->exec("UPDATE digi_products SET category = 'ewallet' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) IN ('e-money', 'emoney', 'dana', 'gopay', 'ovo', 'shopeepay', 'linkaja') OR LOWER(product_name) LIKE '%bebas nominal%')");
+            $this->db->exec("UPDATE digi_products SET category = 'samsat' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) LIKE '%samsat%' OR LOWER(product_name) LIKE '%samsat%' OR LOWER(buyer_sku_code) LIKE 'samsat%')");
+            $this->db->exec("UPDATE digi_products SET category = 'pbb' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) LIKE '%pbb%' OR LOWER(product_name) LIKE '%pbb%' OR LOWER(buyer_sku_code) LIKE 'pbb%' OR LOWER(buyer_sku_code) = 'cimahi')");
+            $this->db->exec("UPDATE digi_products SET category = 'gas' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) IN ('gas', 'pgn', 'pertagas') OR LOWER(product_name) LIKE '%gas%')");
+            
+            $this->seedDefaultPostpaidProducts();
         } catch (\Exception $e) {
             error_log("[DigiflazzModel] init migration error: " . $e->getMessage());
         }
@@ -109,8 +115,133 @@ class DigiflazzModel {
                     $this->saveMarkupRule($cat, $val[0], (float)$val[1]);
                 }
             }
+
+            $this->seedDefaultPostpaidProducts();
         } catch (\Throwable $e) {
             error_log("[DigiflazzModel] ensureTables error: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Seed default standard postpaid products for Digiflazz if missing
+     */
+    public function seedDefaultPostpaidProducts(): void {
+        try {
+            $isSqlite = ($this->db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite');
+            $defaultPostpaid = [
+                // PLN Pascabayar
+                ['sku' => 'pln', 'name' => 'PLN Pascabayar (Tagihan Listrik)', 'category' => 'pln', 'brand' => 'PLN', 'price' => 2500, 'desc' => 'Pembayaran tagihan listrik PLN bulanan pascabayar'],
+                ['sku' => 'plnnontaglis', 'name' => 'PLN Non-Taglis (Pasang Baru / Tambah Daya)', 'category' => 'pln', 'brand' => 'PLN', 'price' => 2500, 'desc' => 'Pembayaran non-tagihan listrik (pasang baru, rubah daya, migrasi meter)'],
+
+                // BPJS
+                ['sku' => 'BPJS', 'name' => 'BPJS Kesehatan', 'category' => 'bpjs', 'brand' => 'BPJS KESEHATAN', 'price' => 2500, 'desc' => 'Pembayaran iuran bulanan BPJS Kesehatan'],
+                ['sku' => 'bpjstk', 'name' => 'BPJS Ketenagakerjaan (BPU)', 'category' => 'bpjs', 'brand' => 'BPJS KETENAGAKERJAAN', 'price' => 2500, 'desc' => 'Pembayaran iuran BPJS Ketenagakerjaan Bukan Penerima Upah'],
+                ['sku' => 'bpjstkpu', 'name' => 'BPJS Ketenagakerjaan (PU)', 'category' => 'bpjs', 'brand' => 'BPJS KETENAGAKERJAAN', 'price' => 2500, 'desc' => 'Pembayaran iuran BPJS Ketenagakerjaan Penerima Upah'],
+
+                // Internet & TV
+                ['sku' => 'internet', 'name' => 'Telkom IndiHome / Speedy', 'category' => 'internet', 'brand' => 'INDIHOME', 'price' => 2500, 'desc' => 'Tagihan internet WiFi IndiHome Telkom'],
+                ['sku' => 'telkom', 'name' => 'Telepon Rumah & Speedy (Telkom)', 'category' => 'internet', 'brand' => 'TELKOM', 'price' => 2500, 'desc' => 'Tagihan telepon rumah PSTN & Telkom'],
+                ['sku' => 'biznet', 'name' => 'Biznet Home Internet', 'category' => 'internet', 'brand' => 'BIZNET', 'price' => 2500, 'desc' => 'Tagihan internet fiber Biznet Home'],
+                ['sku' => 'cbn', 'name' => 'CBN Fiber Internet', 'category' => 'internet', 'brand' => 'CBN', 'price' => 2500, 'desc' => 'Tagihan internet CBN'],
+                ['sku' => 'firstmedia', 'name' => 'First Media Cable & Internet', 'category' => 'internet', 'brand' => 'FIRST MEDIA', 'price' => 2500, 'desc' => 'Tagihan First Media Internet & TV Kabel'],
+                ['sku' => 'mncplay', 'name' => 'MNC Play Media', 'category' => 'internet', 'brand' => 'MNC PLAY', 'price' => 2500, 'desc' => 'Tagihan internet & TV MNC Play'],
+                ['sku' => 'transvision', 'name' => 'Transvision Pascabayar', 'category' => 'internet', 'brand' => 'TRANSVISION', 'price' => 2500, 'desc' => 'Tagihan TV Satelit Transvision'],
+                ['sku' => 'kvision', 'name' => 'K-Vision Pascabayar', 'category' => 'internet', 'brand' => 'K-VISION', 'price' => 2500, 'desc' => 'Tagihan langganan K-Vision pascabayar'],
+
+                // E-Money Pascabayar (Bebas Nominal)
+                ['sku' => 'DANA', 'name' => 'DANA Bebas Nominal', 'category' => 'ewallet', 'brand' => 'DANA', 'price' => 1500, 'desc' => 'Top up saldo DANA bebas nominal pascabayar'],
+                ['sku' => 'GOPAY', 'name' => 'GoPay Bebas Nominal', 'category' => 'ewallet', 'brand' => 'GO PAY', 'price' => 2000, 'desc' => 'Top up saldo GoPay bebas nominal pascabayar'],
+                ['sku' => 'OVO', 'name' => 'OVO Bebas Nominal', 'category' => 'ewallet', 'brand' => 'OVO', 'price' => 2000, 'desc' => 'Top up saldo OVO bebas nominal pascabayar'],
+                ['sku' => 'SHOPEEPAY', 'name' => 'ShopeePay Bebas Nominal', 'category' => 'ewallet', 'brand' => 'SHOPEE PAY', 'price' => 1500, 'desc' => 'Top up saldo ShopeePay bebas nominal pascabayar'],
+                ['sku' => 'LINKAJA', 'name' => 'LinkAja Bebas Nominal', 'category' => 'ewallet', 'brand' => 'LINKAJA', 'price' => 1500, 'desc' => 'Top up saldo LinkAja bebas nominal pascabayar'],
+                ['sku' => 'emoney', 'name' => 'E-Money Mandiri / Tapcash / Brizzi', 'category' => 'ewallet', 'brand' => 'E-MONEY', 'price' => 1500, 'desc' => 'Top up saldo E-Money / Uang Elektronik bebas nominal'],
+
+                // SAMSAT (Pajak Kendaraan Bermotor)
+                ['sku' => 'samsat', 'name' => 'SAMSAT Nasional (Signal / e-Samsat)', 'category' => 'samsat', 'brand' => 'SAMSAT', 'price' => 3000, 'desc' => 'Pembayaran PKB Pajak Kendaraan Bermotor Nasional'],
+                ['sku' => 'samsatjabar', 'name' => 'SAMSAT Jawa Barat (Sambara)', 'category' => 'samsat', 'brand' => 'SAMSAT', 'price' => 3000, 'desc' => 'Pembayaran Pajak Kendaraan Bermotor Provinsi Jawa Barat'],
+                ['sku' => 'samsatjatim', 'name' => 'SAMSAT Jawa Timur', 'category' => 'samsat', 'brand' => 'SAMSAT', 'price' => 3000, 'desc' => 'Pembayaran Pajak Kendaraan Bermotor Provinsi Jawa Timur'],
+                ['sku' => 'samsatjateng', 'name' => 'SAMSAT Jawa Tengah (Sakpole)', 'category' => 'samsat', 'brand' => 'SAMSAT', 'price' => 3000, 'desc' => 'Pembayaran Pajak Kendaraan Bermotor Provinsi Jawa Tengah'],
+                ['sku' => 'samsatdki', 'name' => 'SAMSAT DKI Jakarta', 'category' => 'samsat', 'brand' => 'SAMSAT', 'price' => 3000, 'desc' => 'Pembayaran Pajak Kendaraan Bermotor Provinsi DKI Jakarta'],
+
+                // PBB (Pajak Bumi dan Bangunan)
+                ['sku' => 'pbb', 'name' => 'PBB Nasional', 'category' => 'pbb', 'brand' => 'PBB', 'price' => 2500, 'desc' => 'Pembayaran Pajak Bumi dan Bangunan Nasional'],
+                ['sku' => 'pbbdki', 'name' => 'PBB DKI Jakarta', 'category' => 'pbb', 'brand' => 'PBB', 'price' => 2500, 'desc' => 'Pembayaran PBB Provinsi DKI Jakarta'],
+                ['sku' => 'cimahi', 'name' => 'PBB Kota Cimahi', 'category' => 'pbb', 'brand' => 'PBB', 'price' => 2500, 'desc' => 'Pembayaran PBB Kota Cimahi Jawa Barat'],
+                ['sku' => 'pbbbandung', 'name' => 'PBB Kota / Kab Bandung', 'category' => 'pbb', 'brand' => 'PBB', 'price' => 2500, 'desc' => 'Pembayaran PBB Kota dan Kabupaten Bandung'],
+                ['sku' => 'pbbsubang', 'name' => 'PBB Kab Subang', 'category' => 'pbb', 'brand' => 'PBB', 'price' => 2500, 'desc' => 'Pembayaran PBB Kabupaten Subang'],
+                ['sku' => 'pbbsurabaya', 'name' => 'PBB Kota Surabaya', 'category' => 'pbb', 'brand' => 'PBB', 'price' => 2500, 'desc' => 'Pembayaran PBB Kota Surabaya Jawa Timur'],
+                ['sku' => 'pbbsemarang', 'name' => 'PBB Kota Semarang', 'category' => 'pbb', 'brand' => 'PBB', 'price' => 2500, 'desc' => 'Pembayaran PBB Kota Semarang Jawa Tengah'],
+
+                // PDAM (Air Bersih)
+                ['sku' => 'pdam', 'name' => 'PDAM Nasional', 'category' => 'pdam', 'brand' => 'PDAM', 'price' => 2500, 'desc' => 'Pembayaran tagihan rekening air PDAM Nasional'],
+                ['sku' => 'pdambandung', 'name' => 'PDAM Tirtawening Kota Bandung', 'category' => 'pdam', 'brand' => 'PDAM', 'price' => 2500, 'desc' => 'Tagihan PDAM Tirtawening Kota Bandung'],
+                ['sku' => 'pdamkabbandung', 'name' => 'PDAM Tirta Raharja Kab Bandung', 'category' => 'pdam', 'brand' => 'PDAM', 'price' => 2500, 'desc' => 'Tagihan PDAM Tirta Raharja Kabupaten Bandung'],
+                ['sku' => 'pdamjakarta', 'name' => 'PDAM PAM JAYA DKI Jakarta', 'category' => 'pdam', 'brand' => 'PDAM', 'price' => 2500, 'desc' => 'Tagihan PAM JAYA DKI Jakarta (Aetra / Palyja)'],
+                ['sku' => 'pdamsurabaya', 'name' => 'PDAM Surya Sembada Surabaya', 'category' => 'pdam', 'brand' => 'PDAM', 'price' => 2500, 'desc' => 'Tagihan PDAM Surya Sembada Kota Surabaya'],
+                ['sku' => 'pdamsemarang', 'name' => 'PDAM Tirta Moedal Semarang', 'category' => 'pdam', 'brand' => 'PDAM', 'price' => 2500, 'desc' => 'Tagihan PDAM Tirta Moedal Kota Semarang'],
+
+                // Gas Negara
+                ['sku' => 'pgas', 'name' => 'PGN (Perusahaan Gas Negara)', 'category' => 'gas', 'brand' => 'PGN', 'price' => 2500, 'desc' => 'Pembayaran tagihan gas rumah tangga & industri PGN'],
+                ['sku' => 'pertagas', 'name' => 'Pertamina Gas (Pertagas)', 'category' => 'gas', 'brand' => 'PERTAGAS', 'price' => 2500, 'desc' => 'Pembayaran tagihan Pertamina Gas'],
+
+                // HP Pascabayar
+                ['sku' => 'kartuhalo', 'name' => 'Kartu Halo (Telkomsel Pasca)', 'category' => 'hp', 'brand' => 'TELKOMSEL', 'price' => 2500, 'desc' => 'Tagihan kartu Halo Telkomsel pascabayar'],
+                ['sku' => 'matrix', 'name' => 'Indosat Matrix (Indosat Pasca)', 'category' => 'hp', 'brand' => 'INDOSAT', 'price' => 2500, 'desc' => 'Tagihan Indosat Matrix pascabayar'],
+                ['sku' => 'xlprioritas', 'name' => 'XL Prioritas (XL Pasca)', 'category' => 'hp', 'brand' => 'XL', 'price' => 2500, 'desc' => 'Tagihan XL Prioritas pascabayar'],
+                ['sku' => 'smartfrenpasca', 'name' => 'Smartfren Postpaid', 'category' => 'hp', 'brand' => 'SMARTFREN', 'price' => 2500, 'desc' => 'Tagihan Smartfren pascabayar'],
+            ];
+
+            if ($isSqlite) {
+                $stmt = $this->db->prepare("
+                    INSERT INTO digi_products (
+                        buyer_sku_code, product_name, category, brand, type, 
+                        seller_price, sell_price, markup, buyer_product_status, seller_product_status, 
+                        description, seller_name, is_active, last_synced_at
+                    ) VALUES (
+                        :sku, :name, :category, :brand, 'postpaid', 
+                        :price, :sell_price, 0, 1, 1, 
+                        :desc, 'Digiflazz', 1, CURRENT_TIMESTAMP
+                    ) ON CONFLICT(buyer_sku_code) DO UPDATE SET
+                        category = excluded.category,
+                        brand = excluded.brand,
+                        type = 'postpaid',
+                        buyer_product_status = 1,
+                        seller_product_status = 1,
+                        is_active = 1
+                ");
+            } else {
+                $stmt = $this->db->prepare("
+                    INSERT INTO digi_products (
+                        buyer_sku_code, product_name, category, brand, type, 
+                        seller_price, sell_price, markup, buyer_product_status, seller_product_status, 
+                        description, seller_name, is_active, last_synced_at
+                    ) VALUES (
+                        :sku, :name, :category, :brand, 'postpaid', 
+                        :price, :sell_price, 0, 1, 1, 
+                        :desc, 'Digiflazz', 1, NOW()
+                    ) ON DUPLICATE KEY UPDATE
+                        category = VALUES(category),
+                        brand = VALUES(brand),
+                        type = 'postpaid',
+                        buyer_product_status = 1,
+                        seller_product_status = 1,
+                        is_active = 1
+                ");
+            }
+
+            foreach ($defaultPostpaid as $item) {
+                $stmt->execute([
+                    'sku' => $item['sku'],
+                    'name' => $item['name'],
+                    'category' => $item['category'],
+                    'brand' => $item['brand'],
+                    'price' => $item['price'],
+                    'sell_price' => $item['price'],
+                    'desc' => $item['desc']
+                ]);
+            }
+        } catch (\Throwable $e) {
+            error_log("[DigiflazzModel] seedDefaultPostpaidProducts error: " . $e->getMessage());
         }
     }
 
@@ -447,6 +578,43 @@ class DigiflazzModel {
     }
 
     /**
+     * Get unique categories by type
+     */
+    public function getCategories(string $type = 'prepaid') {
+        $stmt = $this->db->prepare("
+            SELECT DISTINCT category 
+            FROM digi_products 
+            WHERE type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1
+            ORDER BY category ASC
+        ");
+        $stmt->execute(['type' => $type]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Get unique brands by category and type
+     */
+    public function getBrands(string $category, string $type = 'prepaid') {
+        $stmt = $this->db->prepare("
+            SELECT DISTINCT brand 
+            FROM digi_products 
+            WHERE category = :cat AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1 AND brand IS NOT NULL AND brand != ''
+            ORDER BY brand ASC
+        ");
+        $stmt->execute(['cat' => $category, 'type' => $type]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Get a single product by buyer_sku_code
+     */
+    public function getProductBySku(string $sku) {
+        $stmt = $this->db->prepare("SELECT * FROM digi_products WHERE buyer_sku_code = ? LIMIT 1");
+        $stmt->execute([$sku]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Get a single transaction by ref_id
      */
     public function getTransactionByRefId(string $refId) {
@@ -461,10 +629,11 @@ class DigiflazzModel {
     public function getProducts(string $category, ?string $brand = null, string $type = 'prepaid') {
         $catLower = strtolower(trim($category));
         
-        if ($catLower === 'ewallet' || $catLower === 'e-money' || $catLower === 'e-wallet') {
+        if ($catLower === 'ewallet' || $catLower === 'e-money' || $catLower === 'e-wallet' || $catLower === 'emoney') {
             $sql = "SELECT * FROM digi_products 
                     WHERE (LOWER(category) IN ('ewallet', 'e-money', 'e-wallet', 'emoney', 'uang elektronik') 
-                           OR LOWER(brand) IN ('dana', 'gopay', 'ovo', 'shopeepay', 'linkaja', 'shopee pay', 'go pay', 'maxim', 'isaku', 'i-saku', 'sakuku', 'tapcash', 'brizzi', 'e-toll', 'etoll', 'grab', 'gojek'))
+                           OR LOWER(brand) IN ('dana', 'gopay', 'ovo', 'shopeepay', 'linkaja', 'shopee pay', 'go pay', 'e-money', 'emoney', 'maxim', 'isaku', 'i-saku', 'sakuku', 'tapcash', 'brizzi', 'e-toll', 'etoll', 'grab', 'gojek')
+                           OR LOWER(product_name) LIKE '%bebas nominal%')
                       AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
         } elseif ($catLower === 'voucher') {
@@ -477,11 +646,11 @@ class DigiflazzModel {
                     WHERE (LOWER(category) IN ('game', 'games')) 
                       AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
-        } elseif ($catLower === 'tv' || $catLower === 'televisi') {
+        } elseif ($catLower === 'tv' || $catLower === 'televisi' || $catLower === 'internet') {
             $sql = "SELECT * FROM digi_products 
-                    WHERE (LOWER(category) IN ('tv', 'televisi', 'internet pascabayar', 'tv pascabayar')
-                           OR (type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR LOWER(brand) IN ('tv', 'internet', 'telkom', 'indihome') OR LOWER(product_name) LIKE '%indihome%' OR LOWER(product_name) LIKE '%telkom%'))
-                           OR LOWER(brand) IN ('tv', 'internet', 'telkom', 'indihome')) 
+                    WHERE (LOWER(category) IN ('tv', 'televisi', 'internet', 'internet pascabayar', 'tv pascabayar')
+                           OR LOWER(brand) IN ('tv', 'internet', 'telkom', 'indihome', 'biznet', 'cbn', 'first media', 'mnc', 'mnc play', 'transvision', 'k-vision') 
+                           OR LOWER(product_name) LIKE '%indihome%' OR LOWER(product_name) LIKE '%telkom%' OR LOWER(product_name) LIKE '%internet%' OR LOWER(product_name) LIKE '%biznet%' OR LOWER(product_name) LIKE '%first media%' OR LOWER(product_name) LIKE '%cbn%') 
                       AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
         } elseif ($catLower === 'sms_nelpon') {
@@ -492,37 +661,66 @@ class DigiflazzModel {
         } elseif ($catLower === 'pdam') {
             $sql = "SELECT * FROM digi_products 
                     WHERE (LOWER(category) IN ('pdam') 
-                           OR (type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR LOWER(brand) = 'pdam' OR LOWER(product_name) LIKE '%pdam%' OR LOWER(product_name) LIKE '%air%'))
-                           OR LOWER(brand) = 'pdam') 
+                           OR LOWER(brand) = 'pdam' 
+                           OR LOWER(buyer_sku_code) LIKE 'pdam%'
+                           OR LOWER(product_name) LIKE '%pdam%' OR LOWER(product_name) LIKE '%air%') 
                       AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
         } elseif ($catLower === 'hp') {
             $sql = "SELECT * FROM digi_products 
                     WHERE (LOWER(category) IN ('hp', 'hp pascabayar', 'hp pasca') 
-                           OR (type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR LOWER(brand) IN ('hp', 'halo', 'matrix', 'xl prioritas') OR LOWER(product_name) LIKE '%pasca%'))
-                           OR LOWER(brand) IN ('hp', 'halo', 'matrix', 'xl prioritas')) 
+                           OR LOWER(brand) IN ('hp', 'halo', 'matrix', 'xl prioritas', 'smartfren') 
+                           OR LOWER(buyer_sku_code) IN ('kartuhalo', 'matrix', 'xlprioritas', 'smartfrenpasca')
+                           OR LOWER(product_name) LIKE '%pasca%') 
                       AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
         } elseif ($catLower === 'bpjs') {
             $sql = "SELECT * FROM digi_products 
-                    WHERE (LOWER(category) LIKE '%bpjs%' 
-                           OR (type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR LOWER(brand) LIKE '%bpjs%'))
-                           OR LOWER(brand) LIKE '%bpjs%') 
+                    WHERE (LOWER(category) IN ('bpjs', 'bpjs kesehatan', 'bpjs ketenagakerjaan', 'bpjstk')
+                           OR LOWER(category) LIKE '%bpjs%' 
+                           OR LOWER(brand) LIKE '%bpjs%' 
+                           OR LOWER(buyer_sku_code) LIKE 'bpjs%'
+                           OR LOWER(product_name) LIKE '%bpjs%') 
                       AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
         } elseif ($catLower === 'multifinance') {
             $sql = "SELECT * FROM digi_products 
                     WHERE (LOWER(category) IN ('multifinance', 'finance', 'cicilan', 'angsuran') 
-                           OR (type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR LOWER(brand) = 'multifinance' OR LOWER(product_name) LIKE '%finance%' OR LOWER(product_name) LIKE '%credit%' OR LOWER(product_name) LIKE '%angsuran%'))
-                           OR LOWER(brand) = 'multifinance') 
+                           OR LOWER(brand) = 'multifinance' 
+                           OR LOWER(product_name) LIKE '%finance%' OR LOWER(product_name) LIKE '%credit%' OR LOWER(product_name) LIKE '%angsuran%'
+                           OR LOWER(buyer_sku_code) LIKE 'fn%' OR LOWER(buyer_sku_code) LIKE 'afn%') 
                       AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
         } elseif ($catLower === 'pln') {
             $sql = "SELECT * FROM digi_products 
                     WHERE (LOWER(category) IN ('pln', 'pln pascabayar', 'pln nontaglis') 
-                           OR (type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR LOWER(brand) = 'pln'))
-                           OR LOWER(category) LIKE '%pln%' 
-                           OR LOWER(brand) = 'pln') 
+                           OR LOWER(brand) = 'pln' 
+                           OR LOWER(buyer_sku_code) IN ('pln', 'plnnontaglis', 'plnpascatagihan')
+                           OR LOWER(product_name) LIKE '%pln%') 
+                      AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
+            $params = ['type' => $type];
+        } elseif ($catLower === 'samsat') {
+            $sql = "SELECT * FROM digi_products 
+                    WHERE (LOWER(category) IN ('samsat', 'pkb') 
+                           OR LOWER(brand) LIKE '%samsat%' 
+                           OR LOWER(buyer_sku_code) LIKE 'samsat%'
+                           OR LOWER(product_name) LIKE '%samsat%' OR LOWER(product_name) LIKE '%pajak kendaraan%') 
+                      AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
+            $params = ['type' => $type];
+        } elseif ($catLower === 'pbb') {
+            $sql = "SELECT * FROM digi_products 
+                    WHERE (LOWER(category) IN ('pbb', 'pajak') 
+                           OR LOWER(brand) LIKE '%pbb%' 
+                           OR LOWER(buyer_sku_code) LIKE 'pbb%' OR LOWER(buyer_sku_code) = 'cimahi'
+                           OR LOWER(product_name) LIKE '%pbb%' OR LOWER(product_name) LIKE '%pajak bumi%') 
+                      AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
+            $params = ['type' => $type];
+        } elseif ($catLower === 'gas') {
+            $sql = "SELECT * FROM digi_products 
+                    WHERE (LOWER(category) IN ('gas', 'gas negara') 
+                           OR LOWER(brand) IN ('gas', 'pgn', 'pertagas') 
+                           OR LOWER(buyer_sku_code) IN ('pgas', 'pertagas')
+                           OR LOWER(product_name) LIKE '%gas%') 
                       AND type = :type AND is_active = 1 AND buyer_product_status = 1 AND seller_product_status = 1";
             $params = ['type' => $type];
         } else {
@@ -561,24 +759,6 @@ class DigiflazzModel {
             }
         }
         return $result;
-    }
-
-    /**
-     * Get distinct brands for a category
-     */
-    public function getBrands(string $category) {
-        $stmt = $this->db->prepare("SELECT DISTINCT brand FROM digi_products WHERE category = ? AND is_active = 1 AND buyer_product_status = 1 ORDER BY brand");
-        $stmt->execute([$category]);
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
-    }
-
-    /**
-     * Get a specific product by SKU
-     */
-    public function getProductBySku(string $sku) {
-        $stmt = $this->db->prepare("SELECT * FROM digi_products WHERE buyer_sku_code = ?");
-        $stmt->execute([$sku]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     /**
