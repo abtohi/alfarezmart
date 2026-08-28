@@ -1019,7 +1019,13 @@ class MutualFundService
      */
     public static function getCacheFilePath(): string
     {
-        $dir = defined('BASE_PATH') ? BASE_PATH . '/storage' : dirname(__DIR__, 2) . '/storage';
+        if (defined('BASE_PATH') && is_dir(BASE_PATH . '/storage')) {
+            $dir = BASE_PATH . '/storage';
+        } elseif (defined('STORAGE_PATH') && is_dir(STORAGE_PATH)) {
+            $dir = STORAGE_PATH;
+        } else {
+            $dir = dirname(__DIR__, 2) . '/storage';
+        }
         if (!is_dir($dir)) {
             @mkdir($dir, 0777, true);
         }
@@ -1031,14 +1037,18 @@ class MutualFundService
      */
     public static function getLiveNavCache(): array
     {
-        $file = self::getCacheFilePath();
-        if (file_exists($file)) {
-            $raw = @file_get_contents($file);
-            $data = json_decode($raw, true);
-            if (is_array($data)) {
-                return $data;
+        try {
+            $file = self::getCacheFilePath();
+            if (file_exists($file)) {
+                $raw = @file_get_contents($file);
+                if ($raw) {
+                    $data = json_decode($raw, true);
+                    if (is_array($data)) {
+                        return $data;
+                    }
+                }
             }
-        }
+        } catch (\Throwable $e) {}
         return [];
     }
 
@@ -1047,8 +1057,12 @@ class MutualFundService
      */
     public static function saveLiveNavCache(array $cache): bool
     {
-        $file = self::getCacheFilePath();
-        return @file_put_contents($file, json_encode($cache, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) !== false;
+        try {
+            $file = self::getCacheFilePath();
+            return @file_put_contents($file, json_encode($cache, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) !== false;
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /**

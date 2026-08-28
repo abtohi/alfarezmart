@@ -267,7 +267,7 @@ class SavingsModel extends Model
     /**
      * Get single goal by ID with allocations
      */
-    public function getGoalById($id): ?array
+    public function getGoalById(int $id): ?array
     {
         try {
             $stmt = $this->db->prepare("
@@ -336,7 +336,7 @@ class SavingsModel extends Model
     /**
      * Update Goal
      */
-    public function updateGoal($id, array $data): bool
+    public function updateGoal(int $id, array $data): bool
     {
         $stmt = $this->db->prepare("
             UPDATE savings_goals 
@@ -367,7 +367,7 @@ class SavingsModel extends Model
     /**
      * Delete Goal and its related allocations and logs
      */
-    public function deleteGoal($id): bool
+    public function deleteGoal(int $id): bool
     {
         try {
             $this->beginTransaction();
@@ -420,7 +420,7 @@ class SavingsModel extends Model
     /**
      * Get single allocation by ID
      */
-    public function getAllocationById($id): ?array
+    public function getAllocationById(int $id): ?array
     {
         try {
             $stmt = $this->db->prepare("SELECT * FROM savings_allocations WHERE id = :id LIMIT 1");
@@ -486,7 +486,7 @@ class SavingsModel extends Model
     /**
      * Update allocation
      */
-    public function updateAllocation($id, array $data): bool
+    public function updateAllocation(int $id, array $data): bool
     {
         try {
             $existing = $this->getAllocationById($id);
@@ -546,7 +546,7 @@ class SavingsModel extends Model
     /**
      * Delete allocation
      */
-    public function deleteAllocation($id): bool
+    public function deleteAllocation(int $id): bool
     {
         try {
             $existing = $this->getAllocationById($id);

@@ -2624,8 +2624,13 @@ const ALLOC_TYPE_PRESETS = [
 ];
 
 // Master catalog data from MutualFundService (Bareksa top funds)
-const INLINE_MASTER_CATALOG = <?= json_encode(MutualFundService::getDefaultCatalog()) ?>;
-const INLINE_FUND_HOUSES = <?= json_encode(MutualFundService::getFundHouses()) ?>;
+<?php
+require_once __DIR__ . '/../../services/MutualFundService.php';
+$inlineCatalog = class_exists('MutualFundService') ? MutualFundService::getDefaultCatalog() : [];
+$inlineHouses = class_exists('MutualFundService') ? MutualFundService::getFundHouses() : [];
+?>
+const INLINE_MASTER_CATALOG = <?= json_encode($inlineCatalog, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;
+const INLINE_FUND_HOUSES = <?= json_encode($inlineHouses, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;
 
 // State for Mutual Funds
 let allMutualFunds = [];
