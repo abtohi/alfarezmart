@@ -2310,10 +2310,17 @@ html[data-theme="dark"] #inq-detail strong {
                     </div>
 
                     <div class="mb-3" id="custom-price-container" style="display:none; text-align: left; padding: 0 10px;">
-                        <label class="form-label small text-muted mb-1 fw-bold">Harga Jual (Bisa Diubah Untuk Struk)</label>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small text-muted mb-0 fw-bold">Harga Jual (Wajib Diatur > Modal)</label>
+                            <span id="custom-price-modal-badge" class="badge bg-secondary" style="font-size: 10.5px;">Modal: Rp 0</span>
+                        </div>
                         <div class="d-flex align-items-stretch" style="border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; background: var(--surface-2);">
                             <div class="d-flex align-items-center justify-content-center px-3 fw-bold text-muted" style="background: rgba(0,0,0,0.03); border-right: 1px solid var(--border-color);">Rp</div>
                             <input type="number" class="form-control border-0 bg-transparent ps-2 fw-bold shadow-none" id="custom-print-price" placeholder="0" style="font-size: 16px; color: var(--text-primary); padding: 12px 15px;">
+                        </div>
+                        <div id="custom-price-profit-text" class="mt-1 small fw-bold" style="font-size: 11.5px; display: none;"></div>
+                        <div id="custom-price-warning" class="alert alert-warning py-1 px-2 mt-1.5 small mb-0" style="display: none; font-size: 11px; border-radius: 8px;">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Harga jual belum diatur / di bawah harga modal!
                         </div>
                     </div>
 
@@ -3212,10 +3219,17 @@ function openContactBook() {
         'sms_nelpon': 'hp,ewallet',
         'ewallet': 'ewallet,hp',
         'pln': 'pln',
-        'game': 'game',
-        'tv': 'tv'
+        'bpjs': 'bpjs',
+        'pdam': 'pdam',
+        'internet': 'internet,tv',
+        'tv': 'tv,internet',
+        'multifinance': 'multifinance,other',
+        'samsat': 'samsat,other',
+        'pbb': 'pbb,other',
+        'gas': 'gas,other',
+        'game': 'game'
     };
-    let contactType = typeMap[currentCategory] || 'hp'; // fallback to hp
+    let contactType = typeMap[currentCategory] || currentCategory || 'hp';
 
     fetch(`${BASE_URL}api/ppob/customers?type=${contactType}`)
         .then(res => res.json())
@@ -4034,7 +4048,7 @@ async function deletePpobSellPrice(sku) {
             if (typeof currentProducts !== 'undefined') {
                 const p = currentProducts.find(x => x.buyer_sku_code === sku);
                 if (p) {
-                    p.sell_price = p.seller_price;
+                    p.sell_price = p.type === 'postpaid' ? p.seller_price : 0;
                     p.is_custom_price = 0;
                 }
             }
@@ -4165,7 +4179,7 @@ async function deletePpobSellPricesBulk(skus) {
             skus.forEach(sku => {
                 const p = currentProducts.find(x => x.buyer_sku_code === sku);
                 if (p) {
-                    p.sell_price = p.seller_price;
+                    p.sell_price = p.type === 'postpaid' ? p.seller_price : 0;
                     p.is_custom_price = 0;
                 }
             });
@@ -4384,13 +4398,17 @@ function renderProducts(products) {
         let hasUnsetSellPriceInGroup = false;
 
         items.forEach(item => {
-            if (!isCustomPriceSet(item)) {
+            const isCustom = isCustomPriceSet(item);
+            if (!isCustom) {
                 hasUnsetSellPriceInGroup = true;
             }
 
             const sp = parseFloat(item.seller_price || 0);
             const customSell = getPpobSellPrice(item.buyer_sku_code);
-            const sellP = customSell && customSell > sp ? customSell : (parseFloat(item.sell_price) || sp);
+            const isPrepaid = (item.type !== 'postpaid' && item.type !== 'pascabayar');
+            const sellP = (isCustom && customSell && customSell > 0)
+                ? parseFloat(customSell)
+                : ((isCustom && item.sell_price && item.sell_price > 0) ? parseFloat(item.sell_price) : (isPrepaid ? 0 : (parseFloat(item.sell_price) || sp)));
 
             if (sellP < minSellPrice) minSellPrice = sellP;
             if (sellP > maxSellPrice) maxSellPrice = sellP;
@@ -4404,9 +4422,10 @@ function renderProducts(products) {
         // Price range or single price display
         let groupPriceHtml = '';
         if (minSellPrice === maxSellPrice) {
-            groupPriceHtml = formatRp(minSellPrice);
+            groupPriceHtml = minSellPrice > 0 ? formatRp(minSellPrice) : '<span class="text-warning fw-bold">Rp 0 (Belum Set)</span>';
         } else {
-            groupPriceHtml = `${formatRp(minSellPrice)} - ${formatRp(maxSellPrice)}`;
+            const minText = minSellPrice > 0 ? formatRp(minSellPrice) : '<span class="text-warning fw-bold">Rp 0</span>';
+            groupPriceHtml = `${minText} - ${formatRp(maxSellPrice)}`;
         }
 
         // Seller count badge
@@ -4516,14 +4535,20 @@ function renderProducts(products) {
         }
 
         items.forEach((p, idx) => {
-            const sellPrice = getPpobSellPrice(p.buyer_sku_code);
-            const actualSellPrice = sellPrice && sellPrice > 0 ? sellPrice : (p.sell_price || p.seller_price);
+            const isCustom = isCustomPriceSet(p);
+            const customSell = getPpobSellPrice(p.buyer_sku_code);
+            const isPrepaid = (p.type !== 'postpaid' && p.type !== 'pascabayar');
+            const actualSellPrice = (isCustom && customSell && customSell > 0)
+                ? parseInt(customSell, 10)
+                : ((isCustom && p.sell_price && p.sell_price > 0) ? parseInt(p.sell_price, 10) : (isPrepaid ? 0 : (parseInt(p.sell_price || p.seller_price || 0, 10))));
             
             let profitHtml = '';
             if (actualSellPrice > p.seller_price) {
                 const profit = actualSellPrice - p.seller_price;
                 const pct = ((profit / p.seller_price) * 100).toFixed(1);
                 profitHtml = `<span class="seller-profit-tag">+${formatRp(profit)} (${pct}%)</span>`;
+            } else if (actualSellPrice > 0 && actualSellPrice <= p.seller_price) {
+                profitHtml = `<span class="seller-profit-tag bg-danger text-white">Rugi/Seri</span>`;
             }
 
             // Rank Badge & Card Theme
@@ -4616,16 +4641,19 @@ function renderProducts(products) {
 
             const encodedProduct = encodeURIComponent(JSON.stringify(p));
 
-            const isCustom = isCustomPriceSet(p);
             let unsetBadge = '';
             let sellPriceUnsetTag = '';
             let gearClass = 'btn-gear-setting';
 
             if (!isCustom) {
-                unsetBadge = `<span class="badge bg-warning bg-opacity-15 text-warning border border-warning border-opacity-25" style="font-size:9.5px; font-weight:700; padding:2px 6px; white-space:nowrap;" title="Harga Jual belum diset manual oleh user (Menggunakan harga otomatis/modal)"><i class="bi bi-exclamation-triangle-fill me-1"></i>Belum Set Harga</span>`;
-                sellPriceUnsetTag = `<span class="badge bg-warning text-dark ms-1" style="font-size:8.5px; padding:1px 5px;" title="Harga jual belum di-set manual (Menggunakan harga otomatis)"><i class="bi bi-exclamation-triangle-fill"></i> Otomatis</span>`;
+                unsetBadge = `<span class="badge bg-warning bg-opacity-15 text-warning border border-warning border-opacity-25" style="font-size:9.5px; font-weight:700; padding:2px 6px; white-space:nowrap;" title="Harga Jual belum diset manual oleh user"><i class="bi bi-exclamation-triangle-fill me-1"></i>Belum Set Harga</span>`;
+                sellPriceUnsetTag = `<span class="badge bg-warning text-dark ms-1" style="font-size:8.5px; padding:1px 5px;" title="Harga jual belum di-set manual"><i class="bi bi-exclamation-triangle-fill"></i> Belum Set</span>`;
                 gearClass += ' highlight-unset';
             }
+
+            const sellPriceDisplay = actualSellPrice > 0 
+                ? `<span class="sell-price-val">${formatRp(actualSellPrice)}</span>` 
+                : `<span class="sell-price-val text-warning" style="font-size:13px;">Rp 0</span>`;
 
             sellerItemsHtml += `
                 <div class="seller-option-item ${cardClass}">
@@ -4672,7 +4700,7 @@ function renderProducts(products) {
                             <div class="d-flex flex-column">
                                 <span class="price-label-sm">Jual ${sellPriceUnsetTag}</span>
                                 <div class="d-flex align-items-center gap-1 flex-wrap">
-                                    <span class="sell-price-val">${formatRp(actualSellPrice)}</span>
+                                    ${sellPriceDisplay}
                                     ${profitHtml}
                                 </div>
                             </div>
@@ -5349,6 +5377,91 @@ async function performInquiry() {
     btn.disabled = false; btn.innerText = (currentType === 'prepaid') ? 'Cek Nama' : 'Cek Tagihan';
 }
 
+// 7. Confirm Prepaid Purchase
+function confirmPurchase(product) {
+    const custNo = (document.getElementById('customer-no')?.value || '').trim();
+    if (!custNo) {
+        showAlert('⚠️ Masukkan nomor tujuan / ID Pelanggan terlebih dahulu!', 'warning');
+        document.getElementById('customer-no')?.focus();
+        return;
+    }
+    
+    // Check sell price (0 if not custom set by user)
+    const isCustom = isCustomPriceSet(product);
+    const customSell = getPpobSellPrice(product.buyer_sku_code);
+    let sellPrice = 0;
+    if (isCustom && customSell && parseInt(customSell) > 0) {
+        sellPrice = parseInt(customSell);
+    } else if (isCustom && product.sell_price && parseInt(product.sell_price) > 0) {
+        sellPrice = parseInt(product.sell_price);
+    } else {
+        sellPrice = 0;
+    }
+
+    const modalPrice = parseInt(product.seller_price || 0);
+    const sellerName = product.seller_name || 'Digiflazz';
+    const prodName = product.product_name;
+    const custName = (currentCategory === 'pln' && window.currentPlnName) ? window.currentPlnName : (selectedInqData ? selectedInqData.customer_name : '');
+
+    let sellPriceText = sellPrice > 0 ? formatRp(sellPrice) : '<span class="text-warning fw-bold">Rp 0 (Belum Ditentukan)</span>';
+    let profitText = '';
+    if (sellPrice > modalPrice) {
+        const profit = sellPrice - modalPrice;
+        profitText = `<div class="d-flex justify-content-between align-items-center py-1 text-success small">
+            <span>Estimasi Keuntungan:</span>
+            <span class="fw-bold">+${formatRp(profit)} (${((profit/modalPrice)*100).toFixed(1)}%)</span>
+        </div>`;
+    }
+
+    const confirmHtml = `
+        <div class="d-flex flex-column gap-2">
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <span class="text-muted small">Layanan / Produk</span>
+                <span class="fw-bold text-primary text-end small">${prodName}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <span class="text-muted small">No. Tujuan / ID</span>
+                <span class="fw-bold text-end small font-monospace">${custNo}</span>
+            </div>
+            ${custName ? `
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <span class="text-muted small">Nama Pelanggan</span>
+                <span class="fw-bold text-end small text-truncate" style="max-width: 220px;">${custName}</span>
+            </div>` : ''}
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <span class="text-muted small">Seller / Supplier</span>
+                <span class="fw-bold text-end small">${sellerName} (${product.buyer_sku_code})</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color: var(--border-color) !important;">
+                <span class="text-muted small">Harga Modal</span>
+                <span class="fw-bold text-end small">${formatRp(modalPrice)}</span>
+            </div>
+            <div class="d-flex justify-content-between align-items-center pt-2 mt-1">
+                <span class="fw-bold" style="font-size: 13.5px;">Harga Jual</span>
+                <span class="fw-black" style="font-size: 1.25rem; color: ${sellPrice > 0 ? 'var(--success)' : 'var(--warning)'};">${sellPriceText}</span>
+            </div>
+            ${profitText}
+            ${sellPrice === 0 ? `
+            <div class="alert alert-warning p-2 small mb-0 mt-1 d-flex align-items-center gap-2" style="font-size: 11px; border-radius: 8px;">
+                <i class="bi bi-exclamation-triangle-fill flex-shrink-0 fs-6"></i>
+                <div>Harga jual produk ini belum ditentukan. Anda wajib mengatur harga jual setelah transaksi berhasil untuk dapat mencetak struk.</div>
+            </div>` : ''}
+        </div>
+    `;
+
+    showConfirm('Konfirmasi Pembelian', confirmHtml, () => {
+        processTransaction({
+            sku: product.buyer_sku_code,
+            customer_no: custNo,
+            customer_name: custName,
+            brand: product.brand || currentCategory,
+            seller_price: modalPrice,
+            sell_price: sellPrice,
+            product_name: prodName
+        });
+    });
+}
+
 // 8. Pay Postpaid
 async function payPostpaid() {
     if (!selectedInqData) return;
@@ -5388,7 +5501,10 @@ async function payPostpaid() {
         processTransaction({
             sku: selectedInqData.sku,
             customer_no: custNo,
+            customer_name: custName,
+            brand: selectedInqData.brand || currentCategory,
             ref_id: selectedInqData.ref_id, // Wajib dari inquiry
+            seller_price: selectedInqData.price || totalPay,
             sell_price: totalPay,
             amount: selectedInqData.amount || null,
             product_name: selectedInqData.customer_name ? `${prodName} (${selectedInqData.customer_name})` : prodName
@@ -5520,12 +5636,14 @@ async function executeTransactionAPI(payload) {
             lastTrxData = {
                 ref_id: refId,
                 trx_id: trxId,
+                sku: payload.sku || '',
                 product_name: payload.product_name || '-',
                 customer_no: payload.customer_no || '-',
                 customer_name: payload.customer_name || '',
                 brand: payload.brand || '',
                 sn: sn,
-                sell_price: payload.sell_price || 0,
+                seller_price: parseInt(payload.seller_price || 0),
+                sell_price: parseInt(payload.sell_price || 0),
                 created_at: new Date().toLocaleString('id-ID')
             };
 
@@ -5569,7 +5687,28 @@ async function executeTransactionAPI(payload) {
             if (isSuccess || isPending) {
                 document.getElementById('result-actions').style.display = 'flex';
                 document.getElementById('custom-price-container').style.display = 'block';
-                document.getElementById('custom-print-price').value = parseInt(payload.sell_price || 0);
+                
+                const modalPrice = parseInt(payload.seller_price || 0);
+                const currentSell = parseInt(payload.sell_price || 0);
+                document.getElementById('custom-price-modal-badge').innerText = `Modal: ${formatRp(modalPrice)}`;
+                const printPriceInput = document.getElementById('custom-print-price');
+                printPriceInput.value = currentSell > 0 ? currentSell : '';
+                
+                updateResultPricePreview(modalPrice, currentSell);
+
+                // Attach real-time price preview and auto-save on change
+                printPriceInput.oninput = () => {
+                    const typedVal = parseInt(printPriceInput.value) || 0;
+                    updateResultPricePreview(modalPrice, typedVal);
+                };
+                printPriceInput.onchange = () => {
+                    const typedVal = parseInt(printPriceInput.value) || 0;
+                    if (typedVal > modalPrice && lastTrxData.sku) {
+                        savePpobSellPrice(lastTrxData.sku, typedVal);
+                        lastTrxData.sell_price = typedVal;
+                        showToast(`✅ Harga jual ${lastTrxData.sku} (${formatRp(typedVal)}) tersimpan ke database`, 'success');
+                    }
+                };
                 
                 // Update printer badge
                 let printer = window._ppobPrinter;
@@ -5649,6 +5788,72 @@ async function executeTransactionAPI(payload) {
     }
 }
 
+// Helper: update profit / warning in result modal
+function updateResultPricePreview(modalPrice, sellPrice) {
+    const profitEl = document.getElementById('custom-price-profit-text');
+    const warningEl = document.getElementById('custom-price-warning');
+    if (!profitEl || !warningEl) return;
+
+    if (!sellPrice || sellPrice <= 0) {
+        profitEl.style.display = 'none';
+        warningEl.style.display = 'block';
+        warningEl.className = 'alert alert-warning py-1 px-2 mt-1.5 small mb-0';
+        warningEl.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i>Harga jual belum diatur! Wajib tentukan harga jual di atas modal.';
+    } else if (modalPrice > 0 && sellPrice <= modalPrice) {
+        profitEl.style.display = 'none';
+        warningEl.style.display = 'block';
+        warningEl.className = 'alert alert-danger py-1 px-2 mt-1.5 small mb-0';
+        warningEl.innerHTML = `<i class="bi bi-x-circle-fill me-1"></i>Harga jual (${formatRp(sellPrice)}) di bawah/sama dengan modal (${formatRp(modalPrice)})!`;
+    } else {
+        warningEl.style.display = 'none';
+        profitEl.style.display = 'block';
+        const profit = sellPrice - modalPrice;
+        const pct = modalPrice > 0 ? ((profit / modalPrice) * 100).toFixed(1) : 0;
+        profitEl.innerHTML = `<span class="text-success"><i class="bi bi-graph-up-arrow me-1"></i>Keuntungan: <b>+${formatRp(profit)}</b> (${pct}%)</span>`;
+    }
+}
+
+// Helper: validate selling price before printing/sharing receipt
+function validateReceiptPrice() {
+    if (!lastTrxData) {
+        showAlert('⚠️ Data transaksi tidak ditemukan', 'warning');
+        return false;
+    }
+    const customPriceInput = document.getElementById('custom-print-price');
+    const inputVal = customPriceInput && customPriceInput.value ? parseInt(customPriceInput.value, 10) : 0;
+    const sellPrice = inputVal > 0 ? inputVal : parseInt(lastTrxData.sell_price || 0, 10);
+    const modalPrice = parseInt(lastTrxData.seller_price || 0, 10);
+
+    if (!sellPrice || sellPrice <= 0) {
+        showAlert('⚠️ Harga jual belum ditentukan (Rp 0)! Harap atur harga jual terlebih dahulu pada kolom yang disediakan sebelum mencetak atau membagikan struk.', 'danger');
+        if (customPriceInput) {
+            customPriceInput.focus();
+            customPriceInput.style.borderColor = 'var(--danger, #ef4444)';
+        }
+        return false;
+    }
+
+    if (modalPrice > 0 && sellPrice <= modalPrice) {
+        showAlert(`⚠️ Harga jual (${formatRp(sellPrice)}) tidak boleh sama atau di bawah harga modal (${formatRp(modalPrice)})! Harap tentukan harga jual di atas modal.`, 'danger');
+        if (customPriceInput) {
+            customPriceInput.focus();
+            customPriceInput.style.borderColor = 'var(--danger, #ef4444)';
+        }
+        return false;
+    }
+
+    if (customPriceInput) {
+        customPriceInput.style.borderColor = '';
+    }
+
+    // Persist price to database and memory
+    lastTrxData.sell_price = sellPrice;
+    if (lastTrxData.sku) {
+        savePpobSellPrice(lastTrxData.sku, sellPrice);
+    }
+    return true;
+}
+
 // 10. Check transaction status (polling)
 // isAuto parameter prevents button text from flickering during auto-poll
 async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
@@ -5684,7 +5889,10 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
                         document.getElementById('result-trxid').innerText = lastTrxData.trx_id;
                     }
                     const configuredPrice = typeof getPpobSellPrice === 'function' ? getPpobSellPrice(lastTrxData.sku) : null;
-                    document.getElementById('custom-print-price').value = parseInt(configuredPrice || lastTrxData.sell_price || 0);
+                    const finalSell = parseInt(configuredPrice || lastTrxData.sell_price || 0);
+                    const printInput = document.getElementById('custom-print-price');
+                    printInput.value = finalSell > 0 ? finalSell : '';
+                    updateResultPricePreview(parseInt(lastTrxData.seller_price || 0), finalSell);
                 }
                 
                 if (isSuccess) {
@@ -5758,13 +5966,7 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
 
 // 11. Print PPOB Receipt
 async function printPpobReceipt() {
-    if (!lastTrxData) { showToast('⚠️ Data transaksi tidak ditemukan', 'warning'); return; }
-    
-    // Override sell price with custom input if valid
-    const customPriceInput = document.getElementById('custom-print-price');
-    if (customPriceInput && customPriceInput.value) {
-        lastTrxData.sell_price = parseInt(customPriceInput.value) || lastTrxData.sell_price;
-    }
+    if (!validateReceiptPrice()) return;
     
     const btn = document.getElementById('btn-print-receipt');
     const badge = document.getElementById('printer-status-badge');
@@ -5808,24 +6010,13 @@ async function printPpobReceipt() {
 
 // Preview Web Receipt
 function previewPpobReceipt() {
-    if (!lastTrxData) { showToast('⚠️ Data transaksi tidak ditemukan', 'warning'); return; }
-    // Override sell price with custom input if valid
-    const customPriceInput = document.getElementById('custom-print-price');
-    if (customPriceInput && customPriceInput.value) {
-        lastTrxData.sell_price = parseInt(customPriceInput.value) || lastTrxData.sell_price;
-    }
+    if (!validateReceiptPrice()) return;
     printPpobReceiptBrowser();
 }
 
 // Share Receipt Image
 async function sharePpobReceipt() {
-    if (!lastTrxData) { showToast('⚠️ Data transaksi tidak ditemukan', 'warning'); return; }
-    
-    // Override sell price with custom input if valid
-    const customPriceInput = document.getElementById('custom-print-price');
-    if (customPriceInput && customPriceInput.value) {
-        lastTrxData.sell_price = parseInt(customPriceInput.value) || lastTrxData.sell_price;
-    }
+    if (!validateReceiptPrice()) return;
     
     const btn = document.getElementById('btn-share-receipt');
     const originalText = btn.innerHTML;
@@ -6031,7 +6222,17 @@ async function promptSavePpobContact(customerNo, defaultName = '', category = ''
             targetType = 'bpjs';
         } else if (cat === 'internet' || cat === 'wifi' || cat === 'indihome' || cat === 'telkom') {
             targetType = 'internet';
-        } else if (cat === 'ewallet' || cat === 'pulsa' || cat === 'data' || cat === 'sms_nelpon' || cat === 'phone') {
+        } else if (cat === 'multifinance' || cat === 'finance' || cat === 'leasing' || cat === 'cicilan') {
+            targetType = 'multifinance';
+        } else if (cat === 'samsat' || cat === 'pkb') {
+            targetType = 'samsat';
+        } else if (cat === 'pbb') {
+            targetType = 'pbb';
+        } else if (cat === 'gas' || cat === 'pgn' || cat === 'pertagas') {
+            targetType = 'gas';
+        } else if (cat === 'ewallet') {
+            targetType = 'ewallet';
+        } else if (cat === 'pulsa' || cat === 'data' || cat === 'sms_nelpon' || cat === 'phone') {
             targetType = 'hp';
         } else {
             if (/^08\d{8,13}$/.test(cleanNo)) {

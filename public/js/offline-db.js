@@ -575,6 +575,7 @@ window.OfflineDB = (function() {
                 if (isSupplierMatch) {
                     score += 500;
                     const spData = supplierProductMap.get(p.id);
+                    if (spData) {
                         score += Math.min(spData.purchase_count, 50); // Frequency bonus (capped)
                         p.last_buy_price = spData.last_buy_price;
                     }

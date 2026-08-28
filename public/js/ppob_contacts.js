@@ -45,13 +45,18 @@ function openUnifiedContactModal(customer = null, defaultType = 'hp', defaultNo 
             <div class="mb-3">
                 <label class="form-label fw-bold small" style="color:var(--text-secondary);">Tipe Pelanggan</label>
                 <select class="form-select glass-input fw-bold" id="uc_type" onchange="toggleUnifiedContactType()" ${isEdit ? 'disabled' : ''}>
-                    <option value="hp" ${(customer ? customer.type : defaultType) === 'hp' ? 'selected' : ''}>Nomor HP (Pulsa/Data/E-Wallet)</option>
-                    <option value="pln" ${(customer ? customer.type : defaultType) === 'pln' ? 'selected' : ''}>PLN (Token/Tagihan)</option>
-                    <option value="game" ${(customer ? customer.type : defaultType) === 'game' ? 'selected' : ''}>Voucher Game / ID Game</option>
-                    <option value="tv" ${(customer ? customer.type : defaultType) === 'tv' ? 'selected' : ''}>TV Voucher / Kabel</option>
+                    <option value="hp" ${(customer ? customer.type : defaultType) === 'hp' ? 'selected' : ''}>Nomor HP (Pulsa/Data)</option>
+                    <option value="ewallet" ${(customer ? customer.type : defaultType) === 'ewallet' ? 'selected' : ''}>E-Wallet (Dana, GoPay, OVO, ShopeePay, LinkAja)</option>
+                    <option value="pln" ${(customer ? customer.type : defaultType) === 'pln' ? 'selected' : ''}>PLN (Token / Tagihan Pascabayar)</option>
+                    <option value="bpjs" ${(customer ? customer.type : defaultType) === 'bpjs' ? 'selected' : ''}>BPJS (Kesehatan / Ketenagakerjaan)</option>
                     <option value="pdam" ${(customer ? customer.type : defaultType) === 'pdam' ? 'selected' : ''}>PDAM (Air Minum)</option>
-                    <option value="bpjs" ${(customer ? customer.type : defaultType) === 'bpjs' ? 'selected' : ''}>BPJS Kesehatan/Ketenagakerjaan</option>
-                    <option value="internet" ${(customer ? customer.type : defaultType) === 'internet' ? 'selected' : ''}>Internet & Telkom</option>
+                    <option value="internet" ${(customer ? customer.type : defaultType) === 'internet' ? 'selected' : ''}>Internet & TV Kabel / Telkom</option>
+                    <option value="multifinance" ${(customer ? customer.type : defaultType) === 'multifinance' ? 'selected' : ''}>Multifinance (Cicilan / Leasing)</option>
+                    <option value="samsat" ${(customer ? customer.type : defaultType) === 'samsat' ? 'selected' : ''}>SAMSAT / PKB (Pajak Kendaraan)</option>
+                    <option value="pbb" ${(customer ? customer.type : defaultType) === 'pbb' ? 'selected' : ''}>PBB (Pajak Bumi & Bangunan)</option>
+                    <option value="gas" ${(customer ? customer.type : defaultType) === 'gas' ? 'selected' : ''}>Gas Negara (PGN / Pertagas)</option>
+                    <option value="game" ${(customer ? customer.type : defaultType) === 'game' ? 'selected' : ''}>Voucher Game / ID Game</option>
+                    <option value="tv" ${(customer ? customer.type : defaultType) === 'tv' ? 'selected' : ''}>TV Voucher</option>
                     <option value="other" ${(customer ? customer.type : defaultType) === 'other' ? 'selected' : ''}>Lainnya / Tagihan Pasca</option>
                 </select>
             </div>
@@ -114,7 +119,7 @@ function openUnifiedContactModal(customer = null, defaultType = 'hp', defaultNo 
             if (type === 'pln') {
                 data.pln_name = document.getElementById('uc_pln_name').value.trim();
                 data.pln_power = document.getElementById('uc_pln_power').value.trim();
-            } else if (type === 'hp') {
+            } else if (type === 'hp' || type === 'ewallet') {
                 let ew = {};
                 document.querySelectorAll('.ewallet-check:checked').forEach(el => {
                     const s = el.value;
@@ -152,7 +157,7 @@ function toggleUnifiedContactType() {
     const plnSec = document.getElementById('uc_pln_section');
     const ewSec = document.getElementById('uc_ewallet_section');
     if(plnSec) plnSec.style.display = (type === 'pln') ? 'block' : 'none';
-    if(ewSec) ewSec.style.display = (type === 'hp') ? 'block' : 'none';
+    if(ewSec) ewSec.style.display = (type === 'hp' || type === 'ewallet') ? 'block' : 'none';
 }
 
 function toggleEwalletInput(service) {

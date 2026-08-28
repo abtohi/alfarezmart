@@ -30,6 +30,9 @@ class DigiflazzModel {
             $this->db->exec("UPDATE digi_products SET category = 'pbb' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) LIKE '%pbb%' OR LOWER(product_name) LIKE '%pbb%' OR LOWER(buyer_sku_code) LIKE 'pbb%' OR LOWER(buyer_sku_code) = 'cimahi')");
             $this->db->exec("UPDATE digi_products SET category = 'gas' WHERE type = 'postpaid' AND (LOWER(category) = 'pascabayar' OR category IS NULL OR category = '') AND (LOWER(brand) IN ('gas', 'pgn', 'pertagas') OR LOWER(product_name) LIKE '%gas%')");
             
+            // Ensure all prepaid products without custom prices have sell_price = 0
+            $this->db->exec("UPDATE digi_products SET sell_price = 0 WHERE type = 'prepaid' AND is_custom_price = 0");
+            
             $this->seedDefaultPostpaidProducts();
         } catch (\Exception $e) {
             error_log("[DigiflazzModel] init migration error: " . $e->getMessage());
@@ -496,7 +499,10 @@ class DigiflazzModel {
                     2000
                 )
             ");
-            $this->db->exec("UPDATE digi_products SET sell_price = CEIL((seller_price + markup) / 100) * 100 WHERE is_custom_price = 0");
+            // For postpaid products without custom price, apply default/admin markup
+            $this->db->exec("UPDATE digi_products SET sell_price = CEIL((seller_price + markup) / 100) * 100 WHERE type = 'postpaid' AND is_custom_price = 0");
+            // For prepaid products without custom price, sell_price remains 0
+            $this->db->exec("UPDATE digi_products SET sell_price = 0 WHERE type = 'prepaid' AND is_custom_price = 0");
         } else {
             try {
                 $rules = $this->getMarkupRules();
@@ -505,14 +511,16 @@ class DigiflazzModel {
                     $type = $r['markup_type'];
                     $val = (float)$r['markup_value'];
                     if ($type === 'percentage') {
-                        $this->db->exec("UPDATE digi_products SET markup = (seller_price * $val / 100), sell_price = (seller_price + (seller_price * $val / 100)) WHERE category = '$cat' AND is_custom_price = 0");
+                        $this->db->exec("UPDATE digi_products SET markup = (seller_price * $val / 100), sell_price = (seller_price + (seller_price * $val / 100)) WHERE category = '$cat' AND type = 'postpaid' AND is_custom_price = 0");
                     } else {
-                        $this->db->exec("UPDATE digi_products SET markup = $val, sell_price = (seller_price + $val) WHERE category = '$cat' AND is_custom_price = 0");
+                        $this->db->exec("UPDATE digi_products SET markup = $val, sell_price = (seller_price + $val) WHERE category = '$cat' AND type = 'postpaid' AND is_custom_price = 0");
                     }
                 }
-                $this->db->exec("UPDATE digi_products SET sell_price = (seller_price + 2000) WHERE (sell_price IS NULL OR sell_price = 0) AND is_custom_price = 0");
+                $this->db->exec("UPDATE digi_products SET sell_price = (seller_price + 2000) WHERE (sell_price IS NULL OR sell_price = 0) AND type = 'postpaid' AND is_custom_price = 0");
+                $this->db->exec("UPDATE digi_products SET sell_price = 0 WHERE type = 'prepaid' AND is_custom_price = 0");
             } catch (\Throwable $e) {
-                $this->db->exec("UPDATE digi_products SET sell_price = (seller_price + 2000) WHERE is_custom_price = 0");
+                $this->db->exec("UPDATE digi_products SET sell_price = (seller_price + 2000) WHERE type = 'postpaid' AND is_custom_price = 0");
+                $this->db->exec("UPDATE digi_products SET sell_price = 0 WHERE type = 'prepaid' AND is_custom_price = 0");
             }
         }
     }
@@ -532,7 +540,7 @@ class DigiflazzModel {
      * Reset specific product selling price to auto markup
      */
     public function resetCustomPrice(string $sku) {
-        $stmt = $this->db->prepare("UPDATE digi_products SET is_custom_price = 0 WHERE buyer_sku_code = :sku");
+        $stmt = $this->db->prepare("UPDATE digi_products SET is_custom_price = 0, sell_price = CASE WHEN type = 'prepaid' THEN 0 ELSE seller_price END WHERE buyer_sku_code = :sku");
         $stmt->execute(['sku' => $sku]);
         $this->applyAllMarkups(); // Re-apply to update the sell_price of this specific product
         return true;

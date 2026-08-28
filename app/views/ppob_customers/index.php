@@ -56,11 +56,16 @@ $csrfToken = $csrfToken ?? '';
 }
 .icon-pln { background: rgba(249, 115, 22, 0.1); color: #f97316; }
 .icon-hp { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.icon-ewallet { background: rgba(16, 185, 129, 0.1); color: #10b981; }
 .icon-game { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
 .icon-tv { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
 .icon-pdam { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
 .icon-bpjs { background: rgba(16, 185, 129, 0.1); color: #10b981; }
 .icon-internet { background: rgba(99, 102, 241, 0.1); color: #6366f1; }
+.icon-finance { background: rgba(234, 88, 12, 0.1); color: #ea580c; }
+.icon-samsat { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.icon-pbb { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+.icon-gas { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 .icon-other { background: rgba(107, 114, 128, 0.1); color: #6b7280; }
 
 .customer-info {
@@ -208,25 +213,37 @@ $csrfToken = $csrfToken ?? '';
             <button class="nav-link active whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-all" type="button" role="tab" onclick="filterCustomers('all')">Semua</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-pln" type="button" role="tab" onclick="filterCustomers('pln')">PLN</button>
-        </li>
-        <li class="nav-item" role="presentation">
             <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-hp" type="button" role="tab" onclick="filterCustomers('hp')">Nomor HP</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-game" type="button" role="tab" onclick="filterCustomers('game')">Game</button>
+            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-ewallet" type="button" role="tab" onclick="filterCustomers('ewallet')">E-Wallet</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-tv" type="button" role="tab" onclick="filterCustomers('tv')">TV</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-pdam" type="button" role="tab" onclick="filterCustomers('pdam')">PDAM</button>
+            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-pln" type="button" role="tab" onclick="filterCustomers('pln')">PLN</button>
         </li>
         <li class="nav-item" role="presentation">
             <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-bpjs" type="button" role="tab" onclick="filterCustomers('bpjs')">BPJS</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-internet" type="button" role="tab" onclick="filterCustomers('internet')">Internet</button>
+            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-pdam" type="button" role="tab" onclick="filterCustomers('pdam')">PDAM</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-internet" type="button" role="tab" onclick="filterCustomers('internet')">Internet & TV</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-multifinance" type="button" role="tab" onclick="filterCustomers('multifinance')">Multifinance</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-samsat" type="button" role="tab" onclick="filterCustomers('samsat')">SAMSAT</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-pbb" type="button" role="tab" onclick="filterCustomers('pbb')">PBB</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-gas" type="button" role="tab" onclick="filterCustomers('gas')">Gas</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link whitespace-nowrap" data-bs-toggle="pill" data-bs-target="#tab-game" type="button" role="tab" onclick="filterCustomers('game')">Game</button>
         </li>
     </ul>
 
@@ -248,11 +265,16 @@ $csrfToken = $csrfToken ?? '';
             <?php foreach($customers as $c): 
                 $iconClass = 'icon-hp'; $iconBi = 'bi-phone';
                 if($c['type'] == 'pln') { $iconClass = 'icon-pln'; $iconBi = 'bi-lightning-charge'; }
+                else if($c['type'] == 'ewallet') { $iconClass = 'icon-ewallet'; $iconBi = 'bi-wallet2'; }
                 else if($c['type'] == 'game') { $iconClass = 'icon-game'; $iconBi = 'bi-controller'; }
                 else if($c['type'] == 'tv') { $iconClass = 'icon-tv'; $iconBi = 'bi-tv'; }
                 else if($c['type'] == 'pdam') { $iconClass = 'icon-pdam'; $iconBi = 'bi-droplet'; }
                 else if($c['type'] == 'bpjs') { $iconClass = 'icon-bpjs'; $iconBi = 'bi-shield-check'; }
                 else if($c['type'] == 'internet') { $iconClass = 'icon-internet'; $iconBi = 'bi-wifi'; }
+                else if($c['type'] == 'multifinance') { $iconClass = 'icon-finance'; $iconBi = 'bi-building'; }
+                else if($c['type'] == 'samsat') { $iconClass = 'icon-samsat'; $iconBi = 'bi-car-front'; }
+                else if($c['type'] == 'pbb') { $iconClass = 'icon-pbb'; $iconBi = 'bi-houses'; }
+                else if($c['type'] == 'gas') { $iconClass = 'icon-gas'; $iconBi = 'bi-fire'; }
                 else if($c['type'] == 'other') { $iconClass = 'icon-other'; $iconBi = 'bi-person'; }
             ?>
             <div class="customer-card customer-item" 
