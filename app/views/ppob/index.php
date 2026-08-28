@@ -5071,38 +5071,7 @@ async function fetchSellerHistory(page) {
 
 function resolveCustomerName(data, category) {
     if (!data) return 'Pelanggan';
-    let name = (data.customer_name || '').trim();
-    const desc = data.desc || {};
-    
-    // List of possible unmasked name fields in desc
-    const candidates = [
-        desc.milik_kenama,
-        desc.nama_pelanggan,
-        desc.nama_peserta,
-        desc.nama_konsumen,
-        desc.nama_wajib_pajak,
-        desc.nama_wp,
-        desc.nama_pemilik,
-        desc.nama,
-        (desc.detail && desc.detail[0] ? desc.detail[0].nama : null),
-        (desc.detail && desc.detail[0] ? desc.detail[0].nama_pelanggan : null)
-    ];
-    
-    for (const c of candidates) {
-        if (c && typeof c === 'string' && c.trim() && !c.includes('*')) {
-            return c.trim();
-        }
-    }
-    
-    if (name.includes('*')) {
-        for (const c of candidates) {
-            if (c && typeof c === 'string' && c.trim()) {
-                return c.trim();
-            }
-        }
-    }
-    
-    return name || 'Pelanggan';
+    return (data.customer_name || (data.desc && data.desc.milik_kenama) || data.name || 'Pelanggan').trim();
 }
 
 // 6. Inquiry (Cek Tagihan / Cek Nama PLN / E-Wallet)
