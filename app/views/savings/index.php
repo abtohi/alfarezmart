@@ -8,6 +8,7 @@
  * @var string $csrfToken
  */
 $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : '');
+require_once APP_PATH . '/services/MutualFundService.php';
 ?>
 
 <style>
@@ -2367,9 +2368,18 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                                 </div>
                                 <i class="bi bi-chevron-down custom-select-chevron"></i>
                             </div>
-                            <div class="custom-select-menu" id="mfProductPickerMenu">
-                                <div class="custom-select-search">
-                                    <input type="text" placeholder="Cari nama produk reksadana..." oninput="filterDropdownOptions('mfProductPickerMenu', this.value)">
+                            <div class="custom-select-menu" id="mfProductPickerMenu" style="max-height: 340px; min-width: 320px;">
+                                <div class="custom-select-search" style="padding: 8px 10px 4px 10px;">
+                                    <input type="text" id="inputSearchMfProducts" placeholder="Cari nama produk, obligasi, MI..." oninput="onFilterMfProductList(this.value)">
+                                </div>
+                                <!-- Quick Category Filter Strip -->
+                                <div style="display: flex; gap: 4px; padding: 4px 10px 8px 10px; overflow-x: auto; border-bottom: 1px solid var(--border-color);" id="mfProductCatFilterStrip">
+                                    <button type="button" class="btn-filter active" style="font-size: 10px; padding: 3px 8px; border-radius: 6px; white-space: nowrap;" onclick="setMfProductCatFilter('all', this)">Semua</button>
+                                    <button type="button" class="btn-filter" style="font-size: 10px; padding: 3px 8px; border-radius: 6px; white-space: nowrap;" onclick="setMfProductCatFilter('Pasar Uang', this)">Pasar Uang</button>
+                                    <button type="button" class="btn-filter" style="font-size: 10px; padding: 3px 8px; border-radius: 6px; white-space: nowrap;" onclick="setMfProductCatFilter('Pendapatan Tetap', this)">Obligasi / Fixed</button>
+                                    <button type="button" class="btn-filter" style="font-size: 10px; padding: 3px 8px; border-radius: 6px; white-space: nowrap;" onclick="setMfProductCatFilter('Saham', this)">Saham</button>
+                                    <button type="button" class="btn-filter" style="font-size: 10px; padding: 3px 8px; border-radius: 6px; white-space: nowrap;" onclick="setMfProductCatFilter('Campuran', this)">Campuran</button>
+                                    <button type="button" class="btn-filter" style="font-size: 10px; padding: 3px 8px; border-radius: 6px; white-space: nowrap;" onclick="setMfProductCatFilter('Index / ETF', this)">Index</button>
                                 </div>
                                 <div id="mfProductOptionsList" style="max-height: 220px; overflow-y: auto;">
                                     <!-- Rendered by JS -->
@@ -2575,16 +2585,24 @@ const ALLOC_TYPE_PRESETS = [
     { value: 'Lainnya', label: 'Lainnya (Fisik / Dompet)', icon: 'bi-wallet2', bg: 'rgba(100,116,139,0.15)', color: '#94a3b8', sub: 'Dompet fisik, amplop, dll' }
 ];
 
+// Master catalog data from MutualFundService (Bareksa top funds)
+const INLINE_MASTER_CATALOG = <?= json_encode(MutualFundService::getDefaultCatalog()) ?>;
+const INLINE_FUND_HOUSES = <?= json_encode(MutualFundService::getFundHouses()) ?>;
+
 // State for Mutual Funds
 let allMutualFunds = [];
 let mutualFundsSummary = null;
 let currentMfFilter = 'all';
 let searchMfKeyword = '';
-let masterCatalogProducts = [];
+let masterCatalogProducts = Array.isArray(INLINE_MASTER_CATALOG) ? INLINE_MASTER_CATALOG : [];
 let isCustomMfInput = false;
+let currentMfCategoryFilter = 'all';
+let searchMfDropdownKeyword = '';
+let selectedMfHouseFilter = '';
 
 document.addEventListener('DOMContentLoaded', () => {
     initCustomSelectPickers();
+    initMutualFundPickers();
     loadGoals();
     loadSummary();
     loadSavingsPpobBalance();
@@ -2985,10 +3003,22 @@ async function loadSavingsPpobBalance(isManualRefresh = false) {
     if (refreshBtn) refreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" style="width:10px;height:10px;"></span> Refreshing...';
 
     try {
-        const res = await fetch('<?= BASE_URL ?>api/ppob/balance');
+        let res = await fetch('<?= BASE_URL ?>api/savings/ppob-balance');
+        if (!res.ok) {
+            res = await fetch('<?= BASE_URL ?>api/ppob/balance');
+        }
         const json = await res.json();
+        let bal = null;
         if (json.success && json.data && json.data.deposit !== undefined) {
-            currentPpobBalanceNum = parseFloat(json.data.deposit) || 0;
+            bal = json.data.deposit;
+        } else if (json.data && json.data.balance !== undefined) {
+            bal = json.data.balance;
+        } else if (json.deposit !== undefined) {
+            bal = json.deposit;
+        }
+
+        if (bal !== null && !isNaN(bal)) {
+            currentPpobBalanceNum = parseFloat(bal);
             const formatted = `Rp ${Math.round(currentPpobBalanceNum).toLocaleString('id-ID')}`;
             if (valEl) {
                 valEl.innerHTML = formatted;
@@ -3013,7 +3043,8 @@ async function loadSavingsPpobBalance(isManualRefresh = false) {
                 showSavingsToast('Saldo PPOB Diperbarui', `Saldo saat ini: ${formatted}`, 'success');
             }
         } else {
-            if (valEl) valEl.innerHTML = '<span class="text-danger small" style="font-size:13px;"><i class="bi bi-exclamation-circle me-1"></i>Gagal memuat</span>';
+            const errMsg = json.error || json.message || 'Gagal memuat';
+            if (valEl) valEl.innerHTML = `<span class="text-danger small" style="font-size:12px;"><i class="bi bi-exclamation-circle me-1"></i>${escapeHtml(errMsg)}</span>`;
             if (badgeEl) {
                 badgeEl.className = 'badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-25';
                 badgeEl.innerHTML = '<i class="bi bi-x-circle-fill" style="font-size:6px;"></i> Offline';
@@ -3434,40 +3465,57 @@ function onMfTypeSelectChange(type) {
     document.getElementById('formMfType').value = type;
 }
 
-const FUND_HOUSES_LIST = [
-    { name: 'Semua Manajer Investasi', code: 'all', icon: 'bi-grid-fill' },
-    { name: 'Sucorinvest Asset Management', code: 'sucor', icon: 'bi-building' },
-    { name: 'Batavia Prosperindo Aset Manajemen', code: 'batavia', icon: 'bi-building' },
-    { name: 'Mandiri Manajemen Investasi', code: 'mandiri', icon: 'bi-building' },
-    { name: 'Bahana TCW Investment Management', code: 'bahana', icon: 'bi-building' },
-    { name: 'BRI Manajemen Investasi (Danareksa)', code: 'danareksa', icon: 'bi-building' },
-    { name: 'Manulife Aset Manajemen Indonesia', code: 'manulife', icon: 'bi-building' },
-    { name: 'BNP Paribas Asset Management', code: 'bnp', icon: 'bi-building' },
-    { name: 'Ashmore Asset Management Indonesia', code: 'ashmore', icon: 'bi-building' },
-    { name: 'Trimegah Asset Management', code: 'trimegah', icon: 'bi-building' },
-    { name: 'Syailendra Capital', code: 'syailendra', icon: 'bi-building' },
-    { name: 'Panin Asset Management', code: 'panin', icon: 'bi-building' },
-    { name: 'Schroder Investment Management Indonesia', code: 'schroder', icon: 'bi-building' },
-    { name: 'BNI Asset Management', code: 'bni', icon: 'bi-building' },
-    { name: 'Eastspring Investments Indonesia', code: 'eastspring', icon: 'bi-building' },
-    { name: 'Avrist Asset Management', code: 'avrist', icon: 'bi-building' }
-];
+// Dynamic Fund Houses from catalog
+function getDynamicFundHouses() {
+    const counts = {};
+    (masterCatalogProducts || []).forEach(p => {
+        const h = p.fund_house || 'Lainnya';
+        counts[h] = (counts[h] || 0) + 1;
+    });
 
-let selectedMfHouseFilter = '';
+    const list = [
+        { name: 'Semua Manajer Investasi', code: 'all', count: (masterCatalogProducts || []).length, icon: 'bi-grid-fill' }
+    ];
+
+    Object.keys(counts).sort().forEach(h => {
+        list.push({
+            name: h,
+            code: h.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+            count: counts[h],
+            icon: 'bi-building'
+        });
+    });
+
+    return list;
+}
 
 function initMutualFundPickers() {
     renderMfHouseOptions();
     renderMfProductOptions();
 }
 
+async function loadMasterCatalog() {
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/savings/mutual-funds/master');
+        const json = await res.json();
+        if (json.success && json.data && Array.isArray(json.data.products) && json.data.products.length > 0) {
+            masterCatalogProducts = json.data.products;
+            initMutualFundPickers();
+        }
+    } catch (e) {
+        console.warn('Fallback to inline master mutual fund catalog:', e);
+    }
+}
+
 function renderMfHouseOptions() {
     const listEl = document.getElementById('mfHouseOptionsList');
     if (!listEl) return;
 
-    const currentHouse = document.getElementById('formMfHouse')?.value || 'Sucorinvest Asset Management';
+    const currentHouse = selectedMfHouseFilter || document.getElementById('formMfHouse')?.value || 'Semua Manajer Investasi';
+    const houses = getDynamicFundHouses();
 
-    listEl.innerHTML = FUND_HOUSES_LIST.map(h => {
-        const isSelected = (h.name === currentHouse || (h.code === 'all' && (!currentHouse || currentHouse === 'Semua Manajer Investasi')));
+    listEl.innerHTML = houses.map(h => {
+        const isSelected = (h.name === currentHouse || (h.code === 'all' && (!selectedMfHouseFilter || selectedMfHouseFilter === 'Semua Manajer Investasi')));
         return `
             <div class="custom-select-option ${isSelected ? 'selected' : ''}" onclick="selectMfHouseOption('${h.name.replace(/'/g, "\\'")}')">
                 <div class="custom-select-content">
@@ -3476,7 +3524,7 @@ function renderMfHouseOptions() {
                     </div>
                     <div style="min-width: 0;">
                         <div class="custom-select-label">${escapeHtml(h.name)}</div>
-                        <div class="custom-select-sub">Manajer Investasi</div>
+                        <div class="custom-select-sub">${h.count} Produk Tersedia</div>
                     </div>
                 </div>
                 <i class="bi bi-check-lg custom-select-check"></i>
@@ -3486,8 +3534,10 @@ function renderMfHouseOptions() {
 }
 
 function selectMfHouseOption(houseName) {
-    if (houseName === 'Semua Manajer Investasi') {
+    if (houseName === 'Semua Manajer Investasi' || houseName === 'all') {
         selectedMfHouseFilter = '';
+        const houseLabel = document.getElementById('mfHouseSelectedLabel');
+        if (houseLabel) houseLabel.textContent = 'Semua Manajer Investasi';
     } else {
         selectedMfHouseFilter = houseName;
         const houseInput = document.getElementById('formMfHouse');
@@ -3504,25 +3554,62 @@ function selectMfHouseOption(houseName) {
     if (menu) menu.classList.remove('show');
 }
 
+function setMfProductCatFilter(cat, btnEl) {
+    currentMfCategoryFilter = cat;
+    const strip = document.getElementById('mfProductCatFilterStrip');
+    if (strip) {
+        strip.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+    }
+    if (btnEl) btnEl.classList.add('active');
+    renderMfProductOptions();
+}
+
+function onFilterMfProductList(query) {
+    searchMfDropdownKeyword = (query || '').toLowerCase().trim();
+    renderMfProductOptions();
+}
+
 function renderMfProductOptions() {
     const listEl = document.getElementById('mfProductOptionsList');
     if (!listEl) return;
 
     let products = masterCatalogProducts || [];
-    const currentHouse = selectedMfHouseFilter || document.getElementById('formMfHouse')?.value || '';
 
-    if (currentHouse && currentHouse !== 'Semua Manajer Investasi') {
-        const houseLower = currentHouse.toLowerCase();
+    // Filter by MI if selected
+    if (selectedMfHouseFilter && selectedMfHouseFilter !== 'Semua Manajer Investasi') {
+        const houseLower = selectedMfHouseFilter.toLowerCase();
         products = products.filter(p => p.fund_house.toLowerCase().includes(houseLower) || houseLower.includes(p.fund_house.toLowerCase()));
+    }
+
+    // Filter by Category if selected
+    if (currentMfCategoryFilter && currentMfCategoryFilter !== 'all') {
+        const catLower = currentMfCategoryFilter.toLowerCase();
+        products = products.filter(p => {
+            const pType = (p.type || '').toLowerCase();
+            if (catLower === 'pendapatan tetap') {
+                return pType.includes('pendapatan tetap') || pType.includes('obligasi');
+            }
+            return pType.includes(catLower);
+        });
+    }
+
+    // Filter by Search Keyword if typed
+    if (searchMfDropdownKeyword) {
+        const kw = searchMfDropdownKeyword;
+        products = products.filter(p => {
+            const haystack = `${p.name} ${p.fund_house} ${p.type} ${p.code} ${p.is_syariah ? 'syariah' : ''}`.toLowerCase();
+            return haystack.includes(kw);
+        });
     }
 
     if (products.length === 0) {
         listEl.innerHTML = `
-            <div style="padding: 14px; text-align: center; color: var(--text-muted); font-size: 11.5px;">
-                Tidak ada produk reksadana untuk Manajer Investasi ini.
-                <div style="margin-top: 6px; display: flex; justify-content: center; gap: 8px;">
-                    <button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 10.5px;" onclick="selectMfHouseOption('Semua Manajer Investasi')">Tampilkan Semua MI</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 10.5px;" onclick="toggleCustomMfInput()">Ketik Manual</button>
+            <div style="padding: 18px 14px; text-align: center; color: var(--text-muted); font-size: 12px;">
+                <i class="bi bi-search" style="font-size: 20px; display: block; margin-bottom: 6px; opacity: 0.5;"></i>
+                Tidak ada produk reksadana yang cocok dengan filter / pencarian ini.
+                <div style="margin-top: 8px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 11px;" onclick="resetMfProductFilters()">Reset Filter & Tampilkan Semua</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 11px;" onclick="toggleCustomMfInput()">Ketik Manual</button>
                 </div>
             </div>
         `;
@@ -3536,7 +3623,7 @@ function renderMfProductOptions() {
         let badgeColor = '#3b82f6';
         let badgeBg = 'rgba(59,130,246,0.12)';
         if (p.type.includes('Pasar Uang')) { badgeColor = '#10b981'; badgeBg = 'rgba(16,185,129,0.12)'; }
-        else if (p.type.includes('Pendapatan Tetap')) { badgeColor = '#818cf8'; badgeBg = 'rgba(99,102,241,0.12)'; }
+        else if (p.type.includes('Pendapatan Tetap') || p.type.includes('Obligasi')) { badgeColor = '#818cf8'; badgeBg = 'rgba(99,102,241,0.12)'; }
         else if (p.type.includes('Saham')) { badgeColor = '#ec4899'; badgeBg = 'rgba(236,72,153,0.12)'; }
         else if (p.type.includes('Campuran')) { badgeColor = '#f59e0b'; badgeBg = 'rgba(245,158,11,0.12)'; }
 
@@ -3548,7 +3635,7 @@ function renderMfProductOptions() {
                     </div>
                     <div style="min-width: 0;">
                         <div class="custom-select-label" style="font-size: 11.5px; font-weight: 700;">${escapeHtml(p.name)}</div>
-                        <div class="custom-select-sub" style="display: flex; gap: 6px; align-items: center; margin-top: 2px;">
+                        <div class="custom-select-sub" style="display: flex; gap: 6px; align-items: center; margin-top: 2px; flex-wrap: wrap;">
                             <span style="color: var(--text-muted);">${escapeHtml(p.fund_house)}</span>
                             <span>&middot;</span>
                             <span style="color: ${badgeColor}; font-weight: 700;">${escapeHtml(p.type)}</span>
@@ -3562,6 +3649,25 @@ function renderMfProductOptions() {
             </div>
         `;
     }).join('');
+}
+
+function resetMfProductFilters() {
+    selectedMfHouseFilter = '';
+    currentMfCategoryFilter = 'all';
+    searchMfDropdownKeyword = '';
+    const searchInp = document.getElementById('inputSearchMfProducts');
+    if (searchInp) searchInp.value = '';
+    const strip = document.getElementById('mfProductCatFilterStrip');
+    if (strip) {
+        strip.querySelectorAll('.btn-filter').forEach((b, i) => {
+            if (i === 0) b.classList.add('active');
+            else b.classList.remove('active');
+        });
+    }
+    const houseLabel = document.getElementById('mfHouseSelectedLabel');
+    if (houseLabel) houseLabel.textContent = 'Semua Manajer Investasi';
+    renderMfHouseOptions();
+    renderMfProductOptions();
 }
 
 function selectMfProductOption(code) {
@@ -3633,9 +3739,22 @@ function toggleCustomMfInput() {
 function openAddMutualFundModal() {
     document.getElementById('mfFormTitle').textContent = 'Tambah Produk Reksadana';
     document.getElementById('formMfId').value = '';
-    document.getElementById('formMfHouse').value = 'Sucorinvest Asset Management';
-    document.getElementById('mfHouseSelectedLabel').textContent = 'Sucorinvest Asset Management';
     selectedMfHouseFilter = '';
+    currentMfCategoryFilter = 'all';
+    searchMfDropdownKeyword = '';
+    const searchInp = document.getElementById('inputSearchMfProducts');
+    if (searchInp) searchInp.value = '';
+    const strip = document.getElementById('mfProductCatFilterStrip');
+    if (strip) {
+        strip.querySelectorAll('.btn-filter').forEach((b, i) => {
+            if (i === 0) b.classList.add('active');
+            else b.classList.remove('active');
+        });
+    }
+
+    isCustomMfInput = false;
+    document.getElementById('mfProductPickerContainer').style.display = 'block';
+    document.getElementById('formMfNameManual').style.display = 'none';
 
     // Pick first product from catalog
     if (masterCatalogProducts && masterCatalogProducts.length > 0) {
@@ -3647,20 +3766,12 @@ function openAddMutualFundModal() {
         document.getElementById('mfProductSelectedSub').textContent = 'Pilih dari katalog';
     }
 
-    document.getElementById('formMfTypeSelect').value = 'Pasar Uang';
-    document.getElementById('formMfType').value = 'Pasar Uang';
     document.getElementById('formMfInvested').value = '';
     document.getElementById('formMfBuyNav').value = '';
     document.getElementById('formMfUnits').value = '';
-    document.getElementById('formMfCurrentNav').value = '';
     document.getElementById('formMfPlatform').value = 'Bibit';
     document.getElementById('formMfBuyDate').value = new Date().toISOString().split('T')[0];
-    document.getElementById('formMfIsSyariah').checked = false;
     document.getElementById('formMfNotes').value = '';
-
-    isCustomMfInput = false;
-    document.getElementById('mfProductPickerContainer').style.display = 'block';
-    document.getElementById('formMfNameManual').style.display = 'none';
 
     renderMfHouseOptions();
     renderMfProductOptions();

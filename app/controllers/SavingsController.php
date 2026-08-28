@@ -669,4 +669,20 @@ class SavingsController extends Controller
             $this->json(['error' => 'Gagal memperbarui NAB reksadana: ' . $e->getMessage()], 500);
         }
     }
+
+    /**
+     * API: Get Real-time PPOB Balance with graceful error handling
+     */
+    public function apiGetPpobBalance()
+    {
+        $this->requireService('savings');
+        try {
+            require_once __DIR__ . '/../services/DigiflazzService.php';
+            $digiService = new DigiflazzService();
+            $res = $digiService->getBalance();
+            $this->json($res);
+        } catch (\Throwable $e) {
+            $this->json(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
 }

@@ -89,6 +89,7 @@ $router->post('/api/savings/mutual-funds', 'SavingsController@apiCreateMutualFun
 $router->post('/api/savings/mutual-funds/{id}/update', 'SavingsController@apiUpdateMutualFund');
 $router->post('/api/savings/mutual-funds/{id}/delete', 'SavingsController@apiDeleteMutualFund');
 $router->post('/api/savings/mutual-funds/refresh-nav', 'SavingsController@apiRefreshMutualFundsNav');
+$router->get('/api/savings/ppob-balance', 'SavingsController@apiGetPpobBalance');
 
 // ============================================
 // PPOB / Produk Digital (Digiflazz)
