@@ -2424,10 +2424,13 @@ require_once APP_PATH . '/services/MutualFundService.php';
 
                         <!-- NAB Saat Ini (Real-time Live NAV) -->
                         <div>
-                            <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; display: block;">
-                                NAB Terkini (Rp) <span style="color: var(--success); font-size: 9.5px;">(Live)</span>
+                            <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; display: flex; align-items: center; justify-content: space-between;">
+                                <span>NAB Terkini (Rp)</span>
+                                <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25" id="mfLiveNavBadge" style="font-size: 9px; font-weight: 700; padding: 2px 6px;">
+                                    <i class="bi bi-broadcast me-1"></i>Live Otomatis
+                                </span>
                             </label>
-                            <input type="number" step="0.0001" id="formMfCurrentNav" class="form-control-custom" placeholder="1528.42" required oninput="calcMfAssetPreview()" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--success); font-size: 13px; font-weight: 800;">
+                            <input type="number" step="0.0001" id="formMfCurrentNav" class="form-control-custom" placeholder="1528.42" readonly required oninput="calcMfAssetPreview()" style="width: 100%; padding: 8px 10px; background: rgba(16,185,129,0.06); border: 1.5px solid rgba(16,185,129,0.3); border-radius: var(--radius-md); color: var(--success); font-size: 13px; font-weight: 800; cursor: default;">
                         </div>
                     </div>
 
@@ -3608,10 +3611,12 @@ function renderMfProductOptions() {
 
     // Filter by Search Keyword if typed
     if (searchMfDropdownKeyword) {
-        const kw = searchMfDropdownKeyword;
+        let kw = searchMfDropdownKeyword.toLowerCase().trim();
+        kw = kw.replace(/ibligasi/g, 'obligasi').replace(/reksadana\s+/g, '');
+        const tokens = kw.split(/\s+/).filter(t => t.length > 0);
         products = products.filter(p => {
             const haystack = `${p.name} ${p.fund_house} ${p.type} ${p.code} ${p.is_syariah ? 'syariah' : ''}`.toLowerCase();
-            return haystack.includes(kw);
+            return tokens.every(token => haystack.includes(token));
         });
     }
 
@@ -3704,8 +3709,19 @@ function selectMfProductOption(code) {
     // Set Syariah
     document.getElementById('formMfIsSyariah').checked = !!item.is_syariah;
 
-    // Set Live NAV
-    document.getElementById('formMfCurrentNav').value = item.current_nav;
+    // Set Live NAV & ensure readonly
+    const navInput = document.getElementById('formMfCurrentNav');
+    if (navInput) {
+        navInput.value = item.current_nav;
+        navInput.setAttribute('readonly', 'readonly');
+        navInput.style.cursor = 'default';
+        navInput.style.background = 'rgba(16,185,129,0.06)';
+    }
+    const badge = document.getElementById('mfLiveNavBadge');
+    if (badge) {
+        badge.className = 'badge bg-success bg-opacity-15 text-success border border-success border-opacity-25';
+        badge.innerHTML = '<i class="bi bi-broadcast me-1"></i>Live Otomatis';
+    }
 
     // Auto calculate asset preview
     calcMfAssetPreview();
@@ -3731,6 +3747,8 @@ function toggleCustomMfInput() {
     isCustomMfInput = !isCustomMfInput;
     const picker = document.getElementById('mfProductPickerContainer');
     const manualInput = document.getElementById('formMfNameManual');
+    const navInput = document.getElementById('formMfCurrentNav');
+    const badge = document.getElementById('mfLiveNavBadge');
 
     if (isCustomMfInput) {
         if (picker) picker.style.display = 'none';
@@ -3738,6 +3756,15 @@ function toggleCustomMfInput() {
             manualInput.style.display = 'block';
             manualInput.value = document.getElementById('formMfName')?.value || '';
             manualInput.focus();
+        }
+        if (navInput) {
+            navInput.removeAttribute('readonly');
+            navInput.style.cursor = 'text';
+            navInput.style.background = 'var(--bg-primary)';
+        }
+        if (badge) {
+            badge.className = 'badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25';
+            badge.innerHTML = '<i class="bi bi-pencil me-1"></i>Input Manual';
         }
     } else {
         if (picker) picker.style.display = 'block';
@@ -3747,6 +3774,15 @@ function toggleCustomMfInput() {
                 document.getElementById('formMfName').value = manualInput.value.trim();
                 document.getElementById('mfProductSelectedLabel').textContent = manualInput.value.trim();
             }
+        }
+        if (navInput) {
+            navInput.setAttribute('readonly', 'readonly');
+            navInput.style.cursor = 'default';
+            navInput.style.background = 'rgba(16,185,129,0.06)';
+        }
+        if (badge) {
+            badge.className = 'badge bg-success bg-opacity-15 text-success border border-success border-opacity-25';
+            badge.innerHTML = '<i class="bi bi-broadcast me-1"></i>Live Otomatis';
         }
     }
 }
@@ -3823,15 +3859,36 @@ function openEditMutualFundModal(id) {
 
     // Check if fund name exists in master catalog
     const matchedMaster = masterCatalogProducts.find(p => p.name.toLowerCase() === fund.fund_name.toLowerCase());
+    const navInput = document.getElementById('formMfCurrentNav');
+    const badge = document.getElementById('mfLiveNavBadge');
+
     if (matchedMaster) {
         isCustomMfInput = false;
         document.getElementById('mfProductPickerContainer').style.display = 'block';
         document.getElementById('formMfNameManual').style.display = 'none';
+        if (navInput) {
+            navInput.setAttribute('readonly', 'readonly');
+            navInput.style.cursor = 'default';
+            navInput.style.background = 'rgba(16,185,129,0.06)';
+        }
+        if (badge) {
+            badge.className = 'badge bg-success bg-opacity-15 text-success border border-success border-opacity-25';
+            badge.innerHTML = '<i class="bi bi-broadcast me-1"></i>Live Otomatis';
+        }
     } else {
         isCustomMfInput = true;
         document.getElementById('mfProductPickerContainer').style.display = 'none';
         document.getElementById('formMfNameManual').style.display = 'block';
         document.getElementById('formMfNameManual').value = fund.fund_name;
+        if (navInput) {
+            navInput.removeAttribute('readonly');
+            navInput.style.cursor = 'text';
+            navInput.style.background = 'var(--bg-primary)';
+        }
+        if (badge) {
+            badge.className = 'badge bg-primary bg-opacity-15 text-primary border border-primary border-opacity-25';
+            badge.innerHTML = '<i class="bi bi-pencil me-1"></i>Input Manual';
+        }
     }
 
     renderMfHouseOptions();

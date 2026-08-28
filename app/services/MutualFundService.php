@@ -357,6 +357,30 @@ class MutualFundService
                 'is_syariah' => 1,
             ],
             [
+                'code' => 'SUCOR_SSSF_A',
+                'name' => 'Sucorinvest Sharia Sukuk Fund Kelas A',
+                'fund_house' => 'Sucorinvest Asset Management',
+                'type' => 'Pendapatan Tetap',
+                'current_nav' => 1302.39,
+                'last_nav' => 1301.85,
+                'one_day_return' => 0.041,
+                'one_year_return' => 6.95,
+                'aum' => 'Rp 3.2 T',
+                'is_syariah' => 1,
+            ],
+            [
+                'code' => 'GROW_OOD_O',
+                'name' => 'Grow Obligasi Optima Dinamis Kelas O',
+                'fund_house' => 'Grow Investments Indonesia',
+                'type' => 'Pendapatan Tetap',
+                'current_nav' => 1078.97,
+                'last_nav' => 1078.45,
+                'one_day_return' => 0.048,
+                'one_year_return' => 6.85,
+                'aum' => 'Rp 1.5 T',
+                'is_syariah' => 0,
+            ],
+            [
                 'code' => 'BATAVIA_DPO',
                 'name' => 'Batavia Dana Obligasi Ultima',
                 'fund_house' => 'Batavia Prosperindo Aset Manajemen',
@@ -535,6 +559,30 @@ class MutualFundService
                 'one_year_return' => 7.30,
                 'aum' => 'Rp 2.1 T',
                 'is_syariah' => 0,
+            ],
+            [
+                'code' => 'TRIMEGAH_TDTS_A',
+                'name' => 'Trimegah Dana Tetap Syariah Kelas A',
+                'fund_house' => 'Trimegah Asset Management',
+                'type' => 'Pendapatan Tetap',
+                'current_nav' => 1460.50,
+                'last_nav' => 1459.80,
+                'one_day_return' => 0.048,
+                'one_year_return' => 7.15,
+                'aum' => 'Rp 2.8 T',
+                'is_syariah' => 1,
+            ],
+            [
+                'code' => 'TRIMEGAH_TDTS',
+                'name' => 'Trimegah Dana Tetap Syariah',
+                'fund_house' => 'Trimegah Asset Management',
+                'type' => 'Pendapatan Tetap',
+                'current_nav' => 1458.75,
+                'last_nav' => 1458.10,
+                'one_day_return' => 0.045,
+                'one_year_return' => 7.10,
+                'aum' => 'Rp 3.1 T',
+                'is_syariah' => 1,
             ],
             [
                 'code' => 'DANAREKSA_GEBYAR',
@@ -1003,8 +1051,18 @@ class MutualFundService
                 continue;
             }
             if ($kw !== '') {
-                $haystack = strtolower($item['name'] . ' ' . $item['fund_house'] . ' ' . $item['type'] . ' ' . $item['code']);
-                if (strpos($haystack, $kw) === false) {
+                $normalizedKw = str_replace(['ibligasi', 'sukuk fund', 'reksadana '], ['obligasi', 'sukuk', ''], $kw);
+                $words = array_filter(explode(' ', $normalizedKw));
+                $haystack = strtolower($item['name'] . ' ' . $item['fund_house'] . ' ' . $item['type'] . ' ' . $item['code'] . ' ' . ($item['is_syariah'] ? 'syariah' : ''));
+                
+                $matchAll = true;
+                foreach ($words as $w) {
+                    if (strpos($haystack, $w) === false) {
+                        $matchAll = false;
+                        break;
+                    }
+                }
+                if (!$matchAll && strpos($haystack, $kw) === false) {
                     continue;
                 }
             }
