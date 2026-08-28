@@ -93,9 +93,99 @@ const QtyPricing = {
         let qty = parseFloat(quantity) || 0;
         if (qty <= 0) return result;
 
-        // 1. Check for active tier pricing specific to this packaging level
-        //    Tier price applies only to the max multiple of min_qty that fits.
-        //    Remainder is recursively priced through lower tiers or base price.
+        const pkgLevel = parseInt(pkg?.level || 1, 10);
+        const pkgBaseQty = parseFloat(pkg?.base_qty) || 1;
+        const targetBaseQty = qty * pkgBaseQty;
+
+        // Check if bundle upgrade across larger packagings / multi-tiers is applicable
+        const hasMultiPackagings = allPackagings && Array.isArray(allPackagings) && allPackagings.length > 1;
+
+        if (hasMultiPackagings) {
+            // Collect chunks from packagings at level >= pkgLevel
+            // (e.g. Level 1 can upgrade to Level 1 Tiers, Level 2, Level 3; Level 2 never downgrades to Level 1)
+            let chunks = [];
+
+            allPackagings.forEach(p => {
+                const pLevel = parseInt(p.level || 1, 10);
+                if (pLevel < pkgLevel) return;
+
+                const pBaseQty = parseFloat(p.base_qty) || 1;
+                const basePrice = this.getBaseUnitPrice(p, saleMode);
+                const unitName = p.unit_name || 'Unit';
+                if (basePrice > 0 && pBaseQty > 0) {
+                    chunks.push({
+                        level: pLevel,
+                        chunk_size: pBaseQty,
+                        chunk_price: basePrice,
+                        price_per_base_unit: basePrice / pBaseQty,
+                        name: (pBaseQty === pkgBaseQty && pLevel === pkgLevel) ? `1 ${pkg.unit_name || 'Unit'}` : `1 ${unitName}`,
+                        is_tier: false
+                    });
+                }
+                
+                if (p.qty_prices && Array.isArray(p.qty_prices)) {
+                    p.qty_prices.forEach(t => {
+                        const tMode = t.sale_mode || 'both';
+                        if (tMode === 'both' || tMode === saleMode) {
+                            const tMin = parseFloat(t.min_qty) || 0;
+                            const tPrice = parseFloat(t.unit_price) || 0;
+                            if (tMin > 0 && tPrice > 0) {
+                                const chunkSize = pBaseQty * tMin;
+                                const chunkPrice = tPrice * tMin;
+                                chunks.push({
+                                    level: pLevel,
+                                    chunk_size: chunkSize,
+                                    chunk_price: chunkPrice,
+                                    price_per_base_unit: chunkPrice / chunkSize,
+                                    name: `${tMin} ${unitName} (Tier)`,
+                                    is_tier: true
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+
+            if (chunks.length > 0) {
+                // Sort chunks by price_per_base_unit ascending (best deal first),
+                // and if identical, prefer larger chunk_size first
+                chunks.sort((a, b) => {
+                    if (Math.abs(a.price_per_base_unit - b.price_per_base_unit) > 0.0001) {
+                        return a.price_per_base_unit - b.price_per_base_unit;
+                    }
+                    return b.chunk_size - a.chunk_size;
+                });
+
+                let remainingBaseQty = targetBaseQty;
+                for (const chunk of chunks) {
+                    if (remainingBaseQty >= chunk.chunk_size - 0.001) {
+                        const applyCount = Math.floor((remainingBaseQty + 0.001) / chunk.chunk_size);
+                        const lineTotal = applyCount * chunk.chunk_price;
+                        result.total += lineTotal;
+                        remainingBaseQty -= (applyCount * chunk.chunk_size);
+                        
+                        let countPrefix = applyCount > 1 ? `${applyCount}x ` : '';
+                        result.breakdown.push({ note: `${countPrefix}${chunk.name}`, price: lineTotal });
+                    }
+                }
+
+                if (remainingBaseQty >= 0.001) {
+                    const fallbackChunks = chunks.slice().sort((a, b) => a.chunk_size - b.chunk_size);
+                    const smallest = fallbackChunks[0];
+                    if (smallest) {
+                        const fractionalTotal = (remainingBaseQty / smallest.chunk_size) * smallest.chunk_price;
+                        result.total += fractionalTotal;
+                        const fractionalQty = remainingBaseQty / pkgBaseQty;
+                        result.breakdown.push({ note: `${fractionalQty} ${pkg.unit_name || 'Unit'} (Sisa)`, price: fractionalTotal });
+                    }
+                }
+
+                result.total = Math.round(result.total);
+                return result;
+            }
+        }
+
+        // Fallback for single packaging level with standard tier pricing
         const activeTier = this.getActiveTier(pkg, saleMode, qty);
         if (activeTier) {
             const basePrice = this.getBaseUnitPrice(pkg, saleMode);
@@ -103,102 +193,13 @@ const QtyPricing = {
             return result;
         }
 
-        // 2. If packaging level > 1 (e.g. Renceng, Pack, Karton, Sak), ALWAYS use its explicit unit price
-        // This ensures selecting Level 2/3/4 never gets degraded or mistakenly computed as Level 1
-        const pkgLevel = parseInt(pkg?.level || 1, 10);
-        if (pkgLevel > 1) {
-            const basePrice = this.getBaseUnitPrice(pkg, saleMode);
-            const lineTotal = Math.round(basePrice * qty);
-            result.total = lineTotal;
-            result.breakdown.push({
-                note: `${qty} ${pkg.unit_name || 'Unit'} (@${basePrice.toLocaleString('id-ID')})`,
-                price: lineTotal
-            });
-            return result;
-        }
-
-        // 3. For Base Level 1 (e.g. Pcs): Check if bundle upgrade across larger packagings is applicable
-        if (!allPackagings || !Array.isArray(allPackagings) || allPackagings.length <= 1) {
-            const basePrice = this.getBaseUnitPrice(pkg, saleMode);
-            const lineTotal = Math.round(basePrice * qty);
-            result.total = lineTotal;
-            result.breakdown.push({ note: `${qty} ${pkg.unit_name || 'Unit'}`, price: lineTotal });
-            return result;
-        }
-
-        const targetBaseQty = qty * (parseFloat(pkg.base_qty) || 1);
-        let remainingBaseQty = targetBaseQty;
-        
-        let chunks = [];
-
-        allPackagings.forEach(p => {
-            const pBaseQty = parseFloat(p.base_qty) || 1;
-            const basePrice = this.getBaseUnitPrice(p, saleMode);
-            const unitName = p.unit_name || 'Unit';
-            if (basePrice > 0) {
-                chunks.push({
-                    chunk_size: pBaseQty,
-                    chunk_price: basePrice,
-                    price_per_base_unit: basePrice / pBaseQty,
-                    name: `1 ${unitName}`,
-                    is_tier: false
-                });
-            }
-            
-            if (p.qty_prices && Array.isArray(p.qty_prices)) {
-                p.qty_prices.forEach(t => {
-                    const tMode = t.sale_mode || 'both';
-                    if (tMode === 'both' || tMode === saleMode) {
-                        const tMin = parseFloat(t.min_qty) || 0;
-                        const tPrice = parseFloat(t.unit_price) || 0;
-                        if (tMin > 0 && tPrice > 0) {
-                            const chunkSize = pBaseQty * tMin;
-                            const chunkPrice = tPrice * tMin;
-                            chunks.push({
-                                chunk_size: chunkSize,
-                                chunk_price: chunkPrice,
-                                price_per_base_unit: chunkPrice / chunkSize,
-                                name: `${tMin} ${unitName} (Tier)`,
-                                is_tier: true
-                            });
-                        }
-                    }
-                });
-            }
+        const basePrice = this.getBaseUnitPrice(pkg, saleMode);
+        const lineTotal = Math.round(basePrice * qty);
+        result.total = lineTotal;
+        result.breakdown.push({
+            note: `${qty} ${pkg.unit_name || 'Unit'} (@${basePrice.toLocaleString('id-ID')})`,
+            price: lineTotal
         });
-
-        chunks.sort((a, b) => {
-            if (Math.abs(a.price_per_base_unit - b.price_per_base_unit) > 0.0001) {
-                return a.price_per_base_unit - b.price_per_base_unit;
-            }
-            return b.chunk_size - a.chunk_size;
-        });
-
-        for (const chunk of chunks) {
-            if (remainingBaseQty >= chunk.chunk_size - 0.001) {
-                const applyCount = Math.floor((remainingBaseQty + 0.001) / chunk.chunk_size);
-                const lineTotal = applyCount * chunk.chunk_price;
-                result.total += lineTotal;
-                remainingBaseQty -= (applyCount * chunk.chunk_size);
-                
-                let countPrefix = applyCount > 1 ? `${applyCount}x ` : '';
-                result.breakdown.push({ note: `${countPrefix}${chunk.name}`, price: lineTotal });
-            }
-        }
-
-        if (remainingBaseQty >= 0.001) {
-            const fallbackChunks = chunks.sort((a, b) => a.chunk_size - b.chunk_size);
-            if (fallbackChunks.length > 0) {
-                const smallest = fallbackChunks[0];
-                const fractionalTotal = (remainingBaseQty / smallest.chunk_size) * smallest.chunk_price;
-                result.total += fractionalTotal;
-                
-                const fractionalQty = remainingBaseQty / (parseFloat(pkg.base_qty) || 1);
-                result.breakdown.push({ note: `${fractionalQty} ${pkg.unit_name || 'Unit'} (Pecahan)`, price: fractionalTotal });
-            }
-        }
-
-        result.total = Math.round(result.total);
         return result;
     },
 

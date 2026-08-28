@@ -650,6 +650,7 @@ async function preloadPosCatalog() {
                                 unit_name: pkg.unit_name,
                                 unit_abbr: pkg.unit_abbr,
                                 barcode: pkg.barcode,
+                                base_qty: pkg.base_qty || 1,
                                 sell_price_retail: pkg.sell_price_retail,
                                 sell_price_wholesale: pkg.sell_price_wholesale,
                                 buy_price: pkg.buy_price || 0,
