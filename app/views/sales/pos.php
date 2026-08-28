@@ -589,6 +589,20 @@ function setMixDefault(mode) {
 window._posProductsCatalog = window._posProductsCatalog || [];
 
 async function preloadPosCatalog() {
+    const POS_LAST_SYNC_KEY = 'pos_last_auto_sync_time';
+    const POS_CACHE_VER_KEY = 'pos_catalog_cache_ver';
+    const CURRENT_POS_CACHE_VER = 'v25.10_baseqty';
+
+    // Invalidate stale local catalog cache if version changed
+    if (localStorage.getItem(POS_CACHE_VER_KEY) !== CURRENT_POS_CACHE_VER) {
+        try {
+            localStorage.removeItem('pos_catalog_cache');
+            localStorage.removeItem(POS_LAST_SYNC_KEY);
+            localStorage.setItem(POS_CACHE_VER_KEY, CURRENT_POS_CACHE_VER);
+            window._posProductsCatalog = [];
+        } catch(e) {}
+    }
+
     // 1. Load from LocalStorage for 0ms immediate availability (only available products for POS)
     try {
         const cached = localStorage.getItem('pos_catalog_cache');
@@ -611,7 +625,6 @@ async function preloadPosCatalog() {
     }
 
     // 3. Fetch fresh catalog from server (throttled to 10 mins if local data already present)
-    const POS_LAST_SYNC_KEY = 'pos_last_auto_sync_time';
     const lastSyncTime = parseInt(localStorage.getItem(POS_LAST_SYNC_KEY) || '0', 10);
     const hasLocalCatalog = window._posProductsCatalog.length > 0;
     const shouldFetch = !hasLocalCatalog || (Date.now() - lastSyncTime > 600000); // 10 minutes

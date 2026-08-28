@@ -94,7 +94,7 @@ const QtyPricing = {
         if (qty <= 0) return result;
 
         const pkgLevel = parseInt(pkg?.level || 1, 10);
-        const pkgBaseQty = parseFloat(pkg?.base_qty) || 1;
+        const pkgBaseQty = parseFloat(pkg?.base_qty || pkg?.contained_qty) || 1;
         const targetBaseQty = qty * pkgBaseQty;
 
         // Check if bundle upgrade across larger packagings / multi-tiers is applicable
@@ -109,7 +109,7 @@ const QtyPricing = {
                 const pLevel = parseInt(p.level || 1, 10);
                 if (pLevel < pkgLevel) return;
 
-                const pBaseQty = parseFloat(p.base_qty) || 1;
+                const pBaseQty = parseFloat(p.base_qty || p.contained_qty) || 1;
                 const basePrice = this.getBaseUnitPrice(p, saleMode);
                 const unitName = p.unit_name || 'Unit';
                 if (basePrice > 0 && pBaseQty > 0) {
