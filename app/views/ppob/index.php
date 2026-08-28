@@ -1319,31 +1319,85 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
     }
 }
 
-/* Inquriy Result Box - Modern Glassmorphism */
+/* Inquriy Result Box - Modern Theme-Aware High Contrast */
 .inquiry-box {
-    background: var(--surface-2);
-    border: 1px solid rgba(16, 185, 129, 0.35);
+    background: var(--surface-2, #f8fafc);
+    border: 1.5px solid rgba(16, 185, 129, 0.45);
     border-radius: 16px;
     padding: 22px;
     margin-top: 18px;
     display: none;
     position: relative;
-    box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.1);
+    box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.15);
     animation: customDropdownPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    color: var(--text-primary);
 }
 .inq-label { 
     font-size: 11px; 
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: var(--text-muted); 
+    color: var(--text-muted, #94a3b8) !important; 
     margin-bottom: 3px;
 }
 .inq-value { 
     font-size: 16px; 
     font-weight: 800; 
-    color: var(--text-primary); 
+    color: var(--text-primary, #ffffff) !important; 
     margin-bottom: 12px; 
+}
+#inq-name {
+    color: var(--text-primary, #0f172a) !important;
+    font-size: 1.25rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.3px;
+}
+#inq-detail {
+    color: var(--text-primary) !important;
+    background: var(--surface-1, rgba(255,255,255,0.05)) !important;
+    border: 1px solid var(--border-color, rgba(255,255,255,0.12)) !important;
+}
+#inq-detail b, #inq-detail strong {
+    color: var(--text-primary) !important;
+}
+[data-theme="dark"] .inquiry-box,
+[data-bs-theme="dark"] .inquiry-box,
+body.dark-mode .inquiry-box,
+html[data-theme="dark"] .inquiry-box {
+    background: var(--surface-2, #1e293b) !important;
+    border-color: rgba(52, 211, 153, 0.5) !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+[data-theme="dark"] #inq-name,
+[data-bs-theme="dark"] #inq-name,
+body.dark-mode #inq-name,
+html[data-theme="dark"] #inq-name {
+    color: #ffffff !important;
+    text-shadow: 0 0 12px rgba(255,255,255,0.2) !important;
+}
+[data-theme="dark"] .inq-label,
+[data-bs-theme="dark"] .inq-label,
+body.dark-mode .inq-label,
+html[data-theme="dark"] .inq-label {
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] #inq-detail,
+[data-bs-theme="dark"] #inq-detail,
+body.dark-mode #inq-detail,
+html[data-theme="dark"] #inq-detail {
+    background: rgba(15, 23, 42, 0.75) !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    color: #f8fafc !important;
+}
+[data-theme="dark"] #inq-detail b,
+[data-theme="dark"] #inq-detail strong,
+[data-bs-theme="dark"] #inq-detail b,
+[data-bs-theme="dark"] #inq-detail strong,
+body.dark-mode #inq-detail b,
+body.dark-mode #inq-detail strong,
+html[data-theme="dark"] #inq-detail b,
+html[data-theme="dark"] #inq-detail strong {
+    color: #38bdf8 !important;
 }
 
 /* Custom Searchable Dropdown Styles */
@@ -1861,11 +1915,11 @@ html[data-theme="light"] .btn-riwayat-premium:hover {
                     <div class="row align-items-center">
                         <div class="col-md-7">
                             <div class="inq-label" id="inq-title-label">Nama Pelanggan</div>
-                            <div class="inq-value fw-bold fs-5 text-dark" id="inq-name">-</div>
-                            <div id="inq-subtext" class="text-muted small mb-2" style="font-size:12px; display:none;"></div>
+                            <div class="inq-value fw-bold fs-5" id="inq-name">-</div>
+                            <div id="inq-subtext" class="small mb-2" style="font-size:12px; display:none;"></div>
                             
                             <div class="inq-label mt-2" id="inq-detail-label" style="display:none;">Rincian Tagihan</div>
-                            <div class="inq-value mt-1" id="inq-detail" style="display:none; font-size:12.5px; font-weight:normal; background:rgba(0,0,0,0.03); padding:10px 14px; border-radius:10px; border:1px solid var(--border-color); line-height:1.6;">-</div>
+                            <div class="inq-value mt-1" id="inq-detail" style="display:none; font-size:12.5px; font-weight:normal; padding:12px 14px; border-radius:10px; line-height:1.6;">-</div>
                         </div>
                         <div class="col-md-5 text-md-end mt-3 mt-md-0">
                             <div class="inq-label">Total Pembayaran</div>
@@ -5015,6 +5069,42 @@ async function fetchSellerHistory(page) {
     }
 }
 
+function resolveCustomerName(data, category) {
+    if (!data) return 'Pelanggan';
+    let name = (data.customer_name || '').trim();
+    const desc = data.desc || {};
+    
+    // List of possible unmasked name fields in desc
+    const candidates = [
+        desc.milik_kenama,
+        desc.nama_pelanggan,
+        desc.nama_peserta,
+        desc.nama_konsumen,
+        desc.nama_wajib_pajak,
+        desc.nama_wp,
+        desc.nama_pemilik,
+        desc.nama,
+        (desc.detail && desc.detail[0] ? desc.detail[0].nama : null),
+        (desc.detail && desc.detail[0] ? desc.detail[0].nama_pelanggan : null)
+    ];
+    
+    for (const c of candidates) {
+        if (c && typeof c === 'string' && c.trim() && !c.includes('*')) {
+            return c.trim();
+        }
+    }
+    
+    if (name.includes('*')) {
+        for (const c of candidates) {
+            if (c && typeof c === 'string' && c.trim()) {
+                return c.trim();
+            }
+        }
+    }
+    
+    return name || 'Pelanggan';
+}
+
 // 6. Inquiry (Cek Tagihan / Cek Nama PLN / E-Wallet)
 async function performInquiry() {
     const btn = document.getElementById('btn-inquiry');
@@ -5158,13 +5248,14 @@ async function performInquiry() {
                 
                 inqBox.style.display = 'block';
                 
-                const custName = data.data.customer_name || 'Pelanggan';
+                const custName = resolveCustomerName(data.data, currentCategory);
+                selectedInqData.customer_name = custName;
                 document.getElementById('inq-name').innerText = custName;
                 
                 const subtextEl = document.getElementById('inq-subtext');
                 if (subtextEl) {
                     subtextEl.style.display = 'block';
-                    subtextEl.innerHTML = `<span class="badge bg-secondary bg-opacity-10 text-dark">ID/No: <b>${no}</b></span>`;
+                    subtextEl.innerHTML = `<span class="badge bg-secondary bg-opacity-10" style="color: var(--text-primary); border: 1px solid var(--border-color);">ID/No: <b>${no}</b></span>`;
                 }
 
                 document.getElementById('inq-detail-label').style.display = 'block';

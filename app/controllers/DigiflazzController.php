@@ -480,6 +480,43 @@ class DigiflazzController extends Controller {
         if ($res['success'] && isset($res['data'])) {
             // Append ref_id so frontend can use it to pay
             $res['data']['ref_id'] = $refId;
+
+            // Extract unmasked customer name if available in desc or database
+            $custName = trim($res['data']['customer_name'] ?? '');
+            $desc = $res['data']['desc'] ?? [];
+            
+            // Check potential unmasked name fields in desc
+            $unmaskedCandidate = '';
+            $descFields = ['milik_kenama', 'nama_pelanggan', 'nama_peserta', 'nama_konsumen', 'nama_wajib_pajak', 'nama_wp', 'nama_pemilik', 'nama'];
+            if (is_array($desc)) {
+                foreach ($descFields as $f) {
+                    if (!empty($desc[$f]) && is_string($desc[$f]) && strpos($desc[$f], '*') === false) {
+                        $unmaskedCandidate = trim($desc[$f]);
+                        break;
+                    }
+                }
+                if (empty($unmaskedCandidate) && !empty($desc['detail']) && is_array($desc['detail'])) {
+                    foreach ($desc['detail'] as $dItem) {
+                        if (!empty($dItem['nama']) && is_string($dItem['nama']) && strpos($dItem['nama'], '*') === false) {
+                            $unmaskedCandidate = trim($dItem['nama']);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // If current name has asterisks but candidate doesn't, use candidate
+            if (strpos($custName, '*') !== false && !empty($unmaskedCandidate)) {
+                $res['data']['customer_name'] = $unmaskedCandidate;
+            } else if (strpos($custName, '*') !== false || empty($custName)) {
+                // Check saved ppob_customers table
+                require_once __DIR__ . '/../models/PpobCustomerModel.php';
+                $custModel = new PpobCustomerModel();
+                $savedCust = $custModel->getByCustomerNo($customerNo);
+                if ($savedCust && !empty($savedCust['customer_name']) && strpos($savedCust['customer_name'], '*') === false) {
+                    $res['data']['customer_name'] = $savedCust['customer_name'];
+                }
+            }
         }
 
         header('Content-Type: application/json');

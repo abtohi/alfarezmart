@@ -53,6 +53,12 @@ class PpobCustomerModel {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
+    public function getByCustomerNo(string $customerNo) {
+        $stmt = $this->db->prepare("SELECT * FROM ppob_customers WHERE customer_no = :customer_no LIMIT 1");
+        $stmt->execute(['customer_no' => trim($customerNo)]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
     public function create(array $data) {
         $stmt = $this->db->prepare("
             INSERT INTO ppob_customers (type, customer_name, customer_no, pln_name, pln_power, ewallet_accounts)
