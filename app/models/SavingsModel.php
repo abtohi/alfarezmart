@@ -5,6 +5,7 @@
 class SavingsModel extends Model
 {
     protected $table = 'savings_goals';
+    private static bool $schemaEnsured = false;
 
     public function __construct()
     {
@@ -17,6 +18,9 @@ class SavingsModel extends Model
      */
     private function ensureSchema(): void
     {
+        if (self::$schemaEnsured) return;
+        self::$schemaEnsured = true;
+
         try {
             if (!$this->db) return;
 

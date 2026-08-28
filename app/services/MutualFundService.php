@@ -1073,6 +1073,12 @@ class MutualFundService
      */
     public static function scrapeOnlineNav(string $fundName, string $fundHouse = ''): ?array
     {
+        // Hanya jalankan scraping HTTP jika dipanggil dari CLI cron background job
+        // untuk mencegah blocking web server worker threads pada HTTP requests
+        if (PHP_SAPI !== 'cli') {
+            return null;
+        }
+
         $query = trim($fundName);
         if (empty($query)) return null;
 

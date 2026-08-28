@@ -428,15 +428,6 @@ class SavingsController extends Controller
     {
         $this->requireService('savings');
 
-        // Automatic hourly background update check (every 3600s)
-        try {
-            $settingModel = new SettingModel();
-            $lastUpdate = (int)$settingModel->get('mutual_funds_last_hourly_update', 0);
-            if (time() - $lastUpdate >= 3600) {
-                $this->savingsModel->refreshAllMutualFundsNav();
-            }
-        } catch (\Throwable $e) {}
-
         $type = $this->query('type');
         $funds = $this->savingsModel->getMutualFunds($type);
         $summary = $this->savingsModel->getMutualFundsSummary();
