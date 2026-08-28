@@ -1321,32 +1321,23 @@ class SavingsModel extends Model
     }
 
     /**
-     * Get Mutual Funds Overall Portfolio Summary & Diversification Metrics
+     * Get Mutual Funds Overall Portfolio Summary & Asset Metrics
      */
     public function getMutualFundsSummary(): array
     {
         $funds = $this->getMutualFunds();
 
-        $totalInvested = 0.0;
         $totalCurrentValue = 0.0;
-        $totalDailyPnl = 0.0;
         $typeDistribution = [];
         $fundHouseDistribution = [];
-        $topPerformer = null;
-        $worstPerformer = null;
+        $largestHolding = null;
 
         foreach ($funds as $f) {
-            $inv = (float)$f['invested_amount'];
             $val = (float)$f['current_value'];
-            $pnl = (float)$f['unrealized_pnl'];
-            $pnlPct = (float)$f['unrealized_pnl_pct'];
-            $dailyPnl = (float)$f['daily_pnl'];
             $type = $f['fund_type'] ?: 'Lainnya';
             $house = $f['fund_house'] ?: 'Lainnya';
 
-            $totalInvested += $inv;
             $totalCurrentValue += $val;
-            $totalDailyPnl += $dailyPnl;
 
             // Type Distribution
             if (!isset($typeDistribution[$type])) {
@@ -1362,17 +1353,11 @@ class SavingsModel extends Model
             $fundHouseDistribution[$house]['amount'] += $val;
             $fundHouseDistribution[$house]['count']++;
 
-            // Top & Worst Performer
-            if ($topPerformer === null || $pnlPct > $topPerformer['unrealized_pnl_pct']) {
-                $topPerformer = $f;
-            }
-            if ($worstPerformer === null || $pnlPct < $worstPerformer['unrealized_pnl_pct']) {
-                $worstPerformer = $f;
+            // Largest Asset Holding
+            if ($largestHolding === null || $val > (float)$largestHolding['current_value']) {
+                $largestHolding = $f;
             }
         }
-
-        $totalPnl = round($totalCurrentValue - $totalInvested, 2);
-        $totalReturnPct = $totalInvested > 0 ? round(($totalPnl / $totalInvested) * 100, 2) : 0.0;
 
         // Calculate distribution percentages
         $typeBreakdown = [];
@@ -1389,15 +1374,9 @@ class SavingsModel extends Model
 
         return [
             'total_funds' => count($funds),
-            'total_invested' => $totalInvested,
             'total_current_value' => $totalCurrentValue,
-            'total_pnl' => $totalPnl,
-            'total_return_pct' => $totalReturnPct,
-            'total_daily_pnl' => $totalDailyPnl,
-            'is_overall_profit' => $totalPnl >= 0,
+            'largest_holding' => $largestHolding,
             'type_breakdown' => $typeBreakdown,
-            'top_performer' => $topPerformer,
-            'worst_performer' => $worstPerformer,
             'last_sync' => date('d M Y, H:i') . ' WIB'
         ];
     }

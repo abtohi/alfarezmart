@@ -1588,28 +1588,14 @@ require_once APP_PATH . '/services/MutualFundService.php';
     <!-- SECTION 2: MUTUAL FUNDS / REKSADANA PORTFOLIO VIEW       -->
     <!-- ======================================================== -->
     <div id="sectionMutualFundsView" style="display: none;">
-        <!-- Reksadana KPI Grid -->
+        <!-- Reksadana KPI Grid (Fokus Pemantauan Aset Real-time) -->
         <div class="mf-kpi-grid" id="mfKpiGridContainer">
-            <!-- 1. Total Modal Investasi -->
+            <!-- 1. Total Nilai Aset Reksadana -->
             <div class="mf-kpi-card">
                 <div class="kpi-title-row">
-                    <span class="kpi-title-text">Modal Investasi</span>
-                    <div class="kpi-icon-box" style="background: rgba(99,102,241,0.12); color: #818cf8;">
-                        <i class="bi bi-wallet2"></i>
-                    </div>
-                </div>
-                <div id="mfStatTotalInvested" class="kpi-value-text" style="color: var(--text-primary);">
-                    Rp 0
-                </div>
-                <div class="kpi-sub-text" id="mfStatTotalFunds">0 Produk Reksadana</div>
-            </div>
-
-            <!-- 2. Nilai Portofolio Saat Ini -->
-            <div class="mf-kpi-card">
-                <div class="kpi-title-row">
-                    <span class="kpi-title-text">Nilai Portofolio Saat Ini</span>
+                    <span class="kpi-title-text">Total Aset Reksadana</span>
                     <div class="kpi-icon-box" style="background: rgba(59,130,246,0.12); color: #3b82f6;">
-                        <i class="bi bi-graph-up-arrow"></i>
+                        <i class="bi bi-wallet2"></i>
                     </div>
                 </div>
                 <div id="mfStatCurrentValue" class="kpi-value-text" style="color: #3b82f6;">
@@ -1618,32 +1604,46 @@ require_once APP_PATH . '/services/MutualFundService.php';
                 <div class="kpi-sub-text">Total Unit &times; NAB Terkini</div>
             </div>
 
-            <!-- 3. Total Keuntungan / Return -->
+            <!-- 2. Total Produk Terpantau -->
             <div class="mf-kpi-card">
                 <div class="kpi-title-row">
-                    <span class="kpi-title-text">Total Keuntungan (Return)</span>
-                    <div class="kpi-icon-box" id="mfPnlIconBox" style="background: rgba(16,185,129,0.12); color: var(--success);">
-                        <i class="bi bi-cash-stack" id="mfPnlIcon"></i>
+                    <span class="kpi-title-text">Produk Terpantau</span>
+                    <div class="kpi-icon-box" style="background: rgba(16,185,129,0.12); color: #10b981;">
+                        <i class="bi bi-collection-fill"></i>
                     </div>
                 </div>
-                <div id="mfStatTotalPnl" class="kpi-value-text" style="color: var(--success);">
-                    +Rp 0 (+0.0%)
+                <div id="mfStatTotalFunds" class="kpi-value-text" style="color: var(--text-primary);">
+                    0 Produk
                 </div>
-                <div class="kpi-sub-text" id="mfStatReturnSub">Capital Gain / Loss</div>
+                <div class="kpi-sub-text">Diversifikasi portofolio</div>
             </div>
 
-            <!-- 4. Pergerakan Hari Ini & Top Performer -->
+            <!-- 3. Aset Reksadana Terbesar -->
             <div class="mf-kpi-card">
                 <div class="kpi-title-row">
-                    <span class="kpi-title-text">Pergerakan Hari Ini</span>
+                    <span class="kpi-title-text">Aset Terbesar</span>
                     <div class="kpi-icon-box" style="background: rgba(245,158,11,0.12); color: #f59e0b;">
-                        <i class="bi bi-lightning-charge-fill"></i>
+                        <i class="bi bi-trophy-fill"></i>
                     </div>
                 </div>
-                <div id="mfStatDailyPnl" class="kpi-value-text" style="color: #f59e0b;">
-                    Rp 0
+                <div id="mfStatTopPerformer" class="kpi-value-text" style="font-size: 13.5px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    -
                 </div>
-                <div class="kpi-sub-text" id="mfStatTopPerformer">Top: -</div>
+                <div class="kpi-sub-text" id="mfStatTopPerformerSub">Porsi kepemilikan tertinggi</div>
+            </div>
+
+            <!-- 4. Status Pembaruan Otomatis -->
+            <div class="mf-kpi-card">
+                <div class="kpi-title-row">
+                    <span class="kpi-title-text">Pembaruan NAB</span>
+                    <div class="kpi-icon-box" style="background: rgba(99,102,241,0.12); color: #818cf8;">
+                        <i class="bi bi-arrow-repeat"></i>
+                    </div>
+                </div>
+                <div id="mfStatAutoSyncStatus" class="kpi-value-text" style="font-size: 13.5px; color: var(--success); display: flex; align-items: center; gap: 5px;">
+                    <i class="bi bi-check-circle-fill" style="font-size: 12px;"></i> Otomatis Tiap 1 Jam
+                </div>
+                <div class="kpi-sub-text" id="mfStatLastSyncTime">Sinkronisasi Real-time Bareksa</div>
             </div>
         </div>
 
@@ -2390,7 +2390,7 @@ require_once APP_PATH . '/services/MutualFundService.php';
                         <input type="text" id="formMfNameManual" class="form-control-custom" placeholder="Ketik nama produk reksadana..." style="width: 100%; padding: 9px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12.5px; font-weight: 600; display: none;">
                     </div>
 
-                    <!-- 3. Tipe / Kategori & Tanggal Beli (2 cols) -->
+                    <!-- 3. Tipe / Kategori & Platform Agen (2 cols) -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                         <div>
                             <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
@@ -2406,80 +2406,63 @@ require_once APP_PATH . '/services/MutualFundService.php';
                         </div>
                         <div>
                             <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
-                                Tanggal Pembelian
-                            </label>
-                            <input type="date" id="formMfBuyDate" value="<?= date('Y-m-d') ?>" class="form-control-custom" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 11.5px; color-scheme: dark;">
-                        </div>
-                    </div>
-
-                    <!-- Smart Investment Inputs (Modal, NAB Beli, Unit) with Auto Calculation -->
-                    <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <span style="font-size: 11px; font-weight: 700; color: var(--text-primary);">
-                                <i class="bi bi-calculator me-1" style="color: var(--primary);"></i> Kalkulasi Pembelian &amp; Unit
-                            </span>
-                            <span style="font-size: 9.5px; color: var(--text-muted);">
-                                Otomatis menghitung Unit &amp; Nilai
-                            </span>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
-                            <!-- Modal Pembelian (Rp) -->
-                            <div>
-                                <label class="form-label-custom" style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; display: block;">
-                                    Modal Beli (Rp) <span style="color: var(--primary);">*</span>
-                                </label>
-                                <input type="text" id="formMfInvested" class="form-control-custom" placeholder="5.000.000" required oninput="formatCurrencyInput(this); calcMfUnitsOrNav('invested');" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12.5px; font-weight: 800;">
-                            </div>
-
-                            <!-- NAB Pembelian per Unit -->
-                            <div>
-                                <label class="form-label-custom" style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; display: block;">
-                                    NAB Beli / Unit (Rp) <span style="color: var(--primary);">*</span>
-                                </label>
-                                <input type="number" step="0.0001" id="formMfBuyNav" class="form-control-custom" placeholder="1528.42" required oninput="calcMfUnitsOrNav('buy_nav')" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px; font-weight: 700;">
-                            </div>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <!-- Total Unit Dimiliki -->
-                            <div>
-                                <label class="form-label-custom" style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; display: block;">
-                                    Total Unit Dimiliki <span style="color: var(--primary);">*</span>
-                                </label>
-                                <input type="number" step="0.0001" id="formMfUnits" class="form-control-custom" placeholder="3271.3652" required oninput="calcMfUnitsOrNav('units')" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: #3b82f6; font-size: 12px; font-weight: 800;">
-                            </div>
-
-                            <!-- NAB Saat Ini (Real-time Live NAV) -->
-                            <div>
-                                <label class="form-label-custom" style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; display: block;">
-                                    NAB Terkini (Rp)
-                                </label>
-                                <input type="number" step="0.0001" id="formMfCurrentNav" class="form-control-custom" placeholder="1528.42" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--success); font-size: 12px; font-weight: 700;">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Platform & Syariah (2 cols) -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center;">
-                        <div>
-                            <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
                                 Platform Agen / APERD
                             </label>
                             <input type="text" id="formMfPlatform" class="form-control-custom" placeholder="Bibit / Bareksa / IPOT" value="Bibit" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px;">
                         </div>
-                        <div style="padding-top: 18px;">
-                            <label class="form-check-label" style="font-size: 11.5px; font-weight: 600; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                                <input type="checkbox" id="formMfIsSyariah" class="form-check-input" style="cursor: pointer;">
-                                <span>Produk Syariah</span>
+                    </div>
+
+                    <!-- 4. Total Unit Dimiliki & NAB Terkini (2 cols) -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <!-- Total Unit Dimiliki -->
+                        <div>
+                            <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; display: block;">
+                                Total Unit Dimiliki <span style="color: var(--primary);">*</span>
                             </label>
+                            <input type="number" step="0.0001" id="formMfUnits" class="form-control-custom" placeholder="Misal: 1520.4567" required oninput="calcMfAssetPreview()" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: #3b82f6; font-size: 13px; font-weight: 800;">
+                        </div>
+
+                        <!-- NAB Saat Ini (Real-time Live NAV) -->
+                        <div>
+                            <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; display: block;">
+                                NAB Terkini (Rp) <span style="color: var(--success); font-size: 9.5px;">(Live)</span>
+                            </label>
+                            <input type="number" step="0.0001" id="formMfCurrentNav" class="form-control-custom" placeholder="1528.42" required oninput="calcMfAssetPreview()" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--success); font-size: 13px; font-weight: 800;">
                         </div>
                     </div>
+
+                    <!-- 5. Live Asset Calculation Preview Card -->
+                    <div style="background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(16,185,129,0.08)); border: 1.5px solid rgba(59,130,246,0.25); border-radius: var(--radius-md); padding: 12px 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+                                <i class="bi bi-wallet2 me-1" style="color: #3b82f6;"></i> Estimasi Nilai Aset Saat Ini
+                            </span>
+                            <span style="font-size: 9.5px; color: var(--text-muted);">
+                                (Total Unit &times; NAB Terkini)
+                            </span>
+                        </div>
+                        <div style="font-size: 1.35rem; font-weight: 900; color: var(--text-primary); margin-top: 4px;" id="mfFormLiveAssetVal">
+                            Rp 0
+                        </div>
+                    </div>
+
+                    <!-- Syariah & Notes -->
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <label class="form-check-label" style="font-size: 11.5px; font-weight: 600; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                            <input type="checkbox" id="formMfIsSyariah" class="form-check-input" style="cursor: pointer;">
+                            <span>Produk Syariah</span>
+                        </label>
+                    </div>
+
+                    <!-- Hidden legacy inputs for compatibility -->
+                    <input type="hidden" id="formMfInvested" value="0">
+                    <input type="hidden" id="formMfBuyNav" value="0">
+                    <input type="hidden" id="formMfBuyDate" value="<?= date('Y-m-d') ?>">
 
                     <!-- Notes -->
                     <div>
                         <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
-                            Catatan Investasi (Opsional)
+                            Catatan (Opsional)
                         </label>
                         <input type="text" id="formMfNotes" class="form-control-custom" placeholder="Misal: Alokasi untuk dana darurat / DP Rumah" style="width: 100%; padding: 8px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px;">
                     </div>
@@ -3234,42 +3217,29 @@ async function loadMasterCatalog() {
 }
 
 function updateMutualFundsSummaryUI(summary) {
-    document.getElementById('mfStatTotalInvested').textContent = formatRupiah(summary.total_invested);
-    document.getElementById('mfStatTotalFunds').textContent = `${summary.total_funds} Produk Reksadana`;
-    document.getElementById('mfStatCurrentValue').textContent = formatRupiah(summary.total_current_value);
+    const currentValEl = document.getElementById('mfStatCurrentValue');
+    if (currentValEl) currentValEl.textContent = formatRupiah(summary.total_current_value);
 
-    // Total Return / P&L
-    const pnlEl = document.getElementById('mfStatTotalPnl');
-    const pnlIconBox = document.getElementById('mfPnlIconBox');
-    const returnSub = document.getElementById('mfStatReturnSub');
-    const isProfit = summary.is_overall_profit;
-    const sign = isProfit ? '+' : '';
-    const pnlFormatted = `${sign}${formatRupiah(summary.total_pnl)} (${sign}${summary.total_return_pct}%)`;
+    const totalFundsEl = document.getElementById('mfStatTotalFunds');
+    if (totalFundsEl) totalFundsEl.textContent = `${summary.total_funds} Produk Terpantau`;
 
-    pnlEl.textContent = pnlFormatted;
-    pnlEl.style.color = isProfit ? 'var(--success)' : 'var(--danger)';
-    if (pnlIconBox) {
-        pnlIconBox.style.background = isProfit ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
-        pnlIconBox.style.color = isProfit ? 'var(--success)' : 'var(--danger)';
-    }
-    if (returnSub) {
-        returnSub.textContent = isProfit ? 'Floating Profit' : 'Floating Loss';
-    }
-
-    // Daily Return
-    const dailyPnlEl = document.getElementById('mfStatDailyPnl');
-    const dailySign = summary.total_daily_pnl >= 0 ? '+' : '';
-    dailyPnlEl.textContent = `${dailySign}${formatRupiah(summary.total_daily_pnl)}`;
-    dailyPnlEl.style.color = summary.total_daily_pnl >= 0 ? '#10b981' : '#ef4444';
-
-    // Top Performer
+    // Largest Asset Holding
     const topPerfEl = document.getElementById('mfStatTopPerformer');
+    const topPerfSub = document.getElementById('mfStatTopPerformerSub');
     if (topPerfEl) {
-        if (summary.top_performer) {
-            topPerfEl.innerHTML = `Top: <strong style="color:var(--text-primary);">${summary.top_performer.fund_name.substring(0, 18)}...</strong> (+${summary.top_performer.unrealized_pnl_pct}%)`;
+        if (summary.largest_holding) {
+            topPerfEl.innerHTML = `<strong style="color:var(--text-primary);">${escapeHtml(summary.largest_holding.fund_name).substring(0, 18)}...</strong>`;
+            if (topPerfSub) topPerfSub.textContent = `Aset: ${formatRupiah(summary.largest_holding.current_value)}`;
         } else {
-            topPerfEl.textContent = 'Top: Belum ada data';
+            topPerfEl.textContent = 'Belum ada data';
+            if (topPerfSub) topPerfSub.textContent = 'Porsi kepemilikan tertinggi';
         }
+    }
+
+    // Last Sync
+    const lastSyncEl = document.getElementById('mfStatLastSyncTime');
+    if (lastSyncEl && summary.last_sync) {
+        lastSyncEl.textContent = `Update: ${summary.last_sync}`;
     }
 
     // Diversification Bar & Pills
@@ -3367,12 +3337,6 @@ function renderMutualFundsGrid() {
     }
 
     container.innerHTML = list.map(f => {
-        const isProfit = f.is_profit;
-        const pnlSign = isProfit ? '+' : '';
-        const pnlFormatted = `${pnlSign}${formatRupiah(f.unrealized_pnl)} (${pnlSign}${f.unrealized_pnl_pct}%)`;
-        const pnlClass = isProfit ? 'profit' : 'loss';
-        const pnlIcon = isProfit ? 'bi-arrow-up-right' : 'bi-arrow-down-right';
-
         let typeBadgeBg = 'rgba(59,130,246,0.12)';
         let typeBadgeColor = '#3b82f6';
         if (f.fund_type === 'Pasar Uang') { typeBadgeBg = 'rgba(16,185,129,0.12)'; typeBadgeColor = '#10b981'; }
@@ -3406,10 +3370,10 @@ function renderMutualFundsGrid() {
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="background: var(--surface-1); border: 1px solid var(--border-color); font-size: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-                                <li><a class="dropdown-item text-primary" href="javascript:void(0)" onclick="openEditMutualFundModal(${f.id})"><i class="bi bi-pencil-square me-2"></i>Edit Reksadana</a></li>
+                                <li><a class="dropdown-item text-primary" href="javascript:void(0)" onclick="openEditMutualFundModal(${f.id})"><i class="bi bi-pencil-square me-2"></i>Edit Unit / Produk</a></li>
                                 <li><a class="dropdown-item text-info" href="javascript:void(0)" onclick="openMutualFundHistoryModal(${f.id}, '${escapeHtml(f.fund_name).replace(/'/g, "\\'")}')"><i class="bi bi-clock-history me-2"></i>Riwayat Perubahan NAB</a></li>
                                 <li><hr class="dropdown-divider" style="border-color: var(--border-color);"></li>
-                                <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteMutualFund(${f.id}, '${escapeHtml(f.fund_name).replace(/'/g, "\\'")}')"><i class="bi bi-trash me-2"></i>Hapus dari Portofolio</a></li>
+                                <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteMutualFund(${f.id}, '${escapeHtml(f.fund_name).replace(/'/g, "\\'")}')"><i class="bi bi-trash me-2"></i>Hapus Reksadana</a></li>
                             </ul>
                         </div>
                     </div>
@@ -3418,18 +3382,6 @@ function renderMutualFundsGrid() {
                 <!-- Metrics Box -->
                 <div class="mf-metric-box">
                     <div class="mf-metric-row">
-                        <span class="mf-metric-label">Modal Pembelian:</span>
-                        <span class="mf-metric-val">${formatRupiah(f.invested_amount)}</span>
-                    </div>
-                    <div class="mf-metric-row">
-                        <span class="mf-metric-label">Total Unit Dimiliki:</span>
-                        <span class="mf-metric-val" style="color: #3b82f6; font-family: monospace; font-weight: 800;">${parseFloat(f.units_owned).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} Unit</span>
-                    </div>
-                    <div class="mf-metric-row">
-                        <span class="mf-metric-label">Harga Beli (NAB Awal):</span>
-                        <span class="mf-metric-val">Rp ${parseFloat(f.buy_nav).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
-                    </div>
-                    <div class="mf-metric-row" style="border-top: 1px dashed var(--border-color); margin-top: 3px; padding-top: 4px;">
                         <span class="mf-metric-label">Harga NAB Terkini (Live):</span>
                         <span class="mf-metric-val" style="color: var(--success); font-weight: 800;">
                             Rp ${parseFloat(f.current_nav).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
@@ -3438,31 +3390,32 @@ function renderMutualFundsGrid() {
                             </span>
                         </span>
                     </div>
+                    <div class="mf-metric-row" style="border-top: 1px dashed var(--border-color); margin-top: 3px; padding-top: 4px;">
+                        <span class="mf-metric-label">Total Unit Dimiliki:</span>
+                        <span class="mf-metric-val" style="color: #3b82f6; font-family: monospace; font-weight: 800;">${parseFloat(f.units_owned).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} Unit</span>
+                    </div>
                 </div>
 
-                <!-- Current Asset Value & PnL Highlight -->
-                <div style="background: linear-gradient(135deg, rgba(59,130,246,0.06), rgba(99,102,241,0.06)); border: 1px solid rgba(59,130,246,0.18); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 12px;">
+                <!-- Current Asset Value Highlight -->
+                <div style="background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(16,185,129,0.08)); border: 1.5px solid rgba(59,130,246,0.22); border-radius: var(--radius-md); padding: 11px 13px; margin-bottom: 12px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
-                            Total Nilai Aset Saat Ini
+                            <i class="bi bi-wallet2 me-1" style="color: #3b82f6;"></i> Nilai Aset Saat Ini
                         </span>
                         <span style="font-size: 9.5px; color: var(--text-muted);">
-                            (Unit &times; NAB Saat Ini)
+                            (Total Unit &times; NAB Terkini)
                         </span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; margin-top: 2px;">
-                        <span class="mf-val-highlight">${formatRupiah(f.current_value)}</span>
-                        <span class="mf-pnl-pill ${pnlClass}">
-                            <i class="bi ${pnlIcon}"></i> ${pnlFormatted}
-                        </span>
+                    <div style="font-size: 1.3rem; font-weight: 900; color: var(--text-primary); margin-top: 2px;">
+                        ${formatRupiah(f.current_value)}
                     </div>
                 </div>
 
                 <!-- Footer -->
                 <div class="mf-card-footer">
-                    <span><i class="bi bi-calendar-event me-1"></i>Beli: ${formatIndoDate(f.buy_date)}</span>
+                    <span><i class="bi bi-arrow-repeat me-1 text-success"></i>Update Otomatis 1 Jam</span>
                     <span style="cursor: pointer; color: var(--primary); font-weight: 700;" onclick="openEditMutualFundModal(${f.id})">
-                        Kelola <i class="bi bi-chevron-right"></i>
+                        Edit Unit <i class="bi bi-chevron-right"></i>
                     </span>
                 </div>
             </div>
@@ -3751,21 +3704,27 @@ function selectMfProductOption(code) {
     // Set Syariah
     document.getElementById('formMfIsSyariah').checked = !!item.is_syariah;
 
-    // Prefill Buy NAV if empty, and Live NAV
-    const buyNavInput = document.getElementById('formMfBuyNav');
-    if (!buyNavInput.value || parseFloat(buyNavInput.value) <= 0) {
-        buyNavInput.value = item.current_nav;
-    }
+    // Set Live NAV
     document.getElementById('formMfCurrentNav').value = item.current_nav;
 
-    // Auto calculate units or modal
-    calcMfUnitsOrNav('buy_nav');
+    // Auto calculate asset preview
+    calcMfAssetPreview();
 
     // Close menu & refresh options
     renderMfHouseOptions();
     renderMfProductOptions();
     const menu = document.getElementById('mfProductPickerMenu');
     if (menu) menu.classList.remove('show');
+}
+
+function calcMfAssetPreview() {
+    const units = parseFloat(document.getElementById('formMfUnits')?.value) || 0;
+    const nav = parseFloat(document.getElementById('formMfCurrentNav')?.value) || 0;
+    const totalAsset = Math.round(units * nav);
+    const previewEl = document.getElementById('mfFormLiveAssetVal');
+    if (previewEl) {
+        previewEl.textContent = formatRupiah(totalAsset);
+    }
 }
 
 function toggleCustomMfInput() {
@@ -3826,12 +3785,10 @@ function openAddMutualFundModal() {
         document.getElementById('mfProductSelectedSub').textContent = 'Pilih dari katalog';
     }
 
-    document.getElementById('formMfInvested').value = '';
-    document.getElementById('formMfBuyNav').value = '';
     document.getElementById('formMfUnits').value = '';
     document.getElementById('formMfPlatform').value = 'Bibit';
-    document.getElementById('formMfBuyDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('formMfNotes').value = '';
+    calcMfAssetPreview();
 
     renderMfHouseOptions();
     renderMfProductOptions();
@@ -3856,14 +3813,13 @@ function openEditMutualFundModal(id) {
 
     document.getElementById('formMfTypeSelect').value = fund.fund_type;
     document.getElementById('formMfType').value = fund.fund_type;
-    document.getElementById('formMfInvested').value = Math.round(fund.invested_amount).toLocaleString('id-ID');
-    document.getElementById('formMfBuyNav').value = fund.buy_nav;
     document.getElementById('formMfUnits').value = fund.units_owned;
     document.getElementById('formMfCurrentNav').value = fund.current_nav;
     document.getElementById('formMfPlatform').value = fund.platform || 'Bibit';
-    document.getElementById('formMfBuyDate').value = fund.buy_date || new Date().toISOString().split('T')[0];
     document.getElementById('formMfIsSyariah').checked = !!parseInt(fund.is_syariah);
     document.getElementById('formMfNotes').value = fund.notes || '';
+
+    calcMfAssetPreview();
 
     // Check if fund name exists in master catalog
     const matchedMaster = masterCatalogProducts.find(p => p.name.toLowerCase() === fund.fund_name.toLowerCase());
@@ -3896,12 +3852,9 @@ async function submitMutualFundForm(e) {
     const name = isCustomMfInput ? document.getElementById('formMfNameManual').value : document.getElementById('formMfName').value;
     const house = document.getElementById('formMfHouse').value;
     const type = document.getElementById('formMfType').value;
-    const invested = parseRupiahInput(document.getElementById('formMfInvested').value);
-    const buyNav = parseFloat(document.getElementById('formMfBuyNav').value) || 0;
     const units = parseFloat(document.getElementById('formMfUnits').value) || 0;
-    const currentNav = parseFloat(document.getElementById('formMfCurrentNav').value) || buyNav;
+    const currentNav = parseFloat(document.getElementById('formMfCurrentNav').value) || 1000;
     const platform = document.getElementById('formMfPlatform').value;
-    const buyDate = document.getElementById('formMfBuyDate').value;
     const isSyariah = document.getElementById('formMfIsSyariah').checked ? 1 : 0;
     const notes = document.getElementById('formMfNotes').value;
 
@@ -3912,16 +3865,20 @@ async function submitMutualFundForm(e) {
         return;
     }
 
+    if (units <= 0) {
+        showSavingsToast('Peringatan', 'Silakan masukkan total unit yang dimiliki', 'warning');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        return;
+    }
+
     const payload = {
         fund_name: name.trim(),
         fund_house: house || 'Lainnya',
         fund_type: type,
-        invested_amount: invested,
-        buy_nav: buyNav,
         units_owned: units,
         current_nav: currentNav,
         platform: platform,
-        buy_date: buyDate,
         is_syariah: isSyariah,
         notes: notes
     };
