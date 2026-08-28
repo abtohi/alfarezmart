@@ -2313,7 +2313,37 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 
                 <div class="modal-body" style="padding: 16px 18px; display: flex; flex-direction: column; gap: 13px;">
                     
-                    <!-- Searchable Catalog Autocomplete or Custom Input -->
+                    <!-- 1. Manajer Investasi (MI) Custom Searchable Dropdown Picker -->
+                    <div>
+                        <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
+                            Manajer Investasi (MI) <span style="color: var(--primary);">*</span>
+                        </label>
+                        <input type="hidden" id="formMfHouse" value="Sucorinvest Asset Management" required>
+                        <div class="custom-select-picker" id="mfHousePickerContainer">
+                            <div class="custom-select-trigger" id="mfHousePickerTrigger" onclick="toggleCustomDropdown('mfHousePickerMenu', event)">
+                                <div class="custom-select-content">
+                                    <div class="custom-select-icon" id="mfHouseSelectedIcon" style="background: rgba(99,102,241,0.15); color: #818cf8;">
+                                        <i class="bi bi-building"></i>
+                                    </div>
+                                    <div style="min-width: 0;">
+                                        <div class="custom-select-label" id="mfHouseSelectedLabel">Sucorinvest Asset Management</div>
+                                        <div class="custom-select-sub" id="mfHouseSelectedSub">Manajer Investasi</div>
+                                    </div>
+                                </div>
+                                <i class="bi bi-chevron-down custom-select-chevron"></i>
+                            </div>
+                            <div class="custom-select-menu" id="mfHousePickerMenu">
+                                <div class="custom-select-search">
+                                    <input type="text" placeholder="Cari Manajer Investasi..." oninput="filterDropdownOptions('mfHousePickerMenu', this.value)">
+                                </div>
+                                <div id="mfHouseOptionsList" style="max-height: 200px; overflow-y: auto;">
+                                    <!-- Rendered by JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Nama Produk Reksadana Custom Searchable Dropdown Picker -->
                     <div>
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                             <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin: 0;">
@@ -2323,31 +2353,35 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                                 <i class="bi bi-pencil-square me-1"></i>Ketik Manual / Custom
                             </span>
                         </div>
-
-                        <!-- Catalog Search Input Box -->
-                        <div id="mfCatalogSearchWrapper" style="position: relative;">
-                            <input type="text" id="formMfSearchInput" class="form-control-custom" placeholder="Ketik nama: Sucorinvest, Batavia, Mandiri..." autocomplete="off" oninput="onMfCatalogSearch(this.value)" onfocus="showMfCatalogDropdown()" style="width: 100%; padding: 9px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12.5px; font-weight: 600;">
-                            
-                            <!-- Search Autocomplete Dropdown List -->
-                            <div id="mfCatalogDropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; max-height: 220px; overflow-y: auto; background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-md); z-index: 1050; box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
-                                <div id="mfCatalogItemsContainer">
-                                    <!-- Populated by JS -->
+                        <input type="hidden" id="formMfName" value="Sucorinvest Sharia Money Market Fund" required>
+                        <div class="custom-select-picker" id="mfProductPickerContainer">
+                            <div class="custom-select-trigger" id="mfProductPickerTrigger" onclick="toggleCustomDropdown('mfProductPickerMenu', event)">
+                                <div class="custom-select-content">
+                                    <div class="custom-select-icon" id="mfProductSelectedIcon" style="background: rgba(16,185,129,0.15); color: #10b981;">
+                                        <i class="bi bi-graph-up-arrow"></i>
+                                    </div>
+                                    <div style="min-width: 0;">
+                                        <div class="custom-select-label" id="mfProductSelectedLabel">Sucorinvest Sharia Money Market Fund</div>
+                                        <div class="custom-select-sub" id="mfProductSelectedSub">Pasar Uang &middot; NAB: Rp 1.528,42</div>
+                                    </div>
+                                </div>
+                                <i class="bi bi-chevron-down custom-select-chevron"></i>
+                            </div>
+                            <div class="custom-select-menu" id="mfProductPickerMenu">
+                                <div class="custom-select-search">
+                                    <input type="text" placeholder="Cari nama produk reksadana..." oninput="filterDropdownOptions('mfProductPickerMenu', this.value)">
+                                </div>
+                                <div id="mfProductOptionsList" style="max-height: 220px; overflow-y: auto;">
+                                    <!-- Rendered by JS -->
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Custom Manual Product Name Input (Hidden by default) -->
-                        <input type="text" id="formMfName" class="form-control-custom" placeholder="Misal: Sucorinvest Sharia Money Market Fund" required style="width: 100%; padding: 9px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12.5px; font-weight: 600; display: none;">
+                        <!-- Manual Name Input (if custom toggle active) -->
+                        <input type="text" id="formMfNameManual" class="form-control-custom" placeholder="Ketik nama produk reksadana..." style="width: 100%; padding: 9px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12.5px; font-weight: 600; display: none;">
                     </div>
 
-                    <!-- Manajer Investasi & Kategori (2 cols) -->
+                    <!-- 3. Tipe / Kategori & Tanggal Beli (2 cols) -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div>
-                            <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
-                                Manajer Investasi (MI) <span style="color: var(--primary);">*</span>
-                            </label>
-                            <input type="text" id="formMfHouse" class="form-control-custom" placeholder="Sucorinvest / Batavia / Mandiri" required style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px; font-weight: 600;">
-                        </div>
                         <div>
                             <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
                                 Tipe / Kategori <span style="color: var(--primary);">*</span>
@@ -2359,6 +2393,12 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                                 <option value="Campuran">Campuran (Balanced)</option>
                                 <option value="Index / ETF">Index / ETF</option>
                             </select>
+                        </div>
+                        <div>
+                            <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
+                                Tanggal Pembelian
+                            </label>
+                            <input type="date" id="formMfBuyDate" value="<?= date('Y-m-d') ?>" class="form-control-custom" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 11.5px; color-scheme: dark;">
                         </div>
                     </div>
 
@@ -2410,28 +2450,20 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                         </div>
                     </div>
 
-                    <!-- Platform & Tanggal Beli (2 cols) -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <!-- Platform & Syariah (2 cols) -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center;">
                         <div>
                             <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
                                 Platform Agen / APERD
                             </label>
                             <input type="text" id="formMfPlatform" class="form-control-custom" placeholder="Bibit / Bareksa / IPOT" value="Bibit" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px;">
                         </div>
-                        <div>
-                            <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
-                                Tanggal Pembelian
+                        <div style="padding-top: 18px;">
+                            <label class="form-check-label" style="font-size: 11.5px; font-weight: 600; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                <input type="checkbox" id="formMfIsSyariah" class="form-check-input" style="cursor: pointer;">
+                                <span>Produk Syariah</span>
                             </label>
-                            <input type="date" id="formMfBuyDate" value="<?= date('Y-m-d') ?>" class="form-control-custom" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 11.5px; color-scheme: dark;">
                         </div>
-                    </div>
-
-                    <!-- Syariah & Notes -->
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-                        <label class="form-check-label" style="font-size: 11.5px; font-weight: 600; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                            <input type="checkbox" id="formMfIsSyariah" class="form-check-input" style="cursor: pointer;">
-                            <span>Produk Syariah</span>
-                        </label>
                     </div>
 
                     <!-- Notes -->
@@ -2773,6 +2805,9 @@ function initCustomSelectPickers() {
             </div>
         `).join('');
     }
+
+    // 5. Mutual Fund Pickers (MI & Products)
+    initMutualFundPickers();
 }
 
 function toggleCustomDropdown(menuId, e) {
@@ -3112,6 +3147,7 @@ async function loadMasterCatalog() {
         const json = await res.json();
         if (json.success && json.data && json.data.products) {
             masterCatalogProducts = json.data.products;
+            initMutualFundPickers();
         }
     } catch (e) {
         console.error('Error loading master mutual funds catalog:', e);
@@ -3398,99 +3434,196 @@ function onMfTypeSelectChange(type) {
     document.getElementById('formMfType').value = type;
 }
 
-function toggleCustomMfInput() {
-    isCustomMfInput = !isCustomMfInput;
-    const searchWrapper = document.getElementById('mfCatalogSearchWrapper');
-    const manualInput = document.getElementById('formMfName');
+const FUND_HOUSES_LIST = [
+    { name: 'Semua Manajer Investasi', code: 'all', icon: 'bi-grid-fill' },
+    { name: 'Sucorinvest Asset Management', code: 'sucor', icon: 'bi-building' },
+    { name: 'Batavia Prosperindo Aset Manajemen', code: 'batavia', icon: 'bi-building' },
+    { name: 'Mandiri Manajemen Investasi', code: 'mandiri', icon: 'bi-building' },
+    { name: 'Bahana TCW Investment Management', code: 'bahana', icon: 'bi-building' },
+    { name: 'BRI Manajemen Investasi (Danareksa)', code: 'danareksa', icon: 'bi-building' },
+    { name: 'Manulife Aset Manajemen Indonesia', code: 'manulife', icon: 'bi-building' },
+    { name: 'BNP Paribas Asset Management', code: 'bnp', icon: 'bi-building' },
+    { name: 'Ashmore Asset Management Indonesia', code: 'ashmore', icon: 'bi-building' },
+    { name: 'Trimegah Asset Management', code: 'trimegah', icon: 'bi-building' },
+    { name: 'Syailendra Capital', code: 'syailendra', icon: 'bi-building' },
+    { name: 'Panin Asset Management', code: 'panin', icon: 'bi-building' },
+    { name: 'Schroder Investment Management Indonesia', code: 'schroder', icon: 'bi-building' },
+    { name: 'BNI Asset Management', code: 'bni', icon: 'bi-building' },
+    { name: 'Eastspring Investments Indonesia', code: 'eastspring', icon: 'bi-building' },
+    { name: 'Avrist Asset Management', code: 'avrist', icon: 'bi-building' }
+];
 
-    if (isCustomMfInput) {
-        searchWrapper.style.display = 'none';
-        manualInput.style.display = 'block';
-        manualInput.value = document.getElementById('formMfSearchInput').value || '';
-        manualInput.focus();
-    } else {
-        searchWrapper.style.display = 'block';
-        manualInput.style.display = 'none';
-        document.getElementById('formMfSearchInput').value = manualInput.value || '';
-    }
+let selectedMfHouseFilter = '';
+
+function initMutualFundPickers() {
+    renderMfHouseOptions();
+    renderMfProductOptions();
 }
 
-function onMfCatalogSearch(keyword) {
-    const q = (keyword || '').toLowerCase().trim();
-    const container = document.getElementById('mfCatalogItemsContainer');
-    if (!container) return;
+function renderMfHouseOptions() {
+    const listEl = document.getElementById('mfHouseOptionsList');
+    if (!listEl) return;
 
-    let matches = masterCatalogProducts;
-    if (q) {
-        matches = masterCatalogProducts.filter(p => {
-            return p.name.toLowerCase().includes(q) || p.fund_house.toLowerCase().includes(q) || p.type.toLowerCase().includes(q);
-        });
-    }
+    const currentHouse = document.getElementById('formMfHouse')?.value || 'Sucorinvest Asset Management';
 
-    if (matches.length === 0) {
-        container.innerHTML = `
-            <div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 11.5px;">
-                Tidak ada produk di katalog.
-                <button type="button" class="btn btn-link p-0 text-primary fw-bold ms-1" style="font-size: 11.5px;" onclick="toggleCustomMfInput()">Gunakan input manual</button>
-            </div>
-        `;
-    } else {
-        container.innerHTML = matches.map(p => `
-            <div class="custom-select-option" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border-color);" onclick="selectMfCatalogItem('${p.code}')">
-                <div style="min-width: 0; flex: 1;">
-                    <div style="font-size: 12px; font-weight: 800; color: var(--text-primary); line-height: 1.2;">
-                        ${escapeHtml(p.name)}
+    listEl.innerHTML = FUND_HOUSES_LIST.map(h => {
+        const isSelected = (h.name === currentHouse || (h.code === 'all' && (!currentHouse || currentHouse === 'Semua Manajer Investasi')));
+        return `
+            <div class="custom-select-option ${isSelected ? 'selected' : ''}" onclick="selectMfHouseOption('${h.name.replace(/'/g, "\\'")}')">
+                <div class="custom-select-content">
+                    <div class="custom-select-icon" style="background: rgba(99,102,241,0.12); color: #818cf8;">
+                        <i class="bi ${h.icon || 'bi-building'}"></i>
                     </div>
-                    <div style="font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; margin-top: 2px;">
-                        <span><i class="bi bi-building me-1"></i>${escapeHtml(p.fund_house)}</span>
-                        <span>&middot;</span>
-                        <span style="color: var(--primary); font-weight: 700;">${escapeHtml(p.type)}</span>
-                        <span>&middot;</span>
-                        <span style="color: var(--success); font-weight: 700;">NAB: Rp ${p.current_nav.toLocaleString('id-ID')}</span>
+                    <div style="min-width: 0;">
+                        <div class="custom-select-label">${escapeHtml(h.name)}</div>
+                        <div class="custom-select-sub">Manajer Investasi</div>
                     </div>
                 </div>
+                <i class="bi bi-check-lg custom-select-check"></i>
             </div>
-        `).join('');
+        `;
+    }).join('');
+}
+
+function selectMfHouseOption(houseName) {
+    if (houseName === 'Semua Manajer Investasi') {
+        selectedMfHouseFilter = '';
+    } else {
+        selectedMfHouseFilter = houseName;
+        const houseInput = document.getElementById('formMfHouse');
+        if (houseInput) houseInput.value = houseName;
+        const houseLabel = document.getElementById('mfHouseSelectedLabel');
+        if (houseLabel) houseLabel.textContent = houseName;
     }
 
-    showMfCatalogDropdown();
+    renderMfHouseOptions();
+    renderMfProductOptions();
+
+    // Close menu
+    const menu = document.getElementById('mfHousePickerMenu');
+    if (menu) menu.classList.remove('show');
 }
 
-function showMfCatalogDropdown() {
-    const dropdown = document.getElementById('mfCatalogDropdown');
-    if (dropdown) {
-        dropdown.style.display = 'block';
-        if (!document.getElementById('mfCatalogItemsContainer').innerHTML.trim()) {
-            onMfCatalogSearch(document.getElementById('formMfSearchInput').value || '');
-        }
+function renderMfProductOptions() {
+    const listEl = document.getElementById('mfProductOptionsList');
+    if (!listEl) return;
+
+    let products = masterCatalogProducts || [];
+    const currentHouse = selectedMfHouseFilter || document.getElementById('formMfHouse')?.value || '';
+
+    if (currentHouse && currentHouse !== 'Semua Manajer Investasi') {
+        const houseLower = currentHouse.toLowerCase();
+        products = products.filter(p => p.fund_house.toLowerCase().includes(houseLower) || houseLower.includes(p.fund_house.toLowerCase()));
     }
+
+    if (products.length === 0) {
+        listEl.innerHTML = `
+            <div style="padding: 14px; text-align: center; color: var(--text-muted); font-size: 11.5px;">
+                Tidak ada produk reksadana untuk Manajer Investasi ini.
+                <div style="margin-top: 6px; display: flex; justify-content: center; gap: 8px;">
+                    <button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 10.5px;" onclick="selectMfHouseOption('Semua Manajer Investasi')">Tampilkan Semua MI</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" style="font-size: 10.5px;" onclick="toggleCustomMfInput()">Ketik Manual</button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    const currentName = document.getElementById('formMfName')?.value || '';
+
+    listEl.innerHTML = products.map(p => {
+        const isSelected = (p.name === currentName);
+        let badgeColor = '#3b82f6';
+        let badgeBg = 'rgba(59,130,246,0.12)';
+        if (p.type.includes('Pasar Uang')) { badgeColor = '#10b981'; badgeBg = 'rgba(16,185,129,0.12)'; }
+        else if (p.type.includes('Pendapatan Tetap')) { badgeColor = '#818cf8'; badgeBg = 'rgba(99,102,241,0.12)'; }
+        else if (p.type.includes('Saham')) { badgeColor = '#ec4899'; badgeBg = 'rgba(236,72,153,0.12)'; }
+        else if (p.type.includes('Campuran')) { badgeColor = '#f59e0b'; badgeBg = 'rgba(245,158,11,0.12)'; }
+
+        return `
+            <div class="custom-select-option ${isSelected ? 'selected' : ''}" onclick="selectMfProductOption('${p.code}')">
+                <div class="custom-select-content">
+                    <div class="custom-select-icon" style="background: ${badgeBg}; color: ${badgeColor};">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <div style="min-width: 0;">
+                        <div class="custom-select-label" style="font-size: 11.5px; font-weight: 700;">${escapeHtml(p.name)}</div>
+                        <div class="custom-select-sub" style="display: flex; gap: 6px; align-items: center; margin-top: 2px;">
+                            <span style="color: var(--text-muted);">${escapeHtml(p.fund_house)}</span>
+                            <span>&middot;</span>
+                            <span style="color: ${badgeColor}; font-weight: 700;">${escapeHtml(p.type)}</span>
+                            ${p.is_syariah ? '<span class="badge" style="background:rgba(16,185,129,0.12);color:#10b981;font-size:8.5px;padding:1px 4px;">Syariah</span>' : ''}
+                            <span>&middot;</span>
+                            <span style="color: var(--success); font-weight: 700;">NAB: Rp ${p.current_nav.toLocaleString('id-ID')}</span>
+                        </div>
+                    </div>
+                </div>
+                <i class="bi bi-check-lg custom-select-check"></i>
+            </div>
+        `;
+    }).join('');
 }
 
-function hideMfCatalogDropdown() {
-    const dropdown = document.getElementById('mfCatalogDropdown');
-    if (dropdown) dropdown.style.display = 'none';
-}
-
-function selectMfCatalogItem(code) {
+function selectMfProductOption(code) {
     const item = masterCatalogProducts.find(p => p.code === code);
     if (!item) return;
 
-    document.getElementById('formMfSearchInput').value = item.name;
+    // Set Product Name
     document.getElementById('formMfName').value = item.name;
+    document.getElementById('mfProductSelectedLabel').textContent = item.name;
+    document.getElementById('mfProductSelectedSub').innerHTML = `${item.type} &middot; NAB: Rp ${item.current_nav.toLocaleString('id-ID')}`;
+
+    // Set House
     document.getElementById('formMfHouse').value = item.fund_house;
+    document.getElementById('mfHouseSelectedLabel').textContent = item.fund_house;
+    selectedMfHouseFilter = item.fund_house;
+
+    // Set Type
     document.getElementById('formMfTypeSelect').value = item.type;
     document.getElementById('formMfType').value = item.type;
+
+    // Set Syariah
     document.getElementById('formMfIsSyariah').checked = !!item.is_syariah;
 
-    // Prefill NAB if empty
+    // Prefill Buy NAV if empty, and Live NAV
     const buyNavInput = document.getElementById('formMfBuyNav');
     if (!buyNavInput.value || parseFloat(buyNavInput.value) <= 0) {
         buyNavInput.value = item.current_nav;
     }
     document.getElementById('formMfCurrentNav').value = item.current_nav;
 
+    // Auto calculate units or modal
     calcMfUnitsOrNav('buy_nav');
-    hideMfCatalogDropdown();
+
+    // Close menu & refresh options
+    renderMfHouseOptions();
+    renderMfProductOptions();
+    const menu = document.getElementById('mfProductPickerMenu');
+    if (menu) menu.classList.remove('show');
+}
+
+function toggleCustomMfInput() {
+    isCustomMfInput = !isCustomMfInput;
+    const picker = document.getElementById('mfProductPickerContainer');
+    const manualInput = document.getElementById('formMfNameManual');
+
+    if (isCustomMfInput) {
+        if (picker) picker.style.display = 'none';
+        if (manualInput) {
+            manualInput.style.display = 'block';
+            manualInput.value = document.getElementById('formMfName')?.value || '';
+            manualInput.focus();
+        }
+    } else {
+        if (picker) picker.style.display = 'block';
+        if (manualInput) {
+            manualInput.style.display = 'none';
+            if (manualInput.value.trim()) {
+                document.getElementById('formMfName').value = manualInput.value.trim();
+                document.getElementById('mfProductSelectedLabel').textContent = manualInput.value.trim();
+            }
+        }
+    }
 }
 
 // ----------------------------------------------------
@@ -3500,9 +3633,20 @@ function selectMfCatalogItem(code) {
 function openAddMutualFundModal() {
     document.getElementById('mfFormTitle').textContent = 'Tambah Produk Reksadana';
     document.getElementById('formMfId').value = '';
-    document.getElementById('formMfSearchInput').value = '';
-    document.getElementById('formMfName').value = '';
-    document.getElementById('formMfHouse').value = '';
+    document.getElementById('formMfHouse').value = 'Sucorinvest Asset Management';
+    document.getElementById('mfHouseSelectedLabel').textContent = 'Sucorinvest Asset Management';
+    selectedMfHouseFilter = '';
+
+    // Pick first product from catalog
+    if (masterCatalogProducts && masterCatalogProducts.length > 0) {
+        const firstProduct = masterCatalogProducts[0];
+        selectMfProductOption(firstProduct.code);
+    } else {
+        document.getElementById('formMfName').value = '';
+        document.getElementById('mfProductSelectedLabel').textContent = 'Pilih Produk Reksadana...';
+        document.getElementById('mfProductSelectedSub').textContent = 'Pilih dari katalog';
+    }
+
     document.getElementById('formMfTypeSelect').value = 'Pasar Uang';
     document.getElementById('formMfType').value = 'Pasar Uang';
     document.getElementById('formMfInvested').value = '';
@@ -3515,8 +3659,11 @@ function openAddMutualFundModal() {
     document.getElementById('formMfNotes').value = '';
 
     isCustomMfInput = false;
-    document.getElementById('mfCatalogSearchWrapper').style.display = 'block';
-    document.getElementById('formMfName').style.display = 'none';
+    document.getElementById('mfProductPickerContainer').style.display = 'block';
+    document.getElementById('formMfNameManual').style.display = 'none';
+
+    renderMfHouseOptions();
+    renderMfProductOptions();
 
     const modal = new bootstrap.Modal(document.getElementById('modalMutualFundForm'));
     modal.show();
@@ -3528,9 +3675,14 @@ function openEditMutualFundModal(id) {
 
     document.getElementById('mfFormTitle').textContent = 'Edit Data Reksadana';
     document.getElementById('formMfId').value = fund.id;
-    document.getElementById('formMfSearchInput').value = fund.fund_name;
-    document.getElementById('formMfName').value = fund.fund_name;
     document.getElementById('formMfHouse').value = fund.fund_house;
+    document.getElementById('mfHouseSelectedLabel').textContent = fund.fund_house;
+    selectedMfHouseFilter = fund.fund_house;
+
+    document.getElementById('formMfName').value = fund.fund_name;
+    document.getElementById('mfProductSelectedLabel').textContent = fund.fund_name;
+    document.getElementById('mfProductSelectedSub').innerHTML = `${fund.fund_type} &middot; NAB: Rp ${parseFloat(fund.current_nav).toLocaleString('id-ID')}`;
+
     document.getElementById('formMfTypeSelect').value = fund.fund_type;
     document.getElementById('formMfType').value = fund.fund_type;
     document.getElementById('formMfInvested').value = Math.round(fund.invested_amount).toLocaleString('id-ID');
@@ -3542,9 +3694,21 @@ function openEditMutualFundModal(id) {
     document.getElementById('formMfIsSyariah').checked = !!parseInt(fund.is_syariah);
     document.getElementById('formMfNotes').value = fund.notes || '';
 
-    isCustomMfInput = true;
-    document.getElementById('mfCatalogSearchWrapper').style.display = 'none';
-    document.getElementById('formMfName').style.display = 'block';
+    // Check if fund name exists in master catalog
+    const matchedMaster = masterCatalogProducts.find(p => p.name.toLowerCase() === fund.fund_name.toLowerCase());
+    if (matchedMaster) {
+        isCustomMfInput = false;
+        document.getElementById('mfProductPickerContainer').style.display = 'block';
+        document.getElementById('formMfNameManual').style.display = 'none';
+    } else {
+        isCustomMfInput = true;
+        document.getElementById('mfProductPickerContainer').style.display = 'none';
+        document.getElementById('formMfNameManual').style.display = 'block';
+        document.getElementById('formMfNameManual').value = fund.fund_name;
+    }
+
+    renderMfHouseOptions();
+    renderMfProductOptions();
 
     const modal = new bootstrap.Modal(document.getElementById('modalMutualFundForm'));
     modal.show();
@@ -3558,7 +3722,7 @@ async function submitMutualFundForm(e) {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
 
     const id = document.getElementById('formMfId').value;
-    const name = isCustomMfInput ? document.getElementById('formMfName').value : (document.getElementById('formMfSearchInput').value || document.getElementById('formMfName').value);
+    const name = isCustomMfInput ? document.getElementById('formMfNameManual').value : document.getElementById('formMfName').value;
     const house = document.getElementById('formMfHouse').value;
     const type = document.getElementById('formMfType').value;
     const invested = parseRupiahInput(document.getElementById('formMfInvested').value);
@@ -3570,9 +3734,16 @@ async function submitMutualFundForm(e) {
     const isSyariah = document.getElementById('formMfIsSyariah').checked ? 1 : 0;
     const notes = document.getElementById('formMfNotes').value;
 
+    if (!name || !name.trim()) {
+        showSavingsToast('Peringatan', 'Silakan pilih atau masukkan nama produk reksadana', 'warning');
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        return;
+    }
+
     const payload = {
-        fund_name: name,
-        fund_house: house,
+        fund_name: name.trim(),
+        fund_house: house || 'Lainnya',
         fund_type: type,
         invested_amount: invested,
         buy_nav: buyNav,
