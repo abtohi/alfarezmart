@@ -81,6 +81,15 @@ $router->get('/api/savings/snapshots/all', 'SavingsController@apiGetAllSnapshots
 $router->post('/api/savings/goals/{id}/snapshot', 'SavingsController@apiCaptureGoalSnapshot');
 $router->post('/api/savings/snapshots/capture-all', 'SavingsController@apiCaptureAllSnapshots');
 
+// Mutual Funds (Reksadana) API
+$router->get('/api/savings/mutual-funds', 'SavingsController@apiGetMutualFunds');
+$router->get('/api/savings/mutual-funds/master', 'SavingsController@apiGetMasterMutualFunds');
+$router->get('/api/savings/mutual-funds/{id}', 'SavingsController@apiGetMutualFundDetail');
+$router->post('/api/savings/mutual-funds', 'SavingsController@apiCreateMutualFund');
+$router->post('/api/savings/mutual-funds/{id}/update', 'SavingsController@apiUpdateMutualFund');
+$router->post('/api/savings/mutual-funds/{id}/delete', 'SavingsController@apiDeleteMutualFund');
+$router->post('/api/savings/mutual-funds/refresh-nav', 'SavingsController@apiRefreshMutualFundsNav');
+
 // ============================================
 // PPOB / Produk Digital (Digiflazz)
 // ============================================

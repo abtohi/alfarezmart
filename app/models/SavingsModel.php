@@ -71,6 +71,24 @@ class SavingsModel extends Model
                         allocations_breakdown TEXT,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         UNIQUE(goal_id, snapshot_date)
+                    )",
+                    "CREATE TABLE IF NOT EXISTS savings_mutual_funds (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        fund_name TEXT NOT NULL,
+                        fund_house TEXT NOT NULL,
+                        fund_type TEXT NOT NULL DEFAULT 'Pasar Uang',
+                        buy_date DATE NOT NULL,
+                        invested_amount REAL NOT NULL DEFAULT 0,
+                        buy_nav REAL NOT NULL DEFAULT 1000.0000,
+                        units_owned REAL NOT NULL DEFAULT 0.0000,
+                        current_nav REAL NOT NULL DEFAULT 1000.0000,
+                        last_nav REAL,
+                        daily_change_pct REAL DEFAULT 0,
+                        is_syariah INTEGER DEFAULT 0,
+                        platform TEXT DEFAULT 'Bibit',
+                        notes TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     )"
                 ];
             } else {
@@ -123,9 +141,29 @@ class SavingsModel extends Model
                         change_percent DECIMAL(5,2) NOT NULL DEFAULT 0,
                         allocations_breakdown TEXT NULL,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        UNIQUE KEY unique_goal_snapshot (goal_id, snapshot_date),
+                        UNIQUE KEY uq_goal_date (goal_id, snapshot_date),
                         INDEX idx_snapshot_date (snapshot_date),
                         INDEX idx_goal_snapshot (goal_id)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+                    "CREATE TABLE IF NOT EXISTS savings_mutual_funds (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        fund_name VARCHAR(200) NOT NULL,
+                        fund_house VARCHAR(150) NOT NULL,
+                        fund_type VARCHAR(50) NOT NULL DEFAULT 'Pasar Uang',
+                        buy_date DATE NOT NULL,
+                        invested_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
+                        buy_nav DECIMAL(15,4) NOT NULL DEFAULT 1000.0000,
+                        units_owned DECIMAL(15,4) NOT NULL DEFAULT 0.0000,
+                        current_nav DECIMAL(15,4) NOT NULL DEFAULT 1000.0000,
+                        last_nav DECIMAL(15,4) NULL,
+                        daily_change_pct DECIMAL(8,4) DEFAULT 0,
+                        is_syariah TINYINT(1) DEFAULT 0,
+                        platform VARCHAR(100) DEFAULT 'Bibit',
+                        notes TEXT NULL,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                        INDEX idx_fund_type (fund_type),
+                        INDEX idx_fund_house (fund_house)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
                 ];
             }
@@ -952,5 +990,324 @@ class SavingsModel extends Model
         } catch (\Throwable $e) {
             error_log('[SavingsModel] autoTriggerDailySnapshot warning: ' . $e->getMessage());
         }
+    }
+
+    // ========================================================
+    // MUTUAL FUNDS (REKSADANA) PORTFOLIO METHODS
+    // ========================================================
+
+    /**
+     * Get All Mutual Funds in User Portfolio with Real-time metrics
+     */
+    public function getMutualFunds(?string $type = null): array
+    {
+        try {
+            $sql = "SELECT * FROM savings_mutual_funds";
+            $params = [];
+            if ($type && $type !== 'all') {
+                $sql .= " WHERE fund_type = :type";
+                $params[':type'] = $type;
+            }
+            $sql .= " ORDER BY (units_owned * current_nav) DESC, id DESC";
+
+            $stmt = $this->db->prepare($sql);
+            foreach ($params as $k => $v) {
+                $stmt->bindValue($k, $v);
+            }
+            $stmt->execute();
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Compute real-time metrics for each fund
+            foreach ($rows as &$item) {
+                $invested = (float)$item['invested_amount'];
+                $units = (float)$item['units_owned'];
+                $buyNav = (float)$item['buy_nav'];
+                $currentNav = (float)$item['current_nav'];
+                $lastNav = (float)($item['last_nav'] ?? $currentNav);
+
+                $currentValue = round($units * $currentNav, 2);
+                $unrealizedPnl = round($currentValue - $invested, 2);
+                $unrealizedPct = $invested > 0 ? round(($unrealizedPnl / $invested) * 100, 2) : 0.0;
+
+                $dailyNavChange = $currentNav - $lastNav;
+                $dailyPnl = round($units * $dailyNavChange, 2);
+                $dailyPct = (float)($item['daily_change_pct'] ?? 0);
+
+                $item['current_value'] = $currentValue;
+                $item['unrealized_pnl'] = $unrealizedPnl;
+                $item['unrealized_pnl_pct'] = $unrealizedPct;
+                $item['daily_pnl'] = $dailyPnl;
+                $item['daily_change_pct'] = $dailyPct;
+                $item['is_profit'] = $unrealizedPnl >= 0;
+            }
+
+            return $rows;
+        } catch (\Throwable $e) {
+            error_log('[SavingsModel] getMutualFunds error: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Get Mutual Fund Detail by ID
+     */
+    public function getMutualFundById(int $id): ?array
+    {
+        try {
+            $stmt = $this->db->prepare("SELECT * FROM savings_mutual_funds WHERE id = :id");
+            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+            $stmt->execute();
+            $item = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$item) return null;
+
+            $invested = (float)$item['invested_amount'];
+            $units = (float)$item['units_owned'];
+            $buyNav = (float)$item['buy_nav'];
+            $currentNav = (float)$item['current_nav'];
+            $lastNav = (float)($item['last_nav'] ?? $currentNav);
+
+            $currentValue = round($units * $currentNav, 2);
+            $unrealizedPnl = round($currentValue - $invested, 2);
+            $unrealizedPct = $invested > 0 ? round(($unrealizedPnl / $invested) * 100, 2) : 0.0;
+
+            $item['current_value'] = $currentValue;
+            $item['unrealized_pnl'] = $unrealizedPnl;
+            $item['unrealized_pnl_pct'] = $unrealizedPct;
+            $item['is_profit'] = $unrealizedPnl >= 0;
+
+            return $item;
+        } catch (\Throwable $e) {
+            error_log('[SavingsModel] getMutualFundById error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Create New Mutual Fund
+     */
+    public function createMutualFund(array $data): int
+    {
+        $invested = (float)($data['invested_amount'] ?? 0);
+        $buyNav = (float)($data['buy_nav'] ?? 1000);
+        $units = (float)($data['units_owned'] ?? 0);
+
+        // If units is 0 but invested and buyNav exist, auto calculate units
+        if ($units <= 0 && $invested > 0 && $buyNav > 0) {
+            $units = round($invested / $buyNav, 4);
+        }
+        // If buyNav is 0 but invested and units exist, auto calculate buyNav
+        if ($buyNav <= 0 && $invested > 0 && $units > 0) {
+            $buyNav = round($invested / $units, 4);
+        }
+
+        $currentNav = (float)($data['current_nav'] ?? $buyNav);
+        $lastNav = (float)($data['last_nav'] ?? $currentNav);
+        $dailyChange = (float)($data['daily_change_pct'] ?? 0);
+
+        $stmt = $this->db->prepare("
+            INSERT INTO savings_mutual_funds (
+                fund_name, fund_house, fund_type, buy_date, invested_amount, 
+                buy_nav, units_owned, current_nav, last_nav, daily_change_pct, 
+                is_syariah, platform, notes
+            ) VALUES (
+                :fund_name, :fund_house, :fund_type, :buy_date, :invested_amount, 
+                :buy_nav, :units_owned, :current_nav, :last_nav, :daily_change_pct, 
+                :is_syariah, :platform, :notes
+            )
+        ");
+
+        $stmt->bindValue(':fund_name', trim($data['fund_name']));
+        $stmt->bindValue(':fund_house', trim($data['fund_house']));
+        $stmt->bindValue(':fund_type', trim($data['fund_type'] ?? 'Pasar Uang'));
+        $stmt->bindValue(':buy_date', $data['buy_date'] ?? date('Y-m-d'));
+        $stmt->bindValue(':invested_amount', $invested);
+        $stmt->bindValue(':buy_nav', $buyNav);
+        $stmt->bindValue(':units_owned', $units);
+        $stmt->bindValue(':current_nav', $currentNav);
+        $stmt->bindValue(':last_nav', $lastNav);
+        $stmt->bindValue(':daily_change_pct', $dailyChange);
+        $stmt->bindValue(':is_syariah', (int)($data['is_syariah'] ?? 0), PDO::PARAM_INT);
+        $stmt->bindValue(':platform', trim($data['platform'] ?? 'Bibit'));
+        $stmt->bindValue(':notes', !empty($data['notes']) ? trim($data['notes']) : null);
+
+        $stmt->execute();
+        return (int)$this->db->lastInsertId();
+    }
+
+    /**
+     * Update Mutual Fund
+     */
+    public function updateMutualFund(int $id, array $data): bool
+    {
+        $invested = (float)($data['invested_amount'] ?? 0);
+        $buyNav = (float)($data['buy_nav'] ?? 1000);
+        $units = (float)($data['units_owned'] ?? 0);
+
+        if ($units <= 0 && $invested > 0 && $buyNav > 0) {
+            $units = round($invested / $buyNav, 4);
+        }
+        if ($buyNav <= 0 && $invested > 0 && $units > 0) {
+            $buyNav = round($invested / $units, 4);
+        }
+
+        $stmt = $this->db->prepare("
+            UPDATE savings_mutual_funds SET 
+                fund_name = :fund_name,
+                fund_house = :fund_house,
+                fund_type = :fund_type,
+                buy_date = :buy_date,
+                invested_amount = :invested_amount,
+                buy_nav = :buy_nav,
+                units_owned = :units_owned,
+                current_nav = :current_nav,
+                is_syariah = :is_syariah,
+                platform = :platform,
+                notes = :notes
+            WHERE id = :id
+        ");
+
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmt->bindValue(':fund_name', trim($data['fund_name']));
+        $stmt->bindValue(':fund_house', trim($data['fund_house']));
+        $stmt->bindValue(':fund_type', trim($data['fund_type'] ?? 'Pasar Uang'));
+        $stmt->bindValue(':buy_date', $data['buy_date'] ?? date('Y-m-d'));
+        $stmt->bindValue(':invested_amount', $invested);
+        $stmt->bindValue(':buy_nav', $buyNav);
+        $stmt->bindValue(':units_owned', $units);
+        $stmt->bindValue(':current_nav', (float)($data['current_nav'] ?? $buyNav));
+        $stmt->bindValue(':is_syariah', (int)($data['is_syariah'] ?? 0), PDO::PARAM_INT);
+        $stmt->bindValue(':platform', trim($data['platform'] ?? 'Bibit'));
+        $stmt->bindValue(':notes', !empty($data['notes']) ? trim($data['notes']) : null);
+
+        return $stmt->execute();
+    }
+
+    /**
+     * Delete Mutual Fund
+     */
+    public function deleteMutualFund(int $id): bool
+    {
+        $stmt = $this->db->prepare("DELETE FROM savings_mutual_funds WHERE id = :id");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+
+    /**
+     * Refresh Live NAV for all mutual funds in portfolio
+     */
+    public function refreshAllMutualFundsNav(): array
+    {
+        require_once __DIR__ . '/../services/MutualFundService.php';
+
+        $funds = $this->getMutualFunds();
+        $updatedCount = 0;
+
+        foreach ($funds as $f) {
+            $liveData = MutualFundService::fetchLiveNav($f['fund_name'], $f['fund_house'], (float)$f['current_nav']);
+            if ($liveData['success']) {
+                $stmt = $this->db->prepare("
+                    UPDATE savings_mutual_funds SET 
+                        current_nav = :current_nav,
+                        last_nav = :last_nav,
+                        daily_change_pct = :daily_change_pct
+                    WHERE id = :id
+                ");
+                $stmt->bindValue(':id', $f['id'], PDO::PARAM_INT);
+                $stmt->bindValue(':current_nav', $liveData['nav']);
+                $stmt->bindValue(':last_nav', $liveData['last_nav']);
+                $stmt->bindValue(':daily_change_pct', $liveData['change_pct']);
+                $stmt->execute();
+                $updatedCount++;
+            }
+        }
+
+        return [
+            'success' => true,
+            'updated_count' => $updatedCount,
+            'total_funds' => count($funds),
+            'timestamp' => date('Y-m-d H:i:s')
+        ];
+    }
+
+    /**
+     * Get Mutual Funds Overall Portfolio Summary & Diversification Metrics
+     */
+    public function getMutualFundsSummary(): array
+    {
+        $funds = $this->getMutualFunds();
+
+        $totalInvested = 0.0;
+        $totalCurrentValue = 0.0;
+        $totalDailyPnl = 0.0;
+        $typeDistribution = [];
+        $fundHouseDistribution = [];
+        $topPerformer = null;
+        $worstPerformer = null;
+
+        foreach ($funds as $f) {
+            $inv = (float)$f['invested_amount'];
+            $val = (float)$f['current_value'];
+            $pnl = (float)$f['unrealized_pnl'];
+            $pnlPct = (float)$f['unrealized_pnl_pct'];
+            $dailyPnl = (float)$f['daily_pnl'];
+            $type = $f['fund_type'] ?: 'Lainnya';
+            $house = $f['fund_house'] ?: 'Lainnya';
+
+            $totalInvested += $inv;
+            $totalCurrentValue += $val;
+            $totalDailyPnl += $dailyPnl;
+
+            // Type Distribution
+            if (!isset($typeDistribution[$type])) {
+                $typeDistribution[$type] = ['type' => $type, 'amount' => 0.0, 'count' => 0];
+            }
+            $typeDistribution[$type]['amount'] += $val;
+            $typeDistribution[$type]['count']++;
+
+            // Fund House Distribution
+            if (!isset($fundHouseDistribution[$house])) {
+                $fundHouseDistribution[$house] = ['house' => $house, 'amount' => 0.0, 'count' => 0];
+            }
+            $fundHouseDistribution[$house]['amount'] += $val;
+            $fundHouseDistribution[$house]['count']++;
+
+            // Top & Worst Performer
+            if ($topPerformer === null || $pnlPct > $topPerformer['unrealized_pnl_pct']) {
+                $topPerformer = $f;
+            }
+            if ($worstPerformer === null || $pnlPct < $worstPerformer['unrealized_pnl_pct']) {
+                $worstPerformer = $f;
+            }
+        }
+
+        $totalPnl = round($totalCurrentValue - $totalInvested, 2);
+        $totalReturnPct = $totalInvested > 0 ? round(($totalPnl / $totalInvested) * 100, 2) : 0.0;
+
+        // Calculate distribution percentages
+        $typeBreakdown = [];
+        foreach ($typeDistribution as $t => $item) {
+            $pct = $totalCurrentValue > 0 ? round(($item['amount'] / $totalCurrentValue) * 100, 1) : 0;
+            $typeBreakdown[] = [
+                'type' => $t,
+                'total_amount' => $item['amount'],
+                'percentage' => $pct,
+                'fund_count' => $item['count']
+            ];
+        }
+        usort($typeBreakdown, fn($a, $b) => $b['total_amount'] <=> $a['total_amount']);
+
+        return [
+            'total_funds' => count($funds),
+            'total_invested' => $totalInvested,
+            'total_current_value' => $totalCurrentValue,
+            'total_pnl' => $totalPnl,
+            'total_return_pct' => $totalReturnPct,
+            'total_daily_pnl' => $totalDailyPnl,
+            'is_overall_profit' => $totalPnl >= 0,
+            'type_breakdown' => $typeBreakdown,
+            'top_performer' => $topPerformer,
+            'worst_performer' => $worstPerformer,
+            'last_sync' => date('d M Y, H:i') . ' WIB'
+        ];
     }
 }

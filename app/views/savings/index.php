@@ -1134,6 +1134,208 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     from { transform: scaleX(1); }
     to { transform: scaleX(0); }
 }
+
+/* Savings Tab Navigation */
+.savings-tab-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    overflow-x: auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.btn-tab-pill {
+    background: var(--surface-1);
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.btn-tab-pill:hover {
+    background: var(--surface-2);
+    color: var(--text-primary);
+    border-color: var(--primary);
+}
+
+.btn-tab-pill.active {
+    background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(59,130,246,0.15));
+    color: var(--primary);
+    border-color: var(--primary);
+    box-shadow: 0 2px 10px rgba(99,102,241,0.15);
+}
+
+/* Mutual Funds Specific Styles */
+.mf-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+@media (min-width: 992px) {
+    .mf-kpi-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+    }
+}
+
+.mf-kpi-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.04);
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease;
+}
+
+.mf-kpi-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+}
+
+.mf-card-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+    .mf-card-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1200px) {
+    .mf-card-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.mf-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.mf-card:hover {
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.08);
+    transform: translateY(-3px);
+}
+
+.mf-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.mf-card-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1.3;
+    margin-bottom: 3px;
+}
+
+.mf-card-house {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.mf-metric-box {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+
+.mf-metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11.5px;
+    padding: 3px 0;
+}
+
+.mf-metric-label {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.mf-metric-val {
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+.mf-val-highlight {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #3b82f6;
+    letter-spacing: -0.2px;
+}
+
+.mf-pnl-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.mf-pnl-pill.profit {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.mf-pnl-pill.loss {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.mf-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+    font-size: 11px;
+    color: var(--text-muted);
+}
 </style>
 
 <div class="page-section savings-container">
@@ -1203,165 +1405,313 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
         </div>
     </div>
 
-    <!-- KPI Summary Grid -->
-    <div class="savings-kpi-grid" id="kpiGridContainer">
-        <!-- 1. Total Terkumpul -->
-        <div class="savings-kpi-card">
-            <div class="kpi-title-row">
-                <span class="kpi-title-text">Total Terkumpul</span>
-                <div class="kpi-icon-box" style="background: rgba(16,185,129,0.12); color: var(--success);">
-                    <i class="bi bi-cash-stack"></i>
+    <!-- Savings & Portfolio Navigation Tabs -->
+    <div class="savings-tab-nav" style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+        <button type="button" class="btn-tab-pill active" id="tabBtnGoals" onclick="switchSavingsTab('goals')">
+            <i class="bi bi-bullseye"></i> Financial Goals &amp; Tabungan
+        </button>
+        <button type="button" class="btn-tab-pill" id="tabBtnMutualFunds" onclick="switchSavingsTab('reksadana')">
+            <i class="bi bi-graph-up-arrow"></i> Portofolio Reksadana Real-time
+            <span class="badge bg-primary bg-opacity-20 text-primary ms-1" id="badgeMfCount" style="font-size: 10px; padding: 2px 6px; border-radius: 20px;">0</span>
+        </button>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- SECTION 1: FINANCIAL GOALS & TARGET TABUNGAN VIEW        -->
+    <!-- ======================================================== -->
+    <div id="sectionGoalsView">
+        <!-- KPI Summary Grid -->
+        <div class="savings-kpi-grid" id="kpiGridContainer">
+            <!-- 1. Total Terkumpul -->
+            <div class="savings-kpi-card">
+                <div class="kpi-title-row">
+                    <span class="kpi-title-text">Total Terkumpul</span>
+                    <div class="kpi-icon-box" style="background: rgba(16,185,129,0.12); color: var(--success);">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
+                </div>
+                <div id="statTotalCollected" class="kpi-value-text" style="color: var(--success);">
+                    Rp <?= number_format($summary['total_collected'] ?? 0, 0, ',', '.') ?>
+                </div>
+                <div class="kpi-sub-text">Akumulasi seluruh alokasi</div>
+            </div>
+
+            <!-- 2. Total Target -->
+            <div class="savings-kpi-card">
+                <div class="kpi-title-row">
+                    <span class="kpi-title-text">Total Target</span>
+                    <div class="kpi-icon-box" style="background: rgba(99,102,241,0.12); color: #818cf8;">
+                        <i class="bi bi-bullseye"></i>
+                    </div>
+                </div>
+                <div id="statTotalTarget" class="kpi-value-text" style="color: var(--text-primary);">
+                    Rp <?= number_format($summary['total_target'] ?? 0, 0, ',', '.') ?>
+                </div>
+                <div id="statTotalRemaining" class="kpi-sub-text">
+                    Sisa: <strong style="color: var(--primary);">Rp <?= number_format($summary['total_remaining'] ?? 0, 0, ',', '.') ?></strong>
                 </div>
             </div>
-            <div id="statTotalCollected" class="kpi-value-text" style="color: var(--success);">
-                Rp <?= number_format($summary['total_collected'] ?? 0, 0, ',', '.') ?>
+
+            <!-- 3. Overall Progress -->
+            <div class="savings-kpi-card">
+                <div class="kpi-title-row">
+                    <span class="kpi-title-text">Pencapaian</span>
+                    <div class="kpi-icon-box" style="background: rgba(245,158,11,0.12); color: #f59e0b;">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                </div>
+                <div id="statOverallProgress" class="kpi-value-text" style="color: #f59e0b;">
+                    <?= $summary['overall_progress'] ?? 0 ?>%
+                </div>
+                <div class="goal-progress-bar" style="margin: 4px 0 0 0; height: 5px;">
+                    <div id="statProgressBar" class="goal-progress-fill" style="width: <?= min(100, $summary['overall_progress'] ?? 0) ?>%; background: linear-gradient(90deg, #f59e0b, #10b981);"></div>
+                </div>
             </div>
-            <div class="kpi-sub-text">Akumulasi seluruh alokasi</div>
+
+            <!-- 4. Goals Count -->
+            <div class="savings-kpi-card">
+                <div class="kpi-title-row">
+                    <span class="kpi-title-text">Goals / Target</span>
+                    <div class="kpi-icon-box" style="background: rgba(59,130,246,0.12); color: #3b82f6;">
+                        <i class="bi bi-flag-fill"></i>
+                    </div>
+                </div>
+                <div id="statGoalsCount" class="kpi-value-text" style="color: var(--text-primary);">
+                    <?= $summary['total_goals'] ?? 0 ?> Target
+                </div>
+                <div id="statGoalsSub" class="kpi-sub-text">
+                    <span style="color: var(--success); font-weight: 700;"><?= $summary['achieved_goals'] ?? 0 ?> Tercapai</span> &middot; <?= $summary['in_progress_goals'] ?? 0 ?> Berjalan
+                </div>
+            </div>
         </div>
 
-        <!-- 2. Total Target -->
-        <div class="savings-kpi-card">
-            <div class="kpi-title-row">
-                <span class="kpi-title-text">Total Target</span>
-                <div class="kpi-icon-box" style="background: rgba(99,102,241,0.12); color: #818cf8;">
-                    <i class="bi bi-bullseye"></i>
+        <!-- Distribusi Klasifikasi Penempatan Uang (Toko, Investasi, Bank, Piutang) -->
+        <div class="savings-dist-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                <div>
+                    <div style="font-size: 12.5px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                        <i class="bi bi-pie-chart-fill" style="color: #6366f1;"></i>
+                        <span>Klasifikasi Penempatan Dana (Grouping Uang)</span>
+                    </div>
+                    <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 1px;">
+                        Sebaran uang tabungan di Toko (uang berputar), Bibit (investasi), SeaBank/Bank, dll
+                    </div>
                 </div>
+                <span id="totalAllocationsBadge" class="badge-custom badge-primary" style="font-size: 10px;">
+                    <?= count($summary['type_breakdown'] ?? []) ?> Kategori Akun
+                </span>
             </div>
-            <div id="statTotalTarget" class="kpi-value-text" style="color: var(--text-primary);">
-                Rp <?= number_format($summary['total_target'] ?? 0, 0, ',', '.') ?>
+
+            <!-- Multi-Segment Bar -->
+            <div class="dist-bar-wrapper" id="distBarContainer">
+                <?php 
+                $palette = ['#10b981', '#6366f1', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'];
+                $typeBreakdown = $summary['type_breakdown'] ?? [];
+                if (empty($typeBreakdown)): ?>
+                    <div class="dist-bar-segment" style="width: 100%; background: var(--surface-3);"></div>
+                <?php else: 
+                    foreach ($typeBreakdown as $idx => $item):
+                        $bg = $palette[$idx % count($palette)];
+                ?>
+                    <div class="dist-bar-segment" style="width: <?= max(2, $item['percentage']) ?>%; background: <?= $bg ?>;" title="<?= htmlspecialchars($item['account_type']) ?>: Rp <?= number_format($item['total_amount'], 0, ',', '.') ?> (<?= $item['percentage'] ?>%)"></div>
+                <?php endforeach; endif; ?>
             </div>
-            <div id="statTotalRemaining" class="kpi-sub-text">
-                Sisa: <strong style="color: var(--primary);">Rp <?= number_format($summary['total_remaining'] ?? 0, 0, ',', '.') ?></strong>
+
+            <!-- Pills Grid -->
+            <div class="dist-pills-grid" id="distPillsContainer">
+                <?php if (empty($typeBreakdown)): ?>
+                    <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: 11px; padding: 6px 0;">
+                        Belum ada pos penempatan dana. Buat goal dan tambahkan alokasi uang (Toko, Bibit, Bank).
+                    </div>
+                <?php else:
+                    foreach ($typeBreakdown as $idx => $item):
+                        $bg = $palette[$idx % count($palette)];
+                        $iconClass = 'bi-wallet2';
+                        if (stripos($item['account_type'], 'toko') !== false || stripos($item['account_type'], 'kas') !== false) $iconClass = 'bi-shop';
+                        elseif (stripos($item['account_type'], 'investasi') !== false) $iconClass = 'bi-graph-up-arrow';
+                        elseif (stripos($item['account_type'], 'bank') !== false) $iconClass = 'bi-bank';
+                        elseif (stripos($item['account_type'], 'piutang') !== false) $iconClass = 'bi-person-lines-fill';
+                ?>
+                    <div class="dist-pill-item">
+                        <div style="width: 28px; height: 28px; border-radius: 7px; background: <?= $bg ?>22; color: <?= $bg ?>; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;">
+                            <i class="bi <?= $iconClass ?>"></i>
+                        </div>
+                        <div style="min-width: 0; flex: 1;">
+                            <div style="font-size: 9.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; text-transform: uppercase;">
+                                <?= htmlspecialchars($item['account_type']) ?>
+                            </div>
+                            <div style="font-size: 11.5px; font-weight: 800; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                Rp <?= number_format($item['total_amount'], 0, ',', '.') ?>
+                            </div>
+                            <div style="font-size: 9px; color: <?= $bg ?>; font-weight: 700;">
+                                <?= $item['percentage'] ?>% &middot; <?= $item['item_count'] ?> pos
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; endif; ?>
             </div>
         </div>
 
-        <!-- 3. Overall Progress -->
-        <div class="savings-kpi-card">
-            <div class="kpi-title-row">
-                <span class="kpi-title-text">Pencapaian</span>
-                <div class="kpi-icon-box" style="background: rgba(245,158,11,0.12); color: #f59e0b;">
-                    <i class="bi bi-graph-up-arrow"></i>
+        <!-- Search & Filter Control Bar -->
+        <div class="savings-control-bar">
+            <div class="section-title" style="margin-bottom: 0;">Daftar Target &amp; Goals</div>
+            
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
+                <!-- Search Box -->
+                <div class="search-input-wrapper savings-search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="searchGoalsInput" placeholder="Cari nama target / pos uang..." oninput="onSearchGoals(this.value)">
+                    <button type="button" id="btnClearSearch" onclick="clearSearchGoals()" style="display: none; background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 0 4px;">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </button>
                 </div>
-            </div>
-            <div id="statOverallProgress" class="kpi-value-text" style="color: #f59e0b;">
-                <?= $summary['overall_progress'] ?? 0 ?>%
-            </div>
-            <div class="goal-progress-bar" style="margin: 4px 0 0 0; height: 5px;">
-                <div id="statProgressBar" class="goal-progress-fill" style="width: <?= min(100, $summary['overall_progress'] ?? 0) ?>%; background: linear-gradient(90deg, #f59e0b, #10b981);"></div>
+
+                <!-- Filter Status Buttons -->
+                <div class="filter-btn-group" style="display: flex; gap: 5px;">
+                    <button class="btn-filter active" onclick="filterGoals('all', this)"><i class="bi bi-grid"></i> Semua</button>
+                    <button class="btn-filter" onclick="filterGoals('in_progress', this)"><i class="bi bi-hourglass-split"></i> Berjalan</button>
+                    <button class="btn-filter" onclick="filterGoals('achieved', this)"><i class="bi bi-check2-circle"></i> Tercapai</button>
+                </div>
             </div>
         </div>
 
-        <!-- 4. Goals Count -->
-        <div class="savings-kpi-card">
-            <div class="kpi-title-row">
-                <span class="kpi-title-text">Goals / Target</span>
-                <div class="kpi-icon-box" style="background: rgba(59,130,246,0.12); color: #3b82f6;">
-                    <i class="bi bi-flag-fill"></i>
-                </div>
-            </div>
-            <div id="statGoalsCount" class="kpi-value-text" style="color: var(--text-primary);">
-                <?= $summary['total_goals'] ?? 0 ?> Target
-            </div>
-            <div id="statGoalsSub" class="kpi-sub-text">
-                <span style="color: var(--success); font-weight: 700;"><?= $summary['achieved_goals'] ?? 0 ?> Tercapai</span> &middot; <?= $summary['in_progress_goals'] ?? 0 ?> Berjalan
+        <!-- Goals Grid Container -->
+        <div id="goalsGridContainer" class="savings-goals-grid">
+            <div class="elegant-loader" style="grid-column: 1 / -1; margin: 30px auto;">
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div>
             </div>
         </div>
     </div>
 
-    <!-- Distribusi Klasifikasi Penempatan Uang (Toko, Investasi, Bank, Piutang) -->
-    <div class="savings-dist-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
-            <div>
-                <div style="font-size: 12.5px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
-                    <i class="bi bi-pie-chart-fill" style="color: #6366f1;"></i>
-                    <span>Klasifikasi Penempatan Dana (Grouping Uang)</span>
+    <!-- ======================================================== -->
+    <!-- SECTION 2: MUTUAL FUNDS / REKSADANA PORTFOLIO VIEW       -->
+    <!-- ======================================================== -->
+    <div id="sectionMutualFundsView" style="display: none;">
+        <!-- Reksadana KPI Grid -->
+        <div class="mf-kpi-grid" id="mfKpiGridContainer">
+            <!-- 1. Total Modal Investasi -->
+            <div class="mf-kpi-card">
+                <div class="kpi-title-row">
+                    <span class="kpi-title-text">Modal Investasi</span>
+                    <div class="kpi-icon-box" style="background: rgba(99,102,241,0.12); color: #818cf8;">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
                 </div>
-                <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 1px;">
-                    Sebaran uang tabungan di Toko (uang berputar), Bibit (investasi), SeaBank/Bank, dll
+                <div id="mfStatTotalInvested" class="kpi-value-text" style="color: var(--text-primary);">
+                    Rp 0
                 </div>
+                <div class="kpi-sub-text" id="mfStatTotalFunds">0 Produk Reksadana</div>
             </div>
-            <span id="totalAllocationsBadge" class="badge-custom badge-primary" style="font-size: 10px;">
-                <?= count($summary['type_breakdown'] ?? []) ?> Kategori Akun
-            </span>
-        </div>
 
-        <!-- Multi-Segment Bar -->
-        <div class="dist-bar-wrapper" id="distBarContainer">
-            <?php 
-            $palette = ['#10b981', '#6366f1', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6'];
-            $typeBreakdown = $summary['type_breakdown'] ?? [];
-            if (empty($typeBreakdown)): ?>
-                <div class="dist-bar-segment" style="width: 100%; background: var(--surface-3);"></div>
-            <?php else: 
-                foreach ($typeBreakdown as $idx => $item):
-                    $bg = $palette[$idx % count($palette)];
-            ?>
-                <div class="dist-bar-segment" style="width: <?= max(2, $item['percentage']) ?>%; background: <?= $bg ?>;" title="<?= htmlspecialchars($item['account_type']) ?>: Rp <?= number_format($item['total_amount'], 0, ',', '.') ?> (<?= $item['percentage'] ?>%)"></div>
-            <?php endforeach; endif; ?>
-        </div>
-
-        <!-- Pills Grid -->
-        <div class="dist-pills-grid" id="distPillsContainer">
-            <?php if (empty($typeBreakdown)): ?>
-                <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: 11px; padding: 6px 0;">
-                    Belum ada pos penempatan dana. Buat goal dan tambahkan alokasi uang (Toko, Bibit, Bank).
-                </div>
-            <?php else:
-                foreach ($typeBreakdown as $idx => $item):
-                    $bg = $palette[$idx % count($palette)];
-                    $iconClass = 'bi-wallet2';
-                    if (stripos($item['account_type'], 'toko') !== false || stripos($item['account_type'], 'kas') !== false) $iconClass = 'bi-shop';
-                    elseif (stripos($item['account_type'], 'investasi') !== false) $iconClass = 'bi-graph-up-arrow';
-                    elseif (stripos($item['account_type'], 'bank') !== false) $iconClass = 'bi-bank';
-                    elseif (stripos($item['account_type'], 'piutang') !== false) $iconClass = 'bi-person-lines-fill';
-            ?>
-                <div class="dist-pill-item">
-                    <div style="width: 28px; height: 28px; border-radius: 7px; background: <?= $bg ?>22; color: <?= $bg ?>; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;">
-                        <i class="bi <?= $iconClass ?>"></i>
-                    </div>
-                    <div style="min-width: 0; flex: 1;">
-                        <div style="font-size: 9.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; text-transform: uppercase;">
-                            <?= htmlspecialchars($item['account_type']) ?>
-                        </div>
-                        <div style="font-size: 11.5px; font-weight: 800; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            Rp <?= number_format($item['total_amount'], 0, ',', '.') ?>
-                        </div>
-                        <div style="font-size: 9px; color: <?= $bg ?>; font-weight: 700;">
-                            <?= $item['percentage'] ?>% &middot; <?= $item['item_count'] ?> pos
-                        </div>
+            <!-- 2. Nilai Portofolio Saat Ini -->
+            <div class="mf-kpi-card">
+                <div class="kpi-title-row">
+                    <span class="kpi-title-text">Nilai Portofolio Saat Ini</span>
+                    <div class="kpi-icon-box" style="background: rgba(59,130,246,0.12); color: #3b82f6;">
+                        <i class="bi bi-graph-up-arrow"></i>
                     </div>
                 </div>
-            <?php endforeach; endif; ?>
-        </div>
-    </div>
+                <div id="mfStatCurrentValue" class="kpi-value-text" style="color: #3b82f6;">
+                    Rp 0
+                </div>
+                <div class="kpi-sub-text">Total Unit &times; NAB Terkini</div>
+            </div>
 
-    <!-- Search & Filter Control Bar -->
-    <div class="savings-control-bar">
-        <div class="section-title" style="margin-bottom: 0;">Daftar Target &amp; Goals</div>
-        
-        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
-            <!-- Search Box -->
-            <div class="search-input-wrapper savings-search-box">
-                <i class="bi bi-search"></i>
-                <input type="text" id="searchGoalsInput" placeholder="Cari nama target / pos uang..." oninput="onSearchGoals(this.value)">
-                <button type="button" id="btnClearSearch" onclick="clearSearchGoals()" style="display: none; background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 0 4px;">
-                    <i class="bi bi-x-circle-fill"></i>
+            <!-- 3. Total Keuntungan / Return -->
+            <div class="mf-kpi-card">
+                <div class="kpi-title-row">
+                    <span class="kpi-title-text">Total Keuntungan (Return)</span>
+                    <div class="kpi-icon-box" id="mfPnlIconBox" style="background: rgba(16,185,129,0.12); color: var(--success);">
+                        <i class="bi bi-cash-stack" id="mfPnlIcon"></i>
+                    </div>
+                </div>
+                <div id="mfStatTotalPnl" class="kpi-value-text" style="color: var(--success);">
+                    +Rp 0 (+0.0%)
+                </div>
+                <div class="kpi-sub-text" id="mfStatReturnSub">Capital Gain / Loss</div>
+            </div>
+
+            <!-- 4. Pergerakan Hari Ini & Top Performer -->
+            <div class="mf-kpi-card">
+                <div class="kpi-title-row">
+                    <span class="kpi-title-text">Pergerakan Hari Ini</span>
+                    <div class="kpi-icon-box" style="background: rgba(245,158,11,0.12); color: #f59e0b;">
+                        <i class="bi bi-lightning-charge-fill"></i>
+                    </div>
+                </div>
+                <div id="mfStatDailyPnl" class="kpi-value-text" style="color: #f59e0b;">
+                    Rp 0
+                </div>
+                <div class="kpi-sub-text" id="mfStatTopPerformer">Top: -</div>
+            </div>
+        </div>
+
+        <!-- Diversifikasi Reksadana Section -->
+        <div class="savings-dist-card" style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                <div>
+                    <div style="font-size: 12.5px; font-weight: 800; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                        <i class="bi bi-pie-chart-fill" style="color: #3b82f6;"></i>
+                        <span>Diversifikasi Portofolio Reksadana</span>
+                    </div>
+                    <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 1px;" id="mfDistSummaryText">
+                        Alokasi sebaran aset (Pasar Uang, Obligasi, Saham, Campuran)
+                    </div>
+                </div>
+                <button type="button" class="btn-primary-custom" onclick="syncMutualFundsToSavings()" style="background: var(--surface-2); color: var(--primary); border: 1px solid rgba(99,102,241,0.3); padding: 5px 12px; font-size: 11px; display: inline-flex; align-items: center; gap: 5px;" title="Gunakan total aset reksadana sebagai saldo pada pos alokasi tabungan">
+                    <i class="bi bi-arrow-repeat"></i> Sinkron ke Tabungan
                 </button>
             </div>
-
-            <!-- Filter Status Buttons -->
-            <div class="filter-btn-group" style="display: flex; gap: 5px;">
-                <button class="btn-filter active" onclick="filterGoals('all', this)"><i class="bi bi-grid"></i> Semua</button>
-                <button class="btn-filter" onclick="filterGoals('in_progress', this)"><i class="bi bi-hourglass-split"></i> Berjalan</button>
-                <button class="btn-filter" onclick="filterGoals('achieved', this)"><i class="bi bi-check2-circle"></i> Tercapai</button>
+            <div class="dist-bar-wrapper" id="mfDistBarContainer">
+                <div class="dist-bar-segment" style="width: 100%; background: var(--surface-3);"></div>
+            </div>
+            <div class="dist-pills-grid" id="mfDistPillsContainer">
+                <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: 11px; padding: 6px 0;">
+                    Belum ada data reksadana. Tambahkan produk untuk melihat grafik alokasi.
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Goals Grid Container -->
-    <div id="goalsGridContainer" class="savings-goals-grid">
-        <div class="elegant-loader" style="grid-column: 1 / -1; margin: 30px auto;">
-            <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        <!-- Control Bar: Search, Filter, Buttons -->
+        <div class="savings-control-bar">
+            <div class="section-title" style="margin-bottom: 0;">Daftar Reksadana</div>
+
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1; justify-content: flex-end;">
+                <!-- Search Box -->
+                <div class="search-input-wrapper savings-search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="searchMfInput" placeholder="Cari nama produk / Manajer Investasi..." oninput="onSearchMutualFunds(this.value)">
+                    <button type="button" id="btnClearMfSearch" onclick="clearSearchMutualFunds()" style="display: none; background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 0 4px;">
+                        <i class="bi bi-x-circle-fill"></i>
+                    </button>
+                </div>
+
+                <!-- Filter Buttons -->
+                <div class="filter-btn-group" id="mfFilterGroup" style="display: flex; gap: 4px; flex-wrap: wrap;">
+                    <button class="btn-filter active" onclick="filterMutualFunds('all', this)">Semua</button>
+                    <button class="btn-filter" onclick="filterMutualFunds('Pasar Uang', this)">Pasar Uang</button>
+                    <button class="btn-filter" onclick="filterMutualFunds('Pendapatan Tetap', this)">Pendapatan Tetap</button>
+                    <button class="btn-filter" onclick="filterMutualFunds('Saham', this)">Saham</button>
+                    <button class="btn-filter" onclick="filterMutualFunds('Campuran', this)">Campuran</button>
+                    <button class="btn-filter" onclick="filterMutualFunds('Index / ETF', this)">Index</button>
+                </div>
+
+                <!-- Action Buttons -->
+                <button type="button" class="btn-primary-custom" onclick="refreshMutualFundsLiveNav()" id="btnRefreshMfNav" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 7px 12px; font-size: 11.5px; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="bi bi-arrow-clockwise"></i> Update Live NAB
+                </button>
+                <button type="button" class="btn-primary-custom" onclick="openAddMutualFundModal()" style="padding: 7px 14px; font-size: 11.5px; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="bi bi-plus-circle-fill"></i> Tambah Reksadana
+                </button>
+            </div>
+        </div>
+
+        <!-- Mutual Funds Cards Grid -->
+        <div class="mf-card-grid" id="mfGridContainer">
+            <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 40px;">
+                <div class="spinner-border spinner-border-sm text-primary mb-2"></div>
+                <div>Memuat portofolio reksadana...</div>
+            </div>
         </div>
     </div>
 </div>
@@ -1946,6 +2296,167 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
 </div>
 
 <!-- ======================================================== -->
+<!-- MODAL 7: TAMBAH / EDIT REKSADANA                        -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modalMutualFundForm" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content modal-content-custom" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-lg);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding: 14px 18px;">
+                <h5 class="modal-title" id="mfFormTitle" style="font-weight: 800; font-size: 1rem; color: var(--text-primary);">
+                    Tambah Produk Reksadana
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="mutualFundForm" onsubmit="submitMutualFundForm(event)">
+                <input type="hidden" id="formMfId" value="">
+                <input type="hidden" id="formMfType" value="Pasar Uang">
+
+                <div class="modal-body" style="padding: 16px 18px; display: flex; flex-direction: column; gap: 13px;">
+                    
+                    <!-- Searchable Catalog Autocomplete or Custom Input -->
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin: 0;">
+                                Nama Produk Reksadana <span style="color: var(--primary);">*</span>
+                            </label>
+                            <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size: 9.5px; cursor: pointer;" onclick="toggleCustomMfInput()">
+                                <i class="bi bi-pencil-square me-1"></i>Ketik Manual / Custom
+                            </span>
+                        </div>
+
+                        <!-- Catalog Search Input Box -->
+                        <div id="mfCatalogSearchWrapper" style="position: relative;">
+                            <input type="text" id="formMfSearchInput" class="form-control-custom" placeholder="Ketik nama: Sucorinvest, Batavia, Mandiri..." autocomplete="off" oninput="onMfCatalogSearch(this.value)" onfocus="showMfCatalogDropdown()" style="width: 100%; padding: 9px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12.5px; font-weight: 600;">
+                            
+                            <!-- Search Autocomplete Dropdown List -->
+                            <div id="mfCatalogDropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; max-height: 220px; overflow-y: auto; background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-md); z-index: 1050; box-shadow: 0 10px 25px rgba(0,0,0,0.4);">
+                                <div id="mfCatalogItemsContainer">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Custom Manual Product Name Input (Hidden by default) -->
+                        <input type="text" id="formMfName" class="form-control-custom" placeholder="Misal: Sucorinvest Sharia Money Market Fund" required style="width: 100%; padding: 9px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12.5px; font-weight: 600; display: none;">
+                    </div>
+
+                    <!-- Manajer Investasi & Kategori (2 cols) -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
+                                Manajer Investasi (MI) <span style="color: var(--primary);">*</span>
+                            </label>
+                            <input type="text" id="formMfHouse" class="form-control-custom" placeholder="Sucorinvest / Batavia / Mandiri" required style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px; font-weight: 600;">
+                        </div>
+                        <div>
+                            <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
+                                Tipe / Kategori <span style="color: var(--primary);">*</span>
+                            </label>
+                            <select id="formMfTypeSelect" class="form-control-custom" onchange="onMfTypeSelectChange(this.value)" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px; font-weight: 600;">
+                                <option value="Pasar Uang">Pasar Uang</option>
+                                <option value="Pendapatan Tetap">Pendapatan Tetap (Obligasi)</option>
+                                <option value="Saham">Saham (Equity)</option>
+                                <option value="Campuran">Campuran (Balanced)</option>
+                                <option value="Index / ETF">Index / ETF</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Smart Investment Inputs (Modal, NAB Beli, Unit) with Auto Calculation -->
+                    <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 11px; font-weight: 700; color: var(--text-primary);">
+                                <i class="bi bi-calculator me-1" style="color: var(--primary);"></i> Kalkulasi Pembelian &amp; Unit
+                            </span>
+                            <span style="font-size: 9.5px; color: var(--text-muted);">
+                                Otomatis menghitung Unit &amp; Nilai
+                            </span>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+                            <!-- Modal Pembelian (Rp) -->
+                            <div>
+                                <label class="form-label-custom" style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; display: block;">
+                                    Modal Beli (Rp) <span style="color: var(--primary);">*</span>
+                                </label>
+                                <input type="text" id="formMfInvested" class="form-control-custom" placeholder="5.000.000" required oninput="formatCurrencyInput(this); calcMfUnitsOrNav('invested');" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12.5px; font-weight: 800;">
+                            </div>
+
+                            <!-- NAB Pembelian per Unit -->
+                            <div>
+                                <label class="form-label-custom" style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; display: block;">
+                                    NAB Beli / Unit (Rp) <span style="color: var(--primary);">*</span>
+                                </label>
+                                <input type="number" step="0.0001" id="formMfBuyNav" class="form-control-custom" placeholder="1528.42" required oninput="calcMfUnitsOrNav('buy_nav')" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px; font-weight: 700;">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <!-- Total Unit Dimiliki -->
+                            <div>
+                                <label class="form-label-custom" style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; display: block;">
+                                    Total Unit Dimiliki <span style="color: var(--primary);">*</span>
+                                </label>
+                                <input type="number" step="0.0001" id="formMfUnits" class="form-control-custom" placeholder="3271.3652" required oninput="calcMfUnitsOrNav('units')" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: #3b82f6; font-size: 12px; font-weight: 800;">
+                            </div>
+
+                            <!-- NAB Saat Ini (Real-time Live NAV) -->
+                            <div>
+                                <label class="form-label-custom" style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; display: block;">
+                                    NAB Terkini (Rp)
+                                </label>
+                                <input type="number" step="0.0001" id="formMfCurrentNav" class="form-control-custom" placeholder="1528.42" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--success); font-size: 12px; font-weight: 700;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Platform & Tanggal Beli (2 cols) -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
+                                Platform Agen / APERD
+                            </label>
+                            <input type="text" id="formMfPlatform" class="form-control-custom" placeholder="Bibit / Bareksa / IPOT" value="Bibit" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px;">
+                        </div>
+                        <div>
+                            <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
+                                Tanggal Pembelian
+                            </label>
+                            <input type="date" id="formMfBuyDate" value="<?= date('Y-m-d') ?>" class="form-control-custom" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 11.5px; color-scheme: dark;">
+                        </div>
+                    </div>
+
+                    <!-- Syariah & Notes -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <label class="form-check-label" style="font-size: 11.5px; font-weight: 600; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                            <input type="checkbox" id="formMfIsSyariah" class="form-check-input" style="cursor: pointer;">
+                            <span>Produk Syariah</span>
+                        </label>
+                    </div>
+
+                    <!-- Notes -->
+                    <div>
+                        <label class="form-label-custom" style="font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
+                            Catatan Investasi (Opsional)
+                        </label>
+                        <input type="text" id="formMfNotes" class="form-control-custom" placeholder="Misal: Alokasi untuk dana darurat / DP Rumah" style="width: 100%; padding: 8px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12px;">
+                    </div>
+                </div>
+
+                <div class="modal-footer" style="padding: 12px 18px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+                    <button type="button" class="btn-primary-custom" data-bs-dismiss="modal" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 7px 14px; font-size: 11.5px;">
+                        Batal
+                    </button>
+                    <button type="submit" id="btnSubmitMf" class="btn-primary-custom" style="padding: 7px 18px; font-size: 11.5px;">
+                        Simpan Reksadana
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
 <!-- MODAL 6: CUSTOM CONFIRMATION MODAL                      -->
 <!-- ======================================================== -->
 <div class="modal fade" id="modalSavingsConfirm" tabindex="-1" aria-hidden="true" style="z-index: 100000;">
@@ -2032,11 +2543,21 @@ const ALLOC_TYPE_PRESETS = [
     { value: 'Lainnya', label: 'Lainnya (Fisik / Dompet)', icon: 'bi-wallet2', bg: 'rgba(100,116,139,0.15)', color: '#94a3b8', sub: 'Dompet fisik, amplop, dll' }
 ];
 
+// State for Mutual Funds
+let allMutualFunds = [];
+let mutualFundsSummary = null;
+let currentMfFilter = 'all';
+let searchMfKeyword = '';
+let masterCatalogProducts = [];
+let isCustomMfInput = false;
+
 document.addEventListener('DOMContentLoaded', () => {
     initCustomSelectPickers();
     loadGoals();
     loadSummary();
     loadSavingsPpobBalance();
+    loadMutualFunds();
+    loadMasterCatalog();
     scheduleNightlySnapshot();
 
     // Close dropdowns on outside click
@@ -2044,6 +2565,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!e.target.closest('.custom-select-picker')) {
             document.querySelectorAll('.custom-select-menu.show').forEach(m => m.classList.remove('show'));
             document.querySelectorAll('.custom-select-trigger.open').forEach(t => t.classList.remove('open'));
+        }
+        if (!e.target.closest('#mfCatalogSearchWrapper')) {
+            hideMfCatalogDropdown();
         }
     });
 });
@@ -2531,6 +3055,642 @@ function applyPpobBalanceToMutInput() {
         notesInput.value = 'Penyesuaian Saldo PPOB Digiflazz';
     }
     showSavingsToast('Nominal Diisi', `Nominal Rp ${Math.round(currentPpobBalanceNum).toLocaleString('id-ID')} berhasil dimasukkan ke form mutasi`, 'info');
+}
+
+// ----------------------------------------------------
+// TAB NAVIGATION (GOALS VS REKSADANA)
+// ----------------------------------------------------
+function switchSavingsTab(tabName) {
+    const goalsView = document.getElementById('sectionGoalsView');
+    const mfView = document.getElementById('sectionMutualFundsView');
+    const tabGoals = document.getElementById('tabBtnGoals');
+    const tabMf = document.getElementById('tabBtnMutualFunds');
+
+    if (tabName === 'reksadana') {
+        if (goalsView) goalsView.style.display = 'none';
+        if (mfView) mfView.style.display = 'block';
+        if (tabGoals) tabGoals.classList.remove('active');
+        if (tabMf) tabMf.classList.add('active');
+        renderMutualFundsGrid();
+    } else {
+        if (goalsView) goalsView.style.display = 'block';
+        if (mfView) mfView.style.display = 'none';
+        if (tabGoals) tabGoals.classList.add('active');
+        if (tabMf) tabMf.classList.remove('active');
+    }
+}
+
+// ----------------------------------------------------
+// MUTUAL FUNDS (REKSADANA) PORTFOLIO CONTROLLER
+// ----------------------------------------------------
+
+async function loadMutualFunds() {
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/savings/mutual-funds');
+        const json = await res.json();
+        if (json.success) {
+            allMutualFunds = Array.isArray(json.data) ? json.data : [];
+            mutualFundsSummary = json.summary || null;
+            
+            // Update Tab Count Badge
+            const badge = document.getElementById('badgeMfCount');
+            if (badge) badge.innerText = allMutualFunds.length;
+
+            renderMutualFundsGrid();
+            if (mutualFundsSummary) {
+                updateMutualFundsSummaryUI(mutualFundsSummary);
+            }
+        }
+    } catch (e) {
+        console.error('Error loading mutual funds:', e);
+    }
+}
+
+async function loadMasterCatalog() {
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/savings/mutual-funds/master');
+        const json = await res.json();
+        if (json.success && json.data && json.data.products) {
+            masterCatalogProducts = json.data.products;
+        }
+    } catch (e) {
+        console.error('Error loading master mutual funds catalog:', e);
+    }
+}
+
+function updateMutualFundsSummaryUI(summary) {
+    document.getElementById('mfStatTotalInvested').textContent = formatRupiah(summary.total_invested);
+    document.getElementById('mfStatTotalFunds').textContent = `${summary.total_funds} Produk Reksadana`;
+    document.getElementById('mfStatCurrentValue').textContent = formatRupiah(summary.total_current_value);
+
+    // Total Return / P&L
+    const pnlEl = document.getElementById('mfStatTotalPnl');
+    const pnlIconBox = document.getElementById('mfPnlIconBox');
+    const returnSub = document.getElementById('mfStatReturnSub');
+    const isProfit = summary.is_overall_profit;
+    const sign = isProfit ? '+' : '';
+    const pnlFormatted = `${sign}${formatRupiah(summary.total_pnl)} (${sign}${summary.total_return_pct}%)`;
+
+    pnlEl.textContent = pnlFormatted;
+    pnlEl.style.color = isProfit ? 'var(--success)' : 'var(--danger)';
+    if (pnlIconBox) {
+        pnlIconBox.style.background = isProfit ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+        pnlIconBox.style.color = isProfit ? 'var(--success)' : 'var(--danger)';
+    }
+    if (returnSub) {
+        returnSub.textContent = isProfit ? 'Floating Profit' : 'Floating Loss';
+    }
+
+    // Daily Return
+    const dailyPnlEl = document.getElementById('mfStatDailyPnl');
+    const dailySign = summary.total_daily_pnl >= 0 ? '+' : '';
+    dailyPnlEl.textContent = `${dailySign}${formatRupiah(summary.total_daily_pnl)}`;
+    dailyPnlEl.style.color = summary.total_daily_pnl >= 0 ? '#10b981' : '#ef4444';
+
+    // Top Performer
+    const topPerfEl = document.getElementById('mfStatTopPerformer');
+    if (topPerfEl) {
+        if (summary.top_performer) {
+            topPerfEl.innerHTML = `Top: <strong style="color:var(--text-primary);">${summary.top_performer.fund_name.substring(0, 18)}...</strong> (+${summary.top_performer.unrealized_pnl_pct}%)`;
+        } else {
+            topPerfEl.textContent = 'Top: Belum ada data';
+        }
+    }
+
+    // Diversification Bar & Pills
+    const barCont = document.getElementById('mfDistBarContainer');
+    const pillsCont = document.getElementById('mfDistPillsContainer');
+    const typeBreakdown = summary.type_breakdown || [];
+    const palette = ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#ec4899', '#8b5cf6'];
+
+    if (typeBreakdown.length === 0) {
+        barCont.innerHTML = '<div class="dist-bar-segment" style="width:100%;background:var(--surface-3);"></div>';
+        pillsCont.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-muted);font-size:11px;padding:10px 0;">Belum ada reksadana. Tambahkan produk untuk melihat grafik alokasi aset.</div>';
+    } else {
+        barCont.innerHTML = typeBreakdown.map((item, idx) => {
+            const bg = palette[idx % palette.length];
+            return `<div class="dist-bar-segment" style="width:${Math.max(2, item.percentage)}%;background:${bg};" title="${item.type}: ${formatRupiah(item.total_amount)} (${item.percentage}%)"></div>`;
+        }).join('');
+
+        pillsCont.innerHTML = typeBreakdown.map((item, idx) => {
+            const bg = palette[idx % palette.length];
+            let icon = 'bi-wallet2';
+            if (item.type.includes('Pasar Uang')) icon = 'bi-cash-coin';
+            else if (item.type.includes('Pendapatan Tetap')) icon = 'bi-shield-check';
+            else if (item.type.includes('Saham')) icon = 'bi-graph-up-arrow';
+            else if (item.type.includes('Campuran')) icon = 'bi-pie-chart-fill';
+            else if (item.type.includes('Index')) icon = 'bi-bar-chart-line-fill';
+
+            return `
+                <div class="dist-pill-item">
+                    <div style="width: 28px; height: 28px; border-radius: 7px; background: ${bg}22; color: ${bg}; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0;">
+                        <i class="bi ${icon}"></i>
+                    </div>
+                    <div style="min-width: 0; flex: 1;">
+                        <div style="font-size: 9.5px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; text-transform: uppercase;">
+                            ${item.type}
+                        </div>
+                        <div style="font-size: 11.5px; font-weight: 800; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            ${formatRupiah(item.total_amount)}
+                        </div>
+                        <div style="font-size: 9px; color: ${bg}; font-weight: 700;">
+                            ${item.percentage}% &middot; ${item.fund_count} produk
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+}
+
+function renderMutualFundsGrid() {
+    const container = document.getElementById('mfGridContainer');
+    if (!container) return;
+
+    let list = [...allMutualFunds];
+
+    // Filter by type
+    if (currentMfFilter !== 'all') {
+        list = list.filter(f => f.fund_type === currentMfFilter);
+    }
+
+    // Filter by search keyword
+    if (searchMfKeyword) {
+        list = list.filter(f => {
+            const matchName = (f.fund_name || '').toLowerCase().includes(searchMfKeyword);
+            const matchHouse = (f.fund_house || '').toLowerCase().includes(searchMfKeyword);
+            const matchType = (f.fund_type || '').toLowerCase().includes(searchMfKeyword);
+            const matchPlatform = (f.platform || '').toLowerCase().includes(searchMfKeyword);
+            return matchName || matchHouse || matchType || matchPlatform;
+        });
+    }
+
+    if (list.length === 0) {
+        container.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 45px 20px; background: var(--surface-1); border: 1px dashed var(--border-color); border-radius: var(--radius-lg);">
+                <div style="width: 52px; height: 52px; border-radius: 14px; background: rgba(59,130,246,0.1); color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; margin: 0 auto 12px;">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <h5 style="font-weight: 800; font-size: 1rem; color: var(--text-primary); margin-bottom: 6px;">
+                    ${searchMfKeyword || currentMfFilter !== 'all' ? 'Tidak Ada Reksadana yang Cocok' : 'Belum Ada Portofolio Reksadana'}
+                </h5>
+                <p style="font-size: 11.5px; color: var(--text-muted); max-width: 400px; margin: 0 auto 16px;">
+                    ${searchMfKeyword || currentMfFilter !== 'all' ? 'Coba ubah kata kunci pencarian atau filter kategori reksadana Anda.' : 'Mulai pantau investasi reksadana Anda dengan harga NAB real-time dan hitung total unit & keuntungan secara otomatis.'}
+                </p>
+                ${!searchMfKeyword && currentMfFilter === 'all' ? `
+                    <button class="btn-primary-custom" onclick="openAddMutualFundModal()" style="padding: 8px 18px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="bi bi-plus-circle-fill"></i> Tambah Reksadana Sekarang
+                    </button>
+                ` : `
+                    <button class="btn-primary-custom" onclick="clearSearchMutualFunds(); filterMutualFunds('all', document.querySelector('#mfFilterGroup .btn-filter'));" style="background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border-color); padding: 7px 14px; font-size: 11.5px;">
+                        Reset Filter
+                    </button>
+                `}
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = list.map(f => {
+        const isProfit = f.is_profit;
+        const pnlSign = isProfit ? '+' : '';
+        const pnlFormatted = `${pnlSign}${formatRupiah(f.unrealized_pnl)} (${pnlSign}${f.unrealized_pnl_pct}%)`;
+        const pnlClass = isProfit ? 'profit' : 'loss';
+        const pnlIcon = isProfit ? 'bi-arrow-up-right' : 'bi-arrow-down-right';
+
+        let typeBadgeBg = 'rgba(59,130,246,0.12)';
+        let typeBadgeColor = '#3b82f6';
+        if (f.fund_type === 'Pasar Uang') { typeBadgeBg = 'rgba(16,185,129,0.12)'; typeBadgeColor = '#10b981'; }
+        else if (f.fund_type === 'Pendapatan Tetap') { typeBadgeBg = 'rgba(99,102,241,0.12)'; typeBadgeColor = '#818cf8'; }
+        else if (f.fund_type === 'Saham') { typeBadgeBg = 'rgba(236,72,153,0.12)'; typeBadgeColor = '#ec4899'; }
+        else if (f.fund_type === 'Campuran') { typeBadgeBg = 'rgba(245,158,11,0.12)'; typeBadgeColor = '#f59e0b'; }
+
+        return `
+            <div class="mf-card" id="mfCard_${f.id}">
+                <!-- Header -->
+                <div class="mf-card-header">
+                    <div style="min-width: 0; flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-bottom: 4px;">
+                            <span class="badge-custom" style="background:${typeBadgeBg}; color:${typeBadgeColor}; font-size: 9px; font-weight: 800;">
+                                ${escapeHtml(f.fund_type)}
+                            </span>
+                            ${f.is_syariah ? '<span class="badge-custom" style="background:rgba(16,185,129,0.12); color:#10b981; font-size: 9px; font-weight: 800;"><i class="bi bi-moon-stars-fill me-1"></i>Syariah</span>' : ''}
+                            <span class="badge-custom" style="background:var(--surface-2); color:var(--text-muted); font-size: 9px;">
+                                ${escapeHtml(f.platform || 'Bibit')}
+                            </span>
+                        </div>
+                        <div class="mf-card-title">${escapeHtml(f.fund_name)}</div>
+                        <div class="mf-card-house"><i class="bi bi-building me-1"></i>${escapeHtml(f.fund_house)}</div>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-icon" type="button" data-bs-toggle="dropdown" style="background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 6px; width: 28px; height: 28px; padding: 0;">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="background: var(--surface-1); border: 1px solid var(--border-color); font-size: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                            <li><a class="dropdown-item text-primary" href="javascript:void(0)" onclick="openEditMutualFundModal(${f.id})"><i class="bi bi-pencil-square me-2"></i>Edit Reksadana</a></li>
+                            <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteMutualFund(${f.id}, '${escapeHtml(f.fund_name).replace(/'/g, "\\'")}')"><i class="bi bi-trash me-2"></i>Hapus dari Portofolio</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Metrics Box -->
+                <div class="mf-metric-box">
+                    <div class="mf-metric-row">
+                        <span class="mf-metric-label">Modal Investasi:</span>
+                        <span class="mf-metric-val">${formatRupiah(f.invested_amount)}</span>
+                    </div>
+                    <div class="mf-metric-row">
+                        <span class="mf-metric-label">Total Unit Dimiliki:</span>
+                        <span class="mf-metric-val" style="color: #3b82f6; font-family: monospace;">${parseFloat(f.units_owned).toLocaleString('id-ID', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} Unit</span>
+                    </div>
+                    <div class="mf-metric-row">
+                        <span class="mf-metric-label">NAB Beli:</span>
+                        <span class="mf-metric-val">Rp ${parseFloat(f.buy_nav).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
+                    </div>
+                    <div class="mf-metric-row" style="border-top: 1px dashed var(--border-color); margin-top: 3px; padding-top: 4px;">
+                        <span class="mf-metric-label">NAB Terkini:</span>
+                        <span class="mf-metric-val" style="color: var(--success);">
+                            Rp ${parseFloat(f.current_nav).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                            <span style="font-size: 9.5px; font-weight: 800; color: ${f.daily_change_pct >= 0 ? '#10b981' : '#ef4444'}; margin-left: 3px;">
+                                ${f.daily_change_pct >= 0 ? '+' : ''}${f.daily_change_pct}%
+                            </span>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Current Asset Value & PnL Highlight -->
+                <div style="background: linear-gradient(135deg, rgba(59,130,246,0.06), rgba(99,102,241,0.06)); border: 1px solid rgba(59,130,246,0.18); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 12px;">
+                    <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+                        Nilai Investasi Saat Ini
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; margin-top: 2px;">
+                        <span class="mf-val-highlight">${formatRupiah(f.current_value)}</span>
+                        <span class="mf-pnl-pill ${pnlClass}">
+                            <i class="bi ${pnlIcon}"></i> ${pnlFormatted}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="mf-card-footer">
+                    <span><i class="bi bi-calendar-event me-1"></i>Beli: ${formatIndoDate(f.buy_date)}</span>
+                    <span style="cursor: pointer; color: var(--primary); font-weight: 700;" onclick="openEditMutualFundModal(${f.id})">
+                        Kelola <i class="bi bi-chevron-right"></i>
+                    </span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function onSearchMutualFunds(query) {
+    searchMfKeyword = (query || '').toLowerCase().trim();
+    const btnClear = document.getElementById('btnClearMfSearch');
+    if (btnClear) btnClear.style.display = searchMfKeyword ? 'inline-block' : 'none';
+    renderMutualFundsGrid();
+}
+
+function clearSearchMutualFunds() {
+    const input = document.getElementById('searchMfInput');
+    if (input) input.value = '';
+    onSearchMutualFunds('');
+}
+
+function filterMutualFunds(type, el) {
+    currentMfFilter = type;
+    document.querySelectorAll('#mfFilterGroup .btn-filter').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+    renderMutualFundsGrid();
+}
+
+// ----------------------------------------------------
+// SMART CALCULATION & AUTOCOMPLETE HANDLERS
+// ----------------------------------------------------
+
+function calcMfUnitsOrNav(changedField) {
+    const investedStr = document.getElementById('formMfInvested').value || '0';
+    const invested = parseRupiahInput(investedStr);
+    const buyNav = parseFloat(document.getElementById('formMfBuyNav').value) || 0;
+    const units = parseFloat(document.getElementById('formMfUnits').value) || 0;
+
+    if (changedField === 'invested' || changedField === 'buy_nav') {
+        if (invested > 0 && buyNav > 0) {
+            const calculatedUnits = round(invested / buyNav, 4);
+            document.getElementById('formMfUnits').value = calculatedUnits;
+        }
+    } else if (changedField === 'units') {
+        if (invested > 0 && units > 0) {
+            const calculatedNav = round(invested / units, 4);
+            document.getElementById('formMfBuyNav').value = calculatedNav;
+        }
+    }
+}
+
+function round(value, decimals) {
+    return Number(Math.round(value + 'e' + decimals) + 'e-' + decimals);
+}
+
+function parseRupiahInput(val) {
+    return parseFloat(String(val).replace(/[^0-9]/g, '')) || 0;
+}
+
+function onMfTypeSelectChange(type) {
+    document.getElementById('formMfType').value = type;
+}
+
+function toggleCustomMfInput() {
+    isCustomMfInput = !isCustomMfInput;
+    const searchWrapper = document.getElementById('mfCatalogSearchWrapper');
+    const manualInput = document.getElementById('formMfName');
+
+    if (isCustomMfInput) {
+        searchWrapper.style.display = 'none';
+        manualInput.style.display = 'block';
+        manualInput.value = document.getElementById('formMfSearchInput').value || '';
+        manualInput.focus();
+    } else {
+        searchWrapper.style.display = 'block';
+        manualInput.style.display = 'none';
+        document.getElementById('formMfSearchInput').value = manualInput.value || '';
+    }
+}
+
+function onMfCatalogSearch(keyword) {
+    const q = (keyword || '').toLowerCase().trim();
+    const container = document.getElementById('mfCatalogItemsContainer');
+    if (!container) return;
+
+    let matches = masterCatalogProducts;
+    if (q) {
+        matches = masterCatalogProducts.filter(p => {
+            return p.name.toLowerCase().includes(q) || p.fund_house.toLowerCase().includes(q) || p.type.toLowerCase().includes(q);
+        });
+    }
+
+    if (matches.length === 0) {
+        container.innerHTML = `
+            <div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 11.5px;">
+                Tidak ada produk di katalog.
+                <button type="button" class="btn btn-link p-0 text-primary fw-bold ms-1" style="font-size: 11.5px;" onclick="toggleCustomMfInput()">Gunakan input manual</button>
+            </div>
+        `;
+    } else {
+        container.innerHTML = matches.map(p => `
+            <div class="custom-select-option" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid var(--border-color);" onclick="selectMfCatalogItem('${p.code}')">
+                <div style="min-width: 0; flex: 1;">
+                    <div style="font-size: 12px; font-weight: 800; color: var(--text-primary); line-height: 1.2;">
+                        ${escapeHtml(p.name)}
+                    </div>
+                    <div style="font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; margin-top: 2px;">
+                        <span><i class="bi bi-building me-1"></i>${escapeHtml(p.fund_house)}</span>
+                        <span>&middot;</span>
+                        <span style="color: var(--primary); font-weight: 700;">${escapeHtml(p.type)}</span>
+                        <span>&middot;</span>
+                        <span style="color: var(--success); font-weight: 700;">NAB: Rp ${p.current_nav.toLocaleString('id-ID')}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    showMfCatalogDropdown();
+}
+
+function showMfCatalogDropdown() {
+    const dropdown = document.getElementById('mfCatalogDropdown');
+    if (dropdown) {
+        dropdown.style.display = 'block';
+        if (!document.getElementById('mfCatalogItemsContainer').innerHTML.trim()) {
+            onMfCatalogSearch(document.getElementById('formMfSearchInput').value || '');
+        }
+    }
+}
+
+function hideMfCatalogDropdown() {
+    const dropdown = document.getElementById('mfCatalogDropdown');
+    if (dropdown) dropdown.style.display = 'none';
+}
+
+function selectMfCatalogItem(code) {
+    const item = masterCatalogProducts.find(p => p.code === code);
+    if (!item) return;
+
+    document.getElementById('formMfSearchInput').value = item.name;
+    document.getElementById('formMfName').value = item.name;
+    document.getElementById('formMfHouse').value = item.fund_house;
+    document.getElementById('formMfTypeSelect').value = item.type;
+    document.getElementById('formMfType').value = item.type;
+    document.getElementById('formMfIsSyariah').checked = !!item.is_syariah;
+
+    // Prefill NAB if empty
+    const buyNavInput = document.getElementById('formMfBuyNav');
+    if (!buyNavInput.value || parseFloat(buyNavInput.value) <= 0) {
+        buyNavInput.value = item.current_nav;
+    }
+    document.getElementById('formMfCurrentNav').value = item.current_nav;
+
+    calcMfUnitsOrNav('buy_nav');
+    hideMfCatalogDropdown();
+}
+
+// ----------------------------------------------------
+// MODAL ACTIONS (ADD, EDIT, SUBMIT, DELETE, REFRESH)
+// ----------------------------------------------------
+
+function openAddMutualFundModal() {
+    document.getElementById('mfFormTitle').textContent = 'Tambah Produk Reksadana';
+    document.getElementById('formMfId').value = '';
+    document.getElementById('formMfSearchInput').value = '';
+    document.getElementById('formMfName').value = '';
+    document.getElementById('formMfHouse').value = '';
+    document.getElementById('formMfTypeSelect').value = 'Pasar Uang';
+    document.getElementById('formMfType').value = 'Pasar Uang';
+    document.getElementById('formMfInvested').value = '';
+    document.getElementById('formMfBuyNav').value = '';
+    document.getElementById('formMfUnits').value = '';
+    document.getElementById('formMfCurrentNav').value = '';
+    document.getElementById('formMfPlatform').value = 'Bibit';
+    document.getElementById('formMfBuyDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('formMfIsSyariah').checked = false;
+    document.getElementById('formMfNotes').value = '';
+
+    isCustomMfInput = false;
+    document.getElementById('mfCatalogSearchWrapper').style.display = 'block';
+    document.getElementById('formMfName').style.display = 'none';
+
+    const modal = new bootstrap.Modal(document.getElementById('modalMutualFundForm'));
+    modal.show();
+}
+
+function openEditMutualFundModal(id) {
+    const fund = allMutualFunds.find(f => f.id == id);
+    if (!fund) return;
+
+    document.getElementById('mfFormTitle').textContent = 'Edit Data Reksadana';
+    document.getElementById('formMfId').value = fund.id;
+    document.getElementById('formMfSearchInput').value = fund.fund_name;
+    document.getElementById('formMfName').value = fund.fund_name;
+    document.getElementById('formMfHouse').value = fund.fund_house;
+    document.getElementById('formMfTypeSelect').value = fund.fund_type;
+    document.getElementById('formMfType').value = fund.fund_type;
+    document.getElementById('formMfInvested').value = Math.round(fund.invested_amount).toLocaleString('id-ID');
+    document.getElementById('formMfBuyNav').value = fund.buy_nav;
+    document.getElementById('formMfUnits').value = fund.units_owned;
+    document.getElementById('formMfCurrentNav').value = fund.current_nav;
+    document.getElementById('formMfPlatform').value = fund.platform || 'Bibit';
+    document.getElementById('formMfBuyDate').value = fund.buy_date || new Date().toISOString().split('T')[0];
+    document.getElementById('formMfIsSyariah').checked = !!parseInt(fund.is_syariah);
+    document.getElementById('formMfNotes').value = fund.notes || '';
+
+    isCustomMfInput = true;
+    document.getElementById('mfCatalogSearchWrapper').style.display = 'none';
+    document.getElementById('formMfName').style.display = 'block';
+
+    const modal = new bootstrap.Modal(document.getElementById('modalMutualFundForm'));
+    modal.show();
+}
+
+async function submitMutualFundForm(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btnSubmitMf');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Menyimpan...';
+
+    const id = document.getElementById('formMfId').value;
+    const name = isCustomMfInput ? document.getElementById('formMfName').value : (document.getElementById('formMfSearchInput').value || document.getElementById('formMfName').value);
+    const house = document.getElementById('formMfHouse').value;
+    const type = document.getElementById('formMfType').value;
+    const invested = parseRupiahInput(document.getElementById('formMfInvested').value);
+    const buyNav = parseFloat(document.getElementById('formMfBuyNav').value) || 0;
+    const units = parseFloat(document.getElementById('formMfUnits').value) || 0;
+    const currentNav = parseFloat(document.getElementById('formMfCurrentNav').value) || buyNav;
+    const platform = document.getElementById('formMfPlatform').value;
+    const buyDate = document.getElementById('formMfBuyDate').value;
+    const isSyariah = document.getElementById('formMfIsSyariah').checked ? 1 : 0;
+    const notes = document.getElementById('formMfNotes').value;
+
+    const payload = {
+        fund_name: name,
+        fund_house: house,
+        fund_type: type,
+        invested_amount: invested,
+        buy_nav: buyNav,
+        units_owned: units,
+        current_nav: currentNav,
+        platform: platform,
+        buy_date: buyDate,
+        is_syariah: isSyariah,
+        notes: notes
+    };
+
+    const url = id ? `<?= BASE_URL ?>api/savings/mutual-funds/${id}/update` : `<?= BASE_URL ?>api/savings/mutual-funds`;
+
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.getElementById('csrfToken').value
+            },
+            body: JSON.stringify(payload)
+        });
+        const json = await res.json();
+
+        if (json.success) {
+            const modalEl = document.getElementById('modalMutualFundForm');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            showSavingsToast('Berhasil', json.message || 'Data reksadana berhasil disimpan', 'success');
+            loadMutualFunds();
+        } else {
+            showSavingsToast('Gagal', json.error || 'Gagal menyimpan data reksadana', 'danger');
+        }
+    } catch (err) {
+        console.error(err);
+        showSavingsToast('Error', 'Terjadi kesalahan sistem', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+function deleteMutualFund(id, name) {
+    showSavingsConfirm({
+        title: 'Hapus Reksadana',
+        text: `Apakah Anda yakin ingin menghapus produk "${name}" dari portofolio investasi?`,
+        icon: 'bi-trash-fill',
+        iconColor: '#ef4444',
+        iconBg: 'rgba(239,68,68,0.15)',
+        confirmText: 'Ya, Hapus',
+        confirmBtnColor: 'var(--danger)',
+        onConfirm: async () => {
+            try {
+                const res = await fetch(`<?= BASE_URL ?>api/savings/mutual-funds/${id}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-Token': document.getElementById('csrfToken').value
+                    }
+                });
+                const json = await res.json();
+                if (json.success) {
+                    showSavingsToast('Terhapus', json.message, 'success');
+                    loadMutualFunds();
+                } else {
+                    showSavingsToast('Gagal', json.error, 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showSavingsToast('Error', 'Gagal menghubungi server', 'danger');
+            }
+        }
+    });
+}
+
+async function refreshMutualFundsLiveNav() {
+    const btn = document.getElementById('btnRefreshMfNav');
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Mengupdate NAB...';
+
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/savings/mutual-funds/refresh-nav', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': document.getElementById('csrfToken').value
+            }
+        });
+        const json = await res.json();
+        if (json.success) {
+            allMutualFunds = Array.isArray(json.data) ? json.data : allMutualFunds;
+            mutualFundsSummary = json.summary || mutualFundsSummary;
+            renderMutualFundsGrid();
+            if (mutualFundsSummary) updateMutualFundsSummaryUI(mutualFundsSummary);
+            showSavingsToast('NAB Terkini Berhasil Dimuat', `Pembaruan harga NAB real-time selesai (${json.meta ? json.meta.updated_count : 0} produk)`, 'success');
+        } else {
+            showSavingsToast('Peringatan', json.error || 'Gagal memperbarui NAB', 'warning');
+        }
+    } catch (e) {
+        console.error(e);
+        showSavingsToast('Error', 'Gagal memuat live NAB', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+    }
+}
+
+function syncMutualFundsToSavings() {
+    if (!mutualFundsSummary || mutualFundsSummary.total_current_value <= 0) {
+        showSavingsToast('Info', 'Belum ada aset reksadana atau total nilai Rp 0', 'info');
+        return;
+    }
+
+    const totalVal = Math.round(mutualFundsSummary.total_current_value);
+    showSavingsToast('Aset Reksadana Siap', `Total nilai aset: Rp ${totalVal.toLocaleString('id-ID')}. Anda dapat memilih Target Keuangan untuk menambahkan alokasi ini.`, 'info');
+    
+    // Switch to goals tab and prompt
+    switchSavingsTab('goals');
 }
 
 function updateSummaryUI(summary) {

@@ -416,4 +416,257 @@ class SavingsController extends Controller
             $this->json(['error' => 'Gagal mencapture snapshot seluruh target: ' . $e->getMessage()], 500);
         }
     }
+
+    // ==========================================
+    // MUTUAL FUNDS (REKSADANA) API
+    // ==========================================
+
+    /**
+     * API: Get Mutual Funds Portfolio List & Summary
+     */
+    public function apiGetMutualFunds()
+    {
+        $this->requireService('savings');
+        $type = $this->query('type');
+        $funds = $this->savingsModel->getMutualFunds($type);
+        $summary = $this->savingsModel->getMutualFundsSummary();
+
+        $this->json([
+            'success' => true,
+            'data' => $funds,
+            'summary' => $summary
+        ]);
+    }
+
+    /**
+     * API: Get Master Catalog & Fund Houses for Dropdown/Search
+     */
+    public function apiGetMasterMutualFunds()
+    {
+        $this->requireService('savings');
+        require_once __DIR__ . '/../services/MutualFundService.php';
+
+        $keyword = (string)$this->query('q', '');
+        $type = (string)$this->query('type', '');
+        $fundHouse = (string)$this->query('fund_house', '');
+
+        $products = MutualFundService::searchProducts($keyword, $type, $fundHouse);
+        $fundHouses = MutualFundService::getFundHouses();
+
+        $this->json([
+            'success' => true,
+            'data' => [
+                'products' => $products,
+                'fund_houses' => $fundHouses,
+                'total_results' => count($products)
+            ]
+        ]);
+    }
+
+    /**
+     * API: Get Mutual Fund Detail by ID
+     * @param int|string $id
+     */
+    public function apiGetMutualFundDetail(int|string $id)
+    {
+        $this->requireService('savings');
+        $fund = $this->savingsModel->getMutualFundById((int)$id);
+        if (!$fund) {
+            $this->json(['error' => 'Data reksadana tidak ditemukan'], 404);
+        }
+        $this->json(['success' => true, 'data' => $fund]);
+    }
+
+    /**
+     * API: Create New Mutual Fund Entry
+     */
+    public function apiCreateMutualFund()
+    {
+        $this->requireService('savings');
+        $this->validateCSRF();
+        require_once __DIR__ . '/../services/MutualFundService.php';
+
+        $fundName = trim((string)$this->input('fund_name', ''));
+        $fundHouse = trim((string)$this->input('fund_house', ''));
+        $fundType = trim((string)$this->input('fund_type', 'Pasar Uang'));
+        $buyDate = trim((string)$this->input('buy_date', date('Y-m-d')));
+        $investedAmount = (float)$this->input('invested_amount', 0);
+        $buyNav = (float)$this->input('buy_nav', 0);
+        $unitsOwned = (float)$this->input('units_owned', 0);
+        $isSyariah = (int)$this->input('is_syariah', 0);
+        $platform = trim((string)$this->input('platform', 'Bibit'));
+        $notes = trim((string)$this->input('notes', ''));
+
+        if (empty($fundName)) {
+            $this->json(['error' => 'Nama produk reksadana wajib diisi'], 422);
+        }
+        if (empty($fundHouse)) {
+            $this->json(['error' => 'Manajer Investasi wajib dipilih atau diisi'], 422);
+        }
+        if ($investedAmount <= 0) {
+            $this->json(['error' => 'Modal pembelian investasi harus lebih dari 0'], 422);
+        }
+
+        // Auto calculate units or buy NAV if one is missing
+        if ($unitsOwned <= 0 && $buyNav > 0) {
+            $unitsOwned = round($investedAmount / $buyNav, 4);
+        } elseif ($buyNav <= 0 && $unitsOwned > 0) {
+            $buyNav = round($investedAmount / $unitsOwned, 4);
+        } elseif ($unitsOwned <= 0 && $buyNav <= 0) {
+            // Default NAV 1000 if not specified
+            $buyNav = 1000.0;
+            $unitsOwned = round($investedAmount / 1000.0, 4);
+        }
+
+        // Fetch live / current NAV from service
+        $liveData = MutualFundService::fetchLiveNav($fundName, $fundHouse, $buyNav);
+        $currentNav = (float)($liveData['nav'] ?? $buyNav);
+        $lastNav = (float)($liveData['last_nav'] ?? $currentNav);
+        $dailyChange = (float)($liveData['change_pct'] ?? 0);
+
+        try {
+            $id = $this->savingsModel->createMutualFund([
+                'fund_name' => $fundName,
+                'fund_house' => $fundHouse,
+                'fund_type' => $fundType,
+                'buy_date' => $buyDate,
+                'invested_amount' => $investedAmount,
+                'buy_nav' => $buyNav,
+                'units_owned' => $unitsOwned,
+                'current_nav' => $currentNav,
+                'last_nav' => $lastNav,
+                'daily_change_pct' => $dailyChange,
+                'is_syariah' => $isSyariah,
+                'platform' => $platform,
+                'notes' => $notes
+            ]);
+
+            $newFund = $this->savingsModel->getMutualFundById($id);
+            $this->json([
+                'success' => true,
+                'message' => 'Reksadana berhasil ditambahkan ke portofolio',
+                'data' => $newFund
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Gagal menyimpan data reksadana: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Update Mutual Fund
+     * @param int|string $id
+     */
+    public function apiUpdateMutualFund(int|string $id)
+    {
+        $this->requireService('savings');
+        $this->validateCSRF();
+        require_once __DIR__ . '/../services/MutualFundService.php';
+
+        $fundId = (int)$id;
+        $existing = $this->savingsModel->getMutualFundById($fundId);
+        if (!$existing) {
+            $this->json(['error' => 'Data reksadana tidak ditemukan'], 404);
+        }
+
+        $fundName = trim((string)$this->input('fund_name', $existing['fund_name']));
+        $fundHouse = trim((string)$this->input('fund_house', $existing['fund_house']));
+        $fundType = trim((string)$this->input('fund_type', $existing['fund_type']));
+        $buyDate = trim((string)$this->input('buy_date', $existing['buy_date']));
+        $investedAmount = (float)$this->input('invested_amount', $existing['invested_amount']);
+        $buyNav = (float)$this->input('buy_nav', $existing['buy_nav']);
+        $unitsOwned = (float)$this->input('units_owned', $existing['units_owned']);
+        $currentNav = (float)$this->input('current_nav', $existing['current_nav']);
+        $isSyariah = (int)$this->input('is_syariah', $existing['is_syariah']);
+        $platform = trim((string)$this->input('platform', $existing['platform'] ?? 'Bibit'));
+        $notes = trim((string)$this->input('notes', $existing['notes'] ?? ''));
+
+        if (empty($fundName)) {
+            $this->json(['error' => 'Nama produk reksadana wajib diisi'], 422);
+        }
+        if ($investedAmount <= 0) {
+            $this->json(['error' => 'Modal pembelian harus lebih dari 0'], 422);
+        }
+
+        if ($unitsOwned <= 0 && $buyNav > 0) {
+            $unitsOwned = round($investedAmount / $buyNav, 4);
+        } elseif ($buyNav <= 0 && $unitsOwned > 0) {
+            $buyNav = round($investedAmount / $unitsOwned, 4);
+        }
+
+        try {
+            $this->savingsModel->updateMutualFund($fundId, [
+                'fund_name' => $fundName,
+                'fund_house' => $fundHouse,
+                'fund_type' => $fundType,
+                'buy_date' => $buyDate,
+                'invested_amount' => $investedAmount,
+                'buy_nav' => $buyNav,
+                'units_owned' => $unitsOwned,
+                'current_nav' => $currentNav > 0 ? $currentNav : (float)$existing['current_nav'],
+                'is_syariah' => $isSyariah,
+                'platform' => $platform,
+                'notes' => $notes
+            ]);
+
+            $updated = $this->savingsModel->getMutualFundById($fundId);
+            $this->json([
+                'success' => true,
+                'message' => 'Data reksadana berhasil diperbarui',
+                'data' => $updated
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Gagal memperbarui data reksadana: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Delete Mutual Fund
+     * @param int|string $id
+     */
+    public function apiDeleteMutualFund(int|string $id)
+    {
+        $this->requireService('savings');
+        $this->validateCSRF();
+
+        $fundId = (int)$id;
+        $existing = $this->savingsModel->getMutualFundById($fundId);
+        if (!$existing) {
+            $this->json(['error' => 'Data reksadana tidak ditemukan'], 404);
+        }
+
+        try {
+            $this->savingsModel->deleteMutualFund($fundId);
+            $this->json([
+                'success' => true,
+                'message' => 'Reksadana ' . $existing['fund_name'] . ' berhasil dihapus dari portofolio'
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Gagal menghapus reksadana: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Trigger Live NAV Refresh for All Mutual Funds
+     */
+    public function apiRefreshMutualFundsNav()
+    {
+        $this->requireService('savings');
+        $this->validateCSRF();
+
+        try {
+            $res = $this->savingsModel->refreshAllMutualFundsNav();
+            $funds = $this->savingsModel->getMutualFunds();
+            $summary = $this->savingsModel->getMutualFundsSummary();
+
+            $this->json([
+                'success' => true,
+                'message' => 'Harga NAB seluruh reksadana berhasil diperbarui secara real-time',
+                'meta' => $res,
+                'data' => $funds,
+                'summary' => $summary
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Gagal memperbarui NAB reksadana: ' . $e->getMessage()], 500);
+        }
+    }
 }
