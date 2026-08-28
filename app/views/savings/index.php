@@ -44,6 +44,123 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
     box-sizing: border-box;
 }
 
+/* PPOB Live Balance Banner */
+.savings-ppob-banner {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.22);
+    border-radius: var(--radius-lg);
+    padding: 12px 18px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.savings-ppob-banner:hover {
+    border-color: rgba(59, 130, 246, 0.4);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.08);
+}
+
+.savings-ppob-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.savings-ppob-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.savings-ppob-info {
+    min-width: 0;
+}
+
+.savings-ppob-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.savings-ppob-val-wrapper {
+    margin-top: 2px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.savings-ppob-value {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #3b82f6;
+    letter-spacing: -0.2px;
+    line-height: 1.2;
+}
+
+.savings-ppob-actions {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.btn-ppob-action {
+    background: var(--surface-1);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 6px 12px;
+    border-radius: var(--radius-md);
+    font-size: 11.5px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.btn-ppob-action:hover {
+    background: var(--surface-2);
+    border-color: var(--primary);
+    color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.btn-ppob-action.primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.btn-ppob-action.primary:hover {
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+    color: #ffffff;
+}
+
 /* KPI Summary Grid */
 .savings-kpi-grid {
     display: grid;
@@ -1053,6 +1170,39 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
         </div>
     </div>
 
+    <!-- Saldo PPOB Live Widget Banner -->
+    <div class="savings-ppob-banner" id="savingsPpobBanner">
+        <div class="savings-ppob-left">
+            <div class="savings-ppob-icon">
+                <i class="bi bi-wallet2"></i>
+            </div>
+            <div class="savings-ppob-info">
+                <div class="savings-ppob-label">
+                    <span>Saldo PPOB Saat Ini (Digiflazz)</span>
+                    <span class="badge bg-success bg-opacity-15 text-success border border-success border-opacity-25" id="ppobStatusLiveBadge" style="font-size: 9.5px; font-weight: 700; padding: 2px 7px;">
+                        <i class="bi bi-circle-fill" style="font-size: 6px;"></i> Live
+                    </span>
+                </div>
+                <div class="savings-ppob-val-wrapper">
+                    <span class="savings-ppob-value" id="topPpobBalanceVal">
+                        <span class="spinner-border spinner-border-sm text-primary" style="width: 1.1rem; height: 1.1rem; vertical-align: middle;"></span> <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);">Memuat saldo...</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="savings-ppob-actions">
+            <button type="button" class="btn-ppob-action" onclick="refreshSavingsPpobBalance()" id="btnRefreshPpobBalance" title="Perbarui Saldo Real-Time">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+            <button type="button" class="btn-ppob-action" onclick="copyPpobBalanceAmount()" id="btnCopyPpobBalance" title="Salin Nominal Saldo">
+                <i class="bi bi-clipboard"></i> Salin Nominal
+            </button>
+            <a href="<?= BASE_URL ?>ppob" class="btn-ppob-action primary" title="Buka Menu Transaksi PPOB">
+                <i class="bi bi-box-arrow-up-right"></i> Buka PPOB
+            </a>
+        </div>
+    </div>
+
     <!-- KPI Summary Grid -->
     <div class="savings-kpi-grid" id="kpiGridContainer">
         <!-- 1. Total Terkumpul -->
@@ -1604,6 +1754,12 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                                 Nominal Saldo (Rp) <span style="color: var(--primary);">*</span>
                             </label>
                             <input type="text" id="formAllocAmount" class="form-control-custom" placeholder="3.000.000" required oninput="formatCurrencyInput(this)" style="width: 100%; padding: 8px 10px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 12.5px; font-weight: 800;">
+                            <div id="quickPpobAllocHelper" class="mt-1" style="font-size: 10.5px; display: none;">
+                                <span style="color: var(--text-muted);">Saldo PPOB:</span>
+                                <button type="button" class="btn btn-sm py-0 px-2 rounded-pill ms-1 fw-bold" onclick="applyPpobBalanceToAllocInput()" style="font-size: 10px; background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.25);" title="Klik untuk otomatis mengisi nominal sesuai Saldo PPOB saat ini">
+                                    <i class="bi bi-wallet2 me-1"></i><span id="allocPpobBalanceText">Rp 0</span> (Gunakan)
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -1690,6 +1846,12 @@ $csrfToken = $csrfToken ?? ($this->security ? $this->security->getCSRFToken() : 
                             Nominal Mutasi (Rp) <span style="color: var(--primary);">*</span>
                         </label>
                         <input type="text" id="formMutAmount" class="form-control-custom" placeholder="Misal: 500.000" required oninput="formatCurrencyInput(this)" style="width: 100%; padding: 9px 12px; background: var(--bg-primary); border: 1.5px solid var(--border-color); border-radius: var(--radius-md); color: var(--text-primary); font-size: 13.5px; font-weight: 800;">
+                        <div id="quickPpobMutHelper" class="mt-1" style="font-size: 10.5px; display: none;">
+                            <span style="color: var(--text-muted);">Isi sesuai Saldo PPOB:</span>
+                            <button type="button" class="btn btn-sm py-0 px-2 rounded-pill ms-1 fw-bold" onclick="applyPpobBalanceToMutInput()" style="font-size: 10px; background: rgba(59, 130, 246, 0.12); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.25);" title="Klik untuk otomatis mengisi nominal mutasi sesuai Saldo PPOB saat ini">
+                                <i class="bi bi-wallet2 me-1"></i><span id="mutPpobBalanceText">Rp 0</span>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Date & Notes -->
@@ -1862,6 +2024,7 @@ const COLOR_PRESETS = [
 ];
 
 const ALLOC_TYPE_PRESETS = [
+    { value: 'PPOB / Digiflazz', label: 'Saldo PPOB (Digiflazz / Pulsa)', icon: 'bi-wallet2', bg: 'rgba(16,185,129,0.15)', color: '#10b981', sub: 'Saldo deposit Digiflazz / PPOB' },
     { value: 'Toko / Kas', label: 'Toko / Kas (Uang Berputar)', icon: 'bi-shop', bg: 'rgba(245,158,11,0.15)', color: '#f59e0b', sub: 'Uang di kasir, brankas, modal toko' },
     { value: 'Investasi', label: 'Investasi (Bibit, Saham, Reksadana)', icon: 'bi-graph-up-arrow', bg: 'rgba(59,130,246,0.15)', color: '#3b82f6', sub: 'Bibit, Ajaib, Reksadana, Emas' },
     { value: 'Bank / Rekening', label: 'Bank / Rekening (SeaBank, BCA)', icon: 'bi-bank', bg: 'rgba(99,102,241,0.15)', color: '#818cf8', sub: 'SeaBank, BCA, Mandiri, BRI' },
@@ -1873,6 +2036,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initCustomSelectPickers();
     loadGoals();
     loadSummary();
+    loadSavingsPpobBalance();
     scheduleNightlySnapshot();
 
     // Close dropdowns on outside click
@@ -2248,6 +2412,125 @@ async function loadSummary() {
     } catch (e) {
         console.error(e);
     }
+}
+
+// ----------------------------------------------------
+// PPOB LIVE BALANCE INTEGRATION
+// ----------------------------------------------------
+let currentPpobBalanceNum = 0;
+
+async function loadSavingsPpobBalance(isManualRefresh = false) {
+    const valEl = document.getElementById('topPpobBalanceVal');
+    const badgeEl = document.getElementById('ppobStatusLiveBadge');
+    const refreshBtn = document.getElementById('btnRefreshPpobBalance');
+    if (refreshBtn) refreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" style="width:10px;height:10px;"></span> Refreshing...';
+
+    try {
+        const res = await fetch('<?= BASE_URL ?>api/ppob/balance');
+        const json = await res.json();
+        if (json.success && json.data && json.data.deposit !== undefined) {
+            currentPpobBalanceNum = parseFloat(json.data.deposit) || 0;
+            const formatted = `Rp ${Math.round(currentPpobBalanceNum).toLocaleString('id-ID')}`;
+            if (valEl) {
+                valEl.innerHTML = formatted;
+            }
+            if (badgeEl) {
+                badgeEl.className = 'badge bg-success bg-opacity-15 text-success border border-success border-opacity-25';
+                badgeEl.innerHTML = '<i class="bi bi-circle-fill" style="font-size:6px;"></i> Live';
+            }
+            
+            // Update helpers in modals
+            const allocHelper = document.getElementById('allocPpobBalanceText');
+            if (allocHelper) allocHelper.innerText = formatted;
+            const quickAllocPill = document.getElementById('quickPpobAllocHelper');
+            if (quickAllocPill) quickAllocPill.style.display = 'block';
+
+            const mutHelper = document.getElementById('mutPpobBalanceText');
+            if (mutHelper) mutHelper.innerText = formatted;
+            const quickMutPill = document.getElementById('quickPpobMutHelper');
+            if (quickMutPill) quickMutPill.style.display = 'block';
+
+            if (isManualRefresh) {
+                showSavingsToast('Saldo PPOB Diperbarui', `Saldo saat ini: ${formatted}`, 'success');
+            }
+        } else {
+            if (valEl) valEl.innerHTML = '<span class="text-danger small" style="font-size:13px;"><i class="bi bi-exclamation-circle me-1"></i>Gagal memuat</span>';
+            if (badgeEl) {
+                badgeEl.className = 'badge bg-danger bg-opacity-15 text-danger border border-danger border-opacity-25';
+                badgeEl.innerHTML = '<i class="bi bi-x-circle-fill" style="font-size:6px;"></i> Offline';
+            }
+        }
+    } catch (e) {
+        console.error('Error fetching PPOB balance on savings page:', e);
+        if (valEl) valEl.innerHTML = '<span class="text-danger small" style="font-size:13px;"><i class="bi bi-exclamation-circle me-1"></i>Offline</span>';
+    } finally {
+        if (refreshBtn) refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Refresh';
+    }
+}
+
+function refreshSavingsPpobBalance() {
+    loadSavingsPpobBalance(true);
+}
+
+function copyPpobBalanceAmount() {
+    if (!currentPpobBalanceNum || currentPpobBalanceNum <= 0) {
+        showSavingsToast('Info', 'Saldo PPOB adalah Rp 0 atau belum termuat', 'info');
+        return;
+    }
+    const amountStr = Math.round(currentPpobBalanceNum).toString();
+    const formatted = `Rp ${Math.round(currentPpobBalanceNum).toLocaleString('id-ID')}`;
+    
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(amountStr).then(() => {
+            showSavingsToast('Berhasil Disalin!', `Nominal ${formatted} (${amountStr}) telah disalin ke clipboard`, 'success');
+        }).catch(() => fallbackCopy(amountStr, formatted));
+    } else {
+        fallbackCopy(amountStr, formatted);
+    }
+}
+
+function fallbackCopy(text, formatted) {
+    const tempInput = document.createElement('input');
+    tempInput.value = text;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    document.execCommand('copy');
+    document.body.removeChild(tempInput);
+    showSavingsToast('Berhasil Disalin!', `Nominal ${formatted} (${text}) telah disalin`, 'success');
+}
+
+function applyPpobBalanceToAllocInput() {
+    if (!currentPpobBalanceNum || currentPpobBalanceNum <= 0) return;
+    const amountInput = document.getElementById('formAllocAmount');
+    if (amountInput) {
+        amountInput.value = Math.round(currentPpobBalanceNum).toLocaleString('id-ID');
+        amountInput.focus();
+    }
+    const nameInput = document.getElementById('formAllocName');
+    if (nameInput && !nameInput.value.trim()) {
+        nameInput.value = 'Saldo PPOB (Digiflazz)';
+    }
+    const instInput = document.getElementById('formAllocInstitution');
+    if (instInput && !instInput.value.trim()) {
+        instInput.value = 'Digiflazz / PPOB';
+    }
+    // Select PPOB / Digiflazz type
+    selectAllocTypeOption('PPOB / Digiflazz', 'Saldo PPOB (Digiflazz / Pulsa)', 'bi-wallet2', 'rgba(16,185,129,0.15)', '#10b981', 'Saldo deposit Digiflazz / PPOB');
+    showSavingsToast('Nominal Diisi', `Nominal Rp ${Math.round(currentPpobBalanceNum).toLocaleString('id-ID')} berhasil dimasukkan ke form`, 'info');
+}
+
+function applyPpobBalanceToMutInput() {
+    if (!currentPpobBalanceNum || currentPpobBalanceNum <= 0) return;
+    const amountInput = document.getElementById('formMutAmount');
+    if (amountInput) {
+        amountInput.value = Math.round(currentPpobBalanceNum).toLocaleString('id-ID');
+        amountInput.focus();
+    }
+    const notesInput = document.getElementById('formMutNotes');
+    if (notesInput && !notesInput.value.trim()) {
+        notesInput.value = 'Penyesuaian Saldo PPOB Digiflazz';
+    }
+    showSavingsToast('Nominal Diisi', `Nominal Rp ${Math.round(currentPpobBalanceNum).toLocaleString('id-ID')} berhasil dimasukkan ke form mutasi`, 'info');
 }
 
 function updateSummaryUI(summary) {
