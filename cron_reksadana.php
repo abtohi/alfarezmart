@@ -1,19 +1,19 @@
 <?php
 /**
- * CRON JOB: Hourly Mutual Fund (Reksadana) NAV & Asset Auto-Update
+ * CRON JOB: Mutual Fund (Reksadana) Live NAV & Asset Auto-Update
  * 
- * Memperbarui data NAB reksadana setiap jam secara otomatis,
+ * Memperbarui data NAB reksadana secara otomatis (setiap jam & pukul 22:00 WIB / 10 malam GMT+7),
  * menghitung total aset (unit * NAB), mencatat log history di database,
  * dan menyimpan cache JSON dinamis.
  * 
- * Jalankan via Windows Task Scheduler atau Linux Cron (setiap 1 jam):
- * 0 * * * * php /path/to/cron_reksadana.php
+ * Jadwal Cron Server (misal setiap hari jam 22:00 WIB):
+ * 0 22 * * * php /path/to/cron_reksadana.php
  */
 
 define('BASE_PATH', __DIR__);
 define('APP_PATH', BASE_PATH . '/app');
 define('PUBLIC_PATH', BASE_PATH . '/public');
-define('STORAGE_PATH', dirname(BASE_PATH) . '/storage');
+define('STORAGE_PATH', is_dir(BASE_PATH . '/storage') ? BASE_PATH . '/storage' : dirname(BASE_PATH) . '/storage');
 
 require_once __DIR__ . '/app/core/Autoloader.php';
 Autoloader::register();

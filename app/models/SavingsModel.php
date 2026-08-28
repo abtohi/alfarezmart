@@ -1229,6 +1229,65 @@ class SavingsModel extends Model
     }
 
     /**
+     * Refresh Live NAV for a single mutual fund & log to history
+     */
+    public function refreshSingleMutualFundNav(int $fundId): ?array
+    {
+        require_once __DIR__ . '/../services/MutualFundService.php';
+
+        $fund = $this->getMutualFundById($fundId);
+        if (!$fund) return null;
+
+        $now = date('Y-m-d H:i:s');
+        $today = date('Y-m-d');
+        $liveData = MutualFundService::fetchLiveNav($fund['fund_name'], $fund['fund_house'], (float)$fund['current_nav']);
+
+        if ($liveData['success']) {
+            $newNav = (float)$liveData['nav'];
+            $lastNav = (float)$liveData['last_nav'];
+            $changePct = (float)$liveData['change_pct'];
+            $units = (float)$fund['units_owned'];
+            $totalAsset = round($units * $newNav, 2);
+
+            $stmt = $this->db->prepare("
+                UPDATE savings_mutual_funds SET 
+                    current_nav = :current_nav,
+                    last_nav = :last_nav,
+                    daily_change_pct = :daily_change_pct,
+                    updated_at = :updated_at
+                WHERE id = :id
+            ");
+            $stmt->bindValue(':id', $fundId, PDO::PARAM_INT);
+            $stmt->bindValue(':current_nav', $newNav);
+            $stmt->bindValue(':last_nav', $lastNav);
+            $stmt->bindValue(':daily_change_pct', $changePct);
+            $stmt->bindValue(':updated_at', $now);
+            $stmt->execute();
+
+            try {
+                $stmtHist = $this->db->prepare("
+                    INSERT INTO savings_mutual_fund_nav_history 
+                        (fund_id, fund_name, nav, nav_date, daily_change_pct, total_units, total_value, source, created_at)
+                    VALUES 
+                        (:fund_id, :fund_name, :nav, :nav_date, :daily_change_pct, :total_units, :total_value, :source, :created_at)
+                ");
+                $stmtHist->bindValue(':fund_id', $fundId, PDO::PARAM_INT);
+                $stmtHist->bindValue(':fund_name', $fund['fund_name']);
+                $stmtHist->bindValue(':nav', $newNav);
+                $stmtHist->bindValue(':nav_date', $today);
+                $stmtHist->bindValue(':daily_change_pct', $changePct);
+                $stmtHist->bindValue(':total_units', $units);
+                $stmtHist->bindValue(':total_value', $totalAsset);
+                $stmtHist->bindValue(':source', $liveData['source'] ?? 'bareksa');
+                $stmtHist->bindValue(':created_at', $now);
+                $stmtHist->execute();
+            } catch (\Throwable $te) {}
+        }
+
+        return $this->getMutualFundById($fundId);
+    }
+
+    /**
      * Refresh Live NAV for all mutual funds in portfolio & log to history
      */
     public function refreshAllMutualFundsNav(): array

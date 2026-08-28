@@ -504,26 +504,20 @@ class SavingsController extends Controller
         if (empty($fundHouse)) {
             $this->json(['error' => 'Manajer Investasi wajib dipilih atau diisi'], 422);
         }
-        if ($investedAmount <= 0) {
-            $this->json(['error' => 'Modal pembelian investasi harus lebih dari 0'], 422);
-        }
-
-        // Auto calculate units or buy NAV if one is missing
-        if ($unitsOwned <= 0 && $buyNav > 0) {
-            $unitsOwned = round($investedAmount / $buyNav, 4);
-        } elseif ($buyNav <= 0 && $unitsOwned > 0) {
-            $buyNav = round($investedAmount / $unitsOwned, 4);
-        } elseif ($unitsOwned <= 0 && $buyNav <= 0) {
-            // Default NAV 1000 if not specified
-            $buyNav = 1000.0;
-            $unitsOwned = round($investedAmount / 1000.0, 4);
+        if ($unitsOwned <= 0) {
+            $this->json(['error' => 'Total unit yang dimiliki harus lebih dari 0'], 422);
         }
 
         // Fetch live / current NAV from service
-        $liveData = MutualFundService::fetchLiveNav($fundName, $fundHouse, $buyNav);
-        $currentNav = (float)($liveData['nav'] ?? $buyNav);
+        $liveData = MutualFundService::fetchLiveNav($fundName, $fundHouse, $buyNav > 0 ? $buyNav : 1000.0);
+        $currentNav = (float)($liveData['nav'] ?? ($buyNav > 0 ? $buyNav : 1000.0));
         $lastNav = (float)($liveData['last_nav'] ?? $currentNav);
         $dailyChange = (float)($liveData['change_pct'] ?? 0);
+
+        if ($investedAmount <= 0) {
+            $investedAmount = round($unitsOwned * $currentNav, 2);
+        }
+        $buyNav = $currentNav;
 
         try {
             $id = $this->savingsModel->createMutualFund([
@@ -573,10 +567,10 @@ class SavingsController extends Controller
         $fundHouse = trim((string)$this->input('fund_house', $existing['fund_house']));
         $fundType = trim((string)$this->input('fund_type', $existing['fund_type']));
         $buyDate = trim((string)$this->input('buy_date', $existing['buy_date']));
-        $investedAmount = (float)$this->input('invested_amount', $existing['invested_amount']);
-        $buyNav = (float)$this->input('buy_nav', $existing['buy_nav']);
         $unitsOwned = (float)$this->input('units_owned', $existing['units_owned']);
         $currentNav = (float)$this->input('current_nav', $existing['current_nav']);
+        $investedAmount = (float)$this->input('invested_amount', $existing['invested_amount']);
+        $buyNav = (float)$this->input('buy_nav', $existing['buy_nav']);
         $isSyariah = (int)$this->input('is_syariah', $existing['is_syariah']);
         $platform = trim((string)$this->input('platform', $existing['platform'] ?? 'Bibit'));
         $notes = trim((string)$this->input('notes', $existing['notes'] ?? ''));
@@ -584,14 +578,15 @@ class SavingsController extends Controller
         if (empty($fundName)) {
             $this->json(['error' => 'Nama produk reksadana wajib diisi'], 422);
         }
-        if ($investedAmount <= 0) {
-            $this->json(['error' => 'Modal pembelian harus lebih dari 0'], 422);
+        if ($unitsOwned <= 0) {
+            $this->json(['error' => 'Total unit yang dimiliki harus lebih dari 0'], 422);
         }
 
-        if ($unitsOwned <= 0 && $buyNav > 0) {
-            $unitsOwned = round($investedAmount / $buyNav, 4);
-        } elseif ($buyNav <= 0 && $unitsOwned > 0) {
-            $buyNav = round($investedAmount / $unitsOwned, 4);
+        if ($currentNav <= 0) {
+            $currentNav = (float)$existing['current_nav'];
+        }
+        if ($investedAmount <= 0) {
+            $investedAmount = round($unitsOwned * $currentNav, 2);
         }
 
         try {
@@ -601,9 +596,9 @@ class SavingsController extends Controller
                 'fund_type' => $fundType,
                 'buy_date' => $buyDate,
                 'invested_amount' => $investedAmount,
-                'buy_nav' => $buyNav,
+                'buy_nav' => $buyNav > 0 ? $buyNav : $currentNav,
                 'units_owned' => $unitsOwned,
-                'current_nav' => $currentNav > 0 ? $currentNav : (float)$existing['current_nav'],
+                'current_nav' => $currentNav,
                 'is_syariah' => $isSyariah,
                 'platform' => $platform,
                 'notes' => $notes
@@ -617,6 +612,33 @@ class SavingsController extends Controller
             ]);
         } catch (\Throwable $e) {
             $this->json(['error' => 'Gagal memperbarui data reksadana: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * API: Trigger Live NAV Refresh for Single Mutual Fund
+     * @param int|string $id
+     */
+    public function apiRefreshSingleMutualFundNav(int|string $id)
+    {
+        $this->requireService('savings');
+        $this->validateCSRF();
+
+        try {
+            $updated = $this->savingsModel->refreshSingleMutualFundNav((int)$id);
+            if (!$updated) {
+                $this->json(['error' => 'Data reksadana tidak ditemukan'], 404);
+            }
+            $summary = $this->savingsModel->getMutualFundsSummary();
+
+            $this->json([
+                'success' => true,
+                'message' => 'NAB ' . $updated['fund_name'] . ' berhasil disinkronkan secara real-time',
+                'data' => $updated,
+                'summary' => $summary
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Gagal memperbarui NAB: ' . $e->getMessage()], 500);
         }
     }
 

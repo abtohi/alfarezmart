@@ -2638,8 +2638,9 @@ document.addEventListener('DOMContentLoaded', () => {
     loadMutualFunds();
     loadMasterCatalog();
     scheduleNightlySnapshot();
+    scheduleDailyMutualFundSync();
 
-    // Auto-refresh mutual funds live NAV & recalculate assets every 1 hour (3,600,000 ms)
+    // Auto-refresh mutual funds live NAB & recalculate assets every 1 hour (3,600,000 ms)
     setInterval(() => {
         refreshMutualFundsLiveNav(true);
     }, 3600000);
@@ -2655,6 +2656,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Daily Mutual Fund NAV Sync Automation at 22:00 WIB (10 Malam GMT+7)
+function scheduleDailyMutualFundSync() {
+    try {
+        const now = new Date();
+        const target = new Date();
+        target.setHours(22, 0, 0, 0); // 22:00 WIB (10 Malam GMT+7)
+
+        let diff = target.getTime() - now.getTime();
+        // If current time is 22:00 or later, schedule for tomorrow
+        if (diff <= 0) {
+            target.setDate(target.getDate() + 1);
+            diff = target.getTime() - now.getTime();
+        }
+
+        setTimeout(async () => {
+            try {
+                await refreshMutualFundsLiveNav(true);
+            } catch(e) {}
+            scheduleDailyMutualFundSync();
+        }, diff);
+    } catch(e) {
+        console.warn('Daily MF Sync scheduler error:', e);
+    }
+}
 
 // Nightly Snapshot Automation at 23:00 WIB (GMT+7)
 function scheduleNightlySnapshot() {
@@ -3365,6 +3391,9 @@ function renderMutualFundsGrid() {
                         <div class="mf-card-house"><i class="bi bi-building me-1"></i>${escapeHtml(f.fund_house)}</div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 4px;">
+                        <button class="btn btn-sm" type="button" title="Sinkronkan NAB Live Produk Ini Sekarang" onclick="refreshSingleMutualFundNav(${f.id}, this)" style="background: rgba(16,185,129,0.12); color: #10b981; border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; padding: 4px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="bi bi-arrow-clockwise"></i> Sync NAB
+                        </button>
                         <button class="btn btn-sm" type="button" title="Lihat Riwayat NAB & Aset" onclick="openMutualFundHistoryModal(${f.id}, '${escapeHtml(f.fund_name).replace(/'/g, "\\'")}')" style="background: rgba(59,130,246,0.12); color: #3b82f6; border: 1px solid rgba(59,130,246,0.25); border-radius: 6px; padding: 4px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
                             <i class="bi bi-clock-history"></i> Riwayat
                         </button>
@@ -3373,6 +3402,7 @@ function renderMutualFundsGrid() {
                                 <i class="bi bi-three-dots-vertical"></i>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="background: var(--surface-1); border: 1px solid var(--border-color); font-size: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                                <li><a class="dropdown-item text-success" href="javascript:void(0)" onclick="refreshSingleMutualFundNav(${f.id}, null)"><i class="bi bi-arrow-clockwise me-2"></i>Sinkronkan NAB Live</a></li>
                                 <li><a class="dropdown-item text-primary" href="javascript:void(0)" onclick="openEditMutualFundModal(${f.id})"><i class="bi bi-pencil-square me-2"></i>Edit Unit / Produk</a></li>
                                 <li><a class="dropdown-item text-info" href="javascript:void(0)" onclick="openMutualFundHistoryModal(${f.id}, '${escapeHtml(f.fund_name).replace(/'/g, "\\'")}')"><i class="bi bi-clock-history me-2"></i>Riwayat Perubahan NAB</a></li>
                                 <li><hr class="dropdown-divider" style="border-color: var(--border-color);"></li>
@@ -4040,6 +4070,38 @@ async function refreshMutualFundsLiveNav(isSilent = false) {
         if (btn && !isSilent) {
             btn.disabled = false;
             btn.innerHTML = origHtml;
+        }
+    }
+}
+
+async function refreshSingleMutualFundNav(fundId, btnEl) {
+    const origHtml = btnEl ? btnEl.innerHTML : '';
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:10px;height:10px;"></span> Sync...';
+    }
+
+    try {
+        const res = await fetch(`<?= BASE_URL ?>api/savings/mutual-funds/${fundId}/refresh-nav`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': document.getElementById('csrfToken').value
+            }
+        });
+        const json = await res.json();
+        if (json.success) {
+            showSavingsToast('NAB Berhasil Disinkronkan', json.message || 'Harga NAB terkini berhasil diperbarui', 'success');
+            loadMutualFunds();
+        } else {
+            showSavingsToast('Gagal', json.error || 'Gagal menyinkronkan NAB', 'danger');
+        }
+    } catch (e) {
+        console.error(e);
+        showSavingsToast('Error', 'Gagal memproses sinkronisasi NAB', 'danger');
+    } finally {
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = origHtml;
         }
     }
 }
