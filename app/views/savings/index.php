@@ -2499,6 +2499,44 @@ require_once APP_PATH . '/services/MutualFundService.php';
 </div>
 
 <!-- ======================================================== -->
+<!-- MODAL: RIWAYAT NAB & TOTAL ASET REKSADANA               -->
+<!-- ======================================================== -->
+<div class="modal fade" id="modalMutualFundHistory" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content modal-content-custom" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-lg); overflow: hidden;">
+            <div class="modal-header" style="padding: 12px 18px; border-bottom: 1px solid var(--border-color); background: var(--surface-2);">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(59,130,246,0.15); color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 14px;">
+                        <i class="bi bi-clock-history"></i>
+                    </div>
+                    <div>
+                        <h6 id="mfHistoryModalTitle" style="font-weight: 800; font-size: 13px; margin: 0; color: var(--text-primary);">
+                            Riwayat NAB & Perubahan Nilai Aset
+                        </h6>
+                        <span id="mfHistoryModalSub" style="font-size: 10.5px; color: var(--text-muted);">
+                            Log pembaruan otomatis setiap jam
+                        </span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="font-size: 10px;"></button>
+            </div>
+            <div class="modal-body" style="padding: 16px; max-height: 420px; overflow-y: auto;">
+                <div id="mfHistoryListContainer">
+                    <div style="text-align: center; padding: 25px; color: var(--text-muted); font-size: 12px;">
+                        <span class="spinner-border spinner-border-sm me-1"></span> Memuat riwayat NAB...
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 10px 18px; border-top: 1px solid var(--border-color); background: var(--surface-2);">
+                <button type="button" class="btn-primary-custom" data-bs-dismiss="modal" style="background: var(--surface-3); color: var(--text-primary); border: 1px solid var(--border-color); padding: 6px 14px; font-size: 11px;">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================================================== -->
 <!-- MODAL 6: CUSTOM CONFIRMATION MODAL                      -->
 <!-- ======================================================== -->
 <div class="modal fade" id="modalSavingsConfirm" tabindex="-1" aria-hidden="true" style="z-index: 100000;">
@@ -2609,6 +2647,11 @@ document.addEventListener('DOMContentLoaded', () => {
     loadMutualFunds();
     loadMasterCatalog();
     scheduleNightlySnapshot();
+
+    // Auto-refresh mutual funds live NAV & recalculate assets every 1 hour (3,600,000 ms)
+    setInterval(() => {
+        refreshMutualFundsLiveNav(true);
+    }, 3600000);
 
     // Close dropdowns on outside click
     document.addEventListener('click', (e) => {
@@ -3349,34 +3392,41 @@ function renderMutualFundsGrid() {
                         <div class="mf-card-title">${escapeHtml(f.fund_name)}</div>
                         <div class="mf-card-house"><i class="bi bi-building me-1"></i>${escapeHtml(f.fund_house)}</div>
                     </div>
-                    <div class="dropdown">
-                        <button class="btn btn-sm btn-icon" type="button" data-bs-toggle="dropdown" style="background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 6px; width: 28px; height: 28px; padding: 0;">
-                            <i class="bi bi-three-dots-vertical"></i>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <button class="btn btn-sm" type="button" title="Lihat Riwayat NAB & Aset" onclick="openMutualFundHistoryModal(${f.id}, '${escapeHtml(f.fund_name).replace(/'/g, "\\'")}')" style="background: rgba(59,130,246,0.12); color: #3b82f6; border: 1px solid rgba(59,130,246,0.25); border-radius: 6px; padding: 4px 8px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">
+                            <i class="bi bi-clock-history"></i> Riwayat
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="background: var(--surface-1); border: 1px solid var(--border-color); font-size: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
-                            <li><a class="dropdown-item text-primary" href="javascript:void(0)" onclick="openEditMutualFundModal(${f.id})"><i class="bi bi-pencil-square me-2"></i>Edit Reksadana</a></li>
-                            <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteMutualFund(${f.id}, '${escapeHtml(f.fund_name).replace(/'/g, "\\'")}')"><i class="bi bi-trash me-2"></i>Hapus dari Portofolio</a></li>
-                        </ul>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-icon" type="button" data-bs-toggle="dropdown" style="background: var(--surface-2); color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 6px; width: 28px; height: 28px; padding: 0;">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" style="background: var(--surface-1); border: 1px solid var(--border-color); font-size: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                                <li><a class="dropdown-item text-primary" href="javascript:void(0)" onclick="openEditMutualFundModal(${f.id})"><i class="bi bi-pencil-square me-2"></i>Edit Reksadana</a></li>
+                                <li><a class="dropdown-item text-info" href="javascript:void(0)" onclick="openMutualFundHistoryModal(${f.id}, '${escapeHtml(f.fund_name).replace(/'/g, "\\'")}')"><i class="bi bi-clock-history me-2"></i>Riwayat Perubahan NAB</a></li>
+                                <li><hr class="dropdown-divider" style="border-color: var(--border-color);"></li>
+                                <li><a class="dropdown-item text-danger" href="javascript:void(0)" onclick="deleteMutualFund(${f.id}, '${escapeHtml(f.fund_name).replace(/'/g, "\\'")}')"><i class="bi bi-trash me-2"></i>Hapus dari Portofolio</a></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Metrics Box -->
                 <div class="mf-metric-box">
                     <div class="mf-metric-row">
-                        <span class="mf-metric-label">Modal Investasi:</span>
+                        <span class="mf-metric-label">Modal Pembelian:</span>
                         <span class="mf-metric-val">${formatRupiah(f.invested_amount)}</span>
                     </div>
                     <div class="mf-metric-row">
                         <span class="mf-metric-label">Total Unit Dimiliki:</span>
-                        <span class="mf-metric-val" style="color: #3b82f6; font-family: monospace;">${parseFloat(f.units_owned).toLocaleString('id-ID', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} Unit</span>
+                        <span class="mf-metric-val" style="color: #3b82f6; font-family: monospace; font-weight: 800;">${parseFloat(f.units_owned).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 4 })} Unit</span>
                     </div>
                     <div class="mf-metric-row">
-                        <span class="mf-metric-label">NAB Beli:</span>
+                        <span class="mf-metric-label">Harga Beli (NAB Awal):</span>
                         <span class="mf-metric-val">Rp ${parseFloat(f.buy_nav).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
                     </div>
                     <div class="mf-metric-row" style="border-top: 1px dashed var(--border-color); margin-top: 3px; padding-top: 4px;">
-                        <span class="mf-metric-label">NAB Terkini:</span>
-                        <span class="mf-metric-val" style="color: var(--success);">
+                        <span class="mf-metric-label">Harga NAB Terkini (Live):</span>
+                        <span class="mf-metric-val" style="color: var(--success); font-weight: 800;">
                             Rp ${parseFloat(f.current_nav).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                             <span style="font-size: 9.5px; font-weight: 800; color: ${f.daily_change_pct >= 0 ? '#10b981' : '#ef4444'}; margin-left: 3px;">
                                 ${f.daily_change_pct >= 0 ? '+' : ''}${f.daily_change_pct}%
@@ -3387,8 +3437,13 @@ function renderMutualFundsGrid() {
 
                 <!-- Current Asset Value & PnL Highlight -->
                 <div style="background: linear-gradient(135deg, rgba(59,130,246,0.06), rgba(99,102,241,0.06)); border: 1px solid rgba(59,130,246,0.18); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 12px;">
-                    <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
-                        Nilai Investasi Saat Ini
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+                            Total Nilai Aset Saat Ini
+                        </span>
+                        <span style="font-size: 9.5px; color: var(--text-muted);">
+                            (Unit &times; NAB Saat Ini)
+                        </span>
                     </div>
                     <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 6px; margin-top: 2px;">
                         <span class="mf-val-highlight">${formatRupiah(f.current_value)}</span>
@@ -3930,11 +3985,13 @@ function deleteMutualFund(id, name) {
     });
 }
 
-async function refreshMutualFundsLiveNav() {
+async function refreshMutualFundsLiveNav(isSilent = false) {
     const btn = document.getElementById('btnRefreshMfNav');
-    const origHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Mengupdate NAB...';
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn && !isSilent) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Mengupdate NAB...';
+    }
 
     try {
         const res = await fetch('<?= BASE_URL ?>api/savings/mutual-funds/refresh-nav', {
@@ -3949,16 +4006,104 @@ async function refreshMutualFundsLiveNav() {
             mutualFundsSummary = json.summary || mutualFundsSummary;
             renderMutualFundsGrid();
             if (mutualFundsSummary) updateMutualFundsSummaryUI(mutualFundsSummary);
-            showSavingsToast('NAB Terkini Berhasil Dimuat', `Pembaruan harga NAB real-time selesai (${json.meta ? json.meta.updated_count : 0} produk)`, 'success');
-        } else {
+            if (!isSilent) {
+                showSavingsToast('NAB Terkini Berhasil Dimuat', `Pembaruan harga NAB real-time selesai (${json.meta ? json.meta.updated_count : 0} produk)`, 'success');
+            }
+        } else if (!isSilent) {
             showSavingsToast('Peringatan', json.error || 'Gagal memperbarui NAB', 'warning');
         }
     } catch (e) {
         console.error(e);
-        showSavingsToast('Error', 'Gagal memuat live NAB', 'danger');
+        if (!isSilent) {
+            showSavingsToast('Error', 'Gagal memuat live NAB', 'danger');
+        }
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = origHtml;
+        if (btn && !isSilent) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+    }
+}
+
+async function openMutualFundHistoryModal(fundId, fundName) {
+    const titleEl = document.getElementById('mfHistoryModalTitle');
+    const subEl = document.getElementById('mfHistoryModalSub');
+    const listCont = document.getElementById('mfHistoryListContainer');
+
+    if (titleEl) titleEl.textContent = `Riwayat NAB - ${fundName}`;
+    if (subEl) subEl.textContent = 'Log update otomatis setiap jam & perhitungan total aset';
+    if (listCont) {
+        listCont.innerHTML = '<div style="text-align:center;padding:25px;color:var(--text-muted);font-size:12px;"><span class="spinner-border spinner-border-sm me-1"></span> Memuat log riwayat NAB...</div>';
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('modalMutualFundHistory'));
+    modal.show();
+
+    try {
+        const res = await fetch(`<?= BASE_URL ?>api/savings/mutual-funds/${fundId}/history`);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+            listCont.innerHTML = `
+                <div class="table-responsive" style="margin: 0;">
+                    <table class="table table-sm" style="font-size: 11.5px; margin: 0; color: var(--text-primary);">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 10px; text-transform: uppercase;">
+                                <th>Waktu Update</th>
+                                <th style="text-align: right;">NAB (Harga)</th>
+                                <th style="text-align: center;">Perubahan</th>
+                                <th style="text-align: right;">Total Unit</th>
+                                <th style="text-align: right;">Total Aset (Unit &times; NAB)</th>
+                                <th style="text-align: center;">Sumber</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${json.data.map(h => {
+                                const changeSign = (h.daily_change_pct || 0) >= 0 ? '+' : '';
+                                const changeColor = (h.daily_change_pct || 0) >= 0 ? '#10b981' : '#ef4444';
+                                return `
+                                    <tr style="border-bottom: 1px solid var(--border-color); vertical-align: middle;">
+                                        <td>
+                                            <div style="font-weight: 700;">${formatIndoDate(h.nav_date)}</div>
+                                            <div style="font-size: 9.5px; color: var(--text-muted);">${(h.created_at || '').substring(11, 16)} WIB</div>
+                                        </td>
+                                        <td style="text-align: right; font-weight: 800; color: var(--text-primary);">
+                                            Rp ${parseFloat(h.nav).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                                        </td>
+                                        <td style="text-align: center;">
+                                            <span class="badge" style="background: ${changeColor}22; color: ${changeColor}; font-size: 9px; font-weight: 700;">
+                                                ${changeSign}${parseFloat(h.daily_change_pct || 0)}%
+                                            </span>
+                                        </td>
+                                        <td style="text-align: right; font-family: monospace; color: #3b82f6;">
+                                            ${parseFloat(h.total_units).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                                        </td>
+                                        <td style="text-align: right; font-weight: 800; color: var(--success);">
+                                            Rp ${Math.round(h.total_value).toLocaleString('id-ID')}
+                                        </td>
+                                        <td style="text-align: center;">
+                                            <span class="badge bg-secondary bg-opacity-15 text-muted" style="font-size: 9px;">
+                                                ${escapeHtml(h.source || 'bareksa')}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } else {
+            listCont.innerHTML = `
+                <div style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 12px;">
+                    <i class="bi bi-info-circle" style="font-size: 24px; display: block; margin-bottom: 6px; opacity: 0.5;"></i>
+                    Belum ada riwayat NAB tersimpan untuk produk ini.<br>
+                    Data akan otomatis dicatat setiap kali auto-update 1 jam atau tombol refresh NAB dijalankan.
+                </div>
+            `;
+        }
+    } catch (e) {
+        console.error(e);
+        listCont.innerHTML = '<div style="text-align:center;padding:25px;color:var(--danger);font-size:12px;">Gagal memuat riwayat NAB</div>';
     }
 }
 

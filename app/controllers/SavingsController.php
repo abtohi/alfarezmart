@@ -427,6 +427,16 @@ class SavingsController extends Controller
     public function apiGetMutualFunds()
     {
         $this->requireService('savings');
+
+        // Automatic hourly background update check (every 3600s)
+        try {
+            $settingModel = new SettingModel();
+            $lastUpdate = (int)$settingModel->get('mutual_funds_last_hourly_update', 0);
+            if (time() - $lastUpdate >= 3600) {
+                $this->savingsModel->refreshAllMutualFundsNav();
+            }
+        } catch (\Throwable $e) {}
+
         $type = $this->query('type');
         $funds = $this->savingsModel->getMutualFunds($type);
         $summary = $this->savingsModel->getMutualFundsSummary();
@@ -684,5 +694,16 @@ class SavingsController extends Controller
         } catch (\Throwable $e) {
             $this->json(['success' => false, 'error' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * API: Get NAB History for a specific fund
+     * @param int|string $id
+     */
+    public function apiGetMutualFundHistory(int|string $id)
+    {
+        $this->requireService('savings');
+        $history = $this->savingsModel->getMutualFundNavHistory((int)$id);
+        $this->json(['success' => true, 'data' => $history]);
     }
 }

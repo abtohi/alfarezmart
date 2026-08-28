@@ -89,6 +89,18 @@ class SavingsModel extends Model
                         notes TEXT,
                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )",
+                    "CREATE TABLE IF NOT EXISTS savings_mutual_fund_nav_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        fund_id INTEGER NOT NULL,
+                        fund_name TEXT NOT NULL,
+                        nav REAL NOT NULL,
+                        nav_date DATE NOT NULL,
+                        daily_change_pct REAL DEFAULT 0,
+                        total_units REAL NOT NULL DEFAULT 0,
+                        total_value REAL NOT NULL DEFAULT 0,
+                        source TEXT DEFAULT 'bareksa',
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                     )"
                 ];
             } else {
@@ -164,6 +176,20 @@ class SavingsModel extends Model
                         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                         INDEX idx_fund_type (fund_type),
                         INDEX idx_fund_house (fund_house)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+                    "CREATE TABLE IF NOT EXISTS savings_mutual_fund_nav_history (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        fund_id INT NOT NULL,
+                        fund_name VARCHAR(200) NOT NULL,
+                        nav DECIMAL(15,4) NOT NULL,
+                        nav_date DATE NOT NULL,
+                        daily_change_pct DECIMAL(8,4) DEFAULT 0,
+                        total_units DECIMAL(15,4) NOT NULL DEFAULT 0,
+                        total_value DECIMAL(15,2) NOT NULL DEFAULT 0,
+                        source VARCHAR(50) DEFAULT 'bareksa',
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_fund_id (fund_id),
+                        INDEX idx_nav_date (nav_date)
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
                 ];
             }
@@ -1183,17 +1209,23 @@ class SavingsModel extends Model
     }
 
     /**
-     * Delete Mutual Fund
+     * Delete Mutual Fund and all its historical NAV logs
      */
     public function deleteMutualFund(int $id): bool
     {
+        try {
+            $stmtHist = $this->db->prepare("DELETE FROM savings_mutual_fund_nav_history WHERE fund_id = :id");
+            $stmtHist->bindValue(':id', $id, PDO::PARAM_INT);
+            $stmtHist->execute();
+        } catch (\Throwable $e) {}
+
         $stmt = $this->db->prepare("DELETE FROM savings_mutual_funds WHERE id = :id");
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         return $stmt->execute();
     }
 
     /**
-     * Refresh Live NAV for all mutual funds in portfolio
+     * Refresh Live NAV for all mutual funds in portfolio & log to history
      */
     public function refreshAllMutualFundsNav(): array
     {
@@ -1201,32 +1233,87 @@ class SavingsModel extends Model
 
         $funds = $this->getMutualFunds();
         $updatedCount = 0;
+        $now = date('Y-m-d H:i:s');
+        $today = date('Y-m-d');
 
         foreach ($funds as $f) {
             $liveData = MutualFundService::fetchLiveNav($f['fund_name'], $f['fund_house'], (float)$f['current_nav']);
             if ($liveData['success']) {
+                $newNav = (float)$liveData['nav'];
+                $lastNav = (float)$liveData['last_nav'];
+                $changePct = (float)$liveData['change_pct'];
+                $units = (float)$f['units_owned'];
+                $totalAsset = round($units * $newNav, 2);
+
                 $stmt = $this->db->prepare("
                     UPDATE savings_mutual_funds SET 
                         current_nav = :current_nav,
                         last_nav = :last_nav,
-                        daily_change_pct = :daily_change_pct
+                        daily_change_pct = :daily_change_pct,
+                        updated_at = :updated_at
                     WHERE id = :id
                 ");
                 $stmt->bindValue(':id', $f['id'], PDO::PARAM_INT);
-                $stmt->bindValue(':current_nav', $liveData['nav']);
-                $stmt->bindValue(':last_nav', $liveData['last_nav']);
-                $stmt->bindValue(':daily_change_pct', $liveData['change_pct']);
+                $stmt->bindValue(':current_nav', $newNav);
+                $stmt->bindValue(':last_nav', $lastNav);
+                $stmt->bindValue(':daily_change_pct', $changePct);
+                $stmt->bindValue(':updated_at', $now);
                 $stmt->execute();
+
+                // Record historical NAB & Total Aset in history table
+                try {
+                    $stmtHist = $this->db->prepare("
+                        INSERT INTO savings_mutual_fund_nav_history 
+                            (fund_id, fund_name, nav, nav_date, daily_change_pct, total_units, total_value, source, created_at)
+                        VALUES 
+                            (:fund_id, :fund_name, :nav, :nav_date, :daily_change_pct, :total_units, :total_value, :source, :created_at)
+                    ");
+                    $stmtHist->bindValue(':fund_id', $f['id'], PDO::PARAM_INT);
+                    $stmtHist->bindValue(':fund_name', $f['fund_name']);
+                    $stmtHist->bindValue(':nav', $newNav);
+                    $stmtHist->bindValue(':nav_date', $today);
+                    $stmtHist->bindValue(':daily_change_pct', $changePct);
+                    $stmtHist->bindValue(':total_units', $units);
+                    $stmtHist->bindValue(':total_value', $totalAsset);
+                    $stmtHist->bindValue(':source', $liveData['source'] ?? 'bareksa');
+                    $stmtHist->bindValue(':created_at', $now);
+                    $stmtHist->execute();
+                } catch (\Throwable $te) {}
+
                 $updatedCount++;
             }
         }
+
+        // Save last sync time in settings
+        try {
+            $settingModel = new SettingModel();
+            $settingModel->set('mutual_funds_last_hourly_update', time());
+        } catch (\Throwable $se) {}
 
         return [
             'success' => true,
             'updated_count' => $updatedCount,
             'total_funds' => count($funds),
-            'timestamp' => date('Y-m-d H:i:s')
+            'timestamp' => $now,
+            'formatted_time' => date('d M Y, H:i') . ' WIB'
         ];
+    }
+
+    /**
+     * Get NAV History for a specific fund
+     */
+    public function getMutualFundNavHistory(int $fundId, int $limit = 30): array
+    {
+        $stmt = $this->db->prepare("
+            SELECT * FROM savings_mutual_fund_nav_history 
+            WHERE fund_id = :fund_id 
+            ORDER BY created_at DESC, id DESC 
+            LIMIT :lim
+        ");
+        $stmt->bindValue(':fund_id', $fundId, PDO::PARAM_INT);
+        $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**

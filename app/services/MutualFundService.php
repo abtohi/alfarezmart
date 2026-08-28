@@ -1015,6 +1015,43 @@ class MutualFundService
     }
 
     /**
+     * Dapatkan path cache JSON untuk data NAV live dinamis
+     */
+    public static function getCacheFilePath(): string
+    {
+        $dir = defined('BASE_PATH') ? BASE_PATH . '/storage' : dirname(__DIR__, 2) . '/storage';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0777, true);
+        }
+        return $dir . '/mutual_funds_nav_cache.json';
+    }
+
+    /**
+     * Baca cache JSON NAV dinamis
+     */
+    public static function getLiveNavCache(): array
+    {
+        $file = self::getCacheFilePath();
+        if (file_exists($file)) {
+            $raw = @file_get_contents($file);
+            $data = json_decode($raw, true);
+            if (is_array($data)) {
+                return $data;
+            }
+        }
+        return [];
+    }
+
+    /**
+     * Simpan cache JSON NAV dinamis
+     */
+    public static function saveLiveNavCache(array $cache): bool
+    {
+        $file = self::getCacheFilePath();
+        return @file_put_contents($file, json_encode($cache, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)) !== false;
+    }
+
+    /**
      * Dapatkan produk spesifik berdasarkan kode / nama
      */
     public static function findProduct(string $codeOrName): ?array
@@ -1032,16 +1069,114 @@ class MutualFundService
     }
 
     /**
-     * Simulasi Live Fetcher / Online NAV Fetcher dengan Multi-Source Fallback
+     * Scrape / Online Fetcher untuk NAV Reksadana dari Bareksa / Public Financial Sources
+     */
+    public static function scrapeOnlineNav(string $fundName, string $fundHouse = ''): ?array
+    {
+        $query = trim($fundName);
+        if (empty($query)) return null;
+
+        // Try HTTP request with quick timeout
+        try {
+            $cleanSlug = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $fundName));
+            $url = "https://www.bareksa.com/produk/reksadana/" . trim($cleanSlug, '-');
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept: text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8'
+            ]);
+            $res = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode >= 200 && $httpCode < 400 && !empty($res)) {
+                // Check if JSON in __NEXT_DATA__
+                if (preg_match('/<script id="__NEXT_DATA__"[^>]*>(.*?)<\/script>/s', $res, $m)) {
+                    $json = json_decode($m[1], true);
+                    $pageProps = $json['props']['pageProps'] ?? [];
+                    if (!empty($pageProps['product']['nav'])) {
+                        return [
+                            'nav' => (float)$pageProps['product']['nav'],
+                            'last_nav' => (float)($pageProps['product']['last_nav'] ?? $pageProps['product']['nav']),
+                            'change_pct' => (float)($pageProps['product']['daily_return'] ?? 0),
+                            'source' => 'bareksa_live'
+                        ];
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Silently fallback
+        }
+
+        return null;
+    }
+
+    /**
+     * Live NAV Fetcher dengan Multi-Source Dynamic Fallback & JSON Storage
      */
     public static function fetchLiveNav(string $fundName, string $fundHouse = '', ?float $currentNav = null): array
     {
-        // 1. Cek dari master catalog
+        $cache = self::getLiveNavCache();
+        $cacheKey = strtolower(trim($fundName));
+        $now = time();
+
+        // 1. Coba scrape online live terlebih dahulu
+        $scraped = self::scrapeOnlineNav($fundName, $fundHouse);
+        if ($scraped !== null && isset($scraped['nav']) && $scraped['nav'] > 0) {
+            $nav = (float)$scraped['nav'];
+            $lastNav = (float)$scraped['last_nav'];
+            $changePct = (float)$scraped['change_pct'];
+
+            $cache[$cacheKey] = [
+                'fund_name' => $fundName,
+                'fund_house' => $fundHouse,
+                'nav' => $nav,
+                'last_nav' => $lastNav,
+                'change_pct' => $changePct,
+                'source' => 'bareksa_online',
+                'updated_at' => $now,
+                'updated_at_formatted' => date('Y-m-d H:i:s')
+            ];
+            self::saveLiveNavCache($cache);
+
+            return [
+                'success' => true,
+                'fund_name' => $fundName,
+                'fund_house' => $fundHouse,
+                'nav' => $nav,
+                'last_nav' => $lastNav,
+                'change_pct' => $changePct,
+                'as_of_date' => date('Y-m-d'),
+                'source' => 'bareksa_online'
+            ];
+        }
+
+        // 2. Cek apakah ada di master catalog
         $catalogItem = self::findProduct($fundName);
         if ($catalogItem) {
             $baseNav = (float)$catalogItem['current_nav'];
             $lastNav = (float)$catalogItem['last_nav'];
             $changePct = (float)$catalogItem['one_day_return'];
+
+            // Update / simpan ke cache JSON
+            $cache[$cacheKey] = [
+                'fund_name' => $catalogItem['name'],
+                'fund_house' => $catalogItem['fund_house'],
+                'fund_type' => $catalogItem['type'],
+                'nav' => $baseNav,
+                'last_nav' => $lastNav,
+                'change_pct' => $changePct,
+                'source' => 'bareksa_catalog',
+                'updated_at' => $now,
+                'updated_at_formatted' => date('Y-m-d H:i:s')
+            ];
+            self::saveLiveNavCache($cache);
 
             return [
                 'success' => true,
@@ -1052,12 +1187,39 @@ class MutualFundService
                 'last_nav' => $lastNav,
                 'change_pct' => $changePct,
                 'as_of_date' => date('Y-m-d'),
-                'source' => 'catalog_live'
+                'source' => 'bareksa_catalog'
             ];
         }
 
-        // 2. Jika custom fund tanpa catalog, pertahankan / refresh NAV yang ada
+        // 3. Jika custom fund tanpa catalog, gunakan cache JSON jika ada
+        if (isset($cache[$cacheKey]['nav']) && $cache[$cacheKey]['nav'] > 0) {
+            return [
+                'success' => true,
+                'fund_name' => $fundName,
+                'fund_house' => $fundHouse ?: 'Manajer Investasi',
+                'fund_type' => $cache[$cacheKey]['fund_type'] ?? 'Pasar Uang',
+                'nav' => (float)$cache[$cacheKey]['nav'],
+                'last_nav' => (float)($cache[$cacheKey]['last_nav'] ?? $cache[$cacheKey]['nav']),
+                'change_pct' => (float)($cache[$cacheKey]['change_pct'] ?? 0),
+                'as_of_date' => date('Y-m-d'),
+                'source' => 'json_cache'
+            ];
+        }
+
+        // 4. Default fallback untuk custom baru
         $nav = $currentNav && $currentNav > 0 ? $currentNav : 1000.00;
+        $cache[$cacheKey] = [
+            'fund_name' => $fundName,
+            'fund_house' => $fundHouse,
+            'nav' => $nav,
+            'last_nav' => $nav,
+            'change_pct' => 0,
+            'source' => 'custom',
+            'updated_at' => $now,
+            'updated_at_formatted' => date('Y-m-d H:i:s')
+        ];
+        self::saveLiveNavCache($cache);
+
         return [
             'success' => true,
             'fund_name' => $fundName,

@@ -88,6 +88,7 @@ $router->get('/api/savings/mutual-funds/{id}', 'SavingsController@apiGetMutualFu
 $router->post('/api/savings/mutual-funds', 'SavingsController@apiCreateMutualFund');
 $router->post('/api/savings/mutual-funds/{id}/update', 'SavingsController@apiUpdateMutualFund');
 $router->post('/api/savings/mutual-funds/{id}/delete', 'SavingsController@apiDeleteMutualFund');
+$router->get('/api/savings/mutual-funds/{id}/history', 'SavingsController@apiGetMutualFundHistory');
 $router->post('/api/savings/mutual-funds/refresh-nav', 'SavingsController@apiRefreshMutualFundsNav');
 $router->get('/api/savings/ppob-balance', 'SavingsController@apiGetPpobBalance');
 
