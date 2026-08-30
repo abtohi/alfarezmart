@@ -638,12 +638,24 @@ async function scanInvoiceWithAI() {
                 if (item.is_matched && item.product_id) {
                     try {
                         let productData = item.product_data;
-                        if (!productData) {
+                        // If product_data from backend has no packagings, fetch full data
+                        if (!productData || !productData.packagings || productData.packagings.length === 0) {
                             if (typeof OfflineDB !== 'undefined') {
-                                productData = await OfflineDB.getProductById(item.product_id);
+                                const offlineData = await OfflineDB.getProductById(item.product_id);
+                                if (offlineData && offlineData.packagings && offlineData.packagings.length > 0) {
+                                    productData = offlineData;
+                                }
                             }
-                            if (!productData && navigator.onLine) {
-                                productData = await api(`${BASE_URL}api/products/${item.product_id}`);
+                            if ((!productData || !productData.packagings || productData.packagings.length === 0) && navigator.onLine) {
+                                const apiData = await api(`${BASE_URL}api/products/${item.product_id}`);
+                                if (apiData && apiData.packagings && apiData.packagings.length > 0) {
+                                    productData = apiData;
+                                }
+                            }
+                            // Merge: if we had product_data with name but no packagings, keep the name
+                            if (item.product_data && productData && productData !== item.product_data) {
+                                productData.full_name = productData.full_name || item.product_data.full_name;
+                                productData.id = productData.id || item.product_data.product_id;
                             }
                         }
 
@@ -676,14 +688,23 @@ async function scanInvoiceWithAI() {
                                 if (p.diskon_mode === undefined) p.diskon_mode = 'rp';
                                 if (p.diskon_value === undefined) p.diskon_value = 0;
                                 p.harga_nett = parseFloat(p.buy_price) || 0;
+                                // Preserve qty_prices (tier pricing) from DB — never strip them
+                                if (!p.qty_prices) p.qty_prices = [];
+                                // Ensure sell prices from DB are never blanked to 0
+                                p.sell_price_retail = parseFloat(p.sell_price_retail) || 0;
+                                p.sell_price_wholesale = parseFloat(p.sell_price_wholesale) || 0;
                             });
 
                             const unitPriceVal = scanUnitPrice > 0 ? scanUnitPrice : (scanQty > 0 ? scanTotal / scanQty : (parseFloat(selectedPkg.buy_price) || 0));
                             const totalVal = scanTotal > 0 ? scanTotal : (scanQty * unitPriceVal);
 
+                            // Get sell prices from the selected packaging (DB values), never zero them
+                            const selRetail = parseFloat(selectedPkg.sell_price_retail) || 0;
+                            const selWholesale = parseFloat(selectedPkg.sell_price_wholesale) || 0;
+
                             const newCartItem = {
                                 id: Date.now() + Math.floor(Math.random() * 1000000),
-                                product_id: productData.id,
+                                product_id: productData.id || item.product_id,
                                 name: productData.full_name || productData.short_label || productData.name,
                                 original_invoice_name: invName,
                                 supplier_code: item.supplier_code || '',
@@ -695,8 +716,8 @@ async function scanInvoiceWithAI() {
                                 unit_name: selectedPkg.unit_name,
                                 quantity: scanQty,
                                 buy_price: unitPriceVal,
-                                sell_price_retail: parseFloat(selectedPkg.sell_price_retail) || 0,
-                                sell_price_wholesale: parseFloat(selectedPkg.sell_price_wholesale) || 0,
+                                sell_price_retail: selRetail,
+                                sell_price_wholesale: selWholesale,
                                 last_buy_price: productData.last_buy_price ? parseFloat(productData.last_buy_price) : (parseFloat(clonePkgs.find(p => p.level == 1)?.buy_price) || 0),
                                 total: totalVal,
                                 ppn_pct: 0,
@@ -1524,15 +1545,65 @@ async function selectProductToLink(tempId, productId) {
         // Link product to cart item
         item.product_id = productData.id;
         item.name = productData.full_name || productData.short_label || productData.name;
-        item.packagings = productData.packagings;
         item.is_unmatched = false;
         item.last_buy_price = productData.last_buy_price ? parseFloat(productData.last_buy_price) : 0;
 
+        // Clone and sanitize packagings
+        let runningBaseQty = 1;
+        const clonePkgs = JSON.parse(JSON.stringify(productData.packagings));
+        clonePkgs.sort((a, b) => a.level - b.level).forEach(p => {
+            const cqty = parseFloat(p.contained_qty) || 1;
+            if (p.level == 1) {
+                p.base_qty = 1;
+                p.contained_qty = 1;
+                runningBaseQty = 1;
+            } else {
+                if (!p.base_qty || (p.base_qty <= 1 && cqty > 1)) {
+                    p.base_qty = runningBaseQty * cqty;
+                } else if (!p.contained_qty || p.contained_qty <= 1) {
+                    p.contained_qty = (runningBaseQty > 0) ? (p.base_qty / runningBaseQty) : p.base_qty;
+                }
+                runningBaseQty = parseFloat(p.base_qty) || runningBaseQty;
+            }
+            if (p.ppn_pct === undefined) p.ppn_pct = item.ppn_pct || 0;
+            if (p.diskon_mode === undefined) p.diskon_mode = item.diskon_mode || 'rp';
+            if (p.diskon_value === undefined) p.diskon_value = item.diskon_value || 0;
+            p.harga_nett = parseFloat(p.buy_price) || 0;
+            // PRESERVE tier pricing (qty_prices) from DB — never wipe them
+            if (!p.qty_prices) p.qty_prices = [];
+            // PRESERVE sell prices from DB
+            p.sell_price_retail = parseFloat(p.sell_price_retail) || 0;
+            p.sell_price_wholesale = parseFloat(p.sell_price_wholesale) || 0;
+        });
+        item.packagings = clonePkgs;
+
         // Pick matching packaging level
-        let selectedPkg = productData.packagings.find(p => p.unit_name && item.unit_name && p.unit_name.toLowerCase().includes(item.unit_name.toLowerCase()));
-        if (!selectedPkg) selectedPkg = productData.packagings[0];
+        let selectedPkg = clonePkgs.find(p => p.unit_name && item.unit_name && p.unit_name.toLowerCase().includes(item.unit_name.toLowerCase()));
+        if (!selectedPkg) selectedPkg = clonePkgs[0];
         item.level = selectedPkg.level;
         item.unit_name = selectedPkg.unit_name;
+
+        // Preserve buy_price if already set from scan or manual edit, otherwise take from DB
+        const currentBuyPrice = parseFloat(item.buy_price) || 0;
+        const currentTotal = parseFloat(item.total) || 0;
+        const qty = parseFloat(item.quantity) || 1;
+
+        if (currentBuyPrice > 0) {
+            selectedPkg.buy_price = currentBuyPrice;
+        } else if (currentTotal > 0 && qty > 0) {
+            selectedPkg.buy_price = currentTotal / qty;
+            item.buy_price = selectedPkg.buy_price;
+        } else {
+            item.buy_price = parseFloat(selectedPkg.buy_price) || 0;
+            item.total = qty * item.buy_price;
+        }
+
+        // Set sell prices from DB (never overwrite with 0)
+        item.sell_price_retail = parseFloat(selectedPkg.sell_price_retail) || 0;
+        item.sell_price_wholesale = parseFloat(selectedPkg.sell_price_wholesale) || 0;
+
+        // Propagate buy_price and netts across all packaging levels
+        propagateFromMainInputs(item);
 
         // Auto learn alias to backend memory (saves to products.supplier_invoice_name)
         const invoiceAliasToLearn = (item.original_invoice_name || item.name || '').trim();
@@ -2910,10 +2981,16 @@ function buildMiniPricingTableHtml(item) {
             ? `<div style="font-size:8px;color:var(--text-muted);">(${breakdownParts.join(' ')})</div>` 
             : '';
 
+        const tiers = pkg.qty_prices || [];
+        const tierBadge = tiers.length > 0
+            ? `<span style="font-size:8px;background:rgba(76,201,240,0.15);color:var(--info);padding:1px 5px;border-radius:4px;margin-left:3px;font-weight:700;display:inline-block;" title="${tiers.map(t=>`Min ${t.min_qty} ${pkg.unit_name}: Rp${Math.round(parseFloat(t.unit_price)||0).toLocaleString('id-ID')}`).join('\n')}"><i class="bi bi-layers"></i> ${tiers.length} Tier</span>`
+            : '';
+
         return `<tr style="${isSelected ? 'background:rgba(230,57,70,0.08);' : ''}">
             <td style="padding:5px 6px;font-size:10px;font-weight:600;color:${isSelected ? 'var(--primary)' : 'var(--text-muted)'}">
                 ${isSelected ? '<i class="bi bi-arrow-right-short"></i>' : ''} ${pkg.unit_name}
                 <span style="font-size:9px;font-weight:400;color:var(--text-muted);">×${pkg.base_qty}</span>
+                ${tierBadge}
             </td>
             <td style="padding:5px 6px;font-size:10px;text-align:right;">
                 <span style="font-weight:700;">${nett > 0 ? 'Rp' + Math.round(nett).toLocaleString('id-ID') : '—'}</span>
@@ -2930,6 +3007,22 @@ function buildMiniPricingTableHtml(item) {
         </tr>`;
     }).join('');
 
+    // Check if any packaging has tiers
+    let tierSummaryList = [];
+    item.packagings.forEach(p => {
+        (p.qty_prices || []).forEach(t => {
+            const uPrice = parseFloat(t.unit_price) || 0;
+            const modeLbl = t.sale_mode === 'retail' ? 'Ecer' : t.sale_mode === 'wholesale' ? 'Grosir' : 'E+G';
+            tierSummaryList.push(`<strong>${p.unit_name} &ge;${t.min_qty}</strong>: <span style="color:var(--info);">Rp${Math.round(uPrice).toLocaleString('id-ID')}</span> <span style="font-size:8px;opacity:0.8;">(${modeLbl})</span>`);
+        });
+    });
+
+    const tierFooter = tierSummaryList.length > 0 ? `
+        <div style="padding:5px 8px;background:rgba(76,201,240,0.06);border-top:1px dashed rgba(76,201,240,0.2);font-size:9.5px;color:var(--text-muted);display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+            <span style="color:var(--info);font-weight:700;"><i class="bi bi-layers"></i> Harga Tier:</span>
+            ${tierSummaryList.join('<span style="opacity:0.4;">|</span>')}
+        </div>` : '';
+
     return `<div style="margin-top:10px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid rgba(255,255,255,0.06);">
         <table style="width:100%;border-collapse:collapse;">
             <thead>
@@ -2942,6 +3035,7 @@ function buildMiniPricingTableHtml(item) {
             </thead>
             <tbody>${rows}</tbody>
         </table>
+        ${tierFooter}
     </div>`;
 }
 

@@ -310,6 +310,16 @@ class InvoiceScanService
 
                 if ($aliasResult !== null) {
                     // Fast path: learned alias matched
+                    // Enrich aliasResult with full packagings (including prices & tiers)
+                    $enrichedProductData = $aliasResult;
+                    $productPackagings = [];
+                    if (!empty($aliasResult['product_id'])) {
+                        $productPackagings = $this->getProductPackagings($aliasResult['product_id']);
+                        if (!empty($productPackagings)) {
+                            $enrichedProductData['packagings'] = $productPackagings;
+                        }
+                    }
+
                     $mergedItem = array_merge($item, [
                         'product_id'              => $aliasResult['product_id'],
                         'product_name'            => $aliasResult['full_name'],
@@ -317,21 +327,18 @@ class InvoiceScanService
                         'match_score'             => $aliasResult['match_score'],
                         'match_strategy'          => $aliasResult['match_type'],
                         'matched_packaging_level' => 1,
-                        'product_data'            => $aliasResult,
+                        'product_data'            => $enrichedProductData,
                     ]);
 
                     // Determine packaging level using skill
                     $unitPrice = (float)($item['unit_price'] ?? 0);
                     $unit = $item['unit'] ?? '';
-                    if (!empty($aliasResult['product_id'])) {
-                        $productPackagings = $this->getProductPackagings($aliasResult['product_id']);
-                        if (!empty($productPackagings)) {
-                            $pkgDecision = $skill->determinePackagingLevel(
-                                $unitPrice, $productPackagings, $unit,
-                                $aliasResult['last_buy_price'] ?? null
-                            );
-                            $mergedItem['matched_packaging_level'] = $pkgDecision['level'] ?? 1;
-                        }
+                    if (!empty($productPackagings)) {
+                        $pkgDecision = $skill->determinePackagingLevel(
+                            $unitPrice, $productPackagings, $unit,
+                            $aliasResult['last_buy_price'] ?? null
+                        );
+                        $mergedItem['matched_packaging_level'] = $pkgDecision['level'] ?? 1;
                     }
 
                     $scoredItem = $this->scorer->score($mergedItem);
@@ -436,6 +443,7 @@ class InvoiceScanService
 
     /**
      * Get packagings for a specific product (for alias-matched items).
+     * Includes qty_prices (tier pricing) for each packaging.
      */
     private function getProductPackagings(int $productId): array
     {
@@ -449,7 +457,40 @@ class InvoiceScanService
                 ORDER BY pp.level ASC
             ");
             $stmt->execute([$productId]);
-            return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+            $packagings = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+            // Attach qty_prices (tier pricing) for each packaging
+            if (!empty($packagings)) {
+                $pkgIds = array_filter(array_column($packagings, 'id'));
+                if (!empty($pkgIds)) {
+                    try {
+                        $in = implode(',', array_map('intval', $pkgIds));
+                        $tierStmt = $this->db->query("
+                            SELECT id, packaging_id, min_qty, unit_price, sale_mode, label, sort_order
+                            FROM product_qty_prices
+                            WHERE packaging_id IN ($in)
+                            ORDER BY min_qty ASC, sort_order ASC
+                        ");
+                        $tiers = $tierStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                        $tiersByPkg = [];
+                        foreach ($tiers as $t) {
+                            $tiersByPkg[(int)$t['packaging_id']][] = $t;
+                        }
+                        foreach ($packagings as &$pkg) {
+                            $pkg['qty_prices'] = $tiersByPkg[(int)($pkg['id'] ?? 0)] ?? [];
+                        }
+                        unset($pkg);
+                    } catch (\Throwable $te) {
+                        // qty_prices table may not exist yet — non-fatal
+                        foreach ($packagings as &$pkg) {
+                            $pkg['qty_prices'] = [];
+                        }
+                        unset($pkg);
+                    }
+                }
+            }
+
+            return $packagings;
         } catch (\Throwable $e) {
             return [];
         }
