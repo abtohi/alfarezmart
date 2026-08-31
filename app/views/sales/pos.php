@@ -597,8 +597,8 @@ async function preloadPosCatalog() {
     const POS_CACHE_VER_KEY = 'pos_catalog_cache_ver';
     const CURRENT_POS_CACHE_VER = 'v25.10_baseqty';
 
-    // Invalidate stale local catalog cache if version changed
-    if (localStorage.getItem(POS_CACHE_VER_KEY) !== CURRENT_POS_CACHE_VER) {
+    // Invalidate stale local catalog cache ONLY when online so offline mode never loses data
+    if (navigator.onLine && localStorage.getItem(POS_CACHE_VER_KEY) !== CURRENT_POS_CACHE_VER) {
         try {
             localStorage.removeItem('pos_catalog_cache');
             localStorage.removeItem(POS_LAST_SYNC_KEY);
@@ -612,14 +612,14 @@ async function preloadPosCatalog() {
         const cached = localStorage.getItem('pos_catalog_cache');
         if (cached) {
             const parsed = JSON.parse(cached);
-            if (Array.isArray(parsed)) {
+            if (Array.isArray(parsed) && parsed.length > 0) {
                 window._posProductsCatalog = parsed.filter(p => p.is_available != 0 && p.is_available !== '0' && p.is_available !== false);
             }
         }
     } catch(e) {}
 
     // 2. Load from Dexie IndexedDB if localStorage is still empty
-    if (window._posProductsCatalog.length === 0 && typeof db !== 'undefined' && db.products) {
+    if ((!window._posProductsCatalog || window._posProductsCatalog.length === 0) && typeof db !== 'undefined' && db.products) {
         try {
             const dbItems = await db.products.filter(p => p.is_available != 0 && p.is_available !== '0' && p.is_available !== false).toArray();
             if (dbItems && dbItems.length > 0) {
@@ -630,7 +630,7 @@ async function preloadPosCatalog() {
 
     // 3. Fetch fresh catalog from server (throttled to 10 mins if local data already present)
     const lastSyncTime = parseInt(localStorage.getItem(POS_LAST_SYNC_KEY) || '0', 10);
-    const hasLocalCatalog = window._posProductsCatalog.length > 0;
+    const hasLocalCatalog = window._posProductsCatalog && window._posProductsCatalog.length > 0;
     const shouldFetch = !hasLocalCatalog || (Date.now() - lastSyncTime > 600000); // 10 minutes
 
     if (navigator.onLine && shouldFetch) {
@@ -688,10 +688,6 @@ async function preloadPosCatalog() {
     }
 }
 
-let _posSearchDebounceTimer = null;
-
-// ── Barcode Scanner Detection ──────────────────────────────────────────────────
-// Physical barcode scanners send characters in < 30ms bursts.
 let _posSearchDebounceTimer = null;
 
 function initPosSearch() {
@@ -797,7 +793,7 @@ function findMatchedLevelForBarcode(product, q) {
 async function processBarcodeScan(q, inpEl, sugEl, fromScanner) {
     if (!q) return;
     q = q.trim();
-    if (fromScanner === undefined) fromScanner = _posFromScanner;
+    if (fromScanner === undefined) fromScanner = false;
     
     // Prevent duplicate scan of the same code within 350ms
     const now = Date.now();
@@ -838,26 +834,28 @@ async function processBarcodeScan(q, inpEl, sugEl, fromScanner) {
         return;
     }
 
-    // 2. Fallback network search with 5s timeout
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}?pos=1`, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (resp.ok) {
-            result = await resp.json();
-            if (result && result.id) {
-                if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
-                const matchedLevel = findMatchedLevelForBarcode(result, q);
-                addProductToCart(result, matchedLevel);
-                // Input was already cleared before this async call; ensure clean state
-                if (inpEl) inpEl.value = '';
-                if (sugEl) sugEl.innerHTML = '';
-                if (inpEl) inpEl.focus();
-                return;
+    // 2. Fallback network search with 5s timeout (only if online)
+    if (navigator.onLine) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            const resp = await fetch(`${BASE_URL}api/products/barcode/${encodeURIComponent(q)}?pos=1`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (resp.ok) {
+                result = await resp.json();
+                if (result && result.id) {
+                    if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
+                    const matchedLevel = findMatchedLevelForBarcode(result, q);
+                    addProductToCart(result, matchedLevel);
+                    // Ensure clean state
+                    if (inpEl) inpEl.value = '';
+                    if (sugEl) sugEl.innerHTML = '';
+                    if (inpEl) inpEl.focus();
+                    return;
+                }
             }
-        }
-    } catch(e) {}
+        } catch(e) {}
+    }
 
     // ── Barcode not found ─────────────────────────────────────────────────────
     // Keep user's keyword intact and trigger text search suggestions
@@ -887,6 +885,19 @@ async function performSearch(q) {
     const words = q.split(/\s+/).filter(w => w.length > 0);
 
     // ── STEP 1: Search In-Memory / IndexedDB Catalog INSTANTLY (0 Milidetik) ─────────
+    // Lazy-load local catalog if in-memory array is empty
+    if (!window._posProductsCatalog || window._posProductsCatalog.length === 0) {
+        try {
+            const cached = localStorage.getItem('pos_catalog_cache');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    window._posProductsCatalog = parsed.filter(p => p.is_available != 0 && p.is_available !== '0' && p.is_available !== false);
+                }
+            }
+        } catch(e) {}
+    }
+
     let items = [];
     if (window._posProductsCatalog && window._posProductsCatalog.length > 0) {
         const scored = [];
@@ -1047,11 +1058,30 @@ async function performSearch(q) {
         items = scored.slice(0, 50).map(r => r.item);
     }
 
+    // Direct OfflineDB fallback if local in-memory was empty
+    if (items.length === 0 && typeof OfflineDB !== 'undefined' && typeof OfflineDB.searchProducts === 'function') {
+        try {
+            const offlineMatches = await OfflineDB.searchProducts(q, true);
+            if (Array.isArray(offlineMatches) && offlineMatches.length > 0) {
+                items = offlineMatches;
+            }
+        } catch(e) {}
+    }
+
     // Render local results IMMEDIATELY (0ms delay!)
     if (items.length > 0) {
         renderPosSearchSuggestions(sug, items, q);
     } else {
+        if (!navigator.onLine) {
+            sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Tidak ada produk ditemukan (Offline)</div>';
+            return;
+        }
         sug.innerHTML = '<div style="padding:12px;text-align:center;color:#999;">Mencari...</div>';
+    }
+
+    // If device is offline, stop here completely — no network fetch needed
+    if (!navigator.onLine) {
+        return;
     }
 
     // ── STEP 2: Background Server Fetch (Non-blocking with Signal-Aware Abort Timeout) ──
