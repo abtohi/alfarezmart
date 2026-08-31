@@ -447,20 +447,24 @@ function updateCartItemDom(item) {
     // Update custom markup info
     const markupEl = row.querySelector('.cart-custom-markup');
     if (markupEl) {
-        if (item.use_custom_price) {
+        if (item.use_custom_price && !item.is_custom) {
             const curPkg = item.packagings?.find(p => p.level == item.level);
             const buyPrice = parseFloat(curPkg?.buy_price) || 0;
             if (buyPrice > 0 && item.custom_line_total !== null && item.custom_line_total !== '') {
                 const customUnitPrice = parseFloat(item.custom_line_total) / item.quantity;
-                const profitPerUnit = customUnitPrice - buyPrice;
-                const totalProfit = parseFloat(item.custom_line_total) - (buyPrice * item.quantity);
-                const markupPct = (profitPerUnit / buyPrice * 100).toFixed(1);
-                
-                let color = profitPerUnit >= 0 ? 'var(--success)' : 'var(--danger)';
-                let icon = profitPerUnit >= 0 ? '<i class="bi bi-arrow-up-right"></i>' : '<i class="bi bi-arrow-down-right"></i>';
-                
-                markupEl.innerHTML = `<div style="color:${color};"><span style="color:var(--text-muted);font-weight:400;">M:</span> ${icon} ${markupPct}% &nbsp;|&nbsp; <span style="color:var(--text-muted);font-weight:400;">S:</span> ${formatRupiah(profitPerUnit)} &nbsp;|&nbsp; <span style="color:var(--text-muted);font-weight:400;">P:</span> ${formatRupiah(totalProfit)}</div>`;
-                markupEl.style.display = 'block';
+                if (customUnitPrice > 0) {
+                    const profitPerUnit = customUnitPrice - buyPrice;
+                    const totalProfit = parseFloat(item.custom_line_total) - (buyPrice * item.quantity);
+                    const markupPct = (profitPerUnit / buyPrice * 100).toFixed(1);
+                    
+                    let color = profitPerUnit >= 0 ? 'var(--success)' : 'var(--danger)';
+                    let icon = profitPerUnit >= 0 ? '<i class="bi bi-arrow-up-right"></i>' : '<i class="bi bi-arrow-down-right"></i>';
+                    
+                    markupEl.innerHTML = `<div style="color:${color};"><span style="color:var(--text-muted);font-weight:400;">M:</span> ${icon} ${markupPct}% &nbsp;|&nbsp; <span style="color:var(--text-muted);font-weight:400;">S:</span> ${formatRupiah(profitPerUnit)} &nbsp;|&nbsp; <span style="color:var(--text-muted);font-weight:400;">P:</span> ${formatRupiah(totalProfit)}</div>`;
+                    markupEl.style.display = 'block';
+                } else {
+                    markupEl.style.display = 'none';
+                }
             } else {
                 markupEl.style.display = 'none';
             }
@@ -1352,10 +1356,16 @@ function calculateTotal() {
     let mixTotalDiscount = 0;
     cart.forEach(i => {
         sum += i.total;
-        const curPkg = i.packagings?.find(p => p.level == i.level);
-        const buyPrice = parseFloat(curPkg?.buy_price) || 0;
-        if (buyPrice > 0) {
-            profit += i.total - (buyPrice * i.quantity);
+        if (!i.is_custom) {
+            const curPkg = i.packagings?.find(p => p.level == i.level);
+            const buyPrice = parseFloat(curPkg?.buy_price) || 0;
+            const unitPrice = i.quantity > 0 ? (i.total / i.quantity) : 0;
+            if (buyPrice > 0 && unitPrice > 0 && i.total > 0) {
+                const itemProfit = i.total - (buyPrice * i.quantity);
+                if (itemProfit > 0) {
+                    profit += itemProfit;
+                }
+            }
         }
         // Sum up mix discounts (retail_total - actual_total when defaultEcer & override=Grosir)
         if (saleMode === 'mix' && i._retail_total != null && i._retail_total > i.total) {
@@ -1423,11 +1433,12 @@ function renderCart() {
 
         // Harga modal samar & profit item
         const curPkg = item.packagings?.find(p => p.level == item.level);
-        const buyPrice = parseFloat(curPkg?.buy_price) || 0;
-        const profitItem = buyPrice > 0 ? item.total - (buyPrice * item.quantity) : 0;
-        const profitPerUnit = buyPrice > 0 ? (item.total / item.quantity) - buyPrice : 0;
-        const buyPriceBlock = buyPrice > 0
-            ? `<div style="font-size:10px;color:var(--text-muted);margin-top:4px;letter-spacing:0.3px;display:flex;flex-wrap:wrap;gap:6px;"><span>M: ${formatRupiah(buyPrice)}</span> &middot; <span style="color:${profitPerUnit >= 0 ? 'var(--success)' : 'var(--danger)'}">P: ${formatRupiah(profitPerUnit)}/satuan</span> &middot; <span style="color:${profitItem >= 0 ? 'var(--success)' : 'var(--danger)'}">Total P: ${formatRupiah(profitItem)}</span></div>`
+        const buyPrice = (!item.is_custom) ? (parseFloat(curPkg?.buy_price) || 0) : 0;
+        const unitPrice = item.quantity > 0 ? (item.total / item.quantity) : 0;
+        const profitItem = (!item.is_custom && buyPrice > 0 && unitPrice > 0) ? (item.total - (buyPrice * item.quantity)) : 0;
+        const profitPerUnit = (!item.is_custom && buyPrice > 0 && unitPrice > 0) ? (unitPrice - buyPrice) : 0;
+        const buyPriceBlock = (!item.is_custom && buyPrice > 0)
+            ? `<div style="font-size:10px;color:var(--text-muted);margin-top:4px;letter-spacing:0.3px;display:flex;flex-wrap:wrap;gap:6px;"><span>M: ${formatRupiah(buyPrice)}</span> &middot; <span style="color:${profitPerUnit > 0 ? 'var(--success)' : 'var(--text-muted)'}">P: ${formatRupiah(profitPerUnit > 0 ? profitPerUnit : 0)}/satuan</span> &middot; <span style="color:${profitItem > 0 ? 'var(--success)' : 'var(--text-muted)'}">Total P: ${formatRupiah(profitItem > 0 ? profitItem : 0)}</span></div>`
             : '';
 
         // Gambar produk (thumbnail)

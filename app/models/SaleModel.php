@@ -3,6 +3,38 @@ class SaleModel extends Model
 {
     protected $table = 'sale_transactions';
 
+    public function __construct()
+    {
+        parent::__construct();
+        $this->ensureProfitIntegrity();
+    }
+
+    /**
+     * Fix legacy profit discrepancies in sale_items:
+     * 1. Custom items (custom_name IS NOT NULL or product_id matches placeholder) have profit = 0
+     * 2. Items with unit_price = 0 or profit < 0 when unit_price <= 0 have profit = 0
+     */
+    public function ensureProfitIntegrity(): void
+    {
+        try {
+            // Set profit = 0 for custom items
+            $this->db->exec("UPDATE sale_items SET profit = 0 WHERE custom_name IS NOT NULL AND custom_name != ''");
+            
+            // Set profit = 0 for placeholder custom product
+            $this->db->exec("
+                UPDATE sale_items si 
+                JOIN products p ON si.product_id = p.id 
+                SET si.profit = 0 
+                WHERE p.product_code = 'CUSTOM'
+            ");
+
+            // Set profit = 0 for items where unit_price is 0 or null and profit < 0
+            $this->db->exec("UPDATE sale_items SET profit = 0 WHERE (unit_price = 0 OR unit_price IS NULL) AND profit < 0");
+        } catch (\Exception $e) {
+            error_log("[SaleModel] ensureProfitIntegrity error: " . $e->getMessage());
+        }
+    }
+
     public function createWithDetails(array $data, array $items)
     {
         try {
@@ -51,6 +83,9 @@ class SaleModel extends Model
             ");
 
             foreach ($items as $item) {
+                $unitPrice = floatval($item['unit_price'] ?? 0);
+                $quantity = floatval($item['quantity'] ?? 0);
+
                 if (!empty($item['is_custom'])) {
                     // Resolve placeholder product and packaging
                     $placeholder = $this->getPlaceholderProductAndPackaging();
@@ -58,16 +93,16 @@ class SaleModel extends Model
                     $pkgId = $placeholder['packaging_id'];
                     $customName = $item['custom_name'] ?? 'Barang Custom';
                     $customUnit = $item['custom_unit'] ?? 'Pcs';
-                    $profit = $item['quantity'] * $item['unit_price']; // since custom item buy price is 0
+                    $profit = 0; // Custom item profit is always 0
 
                     // Insert sale item
                     $stmtItem->execute([
                         ':tid' => $transactionId,
                         ':prod_id' => $productId,
                         ':pkg_id' => $pkgId,
-                        ':qty' => $item['quantity'],
-                        ':price' => $item['unit_price'],
-                        ':total' => $item['quantity'] * $item['unit_price'],
+                        ':qty' => $quantity,
+                        ':price' => $unitPrice,
+                        ':total' => $quantity * $unitPrice,
                         ':profit' => $profit,
                         ':custom_name' => $customName,
                         ':custom_unit' => $customUnit
@@ -87,22 +122,20 @@ class SaleModel extends Model
                     throw new Exception("Kemasan level {$item['level']} tidak ditemukan untuk produk {$item['product_id']}");
                 }
                 $multiplier = (int)$pkg['base_qty'];
-                
                 $pkgId = $pkg['id'];
                 
-                // Calculate profit
-                // profit = (unit_price - buy_price) * quantity
-                $buyPrice = $pkg['buy_price'];
-                $profit = ($item['unit_price'] - $buyPrice) * $item['quantity'];
+                // Calculate profit: non-negative when unit_price <= 0
+                $buyPrice = floatval($pkg['buy_price'] ?? 0);
+                $profit = ($unitPrice > 0) ? max(0, ($unitPrice - $buyPrice) * $quantity) : 0;
 
                 // Insert sale item
                 $stmtItem->execute([
                     ':tid' => $transactionId,
                     ':prod_id' => $item['product_id'],
                     ':pkg_id' => $pkgId,
-                    ':qty' => $item['quantity'],
-                    ':price' => $item['unit_price'],
-                    ':total' => $item['quantity'] * $item['unit_price'],
+                    ':qty' => $quantity,
+                    ':price' => $unitPrice,
+                    ':total' => $quantity * $unitPrice,
                     ':profit' => $profit,
                     ':custom_name' => null,
                     ':custom_unit' => null
@@ -548,21 +581,24 @@ class SaleModel extends Model
             ");
 
             foreach ($items as $item) {
+                $unitPrice = floatval($item['unit_price'] ?? 0);
+                $quantity = floatval($item['quantity'] ?? 0);
+
                 if (!empty($item['is_custom'])) {
                     $placeholder = $this->getPlaceholderProductAndPackaging();
                     $productId = $placeholder['product_id'];
                     $pkgId = $placeholder['packaging_id'];
                     $customName = $item['custom_name'] ?? 'Barang Custom';
                     $customUnit = $item['custom_unit'] ?? 'Pcs';
-                    $profit = $item['quantity'] * $item['unit_price'];
+                    $profit = 0; // Custom item profit is always 0
 
                     $stmtItem->execute([
                         ':tid' => $id,
                         ':prod_id' => $productId,
                         ':pkg_id' => $pkgId,
-                        ':qty' => $item['quantity'],
-                        ':price' => $item['unit_price'],
-                        ':total' => $item['quantity'] * $item['unit_price'],
+                        ':qty' => $quantity,
+                        ':price' => $unitPrice,
+                        ':total' => $quantity * $unitPrice,
                         ':profit' => $profit,
                         ':custom_name' => $customName,
                         ':custom_unit' => $customUnit
@@ -581,16 +617,17 @@ class SaleModel extends Model
                 $multiplier = (int)$pkg['base_qty'];
                 $pkgId = $pkg['id'];
                 
-                $buyPrice = $pkg['buy_price'];
-                $profit = ($item['unit_price'] - $buyPrice) * $item['quantity'];
+                // Calculate profit: non-negative when unit_price <= 0
+                $buyPrice = floatval($pkg['buy_price'] ?? 0);
+                $profit = ($unitPrice > 0) ? max(0, ($unitPrice - $buyPrice) * $quantity) : 0;
 
                 $stmtItem->execute([
                     ':tid' => $id,
                     ':prod_id' => $item['product_id'],
                     ':pkg_id' => $pkgId,
-                    ':qty' => $item['quantity'],
-                    ':price' => $item['unit_price'],
-                    ':total' => $item['quantity'] * $item['unit_price'],
+                    ':qty' => $quantity,
+                    ':price' => $unitPrice,
+                    ':total' => $quantity * $unitPrice,
                     ':profit' => $profit,
                     ':custom_name' => null,
                     ':custom_unit' => null

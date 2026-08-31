@@ -64,14 +64,14 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     <h3 style="font-size:var(--font-size-md); font-weight:600; margin-bottom:12px;">Daftar Item</h3>
     <div style="background:var(--surface-1); border-radius:var(--radius-lg); overflow:hidden; border:1px solid var(--border-color); margin-bottom:16px;">
         <?php foreach ($sale['items'] as $item): 
+            $isCustom   = !empty($item['custom_name']);
             $buyPrice   = (float)($item['buy_price'] ?? 0);
             $unitPrice  = (float)($item['unit_price'] ?? 0);
             $qty        = (int)($item['quantity'] ?? 1);
-            $totalModal = $buyPrice * $qty;
-            $selisih    = $unitPrice - $buyPrice;
-            $markup     = $buyPrice > 0 ? ($selisih / $buyPrice) * 100 : ($unitPrice > 0 ? 100 : 0);
-            $itemProfit = $selisih * $qty;
-            $isCustom   = !empty($item['custom_name']);
+            $totalModal = $isCustom ? 0 : ($buyPrice * $qty);
+            $selisih    = ($isCustom || $unitPrice <= 0) ? 0 : ($unitPrice - $buyPrice);
+            $markup     = (!$isCustom && $buyPrice > 0 && $unitPrice > 0) ? (($selisih / $buyPrice) * 100) : 0;
+            $itemProfit = ($isCustom || $unitPrice <= 0) ? 0 : ($selisih * $qty);
         ?>
             <div style="padding:12px 16px; border-bottom:1px solid var(--border-color);">
                 <!-- Item name & total -->
