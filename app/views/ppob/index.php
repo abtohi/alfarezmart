@@ -336,6 +336,42 @@
 @media (max-width: 400px) {
     .sh-cat-items-grid { grid-template-columns: 1fr; }
 }
+
+/* Privacy Modal Shadow Price Badge (anti-intip) */
+.ppob-modal-shadow-wrap {
+    display: inline-flex;
+    align-items: center;
+}
+.ppob-modal-shadow-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(148, 163, 184, 0.08);
+    border: 1px dashed rgba(148, 163, 184, 0.35);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted, #94a3b8);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.25s ease;
+}
+.ppob-modal-shadow-badge .ppob-modal-shadow-text {
+    filter: blur(4px);
+    text-shadow: 0 0 8px rgba(148, 163, 184, 0.9);
+    transition: filter 0.2s ease, text-shadow 0.2s ease, color 0.2s ease;
+}
+.ppob-modal-shadow-badge:hover .ppob-modal-shadow-text,
+.ppob-modal-shadow-badge:active .ppob-modal-shadow-text {
+    filter: blur(0);
+    text-shadow: none;
+    color: var(--text-primary, #ffffff);
+}
+.ppob-modal-shadow-badge:hover {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: var(--primary, #3b82f6);
+    color: var(--primary, #3b82f6);
+}
 </style>
 
 <div class="modal fade" id="sellerHistoryModal" tabindex="-1" aria-modal="true" role="dialog" style="z-index: 1060;">
@@ -5572,17 +5608,119 @@ let REQUIRE_PIN_ACTIVE = REQUIRE_PIN;
 // Global variable for polling
 let autoPollInterval = null;
 
+// Helper: Update selling price and profit of a transaction in database and product catalog
+async function updatePpobTransactionPrice(refId, sellPrice, sku = '') {
+    if (sku && sellPrice > 0) {
+        savePpobSellPrice(sku, sellPrice);
+    }
+    if (refId) {
+        try {
+            await fetch('<?= BASE_URL ?>api/ppob/transaction/update-price', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ref_id: refId, sell_price: sellPrice, sku: sku})
+            });
+        } catch(e) {
+            console.error('Failed to update transaction price in database', e);
+        }
+    }
+}
+
+// Helper: Render Result Modal Price based on status, modal price, and selling price
+function renderResultModalPriceDisplay(modalPrice, sellPrice, status = 'pending') {
+    const isPending = (status === 'pending' || status === 'processing');
+    const isSuccess = (status === 'success' || status === 'sukses');
+    const priceEl = document.getElementById('result-price');
+    if (!priceEl) return;
+
+    modalPrice = parseInt(modalPrice || 0, 10);
+    sellPrice = parseInt(sellPrice || 0, 10);
+
+    if (isPending) {
+        if (sellPrice <= 0) {
+            // Sedang Diproses & Belum ada harga jual:
+            // Tampilkan harga modal bentuk shadow kecil agar tidak diintip pembeli
+            priceEl.innerHTML = `
+                <div class="d-flex flex-column align-items-end" style="gap:2px;">
+                    <div class="ppob-modal-shadow-wrap" title="Harga modal (Klik/Arahkan kursor untuk melihat)">
+                        <span class="ppob-modal-shadow-badge">
+                            <i class="bi bi-shield-lock me-1" style="font-size:10px;"></i><span class="ppob-modal-shadow-text">Modal: ${formatRp(modalPrice)}</span>
+                        </span>
+                    </div>
+                    <span class="text-warning fw-semibold" style="font-size:10.5px;">Harga jual belum diatur</span>
+                </div>
+            `;
+        } else {
+            // Sedang Diproses & Sudah ada harga jual:
+            // Tampilkan harga jual DAN harga modal tetap ditampilkan
+            priceEl.innerHTML = `
+                <div class="d-flex flex-column align-items-end" style="gap:2px;">
+                    <span class="fw-bold text-primary" style="font-size:15px;">${formatRp(sellPrice)}</span>
+                    <span class="text-muted" style="font-size:11px; font-weight:600;"><i class="bi bi-tag me-1"></i>Modal: ${formatRp(modalPrice)}</span>
+                </div>
+            `;
+        }
+    } else if (isSuccess) {
+        if (sellPrice <= 0) {
+            // Sukses & Belum ada harga jual:
+            // Tampilkan status belum diatur DAN harga modal tetap ditampilkan
+            priceEl.innerHTML = `
+                <div class="d-flex flex-column align-items-end" style="gap:2px;">
+                    <span class="text-warning fw-bold" style="font-size:14px;">Belum Diatur</span>
+                    <span class="text-muted" style="font-size:11px; font-weight:600;"><i class="bi bi-tag me-1"></i>Modal: ${formatRp(modalPrice)}</span>
+                </div>
+            `;
+        } else {
+            // Sukses & Sudah ada harga jual:
+            // Tampilkan harga jual DAN harga modal tetap ditampilkan
+            const profit = sellPrice - modalPrice;
+            const pct = modalPrice > 0 ? ((profit / modalPrice) * 100).toFixed(1) : 0;
+            const profitBadge = profit > 0 
+                ? `<span class="text-success fw-bold" style="font-size:10.5px;">+${formatRp(profit)} (${pct}%)</span>`
+                : '';
+            priceEl.innerHTML = `
+                <div class="d-flex flex-column align-items-end" style="gap:2px;">
+                    <span class="fw-bold text-success" style="font-size:15px;">${formatRp(sellPrice)}</span>
+                    <div class="d-flex align-items-center gap-1.5 flex-wrap justify-content-end">
+                        <span class="text-muted" style="font-size:11px; font-weight:600;"><i class="bi bi-tag me-1"></i>Modal: ${formatRp(modalPrice)}</span>
+                        ${profitBadge}
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        // Gagal / Failed
+        if (sellPrice > 0) {
+            priceEl.innerHTML = `
+                <div class="d-flex flex-column align-items-end" style="gap:2px;">
+                    <span class="fw-bold text-secondary" style="font-size:14px;">${formatRp(sellPrice)}</span>
+                    <span class="text-muted" style="font-size:11px;"><i class="bi bi-tag me-1"></i>Modal: ${formatRp(modalPrice)}</span>
+                </div>
+            `;
+        } else {
+            priceEl.innerHTML = `
+                <div class="d-flex flex-column align-items-end" style="gap:2px;">
+                    <span class="text-muted" style="font-size:11px;"><i class="bi bi-tag me-1"></i>Modal: ${formatRp(modalPrice)}</span>
+                </div>
+            `;
+        }
+    }
+}
+
 async function executeTransactionAPI(payload) {
     getTrxModal().hide();
     
     const resultModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('resultModal'));
+    const initialModalPrice = parseInt(payload.seller_price || 0, 10);
+    const initialSellPrice = parseInt(payload.sell_price || 0, 10);
+
     // Set to loading state immediately
     document.getElementById('result-icon').innerText = '⏳';
     document.getElementById('result-title').innerText = 'Memproses...';
     document.getElementById('result-title').className = 'fw-bold fs-4 text-warning';
     document.getElementById('result-customer').innerText = payload.customer_no || '-';
     document.getElementById('result-product').innerText = payload.product_name || '-';
-    document.getElementById('result-price').innerText = formatRp(payload.sell_price || 0);
+    renderResultModalPriceDisplay(initialModalPrice, initialSellPrice, 'pending');
     document.getElementById('result-sn').innerText = '-';
     document.getElementById('result-msg').innerText = 'Harap tunggu...';
     document.getElementById('result-refid').innerText = payload.ref_id || '-';
@@ -5621,12 +5759,19 @@ async function executeTransactionAPI(payload) {
             let refId = payload.ref_id || data.data.ref_id || '';
             let trxId = data.data.trx_id || data.data.digiflazz_trx_id || '-';
 
+            const modalPrice = parseInt(payload.seller_price || 0, 10);
+            let currentSell = parseInt(payload.sell_price || 0, 10);
+            if (currentSell <= 0 && payload.sku) {
+                const cfgPrice = typeof getPpobSellPrice === 'function' ? getPpobSellPrice(payload.sku) : null;
+                if (cfgPrice && parseInt(cfgPrice) > 0) currentSell = parseInt(cfgPrice);
+            }
+
             document.getElementById('result-icon').innerText = iconEl;
             document.getElementById('result-title').innerText = statusText;
             document.getElementById('result-title').className = 'fw-bold fs-4 ' + colorClass;
             document.getElementById('result-customer').innerText = payload.customer_no || '-';
             document.getElementById('result-product').innerText = payload.product_name || '-';
-            document.getElementById('result-price').innerText = formatRp(payload.sell_price || 0);
+            renderResultModalPriceDisplay(modalPrice, currentSell, status);
             document.getElementById('result-sn').innerText = sn;
             document.getElementById('result-msg').innerText = msg;
             document.getElementById('result-refid').innerText = refId;
@@ -5642,8 +5787,9 @@ async function executeTransactionAPI(payload) {
                 customer_name: payload.customer_name || '',
                 brand: payload.brand || '',
                 sn: sn,
-                seller_price: parseInt(payload.seller_price || 0),
-                sell_price: parseInt(payload.sell_price || 0),
+                status: status,
+                seller_price: modalPrice,
+                sell_price: currentSell,
                 created_at: new Date().toLocaleString('id-ID')
             };
 
@@ -5683,30 +5829,30 @@ async function executeTransactionAPI(payload) {
                 }, 3000); // 3 seconds interval
             }
 
-            // Show action buttons for success or pending (user may want to print receipt early)
+            // Show action buttons for success or pending (user may want to set selling price & print receipt)
             if (isSuccess || isPending) {
                 document.getElementById('result-actions').style.display = 'flex';
                 document.getElementById('custom-price-container').style.display = 'block';
                 
-                const modalPrice = parseInt(payload.seller_price || 0);
-                const currentSell = parseInt(payload.sell_price || 0);
                 document.getElementById('custom-price-modal-badge').innerText = `Modal: ${formatRp(modalPrice)}`;
                 const printPriceInput = document.getElementById('custom-print-price');
                 printPriceInput.value = currentSell > 0 ? currentSell : '';
                 
                 updateResultPricePreview(modalPrice, currentSell);
 
-                // Attach real-time price preview and auto-save on change
+                // Attach real-time price preview and auto-save on input/change
                 printPriceInput.oninput = () => {
                     const typedVal = parseInt(printPriceInput.value) || 0;
                     updateResultPricePreview(modalPrice, typedVal);
+                    renderResultModalPriceDisplay(modalPrice, typedVal, isPending ? 'pending' : 'success');
                 };
-                printPriceInput.onchange = () => {
+                printPriceInput.onchange = async () => {
                     const typedVal = parseInt(printPriceInput.value) || 0;
-                    if (typedVal > modalPrice && lastTrxData.sku) {
-                        savePpobSellPrice(lastTrxData.sku, typedVal);
+                    if (typedVal > modalPrice && lastTrxData) {
                         lastTrxData.sell_price = typedVal;
-                        showToast(`✅ Harga jual ${lastTrxData.sku} (${formatRp(typedVal)}) tersimpan ke database`, 'success');
+                        renderResultModalPriceDisplay(modalPrice, typedVal, isPending ? 'pending' : 'success');
+                        await updatePpobTransactionPrice(lastTrxData.ref_id, typedVal, lastTrxData.sku);
+                        showToast(`✅ Harga jual (${formatRp(typedVal)}) berhasil disimpan ke transaksi & produk`, 'success');
                     }
                 };
                 
@@ -5848,7 +5994,9 @@ function validateReceiptPrice() {
 
     // Persist price to database and memory
     lastTrxData.sell_price = sellPrice;
-    if (lastTrxData.sku) {
+    if (lastTrxData.ref_id) {
+        updatePpobTransactionPrice(lastTrxData.ref_id, sellPrice, lastTrxData.sku);
+    } else if (lastTrxData.sku) {
         savePpobSellPrice(lastTrxData.sku, sellPrice);
     }
     return true;
@@ -5881,18 +6029,23 @@ async function checkTransactionStatus(sku, customerNo, refId, isAuto = false) {
                 document.getElementById('result-msg').innerText = data.data.message || '';
                 reCheckBtn.style.display = 'none';
 
+                const modalPrice = parseInt(lastTrxData?.seller_price || data.data.modal_price || 0, 10);
+                const configuredPrice = (typeof getPpobSellPrice === 'function' && sku) ? getPpobSellPrice(sku) : null;
+                const finalSell = parseInt(configuredPrice || lastTrxData?.sell_price || data.data.sell_price || 0, 10);
+
+                renderResultModalPriceDisplay(modalPrice, finalSell, isSuccess ? 'success' : 'failed');
+
                 // Update last trx data with new SN & Trx ID and show print button
                 if (lastTrxData) {
                     lastTrxData.sn = data.data.sn || '-';
+                    lastTrxData.status = status;
                     if (data.data.trx_id || data.data.digiflazz_trx_id) {
                         lastTrxData.trx_id = data.data.trx_id || data.data.digiflazz_trx_id;
                         document.getElementById('result-trxid').innerText = lastTrxData.trx_id;
                     }
-                    const configuredPrice = typeof getPpobSellPrice === 'function' ? getPpobSellPrice(lastTrxData.sku) : null;
-                    const finalSell = parseInt(configuredPrice || lastTrxData.sell_price || 0);
                     const printInput = document.getElementById('custom-print-price');
                     printInput.value = finalSell > 0 ? finalSell : '';
-                    updateResultPricePreview(parseInt(lastTrxData.seller_price || 0), finalSell);
+                    updateResultPricePreview(modalPrice, finalSell);
                 }
                 
                 if (isSuccess) {

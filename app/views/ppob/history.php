@@ -250,7 +250,9 @@
             const minutes = String(d.getMinutes()).padStart(2, '0');
             const seconds = String(d.getSeconds()).padStart(2, '0');
             const fullDateStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-            const profit = parseInt(trx.profit || 0);
+            const modalPrice = parseInt(trx.modal_price || 0);
+            const sellPrice = parseInt(trx.sell_price || 0);
+            const profit = sellPrice > 0 ? (parseInt(trx.profit !== undefined && trx.profit !== null ? trx.profit : (sellPrice - modalPrice))) : 0;
             const profitColor = profit > 0 ? 'color:var(--success);' : 'color:var(--text-muted);';
 
             let sellerName = trx.seller_name && trx.seller_name !== '' ? trx.seller_name : '-';
@@ -349,6 +351,14 @@
                 }
             }
 
+            const sellPriceDisplayHtml = sellPrice > 0 ? `
+                <div style="font-weight:700;color:var(--text-primary);font-size:11px;">Rp ${sellPrice.toLocaleString('id-ID')}</div>
+                <div style="font-size:9px;margin-top:2px;${profitColor}font-weight:600;">+Rp ${profit.toLocaleString('id-ID')}</div>
+            ` : `
+                <div style="font-weight:700;color:var(--warning);font-size:11px;">Rp 0 <span class="badge bg-warning text-dark" style="font-size:8px;padding:1px 4px;">Belum Set</span></div>
+                <div style="font-size:9px;margin-top:2px;color:var(--text-muted);font-weight:600;">Rp 0</div>
+            `;
+
             tbody.innerHTML += `
                 <tr style="border-bottom:1px solid var(--border-color);transition:background var(--transition-fast);${rowAccent}" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${rowAccent ? rowAccent.replace('background:','') : 'var(--surface-1)'}'">
                     <td style="padding:12px 16px;text-align:center;min-width:140px;white-space:nowrap;">
@@ -372,11 +382,10 @@
                         ${trx.created_by_name || 'Agen'}
                     </td>
                     <td style="padding:12px 8px;text-align:right;">
-                        <div style="font-weight:700;color:var(--text-primary);font-size:11px;">Rp ${parseInt(trx.modal_price).toLocaleString('id-ID')}</div>
+                        <div style="font-weight:700;color:var(--text-primary);font-size:11px;">Rp ${modalPrice.toLocaleString('id-ID')}</div>
                     </td>
                     <td style="padding:12px 8px;text-align:right;">
-                        <div style="font-weight:700;color:var(--text-primary);font-size:11px;">Rp ${parseInt(trx.sell_price).toLocaleString('id-ID')}</div>
-                        <div style="font-size:9px;margin-top:2px;${profitColor}font-weight:600;">+Rp ${profit.toLocaleString('id-ID')}</div>
+                        ${sellPriceDisplayHtml}
                     </td>
                     <td style="padding:12px 8px;text-align:right;">
                         <div style="font-weight:600;color:var(--text-secondary);font-size:11px;">${balBeforeStr}</div>
@@ -531,6 +540,18 @@
         const previewTotalVal = document.getElementById('preview-total-val');
         if (previewTotalVal) {
             previewTotalVal.innerText = 'Rp ' + price.toLocaleString('id-ID');
+        }
+        activeTrxData.sell_price = price;
+        if (price > 0 && activeTrxData.ref_id) {
+            fetch('<?= BASE_URL ?>api/ppob/transaction/update-price', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    ref_id: activeTrxData.ref_id,
+                    sell_price: price,
+                    sku: activeTrxData.buyer_sku_code || ''
+                })
+            }).catch(() => {});
         }
     }
 

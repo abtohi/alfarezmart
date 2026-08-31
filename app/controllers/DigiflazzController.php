@@ -678,6 +678,39 @@ class DigiflazzController extends Controller {
         exit;
     }
 
+    /**
+     * Update selling price and profit for a specific transaction
+     */
+    public function apiUpdateTransactionPrice() {
+        AuthController::requireAuth();
+        $data = json_decode(file_get_contents('php://input'), true);
+        $refId = trim($data['ref_id'] ?? '');
+        $sellPrice = floatval($data['sell_price'] ?? 0);
+        $sku = trim($data['sku'] ?? '');
+
+        if (empty($refId) && empty($sku)) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'ref_id atau sku diperlukan']);
+            exit;
+        }
+
+        if (!empty($refId)) {
+            $this->digiModel->updateTransactionSellPrice($refId, $sellPrice);
+        }
+
+        if (!empty($sku) && $sellPrice > 0) {
+            $this->digiModel->updateCustomPrice($sku, $sellPrice);
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true, 
+            'message' => 'Harga jual transaksi berhasil diperbarui',
+            'sell_price' => $sellPrice
+        ]);
+        exit;
+    }
+
     public function apiSaveSettings() {
         AuthController::requireAuth();
         AuthController::requireLevel(['superadmin', 'admin']);
@@ -1111,10 +1144,12 @@ class DigiflazzController extends Controller {
             if ($isSuccess) {
                 $totalSuccess++;
                 $dailyTrend[$trxDate]['success']++;
-                $profit = (float)$trx['sell_price'] - (float)$trx['modal_price'];
+                $sellPrice = (float)$trx['sell_price'];
+                $modalPrice = (float)$trx['modal_price'];
+                $profit = $sellPrice > 0 ? ($sellPrice - $modalPrice) : 0;
                 $totalProfit += $profit;
-                $totalRevenue += (float)$trx['sell_price'];
-                $dailyTrend[$trxDate]['revenue'] += (float)$trx['sell_price'];
+                $totalRevenue += $sellPrice;
+                $dailyTrend[$trxDate]['revenue'] += $sellPrice;
                 $dailyTrend[$trxDate]['profit'] += $profit;
             } else if ($isFailed) {
                 $totalFailed++;
@@ -1180,6 +1215,10 @@ class DigiflazzController extends Controller {
                 $sellers[$realSeller]['handle'] = $handle;
             }
 
+            $tSell = (float)($trx['sell_price'] ?? 0);
+            $tModal = (float)($trx['modal_price'] ?? 0);
+            $tProfit = $tSell > 0 ? ($tSell - $tModal) : 0;
+
             // Save transaction record to seller's transaction history
             $sellers[$realSeller]['transactions'][] = [
                 'ref_id' => $trx['ref_id'],
@@ -1188,9 +1227,9 @@ class DigiflazzController extends Controller {
                 'customer_no' => $trx['customer_no'] ?? '',
                 'customer_name' => $trx['customer_name'] ?? '',
                 'category' => $trx['category'] ?? '',
-                'modal_price' => (float)($trx['modal_price'] ?? 0),
-                'sell_price' => (float)($trx['sell_price'] ?? 0),
-                'profit' => (float)($trx['sell_price'] ?? 0) - (float)($trx['modal_price'] ?? 0),
+                'modal_price' => $tModal,
+                'sell_price' => $tSell,
+                'profit' => $tProfit,
                 'status' => strtolower($trx['status']),
                 'created_at' => $trx['created_at'],
                 'updated_at' => $trx['updated_at'],
@@ -1199,9 +1238,9 @@ class DigiflazzController extends Controller {
 
             if ($isSuccess) {
                 $sellers[$realSeller]['success']++;
-                $sellers[$realSeller]['revenue'] += (float)$trx['sell_price'];
-                $sellers[$realSeller]['profit'] += ((float)$trx['sell_price'] - (float)$trx['modal_price']);
-                $sellers[$realSeller]['modal_sum'] += (float)$trx['modal_price'];
+                $sellers[$realSeller]['revenue'] += $tSell;
+                $sellers[$realSeller]['profit'] += $tProfit;
+                $sellers[$realSeller]['modal_sum'] += $tModal;
             } else if ($isFailed) {
                 $sellers[$realSeller]['failed']++;
             } else {

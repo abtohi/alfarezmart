@@ -33,6 +33,9 @@ class DigiflazzModel {
             // Ensure all prepaid products without custom prices have sell_price = 0
             $this->db->exec("UPDATE digi_products SET sell_price = 0 WHERE type = 'prepaid' AND is_custom_price = 0");
             
+            // Fix legacy negative profits where sell_price = 0
+            $this->db->exec("UPDATE digi_transactions SET profit = 0 WHERE (sell_price = 0 OR sell_price IS NULL) AND profit < 0");
+            
             $this->seedDefaultPostpaidProducts();
         } catch (\Exception $e) {
             error_log("[DigiflazzModel] init migration error: " . $e->getMessage());
@@ -773,6 +776,9 @@ class DigiflazzModel {
      * Create a new transaction log
      */
     public function createTransaction(array $data) {
+        $sellPrice = floatval($data['sell_price'] ?? 0);
+        $modalPrice = floatval($data['modal_price'] ?? 0);
+
         // Find seller_name from digi_products
         $sellerName = null;
         $sku = $data['buyer_sku_code'] ?? null;
@@ -806,14 +812,34 @@ class DigiflazzModel {
             'category' => $data['category'] ?? '',
             'brand' => $data['brand'] ?? '',
             'type' => $data['type'] ?? 'prepaid',
-            'sell_price' => $data['sell_price'] ?? 0,
-            'modal_price' => $data['modal_price'] ?? 0,
-            'profit' => ($data['sell_price'] ?? 0) - ($data['modal_price'] ?? 0),
+            'sell_price' => $sellPrice,
+            'modal_price' => $modalPrice,
+            'profit' => ($sellPrice > 0) ? ($sellPrice - $modalPrice) : 0,
             'status' => $data['status'] ?? 'pending',
             'user_id' => $data['user_id'] ?? null,
             'message' => $data['message'] ?? '',
             'raw_response' => isset($data['raw_response']) ? json_encode($data['raw_response']) : null,
             'seller_name' => $sellerName
+        ]);
+    }
+
+    /**
+     * Update transaction selling price and recalculate profit
+     */
+    public function updateTransactionSellPrice(string $refId, float $sellPrice): bool {
+        $sellPrice = max(0, $sellPrice);
+        $stmt = $this->db->prepare("
+            UPDATE digi_transactions 
+            SET sell_price = :sell_price, 
+                profit = CASE WHEN :sell_price_check > 0 THEN :sell_price_calc - modal_price ELSE 0 END,
+                updated_at = NOW() 
+            WHERE ref_id = :ref_id
+        ");
+        return $stmt->execute([
+            'sell_price' => $sellPrice,
+            'sell_price_check' => $sellPrice,
+            'sell_price_calc' => $sellPrice,
+            'ref_id' => $refId
         ]);
     }
 
@@ -893,7 +919,7 @@ class DigiflazzModel {
                 SUM(CASE WHEN LOWER(status) IN ('failed', 'gagal') THEN 1 ELSE 0 END) as failed_count,
                 SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN sell_price ELSE 0 END) as total_revenue,
                 SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN modal_price ELSE 0 END) as total_cost,
-                SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN profit ELSE 0 END) as total_profit,
+                SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') AND sell_price > 0 THEN profit ELSE 0 END) as total_profit,
                 AVG(CASE WHEN LOWER(status) IN ('success', 'sukses', 'failed', 'gagal') 
                              AND TIMESTAMPDIFF(SECOND, created_at, updated_at) BETWEEN 0 AND 900
                         THEN TIMESTAMPDIFF(SECOND, created_at, updated_at) 
