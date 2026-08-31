@@ -282,19 +282,20 @@
         const q = elInput.value.trim();
         clearTimeout(searchTimer);
         if (q.length < 1) { elResults.style.display = 'none'; return; }
-        // Auto-detect barcode if string looks like 8-14 digits without spaces
-        if (/^\d{8,14}$/.test(q)) {
-            searchTimer = setTimeout(() => doBarcodeSearch(q), 300);
-            return;
-        }
-        searchTimer = setTimeout(() => doSearch(q), 250);
+        searchTimer = setTimeout(() => doSearch(q), 200);
     });
     
     elInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             const q = elInput.value.trim();
-            if (q) doBarcodeSearch(q);
+            if (q) {
+                if (/^\d{6,18}$/.test(q)) {
+                    doBarcodeSearch(q);
+                } else {
+                    doSearch(q);
+                }
+            }
         }
     });
     

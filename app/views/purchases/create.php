@@ -1299,16 +1299,19 @@ function initPurchaseProductSearch() {
         runSearch();
     });
 
-    // Enter key: IMMEDIATELY clear searchInput so barcodes never stack or concatenate
+    // Enter key: if barcode, lookup and add; if text, run text search without clearing input
     searchInput.addEventListener('keydown', async function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
             const q = this.value.trim();
-            this.value = ''; // IMMEDIATELY reset input
-            suggestionsDiv.innerHTML = '';
             if (!q) return;
 
-            await processPurchaseBarcodeOrSearch(q);
+            const isBarcode = /^\d{6,18}$/.test(q);
+            if (isBarcode) {
+                await processPurchaseBarcodeOrSearch(q);
+            } else {
+                performProductSearch();
+            }
         }
     });
 }
@@ -1349,10 +1352,6 @@ async function processPurchaseBarcodeOrSearch(rawQuery) {
     // Auto-reveal search section & default sales if not selected yet
     ensureSearchSectionVisible();
 
-    // 1. ALWAYS RESET search input field IMMEDIATELY to prevent barcode accumulation
-    if (searchInput) searchInput.value = '';
-    if (suggestionsDiv) suggestionsDiv.innerHTML = '';
-
     // Check if query is numeric barcode (6-16 digits)
     const isBarcode = /^\d{6,16}$/.test(q);
 
@@ -1370,6 +1369,7 @@ async function processPurchaseBarcodeOrSearch(rawQuery) {
                 addProductToCart(data, targetLevel);
                 const pkgObj = (data.packagings && data.packagings.find(p => p.level == targetLevel)) || {};
                 showToast(`Produk "${data.short_label || data.full_name || data.name}" (${pkgObj.unit_name || ''}) ditambahkan`, 'success');
+                if (searchInput) searchInput.value = '';
                 if (suggestionsDiv) suggestionsDiv.innerHTML = '';
                 return true;
             }
@@ -1409,6 +1409,7 @@ async function processPurchaseBarcodeOrSearch(rawQuery) {
                         addProductToCart(fullProduct, targetLevel);
                         const pkgObj = (fullProduct.packagings && fullProduct.packagings.find(p => p.level == targetLevel)) || {};
                         showToast(`Produk "${fullProduct.short_label || fullProduct.full_name}" (${pkgObj.unit_name || ''}) ditambahkan`, 'success');
+                        if (searchInput) searchInput.value = '';
                         if (suggestionsDiv) suggestionsDiv.innerHTML = '';
                         return true;
                     }
@@ -1418,7 +1419,8 @@ async function processPurchaseBarcodeOrSearch(rawQuery) {
             console.error("Barcode lookup error:", err);
         }
 
-        // Barcode NOT found: Show clear feedback, BUT searchInput remains 100% empty!
+        // Barcode NOT found: Show clear feedback, keep searchInput value
+        if (searchInput) searchInput.value = q;
         if (suggestionsDiv) {
             suggestionsDiv.innerHTML = `
                 <div style="padding:14px 16px; text-align:center; background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-md); margin-top:8px; box-shadow:var(--shadow-sm);">
@@ -1437,7 +1439,9 @@ async function processPurchaseBarcodeOrSearch(rawQuery) {
         return false;
     }
 
-    // Text Keyword Search
+    // Text Keyword Search: keep keyword and perform search
+    if (searchInput) searchInput.value = q;
+    performProductSearch();
 }
 
 /**
