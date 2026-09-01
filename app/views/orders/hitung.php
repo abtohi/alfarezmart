@@ -1163,7 +1163,7 @@
             if (qty <= 0) return;
             const labelName = it.short_label || it.name;
             const unit = it.unit_name || 'pcs';
-            lines.push(`${labelName} ${qty} ${unit}`);
+            lines.push(`* ${labelName} (${qty} ${unit})`);
         });
 
         if (lines.length === 0) {
