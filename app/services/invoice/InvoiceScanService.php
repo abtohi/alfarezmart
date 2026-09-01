@@ -671,13 +671,17 @@ class InvoiceScanService
         set_time_limit(180);
 
         // HIGH-PRECISION & ULTRA-FAST VISION MODEL STRATEGY:
-        // 1. google/gemini-2.5-flash: Ultra fast (~3-5s), native high-res multimodal OCR, top precision.
-        // 2. openrouter/auto: Auto-routes to best available vision model.
-        // 3. qwen/qwen-2.5-vl-72b-instruct: Deep vision specialist fallback.
+        // 1. google/gemini-2.0-flash-001: Ultra fast (~3-5s), native high-res multimodal OCR, top precision.
+        // 2. google/gemini-2.5-flash: Gemini 2.5 Flash Vision.
+        // 3. openrouter/auto: Auto-routes to best available vision model.
+        // 4. qwen/qwen-2.5-vl-72b-instruct: Deep vision specialist fallback.
+        // 5. meta-llama/llama-3.2-11b-vision-instruct:free: Free lightweight vision fallback.
         $DEFAULT_VISION_MODELS = [
+            'google/gemini-2.0-flash-001',
             'google/gemini-2.5-flash',
             'openrouter/auto',
             'qwen/qwen-2.5-vl-72b-instruct',
+            'meta-llama/llama-3.2-11b-vision-instruct:free',
         ];
 
         if (empty($model) || in_array($model, ['openrouter/auto', 'auto', 'openrouter/free'])) {
@@ -697,7 +701,7 @@ class InvoiceScanService
         $noEndpointCount  = 0;
 
         foreach ($modelsToTry as $tryModel) {
-            set_time_limit(40);
+            set_time_limit(90);
             error_log("SCAN_AI_TRACE: Attempting OpenRouter vision model: {$tryModel}");
             $requestCount++;
 
@@ -711,7 +715,7 @@ class InvoiceScanService
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => 3500,
+                'max_tokens'  => 4500,
             ];
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
@@ -725,9 +729,9 @@ class InvoiceScanService
                 'X-Title: AlfarezMart Invoice Scanner',
             ]);
 
-            // 25s timeout per model attempt: fast failover to prevent gateway 504 / connection timeout
-            curl_setopt($ch, CURLOPT_TIMEOUT, 25);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+            // 55s timeout per model attempt: allows deep vision models to finish generating 20+ line items safely
+            curl_setopt($ch, CURLOPT_TIMEOUT, 55);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);
