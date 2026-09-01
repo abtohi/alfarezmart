@@ -2309,6 +2309,10 @@ html[data-theme="dark"] #inq-detail strong {
                             <span class="text-muted small">Nomor Tujuan</span>
                             <span class="fw-bold" id="result-customer">-</span>
                         </div>
+                        <div class="d-flex justify-content-between mb-2" id="result-custname-row" style="display:none;">
+                            <span class="text-muted small">Nama Pelanggan</span>
+                            <span class="fw-bold text-success" id="result-custname">-</span>
+                        </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span class="text-muted small">Produk</span>
                             <span class="fw-bold" id="result-product">-</span>
@@ -3347,12 +3351,43 @@ function selectContact(no) {
     document.getElementById('customer-no').value = no;
     getContactModal().hide();
     
+    // Find contact to pre-fill account/customer name
+    if (typeof contactsData !== 'undefined' && Array.isArray(contactsData)) {
+        const found = contactsData.find(c => String(c.customer_no).trim() === String(no).trim());
+        if (found) {
+            if (found.customer_name) {
+                window.currentContactName = found.customer_name;
+            }
+            if (found.pln_name) {
+                window.currentPlnName = found.pln_name;
+            }
+            if (found.ewallet_accounts) {
+                try {
+                    const ew = JSON.parse(found.ewallet_accounts);
+                    const activeBrandBtn = document.querySelector('#brand-filter-container .btn-primary');
+                    const brand = activeBrandBtn ? activeBrandBtn.innerText.trim() : '';
+                    for (let k in ew) {
+                        if (ew[k] && (!brand || brand === 'Semua' || k.toLowerCase() === brand.toLowerCase())) {
+                            window.currentEwalletName = ew[k];
+                            break;
+                        }
+                    }
+                } catch(e) {}
+            }
+            if (!window.currentEwalletName && found.customer_name) {
+                window.currentEwalletName = found.customer_name;
+            }
+        }
+    }
+    
     // Trigger input event to simulate user typing
     const event = new Event('input', { bubbles: true });
     document.getElementById('customer-no').dispatchEvent(event);
     
-    // Auto perform name check for PLN prepaid if number was selected
-    if(currentCategory === 'pln' && currentType === 'prepaid') {
+    // Auto perform name check for PLN / E-Wallet prepaid if number was selected
+    if (currentCategory === 'pln' && currentType === 'prepaid') {
+        performInquiry();
+    } else if (currentCategory === 'ewallet' && currentType === 'prepaid') {
         performInquiry();
     }
 }
@@ -5248,6 +5283,9 @@ async function performInquiry() {
             }
 
             if (res.ok && accountName) {
+                window.currentEwalletName = accountName;
+                if (!selectedInqData) selectedInqData = {};
+                selectedInqData.customer_name = accountName;
                 inqBox.style.display = 'block';
                 document.getElementById('inq-name').innerText = accountName;
                 document.getElementById('inq-price').innerText = '-';
@@ -5437,7 +5475,11 @@ function confirmPurchase(product) {
     const modalPrice = parseInt(product.seller_price || 0);
     const sellerName = product.seller_name || 'Digiflazz';
     const prodName = product.product_name;
-    const custName = (currentCategory === 'pln' && window.currentPlnName) ? window.currentPlnName : (selectedInqData ? selectedInqData.customer_name : '');
+    const custName = (currentCategory === 'pln' && window.currentPlnName) 
+        ? window.currentPlnName 
+        : ((currentCategory === 'ewallet' && window.currentEwalletName) 
+            ? window.currentEwalletName 
+            : ((selectedInqData && selectedInqData.customer_name) ? selectedInqData.customer_name : (window.currentContactName || '')));
 
     let sellPriceText = sellPrice > 0 ? formatRp(sellPrice) : '<span class="text-warning fw-bold">Rp 0 (Belum Ditentukan)</span>';
     let profitText = '';
@@ -5766,10 +5808,24 @@ async function executeTransactionAPI(payload) {
                 if (cfgPrice && parseInt(cfgPrice) > 0) currentSell = parseInt(cfgPrice);
             }
 
+            const finalCustName = payload.customer_name || (data.data && data.data.customer_name) || window.currentEwalletName || window.currentPlnName || window.currentContactName || '';
+
             document.getElementById('result-icon').innerText = iconEl;
             document.getElementById('result-title').innerText = statusText;
             document.getElementById('result-title').className = 'fw-bold fs-4 ' + colorClass;
             document.getElementById('result-customer').innerText = payload.customer_no || '-';
+            
+            const custNameRow = document.getElementById('result-custname-row');
+            const custNameEl = document.getElementById('result-custname');
+            if (custNameRow && custNameEl) {
+                if (finalCustName) {
+                    custNameEl.innerText = finalCustName;
+                    custNameRow.style.display = 'flex';
+                } else {
+                    custNameRow.style.display = 'none';
+                }
+            }
+
             document.getElementById('result-product').innerText = payload.product_name || '-';
             renderResultModalPriceDisplay(modalPrice, currentSell, status);
             document.getElementById('result-sn').innerText = sn;
@@ -5784,7 +5840,7 @@ async function executeTransactionAPI(payload) {
                 sku: payload.sku || '',
                 product_name: payload.product_name || '-',
                 customer_no: payload.customer_no || '-',
-                customer_name: payload.customer_name || '',
+                customer_name: finalCustName,
                 brand: payload.brand || '',
                 sn: sn,
                 status: status,
@@ -6167,17 +6223,97 @@ function previewPpobReceipt() {
     printPpobReceiptBrowser();
 }
 
-// Share Receipt Image
-async function sharePpobReceipt() {
-    if (!validateReceiptPrice()) return;
+// Format structured text for PPOB Digital Invoice / WhatsApp
+function formatPpobInvoiceText(d) {
+    const storeName = 'ALFAREZ MART';
+    const price = parseInt(d.sell_price || 0).toLocaleString('id-ID');
+    const custName = d.customer_name || '';
+    let snText = d.sn && d.sn !== '-' ? d.sn : '';
     
-    const btn = document.getElementById('btn-share-receipt');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memproses...';
-    btn.disabled = true;
+    // Parse SN if it has structured format
+    let snVal = snText;
+    let extraLines = '';
+    if (snText) {
+        if (snText.includes('/')) {
+            const parts = snText.split('/');
+            if (parts.length >= 4) {
+                snVal = parts[0];
+                if (parts[1]) extraLines += `*Nama Mtr*     : ${parts[1]}\n`;
+                if (parts[2]) extraLines += `*Tarif/Daya*   : ${parts.length > 4 ? parts[2]+'/'+parts[3] : parts[2]}\n`;
+                if (parts[3]) extraLines += `*Jml kWh*      : ${parts.length > 4 ? parts[4] : parts[3]}\n`;
+            }
+        } else if (snText.toUpperCase().includes('NAMA:') && snText.toUpperCase().includes('REFF:')) {
+            const namaMatch = snText.match(/NAMA:\s*([^,\n]+)/i);
+            const reffMatch = snText.match(/REFF:\s*([^,\n]+)/i);
+            if (namaMatch?.[1] && !custName) extraLines += `*Nama Akun*    : ${namaMatch[1].trim()}\n`;
+            if (reffMatch?.[1]) snVal = reffMatch[1].trim();
+        }
+    }
+
+    const typeStr = (d.category || '').toLowerCase();
+    const isEw = ['dana','gopay','shopee','ovo','linkaja','ewallet'].some(k => (d.product_name||'').toLowerCase().includes(k) || (d.buyer_sku_code||'').toLowerCase().includes(k) || typeStr.includes(k));
+
+    let text = `🧾 *STRUK PEMBAYARAN DIGITAL - ${storeName}*\n` +
+               `-------------------------------------------\n` +
+               `*No. Referensi*  : ${d.ref_id || '-'}\n` +
+               (d.digiflazz_trx_id && d.digiflazz_trx_id !== d.ref_id ? `*Trx ID*         : ${d.digiflazz_trx_id}\n` : '') +
+               `*Tanggal*        : ${d.created_at || new Date().toLocaleString('id-ID')}\n` +
+               `*Layanan*        : *${d.product_name || '-'}*\n` +
+               `*No. Tujuan/ID*  : *${d.customer_no || '-'}*\n`;
+
+    if (custName) {
+        text += `*${isEw ? 'Nama Akun' : 'Nama Pelanggan'}*: *${custName}*\n`;
+    }
+    if (extraLines) {
+        text += extraLines;
+    }
+    if (snVal && snVal !== '-') {
+        const isPln = (d.product_name || '').toLowerCase().includes('pln') || (d.buyer_sku_code || '').toLowerCase().includes('pln');
+        text += `*${isPln ? 'TOKEN PLN' : 'SN / Ref'}*      : *${snVal}*\n`;
+    }
+
+    text += `-------------------------------------------\n` +
+            `*TOTAL BAYAR     : Rp ${price}*\n` +
+            `*Status*         : BERHASIL ✅\n` +
+            `-------------------------------------------\n` +
+            `Terima kasih telah bertransaksi di ${storeName}!\n` +
+            `_Struk ini merupakan bukti pembayaran resmi._`;
+
+    return text;
+}
+
+function copyReceiptText(encodedText) {
+    const text = decodeURIComponent(encodedText);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('✅ Teks invoice berhasil disalin ke clipboard', 'success');
+        }).catch(() => {
+            promptCopyFallback(text);
+        });
+    } else {
+        promptCopyFallback(text);
+    }
+}
+
+function promptCopyFallback(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('✅ Teks invoice berhasil disalin', 'success');
+}
+
+async function triggerPpobImageShare() {
+    if (!lastTrxData) return;
+    const d = { ...lastTrxData };
+    const customPriceInput = document.getElementById('custom-print-price');
+    if (customPriceInput && customPriceInput.value) {
+        d.sell_price = parseInt(customPriceInput.value) || d.sell_price;
+    }
 
     try {
-        // Ensure html2canvas is loaded
         if (typeof html2canvas === 'undefined') {
             await new Promise((resolve, reject) => {
                 const script = document.createElement('script');
@@ -6188,29 +6324,22 @@ async function sharePpobReceipt() {
             });
         }
 
-        const d = lastTrxData;
-        
-        // Create a temporary hidden container for the receipt
         const container = document.createElement('div');
         container.style.position = 'absolute';
         container.style.left = '-9999px';
         container.style.top = '0';
         container.style.width = '320px';
-        
         container.innerHTML = getReceiptPreviewContent(d, d.sell_price);
         document.body.appendChild(container);
 
-        // Render to canvas
         const canvas = await html2canvas(container, {
-            scale: 2, // Higher quality
+            scale: 2,
             useCORS: true,
             logging: false,
             backgroundColor: '#ffffff'
         });
-        
         document.body.removeChild(container);
 
-        // Share the image
         canvas.toBlob(async (blob) => {
             if (!blob) {
                 showToast('❌ Gagal membuat gambar struk', 'danger');
@@ -6230,7 +6359,6 @@ async function sharePpobReceipt() {
                     console.log('Share canceled or failed', err);
                 }
             } else {
-                // Fallback: trigger download if Web Share API doesn't support files
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -6239,16 +6367,73 @@ async function sharePpobReceipt() {
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                showToast('✅ Struk berhasil diunduh (perangkat tidak mendukung Web Share)', 'success');
+                showToast('✅ Gambar struk berhasil diunduh', 'success');
             }
         }, 'image/png');
-
     } catch (error) {
         console.error('Error sharing receipt:', error);
         showToast('❌ Gagal membagikan struk', 'danger');
-    } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+    }
+}
+
+// Share Receipt Image & WhatsApp
+async function sharePpobReceipt() {
+    if (!validateReceiptPrice()) return;
+    if (!lastTrxData) {
+        showToast('⚠️ Data transaksi tidak ditemukan', 'warning');
+        return;
+    }
+
+    const d = { ...lastTrxData };
+    const customPriceInput = document.getElementById('custom-print-price');
+    if (customPriceInput && customPriceInput.value) {
+        d.sell_price = parseInt(customPriceInput.value) || d.sell_price;
+    }
+
+    const shareText = formatPpobInvoiceText(d);
+    
+    // Format customer phone for WhatsApp
+    let cleanPhone = String(d.customer_no || '').replace(/\D/g, '');
+    let waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+    if (cleanPhone.startsWith('08')) {
+        cleanPhone = '628' + cleanPhone.substring(2);
+        waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(shareText)}`;
+    } else if (cleanPhone.startsWith('628')) {
+        waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(shareText)}`;
+    }
+
+    if (typeof AppModal !== 'undefined') {
+        AppModal.show({
+            title: 'Bagikan Invoice Digital PPOB',
+            subtitle: `${d.product_name} - ${d.customer_no}`,
+            icon: 'bi-whatsapp',
+            iconColor: 'rgba(37,211,102,0.15)',
+            iconAccent: '#25D366',
+            bodyHTML: `
+                <div style="text-align:center;padding:4px 0;">
+                    <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Kirimkan bukti pembayaran digital ke WhatsApp pelanggan atau bagikan struk:</div>
+                    
+                    <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:14px;">
+                        <a href="${waUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:13px;background:#25D366;color:white;border-radius:12px;text-decoration:none;font-weight:700;font-size:13.5px;box-shadow:0 4px 14px rgba(37,211,102,0.35);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                            <i class="bi bi-whatsapp" style="font-size:1.3rem;"></i> Kirim via WhatsApp
+                        </a>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                        <button type="button" onclick="copyReceiptText(\`${encodeURIComponent(shareText)}\`)" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:var(--surface-2);border:1px solid var(--border-color);color:var(--text-primary);border-radius:10px;font-weight:600;font-size:12px;cursor:pointer;">
+                            <i class="bi bi-clipboard"></i> Salin Teks
+                        </button>
+                        <button type="button" onclick="triggerPpobImageShare()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:var(--surface-2);border:1px solid var(--border-color);color:var(--text-primary);border-radius:10px;font-weight:600;font-size:12px;cursor:pointer;">
+                            <i class="bi bi-image"></i> Gambar Struk
+                        </button>
+                    </div>
+                </div>
+            `,
+            submitText: null,
+            cancelText: 'Tutup'
+        });
+    } else {
+        window.open(waUrl, '_blank');
     }
 }
 

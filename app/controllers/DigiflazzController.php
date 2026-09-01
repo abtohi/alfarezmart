@@ -563,8 +563,13 @@ class DigiflazzController extends Controller {
             
             $this->digiModel->updateTransactionStatus($refId, $status, $message, $sn, $trxId, $res['data']);
             
-            // Modify response to include sell_price for frontend receipt
+            // Modify response to include transaction details for frontend receipt & digital invoice
             $res['data']['sell_price'] = $dbData['sell_price'];
+            $res['data']['customer_name'] = $dbData['customer_name'];
+            $res['data']['product_name'] = $dbData['product_name'];
+            $res['data']['customer_no'] = $dbData['customer_no'];
+            $res['data']['ref_id'] = $dbData['ref_id'];
+            $res['data']['created_at'] = date('d/m/Y H:i');
         } else {
             $this->digiModel->updateTransactionStatus($refId, 'failed', $res['message']);
         }

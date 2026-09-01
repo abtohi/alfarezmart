@@ -1093,22 +1093,22 @@ class ThermalPrinter {
 
             // Additional Customer / Account Info
             const ewallets = ['dana','gopay','shopee','ovo','linkaja'];
-            let hasNamePrinted = false;
+            let custOrAccountName = transaction.customer_name || '';
 
             if (transaction.sn && transaction.sn !== '-') {
-                if (ewallets.includes(typeStr)) {
-                    if (transaction.sn.toUpperCase().includes('NAMA:') && transaction.sn.toUpperCase().includes('REFF:')) {
-                        const namaMatch = transaction.sn.match(/NAMA:\s*([^,]+)/i);
-                        if (namaMatch && namaMatch[1]) {
-                            data += namaMatch[1].trim() + '\n';
-                            hasNamePrinted = true;
-                        }
+                if (transaction.sn.toUpperCase().includes('NAMA:') && transaction.sn.toUpperCase().includes('REFF:')) {
+                    const namaMatch = transaction.sn.match(/NAMA:\s*([^,]+)/i);
+                    if (namaMatch && namaMatch[1]) {
+                        custOrAccountName = namaMatch[1].trim();
                     }
                 }
             }
             
-            if (!hasNamePrinted && transaction.customer_name && !ewallets.includes(typeStr)) {
-                data += transaction.customer_name + '\n';
+            if (custOrAccountName) {
+                data += '\x1BE\x01'; // Bold On
+                data += (ewallets.includes(typeStr) ? 'NAMA AKUN :\n' : 'NAMA :\n');
+                data += '\x1BE\x00'; // Bold Off
+                data += custOrAccountName + '\n';
             }
 
             data += '\n'; // spacing

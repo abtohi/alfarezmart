@@ -619,19 +619,96 @@
         }
     }
 
-    async function executeShareReceipt() {
-        if (!activeTrxData) {
-            triggerToast('⚠️ Data transaksi tidak ditemukan', 'warning');
-            return;
+    // Format structured text for PPOB Digital Invoice / WhatsApp
+    function formatPpobInvoiceText(d) {
+        const storeName = 'ALFAREZ MART';
+        const price = parseInt(d.sell_price || 0).toLocaleString('id-ID');
+        const custName = d.customer_name || '';
+        let snText = d.sn && d.sn !== '-' ? d.sn : '';
+        
+        let snVal = snText;
+        let extraLines = '';
+        if (snText) {
+            if (snText.includes('/')) {
+                const parts = snText.split('/');
+                if (parts.length >= 4) {
+                    snVal = parts[0];
+                    if (parts[1]) extraLines += `*Nama Mtr*     : ${parts[1]}\n`;
+                    if (parts[2]) extraLines += `*Tarif/Daya*   : ${parts.length > 4 ? parts[2]+'/'+parts[3] : parts[2]}\n`;
+                    if (parts[3]) extraLines += `*Jml kWh*      : ${parts.length > 4 ? parts[4] : parts[3]}\n`;
+                }
+            } else if (snText.toUpperCase().includes('NAMA:') && snText.toUpperCase().includes('REFF:')) {
+                const namaMatch = snText.match(/NAMA:\s*([^,\n]+)/i);
+                const reffMatch = snText.match(/REFF:\s*([^,\n]+)/i);
+                if (namaMatch?.[1] && !custName) extraLines += `*Nama Akun*    : ${namaMatch[1].trim()}\n`;
+                if (reffMatch?.[1]) snVal = reffMatch[1].trim();
+            }
         }
 
-        const btn = document.getElementById('btn-share-receipt');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Memproses...';
-        btn.disabled = true;
+        const typeStr = (d.category || '').toLowerCase();
+        const isEw = ['dana','gopay','shopee','ovo','linkaja','ewallet'].some(k => (d.product_name||'').toLowerCase().includes(k) || (d.buyer_sku_code||'').toLowerCase().includes(k) || typeStr.includes(k));
+
+        let text = `🧾 *STRUK PEMBAYARAN DIGITAL - ${storeName}*\n` +
+                   `-------------------------------------------\n` +
+                   `*No. Referensi*  : ${d.ref_id || '-'}\n` +
+                   (d.digiflazz_trx_id && d.digiflazz_trx_id !== d.ref_id ? `*Trx ID*         : ${d.digiflazz_trx_id}\n` : '') +
+                   `*Tanggal*        : ${d.created_at || new Date().toLocaleString('id-ID')}\n` +
+                   `*Layanan*        : *${d.product_name || '-'}*\n` +
+                   `*No. Tujuan/ID*  : *${d.customer_no || '-'}*\n`;
+
+        if (custName) {
+            text += `*${isEw ? 'Nama Akun' : 'Nama Pelanggan'}*: *${custName}*\n`;
+        }
+        if (extraLines) {
+            text += extraLines;
+        }
+        if (snVal && snVal !== '-') {
+            const isPln = (d.product_name || '').toLowerCase().includes('pln') || (d.buyer_sku_code || '').toLowerCase().includes('pln');
+            text += `*${isPln ? 'TOKEN PLN' : 'SN / Ref'}*      : *${snVal}*\n`;
+        }
+
+        text += `-------------------------------------------\n` +
+                `*TOTAL BAYAR     : Rp ${price}*\n` +
+                `*Status*         : BERHASIL ✅\n` +
+                `-------------------------------------------\n` +
+                `Terima kasih telah bertransaksi di ${storeName}!\n` +
+                `_Struk ini merupakan bukti pembayaran resmi._`;
+
+        return text;
+    }
+
+    function copyReceiptText(encodedText) {
+        const text = decodeURIComponent(encodedText);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                triggerToast('✅ Teks invoice berhasil disalin ke clipboard', 'success');
+            }).catch(() => {
+                promptCopyFallback(text);
+            });
+        } else {
+            promptCopyFallback(text);
+        }
+    }
+
+    function promptCopyFallback(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        triggerToast('✅ Teks invoice berhasil disalin', 'success');
+    }
+
+    async function triggerPpobImageShare() {
+        if (!activeTrxData) return;
+        const d = { ...activeTrxData };
+        const customPriceInput = document.getElementById('custom-print-price');
+        if (customPriceInput && customPriceInput.value) {
+            d.sell_price = parseInt(customPriceInput.value) || d.sell_price;
+        }
 
         try {
-            // Load html2canvas if not loaded
             if (typeof html2canvas === 'undefined') {
                 await new Promise((resolve, reject) => {
                     const script = document.createElement('script');
@@ -642,15 +719,7 @@
                 });
             }
 
-            const d = { ...activeTrxData };
-            const customPriceInput = document.getElementById('custom-print-price');
-            if (customPriceInput && customPriceInput.value) {
-                d.sell_price = parseInt(customPriceInput.value) || d.sell_price;
-            }
-
             const previewArea = document.getElementById('receipt-preview-area');
-            
-            // Render receipt image
             const canvas = await html2canvas(previewArea, {
                 scale: 2,
                 useCORS: true,
@@ -677,7 +746,6 @@
                         console.log('Share canceled or failed', err);
                     }
                 } else {
-                    // Download fallback
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
@@ -686,16 +754,71 @@
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
-                    triggerToast('✅ Struk berhasil diunduh (perangkat tidak mendukung Web Share)', 'success');
+                    triggerToast('✅ Gambar struk berhasil diunduh', 'success');
                 }
             }, 'image/png');
-
         } catch (error) {
             console.error('Error sharing receipt:', error);
             triggerToast('❌ Gagal membagikan struk', 'danger');
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
+        }
+    }
+
+    async function executeShareReceipt() {
+        if (!activeTrxData) {
+            triggerToast('⚠️ Data transaksi tidak ditemukan', 'warning');
+            return;
+        }
+
+        const d = { ...activeTrxData };
+        const customPriceInput = document.getElementById('custom-print-price');
+        if (customPriceInput && customPriceInput.value) {
+            d.sell_price = parseInt(customPriceInput.value) || d.sell_price;
+        }
+
+        const shareText = formatPpobInvoiceText(d);
+        
+        // Format customer phone for WhatsApp
+        let cleanPhone = String(d.customer_no || '').replace(/\D/g, '');
+        let waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+        if (cleanPhone.startsWith('08')) {
+            cleanPhone = '628' + cleanPhone.substring(2);
+            waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(shareText)}`;
+        } else if (cleanPhone.startsWith('628')) {
+            waUrl = `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(shareText)}`;
+        }
+
+        if (typeof AppModal !== 'undefined') {
+            AppModal.show({
+                title: 'Bagikan Invoice Digital PPOB',
+                subtitle: `${d.product_name} - ${d.customer_no}`,
+                icon: 'bi-whatsapp',
+                iconColor: 'rgba(37,211,102,0.15)',
+                iconAccent: '#25D366',
+                bodyHTML: `
+                    <div style="text-align:center;padding:4px 0;">
+                        <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Kirimkan bukti pembayaran digital ke WhatsApp pelanggan atau bagikan struk:</div>
+                        
+                        <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:14px;">
+                            <a href="${waUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:13px;background:#25D366;color:white;border-radius:12px;text-decoration:none;font-weight:700;font-size:13.5px;box-shadow:0 4px 14px rgba(37,211,102,0.35);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                <i class="bi bi-whatsapp" style="font-size:1.3rem;"></i> Kirim via WhatsApp
+                            </a>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+                            <button type="button" onclick="copyReceiptText(\`${encodeURIComponent(shareText)}\`)" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:var(--surface-2);border:1px solid var(--border-color);color:var(--text-primary);border-radius:10px;font-weight:600;font-size:12px;cursor:pointer;">
+                                <i class="bi bi-clipboard"></i> Salin Teks
+                            </button>
+                            <button type="button" onclick="triggerPpobImageShare()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:var(--surface-2);border:1px solid var(--border-color);color:var(--text-primary);border-radius:10px;font-weight:600;font-size:12px;cursor:pointer;">
+                                <i class="bi bi-image"></i> Gambar Struk
+                            </button>
+                        </div>
+                    </div>
+                `,
+                submitText: null,
+                cancelText: 'Tutup'
+            });
+        } else {
+            window.open(waUrl, '_blank');
         }
     }
 

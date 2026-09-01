@@ -92,6 +92,9 @@ function detectProductType(d) {
                 // Try to detect if it's purely a ref code
                 result.snValue = sn;
             }
+            if (!result.accountName && d.customer_name) {
+                result.accountName = d.customer_name;
+            }
             result.hasSN = true;
             return result;
         }
@@ -100,6 +103,7 @@ function detectProductType(d) {
         if (type === 'pulsa' || type === 'paket') {
             result.snTitle = 'Nomor SN';
             result.snValue = sn;
+            if (d.customer_name) result.accountName = d.customer_name;
             return result;
         }
 
@@ -110,6 +114,10 @@ function detectProductType(d) {
             if (namaMatch?.[1]) result.accountName = namaMatch[1].trim();
             result.snValue = reffMatch?.[1]?.trim() || sn;
             return result;
+        }
+
+        if (d.customer_name && !result.accountName) {
+            result.accountName = d.customer_name;
         }
 
         return result;
@@ -140,13 +148,15 @@ function detectProductType(d) {
             </tr>
         `).join('');
 
-        // Account name row (e-wallet)
+        // Account name row (e-wallet or customer name)
+        const accountDisplayName = snData.accountName || d.customer_name || '';
         let accountRowHtml = '';
-        if (snData.accountName) {
+        if (accountDisplayName && type !== 'pln') {
+            const isEw = ['dana','gopay','shopee','ovo','linkaja'].includes(type);
             accountRowHtml = `
                 <tr class="info-row">
-                    <td class="info-label">Nama Akun</td>
-                    <td class="info-value highlight-val">${snData.accountName}</td>
+                    <td class="info-label">${isEw ? 'Nama Akun' : 'Nama Pelanggan'}</td>
+                    <td class="info-value highlight-val">${accountDisplayName}</td>
                 </tr>
             `;
         }
@@ -163,9 +173,7 @@ function detectProductType(d) {
             `;
         }
 
-        // Customer name — only show if not e-wallet (e-wallet shows accountName instead)
-        const ewallets = ['dana','gopay','shopee','ovo','linkaja'];
-        const showCustomerName = d.customer_name && !ewallets.includes(type) && type !== 'pln';
+        const showCustomerName = false;
 
         return `<!DOCTYPE html>
 <html lang="id">
@@ -595,13 +603,15 @@ function detectProductType(d) {
             </div>
         `).join('');
 
-        // Account name row
+        // Account name row (e-wallet or customer name)
+        const accountDisplayName = snData.accountName || d.customer_name || '';
         let accountRowHtml = '';
-        if (snData.accountName) {
+        if (accountDisplayName && type !== 'pln') {
+            const isEw = ['dana','gopay','shopee','ovo','linkaja'].includes(type);
             accountRowHtml = `
                 <div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1px dashed #eee;">
-                    <span style="color:#888;font-size:11px;font-weight:500;">Nama Akun</span>
-                    <span style="color:${theme.accentDark};font-size:11.5px;font-weight:700;text-align:right;">${snData.accountName}</span>
+                    <span style="color:#888;font-size:11px;font-weight:500;">${isEw ? 'Nama Akun' : 'Nama Pelanggan'}</span>
+                    <span style="color:${theme.accentDark};font-size:11.5px;font-weight:700;text-align:right;">${accountDisplayName}</span>
                 </div>
             `;
         }
@@ -618,8 +628,7 @@ function detectProductType(d) {
             `;
         }
 
-        const ewallets = ['dana','gopay','shopee','ovo','linkaja'];
-        const showCustomerName = d.customer_name && !ewallets.includes(type) && type !== 'pln';
+        const showCustomerName = false;
 
         return `
             <div style="position:relative;background:#fff;border-radius:14px;overflow:hidden;font-family:'Inter',sans-serif;">
