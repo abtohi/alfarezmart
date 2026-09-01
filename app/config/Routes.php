@@ -49,7 +49,7 @@ $router->get('/customers', 'CustomerController@index');
 $router->get('/scanner', 'BarcodeController@scanner');
 
 // Settings & Help
-$router->get('/settings', 'DashboardController@index');
+$router->get('/settings', 'SettingController@index');
 $router->get('/settings/master-data', 'SettingController@masterData');
 $router->get('/settings/receipt', 'SettingController@receiptSettings');
 $router->get('/settings/app', 'SettingController@appSettings');

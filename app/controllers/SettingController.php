@@ -8,7 +8,7 @@ class SettingController extends Controller
     {
         $this->view('settings.index', [
             'title' => 'Pengaturan',
-            'activeNav' => 'home',
+            'activeNav' => 'settings',
         ]);
     }
 
@@ -71,7 +71,7 @@ class SettingController extends Controller
     {
         $this->view('settings.error_logs', [
             'title'     => 'Error Log Catcher',
-            'activeNav' => 'home',
+            'activeNav' => 'error_logs',
         ]);
     }
 
