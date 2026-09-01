@@ -614,8 +614,13 @@
     // ── Service Worker Registration ──
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            navigator.serviceWorker.register('<?= BASE_URL ?>sw.js')
-                .then(reg => console.log('SW registered on login:', reg.scope))
+            navigator.serviceWorker.register('<?= BASE_URL ?>sw.js?v=25.16', { updateViaCache: 'none' })
+                .then(reg => {
+                    console.log('SW registered on login:', reg.scope);
+                    if (reg && typeof reg.update === 'function') {
+                        reg.update().catch(() => {});
+                    }
+                })
                 .catch(err => console.log('SW registration failed on login:', err));
         });
     }

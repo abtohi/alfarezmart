@@ -102,7 +102,10 @@ self.addEventListener('fetch', event => {
 
     // ── 2. Auth & Critical Live Pages: Always Network First for CSRF & Auth Freshness ──
     const liveFreshPages = ['/', '/login', '/logout', '/register', '/sales/pos', '/purchases/create', '/products/create'];
-    const isLiveFreshPage = liveFreshPages.some(p => url.pathname === p || url.pathname === BASE_URL.replace(/\/$/, '') + p || url.pathname.endsWith(p));
+    const isLiveFreshPage = url.pathname === '/' || 
+                            url.pathname === BASE_URL || 
+                            url.pathname === BASE_URL.replace(/\/$/, '') ||
+                            liveFreshPages.some(p => p !== '/' && (url.pathname === p || url.pathname === BASE_URL.replace(/\/$/, '') + p || url.pathname.endsWith(p)));
     if (isLiveFreshPage) {
         event.respondWith(
             fetch(event.request, { cache: 'no-cache', credentials: 'same-origin' })
