@@ -9,8 +9,8 @@
  * They are cached on first request via the Cache-First fetch handler.
  * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v45.6';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v45.6';
+const CACHE_NAME = 'alfarezmart-cache-v45.7';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v45.7';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     // Static app shell assets only — dynamic PHP pages are cached at runtime upon navigation
@@ -100,14 +100,14 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // ── 2. Auth & Critical Live Pages: Always Network First for CSRF Freshness ──
-    const liveFreshPages = ['/login', '/logout', '/register', '/sales/pos', '/purchases/create', '/products/create'];
-    const isLiveFreshPage = liveFreshPages.some(p => url.pathname === BASE_URL.replace(/\/$/, '') + p || url.pathname.endsWith(p));
+    // ── 2. Auth & Critical Live Pages: Always Network First for CSRF & Auth Freshness ──
+    const liveFreshPages = ['/', '/login', '/logout', '/register', '/sales/pos', '/purchases/create', '/products/create'];
+    const isLiveFreshPage = liveFreshPages.some(p => url.pathname === p || url.pathname === BASE_URL.replace(/\/$/, '') + p || url.pathname.endsWith(p));
     if (isLiveFreshPage) {
         event.respondWith(
             fetch(event.request, { cache: 'no-cache', credentials: 'same-origin' })
                 .then(response => {
-                    if (response && response.ok) {
+                    if (response && response.ok && !response.redirected) {
                         const clone = response.clone();
                         caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
                     }
@@ -116,6 +116,8 @@ self.addEventListener('fetch', event => {
                 .catch(async () => {
                     const cached = await caches.match(event.request, { ignoreSearch: true });
                     if (cached) return cached;
+                    const baseCached = await caches.match(BASE_URL);
+                    if (baseCached) return baseCached;
                     return new Response('Offline: Halaman belum tersedia di cache', { status: 503, headers: { 'Content-Type': 'text/plain' } });
                 })
         );
@@ -182,9 +184,9 @@ self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request, { ignoreSearch: true }).then(async cachedResponse => {
             // Background fetcher helper
-            const fetchPromise = fetch(event.request, { cache: 'no-cache' })
+            const fetchPromise = fetch(event.request, { cache: 'no-cache', credentials: 'same-origin' })
                 .then(networkResponse => {
-                    if (networkResponse && networkResponse.status === 200 && networkResponse.type !== 'opaque' && event.request.url.startsWith('http')) {
+                    if (networkResponse && networkResponse.status === 200 && networkResponse.type !== 'opaque' && !networkResponse.redirected && event.request.url.startsWith('http')) {
                         const clone = networkResponse.clone();
                         caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
                     }
