@@ -864,41 +864,18 @@ if ($userLevel === 'staff') {
     <script>
     const APP_VERSION = '25.15'; // Update this to force client reloads
 
-    // Self-healing cache buster
-    // PERF FIX: Added sessionStorage guard to prevent infinite reload loop.
-    // Previously: async cache.delete() + SW unregister could fail silently
-    // but still trigger reload, causing a reload→mismatch→reload loop.
-    // Now: we mark the session as "already reloaded for this version" using
-    // sessionStorage so the reload only fires ONCE per browser tab.
+    // Safe PWA Version Guard: Update Service Worker in background without destroying offline cache
     (function() {
         const storedVersion = localStorage.getItem('app_version');
-        const reloadedForVersion = sessionStorage.getItem('reloaded_for_version');
-        if (storedVersion !== APP_VERSION && reloadedForVersion !== APP_VERSION) {
-            console.log('[AlfarezMart] New version detected (' + APP_VERSION + ')! Clearing caches...');
-            // Save version FIRST before async operations to avoid re-entry
+        if (storedVersion !== APP_VERSION) {
             localStorage.setItem('app_version', APP_VERSION);
-            sessionStorage.setItem('reloaded_for_version', APP_VERSION);
-
-            const doReload = function() {
-                window.location.reload(true);
-            };
-
-            if ('caches' in window) {
-                caches.keys().then(function(names) {
-                    return Promise.all(names.map(function(n) { return caches.delete(n); }));
-                }).then(function() {
-                    if (navigator.serviceWorker) {
-                        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                            return Promise.all(registrations.map(function(r) { return r.unregister(); }));
-                        }).then(doReload).catch(doReload);
-                    } else {
-                        doReload();
-                    }
-                }).catch(doReload);
-            } else {
-                doReload();
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    registrations.forEach(function(reg) {
+                        if (typeof reg.update === 'function') reg.update().catch(() => {});
+                    });
+                }).catch(() => {});
             }
-            return; // Stop here — page is about to reload
         }
     })();
 
@@ -906,7 +883,6 @@ if ($userLevel === 'staff') {
         navigator.serviceWorker.register('<?= BASE_URL ?>sw.js?v=' + APP_VERSION, { updateViaCache: 'none' })
             .then(reg => {
                 console.log('SW registered:', reg.scope);
-                // Force the new SW to activate immediately & catch silent failures
                 if (reg && typeof reg.update === 'function') {
                     reg.update().catch(() => {});
                 }

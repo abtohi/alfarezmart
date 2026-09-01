@@ -63,25 +63,30 @@
     }
 
     function prefetchCriticalNavLinks() {
-        // Prefetch main bottom navigation / sidebar destinations
+        const base = (typeof BASE_URL !== 'undefined' ? BASE_URL : '/');
+        // Prefetch main bottom navigation & sidebar destinations for instant offline availability
         const criticalNav = [
-            (typeof BASE_URL !== 'undefined' ? BASE_URL : '/') + 'sales',
-            (typeof BASE_URL !== 'undefined' ? BASE_URL : '/') + 'sales/pos',
-            (typeof BASE_URL !== 'undefined' ? BASE_URL : '/') + 'products',
-            (typeof BASE_URL !== 'undefined' ? BASE_URL : '/') + 'purchases',
-            (typeof BASE_URL !== 'undefined' ? BASE_URL : '/') + 'ppob',
-            (typeof BASE_URL !== 'undefined' ? BASE_URL : '/') + 'finance',
-            (typeof BASE_URL !== 'undefined' ? BASE_URL : '/') + 'reports',
-            (typeof BASE_URL !== 'undefined' ? BASE_URL : '/') + 'settings',
+            base + 'sales/pos',
+            base + 'scanner',
+            base + 'products',
+            base + 'purchases/create',
+            base + 'sales',
+            base + 'purchases',
+            base + 'ppob',
+            base + 'finance',
+            base + 'reports',
+            base + 'settings',
+            base + 'settings/error-logs',
+            base + 'settings/backup',
         ];
 
-        // Stagger prefetch to avoid consuming network during initial page paint
-        let delay = 1500;
+        // Stagger prefetch in background to avoid consuming network during initial page paint
+        let delay = 1200;
         criticalNav.forEach(url => {
             setTimeout(() => {
                 prefetchUrl(url);
             }, delay);
-            delay += 400;
+            delay += 300;
         });
     }
 })();

@@ -180,7 +180,7 @@ self.addEventListener('fetch', event => {
 
     // ── 5. HTML/Navigation Requests: Ultra-Fast Race Strategy (350ms) ──
     event.respondWith(
-        caches.match(event.request, { ignoreSearch: true }).then(cachedResponse => {
+        caches.match(event.request, { ignoreSearch: true }).then(async cachedResponse => {
             // Background fetcher helper
             const fetchPromise = fetch(event.request, { cache: 'no-cache' })
                 .then(networkResponse => {
@@ -192,9 +192,57 @@ self.addEventListener('fetch', event => {
                 })
                 .catch(async () => {
                     if (cachedResponse) return cachedResponse;
-                    const baseCached = await caches.match(BASE_URL);
-                    if (baseCached) return baseCached;
-                    return new Response('<html><head><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Offline - AlfarezMart</title></head><body style="background:#1a1a2e;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;"><div style="text-align:center;padding:24px;max-width:400px;"><h2>Mode Offline</h2><p style="color:#94a3b8;font-size:14px;">Halaman ini belum tersedia offline. Mohon periksa koneksi internet Anda.</p><button onclick="window.location.reload()" style="background:#e63946;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:bold;margin-top:12px;">Coba Lagi</button></div></body></html>', {
+                    
+                    // Fallback to other available cached pages in order of priority
+                    const fallbackUrls = [
+                        BASE_URL,
+                        BASE_URL + 'sales/pos',
+                        BASE_URL + 'products',
+                        BASE_URL + 'settings/error-logs'
+                    ];
+                    for (const fUrl of fallbackUrls) {
+                        const hit = await caches.match(fUrl, { ignoreSearch: true });
+                        if (hit) return hit;
+                    }
+
+                    // Interactive Offline Screen with Direct Links
+                    const offlineHtml = `<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mode Offline - AlfarezMart</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .card { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 32px 24px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-bottom: 16px; }
+        h1 { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+        p { color: #94a3b8; font-size: 13px; line-height: 1.5; margin-bottom: 24px; }
+        .btn-group { display: flex; flex-direction: column; gap: 10px; }
+        .btn { display: block; width: 100%; padding: 12px 16px; border-radius: 12px; font-size: 13px; font-weight: 700; text-decoration: none; text-align: center; cursor: pointer; transition: 0.2s ease; border: none; }
+        .btn-primary { background: #ef4444; color: #fff; }
+        .btn-primary:hover { background: #dc2626; }
+        .btn-outline { background: #334155; color: #f8fafc; border: 1px solid rgba(255,255,255,0.1); }
+        .btn-outline:hover { background: #475569; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="badge">📡 Sedang Offline</div>
+        <h1>Halaman Belum Tersedia Offline</h1>
+        <p>Halaman ini belum sempat di-cache ke memori perangkat. Silakan buka menu offline yang siap digunakan di bawah:</p>
+        <div class="btn-group">
+            <a href="${BASE_URL}sales/pos" class="btn btn-primary">🛒 Buka Kasir POS</a>
+            <a href="${BASE_URL}scanner" class="btn btn-outline">🔍 Cek Harga / Scan</a>
+            <a href="${BASE_URL}products" class="btn btn-outline">📦 Katalog Produk</a>
+            <a href="${BASE_URL}settings/error-logs" class="btn btn-outline">🐞 Error Log Catcher</a>
+            <button onclick="window.location.reload()" class="btn btn-outline" style="margin-top:6px; color:#94a3b8;">🔄 Coba Muat Ulang</button>
+        </div>
+    </div>
+</body>
+</html>`;
+                    return new Response(offlineHtml, {
                         status: 200,
                         headers: { 'Content-Type': 'text/html; charset=utf-8' }
                     });
