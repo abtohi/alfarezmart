@@ -42,7 +42,7 @@ if ($userLevel === 'staff') {
     
     <!-- Bootstrap 5.3 (Local) -->
     <link href="<?= BASE_URL ?>public/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="preload" href="<?= BASE_URL ?>public/css/fonts/bootstrap-icons.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="<?= BASE_URL ?>public/css/fonts/bootstrap-icons.woff2?dd67030699838ea613ee6dbda90effa6" as="font" type="font/woff2" crossorigin="anonymous">
     <link href="<?= BASE_URL ?>public/css/bootstrap-icons.min.css" rel="stylesheet">
     
     <!-- Google Fonts -->
@@ -51,7 +51,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=25.10'; ?>
+    <?php $v = '?v=25.14'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -858,7 +858,7 @@ if ($userLevel === 'staff') {
 
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '25.13'; // Update this to force client reloads
+    const APP_VERSION = '25.14'; // Update this to force client reloads
 
     // Self-healing cache buster
     // PERF FIX: Added sessionStorage guard to prevent infinite reload loop.
@@ -1005,33 +1005,45 @@ if ($userLevel === 'staff') {
     })();
     </script>
 
-    <!-- Activity Logger: fire-and-forget, silent, no impact on UX -->
+    <!-- Activity Logger: non-blocking, idle-deferred, zero impact on UX -->
     <script>
     (function() {
         'use strict';
         <?php $actUserId = (int)($_SESSION['user_id'] ?? 0); ?>
         if (<?= $actUserId ?> === 0) return;
-        const _logUrl = BASE_URL + 'api/activity/log';
-        const _pageUrl = window.location.href;
-        const _pageTitle = document.title;
-        function _sendLog(lat, lng) {
-            const body = { page_url: _pageUrl, page_title: _pageTitle };
-            if (lat != null) { body.lat = lat; body.lng = lng; }
-            fetch(_logUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-                keepalive: true
-            }).catch(function() {});
+
+        function _executeLog() {
+            try {
+                const _logUrl = (typeof BASE_URL !== 'undefined' ? BASE_URL : '/') + 'api/activity/log';
+                const payload = JSON.stringify({
+                    page_url: window.location.href,
+                    page_title: document.title
+                });
+
+                if (navigator.sendBeacon) {
+                    const blob = new Blob([payload], { type: 'application/json' });
+                    navigator.sendBeacon(_logUrl, blob);
+                } else if (window.fetch) {
+                    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                    const timeoutId = controller ? setTimeout(() => controller.abort(), 2000) : null;
+                    fetch(_logUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: payload,
+                        signal: controller ? controller.signal : undefined,
+                        keepalive: true
+                    }).catch(() => {}).finally(() => {
+                        if (timeoutId) clearTimeout(timeoutId);
+                    });
+                }
+            } catch (e) {}
         }
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                function(pos) { _sendLog(pos.coords.latitude, pos.coords.longitude); },
-                function()    { _sendLog(null, null); },
-                { timeout: 4000, maximumAge: 60000, enableHighAccuracy: false }
-            );
+
+        // Run when browser is idle to prevent competing with critical page resources
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(_executeLog, { timeout: 3000 });
         } else {
-            _sendLog(null, null);
+            setTimeout(_executeLog, 1200);
         }
     })();
     </script>
