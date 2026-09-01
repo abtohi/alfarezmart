@@ -1985,7 +1985,7 @@ function addProductToCart(product, defaultLevel = null) {
         }
     });
     
-    purchaseItems.unshift({
+    const newItem = {
         id: Date.now(),
         product_id: product.id,
         name: product.full_name || product.short_label,
@@ -2004,7 +2004,9 @@ function addProductToCart(product, defaultLevel = null) {
         diskon_mode: 'rp',
         diskon_value: 0,
         harga_nett: parseFloat(selectedPkg.buy_price) || 0
-    });
+    };
+    propagateFromMainInputs(newItem);
+    purchaseItems.unshift(newItem);
     
     renderCart();
     showToast(`${product.short_label || product.full_name} ditambahkan`);
@@ -2021,11 +2023,12 @@ function changeLevel(tempId, newLevel) {
         item.buy_price = parseFloat(pkg.buy_price) || 0;
         item.sell_price_retail = parseFloat(pkg.sell_price_retail) || 0;
         item.sell_price_wholesale = parseFloat(pkg.sell_price_wholesale) || 0;
-        item.ppn_pct = pkg.ppn_pct || 0;
-        item.diskon_mode = pkg.diskon_mode || 'rp';
-        item.diskon_value = pkg.diskon_value || 0;
-        item.harga_nett = calcItemNett(item.buy_price, item.ppn_pct, item.diskon_mode, item.diskon_value, item.quantity);
+        item.ppn_pct = pkg.ppn_pct || item.ppn_pct || 0;
+        item.diskon_mode = pkg.diskon_mode || item.diskon_mode || 'rp';
+        item.diskon_value = pkg.diskon_value !== undefined ? pkg.diskon_value : (item.diskon_value || 0);
         item.total = item.quantity * item.buy_price;
+        propagateFromMainInputs(item);
+        item.harga_nett = pkg.harga_nett || calcItemNett(item.buy_price, item.ppn_pct, item.diskon_mode, item.diskon_value, item.quantity);
         renderCart();
     }
 }
@@ -3141,14 +3144,35 @@ function propagateFromMainInputs(item) {
 function buildMiniPricingTableHtml(item) {
     if (!item.packagings || item.packagings.length === 0) return '';
 
+    const selPkg     = item.packagings.find(p => p.level == item.level) || item.packagings[0];
+    const selBaseQty = parseFloat(selPkg?.base_qty) || 1;
+    const qty        = parseFloat(item.quantity) || 1;
+    const totalPcs   = qty * selBaseQty;
+    const ppn        = parseFloat(item.ppn_pct) || 0;
+    const dm         = item.diskon_mode || 'rp';
+    const dv         = parseFloat(item.diskon_value) || 0;
+
     const rows = item.packagings.map(pkg => {
         const buy  = parseFloat(pkg.buy_price) || 0;
-        const ppn  = parseFloat(pkg.ppn_pct) || 0;
-        const dm   = pkg.diskon_mode || 'rp';
-        const dv   = parseFloat(pkg.diskon_value) || 0;
-        const nett = calcItemNett(buy, ppn, dm, dv, item.quantity);
+        const bq   = parseFloat(pkg.base_qty) || 1;
         const ret  = parseFloat(pkg.sell_price_retail) || 0;
         const who  = parseFloat(pkg.sell_price_wholesale) || 0;
+
+        let nett = (pkg.harga_nett !== undefined && pkg.harga_nett !== null && !isNaN(pkg.harga_nett))
+            ? parseFloat(pkg.harga_nett)
+            : null;
+
+        if (nett === null) {
+            const ppnAmt = buy * (ppn / 100);
+            let discForPkg = 0;
+            if (dm === 'pct') {
+                discForPkg = buy * (dv / 100);
+            } else {
+                const discPerPcs = totalPcs > 0 ? (dv / totalPcs) : 0;
+                discForPkg = discPerPcs * bq;
+            }
+            nett = Math.max(0, buy + ppnAmt - discForPkg);
+        }
 
         const mR = (nett > 0 && ret > 0) ? ((ret - nett) / nett * 100) : null;
         const mW = (nett > 0 && who > 0) ? ((who - nett) / nett * 100) : null;
@@ -3166,11 +3190,6 @@ function buildMiniPricingTableHtml(item) {
             if (dm === 'pct') {
                 breakdownParts.push(`−${dv}%`);
             } else {
-                const selPkg = item.packagings.find(p => p.level == item.level);
-                const selBq = parseFloat(selPkg?.base_qty) || 1;
-                const bq = parseFloat(pkg.base_qty) || 1;
-                const q = parseFloat(item.quantity) || 1;
-                const totalPcs = q * selBq;
                 const discPerPcs = totalPcs > 0 ? (dv / totalPcs) : 0;
                 const discForPkg = discPerPcs * bq;
                 breakdownParts.push(`−Rp${Math.round(discForPkg).toLocaleString('id-ID')}`);
@@ -3245,7 +3264,10 @@ function buildMiniPricingTableHtml(item) {
 function buildTrendBannerHtml(item) {
     const selPkg      = item.packagings.find(p => p.level == item.level);
     const selBaseQty  = parseFloat(selPkg?.base_qty) || 1;
-    const buyPerPcs   = (parseFloat(item.buy_price) || 0) / selBaseQty;
+    const effectiveBuy = (item.harga_nett !== undefined && item.harga_nett !== null && parseFloat(item.harga_nett) > 0)
+        ? parseFloat(item.harga_nett)
+        : (parseFloat(item.buy_price) || 0);
+    const buyPerPcs   = effectiveBuy / selBaseQty;
     const lastBuy     = parseFloat(item.last_buy_price) || 0;
 
     if (lastBuy <= 0) {
@@ -3288,15 +3310,21 @@ function buildTrendBannerHtml(item) {
 function buildDrawerRowHtml(item, prefix) {
     const uid = item.id;
     let html  = '';
+    const selPkgDrawer = item.packagings.find(p => p.level == item.level) || item.packagings[0];
+    const selBqDrawer  = parseFloat(selPkgDrawer?.base_qty) || 1;
+    const totalPcsDrawer = (parseFloat(item.quantity) || 1) * selBqDrawer;
 
     item.packagings.forEach(pkg => {
         const isLevel1  = (pkg.level == 1);
         const bq        = parseFloat(pkg.base_qty) || 1;
         const buy       = parseFloat(pkg.buy_price) || 0;
-        const ppn       = parseFloat(pkg.ppn_pct) || 0;
-        const dm        = pkg.diskon_mode || 'rp';
-        const dv        = parseFloat(pkg.diskon_value) || 0;
-        const nett      = pkg.harga_nett || calcItemNett(buy, ppn, dm, dv, item.quantity);
+        const ppn       = parseFloat(pkg.ppn_pct !== undefined ? pkg.ppn_pct : (item.ppn_pct || 0));
+        const dm        = pkg.diskon_mode || item.diskon_mode || 'rp';
+        const dv        = parseFloat(pkg.diskon_value !== undefined ? pkg.diskon_value : (item.diskon_value || 0));
+        const discForPkgDrawer = dm === 'pct' ? (buy * (dv / 100)) : (totalPcsDrawer > 0 ? (dv / totalPcsDrawer) * bq : 0);
+        let nett        = (pkg.harga_nett !== undefined && pkg.harga_nett !== null && !isNaN(pkg.harga_nett))
+            ? parseFloat(pkg.harga_nett)
+            : Math.max(0, buy + (buy * (ppn / 100)) - discForPkgDrawer);
         const ret       = parseFloat(pkg.sell_price_retail) || 0;
         const who       = parseFloat(pkg.sell_price_wholesale) || 0;
         const origBuy   = parseFloat(pkg._orig_buy) || 0;
@@ -3379,7 +3407,7 @@ function buildDrawerRowHtml(item, prefix) {
                 &nbsp;|&nbsp;
                 PPN: <strong>${ppn}%</strong>
                 &nbsp;|&nbsp;
-                Diskon: <strong>${dm === 'pct' ? dv + '%' : 'Rp' + Math.round(dv).toLocaleString('id-ID')}</strong>
+                Diskon: <strong>${dm === 'pct' ? dv + '%' : 'Rp' + Math.round(discForPkgDrawer).toLocaleString('id-ID')}</strong>
                 &nbsp;|&nbsp;
                 Nett: <strong style="color:var(--info);">Rp${Math.round(nett).toLocaleString('id-ID')}</strong>
             </div>
@@ -3499,10 +3527,8 @@ function addDrawerTierRow(btn) {
 function refreshDrawerRowMargin(rowEl) {
     const buy   = parseFloat(rowEl.querySelector('.drawer-pkg-buy')?.value) || 0;
     const ppn   = parseFloat(rowEl.closest('[data-item-ppn]')?.dataset.itemPpn || rowEl.closest('.item-card')?.dataset.ppn || 0);
-    // Include discount if available, but simplified here; get exact nett from the item state if possible
-    let nett = calcItemNett(buy, ppn, 'rp', 0);
     
-    // Attempt to get exact nett from the UI badge or dataset if available to include discounts correctly
+    let nett = null;
     const uid = rowEl.closest('[id^="drawer_"]')?.id.split('_')[1];
     if (uid) {
         let item = typeof purchaseItems !== 'undefined' ? purchaseItems.find(i => i.id == uid) : null;
@@ -3510,8 +3536,13 @@ function refreshDrawerRowMargin(rowEl) {
         if (item) {
             const level = parseInt(rowEl.dataset.level || 1, 10);
             const pkg = item.packagings.find(p => p.level == level);
-            if (pkg) nett = pkg.harga_nett || calcItemNett(buy, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
+            if (pkg && pkg.harga_nett !== undefined && pkg.harga_nett !== null && !isNaN(pkg.harga_nett)) {
+                nett = parseFloat(pkg.harga_nett);
+            }
         }
+    }
+    if (nett === null) {
+        nett = calcItemNett(buy, ppn, 'rp', 0);
     }
 
     const ret   = parseFloat(rowEl.querySelector('.drawer-pkg-ret')?.value) || 0;
@@ -3524,8 +3555,7 @@ function refreshDrawerRowMargin(rowEl) {
 
 /**
  * Called when user types in drawer buy input.
- * Only updates the item's pkg data; does NOT re-propagate to other levels
- * (user is editing this level manually, buy_custom must be set).
+ * Updates the item's pkg data and re-propagates nett prices.
  * Works for both regular purchaseItems and bulk modal bulkItems.
  */
 function onDrawerBuyInput(prefix, uid, level, newVal) {
@@ -3536,7 +3566,6 @@ function onDrawerBuyInput(prefix, uid, level, newVal) {
     if (!pkg) return;
     pkg.buy_price  = parseFloat(newVal) || 0;
     pkg.buy_custom = true;
-    pkg.harga_nett = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
     
     // Propagate if level 1
     if (level === 1) {
@@ -3544,7 +3573,6 @@ function onDrawerBuyInput(prefix, uid, level, newVal) {
             if (p.level === 1 || p.buy_custom) return;
             const ratio = (parseFloat(p.base_qty) || 1) / (parseFloat(pkg.base_qty) || 1);
             p.buy_price = pkg.buy_price * ratio;
-            p.harga_nett = calcItemNett(p.buy_price, p.ppn_pct, p.diskon_mode, p.diskon_value);
         });
         
         if (item.level === 1) {
@@ -3560,7 +3588,11 @@ function onDrawerBuyInput(prefix, uid, level, newVal) {
                 }
             }
         }
-        
+    }
+
+    // Re-propagate nett prices across all levels
+    propagateFromMainInputs(item);
+    if (level === 1) {
         refreshOpenDrawer(uid);
     }
 
@@ -3816,10 +3848,17 @@ function renderCart() {
                     ${item.packagings.map(pkg => {
                         const isSel = (pkg.level == item.level);
                         const buy = parseFloat(pkg.buy_price) || 0;
+                        const bq  = parseFloat(pkg.base_qty) || 1;
+                        const selPkg = item.packagings.find(p => p.level == item.level) || item.packagings[0];
+                        const selBq = parseFloat(selPkg?.base_qty) || 1;
+                        const totalPcs = (parseFloat(item.quantity) || 1) * selBq;
                         const ppn = parseFloat(pkg.ppn_pct || item.ppn_pct || 0);
                         const dm  = pkg.diskon_mode || item.diskon_mode || 'rp';
                         const dv  = parseFloat(pkg.diskon_value || item.diskon_value || 0);
-                        const nett = calcItemNett(buy, ppn, dm, dv, item.quantity);
+                        const discForPkg = dm === 'pct' ? (buy * dv / 100) : (totalPcs > 0 ? (dv / totalPcs) * bq : 0);
+                        const nett = (pkg.harga_nett !== undefined && pkg.harga_nett !== null && !isNaN(pkg.harga_nett))
+                            ? parseFloat(pkg.harga_nett)
+                            : Math.max(0, buy + (buy * ppn / 100) - discForPkg);
                         return `<div style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; background:${isSel ? 'rgba(230,57,70,0.12)' : 'var(--bg-input)'}; border:1px solid ${isSel ? 'var(--primary)' : 'var(--border-color)'}; border-radius:var(--radius-sm); font-size:9.5px; white-space:nowrap;">
                             <span style="font-weight:600; color:${isSel ? 'var(--primary)' : 'var(--text-primary)'};">${pkg.unit_name}</span>
                             <span style="color:var(--text-muted); font-size:8.5px;">(x${pkg.base_qty})</span>
@@ -4022,18 +4061,24 @@ function refreshOpenDrawer(uid) {
 
     if (!drawer || drawer.style.display === 'none') return;
     // Re-render only the PPN/Diskon info badges inside each drawer row
+    const selPkgDrawer = item.packagings.find(p => p.level == item.level) || item.packagings[0];
+    const selBqDrawer  = parseFloat(selPkgDrawer?.base_qty) || 1;
+    const totalPcsDrawer = (parseFloat(item.quantity) || 1) * selBqDrawer;
+
     drawer.querySelectorAll('.drawer-pkg-row').forEach(rowEl => {
         const level = parseInt(rowEl.dataset.level);
         const pkg   = item.packagings.find(p => p.level == level);
         if (!pkg) return;
+        const bq    = parseFloat(pkg.base_qty) || 1;
         const ppn   = pkg.ppn_pct || 0;
         const dm    = pkg.diskon_mode || 'rp';
         const dv    = pkg.diskon_value || 0;
-        const nett  = pkg.harga_nett || pkg.buy_price || 0;
+        const discForPkgDrawer = dm === 'pct' ? dv : (totalPcsDrawer > 0 ? (dv / totalPcsDrawer) * bq : 0);
+        const nett  = (pkg.harga_nett !== undefined && pkg.harga_nett !== null && !isNaN(pkg.harga_nett)) ? pkg.harga_nett : (pkg.buy_price || 0);
         // Update PPN/Diskon info label
         const badgesEl = rowEl.querySelector('.pkg-ppn-diskon-badge');
         if (badgesEl) {
-            badgesEl.innerHTML = `PPN: <strong>${ppn}%</strong> &nbsp;|&nbsp; Diskon: <strong>${dm === 'pct' ? dv + '%' : 'Rp' + Math.round(dv).toLocaleString('id-ID')}</strong> &nbsp;|&nbsp; Nett: <strong style="color:var(--info);">Rp${Math.round(nett).toLocaleString('id-ID')}</strong>`;
+            badgesEl.innerHTML = `PPN: <strong>${ppn}%</strong> &nbsp;|&nbsp; Diskon: <strong>${dm === 'pct' ? dv + '%' : 'Rp' + Math.round(discForPkgDrawer).toLocaleString('id-ID')}</strong> &nbsp;|&nbsp; Nett: <strong style="color:var(--info);">Rp${Math.round(nett).toLocaleString('id-ID')}</strong>`;
         }
         // Update buy input if not custom
         if (!pkg.buy_custom) {
@@ -4104,9 +4149,21 @@ async function submitPurchase() {
                     diskon_value: parseFloat(i.diskon_value) || 0,
                     harga_nett: itemNett,
                     packagings: (i.packagings || []).map(p => {
-                        const pkgNett = (parseFloat(p.harga_nett) > 0)
+                        let pkgNett = (parseFloat(p.harga_nett) > 0)
                             ? parseFloat(p.harga_nett)
-                            : calcItemNett(parseFloat(p.buy_price) || 0, parseFloat(p.ppn_pct) || 0, p.diskon_mode || 'rp', parseFloat(p.diskon_value) || 0, i.quantity);
+                            : null;
+                        if (pkgNett === null) {
+                            const pBuy = parseFloat(p.buy_price) || 0;
+                            const pPpn = parseFloat(p.ppn_pct !== undefined ? p.ppn_pct : (i.ppn_pct || 0));
+                            const pDm  = p.diskon_mode || i.diskon_mode || 'rp';
+                            const pDv  = parseFloat(p.diskon_value !== undefined ? p.diskon_value : (i.diskon_value || 0));
+                            const pBq  = parseFloat(p.base_qty) || 1;
+                            const selBq = parseFloat(selPkg.base_qty) || 1;
+                            const totalPcs = (parseFloat(i.quantity) || 1) * selBq;
+                            const discForPkg = pDm === 'pct' ? (pBuy * pDv / 100) : (totalPcs > 0 ? (pDv / totalPcs) * pBq : 0);
+                            const ppnAmt = pBuy * (pPpn / 100);
+                            pkgNett = Math.max(0, pBuy + ppnAmt - discForPkg);
+                        }
                         return {
                             level: p.level,
                             buy_price: pkgNett,
@@ -4491,6 +4548,7 @@ function onBulkLevelChange(bulkId, newLevel) {
     bulkItem.level     = parseInt(newLevel);
     bulkItem.unit_name = pkg.unit_name;
     bulkItem.buy_price = parseFloat(pkg.buy_price) || 0;
+    propagateFromMainInputs(bulkItem);
     // Refresh mini table & trend banner using the shared helpers
     const miniTbl = el.querySelector('.bulk-mini-table');
     if (miniTbl) miniTbl.innerHTML = buildMiniPricingTableHtml(bulkItem);
