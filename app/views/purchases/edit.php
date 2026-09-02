@@ -251,6 +251,13 @@
 </div>
 
 <script>
+// Format packaging base quantity cleanly without unnecessary decimals
+function formatBaseQty(qty) {
+    const n = parseFloat(qty);
+    if (isNaN(n) || n <= 0) return '1';
+    return (n % 1 === 0) ? String(Math.round(n)) : String(parseFloat(n.toFixed(3)));
+}
+
 // ===== Data from PHP =====
 const suppliersData = [
     <?php foreach ($suppliers ?? [] as $s): ?>
@@ -1539,7 +1546,7 @@ async function doLinkProductSearch(tempId) {
         let html = '';
         products.slice(0, 15).forEach(p => {
             const pkgs = p.packagings || [];
-            const pkgLabels = pkgs.map(pkg => `${pkg.unit_name} (x${pkg.base_qty})`).join(', ');
+            const pkgLabels = pkgs.map(pkg => `${pkg.unit_name} (x${formatBaseQty(pkg.base_qty)})`).join(', ');
             html += `
                 <div style="padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;cursor:pointer;border-radius:4px;transition:background 0.15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='transparent'" onclick="selectProductToLink(${tempId}, ${p.id})">
                     <div>
@@ -2525,7 +2532,7 @@ function openAllPackagingsModal(tempId) {
         html += `
         <div class="packaging-level-edit" data-level="${pkg.level}" data-base-qty="${baseQty}" data-pkg-id="${pkg.id || ''}" style="border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:12px;margin-bottom:12px;background:var(--surface-2);">
             <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--primary);display:flex;align-items:center;flex-wrap:wrap;gap:4px;">
-                Level ${pkg.level} — ${pkg.unit_name} (Isi ${baseQty} pcs) ${changeBadge}
+                Level ${pkg.level} — ${pkg.unit_name} (Isi ${formatBaseQty(baseQty)} pcs) ${changeBadge}
             </div>
             <div style="background:rgba(0,0,0,0.15);padding:12px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.05);">
                 ${!isLevel1 ? `
@@ -3069,7 +3076,7 @@ function buildMiniPricingTableHtml(item) {
         return `<tr style="${isSelected ? 'background:rgba(230,57,70,0.08);' : ''}">
             <td style="padding:5px 6px;font-size:10px;font-weight:600;color:${isSelected ? 'var(--primary)' : 'var(--text-muted)'}">
                 ${isSelected ? '<i class="bi bi-arrow-right-short"></i>' : ''} ${pkg.unit_name}
-                <span style="font-size:9px;font-weight:400;color:var(--text-muted);">×${pkg.base_qty}</span>
+                <span style="font-size:9px;font-weight:400;color:var(--text-muted);">×${formatBaseQty(pkg.base_qty)}</span>
                 ${tierBadge}
             </td>
             <td style="padding:5px 6px;font-size:10px;text-align:right;">
@@ -3632,6 +3639,8 @@ function renderCart() {
     purchaseItems.forEach(item => {
         // Ensure orig prices are stored for comparison (first time only)
         item.packagings.forEach(pkg => {
+            pkg.base_qty = parseFloat(pkg.base_qty) || 1;
+            pkg.contained_qty = parseFloat(pkg.contained_qty) || 1;
             if (pkg._orig_buy === undefined) pkg._orig_buy = parseFloat(pkg.buy_price) || 0;
             if (pkg._orig_ret === undefined) pkg._orig_ret = parseFloat(pkg.sell_price_retail) || 0;
             if (!pkg.qty_prices) pkg.qty_prices = [];
@@ -3640,9 +3649,9 @@ function renderCart() {
         if (item.is_collapsed === undefined) item.is_collapsed = false;
 
         const levelOptions = item.packagings.map(p => 
-            `<li><a class="dropdown-item ${p.level == item.level ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='${p.level}'; dp.querySelector('button span').textContent='${p.unit_name} (Isi ${p.base_qty})'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">${p.unit_name} (Isi ${p.base_qty})</a></li>`
+            `<li><a class="dropdown-item ${p.level == item.level ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='${p.level}'; dp.querySelector('button span').textContent='${p.unit_name} (Isi ${formatBaseQty(p.base_qty)})'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">${p.unit_name} (Isi ${formatBaseQty(p.base_qty)})</a></li>`
         ).join('');
-        const activePkgStr = (item.packagings.find(p => p.level == item.level) || item.packagings[0]) ? `${(item.packagings.find(p => p.level == item.level) || item.packagings[0]).unit_name} (Isi ${(item.packagings.find(p => p.level == item.level) || item.packagings[0]).base_qty})` : 'Pilih Kemasan';
+        const activePkgStr = (item.packagings.find(p => p.level == item.level) || item.packagings[0]) ? `${(item.packagings.find(p => p.level == item.level) || item.packagings[0]).unit_name} (Isi ${formatBaseQty((item.packagings.find(p => p.level == item.level) || item.packagings[0]).base_qty)})` : 'Pilih Kemasan';
 
         const selPkg    = item.packagings.find(p => p.level == item.level) || item.packagings[0];
         const selBaseQty = parseFloat(selPkg?.base_qty) || 1;
@@ -3699,7 +3708,7 @@ function renderCart() {
                             : Math.max(0, buy + (buy * ppn / 100) - discForPkg);
                         return `<div style="display:inline-flex; align-items:center; gap:3px; padding:2px 6px; background:${isSel ? 'rgba(230,57,70,0.12)' : 'var(--bg-input)'}; border:1px solid ${isSel ? 'var(--primary)' : 'var(--border-color)'}; border-radius:var(--radius-sm); font-size:9.5px; white-space:nowrap;">
                             <span style="font-weight:600; color:${isSel ? 'var(--primary)' : 'var(--text-primary)'};">${pkg.unit_name}</span>
-                            <span style="color:var(--text-muted); font-size:8.5px;">(x${pkg.base_qty})</span>
+                            <span style="color:var(--text-muted); font-size:8.5px;">(x${formatBaseQty(pkg.base_qty)})</span>
                             <span style="color:var(--text-primary); font-weight:700;">${formatRupiah(nett)}</span>
                         </div>`;
                     }).join('')}
@@ -4112,10 +4121,10 @@ async function openBulkInputModal() {
     // Render each bulk item card using the same helpers
     const listHTML = bulkItems.map(item => {
         const levelOptions = item.packagings.map(p =>
-            `<li><a class="dropdown-item ${p.level == item.level ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='${p.level}'; dp.querySelector('button span').textContent='${p.unit_name} (Isi ${p.base_qty})'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">${p.unit_name} (Isi ${p.base_qty})</a></li>`
+            `<li><a class="dropdown-item ${p.level == item.level ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='${p.level}'; dp.querySelector('button span').textContent='${p.unit_name} (Isi ${formatBaseQty(p.base_qty)})'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">${p.unit_name} (Isi ${formatBaseQty(p.base_qty)})</a></li>`
         ).join('');
         const selPkg = item.packagings.find(p => p.level == item.level) || item.packagings[0];
-        const activePkgStr = selPkg ? `${selPkg.unit_name} (Isi ${selPkg.base_qty})` : 'Pilih Kemasan';
+        const activePkgStr = selPkg ? `${selPkg.unit_name} (Isi ${formatBaseQty(selPkg.base_qty)})` : 'Pilih Kemasan';
         const hasPkgs    = item.packagings.length > 1;
         const drawerHtml  = hasPkgs ? buildDrawerRowHtml(item, 'bulk') : '';
 
