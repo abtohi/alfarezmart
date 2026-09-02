@@ -439,9 +439,28 @@ class ProductModel extends Model
         ");
         $stmt->execute([':pid' => $productId]);
         $rows = $stmt->fetchAll();
+        $runningBase = 1;
         foreach ($rows as &$row) {
-            if (isset($row['contained_qty'])) $row['contained_qty'] = (float)$row['contained_qty'];
-            if (isset($row['base_qty'])) $row['base_qty'] = (float)$row['base_qty'];
+            $lvl  = (int)($row['level'] ?? 1);
+            $cqty = isset($row['contained_qty']) ? (float)$row['contained_qty'] : 1;
+            $bqty = isset($row['base_qty']) ? (float)$row['base_qty'] : 1;
+            if ($lvl === 1) {
+                $row['base_qty'] = 1;
+                $row['contained_qty'] = 1;
+                $runningBase = 1;
+            } else {
+                if ($cqty > 1) {
+                    $row['base_qty'] = $runningBase * $cqty;
+                    $row['contained_qty'] = $cqty;
+                } elseif ($bqty > $runningBase) {
+                    $row['contained_qty'] = round($bqty / $runningBase);
+                    $row['base_qty'] = $runningBase * $row['contained_qty'];
+                } else {
+                    $row['base_qty'] = $runningBase;
+                    $row['contained_qty'] = 1;
+                }
+                $runningBase = $row['base_qty'];
+            }
         }
         unset($row);
         return $this->attachQtyPricesToPackagings($rows);
@@ -701,6 +720,33 @@ class ProductModel extends Model
             $pid = (int)$row['product_id'];
             $byProduct[$pid][] = $row;
         }
+        foreach ($byProduct as $pid => &$pkgs) {
+            $runningBase = 1;
+            foreach ($pkgs as &$row) {
+                $lvl  = (int)($row['level'] ?? 1);
+                $cqty = isset($row['contained_qty']) ? (float)$row['contained_qty'] : 1;
+                $bqty = isset($row['base_qty']) ? (float)$row['base_qty'] : 1;
+                if ($lvl === 1) {
+                    $row['base_qty'] = 1;
+                    $row['contained_qty'] = 1;
+                    $runningBase = 1;
+                } else {
+                    if ($cqty > 1) {
+                        $row['base_qty'] = $runningBase * $cqty;
+                        $row['contained_qty'] = $cqty;
+                    } elseif ($bqty > $runningBase) {
+                        $row['contained_qty'] = round($bqty / $runningBase);
+                        $row['base_qty'] = $runningBase * $row['contained_qty'];
+                    } else {
+                        $row['base_qty'] = $runningBase;
+                        $row['contained_qty'] = 1;
+                    }
+                    $runningBase = $row['base_qty'];
+                }
+            }
+            unset($row);
+        }
+        unset($pkgs);
         foreach ($products as &$p) {
             $pid = (int)$p['id'];
             $p['packagings'] = $byProduct[$pid] ?? [];

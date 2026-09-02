@@ -675,18 +675,24 @@ async function scanInvoiceWithAI() {
                             let runningBaseQty = 1;
                             const clonePkgs = JSON.parse(JSON.stringify(productData.packagings));
                             clonePkgs.sort((a, b) => a.level - b.level).forEach(p => {
-                                const cqty = parseFloat(p.contained_qty) || 1;
+                                let cqty = parseFloat(p.contained_qty) || 1;
+                                let bqty = parseFloat(p.base_qty) || 0;
                                 if (p.level == 1) {
                                     p.base_qty = 1;
                                     p.contained_qty = 1;
                                     runningBaseQty = 1;
                                 } else {
-                                    if (!p.base_qty || (p.base_qty <= 1 && cqty > 1)) {
+                                    if (cqty > 1) {
                                         p.base_qty = runningBaseQty * cqty;
-                                    } else if (!p.contained_qty || p.contained_qty <= 1) {
-                                        p.contained_qty = (runningBaseQty > 0) ? (p.base_qty / runningBaseQty) : p.base_qty;
+                                        p.contained_qty = cqty;
+                                    } else if (bqty > runningBaseQty) {
+                                        p.contained_qty = Math.round(bqty / runningBaseQty);
+                                        p.base_qty = runningBaseQty * p.contained_qty;
+                                    } else {
+                                        p.base_qty = runningBaseQty;
+                                        p.contained_qty = 1;
                                     }
-                                    runningBaseQty = parseFloat(p.base_qty) || runningBaseQty;
+                                    runningBaseQty = p.base_qty;
                                 }
                                 if (p.ppn_pct === undefined) p.ppn_pct = 0;
                                 if (p.diskon_mode === undefined) p.diskon_mode = 'rp';
@@ -1594,18 +1600,24 @@ async function selectProductToLink(tempId, productId) {
         let runningBaseQty = 1;
         const clonePkgs = JSON.parse(JSON.stringify(productData.packagings));
         clonePkgs.sort((a, b) => a.level - b.level).forEach(p => {
-            const cqty = parseFloat(p.contained_qty) || 1;
+            let cqty = parseFloat(p.contained_qty) || 1;
+            let bqty = parseFloat(p.base_qty) || 0;
             if (p.level == 1) {
                 p.base_qty = 1;
                 p.contained_qty = 1;
                 runningBaseQty = 1;
             } else {
-                if (!p.base_qty || (p.base_qty <= 1 && cqty > 1)) {
+                if (cqty > 1) {
                     p.base_qty = runningBaseQty * cqty;
-                } else if (!p.contained_qty || p.contained_qty <= 1) {
-                    p.contained_qty = (runningBaseQty > 0) ? (p.base_qty / runningBaseQty) : p.base_qty;
+                    p.contained_qty = cqty;
+                } else if (bqty > runningBaseQty) {
+                    p.contained_qty = Math.round(bqty / runningBaseQty);
+                    p.base_qty = runningBaseQty * p.contained_qty;
+                } else {
+                    p.base_qty = runningBaseQty;
+                    p.contained_qty = 1;
                 }
-                runningBaseQty = parseFloat(p.base_qty) || runningBaseQty;
+                runningBaseQty = p.base_qty;
             }
             if (p.ppn_pct === undefined) p.ppn_pct = item.ppn_pct || 0;
             if (p.diskon_mode === undefined) p.diskon_mode = item.diskon_mode || 'rp';
@@ -1959,18 +1971,24 @@ function addProductToCart(product, defaultLevel = null) {
     // Ensure base_qty is calculated cumulatively from contained_qty
     let runningBaseQty = 1;
     product.packagings.sort((a, b) => a.level - b.level).forEach(p => {
-        const cqty = parseFloat(p.contained_qty) || 1;
+        let cqty = parseFloat(p.contained_qty) || 1;
+        let bqty = parseFloat(p.base_qty) || 0;
         if (p.level == 1) {
             p.base_qty = 1;
             p.contained_qty = 1;
             runningBaseQty = 1;
         } else {
-            if (!p.base_qty || (p.base_qty <= 1 && cqty > 1)) {
+            if (cqty > 1) {
                 p.base_qty = runningBaseQty * cqty;
-            } else if (!p.contained_qty || p.contained_qty <= 1) {
-                p.contained_qty = (runningBaseQty > 0) ? (p.base_qty / runningBaseQty) : p.base_qty;
+                p.contained_qty = cqty;
+            } else if (bqty > runningBaseQty) {
+                p.contained_qty = Math.round(bqty / runningBaseQty);
+                p.base_qty = runningBaseQty * p.contained_qty;
+            } else {
+                p.base_qty = runningBaseQty;
+                p.contained_qty = 1;
             }
-            runningBaseQty = parseFloat(p.base_qty) || runningBaseQty;
+            runningBaseQty = p.base_qty;
         }
     });
 
