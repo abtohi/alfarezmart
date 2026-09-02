@@ -687,6 +687,8 @@ async function scanInvoiceWithAI() {
                                 if (p.ppn_pct === undefined) p.ppn_pct = 0;
                                 if (p.diskon_mode === undefined) p.diskon_mode = 'rp';
                                 if (p.diskon_value === undefined) p.diskon_value = 0;
+                                if (p._orig_buy === undefined) p._orig_buy = parseFloat(p.buy_price) || 0;
+                                if (p._orig_ret === undefined) p._orig_ret = parseFloat(p.sell_price_retail) || 0;
                                 p.harga_nett = parseFloat(p.buy_price) || 0;
                                 // Preserve qty_prices (tier pricing) from DB — never strip them
                                 if (!p.qty_prices) p.qty_prices = [];
@@ -695,7 +697,9 @@ async function scanInvoiceWithAI() {
                                 p.sell_price_wholesale = parseFloat(p.sell_price_wholesale) || 0;
                             });
 
-                            const unitPriceVal = scanUnitPrice > 0 ? scanUnitPrice : (scanQty > 0 ? scanTotal / scanQty : (parseFloat(selectedPkg.buy_price) || 0));
+                            const unitPriceVal = (scanTotal > 0 && scanQty > 0)
+                                ? (scanTotal / scanQty)
+                                : (scanUnitPrice > 0 ? scanUnitPrice : (parseFloat(selectedPkg.buy_price) || 0));
                             const totalVal = scanTotal > 0 ? scanTotal : (scanQty * unitPriceVal);
 
                             // Get sell prices from the selected packaging (DB values), never zero them
@@ -710,7 +714,7 @@ async function scanInvoiceWithAI() {
                                 supplier_code: item.supplier_code || '',
                                 is_unmatched: false,
                                 is_collapsed: false,
-                                is_manual_price: scanUnitPrice > 0,
+                                is_manual_price: (scanUnitPrice > 0 || scanTotal > 0),
                                 packagings: clonePkgs,
                                 level: selectedPkg.level,
                                 unit_name: selectedPkg.unit_name,
@@ -725,6 +729,22 @@ async function scanInvoiceWithAI() {
                                 diskon_value: 0,
                                 harga_nett: unitPriceVal
                             };
+
+                            // Update target packaging buy_price in packagings array
+                            const targetPkg = clonePkgs.find(p => p.level == selectedPkg.level);
+                            if (targetPkg) {
+                                targetPkg.buy_price = unitPriceVal;
+                            }
+
+                            // Propagate buy_price & calculated nett across all packaging levels based on quantity and contents
+                            propagateFromMainInputs(newCartItem);
+
+                            // Sync item-level harga_nett with selected packaging
+                            const updatedSelPkg = newCartItem.packagings.find(p => p.level == newCartItem.level);
+                            if (updatedSelPkg) {
+                                newCartItem.harga_nett = updatedSelPkg.harga_nett;
+                            }
+
                             scannedItems.push(newCartItem);
                             continue;
                         }
@@ -735,7 +755,8 @@ async function scanInvoiceWithAI() {
 
                 // UNMATCHED OR FALLBACK CART ITEM (Guaranteed 100% insertion)
                 const tempUid = Date.now() + Math.floor(Math.random() * 1000000);
-                const unitPriceVal = scanUnitPrice > 0 ? scanUnitPrice : (scanQty > 0 ? scanTotal / scanQty : 0);
+                const unitPriceVal = (scanTotal > 0 && scanQty > 0) ? (scanTotal / scanQty) : (scanUnitPrice > 0 ? scanUnitPrice : 0);
+                const totalVal = scanTotal > 0 ? scanTotal : (scanQty * unitPriceVal);
                 
                 scannedItems.push({
                     id: tempUid,
@@ -766,7 +787,7 @@ async function scanInvoiceWithAI() {
                     sell_price_retail: 0,
                     sell_price_wholesale: 0,
                     last_buy_price: 0,
-                    total: scanTotal,
+                    total: totalVal,
                     ppn_pct: 0,
                     diskon_mode: 'rp',
                     diskon_value: 0,
@@ -3067,15 +3088,21 @@ function buildMiniPricingTableHtml(item) {
  * @param {object} item - purchase item object
  */
 function buildTrendBannerHtml(item) {
-    const selPkg      = item.packagings.find(p => p.level == item.level);
+    const selPkg      = item.packagings.find(p => p.level == item.level) || item.packagings[0];
     const selBaseQty  = parseFloat(selPkg?.base_qty) || 1;
     const effectiveBuy = (item.harga_nett !== undefined && item.harga_nett !== null && parseFloat(item.harga_nett) > 0)
         ? parseFloat(item.harga_nett)
         : (parseFloat(item.buy_price) || 0);
     const buyPerPcs   = effectiveBuy / selBaseQty;
-    const lastBuy     = parseFloat(item.last_buy_price) || 0;
+    
+    // Previous buy price per pcs:
+    const lvl1Pkg     = item.packagings.find(p => p.level == 1);
+    const origBuyPkg  = parseFloat(selPkg?._orig_buy) || 0;
+    let lastBuyPerPcs = (lvl1Pkg && parseFloat(lvl1Pkg._orig_buy) > 0)
+        ? parseFloat(lvl1Pkg._orig_buy)
+        : (origBuyPkg > 0 ? origBuyPkg / selBaseQty : (parseFloat(item.last_buy_price) || 0));
 
-    if (lastBuy <= 0) {
+    if (lastBuyPerPcs <= 0) {
         if (buyPerPcs > 0) {
             return `<div style="margin-top:8px;padding:7px 10px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.08);font-size:10px;color:var(--text-muted);">
                 <i class="bi bi-info-circle"></i> Produk baru — belum ada histori harga sebelumnya
@@ -3086,19 +3113,19 @@ function buildTrendBannerHtml(item) {
 
     if (buyPerPcs <= 0) return '';
 
-    const diff = Math.round(buyPerPcs - lastBuy);
+    const diff = Math.round(buyPerPcs - lastBuyPerPcs);
     const diffAbs = Math.abs(diff);
     let icon, color, bg, label;
 
     if (diff === 0) {
         icon  = 'bi-check-circle-fill'; color = 'var(--success)'; bg = 'rgba(40,167,69,0.1)';
-        label = `<strong>Stabil</strong> — Harga modal /pcs sama dengan harga terakhir (Rp${Math.round(lastBuy).toLocaleString('id-ID')})`;
+        label = `<strong>Stabil</strong> — Harga modal /pcs sama dengan harga terakhir (Rp${Math.round(lastBuyPerPcs).toLocaleString('id-ID')})`;
     } else if (diff > 0) {
         icon  = 'bi-graph-up-arrow'; color = 'var(--warning)'; bg = 'rgba(255,193,7,0.1)';
-        label = `<strong>Naik Rp${diffAbs.toLocaleString('id-ID')}</strong> dari harga terakhir <span style="opacity:0.7">(Rp${Math.round(lastBuy).toLocaleString('id-ID')} → Rp${Math.round(buyPerPcs).toLocaleString('id-ID')} /pcs)</span>`;
+        label = `<strong>Naik Rp${diffAbs.toLocaleString('id-ID')}</strong> dari harga terakhir <span style="opacity:0.7">(Rp${Math.round(lastBuyPerPcs).toLocaleString('id-ID')} → Rp${Math.round(buyPerPcs).toLocaleString('id-ID')} /pcs)</span>`;
     } else {
         icon  = 'bi-graph-down-arrow'; color = 'var(--info)'; bg = 'rgba(76,201,240,0.1)';
-        label = `<strong>Turun Rp${diffAbs.toLocaleString('id-ID')}</strong> dari harga terakhir <span style="opacity:0.7">(Rp${Math.round(lastBuy).toLocaleString('id-ID')} → Rp${Math.round(buyPerPcs).toLocaleString('id-ID')} /pcs)</span>`;
+        label = `<strong>Turun Rp${diffAbs.toLocaleString('id-ID')}</strong> dari harga terakhir <span style="opacity:0.7">(Rp${Math.round(lastBuyPerPcs).toLocaleString('id-ID')} → Rp${Math.round(buyPerPcs).toLocaleString('id-ID')} /pcs)</span>`;
     }
 
     return `<div style="margin-top:8px;padding:7px 10px;border-radius:var(--radius-sm);background:${bg};border:1px solid ${color}30;font-size:10px;color:${color};display:flex;align-items:flex-start;gap:6px;">
@@ -3589,16 +3616,18 @@ function renderCart() {
 
         // Simple per-unit price summary
         const buyPrice = parseFloat(selPkg?.buy_price) || 0;
-        const lastBuy = parseFloat(item.last_buy_price) || 0;
+        const origBuy  = parseFloat(selPkg?._orig_buy) || 0;
         let priceSummary = '';
-        if (buyPrice > 0) {
+        if (origBuy > 0) {
+            priceSummary = `<span style="font-size:10px;color:var(--text-muted);">Harga terakhir: <strong style="color:var(--info);">Rp${Math.round(origBuy).toLocaleString('id-ID')}</strong>/${selPkg?.unit_name || 'pcs'}</span>`;
+            if (buyPrice > 0 && origBuy !== buyPrice) {
+                const diff = buyPrice - origBuy;
+                const diffIcon = diff > 0 ? 'bi-arrow-up-short' : 'bi-arrow-down-short';
+                const diffColor = diff > 0 ? 'var(--warning)' : 'var(--info)';
+                priceSummary += ` <span style="font-size:9px;color:${diffColor};font-weight:600;"><i class="bi ${diffIcon}"></i>${diff > 0 ? '+' : ''}Rp${Math.round(Math.abs(diff)).toLocaleString('id-ID')}</span>`;
+            }
+        } else if (buyPrice > 0) {
             priceSummary = `<span style="font-size:10px;color:var(--text-muted);">Harga terakhir: <strong style="color:var(--info);">Rp${Math.round(buyPrice).toLocaleString('id-ID')}</strong>/${selPkg?.unit_name || 'pcs'}</span>`;
-        }
-        if (lastBuy > 0 && buyPrice > 0 && lastBuy !== buyPrice) {
-            const diff = buyPrice - lastBuy;
-            const diffIcon = diff > 0 ? 'bi-arrow-up-short' : 'bi-arrow-down-short';
-            const diffColor = diff > 0 ? 'var(--warning)' : 'var(--info)';
-            priceSummary += ` <span style="font-size:9px;color:${diffColor};font-weight:600;"><i class="bi ${diffIcon}"></i>${diff > 0 ? '+' : ''}Rp${Math.round(Math.abs(diff)).toLocaleString('id-ID')}</span>`;
         }
 
         const isCollapsed = !!item.is_collapsed;
