@@ -244,7 +244,7 @@ class DigiflazzController extends Controller {
         $sql = "
             SELECT t.id, t.ref_id, t.buyer_sku_code, t.customer_no, t.customer_name, 
                    t.product_name, t.category, t.brand, t.type, t.sell_price, t.modal_price, t.status, 
-                   t.seller_name, t.created_at, t.user_id, u.name as user_name
+                   t.seller_name, t.created_at, t.user_id, t.raw_response, u.name as user_name
             FROM digi_transactions t
             LEFT JOIN users u ON t.user_id = u.id
             WHERE (
@@ -361,6 +361,9 @@ class DigiflazzController extends Controller {
                 'seller_name' => $seller,
                 'seller_success_rate' => $sellerSr,
                 'seller_avg_speed' => $sellerSpd < 9999 ? $sellerSpd : null,
+                'customer_no' => $r['customer_no'] ?? '',
+                'customer_name' => $r['customer_name'] ?? '',
+                'raw_response' => $r['raw_response'] ? json_decode($r['raw_response'], true) : null,
                 'created_at' => $r['created_at'],
                 'is_available' => $isAvailable,
                 'product' => $productPayload
@@ -480,6 +483,77 @@ class DigiflazzController extends Controller {
         if ($res['success'] && isset($res['data'])) {
             // Append ref_id so frontend can use it to pay
             $res['data']['ref_id'] = $refId;
+
+            // Enrich postpaid inquiry data using customer's past successful transaction
+            // (Useful when upstream biller masks name with asterisks or omits installment/tenor/vehicle)
+            try {
+                $db = Database::getInstance()->getConnection();
+                $hStmt = $db->prepare("
+                    SELECT customer_name, raw_response 
+                    FROM digi_transactions 
+                    WHERE customer_no = ? AND status IN ('sukses', 'success') 
+                    ORDER BY id DESC LIMIT 1
+                ");
+                $hStmt->execute([$customerNo]);
+                $lastTx = $hStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($lastTx) {
+                    $pastName = trim($lastTx['customer_name'] ?? '');
+                    $currentName = trim($res['data']['customer_name'] ?? '');
+
+                    // 1. Unmask customer name if current inquiry has asterisks
+                    if (!empty($pastName) && !str_contains($pastName, '*') && (empty($currentName) || str_contains($currentName, '*'))) {
+                        $res['data']['customer_name'] = $pastName;
+                        $res['data']['is_unmasked'] = true;
+                    }
+
+                    // 2. Parse past raw_response to enrich vehicle & installment sequence if omitted by biller
+                    if (!empty($lastTx['raw_response'])) {
+                        $pastRaw = is_string($lastTx['raw_response']) ? json_decode($lastTx['raw_response'], true) : $lastTx['raw_response'];
+                        if (is_array($pastRaw)) {
+                            $pastDesc = $pastRaw['desc'] ?? [];
+
+                            if (!isset($res['data']['desc']) || !is_array($res['data']['desc'])) {
+                                $res['data']['desc'] = [];
+                            }
+
+                            // Enrich vehicle specs if missing in current inquiry
+                            if (empty($res['data']['desc']['item_name']) && !empty($pastDesc['item_name'])) {
+                                $res['data']['desc']['item_name'] = $pastDesc['item_name'];
+                            }
+                            if (empty($res['data']['desc']['no_rangka']) && !empty($pastDesc['no_rangka'])) {
+                                $res['data']['desc']['no_rangka'] = $pastDesc['no_rangka'];
+                            }
+                            if (empty($res['data']['desc']['no_mesin']) && !empty($pastDesc['no_mesin'])) {
+                                $res['data']['desc']['no_mesin'] = $pastDesc['no_mesin'];
+                            }
+                            if (empty($res['data']['desc']['no_pol']) && !empty($pastDesc['no_pol'])) {
+                                $res['data']['desc']['no_pol'] = $pastDesc['no_pol'];
+                            }
+                            if (empty($res['data']['desc']['tenor']) && !empty($pastDesc['tenor'])) {
+                                $res['data']['desc']['tenor'] = $pastDesc['tenor'];
+                            }
+
+                            // Enrich installment number (periode) if omitted by biller
+                            $currPeriode = $res['data']['periode'] ?? ($res['data']['desc']['periode'] ?? ($res['data']['desc']['detail'][0]['periode'] ?? ''));
+                            if (empty($currPeriode) || $currPeriode === '-') {
+                                $pastPeriode = $pastRaw['periode'] ?? ($pastDesc['periode'] ?? ($pastDesc['detail'][0]['periode'] ?? ''));
+                                if (!empty($pastPeriode) && is_numeric($pastPeriode)) {
+                                    $nextPeriodeNum = (int)$pastPeriode + 1;
+                                    $nextPeriodeStr = str_pad((string)$nextPeriodeNum, 3, '0', STR_PAD_LEFT);
+                                    $res['data']['periode'] = $nextPeriodeStr;
+                                    $res['data']['desc']['periode'] = $nextPeriodeStr;
+                                    if (isset($res['data']['desc']['detail']) && is_array($res['data']['desc']['detail']) && count($res['data']['desc']['detail']) > 0) {
+                                        $res['data']['desc']['detail'][0]['periode'] = $nextPeriodeStr;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (\Exception $e) {
+                // Silently ignore DB errors during enrichment so inquiry still succeeds
+            }
         }
 
         header('Content-Type: application/json');

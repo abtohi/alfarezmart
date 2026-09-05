@@ -9,8 +9,8 @@
  * They are cached on first request via the Cache-First fetch handler.
  * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v46.0';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v46.0';
+const CACHE_NAME = 'alfarezmart-cache-v46.1';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v46.1';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     // Static app shell assets only — dynamic PHP pages are cached at runtime upon navigation
@@ -101,7 +101,7 @@ self.addEventListener('fetch', event => {
     }
 
     // ── 2. Auth & Critical Live Pages: Always Network First for CSRF & Auth Freshness ──
-    const liveFreshPages = ['/', '/login', '/logout', '/register', '/sales/pos', '/purchases/create', '/products/create'];
+    const liveFreshPages = ['/', '/login', '/logout', '/register', '/sales/pos', '/purchases/create', '/products/create', '/ppob', '/ppob/history'];
     const isLiveFreshPage = url.pathname === '/' || 
                             url.pathname === BASE_URL || 
                             url.pathname === BASE_URL.replace(/\/$/, '') ||

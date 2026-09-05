@@ -5369,22 +5369,29 @@ async function performInquiry() {
                 
                 inqBox.style.display = 'block';
                 
-                // Resolving customer name with unmasking support
-                let nameInfo = resolveCustomerName(data.data, currentCategory, no);
-                
-                // If upstream returned asterisks and we don't have unmasked yet in memory, fetch target history
-                if (!nameInfo.isUnmasked && nameInfo.name.includes('*')) {
+                // Ensure target history is available for unmasking and installment/vehicle enrichment
+                if (typeof currentTargetHistory === 'undefined' || !currentTargetHistory || currentTargetHistory.length === 0) {
                     try {
                         const hRes = await fetch(`<?= BASE_URL ?>api/ppob/target-history?number=${encodeURIComponent(no)}`);
                         const hData = await hRes.json();
-                        if (hData && Array.isArray(hData.history)) {
-                            const match = hData.history.find(h => h.customer_name && !h.customer_name.includes('*'));
-                            if (match && match.customer_name) {
-                                nameInfo.name = match.customer_name.trim();
-                                nameInfo.isUnmasked = true;
-                            }
+                        if (hData && Array.isArray(hData.history) && hData.history.length > 0) {
+                            window.currentTargetHistory = hData.history;
                         }
                     } catch(e) {}
+                }
+
+                // Resolving customer name with unmasking support
+                let nameInfo = resolveCustomerName(data.data, currentCategory, no);
+                
+                // If upstream returned asterisks and we didn't unmask yet, look into currentTargetHistory
+                if (!nameInfo.isUnmasked && nameInfo.name.includes('*')) {
+                    if (typeof currentTargetHistory !== 'undefined' && Array.isArray(currentTargetHistory)) {
+                        const match = currentTargetHistory.find(h => h.customer_name && !h.customer_name.includes('*'));
+                        if (match && match.customer_name) {
+                            nameInfo.name = match.customer_name.trim();
+                            nameInfo.isUnmasked = true;
+                        }
+                    }
                 }
 
                 const custName = nameInfo.name;
@@ -5526,9 +5533,24 @@ async function performInquiry() {
                 }
                 // 4. Multifinance / Cicilan / Leasing
                 else if (currentCategory === 'multifinance' || desc.item_name || desc.no_pol || desc.tenor) {
+                    // Check if we have previous history to infer missing installment sequence, tenor, or vehicle
+                    let prevHistory = null;
+                    if (typeof currentTargetHistory !== 'undefined' && Array.isArray(currentTargetHistory)) {
+                        prevHistory = currentTargetHistory.find(h => h.raw_response && (h.status === 'sukses' || h.status === 'Sukses' || h.status === 'success'));
+                    }
+                    let prevRaw = prevHistory ? prevHistory.raw_response : null;
+                    let prevDesc = prevRaw ? (prevRaw.desc || {}) : {};
+
                     let rawPeriode = data.data.periode || dArr.periode || desc.periode || desc.angsuran_ke || '';
+                    if (!rawPeriode && prevRaw) {
+                        let pPeriode = prevRaw.periode || (prevDesc.periode || (prevDesc.detail && prevDesc.detail[0] ? prevDesc.detail[0].periode : ''));
+                        if (pPeriode && !isNaN(parseInt(pPeriode, 10))) {
+                            rawPeriode = String(parseInt(pPeriode, 10) + 1);
+                        }
+                    }
                     let periodeNum = rawPeriode ? parseInt(rawPeriode, 10) : '';
-                    let rawTenor = desc.tenor || data.data.tenor || '';
+
+                    let rawTenor = desc.tenor || data.data.tenor || (prevDesc.tenor || prevRaw?.tenor || '');
                     let tenorNum = rawTenor ? parseInt(rawTenor, 10) : '';
 
                     let angsuranDisplay = '-';
@@ -5540,10 +5562,10 @@ async function performInquiry() {
                         angsuranDisplay = `<span style="font-size:12px;">${tenorNum} Bulan</span>`;
                     }
 
-                    let barang = desc.item_name || desc.merek_kendaraan || desc.nama_barang || desc.keterangan || '';
-                    let noPol = desc.no_pol || desc.nomor_polisi || '';
-                    let noRangka = desc.no_rangka || desc.nomor_rangka || '';
-                    let noMesin = desc.no_mesin || desc.nomor_mesin || '';
+                    let barang = desc.item_name || desc.merek_kendaraan || desc.nama_barang || desc.keterangan || (prevDesc.item_name || '');
+                    let noPol = desc.no_pol || desc.nomor_polisi || (prevDesc.no_pol || '');
+                    let noRangka = desc.no_rangka || desc.nomor_rangka || (prevDesc.no_rangka || '');
+                    let noMesin = desc.no_mesin || desc.nomor_mesin || (prevDesc.no_mesin || '');
                     let jatuhTempo = desc.jatuh_tempo || '';
                     let lembarTagihan = desc.lembar_tagihan ? `${desc.lembar_tagihan} Lembar` : '';
 

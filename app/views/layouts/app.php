@@ -51,7 +51,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=25.19'; ?>
+    <?php $v = '?v=25.20'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -863,13 +863,23 @@ if ($userLevel === 'staff') {
 
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '25.19'; // Update this to force client reloads
+    const APP_VERSION = '25.20'; // Update this to force client reloads
 
     // Safe PWA Version Guard: Update Service Worker in background without destroying offline cache
     (function() {
         const storedVersion = localStorage.getItem('app_version');
         if (storedVersion !== APP_VERSION) {
             localStorage.setItem('app_version', APP_VERSION);
+            if ('caches' in window) {
+                caches.keys().then(function(keys) {
+                    keys.forEach(function(key) {
+                        caches.open(key).then(function(cache) {
+                            cache.delete('<?= BASE_URL ?>ppob').catch(() => {});
+                            cache.delete('<?= BASE_URL ?>ppob/history').catch(() => {});
+                        });
+                    });
+                }).catch(() => {});
+            }
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.getRegistrations().then(function(registrations) {
                     registrations.forEach(function(reg) {
