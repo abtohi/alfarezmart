@@ -507,7 +507,19 @@
         }
         activeTrxData = { ...trx };
         
-        // Render receipt preview
+        // Render receipt preview (with safe loader check)
+        if (typeof getReceiptPreviewContent !== 'function') {
+            triggerToast('⚠️ Memuat modul struk...', 'info');
+            setTimeout(() => {
+                if (typeof getReceiptPreviewContent === 'function') {
+                    previewReceipt(refId);
+                } else {
+                    window.location.reload();
+                }
+            }, 500);
+            return;
+        }
+
         document.getElementById('receipt-preview-area').innerHTML = getReceiptPreviewContent(activeTrxData, activeTrxData.sell_price);
         
         // Initialize custom price input
@@ -698,8 +710,8 @@
             } else if (snText.toUpperCase().includes('NAMA:') && snText.toUpperCase().includes('REFF:')) {
                 const namaMatch = snText.match(/NAMA:\s*([^,\n]+)/i);
                 const reffMatch = snText.match(/REFF:\s*([^,\n]+)/i);
-                if (namaMatch?.[1] && !custName) extraLines += `*Nama Akun*       : ${namaMatch[1].trim()}\n`;
-                if (reffMatch?.[1]) snVal = reffMatch[1].trim();
+                if (namaMatch && namaMatch[1] && !custName) extraLines += `*Nama Akun*       : ${namaMatch[1].trim()}\n`;
+                if (reffMatch && reffMatch[1]) snVal = reffMatch[1].trim();
             }
         }
 
@@ -883,7 +895,7 @@
     // RECEIPT DESIGN SYSTEM — Elegant, Product-Differentiated
     // =====================================================================
 </script>
-<script src="<?= BASE_URL ?>public/js/ppob_receipt.js"></script>
+<script src="<?= BASE_URL ?>public/js/ppob_receipt.js<?= $v ?>"></script>
 <script>
     function executePreviewBrowser() {
         if (!activeTrxData) return;

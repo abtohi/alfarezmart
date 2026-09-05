@@ -51,7 +51,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=25.16'; ?>
+    <?php $v = '?v=25.17'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -799,6 +799,7 @@ if ($userLevel === 'staff') {
     <script src="<?= BASE_URL ?>public/js/dexie.min.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/db.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/printer_v3.js<?= $v ?>"></script>
+    <script src="<?= BASE_URL ?>public/js/ppob_receipt.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/barcode.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/packaging-prices.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/qty-pricing.js<?= $v ?>"></script>
@@ -862,7 +863,7 @@ if ($userLevel === 'staff') {
 
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '25.16'; // Update this to force client reloads
+    const APP_VERSION = '25.17'; // Update this to force client reloads
 
     // Safe PWA Version Guard: Update Service Worker in background without destroying offline cache
     (function() {

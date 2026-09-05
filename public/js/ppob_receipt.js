@@ -876,3 +876,12 @@ function detectProductType(d) {
             </div>
         `;
     }
+
+    // Explicitly attach to global window object
+    if (typeof window !== 'undefined') {
+        window.detectProductType = detectProductType;
+        window.getProductTheme = getProductTheme;
+        window.parseSN = parseSN;
+        window.buildPrintHTML = buildPrintHTML;
+        window.getReceiptPreviewContent = getReceiptPreviewContent;
+    }

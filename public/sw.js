@@ -1,8 +1,8 @@
 /**
  * AlfarezMart PWA - Service Worker (public/sw.js)
  */
-const CACHE_NAME = 'alfarezmart-cache-v25.16';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v25.16';
+const CACHE_NAME = 'alfarezmart-cache-v25.17';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v25.17';
 const BASE_URL = self.location.pathname.replace('/public/sw.js', '/');
 const CORE_ASSETS = [
     BASE_URL,
@@ -13,6 +13,8 @@ const CORE_ASSETS = [
     BASE_URL + 'public/js/utils.js',
     BASE_URL + 'public/js/dexie.min.js',
     BASE_URL + 'public/js/db.js',
+    BASE_URL + 'public/js/printer_v3.js',
+    BASE_URL + 'public/js/ppob_receipt.js',
     BASE_URL + 'public/js/app.js',
     BASE_URL + 'public/js/desktop.js',
     BASE_URL + 'public/js/chat.js',
