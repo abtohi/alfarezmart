@@ -550,6 +550,17 @@ class DigiflazzController extends Controller {
         // Send request to Digiflazz
         if ($isPostpaid) {
             $res = $this->digiService->payPostpaid($sku, $customerNo, $refId, $amount);
+
+            // Immediately log the postpaid response to webhook.log
+            try {
+                $logPayload = isset($res['data']) ? ['data' => $res['data']] : $res;
+                $logPostpaid = date('Y-m-d H:i:s') . " - [PASCABAYAR DIRECT RESPONSE / CALLBACK]\n";
+                $logPostpaid .= "Headers: {\"Content-Type\":\"application/json\",\"Event\":\"pay-pasca\",\"Source\":\"Digiflazz Postpaid Synchronous API\"}\n";
+                $logPostpaid .= "Payload: " . json_encode($logPayload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+                $postpaidStatus = $res['data']['status'] ?? ($res['success'] ? 'sukses' : 'gagal');
+                $logPostpaid .= "SUCCESS: Processed Postpaid $refId to " . strtolower($postpaidStatus) . "\n\n";
+                @file_put_contents(STORAGE_PATH . '/logs/webhook.log', $logPostpaid, FILE_APPEND);
+            } catch (\Throwable $e) {}
         } else {
             $res = $this->digiService->createTransaction($sku, $customerNo, $refId);
         }
@@ -1373,12 +1384,66 @@ class DigiflazzController extends Controller {
 
     public function webhookLog() {
         AuthController::requireAuth(); // Ensure only logged-in users can view logs
-        $logFile = STORAGE_PATH . '/logs/webhook.log';
-        if (file_exists($logFile)) {
-            header('Content-Type: text/plain');
-            echo file_get_contents($logFile);
+        header('Content-Type: text/plain; charset=utf-8');
+
+        $logDir = STORAGE_PATH . '/logs';
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0777, true);
+        }
+        $logFile = $logDir . '/webhook.log';
+        $logContent = file_exists($logFile) ? (file_get_contents($logFile) ?: '') : '';
+
+        // Auto-sync postpaid responses from database into webhook.log if not already present
+        try {
+            $stmt = $this->digiModel->db->query("SELECT id, ref_id, buyer_sku_code, customer_no, customer_name, product_name, type, status, sn, digiflazz_trx_id, created_at, raw_response FROM digi_transactions WHERE type = 'postpaid' OR category = 'multifinance' ORDER BY id ASC");
+            if ($stmt) {
+                $postpaidTrxs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $newEntries = '';
+                foreach ($postpaidTrxs as $pt) {
+                    $ref = $pt['ref_id'];
+                    if (!empty($ref) && strpos($logContent, $ref) === false) {
+                        $raw = $pt['raw_response'];
+                        $rawObj = null;
+                        if (!empty($raw)) {
+                            $rawObj = is_string($raw) ? json_decode($raw, true) : $raw;
+                        }
+                        if (!$rawObj) {
+                            $rawObj = [
+                                'data' => [
+                                    'ref_id' => $pt['ref_id'],
+                                    'customer_no' => $pt['customer_no'],
+                                    'customer_name' => $pt['customer_name'],
+                                    'buyer_sku_code' => $pt['buyer_sku_code'],
+                                    'status' => $pt['status'],
+                                    'sn' => $pt['sn'] ?: $pt['digiflazz_trx_id'],
+                                    'trx_id' => $pt['digiflazz_trx_id']
+                                ]
+                            ];
+                        } elseif (!isset($rawObj['data'])) {
+                            $rawObj = ['data' => $rawObj];
+                        }
+
+                        $dateStr = $pt['created_at'] ?: date('Y-m-d H:i:s');
+                        $newEntries .= "$dateStr - [PASCABAYAR DIRECT RESPONSE / CALLBACK]\n";
+                        $newEntries .= "Headers: {\"Content-Type\":\"application/json\",\"Event\":\"pay-pasca\",\"Source\":\"Digiflazz Postpaid Synchronous API\"}\n";
+                        $newEntries .= "Payload: " . json_encode($rawObj, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+                        $newEntries .= "SUCCESS: Processed Postpaid $ref to " . strtolower($pt['status']) . "\n\n";
+                    }
+                }
+
+                if (!empty($newEntries)) {
+                    @file_put_contents($logFile, $newEntries, FILE_APPEND);
+                    $logContent .= $newEntries;
+                }
+            }
+        } catch (\Throwable $e) {
+            // Silently ignore DB errors when reading log
+        }
+
+        if (!empty(trim($logContent))) {
+            echo $logContent;
         } else {
-            echo "Belum ada log webhook yang diterima. File tidak ditemukan: " . $logFile;
+            echo "Belum ada log webhook atau transaksi pascabayar yang terekam.\nLog file: " . $logFile;
         }
         exit;
     }
