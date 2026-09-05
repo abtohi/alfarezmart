@@ -87,17 +87,19 @@ function detectProductType(d) {
             }
 
             // 2. Tagihan / Angsuran Ke-berapa & Tenor
+            // Configurable: By default hidden so it doesn't cause ambiguity with internal biller billing cycles,
+            // but can be toggled anytime from PPOB Settings or window.PPOB_CONFIG.showInstallmentNo.
+            const showInstallment = (typeof window !== 'undefined' && window.PPOB_CONFIG && window.PPOB_CONFIG.showInstallmentNo) ||
+                                    (typeof localStorage !== 'undefined' && localStorage.getItem('ppob_show_installment_no') === '1');
+
             const dArr = desc.detail && Array.isArray(desc.detail) && desc.detail.length > 0 ? desc.detail[0] : {};
             let rawPeriode = (raw && raw.periode && raw.periode !== '-') ? String(raw.periode).trim() : ((dArr.periode && dArr.periode !== '-') ? String(dArr.periode).trim() : (desc.angsuran_ke ? String(desc.angsuran_ke).trim() : ''));
             let tenorRaw = (desc.tenor && desc.tenor !== '-') ? String(desc.tenor).trim() : '';
 
             let angsuranText = '';
-            if (rawPeriode) {
+            if (rawPeriode && showInstallment) {
                 let pNum = parseInt(rawPeriode, 10);
                 angsuranText = !isNaN(pNum) ? `Ke-${pNum}` : `Periode ${rawPeriode}`;
-                if (rawPeriode.length > 1 && !isNaN(pNum)) {
-                    angsuranText += ` (Periode ${rawPeriode})`;
-                }
             }
 
             let tenorText = '';
@@ -106,9 +108,9 @@ function detectProductType(d) {
                 tenorText = !isNaN(tNum) ? `${tNum} Bulan` : tenorRaw;
             }
 
-            if (angsuranText && tenorText) {
+            if (showInstallment && angsuranText && tenorText) {
                 result.extraRows.push({ label: 'Tagihan / Angsuran', value: `${angsuranText} / Tenor ${tenorText}` });
-            } else if (angsuranText) {
+            } else if (showInstallment && angsuranText) {
                 result.extraRows.push({ label: 'Tagihan / Angsuran', value: angsuranText });
             } else if (tenorText) {
                 result.extraRows.push({ label: 'Tenor Pembiayaan', value: tenorText });

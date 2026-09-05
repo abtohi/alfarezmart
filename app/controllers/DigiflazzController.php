@@ -43,7 +43,8 @@ class DigiflazzController extends Controller {
             'api_key_dev' => $settingModel->get('digiflazz_api_key_dev', ''),
             'api_key_prod' => $settingModel->get('digiflazz_api_key_prod', ''),
             'webhook_secret' => $settingModel->get('digiflazz_webhook_secret', ''),
-            'mode' => $settingModel->get('digiflazz_mode', 'development')
+            'mode' => $settingModel->get('digiflazz_mode', 'development'),
+            'show_installment_no' => $settingModel->get('ppob_show_installment_no', '0')
         ];
 
         $markupRules = $this->digiModel->getMarkupRules();
@@ -834,6 +835,7 @@ class DigiflazzController extends Controller {
         if (isset($data['webhook_secret'])) $settingModel->set('digiflazz_webhook_secret', trim($data['webhook_secret']));
         if ($newMode) $settingModel->set('digiflazz_mode', $newMode);
         if (isset($data['pin'])) $settingModel->set('digiflazz_pin', trim($data['pin']));
+        if (isset($data['show_installment_no'])) $settingModel->set('ppob_show_installment_no', $data['show_installment_no'] === '1' ? '1' : '0');
 
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'message' => 'Pengaturan berhasil disimpan']);

@@ -101,6 +101,25 @@
                     <div class="ppob-hint">Jika diisi, setiap kali kasir melakukan transaksi PPOB akan dimintai PIN ini.</div>
                 </div>
 
+                <!-- Multifinance / Leasing Installment Display Toggle -->
+                <div style="margin-bottom:24px;background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:14px 16px;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div style="font-weight:700;font-size:var(--font-size-sm);color:var(--text-primary);"><i class="bi bi-credit-card-2-front me-2" style="color:var(--primary);"></i>Tampilkan Nomor Cicilan / Angsuran Multifinance</div>
+                            <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+                                Menampilkan nomor urutan cicilan (misal: "Ke-2" atau "Ke-19") pada struk, nota, dan pratinjau tagihan.
+                            </div>
+                        </div>
+                        <div class="form-check form-switch ms-3">
+                            <input class="form-check-input" type="checkbox" role="switch" id="cfg-show-installment" style="width:2.5em;height:1.3em;cursor:pointer;" <?= ($settings['show_installment_no'] ?? '0') === '1' ? 'checked' : '' ?>>
+                        </div>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-secondary);margin-top:8px;padding-top:8px;border-top:1px dashed var(--border-color);">
+                        <i class="bi bi-info-circle me-1" style="color:var(--info);"></i>
+                        <strong>Rekomendasi Dinonaktifkan:</strong> Beberapa biller/switching leasing (seperti OTO) mengembalikan urutan tagihan sistem (misal <code>002</code>) bukan urutan kredit sebenarnya. Jika nonaktif, struk tetap menampilkan <strong>Unit Kendaraan, No. Polisi, No. Rangka, Jatuh Tempo, dan Tenor</strong> tanpa label angsuran agar tidak ambigu.
+                    </div>
+                </div>
+
                 <div style="display:flex;gap:10px;flex-wrap:wrap;">
                     <button type="submit" id="btn-save-cfg" class="ppob-btn-primary" style="min-width:160px;">
                         <i class="bi bi-save me-1"></i> Simpan Pengaturan
@@ -478,7 +497,8 @@ async function sendSettings() {
                 api_key_prod: document.getElementById('cfg-apikey-prod').value,
                 webhook_secret: document.getElementById('cfg-webhook').value,
                 mode: document.getElementById('cfg-mode').value,
-                pin: document.getElementById('cfg-pin').value
+                pin: document.getElementById('cfg-pin').value,
+                show_installment_no: document.getElementById('cfg-show-installment') && document.getElementById('cfg-show-installment').checked ? '1' : '0'
             })
         });
         const data = await res.json();

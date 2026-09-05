@@ -5,8 +5,9 @@ $userLevel = AuthController::currentUser()['level'] ?? '';
 $geoLat = '';
 $geoLng = '';
 $geoRadius = '';
+$settingModel = new SettingModel();
+$ppobShowInstallment = $settingModel->get('ppob_show_installment_no', '0');
 if ($userLevel === 'staff') {
-    $settingModel = new SettingModel();
     $geoLat = $settingModel->get('store_latitude', '');
     $geoLng = $settingModel->get('store_longitude', '');
     $geoRadius = $settingModel->get('store_radius_meters', '25');
@@ -51,7 +52,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=25.20'; ?>
+    <?php $v = '?v=25.21'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -794,6 +795,9 @@ if ($userLevel === 'staff') {
         const BASE_URL = '<?= BASE_URL ?>';
         const version = '25.02';
         window.IS_DB_OFFLINE = <?= (class_exists('Database') && Database::getInstance()->isOffline()) ? 'true' : 'false' ?>;
+        window.PPOB_CONFIG = {
+            showInstallmentNo: <?= $ppobShowInstallment === '1' ? 'true' : 'false' ?>
+        };
     </script>
     <script src="<?= BASE_URL ?>public/js/utils.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/dexie.min.js<?= $v ?>"></script>
@@ -863,7 +867,7 @@ if ($userLevel === 'staff') {
 
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '25.20'; // Update this to force client reloads
+    const APP_VERSION = '25.21'; // Update this to force client reloads
 
     // Safe PWA Version Guard: Update Service Worker in background without destroying offline cache
     (function() {

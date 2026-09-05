@@ -5553,13 +5553,16 @@ async function performInquiry() {
                     let rawTenor = desc.tenor || data.data.tenor || (prevDesc.tenor || prevRaw?.tenor || '');
                     let tenorNum = rawTenor ? parseInt(rawTenor, 10) : '';
 
+                    const showInstallment = (typeof window !== 'undefined' && window.PPOB_CONFIG && window.PPOB_CONFIG.showInstallmentNo) ||
+                                            (typeof localStorage !== 'undefined' && localStorage.getItem('ppob_show_installment_no') === '1');
+
                     let angsuranDisplay = '-';
-                    if (periodeNum && tenorNum) {
+                    if (showInstallment && periodeNum && tenorNum) {
                         angsuranDisplay = `<span class="badge" style="background:#2563eb;color:#fff;font-size:12px;font-weight:700;">Ke-${periodeNum}</span> <span style="font-size:12px;opacity:0.85;">dari ${tenorNum} Bulan</span>`;
-                    } else if (periodeNum) {
+                    } else if (showInstallment && periodeNum) {
                         angsuranDisplay = `<span class="badge" style="background:#2563eb;color:#fff;font-size:12px;font-weight:700;">Ke-${periodeNum}</span>`;
                     } else if (tenorNum) {
-                        angsuranDisplay = `<span style="font-size:12px;">${tenorNum} Bulan</span>`;
+                        angsuranDisplay = `<span class="badge bg-secondary bg-opacity-10 text-primary border" style="font-size:12px;font-weight:600;">Tenor: ${tenorNum} Bulan</span>`;
                     }
 
                     let barang = desc.item_name || desc.merek_kendaraan || desc.nama_barang || desc.keterangan || (prevDesc.item_name || '');
