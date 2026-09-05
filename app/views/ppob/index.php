@@ -5394,16 +5394,57 @@ async function performInquiry() {
                     `;
                 } else if (currentCategory === 'multifinance') {
                     let dArr = desc.detail && Array.isArray(desc.detail) && desc.detail.length > 0 ? desc.detail[0] : {};
-                    let angsuranKe = desc.angsuran_ke ? `Angsuran Ke-${desc.angsuran_ke}` : (desc.tenor ? `Tenor: ${desc.tenor}` : '-');
-                    let barang = desc.merek_kendaraan || desc.nama_barang || desc.keterangan || '-';
+                    
+                    // Periode (Angsuran Ke-berapa) & Tenor
+                    let rawPeriode = data.data.periode || dArr.periode || desc.periode || desc.angsuran_ke || '';
+                    let periodeNum = rawPeriode ? parseInt(rawPeriode, 10) : '';
+                    let rawTenor = desc.tenor || data.data.tenor || '';
+                    let tenorNum = rawTenor ? parseInt(rawTenor, 10) : '';
+
+                    let angsuranDisplay = '-';
+                    if (periodeNum && tenorNum) {
+                        angsuranDisplay = `<span class="badge" style="background:#2563eb;color:#fff;font-size:12px;font-weight:700;">Ke-${periodeNum}</span> <span style="font-size:12px;opacity:0.85;">dari ${tenorNum} Bulan</span>`;
+                    } else if (periodeNum) {
+                        angsuranDisplay = `<span class="badge" style="background:#2563eb;color:#fff;font-size:12px;font-weight:700;">Ke-${periodeNum}</span>`;
+                    } else if (tenorNum) {
+                        angsuranDisplay = `<span style="font-size:12px;">${tenorNum} Bulan</span>`;
+                    }
+
+                    // Barang / Unit Kendaraan
+                    let barang = desc.item_name || desc.merek_kendaraan || desc.nama_barang || desc.keterangan || '';
+                    
+                    // No. Polisi & No. Rangka
+                    let noPol = desc.no_pol || desc.nomor_polisi || '';
+                    let noRangka = desc.no_rangka || desc.nomor_rangka || '';
+                    
+                    // Jatuh Tempo & Lembar
+                    let jatuhTempo = desc.jatuh_tempo || '';
+                    let lembarTagihan = desc.lembar_tagihan ? `${desc.lembar_tagihan} Lembar` : '';
+
+                    // Nama Perusahaan / Provider Layanan
+                    let providerName = document.getElementById('postpaid-selected-title')?.innerText || '';
+                    if (!providerName || providerName.includes('Pilih')) {
+                        providerName = data.data.buyer_sku_code || 'Multifinance';
+                    }
+
+                    // Rincian Biaya
+                    let pokok = dArr.nilai_tagihan || data.data.price || 0;
+                    let denda = dArr.denda || desc.denda || 0;
+                    let admin = dArr.admin || desc.admin || data.data.admin || 0;
+                    let biayaLain = dArr.biaya_lain || desc.biaya_lain || 0;
+
                     detailHtml = `
-                        <div class="row g-2">
-                            <div class="col-6"><b>Perusahaan:</b> ${data.data.buyer_sku_code || 'Multifinance'}</div>
-                            <div class="col-6"><b>Angsuran:</b> ${angsuranKe}</div>
-                            ${barang !== '-' ? `<div class="col-12"><b>Barang / Unit:</b> ${barang}</div>` : ''}
-                            ${desc.nomor_polisi ? `<div class="col-6"><b>No. Polisi:</b> ${desc.nomor_polisi}</div>` : ''}
-                            ${desc.nomor_rangka ? `<div class="col-6"><b>No. Rangka:</b> ${desc.nomor_rangka}</div>` : ''}
-                            <div class="col-12 border-top pt-1 mt-1"><b>Nilai Tagihan:</b> ${formatRp(dArr.nilai_tagihan || data.data.price || 0)} | <b>Denda:</b> ${formatRp(desc.denda || dArr.denda || 0)} | <b>Admin:</b> ${formatRp(desc.admin || data.data.admin || 0)}</div>
+                        <div class="row g-2 text-start" style="font-size:12.5px;line-height:1.5;">
+                            <div class="col-sm-6"><b>Perusahaan:</b> <span class="fw-semibold">${providerName}</span></div>
+                            <div class="col-sm-6"><b>Tagihan / Cicilan:</b> ${angsuranDisplay}</div>
+                            ${barang ? `<div class="col-12" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:7px;padding:6px 10px;margin-top:4px;"><b style="color:var(--primary);"><i class="bi bi-bicycle me-1"></i>Unit Kendaraan:</b> <span class="fw-bold" style="color:var(--text-primary);">${barang}</span></div>` : ''}
+                            ${noPol ? `<div class="col-sm-6"><b>No. Polisi:</b> <span class="badge bg-dark font-monospace text-warning px-2 py-1">${noPol}</span></div>` : ''}
+                            ${noRangka ? `<div class="col-sm-6"><b>No. Rangka:</b> <span class="font-monospace small text-muted">${noRangka}</span></div>` : ''}
+                            ${jatuhTempo ? `<div class="col-sm-6"><b>Jatuh Tempo:</b> <span class="text-danger fw-semibold"><i class="bi bi-calendar-event me-1"></i>${jatuhTempo}</span></div>` : ''}
+                            ${lembarTagihan ? `<div class="col-sm-6"><b>Jml Tagihan:</b> <span class="fw-medium">${lembarTagihan}</span></div>` : ''}
+                            <div class="col-12 border-top pt-2 mt-2" style="font-size:12px;opacity:0.9;">
+                                <b>Nilai Tagihan:</b> ${formatRp(pokok)} | <b>Denda:</b> ${formatRp(denda)} | <b>Admin:</b> ${formatRp(admin)}${biayaLain > 0 ? ` | <b>Biaya Lain:</b> ${formatRp(biayaLain)}` : ''}
+                            </div>
                         </div>
                     `;
                 } else if (currentCategory === 'ewallet') {
