@@ -1948,23 +1948,28 @@ html[data-theme="dark"] #inq-detail strong {
 
                 <!-- Box Hasil Inquiry (Nama Pelanggan, Detail Tagihan) -->
                 <div id="inquiry-box" class="inquiry-box">
-                    <div class="row align-items-center">
+                    <div class="row align-items-center pb-3 mb-2 border-bottom" style="border-color: var(--border-color, rgba(255,255,255,0.1)) !important;">
                         <div class="col-md-7">
                             <div class="inq-label" id="inq-title-label">Nama Pelanggan</div>
-                            <div class="inq-value fw-bold fs-5" id="inq-name">-</div>
-                            <div id="inq-subtext" class="small mb-2" style="font-size:12px; display:none;"></div>
-                            
-                            <div class="inq-label mt-2" id="inq-detail-label" style="display:none;">Rincian Tagihan</div>
-                            <div class="inq-value mt-1" id="inq-detail" style="display:none; font-size:12.5px; font-weight:normal; padding:12px 14px; border-radius:10px; line-height:1.6;">-</div>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <div class="inq-value fw-bold fs-4 m-0" id="inq-name">-</div>
+                                <span id="inq-unmasked-badge" class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-1 px-2" style="display:none; font-size:11px;"><i class="bi bi-shield-check me-1"></i>Nama Lengkap Terverifikasi</span>
+                            </div>
+                            <div id="inq-subtext" class="small mt-1 mb-0" style="font-size:12px; display:none;"></div>
                         </div>
                         <div class="col-md-5 text-md-end mt-3 mt-md-0">
                             <div class="inq-label">Total Pembayaran</div>
-                            <div class="inq-value text-success fw-black fs-2" id="inq-price">Rp 0</div>
+                            <div class="inq-value text-success fw-black fs-2 mb-1" id="inq-price">Rp 0</div>
                             <div class="small text-muted mb-2" id="inq-admin-info" style="font-size:11px; display:none;"></div>
                             <button class="btn btn-success rounded-pill px-4 py-2 fw-bold shadow-sm" id="btn-pay-postpaid" style="display: none;" onclick="payPostpaid()">
                                 <i class="bi bi-check-circle-fill me-1"></i> Bayar Tagihan Sekarang
                             </button>
                         </div>
+                    </div>
+                    
+                    <div class="col-12 mt-2" id="inq-detail-wrapper" style="display:none;">
+                        <div class="inq-label mb-2" id="inq-detail-label" style="font-size:11.5px; letter-spacing:0.5px;"><i class="bi bi-card-checklist me-1 text-primary"></i>Rincian Lengkap Tagihan</div>
+                        <div class="inq-value m-0" id="inq-detail" style="font-size:12.5px; font-weight:normal; padding:14px 16px; border-radius:12px; line-height:1.6; background:var(--surface-1, rgba(255,255,255,0.03)); border:1px solid var(--border-color, rgba(255,255,255,0.08));">-</div>
                     </div>
                 </div>
 
@@ -5168,9 +5173,50 @@ async function fetchSellerHistory(page) {
     }
 }
 
-function resolveCustomerName(data, category) {
-    if (!data) return 'Pelanggan';
-    return (data.customer_name || (data.desc && data.desc.milik_kenama) || data.name || 'Pelanggan').trim();
+function formatInqPeriode(p) {
+    if (!p) return '-';
+    let s = String(p).trim();
+    if (/^\d{6}$/.test(s)) {
+        const year = s.substring(0, 4);
+        const month = parseInt(s.substring(4, 6), 10);
+        const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+        return `${months[month] || month} ${year}`;
+    }
+    if (/^\d{4}$/.test(s)) {
+        // e.g. 0320 -> Maret 2020
+        const m = parseInt(s.substring(0, 2), 10);
+        const y = '20' + s.substring(2, 4);
+        const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+        if (m >= 1 && m <= 12) return `${months[m]} ${y}`;
+    }
+    return s;
+}
+
+function resolveCustomerName(data, category, customerNo = '') {
+    if (!data) return { name: 'Pelanggan', isUnmasked: false };
+    let raw = (data.customer_name || (data.desc && data.desc.milik_kenama) || data.name || '').trim();
+    let unmasked = '';
+
+    if (raw.includes('*')) {
+        const targetNo = String(customerNo || data.customer_no || document.getElementById('customer-no')?.value || '').trim();
+        if (window.currentContactName && !window.currentContactName.includes('*')) {
+            unmasked = window.currentContactName.trim();
+        } else if (category === 'ewallet' && window.currentEwalletName && !window.currentEwalletName.includes('*')) {
+            unmasked = window.currentEwalletName.trim();
+        } else if (typeof currentTargetHistory !== 'undefined' && Array.isArray(currentTargetHistory)) {
+            const h = currentTargetHistory.find(item => item.customer_name && !item.customer_name.includes('*') && (targetNo === '' || String(item.customer_no).trim() === targetNo || targetNo.includes(String(item.customer_no).trim())));
+            if (h && h.customer_name) unmasked = h.customer_name.trim();
+        }
+        if (!unmasked && typeof contactsData !== 'undefined' && Array.isArray(contactsData)) {
+            const c = contactsData.find(item => item.customer_name && !item.customer_name.includes('*') && (targetNo === '' || String(item.customer_no).trim() === targetNo || targetNo.includes(String(item.customer_no).trim())));
+            if (c && c.customer_name) unmasked = c.customer_name.trim();
+        }
+    }
+
+    if (unmasked) {
+        return { name: unmasked, isUnmasked: true, rawName: raw };
+    }
+    return { name: raw || 'Pelanggan', isUnmasked: false, rawName: raw };
 }
 
 // 6. Inquiry (Cek Tagihan / Cek Nama PLN / E-Wallet)
@@ -5242,6 +5288,8 @@ async function performInquiry() {
                 document.getElementById('inq-price').innerText = data.data.segment_power || '-';
                 document.getElementById('inq-detail-label').style.display = 'none';
                 document.getElementById('inq-detail').style.display = 'none';
+                const wrapEl = document.getElementById('inq-detail-wrapper');
+                if (wrapEl) wrapEl.style.display = 'none';
                 document.getElementById('btn-pay-postpaid').style.display = 'none';
             } else { showAlert('❌ ' + (data.message || 'ID pelanggan PLN tidak ditemukan'), 'danger'); }
         } else if (currentCategory === 'ewallet' && currentType === 'prepaid') {
@@ -5291,6 +5339,8 @@ async function performInquiry() {
                 document.getElementById('inq-price').innerText = '-';
                 document.getElementById('inq-detail-label').style.display = 'none';
                 document.getElementById('inq-detail').style.display = 'none';
+                const wrapEl = document.getElementById('inq-detail-wrapper');
+                if (wrapEl) wrapEl.style.display = 'none';
                 document.getElementById('btn-pay-postpaid').style.display = 'none';
             } else {
                 console.error("E-Wallet Check Error Response:", data);
@@ -5319,9 +5369,37 @@ async function performInquiry() {
                 
                 inqBox.style.display = 'block';
                 
-                const custName = resolveCustomerName(data.data, currentCategory);
+                // Resolving customer name with unmasking support
+                let nameInfo = resolveCustomerName(data.data, currentCategory, no);
+                
+                // If upstream returned asterisks and we don't have unmasked yet in memory, fetch target history
+                if (!nameInfo.isUnmasked && nameInfo.name.includes('*')) {
+                    try {
+                        const hRes = await fetch(`<?= BASE_URL ?>api/ppob/target-history?number=${encodeURIComponent(no)}`);
+                        const hData = await hRes.json();
+                        if (hData && Array.isArray(hData.history)) {
+                            const match = hData.history.find(h => h.customer_name && !h.customer_name.includes('*'));
+                            if (match && match.customer_name) {
+                                nameInfo.name = match.customer_name.trim();
+                                nameInfo.isUnmasked = true;
+                            }
+                        }
+                    } catch(e) {}
+                }
+
+                const custName = nameInfo.name;
                 selectedInqData.customer_name = custName;
                 document.getElementById('inq-name').innerText = custName;
+
+                const unmaskedBadge = document.getElementById('inq-unmasked-badge');
+                if (unmaskedBadge) {
+                    if (nameInfo.isUnmasked) {
+                        unmaskedBadge.style.display = 'inline-flex';
+                        unmaskedBadge.title = `Nama lengkap terverifikasi dari riwayat: ${custName}`;
+                    } else {
+                        unmaskedBadge.style.display = 'none';
+                    }
+                }
                 
                 const subtextEl = document.getElementById('inq-subtext');
                 if (subtextEl) {
@@ -5332,70 +5410,122 @@ async function performInquiry() {
                 document.getElementById('inq-detail-label').style.display = 'block';
                 const detailEl = document.getElementById('inq-detail');
                 detailEl.style.display = 'block';
+                const wrapEl = document.getElementById('inq-detail-wrapper');
+                if (wrapEl) wrapEl.style.display = 'block';
                 
-                // Format detail tagihan terstruktur berdasarkan desc
+                // Format detail tagihan terstruktur berdasarkan desc resmi Digiflazz
                 const desc = data.data.desc || {};
+                const detailsArr = desc.detail && Array.isArray(desc.detail) ? desc.detail : [];
+                const dArr = detailsArr.length > 0 ? detailsArr[0] : {};
                 let detailHtml = '';
                 
-                if (currentCategory === 'pln') {
-                    let dArr = desc.detail && Array.isArray(desc.detail) && desc.detail.length > 0 ? desc.detail[0] : {};
+                const skuCode = (data.data.buyer_sku_code || '').toLowerCase();
+                const providerTitle = document.getElementById('postpaid-selected-title')?.innerText || '';
+                const cleanProvider = (!providerTitle || providerTitle.includes('Pilih')) ? (data.data.buyer_sku_code || currentCategory.toUpperCase()) : providerTitle;
+
+                // Multi-detail periods generator helper
+                function renderDetailsTable(details) {
+                    if (!details || details.length <= 1) return '';
+                    let rows = details.map((d, idx) => `
+                        <tr>
+                            <td class="text-center font-monospace">${idx + 1}</td>
+                            <td class="fw-semibold">${formatInqPeriode(d.periode)}</td>
+                            <td>${(d.meter_awal && d.meter_akhir) ? `${d.meter_awal} - ${d.meter_akhir}` : (d.usage ? `${d.usage} m³` : '-')}</td>
+                            <td class="text-end">${formatRp(d.nilai_tagihan || 0)}</td>
+                            <td class="text-end">${formatRp(d.denda || 0)}</td>
+                            <td class="text-end">${formatRp(d.admin || 0)}</td>
+                            ${d.biaya_lain ? `<td class="text-end">${formatRp(d.biaya_lain)}</td>` : ''}
+                        </tr>
+                    `).join('');
+                    return `
+                        <div class="col-12 mt-2">
+                            <div class="small fw-bold text-muted mb-1"><i class="bi bi-calendar3 me-1 text-primary"></i>Rincian Tagihan per Lembar / Periode (${details.length} Periode):</div>
+                            <div class="table-responsive rounded-2 border" style="border-color:var(--border-color)!important;">
+                                <table class="table table-sm table-bordered m-0" style="font-size:11.5px; vertical-align:middle;">
+                                    <thead class="table-light">
+                                        <tr style="background:var(--surface-2);">
+                                            <th style="width:30px;" class="text-center">#</th>
+                                            <th>Periode</th>
+                                            <th>Stand Meter / Pemakaian</th>
+                                            <th class="text-end">Pokok</th>
+                                            <th class="text-end">Denda</th>
+                                            <th class="text-end">Admin</th>
+                                            ${details.some(d => d.biaya_lain) ? '<th class="text-end">Biaya Lain</th>' : ''}
+                                        </tr>
+                                    </thead>
+                                    <tbody>${rows}</tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // 1. PLN Pascabayar
+                if (currentCategory === 'pln' && !desc.transaksi && !skuCode.includes('plnnontaglis')) {
                     let standMeter = (dArr.meter_awal && dArr.meter_akhir) ? `${dArr.meter_awal} - ${dArr.meter_akhir}` : (desc.stand_meter || '-');
+                    let pokok = detailsArr.length > 0 ? detailsArr.reduce((acc, c) => acc + parseFloat(c.nilai_tagihan || 0), 0) : (dArr.nilai_tagihan || data.data.price || 0);
+                    let denda = detailsArr.length > 0 ? detailsArr.reduce((acc, c) => acc + parseFloat(c.denda || 0), 0) : (desc.denda || dArr.denda || 0);
+                    let admin = detailsArr.length > 0 ? detailsArr.reduce((acc, c) => acc + parseFloat(c.admin || 0), 0) : (desc.admin || dArr.admin || data.data.admin || 0);
+                    let periodeText = formatInqPeriode(data.data.periode || dArr.periode || '-');
+
                     detailHtml = `
-                        <div class="row g-2">
-                            <div class="col-6"><b>Tarif / Daya:</b> ${desc.tarif || '-'} / ${desc.daya ? desc.daya + ' VA' : '-'}</div>
-                            <div class="col-6"><b>Stand Meter:</b> ${standMeter}</div>
-                            <div class="col-6"><b>Lembar Tagihan:</b> ${desc.lembar_tagihan || 1} Bulan</div>
-                            <div class="col-6"><b>Periode:</b> ${data.data.periode || dArr.periode || '-'}</div>
-                            <div class="col-12 border-top pt-1 mt-1"><b>Tagihan Pokok:</b> ${formatRp(dArr.nilai_tagihan || data.data.price || 0)} | <b>Denda:</b> ${formatRp(dArr.denda || 0)} | <b>Admin:</b> ${formatRp(dArr.admin || data.data.admin || 0)}</div>
+                        <div class="row g-2 text-start" style="font-size:12.5px; line-height:1.5;">
+                            <div class="col-sm-6"><b>Layanan PLN:</b> <span class="fw-semibold">${cleanProvider}</span></div>
+                            <div class="col-sm-6"><b>Tarif / Daya:</b> <span class="badge bg-primary bg-opacity-10 text-primary px-2 py-1 font-monospace">${desc.tarif || '-'} / ${desc.daya ? desc.daya + ' VA' : '-'}</span></div>
+                            <div class="col-sm-6"><b>Stand Meter:</b> <span class="font-monospace">${standMeter}</span></div>
+                            <div class="col-sm-6"><b>Jumlah Lembar:</b> <span class="fw-medium">${desc.lembar_tagihan || detailsArr.length || 1} Bulan (Periode: ${periodeText})</span></div>
+                            ${renderDetailsTable(detailsArr)}
+                            <div class="col-12 border-top pt-2 mt-2" style="font-size:12px; opacity:0.9;">
+                                <b>Tagihan Pokok:</b> ${formatRp(pokok)} | <b>Denda:</b> ${formatRp(denda)} | <b>Admin:</b> ${formatRp(admin)}
+                            </div>
                         </div>
                     `;
-                } else if (currentCategory === 'bpjs') {
-                    let jmlPeserta = desc.jumlah_peserta ? `${desc.jumlah_peserta} Orang` : '-';
+                }
+                // 2. PLN Nontaglis
+                else if (currentCategory === 'plnnontaglis' || desc.transaksi || skuCode.includes('plnnontaglis')) {
+                    let pokok = dArr.nilai_tagihan || data.data.price || 0;
+                    let admin = dArr.admin || desc.admin || data.data.admin || 0;
                     detailHtml = `
-                        <div class="row g-2">
-                            <div class="col-6"><b>Program:</b> ${desc.kode_program || 'BPJS'}</div>
-                            <div class="col-6"><b>Jumlah Peserta:</b> ${jmlPeserta}</div>
-                            <div class="col-6"><b>Periode:</b> ${data.data.periode || '-'}</div>
-                            <div class="col-6"><b>Kantor Cabang:</b> ${desc.kantor_cabang || '-'}</div>
-                            ${desc.alamat ? `<div class="col-12 text-truncate"><b>Alamat:</b> ${desc.alamat}</div>` : ''}
-                            <div class="col-12 border-top pt-1 mt-1"><b>Iuran:</b> ${formatRp(data.data.price || 0)} | <b>Biaya Admin:</b> ${formatRp(data.data.admin || 0)}</div>
+                        <div class="row g-2 text-start" style="font-size:12.5px; line-height:1.5;">
+                            <div class="col-sm-6"><b>Jenis Transaksi:</b> <span class="fw-bold text-primary">${desc.transaksi || 'PLN NONTAGLIS'}</span></div>
+                            <div class="col-sm-6"><b>No. Registrasi:</b> <span class="badge bg-dark font-monospace text-warning px-2 py-1">${desc.no_registrasi || no}</span></div>
+                            <div class="col-sm-6"><b>Tanggal Registrasi:</b> <span>${desc.tanggal_registrasi ? formatInqPeriode(desc.tanggal_registrasi) : '-'}</span></div>
+                            <div class="col-sm-6"><b>Lembar Tagihan:</b> <span>${desc.lembar_tagihan || 1} Lembar</span></div>
+                            <div class="col-12 border-top pt-2 mt-2" style="font-size:12px; opacity:0.9;">
+                                <b>Nilai Tagihan:</b> ${formatRp(pokok)} | <b>Biaya Admin:</b> ${formatRp(admin)}
+                            </div>
                         </div>
                     `;
-                } else if (currentCategory === 'samsat') {
-                    let noPol = desc.nomor_polisi || '-';
-                    let kendaraan = `${desc.merek_kb || ''} ${desc.model_kb || ''}`.trim() + (desc.tahun_buatan ? ` (${desc.tahun_buatan})` : '');
-                    let pkb = desc.biaya_pokok_pkb || 0;
-                    let swd = desc.biaya_pokok_swd || 0;
-                    let denda = (desc.biaya_denda_pkb || 0) + (desc.biaya_denda_swd || 0);
-                    let admStnk = (desc.biaya_admin_stnk || 0) + (desc.biaya_admin_tnkb || 0);
+                }
+                // 3. PDAM (Air Bersih)
+                else if (currentCategory === 'pdam' || (desc.alamat && (dArr.meter_awal || desc.tarif))) {
+                    let standMeter = (dArr.meter_awal && dArr.meter_akhir) ? `${dArr.meter_awal} - ${dArr.meter_akhir}` : (desc.stand_meter || '-');
+                    let pemakaian = '';
+                    if (dArr.meter_awal && dArr.meter_akhir && !isNaN(parseInt(dArr.meter_akhir) - parseInt(dArr.meter_awal))) {
+                        pemakaian = `${Math.abs(parseInt(dArr.meter_akhir) - parseInt(dArr.meter_awal))} m³`;
+                    }
+                    let pokok = detailsArr.length > 0 ? detailsArr.reduce((acc, c) => acc + parseFloat(c.nilai_tagihan || 0), 0) : (dArr.nilai_tagihan || data.data.price || 0);
+                    let denda = detailsArr.length > 0 ? detailsArr.reduce((acc, c) => acc + parseFloat(c.denda || 0), 0) : (desc.denda || dArr.denda || 0);
+                    let admin = detailsArr.length > 0 ? detailsArr.reduce((acc, c) => acc + parseFloat(c.admin || 0), 0) : (desc.admin || dArr.admin || data.data.admin || 0);
+                    let biayaLain = detailsArr.length > 0 ? detailsArr.reduce((acc, c) => acc + parseFloat(c.biaya_lain || 0), 0) : (dArr.biaya_lain || desc.biaya_lain || 0);
+
                     detailHtml = `
-                        <div class="row g-2">
-                            <div class="col-6"><b>No. Polisi:</b> <span class="badge bg-dark">${noPol}</span></div>
-                            <div class="col-6"><b>Pemilik:</b> ${desc.milik_kenama || custName}</div>
-                            <div class="col-12"><b>Kendaraan:</b> ${kendaraan || '-'}</div>
-                            <div class="col-6"><b>PKB Pokok:</b> ${formatRp(pkb)}</div>
-                            <div class="col-6"><b>SWDKLLJ:</b> ${formatRp(swd)}</div>
-                            <div class="col-6"><b>Denda Pajak:</b> ${formatRp(denda)}</div>
-                            <div class="col-6"><b>Admin STNK/TNKB:</b> ${formatRp(admStnk)}</div>
-                            <div class="col-12 border-top pt-1 mt-1 text-muted small">Tgl Akhir Pajak Baru: ${desc.tgl_akhir_pajak_baru || '-'}</div>
+                        <div class="row g-2 text-start" style="font-size:12.5px; line-height:1.5;">
+                            <div class="col-sm-6"><b>Wilayah PDAM:</b> <span class="fw-semibold">${cleanProvider}</span></div>
+                            <div class="col-sm-6"><b>Golongan / Tarif:</b> <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 px-2 py-1">${desc.tarif || '-'}</span></div>
+                            <div class="col-sm-6"><b>Stand Meter:</b> <span class="font-monospace">${standMeter}</span> ${pemakaian ? `<span class="badge bg-primary bg-opacity-10 text-primary ms-1">${pemakaian}</span>` : ''}</div>
+                            <div class="col-sm-6"><b>Jumlah Lembar:</b> <span class="fw-medium">${desc.lembar_tagihan || detailsArr.length || 1} Lembar (Periode: ${formatInqPeriode(data.data.periode || dArr.periode || '-')})</span></div>
+                            ${desc.jatuh_tempo ? `<div class="col-sm-6"><b>Jatuh Tempo:</b> <span class="text-danger fw-semibold"><i class="bi bi-calendar-event me-1"></i>${desc.jatuh_tempo}</span></div>` : ''}
+                            ${desc.alamat ? `<div class="col-sm-6 text-truncate"><b>Alamat:</b> <span>${desc.alamat}</span></div>` : ''}
+                            ${renderDetailsTable(detailsArr)}
+                            <div class="col-12 border-top pt-2 mt-2" style="font-size:12px; opacity:0.9;">
+                                <b>Tagihan Pokok:</b> ${formatRp(pokok)} | <b>Denda:</b> ${formatRp(denda)} | <b>Admin:</b> ${formatRp(admin)}${biayaLain > 0 ? ` | <b>Biaya Lain:</b> ${formatRp(biayaLain)}` : ''}
+                            </div>
                         </div>
                     `;
-                } else if (currentCategory === 'pbb') {
-                    let luas = `Tanah ${desc.luas_tanah || 0} m² / Bangunan ${desc.luas_gedung || 0} m²`;
-                    let lokasi = `${desc.alamat || ''}, ${desc.kelurahan || ''}, ${desc.kecamatan || ''}, ${desc.kab_kota || ''}`.replace(/^[\s,]+|[\s,]+$/g, '');
-                    detailHtml = `
-                        <div class="row g-2">
-                            <div class="col-6"><b>Wajib Pajak:</b> ${custName}</div>
-                            <div class="col-6"><b>Tahun Pajak:</b> ${desc.tahun_pajak || data.data.periode || '-'}</div>
-                            <div class="col-12"><b>Luas Objek:</b> ${luas}</div>
-                            ${lokasi ? `<div class="col-12 text-truncate"><b>Lokasi:</b> ${lokasi}</div>` : ''}
-                            <div class="col-12 border-top pt-1 mt-1"><b>Pokok PBB:</b> ${formatRp(data.data.price || 0)} | <b>Admin:</b> ${formatRp(data.data.admin || 0)}</div>
-                        </div>
-                    `;
-                } else if (currentCategory === 'multifinance') {
-                    let dArr = desc.detail && Array.isArray(desc.detail) && desc.detail.length > 0 ? desc.detail[0] : {};
-                    
-                    // Periode (Angsuran Ke-berapa) & Tenor
+                }
+                // 4. Multifinance / Cicilan / Leasing
+                else if (currentCategory === 'multifinance' || desc.item_name || desc.no_pol || desc.tenor) {
                     let rawPeriode = data.data.periode || dArr.periode || desc.periode || desc.angsuran_ke || '';
                     let periodeNum = rawPeriode ? parseInt(rawPeriode, 10) : '';
                     let rawTenor = desc.tenor || data.data.tenor || '';
@@ -5410,24 +5540,13 @@ async function performInquiry() {
                         angsuranDisplay = `<span style="font-size:12px;">${tenorNum} Bulan</span>`;
                     }
 
-                    // Barang / Unit Kendaraan
                     let barang = desc.item_name || desc.merek_kendaraan || desc.nama_barang || desc.keterangan || '';
-                    
-                    // No. Polisi & No. Rangka
                     let noPol = desc.no_pol || desc.nomor_polisi || '';
                     let noRangka = desc.no_rangka || desc.nomor_rangka || '';
-                    
-                    // Jatuh Tempo & Lembar
+                    let noMesin = desc.no_mesin || desc.nomor_mesin || '';
                     let jatuhTempo = desc.jatuh_tempo || '';
                     let lembarTagihan = desc.lembar_tagihan ? `${desc.lembar_tagihan} Lembar` : '';
 
-                    // Nama Perusahaan / Provider Layanan
-                    let providerName = document.getElementById('postpaid-selected-title')?.innerText || '';
-                    if (!providerName || providerName.includes('Pilih')) {
-                        providerName = data.data.buyer_sku_code || 'Multifinance';
-                    }
-
-                    // Rincian Biaya
                     let pokok = dArr.nilai_tagihan || data.data.price || 0;
                     let denda = dArr.denda || desc.denda || 0;
                     let admin = dArr.admin || desc.admin || data.data.admin || 0;
@@ -5435,37 +5554,199 @@ async function performInquiry() {
 
                     detailHtml = `
                         <div class="row g-2 text-start" style="font-size:12.5px;line-height:1.5;">
-                            <div class="col-sm-6"><b>Perusahaan:</b> <span class="fw-semibold">${providerName}</span></div>
+                            <div class="col-sm-6"><b>Perusahaan:</b> <span class="fw-semibold">${cleanProvider}</span></div>
                             <div class="col-sm-6"><b>Tagihan / Cicilan:</b> ${angsuranDisplay}</div>
-                            ${barang ? `<div class="col-12" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:7px;padding:6px 10px;margin-top:4px;"><b style="color:var(--primary);"><i class="bi bi-bicycle me-1"></i>Unit Kendaraan:</b> <span class="fw-bold" style="color:var(--text-primary);">${barang}</span></div>` : ''}
+                            ${barang ? `<div class="col-12" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:8px 12px;margin-top:4px;"><b style="color:var(--primary);"><i class="bi bi-bicycle me-1"></i>Unit Kendaraan:</b> <span class="fw-bold" style="color:var(--text-primary);">${barang}</span></div>` : ''}
                             ${noPol ? `<div class="col-sm-6"><b>No. Polisi:</b> <span class="badge bg-dark font-monospace text-warning px-2 py-1">${noPol}</span></div>` : ''}
                             ${noRangka ? `<div class="col-sm-6"><b>No. Rangka:</b> <span class="font-monospace small text-muted">${noRangka}</span></div>` : ''}
+                            ${noMesin ? `<div class="col-sm-6"><b>No. Mesin:</b> <span class="font-monospace small text-muted">${noMesin}</span></div>` : ''}
                             ${jatuhTempo ? `<div class="col-sm-6"><b>Jatuh Tempo:</b> <span class="text-danger fw-semibold"><i class="bi bi-calendar-event me-1"></i>${jatuhTempo}</span></div>` : ''}
                             ${lembarTagihan ? `<div class="col-sm-6"><b>Jml Tagihan:</b> <span class="fw-medium">${lembarTagihan}</span></div>` : ''}
+                            ${renderDetailsTable(detailsArr)}
                             <div class="col-12 border-top pt-2 mt-2" style="font-size:12px;opacity:0.9;">
                                 <b>Nilai Tagihan:</b> ${formatRp(pokok)} | <b>Denda:</b> ${formatRp(denda)} | <b>Admin:</b> ${formatRp(admin)}${biayaLain > 0 ? ` | <b>Biaya Lain:</b> ${formatRp(biayaLain)}` : ''}
                             </div>
                         </div>
                     `;
-                } else if (currentCategory === 'ewallet') {
-                    let nominalTopup = extraPayload.amount || data.data.price || 0;
+                }
+                // 5. BPJS Ketenagakerjaan (BPJSTK / BPJSTKPU)
+                else if (currentCategory === 'bpjs' && (desc.kode_iuran || desc.jht || desc.jkk || skuCode.includes('bpjstk'))) {
+                    let programList = [];
+                    if (desc.jht) programList.push(`JHT: ${formatRp(desc.jht)}`);
+                    if (desc.jkk) programList.push(`JKK: ${formatRp(desc.jkk)}`);
+                    if (desc.jkm) programList.push(`JKM: ${formatRp(desc.jkm)}`);
+                    if (desc.jpk) programList.push(`JPK: ${formatRp(desc.jpk)}`);
+                    if (desc.jpn) programList.push(`JPN: ${formatRp(desc.jpn)}`);
+
                     detailHtml = `
-                        <div class="row g-2">
-                            <div class="col-6"><b>Layanan:</b> ${sku}</div>
-                            <div class="col-6"><b>No. Akun:</b> ${no}</div>
-                            <div class="col-6"><b>Nominal Top Up:</b> ${formatRp(nominalTopup)}</div>
-                            <div class="col-6"><b>Biaya Admin:</b> ${formatRp(data.data.admin || 0)}</div>
+                        <div class="row g-2 text-start" style="font-size:12.5px; line-height:1.5;">
+                            <div class="col-sm-6"><b>Program BPJS:</b> <span class="fw-bold text-primary">${desc.kode_program || 'BPJS Ketenagakerjaan'}</span></div>
+                            <div class="col-sm-6"><b>Kode Iuran:</b> <span class="badge bg-dark font-monospace text-warning px-2 py-1">${desc.kode_iuran || '-'}</span></div>
+                            ${desc.npp ? `<div class="col-sm-6"><b>NPP Perusahaan:</b> <span class="font-monospace">${desc.npp}</span> ${desc.kode_divisi ? `(Div: ${desc.kode_divisi})` : ''}</div>` : ''}
+                            ${desc.kantor_cabang ? `<div class="col-sm-6"><b>Kantor Cabang:</b> <span>${desc.kantor_cabang}</span></div>` : ''}
+                            ${(desc.tgl_efektif && desc.tgl_expired) ? `<div class="col-sm-6"><b>Masa Berlaku:</b> <span class="fw-semibold">${desc.tgl_efektif} s/d ${desc.tgl_expired}</span></div>` : ''}
+                            <div class="col-sm-6"><b>Lembar Tagihan:</b> <span>${desc.lembar_tagihan || 1} Lembar</span></div>
+                            ${programList.length > 0 ? `
+                            <div class="col-12 mt-1">
+                                <div class="small fw-bold text-muted mb-1">Rincian Program:</div>
+                                <div class="d-flex flex-wrap gap-1">
+                                    ${programList.map(p => `<span class="badge bg-secondary bg-opacity-10 text-primary border" style="font-size:11px;">${p}</span>`).join('')}
+                                </div>
+                            </div>` : ''}
+                            <div class="col-12 border-top pt-2 mt-2" style="font-size:12px; opacity:0.9;">
+                                <b>Total Iuran:</b> ${formatRp(data.data.price || 0)} | <b>Admin:</b> ${formatRp(data.data.admin || 0)}
+                            </div>
                         </div>
                     `;
-                } else {
-                    let dArr = desc.detail && Array.isArray(desc.detail) && desc.detail.length > 0 ? desc.detail[0] : null;
-                    if (dArr) {
-                        detailHtml = `Periode: <b>${dArr.periode || '-'}</b> | Tagihan: <b>${formatRp(dArr.nilai_tagihan || 0)}</b> | Denda: <b>${formatRp(dArr.denda || 0)}</b> | Admin: <b>${formatRp(dArr.admin || data.data.admin || 0)}</b>`;
-                    } else if (desc.tarif || desc.daya) {
-                        detailHtml = `Tarif: <b>${desc.tarif || '-'}</b> | Daya: <b>${desc.daya || '-'} VA</b> | Lembar: <b>${desc.lembar_tagihan || 1}</b>`;
-                    } else {
-                        detailHtml = data.data.message || 'Tagihan terverifikasi siap dibayar.';
-                    }
+                }
+                // 6. BPJS Kesehatan
+                else if (currentCategory === 'bpjs') {
+                    let jmlPeserta = desc.jumlah_peserta ? `${desc.jumlah_peserta} Orang` : '-';
+                    detailHtml = `
+                        <div class="row g-2 text-start" style="font-size:12.5px; line-height:1.5;">
+                            <div class="col-sm-6"><b>Program:</b> <span class="fw-bold text-primary">${desc.kode_program || 'BPJS Kesehatan'}</span></div>
+                            <div class="col-sm-6"><b>Jumlah Peserta:</b> <span class="badge bg-primary bg-opacity-10 text-primary px-2 py-1">${jmlPeserta}</span></div>
+                            <div class="col-sm-6"><b>Periode Iuran:</b> <span>${formatInqPeriode(data.data.periode || dArr.periode || '-')}</span></div>
+                            <div class="col-sm-6"><b>Kantor Cabang:</b> <span>${desc.kantor_cabang || '-'}</span></div>
+                            ${desc.alamat ? `<div class="col-12 text-truncate"><b>Alamat:</b> <span>${desc.alamat}</span></div>` : ''}
+                            <div class="col-12 border-top pt-2 mt-2" style="font-size:12px; opacity:0.9;">
+                                <b>Total Iuran:</b> ${formatRp(data.data.price || 0)} | <b>Biaya Admin:</b> ${formatRp(data.data.admin || 0)}
+                            </div>
+                        </div>
+                    `;
+                }
+                // 7. SAMSAT (Pajak Kendaraan Bermotor)
+                else if (currentCategory === 'samsat' || desc.nomor_polisi || desc.biaya_pokok_pkb) {
+                    let noPol = desc.nomor_polisi || '-';
+                    let kendaraan = `${desc.merek_kb || ''} ${desc.model_kb || ''}`.trim() + (desc.tahun_buatan ? ` (${desc.tahun_buatan})` : '');
+                    let pkb = parseFloat(desc.biaya_pokok_pkb || 0);
+                    let swd = parseFloat(desc.biaya_pokok_swd || 0);
+                    let bbn = parseFloat(desc.biaya_pokok_bbn || 0);
+                    let dendaPkb = parseFloat(desc.biaya_denda_pkb || 0);
+                    let dendaSwd = parseFloat(desc.biaya_denda_swd || 0);
+                    let dendaBbn = parseFloat(desc.biaya_denda_bbn || 0);
+                    let totalDenda = dendaPkb + dendaSwd + dendaBbn;
+                    let admStnk = parseFloat(desc.biaya_admin_stnk || 0);
+                    let admTnkb = parseFloat(desc.biaya_admin_tnkb || 0);
+                    let parkir = parseFloat(desc.biaya_parkir_pokok || 0);
+                    let progresif = parseFloat(desc.biaya_pajak_progresif || 0);
+
+                    detailHtml = `
+                        <div class="row g-2 text-start" style="font-size:12.5px; line-height:1.5;">
+                            <div class="col-sm-6"><b>No. Polisi:</b> <span class="badge bg-dark font-monospace text-warning px-2 py-1 fs-6">${noPol}</span></div>
+                            <div class="col-sm-6"><b>NIK Pemilik:</b> <span class="font-monospace">${desc.nomor_identitas || '-'}</span></div>
+                            <div class="col-sm-6"><b>Nama Pemilik:</b> <span>${desc.milik_kenama ? `Milik ke-${parseInt(desc.milik_kenama, 10)} (${custName})` : custName}</span></div>
+                            <div class="col-sm-6"><b>Kendaraan:</b> <span class="fw-semibold">${kendaraan || '-'}</span></div>
+                            ${(desc.nomor_rangka || desc.nomor_mesin) ? `
+                            <div class="col-sm-6"><b>No. Rangka:</b> <span class="font-monospace small text-muted">${desc.nomor_rangka || '-'}</span></div>
+                            <div class="col-sm-6"><b>No. Mesin:</b> <span class="font-monospace small text-muted">${desc.nomor_mesin || '-'}</span></div>` : ''}
+                            ${desc.alamat ? `<div class="col-12 text-truncate"><b>Alamat SAMSAT:</b> <span>${desc.alamat}</span></div>` : ''}
+                            ${desc.tgl_akhir_pajak_baru ? `<div class="col-12"><b>Akhir Masa Pajak Baru:</b> <span class="text-danger fw-bold"><i class="bi bi-calendar-event me-1"></i>${desc.tgl_akhir_pajak_baru}</span></div>` : ''}
+                            <div class="col-12 border-top pt-2 mt-1">
+                                <div class="small fw-bold text-muted mb-1">Rincian Komponen Pajak:</div>
+                                <div class="d-flex flex-wrap gap-2 small">
+                                    <span><b>PKB Pokok:</b> ${formatRp(pkb)}</span>
+                                    <span><b>SWDKLLJ:</b> ${formatRp(swd)}</span>
+                                    ${bbn > 0 ? `<span><b>BBN:</b> ${formatRp(bbn)}</span>` : ''}
+                                    ${totalDenda > 0 ? `<span class="text-danger"><b>Denda:</b> ${formatRp(totalDenda)}</span>` : ''}
+                                    ${admStnk > 0 ? `<span><b>Admin STNK:</b> ${formatRp(admStnk)}</span>` : ''}
+                                    ${admTnkb > 0 ? `<span><b>Admin TNKB:</b> ${formatRp(admTnkb)}</span>` : ''}
+                                    ${parkir > 0 ? `<span><b>Parkir:</b> ${formatRp(parkir)}</span>` : ''}
+                                    ${progresif > 0 ? `<span><b>Pajak Progresif:</b> ${formatRp(progresif)}</span>` : ''}
+                                    <span><b>Admin Layanan:</b> ${formatRp(data.data.admin || 0)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                // 8. PBB & Pajak Daerah Lainnya
+                else if (currentCategory === 'pbb' || desc.luas_tanah || desc.tahun_pajak) {
+                    let luas = `Bumi: ${desc.luas_tanah || 0} m² | Bangunan: ${desc.luas_gedung || 0} m²`;
+                    let lokasiParts = [desc.alamat, desc.kelurahan ? 'Kel. ' + desc.kelurahan : '', desc.kecamatan ? 'Kec. ' + desc.kecamatan : '', desc.kab_kota, desc.provinsi].filter(Boolean);
+                    let lokasi = lokasiParts.join(', ');
+
+                    detailHtml = `
+                        <div class="row g-2 text-start" style="font-size:12.5px; line-height:1.5;">
+                            <div class="col-sm-6"><b>Wajib Pajak:</b> <span class="fw-semibold">${custName}</span></div>
+                            <div class="col-sm-6"><b>Tahun Pajak:</b> <span class="badge bg-primary px-2 py-1">${desc.tahun_pajak || data.data.periode || '-'}</span></div>
+                            <div class="col-sm-6"><b>NOP:</b> <span class="font-monospace">${no}</span></div>
+                            <div class="col-sm-6"><b>Luas Objek:</b> <span>${luas}</span></div>
+                            ${lokasi ? `<div class="col-12"><b>Lokasi Objek Pajak:</b> <span class="text-muted">${lokasi}</span></div>` : ''}
+                            <div class="col-12 border-top pt-2 mt-2" style="font-size:12px; opacity:0.9;">
+                                <b>Pokok PBB:</b> ${formatRp(data.data.price || 0)} | <b>Admin:</b> ${formatRp(data.data.admin || 0)}
+                            </div>
+                        </div>
+                    `;
+                }
+                // 9. GAS NEGARA / PERTAGAS (PGAS)
+                else if (currentCategory === 'gas' || skuCode.includes('pgas') || skuCode.includes('gas') || desc.usage) {
+                    let standMeter = (dArr.meter_awal && dArr.meter_akhir) ? `${dArr.meter_awal} - ${dArr.meter_akhir}` : '-';
+                    let usage = dArr.usage ? `${dArr.usage} m³` : '-';
+
+                    detailHtml = `
+                        <div class="row g-2 text-start" style="font-size:12.5px; line-height:1.5;">
+                            <div class="col-sm-6"><b>Penyedia Gas:</b> <span class="fw-semibold">${cleanProvider}</span></div>
+                            <div class="col-sm-6"><b>Periode:</b> <span>${formatInqPeriode(data.data.periode || dArr.periode || '-')}</span></div>
+                            <div class="col-sm-6"><b>Stand Meter Gas:</b> <span class="font-monospace">${standMeter}</span></div>
+                            <div class="col-sm-6"><b>Pemakaian Gas:</b> <span class="badge bg-info text-dark">${usage}</span></div>
+                            ${desc.alamat ? `<div class="col-12 text-truncate"><b>Alamat Pelanggan:</b> <span>${desc.alamat}</span></div>` : ''}
+                            ${renderDetailsTable(detailsArr)}
+                            <div class="col-12 border-top pt-2 mt-2" style="font-size:12px; opacity:0.9;">
+                                <b>Tagihan Pokok:</b> ${formatRp(dArr.nilai_tagihan || data.data.price || 0)} | <b>Admin:</b> ${formatRp(data.data.admin || 0)}
+                            </div>
+                        </div>
+                    `;
+                }
+                // 10. Internet & TV Berlangganan
+                else if (currentCategory === 'internet' || currentCategory === 'tv') {
+                    let pokok = detailsArr.length > 0 ? detailsArr.reduce((acc, c) => acc + parseFloat(c.nilai_tagihan || 0), 0) : (dArr.nilai_tagihan || data.data.price || 0);
+                    let admin = detailsArr.length > 0 ? detailsArr.reduce((acc, c) => acc + parseFloat(c.admin || 0), 0) : (desc.admin || dArr.admin || data.data.admin || 0);
+                    let denda = detailsArr.length > 0 ? detailsArr.reduce((acc, c) => acc + parseFloat(c.denda || 0), 0) : (desc.denda || dArr.denda || 0);
+
+                    detailHtml = `
+                        <div class="row g-2 text-start" style="font-size:12.5px; line-height:1.5;">
+                            <div class="col-sm-6"><b>Provider / Layanan:</b> <span class="fw-semibold">${cleanProvider}</span></div>
+                            <div class="col-sm-6"><b>Periode:</b> <span class="fw-medium">${formatInqPeriode(data.data.periode || dArr.periode || '-')}</span></div>
+                            <div class="col-sm-6"><b>Lembar Tagihan:</b> <span>${desc.lembar_tagihan || detailsArr.length || 1} Bulan</span></div>
+                            ${dArr.no_ref ? `<div class="col-sm-6"><b>No. Ref:</b> <span class="font-monospace">${dArr.no_ref}</span></div>` : ''}
+                            ${renderDetailsTable(detailsArr)}
+                            <div class="col-12 border-top pt-2 mt-2" style="font-size:12px; opacity:0.9;">
+                                <b>Tagihan Pokok:</b> ${formatRp(pokok)} | <b>Denda:</b> ${formatRp(denda)} | <b>Admin:</b> ${formatRp(admin)}
+                            </div>
+                        </div>
+                    `;
+                }
+                // 11. E-Wallet / E-Money Postpaid
+                else if (currentCategory === 'ewallet') {
+                    let nominalTopup = extraPayload.amount || data.data.price || 0;
+                    detailHtml = `
+                        <div class="row g-2 text-start" style="font-size:12.5px; line-height:1.5;">
+                            <div class="col-sm-6"><b>Layanan:</b> <span class="fw-semibold">${cleanProvider}</span></div>
+                            <div class="col-sm-6"><b>No. Akun / HP:</b> <span class="font-monospace">${no}</span></div>
+                            <div class="col-sm-6"><b>Nominal Top Up:</b> <span class="fw-bold text-success">${formatRp(nominalTopup)}</span></div>
+                            <div class="col-sm-6"><b>Biaya Admin:</b> <span>${formatRp(data.data.admin || 0)}</span></div>
+                        </div>
+                    `;
+                }
+                // 12. HP Pascabayar & Pascabayar Lainnya (Universal Fallback)
+                else {
+                    let pokok = dArr.nilai_tagihan || data.data.price || 0;
+                    let denda = dArr.denda || desc.denda || 0;
+                    let admin = dArr.admin || desc.admin || data.data.admin || 0;
+                    let periodeText = formatInqPeriode(data.data.periode || dArr.periode || '-');
+
+                    detailHtml = `
+                        <div class="row g-2 text-start" style="font-size:12.5px; line-height:1.5;">
+                            <div class="col-sm-6"><b>Layanan:</b> <span class="fw-semibold">${cleanProvider}</span></div>
+                            <div class="col-sm-6"><b>Periode:</b> <span>${periodeText}</span></div>
+                            <div class="col-sm-6"><b>Jumlah Lembar:</b> <span>${desc.lembar_tagihan || detailsArr.length || 1} Lembar</span></div>
+                            ${desc.tarif ? `<div class="col-sm-6"><b>Tarif / Paket:</b> <span>${desc.tarif}</span></div>` : ''}
+                            ${renderDetailsTable(detailsArr)}
+                            <div class="col-12 border-top pt-2 mt-2" style="font-size:12px; opacity:0.9;">
+                                <b>Nilai Tagihan:</b> ${formatRp(pokok)} | <b>Denda:</b> ${formatRp(denda)} | <b>Admin:</b> ${formatRp(admin)}
+                            </div>
+                        </div>
+                    `;
                 }
                 
                 detailEl.innerHTML = detailHtml;
