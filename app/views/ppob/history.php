@@ -623,56 +623,113 @@
     function formatPpobInvoiceText(d) {
         const storeName = 'ALFAREZ MART';
         const price = parseInt(d.sell_price || 0).toLocaleString('id-ID');
-        const custName = d.customer_name || '';
-        let snText = d.sn && d.sn !== '-' ? d.sn : '';
         
+        let raw = {};
+        if (d.raw_response) {
+            try {
+                raw = typeof d.raw_response === 'string' ? JSON.parse(d.raw_response) : d.raw_response;
+            } catch(e) {}
+        }
+        if (raw.data && typeof raw.data === 'object') {
+            raw = { ...raw, ...raw.data };
+        }
+        const desc = raw.desc || {};
+        const details = Array.isArray(desc.detail) ? (desc.detail[0] || {}) : {};
+
+        // Unmasked customer name
+        let custName = d.customer_name || '';
+        if (raw.customer_name && (!custName || custName.includes('*'))) {
+            custName = raw.customer_name;
+        }
+
+        // Clean product name
+        let prodName = (d.product_name || '-').replace(/\s*\([^)]*\*[^)]*\)/g, '').trim();
+
+        // Digiflazz Trx ID / SN
+        let digiId = (d.digiflazz_trx_id && d.digiflazz_trx_id !== d.ref_id) ? d.digiflazz_trx_id : ((d.trx_id && d.trx_id !== d.ref_id) ? d.trx_id : '');
+        if (!digiId && d.sn && d.sn !== '-') {
+            digiId = d.sn;
+        }
+
+        let snText = d.sn && d.sn !== '-' ? d.sn : '';
         let snVal = snText;
         let extraLines = '';
-        if (snText) {
+
+        const typeStr = (d.category || '').toLowerCase();
+        const isMf = typeStr === 'multifinance' || (d.buyer_sku_code || '').toLowerCase().includes('multifinance') || (d.product_name || '').toLowerCase().includes('kredit') || (d.product_name || '').toLowerCase().includes('leasing') || (desc.item_name || desc.no_pol || desc.tenor);
+
+        if (isMf) {
+            const periodeRaw = raw.periode || details.periode || '';
+            const periodeStr = periodeRaw ? String(parseInt(periodeRaw, 10)) : '';
+            const tenorRaw = desc.tenor || '';
+            const tenorStr = tenorRaw ? String(parseInt(tenorRaw, 10)) : '';
+
+            if (periodeStr && tenorStr) {
+                extraLines += `*Angsuran Ke*     : *Ke-${periodeStr} dari ${tenorStr} Bulan*\n`;
+            } else if (periodeStr) {
+                extraLines += `*Angsuran Ke*     : *Ke-${periodeStr}*\n`;
+            } else if (tenorStr) {
+                extraLines += `*Tenor*           : *${tenorStr} Bulan*\n`;
+            }
+
+            if (desc.item_name) extraLines += `*Unit Kendaraan*  : ${desc.item_name}\n`;
+            if (desc.no_pol)    extraLines += `*No. Polisi*      : *${desc.no_pol}*\n`;
+            if (desc.no_rangka) extraLines += `*No. Rangka*      : ${desc.no_rangka}\n`;
+            if (desc.jatuh_tempo) extraLines += `*Jatuh Tempo*     : ${desc.jatuh_tempo}\n`;
+            if (desc.lembar_tagihan) extraLines += `*Jml Tagihan*     : ${desc.lembar_tagihan} Lembar\n`;
+
+            const adminFee = raw.admin || d.admin || 0;
+            const dendaFee = details.denda ? parseInt(details.denda, 10) : 0;
+            const sellPrice = parseInt(d.sell_price || 0, 10);
+            const tagihanPokok = sellPrice > 0 ? (sellPrice - (parseInt(adminFee, 10) || 0) - dendaFee) : 0;
+
+            if (tagihanPokok > 0) extraLines += `*Tagihan Pokok*   : Rp ${tagihanPokok.toLocaleString('id-ID')}\n`;
+            if (adminFee > 0)     extraLines += `*Biaya Admin*     : Rp ${parseInt(adminFee, 10).toLocaleString('id-ID')}\n`;
+            if (dendaFee > 0)     extraLines += `*Denda*           : Rp ${dendaFee.toLocaleString('id-ID')}\n`;
+        } else if (snText) {
             if (snText.includes('/')) {
                 const parts = snText.split('/');
                 if (parts.length >= 4) {
                     snVal = parts[0];
-                    if (parts[1]) extraLines += `*Nama Mtr*     : ${parts[1]}\n`;
-                    if (parts[2]) extraLines += `*Tarif/Daya*   : ${parts.length > 4 ? parts[2]+'/'+parts[3] : parts[2]}\n`;
-                    if (parts[3]) extraLines += `*Jml kWh*      : ${parts.length > 4 ? parts[4] : parts[3]}\n`;
+                    if (parts[1]) extraLines += `*Nama Mtr*        : ${parts[1]}\n`;
+                    if (parts[2]) extraLines += `*Tarif/Daya*      : ${parts.length > 4 ? parts[2]+'/'+parts[3] : parts[2]}\n`;
+                    if (parts[3]) extraLines += `*Jml kWh*         : ${parts.length > 4 ? parts[4] : parts[3]}\n`;
                 }
             } else if (snText.toUpperCase().includes('NAMA:') && snText.toUpperCase().includes('REFF:')) {
                 const namaMatch = snText.match(/NAMA:\s*([^,\n]+)/i);
                 const reffMatch = snText.match(/REFF:\s*([^,\n]+)/i);
-                if (namaMatch?.[1] && !custName) extraLines += `*Nama Akun*    : ${namaMatch[1].trim()}\n`;
+                if (namaMatch?.[1] && !custName) extraLines += `*Nama Akun*       : ${namaMatch[1].trim()}\n`;
                 if (reffMatch?.[1]) snVal = reffMatch[1].trim();
             }
         }
 
-        const typeStr = (d.category || '').toLowerCase();
         const isEw = ['dana','gopay','shopee','ovo','linkaja','ewallet'].some(k => (d.product_name||'').toLowerCase().includes(k) || (d.buyer_sku_code||'').toLowerCase().includes(k) || typeStr.includes(k));
 
         let text = `🧾 *STRUK PEMBAYARAN DIGITAL - ${storeName}*\n` +
                    `-------------------------------------------\n` +
-                   `*No. Referensi*  : ${d.ref_id || '-'}\n` +
-                   (d.digiflazz_trx_id && d.digiflazz_trx_id !== d.ref_id ? `*Trx ID*         : ${d.digiflazz_trx_id}\n` : '') +
-                   `*Tanggal*        : ${d.created_at || new Date().toLocaleString('id-ID')}\n` +
-                   `*Layanan*        : *${d.product_name || '-'}*\n` +
-                   `*No. Tujuan/ID*  : *${d.customer_no || '-'}*\n`;
+                   `*No. Referensi*   : ${d.ref_id || '-'}\n` +
+                   (digiId && digiId !== d.ref_id ? `*Trx ID / SN*     : ${digiId}\n` : '') +
+                   `*Tanggal*         : ${d.created_at || new Date().toLocaleString('id-ID')}\n` +
+                   `*Layanan*         : *${prodName}*\n` +
+                   `*No. Kontrak / ID*: *${d.customer_no || '-'}*\n`;
 
         if (custName) {
-            text += `*${isEw ? 'Nama Akun' : 'Nama Pelanggan'}*: *${custName}*\n`;
+            text += `*${isEw ? 'Nama Akun' : 'Nama Pelanggan'}* : *${custName}*\n`;
         }
         if (extraLines) {
             text += extraLines;
         }
-        if (snVal && snVal !== '-') {
+        if (!isMf && snVal && snVal !== '-') {
             const isPln = (d.product_name || '').toLowerCase().includes('pln') || (d.buyer_sku_code || '').toLowerCase().includes('pln');
-            text += `*${isPln ? 'TOKEN PLN' : 'SN / Ref'}*      : *${snVal}*\n`;
+            text += `*${isPln ? 'TOKEN PLN' : 'SN / Ref'}*       : *${snVal}*\n`;
         }
 
         text += `-------------------------------------------\n` +
-                `*TOTAL BAYAR     : Rp ${price}*\n` +
-                `*Status*         : BERHASIL ✅\n` +
+                `*TOTAL BAYAR      : Rp ${price}*\n` +
+                `*Status*          : BERHASIL ✅\n` +
                 `-------------------------------------------\n` +
                 `Terima kasih telah bertransaksi di ${storeName}!\n` +
-                `_Struk ini merupakan bukti pembayaran resmi._`;
+                `_Struk ini merupakan bukti pembayaran resmi dan sah._`;
 
         return text;
     }

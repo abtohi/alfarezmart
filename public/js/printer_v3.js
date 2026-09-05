@@ -888,9 +888,11 @@ class ThermalPrinter {
         const detectProductTypeStr = (d) => {
             const name  = (d.product_name  || '').toLowerCase();
             const sku   = (d.buyer_sku_code || '').toLowerCase();
+            const cat   = (d.category       || '').toLowerCase();
             const sn    = (d.sn            || '');
             const hasSN = sn && sn !== '-';
 
+            if (cat === 'multifinance' || name.includes('multifinance') || sku.includes('multifinance') || name.includes('kredit') || name.includes('leasing') || /^(oto|adira|fif|baf|wom|mega|mandala|smart)/i.test(sku)) return 'multifinance';
             if (name.includes('pln') || sku.includes('pln') || (hasSN && sn.split('/').length >= 4)) return 'pln';
             if (name.includes('dana') || sku.includes('dana') || name.includes('dnid')) return 'dana';
             if (name.includes('shopeepay') || name.includes('shopee') || sku.includes('shopee') || sku.includes('spay')) return 'shopee';
@@ -908,6 +910,7 @@ class ThermalPrinter {
 
         const getProductLabelInfo = (type) => {
             const themes = {
+                multifinance: 'MULTIFINANCE / CICILAN',
                 pln:     'PLN PREPAID',
                 dana:    'DANA',
                 shopee:  'SHOPEEPAY',
@@ -1039,6 +1042,157 @@ class ThermalPrinter {
             data += 'ini sebagai bukti pembayaran\n';
             data += 'yang sah.\n\n\n\n';
             
+        } else if (typeStr === 'multifinance') {
+            // ==========================================
+            // MULTIFINANCE / CICILAN THERMAL RECEIPT
+            // ==========================================
+            let raw = {};
+            if (transaction.raw_response) {
+                try {
+                    raw = typeof transaction.raw_response === 'string' ? JSON.parse(transaction.raw_response) : transaction.raw_response;
+                } catch(e) {}
+            }
+            if (raw.data && typeof raw.data === 'object') {
+                raw = { ...raw, ...raw.data };
+            }
+            const desc = raw.desc || {};
+            const details = Array.isArray(desc.detail) ? (desc.detail[0] || {}) : {};
+
+            // Unmasked customer name
+            let custName = transaction.customer_name || '';
+            if (raw.customer_name && (!custName || custName.includes('*'))) {
+                custName = raw.customer_name;
+            }
+
+            // Clean product name
+            let prodName = (transaction.product_name || 'Multifinance').replace(/\s*\([^)]*\*[^)]*\)/g, '').trim();
+
+            // Digiflazz Trx ID / SN
+            let digiId = (transaction.digiflazz_trx_id && transaction.digiflazz_trx_id !== transaction.ref_id) ? transaction.digiflazz_trx_id : ((transaction.trx_id && transaction.trx_id !== transaction.ref_id) ? transaction.trx_id : '');
+            if (!digiId && transaction.sn && transaction.sn !== '-') {
+                digiId = transaction.sn;
+            }
+
+            const periodeRaw = raw.periode || details.periode || '';
+            const periodeStr = periodeRaw ? String(parseInt(periodeRaw, 10)) : '';
+            const tenorRaw = desc.tenor || '';
+            const tenorStr = tenorRaw ? String(parseInt(tenorRaw, 10)) : '';
+
+            let angsuranText = '';
+            if (periodeStr && tenorStr) {
+                angsuranText = `Ke-${periodeStr} / ${tenorStr} Bln`;
+            } else if (periodeStr) {
+                angsuranText = `Ke-${periodeStr}`;
+            } else if (tenorStr) {
+                angsuranText = `${tenorStr} Bulan`;
+            }
+
+            const itemName = desc.item_name || '';
+            const noPol = desc.no_pol || '';
+            const noRangka = desc.no_rangka || '';
+            const jatuhTempo = desc.jatuh_tempo || '';
+            const lembar = desc.lembar_tagihan || '';
+
+            // Header
+            data += '\x1B@'; // Init
+            data += '\x1Ba\x01'; // Align Center
+            data += '\x1BE\x01'; // Bold On
+            data += storeName.toUpperCase() + '\n';
+            data += '\x1BE\x00'; // Bold Off
+            data += 'Pusat Pembayaran\nProduk Digital\n';
+            data += '-'.repeat(width) + '\n';
+
+            // Meta
+            data += '\x1Ba\x00'; // Align Left
+            data += '\x1B!\x01'; // Font B
+            data += padRight('TGL', 4) + ': ' + formattedDate + '\n';
+            data += padRight('REF', 4) + ': ' + (transaction.ref_id || '-') + '\n';
+            data += padRight('TRX', 4) + ': ' + (digiId || '-') + '\n';
+            data += '\x1B!\x00'; // Font A
+            data += '-'.repeat(width) + '\n';
+
+            // Badge
+            data += '\x1Ba\x01'; // Align Center
+            data += '\x1BE\x01'; // Bold On
+            data += `=== ${labelInfo} ===\n`;
+            data += 'BUKTI PEMBAYARAN TAGIHAN\n';
+            data += 'TRANSAKSI BERHASIL\n';
+            data += '\x1BE\x00'; // Bold Off
+            data += '-'.repeat(width) + '\n';
+
+            // Info rows
+            const lblW = 11;
+            const printMfRow = (label, val) => {
+                if (!val) return;
+                const left = padRight(label, lblW) + ': ';
+                const maxValW = width - left.length;
+                const valStr = String(val);
+                if (valStr.length <= maxValW) {
+                    data += left + valStr + '\n';
+                } else {
+                    data += left + valStr.substring(0, maxValW) + '\n' + ' '.repeat(left.length) + valStr.substring(maxValW) + '\n';
+                }
+            };
+
+            data += '\x1Ba\x00'; // Align Left
+            printMfRow('Layanan', prodName);
+            printMfRow('No Kontrak', transaction.customer_no);
+            printMfRow('Pelanggan', custName);
+            if (angsuranText) printMfRow('Angsuran', angsuranText);
+            if (itemName) printMfRow('Unit/Brg', itemName);
+            if (noPol) printMfRow('No Polisi', noPol);
+            if (noRangka) printMfRow('No Rangka', noRangka);
+            if (jatuhTempo) printMfRow('Jth Tempo', jatuhTempo);
+            if (lembar) printMfRow('Tagihan', lembar + ' Lembar');
+
+            // Breakdown (Pokok, Admin, Denda)
+            const adminFee = raw.admin || transaction.admin || 0;
+            const dendaFee = details.denda ? parseInt(details.denda, 10) : 0;
+            const sellPrice = parseInt(transaction.sell_price || 0, 10);
+            const tagihanPokok = sellPrice > 0 ? (sellPrice - (parseInt(adminFee, 10) || 0) - dendaFee) : 0;
+
+            if (tagihanPokok > 0 || adminFee > 0 || dendaFee > 0) {
+                data += '-'.repeat(width) + '\n';
+                if (tagihanPokok > 0) printMfRow('Pokok', 'Rp ' + tagihanPokok.toLocaleString('id-ID'));
+                if (adminFee > 0) printMfRow('Biaya Admin', 'Rp ' + parseInt(adminFee, 10).toLocaleString('id-ID'));
+                if (dendaFee > 0) printMfRow('Denda', 'Rp ' + dendaFee.toLocaleString('id-ID'));
+            }
+
+            if (transaction.sn && transaction.sn !== '-') {
+                data += '-'.repeat(width) + '\n';
+                data += '\x1BE\x01';
+                data += 'NO RESI / SN :\n';
+                data += '\x1BE\x00';
+                data += transaction.sn + '\n';
+            }
+
+            data += '-'.repeat(width) + '\n';
+
+            // Total Bayar
+            const price = sellPrice.toLocaleString('id-ID');
+            const totalText = `Rp ${price}`;
+            const totalLabel = 'TOTAL BAYAR';
+
+            data += '\x1BE\x01'; // Bold On
+            data += '\x1B!\x10'; // Double height
+            const spaceCount = width - totalLabel.length - totalText.length;
+            if (spaceCount > 0) {
+                data += totalLabel + ' '.repeat(spaceCount) + totalText + '\n';
+            } else {
+                data += totalLabel + '\n' + padLeft(totalText, width) + '\n';
+            }
+            data += '\x1B!\x00'; // Reset size
+            data += '\x1BE\x00'; // Bold Off
+            data += '-'.repeat(width) + '\n';
+
+            // Footer
+            data += '\x1Ba\x01'; // Align Center
+            data += 'Struk ini merupakan bukti\n';
+            data += 'pembayaran yang sah dan resmi\n';
+            data += `dari ${storeName}.\n\n`;
+            data += 'Terima kasih telah bertransaksi\n';
+            data += '= Harap Simpan Struk Ini =\n\n\n\n';
+
         } else {
             // ==========================================
             // DEFAULT THERMAL RECEIPT (EXISTING DESIGN)

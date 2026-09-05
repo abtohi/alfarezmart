@@ -525,13 +525,17 @@ class DigiflazzController extends Controller {
         $currentUser = $_SESSION['user'] ?? ['id' => 1]; // Fallback ID 1
         $isPostpaid = (strtolower($product['type']) === 'postpaid' || strtolower($product['type']) === 'pascabayar');
 
+        // Clean product name so masked name like (S*y*t*o) is not saved into product_name
+        $cleanProductName = $data['product_name'] ?? $product['product_name'];
+        $cleanProductName = trim(preg_replace('/\s*\([^)]*\*[^)]*\)/', '', $cleanProductName));
+
         // Insert pending transaction to DB
         $dbData = [
             'ref_id' => $refId,
             'buyer_sku_code' => $sku,
             'customer_no' => $customerNo,
             'customer_name' => $data['customer_name'] ?? null,
-            'product_name' => $data['product_name'] ?? $product['product_name'],
+            'product_name' => $cleanProductName ?: $product['product_name'],
             'category' => $product['category'],
             'brand' => $product['brand'],
             'type' => $isPostpaid ? 'postpaid' : 'prepaid',
@@ -556,12 +560,24 @@ class DigiflazzController extends Controller {
             $message = $res['data']['message'] ?? '';
             $sn = $res['data']['sn'] ?? '';
             $trxId = $res['data']['trx_id'] ?? '';
+            if (empty($trxId) && !empty($sn) && $sn !== '-') {
+                $trxId = $sn;
+            }
             
             // Map digiflazz status to our enum
             if ($status === 'gagal') $status = 'failed';
             else if ($status === 'sukses') $status = 'success';
             
             $this->digiModel->updateTransactionStatus($refId, $status, $message, $sn, $trxId, $res['data']);
+
+            // Update customer_name in DB if Digiflazz returned full unmasked name
+            $resCustName = $res['data']['customer_name'] ?? '';
+            if (!empty($resCustName) && strpos($resCustName, '*') === false) {
+                $dbData['customer_name'] = $resCustName;
+                try {
+                    $this->digiModel->db->prepare("UPDATE digi_transactions SET customer_name = ? WHERE ref_id = ?")->execute([$resCustName, $refId]);
+                } catch (\Throwable $e) {}
+            }
             
             // Modify response to include transaction details for frontend receipt & digital invoice
             $res['data']['sell_price'] = $dbData['sell_price'];
@@ -569,6 +585,8 @@ class DigiflazzController extends Controller {
             $res['data']['product_name'] = $dbData['product_name'];
             $res['data']['customer_no'] = $dbData['customer_no'];
             $res['data']['ref_id'] = $dbData['ref_id'];
+            $res['data']['trx_id'] = $trxId;
+            $res['data']['digiflazz_trx_id'] = $trxId;
             $res['data']['created_at'] = date('d/m/Y H:i');
         } else {
             $this->digiModel->updateTransactionStatus($refId, 'failed', $res['message']);
@@ -1009,6 +1027,11 @@ class DigiflazzController extends Controller {
             $balAfter = null;
             $balBefore = null;
 
+            // Clean product name if it has masked name appended e.g. "OTO Kredit Mobil/Motor (S*y*t*o)"
+            if (!empty($t['product_name'])) {
+                $t['product_name'] = trim(preg_replace('/\s*\([^)]*\*[^)]*\)/', '', $t['product_name']));
+            }
+
             if (!empty($t['raw_response'])) {
                 $raw = is_string($t['raw_response']) ? json_decode($t['raw_response'], true) : $t['raw_response'];
                 if (is_array($raw)) {
@@ -1018,11 +1041,18 @@ class DigiflazzController extends Controller {
                         $balAfter = (float)$raw['balance'];
                     }
 
+                    // If DB customer_name is masked with asterisk, take unmasked name from raw response
+                    if (!empty($raw['customer_name']) && (empty($t['customer_name']) || strpos($t['customer_name'], '*') !== false)) {
+                        $t['customer_name'] = $raw['customer_name'];
+                    }
+
                     if (empty($t['digiflazz_trx_id']) || $t['digiflazz_trx_id'] === $t['ref_id']) {
                         if (!empty($raw['tr_id'])) {
                             $t['digiflazz_trx_id'] = (string)$raw['tr_id'];
                         } else if (!empty($raw['trx_id']) && $raw['trx_id'] !== $t['ref_id']) {
                             $t['digiflazz_trx_id'] = (string)$raw['trx_id'];
+                        } else if (!empty($t['sn']) && $t['sn'] !== '-') {
+                            $t['digiflazz_trx_id'] = (string)$t['sn'];
                         } else {
                             $t['digiflazz_trx_id'] = null;
                         }
@@ -1031,7 +1061,7 @@ class DigiflazzController extends Controller {
             }
 
             if (!empty($t['digiflazz_trx_id']) && $t['digiflazz_trx_id'] === $t['ref_id']) {
-                $t['digiflazz_trx_id'] = null;
+                $t['digiflazz_trx_id'] = (!empty($t['sn']) && $t['sn'] !== '-') ? (string)$t['sn'] : null;
             }
 
             if ($balAfter !== null) {

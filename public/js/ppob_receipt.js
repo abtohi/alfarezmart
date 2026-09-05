@@ -1,25 +1,27 @@
 function detectProductType(d) {
-        const name  = (d.product_name  || '').toLowerCase();
-        const sku   = (d.buyer_sku_code || '').toLowerCase();
-        const sn    = (d.sn            || '');
-        const hasSN = sn && sn !== '-';
+        const name     = (d.product_name   || '').toLowerCase();
+        const sku      = (d.buyer_sku_code || d.sku || '').toLowerCase();
+        const sn       = (d.sn             || '');
+        const category = (d.category       || '').toLowerCase();
+        const brand    = (d.brand          || '').toLowerCase();
+        const hasSN    = sn && sn !== '-';
 
-        if (name.includes('pln') || sku.includes('pln') || (hasSN && sn.split('/').length >= 4)) return 'pln';
+        if (category === 'multifinance' || brand.includes('multifinance') || brand.includes('oto') || name.includes('multifinance') || name.includes('leasing') || name.includes('fif') || name.includes('adira') || name.includes('baf') || name.includes('wom') || name.includes('acc') || name.includes('oto') || sku.includes('post73') || sku.includes('post72') || sku.includes('anosf') || sku.startsWith('an')) return 'multifinance';
+        if (name.includes('pln') || sku.includes('pln') || category === 'pln' || brand === 'pln' || (hasSN && sn.split('/').length >= 4)) return 'pln';
         if (name.includes('dana') || sku.includes('dana') || name.includes('dnid')) return 'dana';
         if (name.includes('shopeepay') || name.includes('shopee') || sku.includes('shopee') || sku.includes('spay')) return 'shopee';
         if (name.includes('gopay') || sku.includes('gopay') || sku.includes('gpay')) return 'gopay';
         if (name.includes('ovo') || sku.includes('ovo')) return 'ovo';
         if (name.includes('link aja') || name.includes('linkaja') || sku.includes('linkaja')) return 'linkaja';
-        if (name.includes('bpjs') || sku.includes('bpjs')) return 'bpjs';
-        if (name.includes('pdam') || sku.includes('pdam')) return 'pdam';
-        if (name.includes('samsat') || sku.includes('samsat')) return 'samsat';
-        if (name.includes('pbb') || sku.includes('pbb')) return 'pbb';
-        if (name.includes('multifinance') || name.includes('leasing') || name.includes('fif') || name.includes('adira') || name.includes('baf') || name.includes('wom') || name.includes('acc') || name.includes('oto') || sku.includes('post73') || sku.includes('post72')) return 'multifinance';
-        if (name.includes('gas') || name.includes('pgn') || name.includes('pertagas') || sku.includes('gas')) return 'gas';
-        if (name.includes('telkom') || name.includes('indihome') || name.includes('biznet') || name.includes('cbn') || name.includes('first media') || name.includes('myrepublic') || sku.includes('telkom') || sku.includes('biznet') || sku.includes('cbn')) return 'telkom';
-        if (name.includes('paket data') || name.includes('paket internet') || sku.includes('data')) return 'paket';
-        if (name.includes('pulsa') || name.includes('prabayar') || /^(xl|tsel|isat|axis|tri|hnet|smartfren)/i.test(sku)) return 'pulsa';
-        if (name.includes('voucher') || name.includes('game')) return 'voucher';
+        if (name.includes('bpjs') || sku.includes('bpjs') || category === 'bpjs') return 'bpjs';
+        if (name.includes('pdam') || sku.includes('pdam') || category === 'pdam') return 'pdam';
+        if (name.includes('samsat') || sku.includes('samsat') || category === 'samsat') return 'samsat';
+        if (name.includes('pbb') || sku.includes('pbb') || category === 'pbb') return 'pbb';
+        if (name.includes('gas') || name.includes('pgn') || name.includes('pertagas') || sku.includes('gas') || category === 'gas') return 'gas';
+        if (name.includes('telkom') || name.includes('indihome') || name.includes('biznet') || name.includes('cbn') || name.includes('first media') || name.includes('myrepublic') || sku.includes('telkom') || sku.includes('biznet') || sku.includes('cbn') || category === 'internet') return 'telkom';
+        if (name.includes('paket data') || name.includes('paket internet') || sku.includes('data') || category === 'data') return 'paket';
+        if (name.includes('pulsa') || name.includes('prabayar') || category === 'pulsa' || /^(xl|tsel|isat|axis|tri|hnet|smartfren)/i.test(sku)) return 'pulsa';
+        if (name.includes('voucher') || name.includes('game') || category === 'game' || category === 'voucher') return 'voucher';
         return 'other';
     }
 
@@ -39,7 +41,7 @@ function detectProductType(d) {
             pdam:         { accent:'#1565C0', accentLight:'#e8eeff', accentDark:'#0d3d73', gradient:'linear-gradient(135deg,#1565C0,#1e88e5)', label:'PDAM Air', icon:'💧' },
             samsat:       { accent:'#DC2626', accentLight:'#fee2e2', accentDark:'#991b1b', gradient:'linear-gradient(135deg,#DC2626,#f87171)', label:'SAMSAT PKB', icon:'🚗' },
             pbb:          { accent:'#D97706', accentLight:'#fef3c7', accentDark:'#92400e', gradient:'linear-gradient(135deg,#D97706,#fbbf24)', label:'PBB Pajak', icon:'🏠' },
-            multifinance: { accent:'#7C3AED', accentLight:'#ede9fe', accentDark:'#5b21b6', gradient:'linear-gradient(135deg,#7C3AED,#a78bfa)', label:'Multifinance', icon:'💳' },
+            multifinance: { accent:'#7C3AED', accentLight:'#ede9fe', accentDark:'#5b21b6', gradient:'linear-gradient(135deg,#7C3AED,#6366f1)', label:'Multifinance', icon:'💳' },
             gas:          { accent:'#EA580C', accentLight:'#ffedd5', accentDark:'#9a3412', gradient:'linear-gradient(135deg,#EA580C,#fb923c)', label:'Gas Negara', icon:'🔥' },
             telkom:       { accent:'#E40427', accentLight:'#fff0f1', accentDark:'#b4001e', gradient:'linear-gradient(135deg,#E40427,#f44336)', label:'Internet & TV', icon:'📡' },
             paket:        { accent:'#0277BD', accentLight:'#e6f4ff', accentDark:'#01579b', gradient:'linear-gradient(135deg,#0277BD,#29b6f6)', label:'Paket Data', icon:'📶' },
@@ -52,14 +54,115 @@ function detectProductType(d) {
 
     /**
      * Parse SN field into structured data based on product type.
-     * Returns { snTitle, snValue, extraRows: [{label, value}], accountName }
+     * Returns { snTitle, snValue, extraRows: [{label, value}], accountName, hasSN }
      */
     function parseSN(d, type) {
         const sn = (d.sn || '').trim();
         const hasSN = sn && sn !== '-';
         let result = { snTitle: 'Referensi', snValue: sn, extraRows: [], accountName: null, hasSN };
 
-        if (!hasSN) return result;
+        let raw = null;
+        if (d.raw_response) {
+            try {
+                raw = typeof d.raw_response === 'string' ? JSON.parse(d.raw_response) : d.raw_response;
+            } catch(e) {}
+        }
+        const desc = (raw && raw.desc && typeof raw.desc === 'object') ? raw.desc : (d.desc || {});
+
+        // Multifinance / Leasing (OTO, FIF, Adira, BAF, WOM, ACC, dll)
+        if (type === 'multifinance') {
+            result.snTitle = 'No. Resi / Reff Multifinance';
+            result.hasSN = true;
+            result.snValue = (hasSN && sn) ? sn : (d.ref_id || '-');
+
+            // 1. Unmasked Customer Name
+            if (raw && raw.customer_name && !raw.customer_name.includes('*')) {
+                result.accountName = raw.customer_name.trim();
+            } else if (d.customer_name && !d.customer_name.includes('*')) {
+                result.accountName = d.customer_name.trim();
+            } else if (desc.milik_kenama) {
+                result.accountName = desc.milik_kenama.trim();
+            } else if (d.customer_name) {
+                result.accountName = d.customer_name.trim();
+            }
+
+            // 2. Tagihan / Angsuran Ke-berapa & Tenor
+            const dArr = desc.detail && Array.isArray(desc.detail) && desc.detail.length > 0 ? desc.detail[0] : {};
+            let rawPeriode = (raw && raw.periode && raw.periode !== '-') ? String(raw.periode).trim() : ((dArr.periode && dArr.periode !== '-') ? String(dArr.periode).trim() : (desc.angsuran_ke ? String(desc.angsuran_ke).trim() : ''));
+            let tenorRaw = (desc.tenor && desc.tenor !== '-') ? String(desc.tenor).trim() : '';
+
+            let angsuranText = '';
+            if (rawPeriode) {
+                let pNum = parseInt(rawPeriode, 10);
+                angsuranText = !isNaN(pNum) ? `Ke-${pNum}` : `Periode ${rawPeriode}`;
+                if (rawPeriode.length > 1 && !isNaN(pNum)) {
+                    angsuranText += ` (Periode ${rawPeriode})`;
+                }
+            }
+
+            let tenorText = '';
+            if (tenorRaw) {
+                let tNum = parseInt(tenorRaw, 10);
+                tenorText = !isNaN(tNum) ? `${tNum} Bulan` : tenorRaw;
+            }
+
+            if (angsuranText && tenorText) {
+                result.extraRows.push({ label: 'Tagihan / Angsuran', value: `${angsuranText} / Tenor ${tenorText}` });
+            } else if (angsuranText) {
+                result.extraRows.push({ label: 'Tagihan / Angsuran', value: angsuranText });
+            } else if (tenorText) {
+                result.extraRows.push({ label: 'Tenor Pembiayaan', value: tenorText });
+            }
+
+            // 3. Unit Kendaraan / Barang
+            const itemName = desc.item_name || desc.nama_barang || desc.merek_kendaraan || '';
+            if (itemName && itemName !== '-') {
+                result.extraRows.push({ label: 'Unit Kendaraan', value: itemName });
+            }
+
+            // 4. Nomor Polisi
+            const noPol = desc.no_pol || desc.nomor_polisi || '';
+            if (noPol && noPol !== '-') {
+                result.extraRows.push({ label: 'No. Polisi', value: noPol });
+            }
+
+            // 5. Nomor Rangka
+            const noRangka = desc.no_rangka || desc.nomor_rangka || '';
+            if (noRangka && noRangka !== '-') {
+                result.extraRows.push({ label: 'No. Rangka', value: noRangka });
+            }
+
+            // 6. Jatuh Tempo
+            if (desc.jatuh_tempo && desc.jatuh_tempo !== '-') {
+                result.extraRows.push({ label: 'Jatuh Tempo', value: desc.jatuh_tempo });
+            }
+
+            // 7. Lembar Tagihan
+            if (desc.lembar_tagihan && desc.lembar_tagihan !== '-' && desc.lembar_tagihan !== '0') {
+                result.extraRows.push({ label: 'Lembar Tagihan', value: `${desc.lembar_tagihan} Bulan` });
+            }
+
+            // 8. Rincian Biaya
+            let pokok = dArr.nilai_tagihan || (raw ? raw.price : 0) || d.modal_price || 0;
+            let adminFee = (raw ? raw.admin : 0) || desc.admin || 0;
+            let denda = dArr.denda || desc.denda || 0;
+            let biayaLain = dArr.biaya_lain || desc.biaya_lain || 0;
+
+            if (parseInt(pokok) > 0) {
+                result.extraRows.push({ label: 'Tagihan Pokok', value: 'Rp ' + parseInt(pokok).toLocaleString('id-ID') });
+            }
+            if (parseInt(adminFee) > 0) {
+                result.extraRows.push({ label: 'Biaya Admin', value: 'Rp ' + parseInt(adminFee).toLocaleString('id-ID') });
+            }
+            if (parseInt(denda) > 0) {
+                result.extraRows.push({ label: 'Denda Keterlambatan', value: 'Rp ' + parseInt(denda).toLocaleString('id-ID') });
+            }
+            if (parseInt(biayaLain) > 0) {
+                result.extraRows.push({ label: 'Biaya Lainnya', value: 'Rp ' + parseInt(biayaLain).toLocaleString('id-ID') });
+            }
+
+            return result;
+        }
 
         // PLN: parts split by '/'
         if (type === 'pln' && sn.includes('/')) {
@@ -89,7 +192,6 @@ function detectProductType(d) {
                 }
                 result.snValue = reffMatch?.[1]?.trim() || sn;
             } else {
-                // Try to detect if it's purely a ref code
                 result.snValue = sn;
             }
             if (!result.accountName && d.customer_name) {
@@ -97,6 +199,30 @@ function detectProductType(d) {
             }
             result.hasSN = true;
             return result;
+        }
+
+        // Postpaid BPJS, PDAM, SAMSAT, PBB (Check desc)
+        if (desc && Object.keys(desc).length > 0) {
+            if (type === 'bpjs') {
+                if (desc.kode_program) result.extraRows.push({ label: 'Program', value: desc.kode_program });
+                if (desc.jumlah_peserta) result.extraRows.push({ label: 'Jumlah Peserta', value: `${desc.jumlah_peserta} Orang` });
+                if (raw && raw.periode) result.extraRows.push({ label: 'Periode Tagihan', value: String(raw.periode) });
+                if (desc.kantor_cabang) result.extraRows.push({ label: 'Kantor Cabang', value: desc.kantor_cabang });
+            } else if (type === 'pdam') {
+                const dArr = desc.detail && Array.isArray(desc.detail) && desc.detail.length > 0 ? desc.detail[0] : {};
+                let stand = (dArr.meter_awal && dArr.meter_akhir) ? `${dArr.meter_awal} - ${dArr.meter_akhir}` : (desc.stand_meter || '');
+                if (stand) result.extraRows.push({ label: 'Stand Meter', value: stand });
+                if (desc.lembar_tagihan) result.extraRows.push({ label: 'Lembar Tagihan', value: `${desc.lembar_tagihan} Bulan` });
+                if (raw && raw.periode) result.extraRows.push({ label: 'Periode', value: String(raw.periode) });
+            } else if (type === 'samsat') {
+                if (desc.nomor_polisi) result.extraRows.push({ label: 'No. Polisi', value: desc.nomor_polisi });
+                let kb = `${desc.merek_kb || ''} ${desc.model_kb || ''}`.trim();
+                if (kb) result.extraRows.push({ label: 'Kendaraan', value: kb });
+                if (desc.tgl_akhir_pajak_baru) result.extraRows.push({ label: 'Jatuh Tempo Pajak', value: desc.tgl_akhir_pajak_baru });
+            } else if (type === 'pbb') {
+                if (desc.tahun_pajak) result.extraRows.push({ label: 'Tahun Pajak', value: String(desc.tahun_pajak) });
+                if (desc.luas_tanah) result.extraRows.push({ label: 'Luas Objek', value: `Tanah ${desc.luas_tanah}m² / Bangunan ${desc.luas_gedung || 0}m²` });
+            }
         }
 
         // Pulsa / Paket Data: no structured SN usually; show as-is
@@ -132,8 +258,24 @@ function detectProductType(d) {
         const price = parseInt(d.sell_price || 0).toLocaleString('id-ID');
         const dateStr = d.created_at || '';
 
+        // Provider Trx ID resolution (fallback to SN for postpaid / multifinance)
+        let digiTrxVal = (d.digiflazz_trx_id && d.digiflazz_trx_id !== d.ref_id) ? d.digiflazz_trx_id : ((d.trx_id && d.trx_id !== d.ref_id) ? d.trx_id : '');
+        if (!digiTrxVal && d.raw_response) {
+            try {
+                const raw = typeof d.raw_response === 'string' ? JSON.parse(d.raw_response) : d.raw_response;
+                if (raw.tr_id) digiTrxVal = String(raw.tr_id);
+                else if (raw.trx_id && raw.trx_id !== d.ref_id) digiTrxVal = String(raw.trx_id);
+            } catch(e) {}
+        }
+        if (!digiTrxVal && d.sn && d.sn !== '-') {
+            digiTrxVal = String(d.sn);
+        }
+        if (!digiTrxVal) digiTrxVal = d.ref_id || '-';
+
+        // Clean product name to remove any (S*y*t*o) masked customer name suffix
+        const displayProductName = (d.product_name || '-').replace(/\s*\([^)]*\*[^)]*\)/g, '').trim();
+
         // Watermark tiles — repeated logo as base64 CSS bg is too complex; use img tags in a grid
-        // We use a pseudo-element approach with CSS and a data-uri trick
         const wmCount = 9; // 3x3 grid
         let wmHtml = '';
         for (let i = 0; i < wmCount; i++) {
@@ -149,7 +291,16 @@ function detectProductType(d) {
         `).join('');
 
         // Account name row (e-wallet or customer name)
-        const accountDisplayName = snData.accountName || d.customer_name || '';
+        let accountDisplayName = snData.accountName || d.customer_name || '';
+        if (accountDisplayName.includes('*') && d.raw_response) {
+            try {
+                const raw = typeof d.raw_response === 'string' ? JSON.parse(d.raw_response) : d.raw_response;
+                if (raw.customer_name && !raw.customer_name.includes('*')) {
+                    accountDisplayName = raw.customer_name;
+                }
+            } catch(e) {}
+        }
+
         let accountRowHtml = '';
         if (accountDisplayName && type !== 'pln') {
             const isEw = ['dana','gopay','shopee','ovo','linkaja'].includes(type);
@@ -511,14 +662,14 @@ function detectProductType(d) {
                 <tbody>
                     <tr class="info-row">
                         <td class="info-label">Produk</td>
-                        <td class="info-value">${d.product_name || '-'}</td>
+                        <td class="info-value">${displayProductName}</td>
                     </tr>
                     <tr class="info-row">
                         <td class="info-label">Nomor / ID</td>
                         <td class="info-value">${d.customer_no || '-'}</td>
                     </tr>
                     ${accountRowHtml}
-                    ${showCustomerName ? `<tr class="info-row"><td class="info-label">Nama</td><td class="info-value">${d.customer_name}</td></tr>` : ''}
+                    ${showCustomerName ? `<tr class="info-row"><td class="info-label">Nama</td><td class="info-value">${accountDisplayName}</td></tr>` : ''}
                     ${extraRowsHtml}
                 </tbody>
             </table>
@@ -587,7 +738,12 @@ function detectProductType(d) {
                 else if (raw.trx_id && raw.trx_id !== d.ref_id) digiTrxVal = String(raw.trx_id);
             } catch(e) {}
         }
-        if (!digiTrxVal) digiTrxVal = '-';
+        if (!digiTrxVal && d.sn && d.sn !== '-') {
+            digiTrxVal = String(d.sn);
+        }
+        if (!digiTrxVal) digiTrxVal = d.ref_id || '-';
+
+        const displayProductName = (d.product_name || '-').replace(/\s*\([^)]*\*[^)]*\)/g, '').trim();
 
         // Watermark: 9 tiles
         let wmHtml = '';
@@ -604,7 +760,16 @@ function detectProductType(d) {
         `).join('');
 
         // Account name row (e-wallet or customer name)
-        const accountDisplayName = snData.accountName || d.customer_name || '';
+        let accountDisplayName = snData.accountName || d.customer_name || '';
+        if (accountDisplayName.includes('*') && d.raw_response) {
+            try {
+                const raw = typeof d.raw_response === 'string' ? JSON.parse(d.raw_response) : d.raw_response;
+                if (raw.customer_name && !raw.customer_name.includes('*')) {
+                    accountDisplayName = raw.customer_name;
+                }
+            } catch(e) {}
+        }
+
         let accountRowHtml = '';
         if (accountDisplayName && type !== 'pln') {
             const isEw = ['dana','gopay','shopee','ovo','linkaja'].includes(type);
@@ -680,14 +845,14 @@ function detectProductType(d) {
                     <!-- Info rows -->
                     <div style="display:flex;justify-content:space-between;padding:5px 0;">
                         <span style="color:#888;font-size:11px;font-weight:500;">Produk</span>
-                        <span style="color:#111;font-size:11.5px;font-weight:700;text-align:right;max-width:58%;">${d.product_name || '-'}</span>
+                        <span style="color:#111;font-size:11.5px;font-weight:700;text-align:right;max-width:58%;">${displayProductName}</span>
                     </div>
                     <div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1px dashed #eee;">
                         <span style="color:#888;font-size:11px;font-weight:500;">Nomor / ID</span>
                         <span style="color:#111;font-size:11.5px;font-weight:700;text-align:right;">${d.customer_no || '-'}</span>
                     </div>
                     ${accountRowHtml}
-                    ${showCustomerName ? `<div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1px dashed #eee;"><span style="color:#888;font-size:11px;font-weight:500;">Nama</span><span style="color:#111;font-size:11.5px;font-weight:700;text-align:right;">${d.customer_name}</span></div>` : ''}
+                    ${showCustomerName ? `<div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1px dashed #eee;"><span style="color:#888;font-size:11px;font-weight:500;">Nama</span><span style="color:#111;font-size:11.5px;font-weight:700;text-align:right;">${accountDisplayName}</span></div>` : ''}
                     ${extraRowsHtml}
 
                     <!-- SN Box -->
