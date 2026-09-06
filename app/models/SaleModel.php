@@ -25,7 +25,7 @@ class SaleModel extends Model
                 UPDATE sale_items si 
                 JOIN products p ON si.product_id = p.id 
                 SET si.profit = 0 
-                WHERE p.product_code = 'CUSTOM'
+                WHERE p.code = 'CUSTOM'
             ");
 
             // Set profit = 0 for items where unit_price is 0 or null and profit < 0
@@ -360,9 +360,11 @@ class SaleModel extends Model
             SELECT si.*, COALESCE(si.custom_name, p.full_name) AS full_name, 
                    COALESCE(si.custom_name, p.short_label) AS short_label, 
                    COALESCE(si.custom_name, p.invoice_name) AS invoice_name,
-                   pp.level, pp.buy_price, COALESCE(si.custom_unit, u.name) AS unit_name
+                   pp.level, pp.buy_price, COALESCE(si.custom_unit, u.name) AS unit_name,
+                   p.category_id, COALESCE(cat.name, 'Lainnya') AS category_name
             FROM sale_items si
             JOIN products p ON si.product_id = p.id
+            LEFT JOIN categories cat ON p.category_id = cat.id
             LEFT JOIN product_packagings pp ON si.packaging_id = pp.id
             LEFT JOIN units u ON pp.unit_id = u.id
             WHERE si.transaction_id = :tid

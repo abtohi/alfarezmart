@@ -85,7 +85,8 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
                 showToast('Offline: Perubahan disimpan ke antrian lokal', 'warning');
                 
                 // Return dummy success so UI doesn't break
-                return { success: true, message: 'Disimpan offline (menunggu sinkronisasi)', id: 'offline_' + Date.now() };
+                const clientInv = (payloadData && payloadData.invoice_number) ? payloadData.invoice_number : ('OFF-' + Date.now());
+                return { success: true, message: 'Disimpan offline (menunggu sinkronisasi)', invoice: clientInv, id: clientInv };
             } catch (e) {
                 console.error("Gagal menyimpan ke antrian offline", e);
                 throw new Error('Offline: Gagal menyimpan data sementara');
@@ -132,7 +133,8 @@ async function api(endpoint, methodOrOptions = {}, data = null) {
                 await window.OfflineDB.addPendingChange(endpoint, method, payloadData);
                 if (typeof updateSyncBadge === 'function') updateSyncBadge();
                 showToast('Sinyal lemah: Data disimpan ke antrian offline', 'warning');
-                return { success: true, message: 'Disimpan offline (Sinyal Lemah)', invoice: 'OFF-' + Date.now(), id: 'off_' + Date.now() };
+                const clientInv = (payloadData && payloadData.invoice_number) ? payloadData.invoice_number : ('OFF-' + Date.now());
+                return { success: true, message: 'Disimpan offline (Sinyal Lemah)', invoice: clientInv, id: clientInv };
             } catch (e) {
                 console.error("Gagal simpan antrian offline", e);
             }
