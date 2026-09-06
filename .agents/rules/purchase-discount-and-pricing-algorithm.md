@@ -91,3 +91,26 @@ Ketika produk memiliki beberapa level kemasan (contoh: Level 1 = PCS isi 1, Leve
    - Diskon saja: `Rp5.100` dengan sub-label `(−Rp400)`
    - PPN + Diskon: `Rp5.705` dengan sub-label `(+11%PPN −Rp400)`
    - Tanpa PPN & Diskon: `Rp5.500` (tanpa sub-label)
+
+---
+
+## 7. Aturan Preservasi Status & Harga Custom Kemasan (Packaging Custom Pricing Integrity)
+
+> **Latar Belakang Bug**: Sebelumnya, ketika user menambahkan barang atau melakukan scan nota AI pada pembelian, harga custom (khususnya kemasan Level 3 seperti Dus/Karton) checklist-nya kerap hilang/uncheck otomatis dan harganya ter-reset ke harga proporsional Level 1.
+
+### ⚠️ Larangan & Kewajiban Wajib:
+1. **Fungsi Deteksi Custom (`detectPackagingCustomFlags`)**:
+   - Baik di `purchases/create.php` maupun `purchases/edit.php`, array `packagings` wajib menjalankan `detectPackagingCustomFlags(packagings)`.
+   - Untuk kemasan Level > 1:
+     - Jika harga beli (`buy_price`) menyimpang dari harga proporsional Level 1 ($|\text{buy\_price} - (\text{lv1Buy} \times \text{ratio})| > 0.5$), maka `buy_custom` **WAJIB di-set `true`**.
+     - Jika harga jual ecer/grosir menyimpang dari proporsional Level 1 ($|\text{sell\_price} - (\text{lv1Sell} \times \text{ratio})| > 0.5$), maka `sell_custom` **WAJIB di-set `true`**.
+   - **Status yang Sudah Diset User**: Jika `p.buy_custom === true` atau `p.sell_custom === true` sudah diset manual oleh user, **DILARANG KERAS** mengubahnya kembali menjadi `false`.
+2. **Kloning Objek Kemasan (Deep Clone)**:
+   - ❌ **DILARANG KERAS** memodifikasi referensi array `product.packagings` master yang di-cache di IndexedDB/memory.
+   - ✅ **WAJIB** membuat deep copy: `const clonePkgs = JSON.parse(JSON.stringify(product.packagings))`.
+3. **Integritas `getBaseQtys()` di `packaging-prices.js`**:
+   - Fungsi penentu rasio kemasan (`getBaseQtys`) harus selalu mendukung fallback `dataset.baseQty` jika elemen `.contained-qty` tidak ditemukan (seperti di modal edit kemasan).
+   - ❌ **DILARANG** mengasumsikan rasio `[1, 1, 1]` jika input quantity berada di dalam kontainer bertipe data attribute, karena ini akan mereset harga kemasan Level 3 ke Level 1 saat modal dibuka.
+4. **Sinkronisasi UI Drawer & Modal**:
+   - Ketika user mengetik harga di input drawer/modal, checkbox `chk-buy-custom` / `chk-sell-custom` dan badge toggle `.active` wajib otomatis aktif dan catatan `price-locked-note` disembunyikan.
+

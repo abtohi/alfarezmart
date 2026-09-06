@@ -88,22 +88,50 @@ Mekanisme antrean offline (`window.OfflineDB.addPendingChange` & `syncPendingCha
 
 ---
 
-## 6. Ringkasan File yang Dilindungi Terkait Aturan Ini
+## 6. Aturan Stabilitas PWA Mobile: Instant Navigation, Layar Blank/Hitam, dan Fallback Offline Kasir POS
+
+> **Latar Belakang Bug**: Di aplikasi HP/PWA, terkadang terjadi layar putih/blank hitam saat berpindah halaman atau saat offline, error `Uncaught ReferenceError: openPosScanModal is not defined`, dan halaman kasir POS gagal dimuat saat offline.
+
+### ⚠️ Larangan & Kewajiban Wajib:
+1. **Fungsi Stub Aman di Global Layout (`layouts/app.php`)**:
+   - Header, sidebar, atau navbar memuat pintasan global (seperti tombol scan barcode kasir atau modal batch).
+   - `layouts/app.php` **WAJIB** menyertakan fungsi stub aman (no-op with warning toast/modal) untuk: `openPosScanModal`, `openPosBatchBarcodeModal`, `openBatchInputModal`, dll.
+   - ❌ **DILARANG KERAS** membiarkan tombol header memanggil fungsi yang hanya didefinisikan di halaman POS tanpa fallback stub di layout global.
+2. **Proteksi Instant Navigation (`instant-nav.js`)**:
+   - ❌ **DILARANG** mengaktifkan instant SPA navigation pada halaman otentikasi (`/login`, `/logout`, `/auth`).
+   - Setiap navigasi instan **WAJIB** membersihkan sisa modal/backdrop yang tertinggal (`.modal-backdrop`, modal DOM yang menempel di `body`) agar tidak menimbulkan layar gelap/hitam yang memblokir interaksi.
+   - Eksekusi script inline saat navigasi instan **WAJIB** diberi tanda (`dataset.instantNavExecuted`) untuk mencegah eksekusi ganda yang merusak *event listener*.
+   - Jika `fetch` gagal atau browser sedang offline, sistem **WAJIB** melakukan fallback anggun ke navigasi native (`window.location.href`), bukan membiarkan layar kosong/stuck loading bar.
+3. **PWA Service Worker Core Assets (`sw.js`)**:
+   - File pendukung inti (`public/js/instant-nav.js`, `public/js/packaging-prices.js`, `public/js/utils.js`, `public/js/app.js`, `public/js/db.js`, `public/js/dexie.min.js`) **WAJIB** terdaftar di `CORE_ASSETS` dalam `sw.js`.
+   - Halaman HTML Kasir POS (`/sales/pos`) yang sudah tersimpan di cache **HARUS SELALU** dapat dibuka kembali saat perangkat offline tanpa internet.
+4. **Proteksi Koneksi MySQL Tanpa Koneksi Berulang**:
+   - Tetap pertahankan `PDO::ATTR_PERSISTENT => true` dan gunakan Singleton `Database::getInstance()->getConnection()`.
+   - ❌ **DILARANG** membuka koneksi baru atau memanggil script PHP secara berulang dalam interval cepat tanpa debounce.
+
+---
+
+## 7. Ringkasan File yang Dilindungi Terkait Aturan Ini
 
 | File | Komponen Kritis yang Dilindungi |
 |------|---------------------------------|
 | [`app/config/Database.php`](file:///c:/xampp/htdocs/AlfarezMart/app/config/Database.php) | `PDO::ATTR_PERSISTENT => true`, validasi `SELECT 1`, hybrid fallback SQLite |
-| [`sw.js`](file:///c:/xampp/htdocs/AlfarezMart/sw.js) | `STATIC_ASSETS` hanya file statis, runtime dynamic caching |
+| [`public/sw.js`](file:///c:/xampp/htdocs/AlfarezMart/public/sw.js) | `CORE_ASSETS`, dynamic runtime caching, offline POS caching |
+| [`public/js/instant-nav.js`](file:///c:/xampp/htdocs/AlfarezMart/public/js/instant-nav.js) | Proteksi layar hitam/blank, pembersihan backdrop, script execution guard |
 | [`public/js/utils.js`](file:///c:/xampp/htdocs/AlfarezMart/public/js/utils.js) | `err.isHttpError`, proteksi false offline routing |
 | [`public/js/app.js`](file:///c:/xampp/htdocs/AlfarezMart/public/js/app.js) | `syncPendingChanges()`, normalisasi payload key, penanganan 4xx |
+| [`public/js/packaging-prices.js`](file:///c:/xampp/htdocs/AlfarezMart/public/js/packaging-prices.js) | `getBaseQtys()` support `data-base-qty`, proteksi modal Level 3 pricing |
 | [`app/controllers/ApiController.php`](file:///c:/xampp/htdocs/AlfarezMart/app/controllers/ApiController.php) | Support bracketed & unbracketed JSON keys, auto barcode conflict resolution |
+| [`app/views/layouts/app.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/layouts/app.php) | Stubs fungsi header (`openPosScanModal`), cache versioning `$v`, PWA guard |
 | [`app/views/products/create.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/products/create.php) | Payload clean key formatting, pemisahan error server vs offline |
 | [`app/views/products/edit.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/products/edit.php) | Pemisahan error server vs offline |
 | [`app/views/products/index.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/products/index.php) | Live search non-destructive update, fallback IndexedDB |
-| [`app/views/sales/pos.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/sales/pos.php) | Instant 0ms memory search, non-destructive background fetch |
-| [`app/views/layouts/app.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/layouts/app.php) | `fixAndSyncProducts()`, proteksi data lokal jika server return 0 |
+| [`app/views/sales/pos.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/sales/pos.php) | Instant 0ms memory search, non-destructive background fetch, offline POS |
+| [`app/views/purchases/create.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/purchases/create.php) | `detectPackagingCustomFlags()`, preservasi harga custom kemasan Level 3 |
+| [`app/views/purchases/edit.php`](file:///c:/xampp/htdocs/AlfarezMart/app/views/purchases/edit.php) | `detectPackagingCustomFlags()`, preservasi harga custom kemasan Level 3 |
 | [`sync_to_sqlite.php`](file:///c:/xampp/htdocs/AlfarezMart/sync_to_sqlite.php) | Script replikasi MySQL → SQLite fallback |
 
 ---
 
-*Aturan ini dibuat pada 18 Agustus 2026 dan berlaku permanen di seluruh sesi pengembangan.*
+*Aturan ini diperbarui secara komprehensif pada September 2026 dan berlaku permanen di seluruh sesi pengembangan.*
+

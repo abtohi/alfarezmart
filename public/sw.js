@@ -1,8 +1,8 @@
 /**
  * AlfarezMart PWA - Service Worker (public/sw.js)
  */
-const CACHE_NAME = 'alfarezmart-cache-v25.21';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v25.21';
+const CACHE_NAME = 'alfarezmart-cache-v25.23';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v25.23';
 const BASE_URL = self.location.pathname.replace('/public/sw.js', '/');
 const CORE_ASSETS = [
     BASE_URL,
@@ -146,6 +146,17 @@ self.addEventListener('fetch', event => {
                     const clone = response.clone();
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone).catch(() => {}));
                     return response;
+                }).catch(async () => {
+                    // Fallback: search cache ignoring query string (?v=...)
+                    const fallback = await caches.match(event.request, { ignoreSearch: true });
+                    if (fallback) return fallback;
+                    // CRITICAL: Never return empty body for JS/CSS — it breaks the app!
+                    if (event.request.destination === 'script') {
+                        return new Response('/* [offline] file not cached */', { status: 200, headers: { 'Content-Type': 'application/javascript' } });
+                    } else if (event.request.destination === 'style') {
+                        return new Response('/* [offline] file not cached */', { status: 200, headers: { 'Content-Type': 'text/css' } });
+                    }
+                    return new Response('', { status: 404, headers: { 'Content-Type': 'font/woff2' } });
                 });
             })
         );

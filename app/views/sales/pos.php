@@ -221,6 +221,32 @@
 
 
 <script>
+// ── CRITICAL FIX: Safe-guard stubs for onclick handlers ─────────────────────
+// These MUST be in a SEPARATE script block from the main POS script.
+// If the main script fails to parse entirely (truncated HTML, PHP error,
+// SW serving stale cache), these stubs still survive and prevent
+// "X is not defined" crashes when the user taps buttons.
+// The real implementations (function declarations) in the main script
+// will naturally overwrite these once that script loads successfully.
+function setSaleMode(mode) {
+    console.warn('[POS] setSaleMode stub called — full script not yet loaded');
+    if (typeof showToast === 'function') showToast('Halaman masih loading, coba lagi...', 'info');
+}
+function openPosScanner() {
+    console.warn('[POS] openPosScanner stub called — full script not yet loaded');
+    if (typeof showToast === 'function') showToast('Halaman masih loading, coba lagi...', 'info');
+}
+function toggleCustomerDropdown() {
+    console.warn('[POS] toggleCustomerDropdown stub called — full script not yet loaded');
+    if (typeof showToast === 'function') showToast('Halaman masih loading, coba lagi...', 'info');
+}
+function clearCustomer() {
+    console.warn('[POS] clearCustomer stub called — full script not yet loaded');
+    if (typeof showToast === 'function') showToast('Halaman masih loading, coba lagi...', 'info');
+}
+</script>
+
+<script>
 const STORE_SETTINGS = <?= json_encode($storeSettings ?? [], JSON_UNESCAPED_UNICODE) ?>;
 
 let cart = [];
@@ -3034,9 +3060,7 @@ function _calcExpectedUnitPrice(pkg, mode, qty, allPackagings) {
     const finalTotal = Math.round(finalUnitPrice * qty);
     return qty > 0 ? finalTotal / qty : 0;
 }
-</script>
 
-<script>
 // ===== Customer Selector =====
 
 const customerTypes = <?= json_encode($customerTypes ?? []) ?>;

@@ -9,8 +9,8 @@
  * They are cached on first request via the Cache-First fetch handler.
  * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v46.2';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v46.2';
+const CACHE_NAME = 'alfarezmart-cache-v46.3';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v46.3';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     // Static app shell assets only — dynamic PHP pages are cached at runtime upon navigation
@@ -170,14 +170,26 @@ self.addEventListener('fetch', event => {
                     // Safe fallback: search cache ignoring query string (?v=...)
                     const fallback = await caches.match(event.request, { ignoreSearch: true });
                     if (fallback) return fallback;
-                    const mime = event.request.destination === 'style' ? 'text/css' :
-                                 event.request.destination === 'script' ? 'application/javascript' : 'font/woff2';
-                    return new Response('', { status: 200, headers: { 'Content-Type': mime } });
+                    // CRITICAL FIX: Never return empty body for JS/CSS — it breaks the app!
+                    // Return a safe no-op comment so JS/CSS parsing doesn't crash.
+                    // Fonts get a 404 since a missing font won't crash the app.
+                    if (event.request.destination === 'script') {
+                        return new Response('/* [offline] file not cached */', { status: 200, headers: { 'Content-Type': 'application/javascript' } });
+                    } else if (event.request.destination === 'style') {
+                        return new Response('/* [offline] file not cached */', { status: 200, headers: { 'Content-Type': 'text/css' } });
+                    }
+                    return new Response('', { status: 404, headers: { 'Content-Type': 'font/woff2' } });
                 });
             }).catch(async () => {
                 const fallback = await caches.match(event.request, { ignoreSearch: true });
                 if (fallback) return fallback;
-                return new Response('', { status: 200, headers: { 'Content-Type': 'text/plain' } });
+                // Same safe fallback for outer catch
+                if (event.request.destination === 'script') {
+                    return new Response('/* [offline] file not cached */', { status: 200, headers: { 'Content-Type': 'application/javascript' } });
+                } else if (event.request.destination === 'style') {
+                    return new Response('/* [offline] file not cached */', { status: 200, headers: { 'Content-Type': 'text/css' } });
+                }
+                return new Response('', { status: 404, headers: { 'Content-Type': 'text/plain' } });
             })
         );
         return;

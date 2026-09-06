@@ -21,6 +21,8 @@ storage/uploads/*
 storage/invoices/*
 storage/transactions/*
 storage/backups/*
+storage/*.json
+inv_examples/
 public/storage/uploads/*
 public/storage/invoices/*
 public/storage/transactions/*

@@ -9,7 +9,7 @@ const PackagingPriceSync = {
     },
 
     getBaseQtys() {
-        // Always read fresh from live inputs — never use cached dataset values
+        // Always read fresh from live inputs, or dataset.baseQty for modal edit containers
         const levels = this.getLevels();
         let running = 1;
         return levels.map((lv, i) => {
@@ -19,7 +19,15 @@ const PackagingPriceSync = {
             }
             const inp = lv.querySelector('.contained-qty');
             const cqty = inp ? (parseFloat(inp.value) || 0) : 0;
-            if (cqty > 0) running *= cqty;
+            if (cqty > 0) {
+                running *= cqty;
+                return running;
+            }
+            const datasetBq = parseFloat(lv.dataset.baseQty);
+            if (datasetBq > 0) {
+                running = datasetBq;
+                return running;
+            }
             return running;
         });
     },
@@ -238,7 +246,8 @@ const PackagingPriceSync = {
         const buyToggle = levelEl.querySelector('.buy-custom-toggle');
         const sellToggle = levelEl.querySelector('.sell-custom-toggle');
 
-        if (chkBuy) {
+        if (chkBuy && !chkBuy.dataset.customToggleBound) {
+            chkBuy.dataset.customToggleBound = '1';
             chkBuy.addEventListener('change', () => {
                 const isCustom = chkBuy.checked;
                 if (buyToggle) buyToggle.classList.toggle('active', isCustom);
@@ -251,7 +260,8 @@ const PackagingPriceSync = {
             if (buyToggle) buyToggle.classList.toggle('active', chkBuy.checked);
         }
 
-        if (chkSell) {
+        if (chkSell && !chkSell.dataset.customToggleBound) {
+            chkSell.dataset.customToggleBound = '1';
             chkSell.addEventListener('change', () => {
                 const isCustom = chkSell.checked;
                 if (sellToggle) sellToggle.classList.toggle('active', isCustom);
