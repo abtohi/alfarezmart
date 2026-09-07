@@ -102,7 +102,10 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
 .sale-detail-page {
     max-width: 1400px;
     margin: 0 auto;
-    padding-bottom: 60px;
+    padding: 16px 16px 60px 16px;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
 }
 
 /* Header & Breadcrumb */
@@ -113,12 +116,15 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     align-items: center;
     gap: 12px;
     margin-bottom: 20px;
+    width: 100%;
+    min-width: 0;
 }
 
 .sale-title-wrap {
     display: flex;
     align-items: center;
     gap: 12px;
+    min-width: 0;
 }
 
 .sale-btn-back {
@@ -133,6 +139,7 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     border: 1px solid var(--border-color);
     text-decoration: none;
     transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
 .sale-btn-back:hover {
@@ -162,6 +169,7 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     border: 1px solid rgba(var(--primary-rgb), 0.25);
     font-weight: 700;
     letter-spacing: 0.5px;
+    word-break: break-all;
 }
 
 .sale-header-actions {
@@ -183,6 +191,7 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     cursor: pointer;
     transition: all 0.2s ease;
     border: 1px solid transparent;
+    user-select: none;
 }
 
 .btn-sale-action.primary {
@@ -210,11 +219,17 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
 /* 2-Column Responsive Grid */
 .sale-detail-grid {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 20px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 @media (min-width: 1024px) {
+    .sale-detail-page {
+        padding: 20px 24px 60px 24px;
+    }
     .sale-detail-grid {
         grid-template-columns: minmax(0, 1.62fr) minmax(350px, 0.98fr);
         gap: 24px;
@@ -226,6 +241,7 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
         display: flex;
         flex-direction: column;
         gap: 16px;
+        min-width: 0;
     }
 }
 
@@ -234,6 +250,9 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     display: flex;
     flex-direction: column;
     gap: 16px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 /* Toolbar Control Bar */
@@ -247,12 +266,16 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     justify-content: space-between;
     align-items: center;
     gap: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 .items-title-group {
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
 }
 
 .items-main-title {
@@ -270,6 +293,7 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     color: var(--text-secondary);
     border: 1px solid var(--border-color);
     font-weight: 600;
+    white-space: nowrap;
 }
 
 .items-ctrl-buttons {
@@ -293,6 +317,7 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     cursor: pointer;
     transition: all 0.2s ease;
     user-select: none;
+    white-space: nowrap;
 }
 
 .ctrl-btn:hover {
@@ -312,38 +337,55 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     display: flex;
     gap: 8px;
     overflow-x: auto;
-    padding-bottom: 4px;
+    overflow-y: hidden;
+    padding-bottom: 6px;
+    padding-top: 2px;
     scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .cat-chips-scroll::-webkit-scrollbar {
     height: 4px;
 }
 
-.cat-chips-scroll::-webkit-scrollbar-thumb {
-    background: var(--surface-3);
+.cat-chips-scroll::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.03);
     border-radius: 4px;
+}
+
+.cat-chips-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+}
+
+.cat-chips-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
 }
 
 .cat-chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 5px 10px;
+    padding: 6px 12px;
     background: var(--surface-1);
     border: 1px solid var(--border-color);
     border-radius: 20px;
-    font-size: 0.73rem;
+    font-size: 0.74rem;
     color: var(--text-secondary);
     white-space: nowrap;
     cursor: pointer;
     transition: all 0.2s ease;
     flex-shrink: 0;
+    user-select: none;
 }
 
-.cat-chip:hover {
+.cat-chip:hover, .cat-chip:active {
     background: var(--surface-2);
-    border-color: var(--text-muted);
+    border-color: rgba(var(--primary-rgb), 0.4);
     color: var(--text-primary);
 }
 
@@ -357,6 +399,9 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     display: flex;
     flex-direction: column;
     gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .category-group-card {
@@ -365,14 +410,20 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     border-radius: var(--radius-lg);
     overflow: hidden;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+    scroll-margin-top: 80px;
 }
 
 .category-group-card:hover {
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.16);
 }
 
 .category-group-card.is-open {
-    border-color: rgba(var(--primary-rgb), 0.35);
+    border-color: rgba(var(--primary-rgb), 0.38);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
 }
 
 /* Accordion Header */
@@ -390,6 +441,8 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     color: var(--text-primary);
     transition: background 0.15s ease;
     user-select: none;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 .category-group-header:hover {
@@ -420,6 +473,7 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
 
 .category-title-info {
     min-width: 0;
+    flex: 1;
 }
 
 .category-name-text {
@@ -428,9 +482,9 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     color: var(--text-primary);
     line-height: 1.25;
     margin-bottom: 2px;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .category-meta-text {
@@ -441,19 +495,22 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
 .category-header-right {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     flex-shrink: 0;
 }
 
 .category-spending-pill {
     text-align: right;
+    white-space: nowrap;
 }
 
 .category-spending-label {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.4px;
+    line-height: 1.1;
+    margin-bottom: 1px;
 }
 
 .category-spending-val {
@@ -461,6 +518,8 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     font-weight: 800;
     color: var(--primary);
     letter-spacing: -0.01em;
+    line-height: 1.2;
+    white-space: nowrap;
 }
 
 .category-share-badge {
@@ -470,12 +529,14 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     border-radius: 4px;
     background: var(--surface-3);
     color: var(--text-secondary);
+    flex-shrink: 0;
 }
 
 .category-chevron {
     color: var(--text-muted);
     font-size: 0.85rem;
     transition: transform 0.25s ease;
+    flex-shrink: 0;
 }
 
 .category-group-card.is-open .category-chevron {
@@ -488,6 +549,8 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     display: none;
     border-top: 1px solid var(--border-color);
     background: var(--bg-primary);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .category-group-card.is-open .category-group-body {
@@ -499,6 +562,8 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     padding: 12px 16px;
     border-bottom: 1px solid var(--border-color);
     transition: background 0.15s ease;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .sale-item-row:last-child {
@@ -515,6 +580,7 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     align-items: flex-start;
     gap: 12px;
     margin-bottom: 6px;
+    min-width: 0;
 }
 
 .item-name-wrap {
@@ -528,6 +594,7 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     color: var(--text-primary);
     line-height: 1.35;
     margin-bottom: 3px;
+    word-break: break-word;
 }
 
 .item-unit-badge {
@@ -552,6 +619,7 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     color: var(--text-primary);
     text-align: right;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 /* Cost & Profit Pill */
@@ -562,26 +630,28 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     margin-top: 6px;
     border: 1px solid var(--border-color);
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px 12px;
-}
-
-@media (max-width: 640px) {
-    .item-profit-card {
-        grid-template-columns: 1fr 1fr;
-    }
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .profit-col-label {
     font-size: 0.65rem;
     color: var(--text-muted);
     margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .profit-col-val {
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .profit-total-bar {
@@ -601,6 +671,8 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     overflow: hidden;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Sidebar Cards */
@@ -610,6 +682,9 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     border-radius: var(--radius-lg);
     padding: 18px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 .sidebar-card-title {
@@ -668,6 +743,7 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     border: 1px solid var(--border-color);
     cursor: pointer;
     transition: all 0.2s ease;
+    min-width: 0;
 }
 
 .cat-breakdown-row:hover {
@@ -681,6 +757,7 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     justify-content: space-between;
     align-items: center;
     margin-bottom: 6px;
+    gap: 8px;
 }
 
 .cat-row-title {
@@ -690,12 +767,18 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     display: flex;
     align-items: center;
     gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .cat-row-amount {
     font-size: 0.85rem;
     font-weight: 700;
     color: var(--primary);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .cat-row-bar-wrap {
@@ -779,6 +862,7 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     font-size: 0.78rem;
     outline: none;
     transition: border-color 0.2s ease;
+    box-sizing: border-box;
 }
 
 .search-items-input:focus {
@@ -793,6 +877,109 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     color: var(--text-muted);
     font-size: 0.8rem;
     pointer-events: none;
+}
+
+/* ==========================================================================
+   Mobile-Specific Refinements (Screen <= 640px)
+   ========================================================================== */
+@media (max-width: 640px) {
+    .sale-detail-page {
+        padding: 12px 12px 60px 12px;
+    }
+    .sale-header-bar {
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    .sale-page-title {
+        font-size: 1.1rem;
+    }
+    .sale-header-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1.35fr;
+        gap: 6px;
+    }
+    .btn-sale-action {
+        justify-content: center;
+        padding: 7px 6px;
+        font-size: 0.74rem;
+    }
+    .items-toolbar-card {
+        padding: 12px;
+        gap: 10px;
+    }
+    .items-title-group {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .items-ctrl-buttons {
+        width: 100%;
+        display: flex;
+        gap: 6px;
+    }
+    .ctrl-btn {
+        flex: 1;
+        justify-content: center;
+        padding: 6px 4px;
+        font-size: 0.72rem;
+        white-space: nowrap;
+    }
+    .category-group-header {
+        padding: 12px;
+        gap: 8px;
+    }
+    .category-icon-box {
+        width: 32px;
+        height: 32px;
+        font-size: 0.88rem;
+    }
+    .category-name-text {
+        font-size: 0.86rem;
+        white-space: normal;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        word-break: break-word;
+    }
+    .category-meta-text {
+        font-size: 0.68rem;
+    }
+    .category-header-right {
+        gap: 6px;
+    }
+    .category-spending-label {
+        font-size: 0.58rem;
+    }
+    .category-spending-val {
+        font-size: 0.88rem;
+    }
+    .category-share-badge {
+        font-size: 0.65rem;
+        padding: 1px 5px;
+    }
+    .sale-item-row {
+        padding: 10px 12px;
+    }
+    .item-profit-card {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px 8px;
+        padding: 6px 8px;
+    }
+}
+
+@media (max-width: 360px) {
+    .category-share-badge {
+        display: none;
+    }
+    .sale-page-title {
+        font-size: 1rem;
+    }
+    .sale-inv-badge {
+        font-size: 0.68rem;
+    }
 }
 </style>
 
