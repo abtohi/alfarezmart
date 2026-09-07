@@ -52,7 +52,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=25.24'; ?>
+    <?php $v = '?v=25.25'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -426,20 +426,35 @@ if ($userLevel === 'staff') {
     </div>
     <script>
     function hideAppLoader() {
-        const loader = document.getElementById('appInitLoader');
+        var loader = document.getElementById('appInitLoader');
         if (!loader || loader.dataset.hidden === '1') return;
         loader.dataset.hidden = '1';
         loader.style.pointerEvents = 'none';
         loader.style.opacity = '0';
-        setTimeout(() => { loader.style.display = 'none'; }, 300);
+        setTimeout(function() { if (loader) loader.style.display = 'none'; }, 300);
     }
+    // Multiple redundant triggers to GUARANTEE loader is always removed:
+    // 1. Instant check if DOM is already ready
     if (document.readyState === 'interactive' || document.readyState === 'complete') {
         hideAppLoader();
     } else {
-        window.addEventListener('load', hideAppLoader);
+        // 2. DOMContentLoaded (fires when HTML is parsed)
         document.addEventListener('DOMContentLoaded', hideAppLoader);
+        // 3. Load event (fires when all resources including images are loaded)
+        window.addEventListener('load', hideAppLoader);
     }
+    // 4. Short timeout safety (600ms)
     setTimeout(hideAppLoader, 600);
+    // 5. Ultimate failsafe: if ANY JS error occurs before loader is hidden, force-hide it
+    //    This prevents permanent black screen from fatal script errors
+    var _origOnerror = window.onerror;
+    window.onerror = function() {
+        hideAppLoader();
+        if (_origOnerror) return _origOnerror.apply(this, arguments);
+        return false;
+    };
+    // 6. Long timeout ultimate failsafe (3s) — covers slow mobile devices
+    setTimeout(hideAppLoader, 3000);
     </script>
 
     <!-- Desktop Sidebar Navigation (hidden on mobile via CSS) -->
@@ -793,7 +808,7 @@ if ($userLevel === 'staff') {
     <!-- App JS -->
     <script>
         const BASE_URL = '<?= BASE_URL ?>';
-        const version = '25.02';
+        const version = '25.25';
         window.IS_DB_OFFLINE = <?= (class_exists('Database') && Database::getInstance()->isOffline()) ? 'true' : 'false' ?>;
         window.PPOB_CONFIG = {
             showInstallmentNo: <?= $ppobShowInstallment === '1' ? 'true' : 'false' ?>
@@ -867,7 +882,7 @@ if ($userLevel === 'staff') {
 
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '25.24'; // Update this to force client reloads
+    const APP_VERSION = '25.25'; // Update this to force client reloads
 
     // Safe PWA Version Guard: Update Service Worker in background without destroying offline cache
     (function() {

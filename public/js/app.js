@@ -52,17 +52,35 @@ window.addEventListener('appinstalled', () => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // ── SAFETY: Clean up any orphaned Bootstrap modal backdrops & stuck body styles ──
+    // These can cause "black screen" or "frozen" appearance if a previous page left them behind
+    try {
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    } catch(_) {}
+
     initSearch();
     initHeaderScroll();
     // initPullToRefresh(); // Disabled pull-to-refresh as requested
     
-    // Initialize Offline DB
+    // Initialize Offline DB — isolated in its own try-catch so UI init is NEVER blocked
     try {
         if (typeof OfflineDB !== 'undefined') {
-            await OfflineDB.init();
+            try {
+                await OfflineDB.init();
+            } catch (dbOpenErr) {
+                // Dexie/IndexedDB open can fail on corrupt DB or private browsing
+                // Log but do NOT propagate — the rest of the app must still work
+                console.error('OfflineDB.init() failed (IndexedDB may be unavailable):', dbOpenErr);
+                if (window.ErrorLogger) {
+                    window.ErrorLogger.log('db_error', 'OfflineDB.init failed: ' + (dbOpenErr.message || dbOpenErr), { stack: dbOpenErr.stack || null });
+                }
+            }
 
-            // Update badge immediately
-            await updateSyncBadge();
+            // Update badge immediately (safe even if DB init failed — will show 0)
+            try { await updateSyncBadge(); } catch(_) {}
             
             // Background sync if online (throttled to prevent mobile lag)
             if (navigator.onLine) {

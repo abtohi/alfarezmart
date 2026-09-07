@@ -1,45 +1,79 @@
 /**
- * AlfarezMart PWA - Service Worker (public/sw.js)
+ * AlfarezMart PWA - Service Worker v46.5
+ * Cache Strategy:
+ * - CSS/JS versioned assets: Cache First with EXACT URL match & safe offline fallback
+ * - Navigation / HTML: Fast Network Race (350ms Timeout) with Stale-While-Revalidate
+ * - API GET: Network First with Fast Fallback to Cache
+ *
+ * IMPORTANT: Versioned JS/CSS files (e.g. app.js?v=X.Y) are NOT in STATIC_ASSETS.
+ * They are cached on first request via the Cache-First fetch handler.
+ * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v25.23';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v25.23';
-const BASE_URL = self.location.pathname.replace('/public/sw.js', '/');
-const CORE_ASSETS = [
-    BASE_URL,
-    BASE_URL + 'public/css/variables.css',
-    BASE_URL + 'public/css/app.css',
-    BASE_URL + 'public/css/components.css',
-    BASE_URL + 'public/css/desktop.css',
-    BASE_URL + 'public/js/utils.js',
-    BASE_URL + 'public/js/dexie.min.js',
-    BASE_URL + 'public/js/db.js',
-    BASE_URL + 'public/js/printer_v3.js',
-    BASE_URL + 'public/js/ppob_receipt.js',
-    BASE_URL + 'public/js/app.js',
-    BASE_URL + 'public/js/desktop.js',
-    BASE_URL + 'public/js/chat.js',
-    BASE_URL + 'public/js/error-logger.js',
-    BASE_URL + 'public/js/instant-nav.js',
+const CACHE_NAME = 'alfarezmart-cache-v46.5';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v46.5';
+const APP_ASSET_VERSION = '25.25';
+const BASE_URL = self.location.pathname.replace('/sw.js', '/');
+const STATIC_ASSETS = [
+    // Static app shell assets only — dynamic PHP pages are cached at runtime upon navigation
     BASE_URL + 'manifest.json',
-    BASE_URL + 'public/images/Icon.png',
     BASE_URL + 'public/images/mobile_icon.png',
+    BASE_URL + 'public/images/mobile_icon_192.png',
+    BASE_URL + 'public/images/mobile_icon_512.png',
+    BASE_URL + 'public/images/Icon.png',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css',
+    'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/fonts/bootstrap-icons.woff2?856008caa5eb66df68595e734e59580d',
+    'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/fonts/bootstrap-icons.woff?856008caa5eb66df68595e734e59580d',
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
 ];
 
+/**
+ * CORE_ASSETS: Critical JS/CSS files pre-cached on install for offline availability.
+ * Per rules §6.3: instant-nav.js, packaging-prices.js, utils.js, app.js, db.js, dexie.min.js
+ * MUST be in CORE_ASSETS. Only static files — NO dynamic PHP routes.
+ */
+const CORE_ASSETS = [
+    BASE_URL + 'public/js/utils.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/dexie.min.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/db.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/app.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/instant-nav.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/components.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/packaging-prices.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/qty-pricing.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/barcode.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/error-logger.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/offline-db.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/printer_v3.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/desktop.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/daily-backup.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/geofencing.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/ppob_contacts.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/ppob_receipt.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/bootstrap.bundle.min.js',
+    BASE_URL + 'public/css/variables.css?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/css/app.css?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/css/components.css?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/css/desktop.css?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/css/bootstrap.min.css',
+    BASE_URL + 'public/css/bootstrap-icons.min.css',
+];
+
+// Install - cache static + core assets
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
+            const allAssets = STATIC_ASSETS.concat(CORE_ASSETS);
             return Promise.all(
-                CORE_ASSETS.map(url => {
+                allAssets.map(url => {
                     return fetch(url, { cache: 'no-cache', credentials: 'same-origin' })
                         .then(response => {
-                            if (response.ok || response.type === 'opaque') {
-                                return cache.put(url, response).catch(() => {});
+                            if (!response.ok && response.type !== 'opaque') {
+                                throw new Error('Request failed for ' + url);
                             }
+                            return cache.put(url, response).catch(e => console.warn('Cache.put failed for', url, e));
                         })
-                        .catch(() => {});
+                        .catch(err => console.log('Failed to cache:', url, err));
                 })
             );
         })
@@ -47,82 +81,96 @@ self.addEventListener('install', event => {
     self.skipWaiting();
 });
 
+// Activate - clean old caches
 self.addEventListener('activate', event => {
+    const keepCaches = [CACHE_NAME, DYNAMIC_CACHE];
     event.waitUntil(
         caches.keys().then(keys => {
-            const keepCaches = [CACHE_NAME, DYNAMIC_CACHE];
             return Promise.all(keys.filter(key => !keepCaches.includes(key)).map(key => caches.delete(key)));
         })
     );
     self.clients.claim();
 });
 
+// Fetch - strategy based on request type
 self.addEventListener('fetch', event => {
     if (event.request.method !== 'GET') return;
+
     const url = new URL(event.request.url);
 
-    if (url.pathname.includes('/api/products/sync')) {
-        event.respondWith(fetch(event.request, { cache: 'no-cache' }));
-        return;
-    }
-
-    if (url.pathname.includes('/api/')) {
+    // Bypass API products sync and CSRF from SW interception
+    if (url.pathname.includes('/api/products/sync') || url.pathname.includes('/api/csrf-token')) {
         event.respondWith(
-            new Promise((resolve) => {
-                let isResolved = false;
-                // 300ms Fast Timeout for weak signal fallback to cache
-                const timeoutId = setTimeout(() => {
-                    if (!isResolved) {
-                        caches.match(event.request, { ignoreSearch: true }).then(cached => {
-                            if (cached && !isResolved) {
-                                isResolved = true;
-                                resolve(cached);
-                            }
-                        });
-                    }
-                }, 300);
-
-                fetch(event.request, { cache: 'no-cache' })
-                    .then(response => {
-                        clearTimeout(timeoutId);
-                        if (response.ok) {
-                            const clone = response.clone();
-                            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-                        }
-                        if (!isResolved) {
-                            isResolved = true;
-                            resolve(response);
-                        }
-                    })
-                    .catch(() => {
-                        clearTimeout(timeoutId);
-                        if (!isResolved) {
-                            isResolved = true;
-                            caches.match(event.request, { ignoreSearch: true }).then(cached => {
-                                if (cached) {
-                                    resolve(cached);
-                                } else {
-                                    resolve(new Response(
-                                        JSON.stringify({ offline: true, error: 'Offline', data: [] }),
-                                        { status: 503, headers: { 'Content-Type': 'application/json' } }
-                                    ));
-                                }
-                            });
-                        }
-                    });
+            fetch(event.request, { cache: 'no-cache', credentials: 'same-origin' }).catch(() => {
+                return new Response(
+                    JSON.stringify({ offline: true, error: 'Offline' }),
+                    { status: 200, headers: { 'Content-Type': 'application/json' } }
+                );
             })
         );
         return;
     }
 
-    const isImage = event.request.destination === 'image' ||
-                    url.pathname.includes('/uploads/') ||
+    // ── 1. API Requests: Network First with Fast Cache Fallback ──
+    if (url.pathname.includes('/api/')) {
+        event.respondWith(
+            fetch(event.request, { cache: 'no-cache', credentials: 'same-origin' })
+                .then(response => {
+                    if (response && response.ok && event.request.method === 'GET') {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
+                    }
+                    return response;
+                })
+                .catch(async () => {
+                    const cached = await caches.match(event.request);
+                    if (cached) return cached;
+                    return new Response(
+                        JSON.stringify({ success: false, offline: true, error: 'Offline', data: [] }),
+                        { status: 200, headers: { 'Content-Type': 'application/json' } }
+                    );
+                })
+        );
+        return;
+    }
+
+    // ── 2. Auth & Critical Live Pages: Always Network First for CSRF & Auth Freshness ──
+    const liveFreshPages = ['/', '/login', '/logout', '/register', '/sales/pos', '/purchases/create', '/products/create', '/ppob', '/ppob/history'];
+    const isLiveFreshPage = url.pathname === '/' || 
+                            url.pathname === BASE_URL || 
+                            url.pathname === BASE_URL.replace(/\/$/, '') ||
+                            liveFreshPages.some(p => p !== '/' && (url.pathname === p || url.pathname === BASE_URL.replace(/\/$/, '') + p || url.pathname.endsWith(p)));
+    if (isLiveFreshPage) {
+        event.respondWith(
+            fetch(event.request, { cache: 'no-cache', credentials: 'same-origin' })
+                .then(response => {
+                    if (response && response.ok && !response.redirected) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
+                    }
+                    return response;
+                })
+                .catch(async () => {
+                    const cached = await caches.match(event.request, { ignoreSearch: true });
+                    if (cached) return cached;
+                    const baseCached = await caches.match(BASE_URL);
+                    if (baseCached) return baseCached;
+                    return new Response('Offline: Halaman belum tersedia di cache', { status: 503, headers: { 'Content-Type': 'text/plain' } });
+                })
+        );
+        return;
+    }
+
+    // ── 3. Images: Cache First with Dynamic Fallback ──
+    const isImage = event.request.destination === 'image' || 
+                    url.pathname.includes('/uploads/') || 
                     url.pathname.match(/\.(jpg|jpeg|png|webp|gif|svg|ico)($|\?)/i);
 
     if (isImage) {
         event.respondWith(
             caches.match(event.request, { ignoreSearch: true }).then(cached => {
                 if (cached) return cached;
+
                 return fetch(event.request, { cache: 'no-cache' }).then(response => {
                     if (!response || (response.status !== 200 && response.type !== 'opaque') || !event.request.url.startsWith('http')) {
                         return response;
@@ -130,16 +178,22 @@ self.addEventListener('fetch', event => {
                     const clone = response.clone();
                     caches.open(DYNAMIC_CACHE).then(cache => cache.put(event.request, clone).catch(() => {}));
                     return response;
-                }).catch(() => new Response('', { status: 404, statusText: 'Image Offline' }));
+                }).catch(() => {
+                    return new Response('', { status: 404, statusText: 'Image Offline' });
+                });
+            }).catch(() => {
+                return new Response('', { status: 404, statusText: 'Image Offline' });
             })
         );
         return;
     }
 
+    // ── 4. Styles, Scripts, Fonts: Cache First with Safe Catch Fallback ──
     if (event.request.destination === 'style' || event.request.destination === 'script' || event.request.destination === 'font') {
         event.respondWith(
-            caches.match(event.request, { ignoreSearch: true }).then(cached => {
-                return cached || fetch(event.request, { cache: 'no-cache' }).then(response => {
+            caches.match(event.request).then(cached => {
+                if (cached) return cached;
+                return fetch(event.request, { cache: 'no-cache' }).then(response => {
                     if (!response || response.status !== 200 || response.type === 'opaque' || !event.request.url.startsWith('http')) {
                         return response;
                     }
@@ -147,10 +201,12 @@ self.addEventListener('fetch', event => {
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone).catch(() => {}));
                     return response;
                 }).catch(async () => {
-                    // Fallback: search cache ignoring query string (?v=...)
+                    // Safe fallback: search cache ignoring query string (?v=...)
                     const fallback = await caches.match(event.request, { ignoreSearch: true });
                     if (fallback) return fallback;
-                    // CRITICAL: Never return empty body for JS/CSS — it breaks the app!
+                    // CRITICAL FIX: Never return empty body for JS/CSS — it breaks the app!
+                    // Return a safe no-op comment so JS/CSS parsing doesn't crash.
+                    // Fonts get a 404 since a missing font won't crash the app.
                     if (event.request.destination === 'script') {
                         return new Response('/* [offline] file not cached */', { status: 200, headers: { 'Content-Type': 'application/javascript' } });
                     } else if (event.request.destination === 'style') {
@@ -158,58 +214,105 @@ self.addEventListener('fetch', event => {
                     }
                     return new Response('', { status: 404, headers: { 'Content-Type': 'font/woff2' } });
                 });
+            }).catch(async () => {
+                const fallback = await caches.match(event.request, { ignoreSearch: true });
+                if (fallback) return fallback;
+                // Same safe fallback for outer catch
+                if (event.request.destination === 'script') {
+                    return new Response('/* [offline] file not cached */', { status: 200, headers: { 'Content-Type': 'application/javascript' } });
+                } else if (event.request.destination === 'style') {
+                    return new Response('/* [offline] file not cached */', { status: 200, headers: { 'Content-Type': 'text/css' } });
+                }
+                return new Response('', { status: 404, headers: { 'Content-Type': 'text/plain' } });
             })
         );
         return;
     }
 
-    const hasSearchParams = url.search && url.search.length > 1;
-
+    // ── 5. HTML/Navigation Requests: Ultra-Fast Race Strategy (350ms) ──
     event.respondWith(
-        new Promise((resolve) => {
-            let isResolved = false;
-            let timeoutId = null;
-
-            if (!hasSearchParams) {
-                timeoutId = setTimeout(() => {
-                    if (!isResolved) {
-                        caches.match(event.request, { ignoreSearch: true }).then(cached => {
-                            if (cached && !isResolved) {
-                                isResolved = true;
-                                resolve(cached);
-                            }
-                        });
+        caches.match(event.request, { ignoreSearch: true }).then(async cachedResponse => {
+            // Background fetcher helper
+            const fetchPromise = fetch(event.request, { cache: 'no-cache', credentials: 'same-origin' })
+                .then(networkResponse => {
+                    if (networkResponse && networkResponse.status === 200 && networkResponse.type !== 'opaque' && !networkResponse.redirected && event.request.url.startsWith('http')) {
+                        const clone = networkResponse.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
                     }
-                }, 150);
+                    return networkResponse;
+                })
+                .catch(async () => {
+                    if (cachedResponse) return cachedResponse;
+                    
+                    // Fallback to other available cached pages in order of priority
+                    const fallbackUrls = [
+                        BASE_URL,
+                        BASE_URL + 'sales/pos',
+                        BASE_URL + 'products',
+                        BASE_URL + 'settings/error-logs'
+                    ];
+                    for (const fUrl of fallbackUrls) {
+                        const hit = await caches.match(fUrl, { ignoreSearch: true });
+                        if (hit) return hit;
+                    }
+
+                    // Interactive Offline Screen with Direct Links
+                    const offlineHtml = `<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mode Offline - AlfarezMart</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #0f172a; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+        .card { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 32px 24px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+        .badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-bottom: 16px; }
+        h1 { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+        p { color: #94a3b8; font-size: 13px; line-height: 1.5; margin-bottom: 24px; }
+        .btn-group { display: flex; flex-direction: column; gap: 10px; }
+        .btn { display: block; width: 100%; padding: 12px 16px; border-radius: 12px; font-size: 13px; font-weight: 700; text-decoration: none; text-align: center; cursor: pointer; transition: 0.2s ease; border: none; }
+        .btn-primary { background: #ef4444; color: #fff; }
+        .btn-primary:hover { background: #dc2626; }
+        .btn-outline { background: #334155; color: #f8fafc; border: 1px solid rgba(255,255,255,0.1); }
+        .btn-outline:hover { background: #475569; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="badge">📡 Sedang Offline</div>
+        <h1>Halaman Belum Tersedia Offline</h1>
+        <p>Halaman ini belum sempat di-cache ke memori perangkat. Silakan buka menu offline yang siap digunakan di bawah:</p>
+        <div class="btn-group">
+            <a href="${BASE_URL}sales/pos" class="btn btn-primary">🛒 Buka Kasir POS</a>
+            <a href="${BASE_URL}scanner" class="btn btn-outline">🔍 Cek Harga / Scan</a>
+            <a href="${BASE_URL}products" class="btn btn-outline">📦 Katalog Produk</a>
+            <a href="${BASE_URL}settings/error-logs" class="btn btn-outline">🐞 Error Log Catcher</a>
+            <button onclick="window.location.reload()" class="btn btn-outline" style="margin-top:6px; color:#94a3b8;">🔄 Coba Muat Ulang</button>
+        </div>
+    </div>
+</body>
+</html>`;
+                    return new Response(offlineHtml, {
+                        status: 200,
+                        headers: { 'Content-Type': 'text/html; charset=utf-8' }
+                    });
+                });
+
+            // If we have a cached version, give network only 350ms to respond, otherwise serve cache INSTANTLY
+            if (cachedResponse) {
+                return Promise.race([
+                    fetchPromise,
+                    new Promise(resolve => setTimeout(() => resolve(cachedResponse), 350))
+                ]);
             }
 
-            fetch(event.request, { cache: 'no-cache' })
-                .then(response => {
-                    if (timeoutId) clearTimeout(timeoutId);
-                    if (response && response.status === 200 && response.type !== 'opaque' && event.request.url.startsWith('http')) {
-                        const clone = response.clone();
-                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone).catch(() => {}));
-                    }
-                    if (!isResolved) {
-                        isResolved = true;
-                        resolve(response);
-                    }
-                })
-                .catch(() => {
-                    if (timeoutId) clearTimeout(timeoutId);
-                    if (!isResolved) {
-                        isResolved = true;
-                        caches.match(event.request).then(exactCached => {
-                            if (exactCached) {
-                                resolve(exactCached);
-                            } else {
-                                caches.match(event.request, { ignoreSearch: true }).then(cached => {
-                                    resolve(cached || caches.match(BASE_URL));
-                                });
-                            }
-                        });
-                    }
-                });
+            // Not in cache yet: await network fetch directly
+            return fetchPromise;
+        }).catch(async () => {
+            const baseCached = await caches.match(BASE_URL);
+            if (baseCached) return baseCached;
+            return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
         })
     );
 });

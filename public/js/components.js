@@ -52,6 +52,17 @@ const AppModal = {
         el.addEventListener('click', (e) => { 
             if (e.target === el) this.close(null);
         });
+
+        // Close on Escape key & reset overflow on page hide
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this._overlay && this._overlay.classList.contains('active')) {
+                this.close(null);
+            }
+        });
+        window.addEventListener('pagehide', () => {
+            document.body.style.overflow = '';
+            document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+        });
     },
 
     /**

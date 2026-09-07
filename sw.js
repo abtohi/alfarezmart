@@ -1,5 +1,5 @@
 /**
- * AlfarezMart PWA - Service Worker v44.0
+ * AlfarezMart PWA - Service Worker v46.5
  * Cache Strategy:
  * - CSS/JS versioned assets: Cache First with EXACT URL match & safe offline fallback
  * - Navigation / HTML: Fast Network Race (350ms Timeout) with Stale-While-Revalidate
@@ -9,8 +9,9 @@
  * They are cached on first request via the Cache-First fetch handler.
  * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v46.4';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v46.4';
+const CACHE_NAME = 'alfarezmart-cache-v46.5';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v46.5';
+const APP_ASSET_VERSION = '25.25';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     // Static app shell assets only — dynamic PHP pages are cached at runtime upon navigation
@@ -26,12 +27,45 @@ const STATIC_ASSETS = [
     'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
 ];
 
-// Install - cache static assets
+/**
+ * CORE_ASSETS: Critical JS/CSS files pre-cached on install for offline availability.
+ * Per rules §6.3: instant-nav.js, packaging-prices.js, utils.js, app.js, db.js, dexie.min.js
+ * MUST be in CORE_ASSETS. Only static files — NO dynamic PHP routes.
+ */
+const CORE_ASSETS = [
+    BASE_URL + 'public/js/utils.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/dexie.min.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/db.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/app.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/instant-nav.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/components.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/packaging-prices.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/qty-pricing.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/barcode.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/error-logger.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/offline-db.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/printer_v3.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/desktop.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/daily-backup.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/geofencing.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/ppob_contacts.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/ppob_receipt.js?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/js/bootstrap.bundle.min.js',
+    BASE_URL + 'public/css/variables.css?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/css/app.css?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/css/components.css?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/css/desktop.css?v=' + APP_ASSET_VERSION,
+    BASE_URL + 'public/css/bootstrap.min.css',
+    BASE_URL + 'public/css/bootstrap-icons.min.css',
+];
+
+// Install - cache static + core assets
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
+            const allAssets = STATIC_ASSETS.concat(CORE_ASSETS);
             return Promise.all(
-                STATIC_ASSETS.map(url => {
+                allAssets.map(url => {
                     return fetch(url, { cache: 'no-cache', credentials: 'same-origin' })
                         .then(response => {
                             if (!response.ok && response.type !== 'opaque') {
