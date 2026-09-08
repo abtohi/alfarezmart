@@ -15,7 +15,14 @@ if ($scriptDir !== '/' && strpos($uri, $scriptDir) === 0) {
     $cleanUri = $uri;
 }
 $isStorageRequest = strpos($cleanUri, '/storage/') === 0;
-$staticFile = $isStorageRequest ? dirname(__DIR__) . $cleanUri : __DIR__ . $cleanUri;
+if ($isStorageRequest) {
+    $staticFile = dirname(__DIR__) . $cleanUri;
+    if (!file_exists($staticFile) || !is_file($staticFile)) {
+        $staticFile = __DIR__ . $cleanUri;
+    }
+} else {
+    $staticFile = __DIR__ . $cleanUri;
+}
 
 if ($cleanUri !== '/' && file_exists($staticFile) && is_file($staticFile)) {
     $ext = strtolower(pathinfo($staticFile, PATHINFO_EXTENSION));

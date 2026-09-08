@@ -354,23 +354,28 @@
     border-color: rgba(230, 57, 70, 0.35);
 }
 .tp-prod-item-thumb {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 6px;
-    object-fit: cover;
-    background: var(--surface-3);
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%), var(--surface-2);
+    border: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--text-muted);
     font-size: 0.85rem;
     flex-shrink: 0;
+    overflow: hidden;
+    padding: 2px;
+    box-sizing: border-box;
 }
 .tp-prod-item-thumb img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    border-radius: 5px;
+    object-fit: contain;
+    border-radius: 4px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    background: transparent;
 }
 .tp-prod-item-info {
     flex: 1;
@@ -434,22 +439,28 @@
     gap: 12px;
 }
 .tp-detail-avatar {
-    width: 42px;
-    height: 42px;
-    border-radius: 8px;
-    background: var(--surface-3);
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 100%), var(--surface-2);
+    border: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.1rem;
+    font-size: 1.2rem;
     color: var(--text-muted);
     flex-shrink: 0;
     overflow: hidden;
+    padding: 3px;
+    box-sizing: border-box;
 }
 .tp-detail-avatar img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    border-radius: 6px;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.35));
+    background: transparent;
 }
 .tp-detail-title {
     font-size: 0.98rem;
@@ -1127,6 +1138,20 @@ function escapeHtml(str) {
         .replace(/'/g, '&#039;');
 }
 
+/**
+ * Resolve product photo URL properly (supports transparent images & various path formats)
+ */
+function getProductPhotoUrl(photo) {
+    if (!photo || typeof photo !== 'string') return '';
+    const trimmed = photo.trim();
+    if (!trimmed) return '';
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('data:')) {
+        return trimmed;
+    }
+    const cleanPath = trimmed.replace(/^\/+/, '');
+    return `${BASE_URL}${cleanPath}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     loadTierProducts();
 });
@@ -1323,8 +1348,9 @@ function renderMasterList() {
                         let tierCount = 0;
                         (p.packagings || []).forEach(pkg => { tierCount += (pkg.qty_prices || []).length; });
 
-                        const thumbHtml = p.photo 
-                            ? `<img src="${BASE_URL}storage/products/${escapeHtml(p.photo)}" alt="">`
+                        const photoUrl = getProductPhotoUrl(p.photo);
+                        const thumbHtml = photoUrl 
+                            ? `<img src="${photoUrl}" alt="" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-box-seam\\'></i>';">`
                             : `<i class="bi bi-box-seam"></i>`;
 
                         const isActive = p.id === activeProductId;
@@ -1393,8 +1419,9 @@ function renderDetailPanel(productId) {
         return;
     }
 
-    const photoHtml = p.photo 
-        ? `<img src="${BASE_URL}storage/products/${escapeHtml(p.photo)}" alt="${escapeHtml(p.full_name)}">`
+    const photoUrl = getProductPhotoUrl(p.photo);
+    const photoHtml = photoUrl 
+        ? `<img src="${photoUrl}" alt="${escapeHtml(p.full_name)}" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-box-seam\\'></i>';">`
         : `<i class="bi bi-box-seam"></i>`;
 
     const brandHtml = p.brand_name ? `<span class="tp-tag tp-tag-brand"><i class="bi bi-award"></i> ${escapeHtml(p.brand_name)}</span>` : '';
@@ -1867,9 +1894,10 @@ async function searchModalProducts() {
 
         let html = '';
         results.forEach(p => {
-            const thumb = p.photo 
-                ? `<img src="${BASE_URL}storage/products/${escapeHtml(p.photo)}" style="width:30px;height:30px;border-radius:5px;object-fit:cover;">`
-                : `<div style="width:30px;height:30px;border-radius:5px;background:var(--surface-3);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.75rem;"><i class="bi bi-box"></i></div>`;
+            const photoUrl = getProductPhotoUrl(p.photo);
+            const thumb = photoUrl 
+                ? `<div class="tp-prod-item-thumb"><img src="${photoUrl}" alt="" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-box\\'></i>';"></div>`
+                : `<div class="tp-prod-item-thumb"><i class="bi bi-box"></i></div>`;
 
             const name = escapeHtml(p.short_label || p.full_name);
             const brand = p.brand_name ? ` · ${escapeHtml(p.brand_name)}` : '';
@@ -1928,8 +1956,9 @@ async function selectModalProduct(productId) {
         box.style.display = 'block';
 
         const thumbBox = document.getElementById('modalSelectedThumb');
-        thumbBox.innerHTML = p.photo 
-            ? `<img src="${BASE_URL}storage/products/${escapeHtml(p.photo)}" style="width:100%;height:100%;border-radius:5px;object-fit:cover;">`
+        const photoUrl = getProductPhotoUrl(p.photo);
+        thumbBox.innerHTML = photoUrl 
+            ? `<img src="${photoUrl}" alt="" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-box-seam\\'></i>';">`
             : `<i class="bi bi-box-seam"></i>`;
 
         document.getElementById('modalSelectedName').innerText = p.short_label || p.full_name;
