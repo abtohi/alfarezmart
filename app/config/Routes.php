@@ -26,6 +26,7 @@ $router->get('/products', 'ProductController@index');
 $router->get('/products/create', 'ProductController@create');
 $router->get('/products/multivariant', 'ProductController@multivariant');
 $router->get('/products/barcode-editor', 'ProductController@barcodeEditor');
+$router->get('/products/tier-prices', 'ProductController@tierPrices');
 $router->get('/products/{id}', 'ProductController@show');
 $router->get('/products/{id}/edit', 'ProductController@edit');
 
@@ -124,6 +125,7 @@ $router->get('/api/products/export', 'ApiController@exportProducts');
 $router->get('/api/products/names', 'ApiController@getProductNames');
 $router->get('/api/products', 'ApiController@getProducts');
 $router->get('/api/products/search', 'ApiController@searchProducts');
+$router->get('/api/products/with-tier-prices', 'ApiController@getProductsWithTierPrices');
 $router->get('/api/products/{id}/variants', 'ApiController@getProductVariants');
 $router->post('/api/products/multivariant-apply', 'ApiController@applyMultivariantPricing');
 $router->get('/api/products/barcode/{code}', 'ApiController@getByBarcode');

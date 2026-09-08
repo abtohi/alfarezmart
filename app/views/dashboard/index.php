@@ -680,6 +680,12 @@
             <span class="action-label">Savings</span>
         </a>
         <?php endif; ?>
+        <a href="<?= BASE_URL ?>products/tier-prices" class="quick-action" title="Manajemen Harga Tier (Grosir Bertingkat)">
+            <div class="action-icon" style="background: linear-gradient(135deg, rgba(245,158,11,0.18), rgba(239,68,68,0.18)); color: #f59e0b;">
+                <i class="bi bi-tags-fill"></i>
+            </div>
+            <span class="action-label">Harga Tier</span>
+        </a>
     </div>
 
     <!-- 3. LAPORAN & RIWAYAT -->

@@ -645,6 +645,142 @@ class ApiController extends Controller
         }
     }
 
+    /**
+     * Get all products that have tier pricing, with packagings and qty_prices attached.
+     * Grouped by category for the tier price management page.
+     */
+    public function getProductsWithTierPrices()
+    {
+        try {
+            $db = Database::getInstance()->getConnection();
+            $model = new ProductModel();
+
+            // Find all product IDs that have at least one tier price
+            $sql = "
+                SELECT DISTINCT pp.product_id
+                FROM product_qty_prices pqp
+                INNER JOIN product_packagings pp ON pp.id = pqp.packaging_id
+                INNER JOIN products p ON p.id = pp.product_id AND p.is_active = 1
+                ORDER BY pp.product_id ASC
+            ";
+
+            // Check if table exists first
+            if (!$model->qtyPriceTableExists()) {
+                $this->json(['success' => true, 'products' => [], 'categories' => []]);
+                return;
+            }
+
+            $productIds = $db->query($sql)->fetchAll(PDO::FETCH_COLUMN);
+
+            if (empty($productIds)) {
+                $this->json(['success' => true, 'products' => [], 'categories' => []]);
+                return;
+            }
+
+            $in = implode(',', array_map('intval', $productIds));
+
+            // Fetch product details
+            $products = $db->query("
+                SELECT p.id, p.full_name, p.short_label, p.code, p.photo, p.variant,
+                       p.weight_value, p.weight_unit, p.supplier_product_code,
+                       b.name AS brand_name, c.name AS category_name, c.id AS category_id,
+                       COALESCE(s.current_qty_base, 0) AS current_qty_base
+                FROM products p
+                LEFT JOIN brands b ON p.brand_id = b.id
+                LEFT JOIN categories c ON p.category_id = c.id
+                LEFT JOIN stock s ON s.product_id = p.id
+                WHERE p.id IN ($in) AND p.is_active = 1
+                ORDER BY c.name ASC, COALESCE(NULLIF(TRIM(p.short_label), ''), p.full_name) ASC
+            ")->fetchAll(PDO::FETCH_ASSOC);
+
+            // Fetch all packagings for these products
+            $packagings = $db->query("
+                SELECT pp.*, u.name AS unit_name, u.abbreviation AS unit_abbr
+                FROM product_packagings pp
+                JOIN units u ON pp.unit_id = u.id
+                WHERE pp.product_id IN ($in)
+                ORDER BY pp.product_id ASC, pp.level ASC
+            ")->fetchAll(PDO::FETCH_ASSOC);
+
+            // Fetch all tier prices for these packagings
+            $pkgIds = array_map('intval', array_column($packagings, 'id'));
+            $tierPrices = [];
+            if (!empty($pkgIds)) {
+                $pkgIn = implode(',', $pkgIds);
+                $tierPrices = $db->query("
+                    SELECT * FROM product_qty_prices
+                    WHERE packaging_id IN ($pkgIn)
+                    ORDER BY packaging_id ASC, min_qty ASC, sort_order ASC
+                ")->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+            // Group tier prices by packaging_id
+            $tiersByPkg = [];
+            foreach ($tierPrices as $t) {
+                $tiersByPkg[(int)$t['packaging_id']][] = $t;
+            }
+
+            // Attach tier prices to packagings, fix base_qty calculation
+            $pkgsByProduct = [];
+            $runningBase = [];
+            foreach ($packagings as &$pkg) {
+                $pid = (int)$pkg['product_id'];
+                $lvl = (int)($pkg['level'] ?? 1);
+                $cqty = isset($pkg['contained_qty']) ? (float)$pkg['contained_qty'] : 1;
+                $bqty = isset($pkg['base_qty']) ? (float)$pkg['base_qty'] : 1;
+
+                if ($lvl === 1) {
+                    $pkg['base_qty'] = 1;
+                    $pkg['contained_qty'] = 1;
+                    $runningBase[$pid] = 1;
+                } else {
+                    $rb = $runningBase[$pid] ?? 1;
+                    if ($cqty > 1) {
+                        $pkg['base_qty'] = $rb * $cqty;
+                        $pkg['contained_qty'] = $cqty;
+                    } elseif ($bqty > $rb) {
+                        $pkg['contained_qty'] = round($bqty / $rb);
+                        $pkg['base_qty'] = $rb * $pkg['contained_qty'];
+                    } else {
+                        $pkg['base_qty'] = $rb;
+                        $pkg['contained_qty'] = 1;
+                    }
+                    $runningBase[$pid] = $pkg['base_qty'];
+                }
+
+                $pkg['qty_prices'] = $tiersByPkg[(int)$pkg['id']] ?? [];
+                $pkgsByProduct[$pid][] = $pkg;
+            }
+            unset($pkg);
+
+            // Attach packagings to products, build categories
+            $categories = [];
+            foreach ($products as &$p) {
+                $pid = (int)$p['id'];
+                $p['packagings'] = $pkgsByProduct[$pid] ?? [];
+                $catName = $p['category_name'] ?: 'Tanpa Kategori';
+                if (!isset($categories[$catName])) {
+                    $categories[$catName] = [
+                        'name' => $catName,
+                        'id' => $p['category_id'],
+                        'count' => 0
+                    ];
+                }
+                $categories[$catName]['count']++;
+            }
+            unset($p);
+
+            $this->json([
+                'success' => true,
+                'products' => array_values($products),
+                'categories' => array_values($categories)
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[AlfarezMart][getProductsWithTierPrices] ' . $e->getMessage());
+            $this->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
     public function getByBarcode(string $code)
     {
         $code = trim(urldecode($code));

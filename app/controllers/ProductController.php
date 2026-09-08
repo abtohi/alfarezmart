@@ -62,6 +62,15 @@ class ProductController extends Controller
         ]);
     }
 
+    public function tierPrices()
+    {
+        $this->view('products.tier_prices', [
+            'title' => 'Manajemen Harga Tier',
+            'activeNav' => 'products',
+            'csrfToken' => (new Security())->getCSRFToken()
+        ]);
+    }
+
     public function create()
     {
         $brands = $this->brandModel->all('name', 'ASC');
