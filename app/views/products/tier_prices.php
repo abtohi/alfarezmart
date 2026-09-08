@@ -932,12 +932,104 @@
     100% { transform: rotate(360deg); }
 }
 
+/* Mode Selector */
+.tp-inp-mode {
+    width: 100%;
+    max-width: 135px;
+    padding: 3px 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border-radius: 5px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+}
+.tp-inp-mode:focus {
+    border-color: var(--primary);
+}
+
+/* Sticky Mobile Back Navigation Bar */
+.tp-mobile-back-bar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.tp-mobile-back-bar:hover {
+    background: var(--surface-2);
+}
+.tp-btn-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    color: var(--primary);
+    font-size: 1rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.tp-mobile-back-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+.tp-mobile-back-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-weight: 700;
+}
+.tp-mobile-back-title {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tp-badge-mobile-view {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+}
+
+/* Detail Actions Wrap */
+.tp-detail-actions-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.tp-detail-sub-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 /* ==========================================================================
    MOBILE RESPONSIVENESS (< 992px)
    ========================================================================== */
 @media (max-width: 991px) {
     .tp-page-wrapper {
-        padding: 12px 14px 90px 14px;
+        padding: 8px 10px 90px 10px;
     }
     .tp-split-layout {
         display: block;
@@ -945,40 +1037,282 @@
     .tp-master-col {
         position: static;
         max-height: none;
-        margin-bottom: 16px;
+        margin-bottom: 0;
+    }
+    /* Master vs Detail view switcher on mobile */
+    .tp-split-layout:not(.mobile-detail-open) .tp-detail-col {
+        display: none !important;
+    }
+    .tp-split-layout.mobile-detail-open .tp-master-col {
+        display: none !important;
+    }
+    .tp-split-layout.mobile-detail-open .tp-detail-col {
+        display: block !important;
+        width: 100% !important;
+    }
+    .tp-split-layout.mobile-detail-open .tp-mobile-back-bar {
+        display: flex !important;
     }
     .tp-header {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
+        gap: 8px;
+        padding: 10px;
     }
     .tp-header-actions {
         width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
     }
     .tp-header-actions .tp-btn {
-        flex: 1;
+        justify-content: center;
+        padding: 6px 10px;
+        font-size: 0.78rem;
+    }
+    .tp-stats-ribbon {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        padding: 6px 8px;
+    }
+    .tp-stat-chip {
+        font-size: 0.68rem;
+        padding: 3px 4px;
         justify-content: center;
     }
     .tp-toolbar {
         flex-direction: column;
         align-items: stretch;
+        gap: 6px;
+        padding: 8px;
     }
     .tp-toolbar-left {
         flex-direction: column;
         align-items: stretch;
+        gap: 6px;
     }
     .tp-search-wrap, .tp-cat-select {
         max-width: none;
         width: 100%;
     }
     .tp-toolbar-right {
-        justify-content: space-between;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        width: 100%;
     }
     .tp-toolbar-right .tp-btn-tool {
-        flex: 1;
         justify-content: center;
+        padding: 5px 8px;
+        font-size: 0.74rem;
+    }
+    .tp-detail-banner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 12px;
+    }
+    .tp-detail-actions-wrap {
+        flex-direction: column;
+        width: 100%;
+        gap: 6px;
+    }
+    .tp-detail-actions-wrap .btn-copy-ref {
+        width: 100%;
+        justify-content: center;
+        padding: 8px 12px;
+        font-size: 0.82rem;
+        font-weight: 700;
+    }
+    .tp-detail-sub-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        width: 100%;
+    }
+    .tp-detail-sub-actions .tp-btn {
+        justify-content: center;
+        padding: 6px 8px;
+        font-size: 0.76rem;
+    }
+    .tp-pkg-box {
+        padding: 12px 10px;
+    }
+    .tp-pkg-top-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    .tp-pkg-top-bar-right {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     .tp-finance-grid {
         grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        padding: 8px 10px;
+    }
+    .tp-finance-inp-wrap {
+        max-width: none;
+        width: 100%;
+    }
+}
+
+/* Mobile Tier Cards (< 768px) */
+@media (max-width: 767px) {
+    .tp-table-wrap {
+        overflow: visible;
+        border: none;
+        background: transparent;
+        margin-bottom: 10px;
+    }
+    .tp-table {
+        display: block;
+        min-width: 0;
+        width: 100%;
+    }
+    .tp-table thead {
+        display: none !important;
+    }
+    .tp-table tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .tp-tier-row {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr auto;
+        gap: 6px 8px;
+        align-items: center;
+        background: var(--surface-2);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 10px 12px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+    }
+    .tp-tier-row td {
+        display: block !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+    /* Mode */
+    .tp-tier-row .cell-mode {
+        grid-column: 1 / 3;
+    }
+    .tp-tier-row .cell-mode select {
+        width: 100%;
+        max-width: none;
+    }
+    .tp-tier-row .cell-mode::before {
+        content: "Mode Harga:";
+        display: block;
+        font-size: 0.62rem;
+        color: var(--text-muted);
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+    /* Action / Delete */
+    .tp-tier-row .cell-action {
+        grid-column: 3 / 4;
+        text-align: right !important;
+        padding-top: 12px !important;
+    }
+    /* Min Qty */
+    .tp-tier-row .cell-qty {
+        grid-column: 1 / 2;
+    }
+    .tp-tier-row .cell-qty input {
+        width: 100%;
+    }
+    .tp-tier-row .cell-qty::before {
+        content: "Min. Beli:";
+        display: block;
+        font-size: 0.62rem;
+        color: var(--text-muted);
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+    /* Price */
+    .tp-tier-row .cell-price {
+        grid-column: 2 / 4;
+    }
+    .tp-tier-row .cell-price .tp-inp-price-wrap {
+        width: 100%;
+    }
+    .tp-tier-row .cell-price::before {
+        content: "Harga Satuan Tier:";
+        display: block;
+        font-size: 0.62rem;
+        color: var(--text-muted);
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+    /* Subtotal & Saving */
+    .tp-tier-row .cell-subtotal {
+        grid-column: 1 / 2;
+        background: var(--surface-1);
+        padding: 4px 6px !important;
+        border-radius: 4px;
+        font-size: 0.74rem;
+    }
+    .tp-tier-row .cell-subtotal::before {
+        content: "Total: ";
+        color: var(--text-muted);
+        font-size: 0.65rem;
+    }
+    .tp-tier-row .cell-saving {
+        grid-column: 2 / 4;
+        background: var(--surface-1);
+        padding: 4px 6px !important;
+        border-radius: 4px;
+        text-align: right;
+    }
+    /* Metrics */
+    .tp-tier-row .cell-profit-unit {
+        grid-column: 1 / 2;
+        font-size: 0.72rem;
+    }
+    .tp-tier-row .cell-profit-unit::before {
+        content: "Untung/satuan: ";
+        color: var(--text-muted);
+        font-size: 0.64rem;
+        display: block;
+    }
+    .tp-tier-row .cell-profit-total {
+        grid-column: 2 / 3;
+        font-size: 0.72rem;
+    }
+    .tp-tier-row .cell-profit-total::before {
+        content: "Untung Total: ";
+        color: var(--text-muted);
+        font-size: 0.64rem;
+        display: block;
+    }
+    .tp-tier-row .cell-markup {
+        grid-column: 3 / 4;
+        text-align: right;
+    }
+    .tp-tier-row .cell-markup::before {
+        content: "Markup: ";
+        color: var(--text-muted);
+        font-size: 0.64rem;
+        display: block;
+    }
+    .tp-pkg-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+    }
+    .tp-pkg-actions button {
+        width: 100%;
+        justify-content: center;
+        padding: 7px 10px;
     }
 }
 </style>
@@ -1157,6 +1491,15 @@
                             <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 2px;">Harga Tier / Satuan (Rp)</label>
                             <input type="number" id="modalTierUnitPrice" class="tp-inp-qty" style="width: 100%; text-align: left;" placeholder="Contoh: 1800" oninput="recalcModalTier()">
                         </div>
+                    </div>
+
+                    <div style="margin-bottom: 8px;">
+                        <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 2px;">Mode Penjualan Tier</label>
+                        <select id="modalTierSaleMode" class="tp-inp-mode" style="width: 100%; max-width: none; padding: 5px 8px;">
+                            <option value="both" selected>🛒 Ecer &amp; Grosir (Berlaku Semua)</option>
+                            <option value="retail">🛍️ Ecer Saja (Khusus Transaksi Ecer)</option>
+                            <option value="wholesale">📦 Grosir Saja (Khusus Transaksi Grosir)</option>
+                        </select>
                     </div>
 
                     <!-- Live Calculation Preview in Modal -->
@@ -1567,13 +1910,33 @@ function selectProduct(productId) {
 
     renderDetailPanel(productId);
 
-    // On mobile, scroll smoothly to the detail panel
-    if (window.innerWidth < 992) {
-        const detailPanel = document.getElementById('tpDetailPanel');
-        if (detailPanel) {
-            detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+    // On mobile, switch view to detail panel
+    const splitContainer = document.getElementById('tpSplitContainer');
+    if (splitContainer && window.innerWidth < 992) {
+        splitContainer.classList.add('mobile-detail-open');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+}
+
+/**
+ * Close mobile detail and return to master product list
+ */
+function closeMobileDetail() {
+    const splitContainer = document.getElementById('tpSplitContainer');
+    if (splitContainer) {
+        splitContainer.classList.remove('mobile-detail-open');
+    }
+    if (activeProductId) {
+        setTimeout(() => {
+            const activeEl = document.getElementById(`prodItem_${activeProductId}`);
+            if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 80);
+    }
+}
+
+function markPkgUnsaved(pkgId) {
+    const ind = document.getElementById(`saveInd_${pkgId}`);
+    if (ind) ind.classList.remove('show');
 }
 
 /**
@@ -1605,11 +1968,23 @@ function renderDetailPanel(productId) {
     const catHtml = `<span class="tp-tag"><i class="bi bi-folder"></i> ${escapeHtml(p.category_name || 'Tanpa Kategori')}</span>`;
 
     let html = `
+        <!-- Sticky Mobile Back Bar -->
+        <div class="tp-mobile-back-bar" onclick="closeMobileDetail()">
+            <button type="button" class="tp-btn-back" title="Kembali ke Daftar Produk">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <div class="tp-mobile-back-info">
+                <span class="tp-mobile-back-label"><i class="bi bi-chevron-left"></i> Kembali ke Daftar Produk</span>
+                <strong class="tp-mobile-back-title">${escapeHtml(p.short_label || p.full_name)}</strong>
+            </div>
+            <span class="tp-badge-mobile-view">Tier Editor</span>
+        </div>
+
         <div class="tp-product-detail-card" id="detailCard_${p.id}">
             <div class="tp-detail-banner">
                 <div class="tp-detail-main-info">
                     <div class="tp-detail-avatar">${photoHtml}</div>
-                    <div>
+                    <div style="flex: 1; min-width: 0;">
                         <h2 class="tp-detail-title">${escapeHtml(p.short_label || p.full_name)}</h2>
                         <div class="tp-detail-tags">
                             ${catHtml}
@@ -1619,16 +1994,18 @@ function renderDetailPanel(productId) {
                         </div>
                     </div>
                 </div>
-                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                    <button type="button" class="tp-btn tp-btn-primary tp-btn-sm" onclick="openCopyRefModal(${p.id})" title="Samakan Harga dari Produk Referensi">
+                <div class="tp-detail-actions-wrap">
+                    <button type="button" class="tp-btn tp-btn-primary tp-btn-sm btn-copy-ref" onclick="openCopyRefModal(${p.id})" title="Samakan Harga dari Produk Referensi">
                         <i class="bi bi-copy"></i> Samakan Harga Referensi
                     </button>
-                    <a href="${BASE_URL}products/${p.id}/edit" class="tp-btn tp-btn-outline tp-btn-sm" target="_blank" title="Edit Lengkap">
-                        <i class="bi bi-pencil-square"></i> Edit
-                    </a>
-                    <a href="${BASE_URL}products/${p.id}" class="tp-btn tp-btn-outline tp-btn-sm" target="_blank" title="Lihat Detail">
-                        <i class="bi bi-box-arrow-up-right"></i> Detail
-                    </a>
+                    <div class="tp-detail-sub-actions">
+                        <a href="${BASE_URL}products/${p.id}/edit" class="tp-btn tp-btn-outline tp-btn-sm" title="Edit Lengkap">
+                            <i class="bi bi-pencil-square"></i> Edit
+                        </a>
+                        <a href="${BASE_URL}products/${p.id}" class="tp-btn tp-btn-outline tp-btn-sm" title="Lihat Detail">
+                            <i class="bi bi-box-arrow-up-right"></i> Detail
+                        </a>
+                    </div>
                 </div>
             </div>
             <div class="tp-detail-body">
@@ -1667,7 +2044,7 @@ function renderPackagingBox(product, pkg) {
                     <span class="tp-pkg-unit">${unitInfo}</span>
                     ${barcodeDisplay}
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="tp-pkg-top-bar-right" style="display: flex; align-items: center; gap: 8px;">
                     <span class="tp-save-indicator" id="saveInd_${pkg.id}">
                         <i class="bi bi-check-circle-fill"></i> Tersimpan
                     </span>
@@ -1716,9 +2093,10 @@ function renderPackagingBox(product, pkg) {
                 <table class="tp-table" id="tierTable_${pkg.id}">
                     <thead>
                         <tr>
-                            <th style="width: 90px;">Min. Beli</th>
-                            <th style="width: 130px;">Harga Tier</th>
-                            <th>Total</th>
+                            <th style="width: 130px;">Mode Transaksi</th>
+                            <th style="width: 80px;">Min. Beli</th>
+                            <th style="width: 120px;">Harga Satuan</th>
+                            <th>Total Bayar</th>
                             <th>Untung / Satuan</th>
                             <th>Untung Total</th>
                             <th>Markup Tier</th>
@@ -1751,6 +2129,7 @@ function renderPackagingBox(product, pkg) {
 function renderTierRow(pkgId, tier, buyPrice, normalSellPrice, index) {
     const minQty = parseFloat(tier.min_qty) || 1;
     const unitPrice = parseFloat(tier.unit_price) || 0;
+    const mode = tier.sale_mode || 'both';
 
     const subtotal = minQty * unitPrice;
     const profitPerUnit = unitPrice - buyPrice;
@@ -1762,8 +2141,15 @@ function renderTierRow(pkgId, tier, buyPrice, normalSellPrice, index) {
     const profitSign = profitPerUnit >= 0 ? '+' : '';
 
     return `
-        <tr id="tierRow_${pkgId}_${index}">
-            <td>
+        <tr id="tierRow_${pkgId}_${index}" class="tp-tier-row">
+            <td class="cell-mode">
+                <select class="tp-inp-mode tier-sale-mode" onchange="markPkgUnsaved(${pkgId})">
+                    <option value="both" ${mode === 'both' || !mode ? 'selected' : ''}>🛒 Ecer &amp; Grosir</option>
+                    <option value="retail" ${mode === 'retail' ? 'selected' : ''}>🛍️ Ecer Saja</option>
+                    <option value="wholesale" ${mode === 'wholesale' ? 'selected' : ''}>📦 Grosir Saja</option>
+                </select>
+            </td>
+            <td class="cell-qty">
                 <input type="number" 
                        class="tp-inp-qty tier-min-qty" 
                        value="${minQty}" 
@@ -1771,7 +2157,7 @@ function renderTierRow(pkgId, tier, buyPrice, normalSellPrice, index) {
                        step="1" 
                        oninput="recalcTierRow(${pkgId}, ${index})">
             </td>
-            <td>
+            <td class="cell-price">
                 <div class="tp-inp-price-wrap">
                     <span class="tp-inp-price-prefix">Rp</span>
                     <input type="number" 
@@ -1781,32 +2167,32 @@ function renderTierRow(pkgId, tier, buyPrice, normalSellPrice, index) {
                            oninput="recalcTierRow(${pkgId}, ${index})">
                 </div>
             </td>
-            <td>
+            <td class="cell-subtotal">
                 <span class="tier-txt-subtotal" style="font-weight: 700; color: var(--text-primary);">
                     ${formatRupiah(subtotal)}
                 </span>
             </td>
-            <td>
+            <td class="cell-profit-unit">
                 <span class="tp-profit-val ${profitClass} tier-txt-profit-unit">
                     ${profitSign}${formatRupiah(profitPerUnit)}
                 </span>
             </td>
-            <td>
+            <td class="cell-profit-total">
                 <span class="tp-profit-val ${profitClass} tier-txt-profit-total">
                     ${profitSign}${formatRupiah(profitTotal)}
                 </span>
             </td>
-            <td>
+            <td class="cell-markup">
                 <span class="tp-markup-badge ${profitClass} tier-txt-markup">
                     ${profitSign}${markupPct.toFixed(1)}%
                 </span>
             </td>
-            <td>
+            <td class="cell-saving">
                 <span class="tier-txt-saving" style="font-size: 0.76rem; color: ${customerSaving > 0 ? '#3b82f6' : 'var(--text-muted)'}; font-weight: 600;">
                     ${customerSaving > 0 ? `Hemat ${formatRupiah(customerSaving)}` : '-'}
                 </span>
             </td>
-            <td style="text-align: center;">
+            <td class="cell-action" style="text-align: center;">
                 <button type="button" class="tp-btn-icon tp-btn-del" onclick="deleteTierRow(${pkgId}, ${index})" title="Hapus Tier">
                     <i class="bi bi-trash"></i>
                 </button>
@@ -1845,15 +2231,20 @@ function onPkgPriceChange(pkgId, buyPrice, baseQty) {
 }
 
 /**
- * Recalculate single tier row
+ * Recalculate financial impact of a single Tier row
  */
 function recalcTierRow(pkgId, index) {
+    markPkgUnsaved(pkgId);
     const row = document.getElementById(`tierRow_${pkgId}_${index}`);
     if (!row) return;
 
-    const buyPriceText = document.getElementById(`txtBuyPrice_${pkgId}`)?.innerText || '0';
-    const buyPrice = parseFloat(buyPriceText.replace(/[^0-9]/g, '')) || 0;
+    let targetPkg = null;
+    for (const p of allProducts) {
+        targetPkg = (p.packagings || []).find(pkg => pkg.id === pkgId);
+        if (targetPkg) break;
+    }
 
+    const buyPrice = targetPkg ? parseFloat(targetPkg.buy_price) || 0 : 0;
     const sellInp = document.getElementById(`inpSellPrice_${pkgId}`);
     const normalSell = parseFloat(sellInp ? sellInp.value : 0) || 0;
 
@@ -1914,7 +2305,7 @@ function addTierRow(pkgId, buyPrice) {
     const defMinQty = 5;
     const defUnitPrice = normalSell > 0 ? Math.round((normalSell * 0.9) / 100) * 100 : buyPrice * 1.1;
 
-    const rowHtml = renderTierRow(pkgId, { min_qty: defMinQty, unit_price: defUnitPrice }, buyPrice, normalSell, index);
+    const rowHtml = renderTierRow(pkgId, { min_qty: defMinQty, unit_price: defUnitPrice, sale_mode: 'both' }, buyPrice, normalSell, index);
     tbody.insertAdjacentHTML('beforeend', rowHtml);
     recalcTierRow(pkgId, index);
 }
@@ -1926,6 +2317,7 @@ function deleteTierRow(pkgId, index) {
     const row = document.getElementById(`tierRow_${pkgId}_${index}`);
     if (row) {
         row.remove();
+        markPkgUnsaved(pkgId);
     }
 }
 
@@ -1944,10 +2336,12 @@ async function savePackagingChanges(productId, pkgId) {
     rows.forEach(r => {
         const minQty = parseFloat(r.querySelector('.tier-min-qty')?.value) || 0;
         const unitPrice = parseFloat(r.querySelector('.tier-unit-price')?.value) || 0;
+        const saleMode = r.querySelector('.tier-sale-mode')?.value || 'both';
         if (minQty >= 1 && unitPrice > 0) {
             tiers.push({
                 min_qty: minQty,
                 unit_price: unitPrice,
+                sale_mode: saleMode,
                 label: `Beli >= ${minQty}`
             });
         }
@@ -2223,10 +2617,11 @@ async function saveNewProductTier() {
     }
 
     try {
+        const saleMode = document.getElementById('modalTierSaleMode')?.value || 'both';
         const payload = {
             csrf_token: csrf,
             tiers: [
-                { min_qty: minQty, unit_price: unitPrice, label: `Beli >= ${minQty}` }
+                { min_qty: minQty, unit_price: unitPrice, sale_mode: saleMode, label: `Beli >= ${minQty}` }
             ]
         };
 
@@ -2479,7 +2874,11 @@ function renderRefLevelSelectors() {
                                 <span>Salin <strong>${refTiers.length} Aturan Tier</strong> dari Referensi:</span>
                             </label>
                             <div style="margin-top: 4px; padding-left: 20px;">
-                                ${refTiers.map(t => `<span class="tp-ref-tier-badge">Min ${t.min_qty} @ ${formatRupiah(t.unit_price)}</span>`).join('')}
+                                ${refTiers.map(t => {
+                                    const m = t.sale_mode || 'both';
+                                    const mLbl = m === 'retail' ? 'Ecer Saja' : m === 'wholesale' ? 'Grosir Saja' : 'Ecer & Grosir';
+                                    return `<span class="tp-ref-tier-badge">Min ${t.min_qty} @ ${formatRupiah(t.unit_price)} <small style="opacity:0.85; font-weight:600;">(${mLbl})</small></span>`;
+                                }).join('')}
                             </div>
                         </div>
                     ` : `
