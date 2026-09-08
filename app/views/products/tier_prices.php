@@ -843,6 +843,87 @@
     opacity: 1;
 }
 
+/* Copy Reference Modal Styles */
+.tp-ref-target-badge {
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+}
+.tp-preset-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+.tp-preset-btn {
+    padding: 3px 9px;
+    border-radius: 14px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    border: 1px solid var(--border-color);
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.tp-preset-btn:hover {
+    background: var(--surface-3);
+    color: var(--text-primary);
+}
+.tp-preset-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
+.tp-ref-lvl-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+}
+.tp-ref-lvl-card.disabled {
+    opacity: 0.5;
+}
+.tp-ref-lvl-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.tp-ref-compare-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 6px;
+    font-size: 0.74rem;
+    background: var(--surface-1);
+    padding: 6px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+    margin-top: 4px;
+}
+.tp-ref-tier-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    font-size: 0.68rem;
+    font-weight: 700;
+    margin: 2px 3px 2px 0;
+}
+
 /* Spin animation */
 .spin-animation {
     animation: tpSpin 0.7s linear infinite;
@@ -1100,6 +1181,100 @@
             <button type="button" class="tp-btn tp-btn-outline tp-btn-sm" onclick="closeAddProductModal()">Batal</button>
             <button type="button" id="modalBtnSubmit" class="tp-btn tp-btn-primary tp-btn-sm" onclick="saveNewProductTier()" disabled>
                 <i class="bi bi-check-lg"></i> Simpan ke Tier
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Samakan Harga dari Produk Referensi -->
+<div class="tp-modal-backdrop" id="copyRefModal">
+    <div class="tp-modal-card" style="max-width: 620px;">
+        <div class="tp-modal-header">
+            <h3 class="tp-modal-title">
+                <i class="bi bi-copy" style="color: var(--primary);"></i> Samakan Harga dari Produk Referensi
+            </h3>
+            <button type="button" class="btn-close" onclick="closeCopyRefModal()" style="background: none; border: none; font-size: 1.1rem; color: var(--text-muted); cursor: pointer;">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="tp-modal-body">
+            <!-- Target Product Info Banner -->
+            <div class="tp-ref-target-badge">
+                <div>
+                    <span style="color: var(--text-muted);">🎯 Target:</span>
+                    <strong id="refTargetName" style="color: var(--text-primary); margin-left: 4px;">-</strong>
+                </div>
+                <span style="font-size: 0.7rem; color: #10b981; font-weight: 700; background: rgba(16, 185, 129, 0.12); padding: 2px 7px; border-radius: 4px;">
+                    <i class="bi bi-shield-check"></i> Modal target tetap aman &amp; tidak diubah
+                </span>
+            </div>
+
+            <!-- Step 1: Search Reference Product -->
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 0.76rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
+                    Cari Produk Referensi (Nama / Barcode / Kode)
+                </label>
+                <div class="tp-search-wrap" style="width: 100%; max-width: none;">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="refSearchInput" class="tp-search-input" placeholder="Ketik nama produk referensi..." oninput="debounceRefSearch()">
+                </div>
+                <div id="refSearchSpinner" style="display: none; font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                    <span class="spinner-border spinner-border-sm"></span> Mencari referensi...
+                </div>
+                <div id="refSearchResults" class="tp-modal-res-list" style="display: none;"></div>
+            </div>
+
+            <!-- Step 2: Selected Reference Product & Level Options -->
+            <div id="refSelectedBox" style="display: none;">
+                <!-- Reference Card -->
+                <div style="background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+                    <div id="refSelectedThumb" class="tp-prod-item-thumb">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 0.68rem; color: var(--primary-light); font-weight: 700;">PRODUK REFERENSI:</div>
+                        <div id="refSelectedName" style="font-weight: 700; font-size: 0.85rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+                        <div id="refSelectedMeta" style="font-size: 0.7rem; color: var(--text-muted);"></div>
+                    </div>
+                </div>
+
+                <!-- Presets Bar -->
+                <div style="margin-bottom: 8px;">
+                    <label style="font-size: 0.74rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
+                        Preset Pilihan Cepat:
+                    </label>
+                    <div class="tp-preset-bar">
+                        <button type="button" class="tp-preset-btn active" id="btnPresetAll" onclick="applyRefPreset('all')">
+                            ⚡ Semua Level &amp; Tier
+                        </button>
+                        <button type="button" class="tp-preset-btn" id="btnPresetL1" onclick="applyRefPreset('lvl1')">
+                            Level 1 Saja
+                        </button>
+                        <button type="button" class="tp-preset-btn" id="btnPresetL12" onclick="applyRefPreset('lvl1_2')">
+                            Level 1 &amp; 2
+                        </button>
+                        <button type="button" class="tp-preset-btn" id="btnPresetL2" onclick="applyRefPreset('lvl2')">
+                            Level 2 Saja
+                        </button>
+                        <button type="button" class="tp-preset-btn" id="btnPresetL3" onclick="applyRefPreset('lvl3')">
+                            Level 3 Saja
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Level Selectors Container -->
+                <div id="refLevelSelectorsList" style="max-height: 280px; overflow-y: auto; padding-right: 2px;">
+                    <!-- Rendered by JS -->
+                </div>
+            </div>
+        </div>
+        <div class="tp-modal-footer">
+            <button type="button" class="tp-btn tp-btn-outline tp-btn-sm" onclick="closeCopyRefModal()">Batal</button>
+            <button type="button" id="btnApplyRefEditor" class="tp-btn tp-btn-outline tp-btn-sm" onclick="executeCopyRefPrices(false)" disabled>
+                <i class="bi bi-pencil"></i> Terapkan ke Form
+            </button>
+            <button type="button" id="btnApplyRefSave" class="tp-btn tp-btn-primary tp-btn-sm" onclick="executeCopyRefPrices(true)" disabled>
+                <i class="bi bi-check2-all"></i> Terapkan &amp; Simpan
             </button>
         </div>
     </div>
@@ -1444,7 +1619,10 @@ function renderDetailPanel(productId) {
                         </div>
                     </div>
                 </div>
-                <div style="display: flex; gap: 6px;">
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button type="button" class="tp-btn tp-btn-primary tp-btn-sm" onclick="openCopyRefModal(${p.id})" title="Samakan Harga dari Produk Referensi">
+                        <i class="bi bi-copy"></i> Samakan Harga Referensi
+                    </button>
                     <a href="${BASE_URL}products/${p.id}/edit" class="tp-btn tp-btn-outline tp-btn-sm" target="_blank" title="Edit Lengkap">
                         <i class="bi bi-pencil-square"></i> Edit
                     </a>
@@ -1933,13 +2111,13 @@ async function selectModalProduct(productId) {
     resBox.style.display = 'none';
 
     try {
-        const resp = await fetch(`${BASE_URL}api/products/${productId}/variants`);
-        const data = await resp.json();
-        
         let p = null;
-        if (data.product) {
-            p = data.product;
-        } else {
+        try {
+            const resp = await fetch(`${BASE_URL}api/products/${productId}`);
+            p = await resp.json();
+        } catch (e) {}
+
+        if (!p || !p.packagings) {
             const r = await fetch(`${BASE_URL}api/products/search?q=${productId}`);
             const list = await r.json();
             p = (list || []).find(item => item.id == productId);
@@ -2073,6 +2251,400 @@ async function saveNewProductTier() {
     } catch (err) {
         console.error('Save new tier error:', err);
         showToast(err.message || 'Gagal menyimpan tier', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+    }
+}
+
+/* ==========================================================================
+   MODAL: SAMAKAN HARGA DARI PRODUK REFERENSI
+   ========================================================================== */
+
+let copyRefTargetId = null;
+let selectedRefProduct = null;
+let refSearchTimeout = null;
+
+function openCopyRefModal(targetProductId) {
+    copyRefTargetId = targetProductId;
+    const target = allProducts.find(p => p.id === targetProductId);
+    if (!target) {
+        showToast('Produk target tidak ditemukan', 'warning');
+        return;
+    }
+
+    const modal = document.getElementById('copyRefModal');
+    modal.classList.add('show');
+
+    document.getElementById('refTargetName').innerText = target.short_label || target.full_name;
+    document.getElementById('refSearchInput').value = '';
+    document.getElementById('refSearchResults').style.display = 'none';
+    document.getElementById('refSearchResults').innerHTML = '';
+    document.getElementById('refSelectedBox').style.display = 'none';
+    document.getElementById('btnApplyRefEditor').disabled = true;
+    document.getElementById('btnApplyRefSave').disabled = true;
+    selectedRefProduct = null;
+
+    setTimeout(() => document.getElementById('refSearchInput').focus(), 120);
+}
+
+function closeCopyRefModal() {
+    const modal = document.getElementById('copyRefModal');
+    modal.classList.remove('show');
+}
+
+function debounceRefSearch() {
+    clearTimeout(refSearchTimeout);
+    refSearchTimeout = setTimeout(searchRefProducts, 260);
+}
+
+async function searchRefProducts() {
+    const query = document.getElementById('refSearchInput').value.trim();
+    const resBox = document.getElementById('refSearchResults');
+    const spinner = document.getElementById('refSearchSpinner');
+
+    if (query.length < 1) {
+        resBox.style.display = 'none';
+        resBox.innerHTML = '';
+        return;
+    }
+
+    spinner.style.display = 'block';
+
+    try {
+        const resp = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(query)}`);
+        const results = await resp.json();
+
+        spinner.style.display = 'none';
+        if (!Array.isArray(results) || results.length === 0) {
+            resBox.innerHTML = `<div style="padding: 10px; color: var(--text-muted); font-size: 0.8rem; text-align: center;">Tidak ada produk referensi ditemukan.</div>`;
+            resBox.style.display = 'block';
+            return;
+        }
+
+        // Filter out target product itself
+        const filtered = results.filter(p => p.id !== copyRefTargetId);
+
+        let html = '';
+        filtered.forEach(p => {
+            const photoUrl = getProductPhotoUrl(p.photo);
+            const thumb = photoUrl 
+                ? `<div class="tp-prod-item-thumb"><img src="${photoUrl}" alt="" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-box\\'></i>';"></div>`
+                : `<div class="tp-prod-item-thumb"><i class="bi bi-box"></i></div>`;
+
+            const name = escapeHtml(p.short_label || p.full_name);
+            const brand = p.brand_name ? ` · ${escapeHtml(p.brand_name)}` : '';
+            const code = p.code ? `[${escapeHtml(p.code)}] ` : '';
+
+            // Package prices preview
+            let priceList = [];
+            (p.packagings || []).forEach(pkg => {
+                priceList.push(`L${pkg.level}: ${formatRupiah(pkg.sell_price_retail)}`);
+            });
+            const pricePreview = priceList.length > 0 ? priceList.join(' | ') : 'Belum ada harga';
+
+            html += `
+                <div class="tp-modal-res-item" onclick="selectRefProduct(${p.id})">
+                    ${thumb}
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 700; font-size: 0.82rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            ${code}${name}
+                        </div>
+                        <div style="font-size: 0.7rem; color: var(--text-muted);">
+                            ${escapeHtml(p.category_name || 'Tanpa Kategori')}${brand}
+                        </div>
+                        <div style="font-size: 0.7rem; color: #10b981; font-weight: 600; margin-top: 1px;">
+                            ${escapeHtml(pricePreview)}
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right" style="color: var(--text-muted); font-size: 0.75rem;"></i>
+                </div>
+            `;
+        });
+
+        resBox.innerHTML = html;
+        resBox.style.display = 'block';
+
+    } catch (err) {
+        spinner.style.display = 'none';
+        console.error('Ref search error:', err);
+    }
+}
+
+async function selectRefProduct(refId) {
+    const resBox = document.getElementById('refSearchResults');
+    resBox.style.display = 'none';
+
+    try {
+        let p = null;
+        try {
+            const resp = await fetch(`${BASE_URL}api/products/${refId}`);
+            p = await resp.json();
+        } catch (e) {}
+
+        if (!p || !p.packagings) {
+            const r = await fetch(`${BASE_URL}api/products/search?q=${refId}`);
+            const list = await r.json();
+            p = (list || []).find(item => item.id == refId);
+        }
+
+        if (!p || !p.packagings || p.packagings.length === 0) {
+            showToast('Produk referensi tidak memiliki data kemasan', 'warning');
+            return;
+        }
+
+        selectedRefProduct = p;
+
+        // Render reference header
+        const box = document.getElementById('refSelectedBox');
+        box.style.display = 'block';
+
+        const thumbBox = document.getElementById('refSelectedThumb');
+        const photoUrl = getProductPhotoUrl(p.photo);
+        thumbBox.innerHTML = photoUrl 
+            ? `<img src="${photoUrl}" alt="" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'bi bi-box-seam\\'></i>';">`
+            : `<i class="bi bi-box-seam"></i>`;
+
+        document.getElementById('refSelectedName').innerText = p.short_label || p.full_name;
+        document.getElementById('refSelectedMeta').innerText = `${p.category_name || 'Tanpa Kategori'} · ${p.brand_name || 'Tanpa Brand'}`;
+
+        renderRefLevelSelectors();
+        applyRefPreset('all');
+
+        document.getElementById('btnApplyRefEditor').disabled = false;
+        document.getElementById('btnApplyRefSave').disabled = false;
+
+    } catch (err) {
+        console.error('Error selecting ref product:', err);
+        showToast('Gagal memuat detail produk referensi', 'error');
+    }
+}
+
+/**
+ * Render level checklist comparing target with reference
+ */
+function renderRefLevelSelectors() {
+    const container = document.getElementById('refLevelSelectorsList');
+    if (!selectedRefProduct || !copyRefTargetId) return;
+
+    const target = allProducts.find(p => p.id === copyRefTargetId);
+    if (!target) return;
+
+    let html = '';
+
+    (target.packagings || []).forEach(tPkg => {
+        const rPkg = (selectedRefProduct.packagings || []).find(rp => rp.level === tPkg.level);
+        const hasMatch = !!rPkg;
+
+        if (hasMatch) {
+            const targetBuy = parseFloat(tPkg.buy_price) || 0;
+            const refSell = parseFloat(rPkg.sell_price_retail) || 0;
+            const estDiff = refSell - targetBuy;
+            const estMarkup = targetBuy > 0 ? ((estDiff / targetBuy) * 100) : 0;
+            const refTiers = rPkg.qty_prices || [];
+
+            html += `
+                <div class="tp-ref-lvl-card" id="refCardLvl_${tPkg.level}">
+                    <div class="tp-ref-lvl-header">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin: 0;">
+                            <input type="checkbox" id="refCheckLvl_${tPkg.level}" class="ref-lvl-checkbox" data-level="${tPkg.level}" checked style="accent-color: var(--primary);">
+                            <span>Level ${tPkg.level}: ${escapeHtml(tPkg.unit_name)}</span>
+                        </label>
+                        <span class="tp-pkg-lvl">Lvl ${tPkg.level}</span>
+                    </div>
+
+                    <div class="tp-ref-compare-grid">
+                        <div>
+                            <span style="color: var(--text-muted); display: block; font-size: 0.66rem;">Harga Ref:</span>
+                            <strong style="color: var(--primary);">${formatRupiah(refSell)}</strong>
+                        </div>
+                        <div>
+                            <span style="color: var(--text-muted); display: block; font-size: 0.66rem;">Modal Target:</span>
+                            <span style="color: #ef4444; font-weight: 700;">${formatRupiah(targetBuy)}</span>
+                        </div>
+                        <div>
+                            <span style="color: var(--text-muted); display: block; font-size: 0.66rem;">Est. Untung:</span>
+                            <strong style="color: ${estDiff >= 0 ? '#10b981' : '#ef4444'};">${estDiff >= 0 ? '+' : ''}${formatRupiah(estDiff)}</strong>
+                        </div>
+                        <div>
+                            <span style="color: var(--text-muted); display: block; font-size: 0.66rem;">Est. Markup:</span>
+                            <span class="tp-markup-badge ${estMarkup >= 0 ? '' : 'loss'}">${estMarkup >= 0 ? '+' : ''}${estMarkup.toFixed(1)}%</span>
+                        </div>
+                    </div>
+
+                    ${refTiers.length > 0 ? `
+                        <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--border-color);">
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; margin: 0; font-size: 0.74rem;">
+                                <input type="checkbox" id="refCheckTier_${tPkg.level}" class="ref-tier-checkbox" data-level="${tPkg.level}" checked style="accent-color: var(--primary);">
+                                <span>Salin <strong>${refTiers.length} Aturan Tier</strong> dari Referensi:</span>
+                            </label>
+                            <div style="margin-top: 4px; padding-left: 20px;">
+                                ${refTiers.map(t => `<span class="tp-ref-tier-badge">Min ${t.min_qty} @ ${formatRupiah(t.unit_price)}</span>`).join('')}
+                            </div>
+                        </div>
+                    ` : `
+                        <div style="margin-top: 4px; font-size: 0.7rem; color: var(--text-muted); font-style: italic;">
+                            (Referensi tidak memiliki harga tier di level ini)
+                        </div>
+                    `}
+                </div>
+            `;
+        } else {
+            html += `
+                <div class="tp-ref-lvl-card disabled">
+                    <div class="tp-ref-lvl-header">
+                        <span style="color: var(--text-muted);">Level ${tPkg.level}: ${escapeHtml(tPkg.unit_name)}</span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted);">Tidak ada di referensi</span>
+                    </div>
+                </div>
+            `;
+        }
+    });
+
+    container.innerHTML = html;
+}
+
+/**
+ * Quick Preset filter buttons
+ */
+function applyRefPreset(preset) {
+    document.querySelectorAll('.tp-preset-btn').forEach(b => b.classList.remove('active'));
+
+    const checkboxes = document.querySelectorAll('.ref-lvl-checkbox');
+    const tierCheckboxes = document.querySelectorAll('.ref-tier-checkbox');
+
+    if (preset === 'all') {
+        document.getElementById('btnPresetAll')?.classList.add('active');
+        checkboxes.forEach(cb => cb.checked = true);
+        tierCheckboxes.forEach(cb => cb.checked = true);
+    } else if (preset === 'lvl1') {
+        document.getElementById('btnPresetL1')?.classList.add('active');
+        checkboxes.forEach(cb => cb.checked = (parseInt(cb.dataset.level) === 1));
+        tierCheckboxes.forEach(cb => cb.checked = (parseInt(cb.dataset.level) === 1));
+    } else if (preset === 'lvl1_2') {
+        document.getElementById('btnPresetL12')?.classList.add('active');
+        checkboxes.forEach(cb => {
+            const l = parseInt(cb.dataset.level);
+            cb.checked = (l === 1 || l === 2);
+        });
+        tierCheckboxes.forEach(cb => {
+            const l = parseInt(cb.dataset.level);
+            cb.checked = (l === 1 || l === 2);
+        });
+    } else if (preset === 'lvl2') {
+        document.getElementById('btnPresetL2')?.classList.add('active');
+        checkboxes.forEach(cb => cb.checked = (parseInt(cb.dataset.level) === 2));
+        tierCheckboxes.forEach(cb => cb.checked = (parseInt(cb.dataset.level) === 2));
+    } else if (preset === 'lvl3') {
+        document.getElementById('btnPresetL3')?.classList.add('active');
+        checkboxes.forEach(cb => cb.checked = (parseInt(cb.dataset.level) === 3));
+        tierCheckboxes.forEach(cb => cb.checked = (parseInt(cb.dataset.level) === 3));
+    }
+}
+
+/**
+ * Execute copy of prices from reference to target product
+ */
+async function executeCopyRefPrices(saveImmediately) {
+    if (!selectedRefProduct || !copyRefTargetId) return;
+
+    const target = allProducts.find(p => p.id === copyRefTargetId);
+    if (!target) return;
+
+    const checkedLvls = [];
+    document.querySelectorAll('.ref-lvl-checkbox:checked').forEach(cb => {
+        checkedLvls.push(parseInt(cb.dataset.level));
+    });
+
+    if (checkedLvls.length === 0) {
+        showToast('Pilih minimal satu level kemasan yang ingin disamakan', 'warning');
+        return;
+    }
+
+    const btn = saveImmediately ? document.getElementById('btnApplyRefSave') : document.getElementById('btnApplyRefEditor');
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Memproses...`;
+
+    try {
+        const csrf = document.getElementById('csrfToken').value;
+
+        for (const lvl of checkedLvls) {
+            const targetPkg = (target.packagings || []).find(tp => tp.level === lvl);
+            const refPkg = (selectedRefProduct.packagings || []).find(rp => rp.level === lvl);
+            if (!targetPkg || !refPkg) continue;
+
+            const newSellRetail = parseFloat(refPkg.sell_price_retail) || 0;
+            const newSellWholesale = parseFloat(refPkg.sell_price_wholesale) || 0;
+            const copyTier = document.getElementById(`refCheckTier_${lvl}`)?.checked;
+            const newTiers = copyTier ? JSON.parse(JSON.stringify(refPkg.qty_prices || [])) : null;
+
+            if (saveImmediately) {
+                // 1. Save retail price (BUY PRICE REMAINS TARGET'S ORIGINAL!)
+                const respPkg = await fetch(`${BASE_URL}api/products/packaging/${targetPkg.id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+                    body: JSON.stringify({
+                        csrf_token: csrf,
+                        buy_price: targetPkg.buy_price, // TARGET MODAL KEPT INTACT!
+                        sell_price_retail: newSellRetail,
+                        sell_price_wholesale: newSellWholesale,
+                        barcode: targetPkg.barcode || ''
+                    })
+                });
+                const resPkg = await respPkg.json();
+                if (!respPkg.ok || resPkg.error) throw new Error(resPkg.error || 'Gagal menyimpan harga jual');
+
+                // 2. Save tiers if copied
+                if (copyTier && newTiers) {
+                    const respTiers = await fetch(`${BASE_URL}api/products/packaging/${targetPkg.id}/qty-prices`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+                        body: JSON.stringify({
+                            csrf_token: csrf,
+                            tiers: newTiers
+                        })
+                    });
+                    const resTiers = await respTiers.json();
+                    if (!respTiers.ok || resTiers.error) throw new Error(resTiers.error || 'Gagal menyimpan harga tier');
+                    targetPkg.qty_prices = newTiers;
+                }
+
+                targetPkg.sell_price_retail = newSellRetail;
+                targetPkg.sell_price_wholesale = newSellWholesale;
+
+            } else {
+                // Apply to editor inputs without saving directly
+                const inpSell = document.getElementById(`inpSellPrice_${targetPkg.id}`);
+                if (inpSell) {
+                    inpSell.value = Math.round(newSellRetail);
+                    onPkgPriceChange(targetPkg.id, targetPkg.buy_price, targetPkg.base_qty);
+                }
+
+                if (copyTier && newTiers) {
+                    const tbody = document.getElementById(`tierTbody_${targetPkg.id}`);
+                    if (tbody) {
+                        tbody.innerHTML = newTiers.map((t, idx) => renderTierRow(targetPkg.id, t, targetPkg.buy_price, newSellRetail, idx)).join('');
+                        newTiers.forEach((t, idx) => recalcTierRow(targetPkg.id, idx));
+                    }
+                }
+            }
+        }
+
+        closeCopyRefModal();
+
+        if (saveImmediately) {
+            updateStats();
+            renderMasterList();
+            renderDetailPanel(target.id);
+            showToast('Harga jual & tier berhasil disamakan dan disimpan!', 'success');
+        } else {
+            showToast('Harga referensi telah disalin ke editor. Klik "Simpan" pada kemasan untuk menyimpan perubahan.', 'info');
+        }
+
+    } catch (err) {
+        console.error('Execute copy ref error:', err);
+        showToast(err.message || 'Gagal menyalin harga referensi', 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = origHtml;
