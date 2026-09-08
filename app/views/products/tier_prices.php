@@ -936,18 +936,98 @@
 .tp-inp-mode {
     width: 100%;
     max-width: 135px;
-    padding: 3px 6px;
+    padding: 4px 6px;
     border: 1px solid var(--border-color);
     background: var(--bg-input);
     color: var(--text-primary);
     border-radius: 5px;
     font-size: 0.74rem;
-    font-weight: 600;
+    font-weight: 700;
     outline: none;
     cursor: pointer;
+    transition: all 0.15s ease;
 }
 .tp-inp-mode:focus {
     border-color: var(--primary);
+}
+.tp-inp-mode.mode-both {
+    background: rgba(99, 102, 241, 0.12);
+    color: #818cf8;
+    border-color: rgba(99, 102, 241, 0.35);
+}
+.tp-inp-mode.mode-retail {
+    background: rgba(59, 130, 246, 0.12);
+    color: #60a5fa;
+    border-color: rgba(59, 130, 246, 0.35);
+}
+.tp-inp-mode.mode-wholesale {
+    background: rgba(245, 158, 11, 0.12);
+    color: #fbbf24;
+    border-color: rgba(245, 158, 11, 0.35);
+}
+
+/* Packaging Reference Quick Strip (Desktop & Mobile) */
+.tp-pkg-ref-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(56, 189, 248, 0.06) 100%);
+    border: 1px dashed rgba(99, 102, 241, 0.35);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+.tp-pkg-ref-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.tp-pkg-ref-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    display: block;
+}
+.tp-pkg-ref-desc {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    display: block;
+}
+
+/* Mode Legend Bar */
+.tp-mode-legend-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+    padding: 2px 0;
+}
+.tp-mode-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+}
+.tp-mode-pill.mode-both {
+    background: rgba(99, 102, 241, 0.12);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+}
+.tp-mode-pill.mode-retail {
+    background: rgba(59, 130, 246, 0.12);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+}
+.tp-mode-pill.mode-wholesale {
+    background: rgba(245, 158, 11, 0.12);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.25);
 }
 
 /* Sticky Mobile Back Navigation Bar */
@@ -2054,6 +2134,22 @@ function renderPackagingBox(product, pkg) {
                 </div>
             </div>
 
+            <!-- Quick Reference Price Strip -->
+            <div class="tp-pkg-ref-strip">
+                <div class="tp-pkg-ref-info">
+                    <div style="width: 28px; height: 28px; border-radius: 6px; background: rgba(99, 102, 241, 0.15); color: #818cf8; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; flex-shrink: 0;">
+                        <i class="bi bi-copy"></i>
+                    </div>
+                    <div>
+                        <span class="tp-pkg-ref-title">Referensi Harga Jual Lvl ${pkg.level}</span>
+                        <span class="tp-pkg-ref-desc">Samakan harga jual retail dan harga tier dari produk referensi lain (modal target tetap utuh).</span>
+                    </div>
+                </div>
+                <button type="button" class="tp-btn tp-btn-primary tp-btn-sm" onclick="openCopyRefModal(${product.id})" style="white-space: nowrap; font-weight: 700;">
+                    <i class="bi bi-shuffle"></i> Samakan Harga Referensi
+                </button>
+            </div>
+
             <!-- Financial Strip -->
             <div class="tp-finance-grid">
                 <div class="tp-finance-item">
@@ -2088,14 +2184,24 @@ function renderPackagingBox(product, pkg) {
                 </div>
             </div>
 
+            <!-- Mode Legend Bar (Desktop & Mobile) -->
+            <div class="tp-mode-legend-bar">
+                <span style="font-size: 0.68rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+                    <i class="bi bi-tag-fill"></i> Mode Transaksi:
+                </span>
+                <span class="tp-mode-pill mode-both"><i class="bi bi-cart-check"></i> Ecer &amp; Grosir</span>
+                <span class="tp-mode-pill mode-retail"><i class="bi bi-bag"></i> Ecer Saja</span>
+                <span class="tp-mode-pill mode-wholesale"><i class="bi bi-box-seam"></i> Grosir Saja</span>
+            </div>
+
             <!-- Tier Table -->
             <div class="tp-table-wrap">
                 <table class="tp-table" id="tierTable_${pkg.id}">
                     <thead>
                         <tr>
-                            <th style="width: 130px;">Mode Transaksi</th>
+                            <th style="width: 140px;"><i class="bi bi-ui-checks"></i> Mode Transaksi</th>
                             <th style="width: 80px;">Min. Beli</th>
-                            <th style="width: 120px;">Harga Satuan</th>
+                            <th style="width: 125px;">Harga Satuan</th>
                             <th>Total Bayar</th>
                             <th>Untung / Satuan</th>
                             <th>Untung Total</th>
@@ -2143,7 +2249,7 @@ function renderTierRow(pkgId, tier, buyPrice, normalSellPrice, index) {
     return `
         <tr id="tierRow_${pkgId}_${index}" class="tp-tier-row">
             <td class="cell-mode">
-                <select class="tp-inp-mode tier-sale-mode" onchange="markPkgUnsaved(${pkgId})">
+                <select class="tp-inp-mode tier-sale-mode mode-${mode}" onchange="onTierModeSelectChange(this, ${pkgId})">
                     <option value="both" ${mode === 'both' || !mode ? 'selected' : ''}>🛒 Ecer &amp; Grosir</option>
                     <option value="retail" ${mode === 'retail' ? 'selected' : ''}>🛍️ Ecer Saja</option>
                     <option value="wholesale" ${mode === 'wholesale' ? 'selected' : ''}>📦 Grosir Saja</option>
@@ -2319,6 +2425,15 @@ function deleteTierRow(pkgId, index) {
         row.remove();
         markPkgUnsaved(pkgId);
     }
+}
+
+/**
+ * Handle changing tier transaction sale mode (both, retail, wholesale)
+ */
+function onTierModeSelectChange(selectEl, pkgId) {
+    const mode = selectEl.value || 'both';
+    selectEl.className = `tp-inp-mode tier-sale-mode mode-${mode}`;
+    markPkgUnsaved(pkgId);
 }
 
 /**
