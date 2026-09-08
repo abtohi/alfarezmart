@@ -1,513 +1,181 @@
-<!-- View: Manajemen Harga Tier (Grosir Bertingkat) -->
+<!-- View: Manajemen Harga Tier (Grosir Bertingkat) - Elegant Split & Compact UI -->
 <?php /** @var string $csrfToken */ ?>
 
 <style>
-/* ===== TIER PRICES MANAGEMENT STYLES ===== */
-.tp-container {
-    max-width: 1200px;
+/* ==========================================================================
+   TIER PRICES MANAGEMENT - MODERN COMPACT & DESKTOP SPLIT DESIGN
+   ========================================================================== */
+
+/* Outer Page Wrapper - Breathing Room from Screen Edges */
+.tp-page-wrapper {
+    width: 100%;
+    max-width: 1440px;
     margin: 0 auto;
-    padding-bottom: 120px;
+    padding: 16px 20px 100px 20px;
+    box-sizing: border-box;
 }
 
-/* Header */
+/* Header Area */
 .tp-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     flex-wrap: wrap;
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: 12px;
+    margin-bottom: 16px;
 }
 .tp-header-left {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
 }
 .tp-header-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(239, 68, 68, 0.15));
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(230, 57, 70, 0.18));
     color: #f59e0b;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.4rem;
-    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.18);
+    font-size: 1.15rem;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
     flex-shrink: 0;
 }
 .tp-header-title {
-    font-size: 1.4rem;
+    font-size: 1.18rem;
     font-weight: 800;
     color: var(--text-primary);
     margin: 0;
-    line-height: 1.25;
+    line-height: 1.2;
+    letter-spacing: -0.3px;
 }
 .tp-header-subtitle {
-    font-size: 0.85rem;
+    font-size: 0.76rem;
     color: var(--text-muted);
-    margin: 4px 0 0 0;
+    margin: 2px 0 0 0;
 }
 .tp-header-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
+    gap: 8px;
 }
 
-/* Stats Summary Cards */
-.tp-stats-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 14px;
-    margin-bottom: 24px;
+/* Compact Stats Ribbon */
+.tp-stats-ribbon {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
 }
-.tp-stat-card {
+.tp-stat-chip {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 4px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.tp-stat-chip strong {
+    color: var(--text-primary);
+    font-weight: 800;
+}
+.tp-stat-chip i {
+    font-size: 0.85rem;
+}
+
+/* Toolbar: Search, Filters & Expand/Collapse */
+.tp-toolbar {
     background: var(--surface-1);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
-    padding: 14px 18px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
     display: flex;
-    align-items: center;
-    gap: 14px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-}
-.tp-stat-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    flex-shrink: 0;
-}
-.tp-stat-value {
-    font-size: 1.35rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    line-height: 1.1;
-}
-.tp-stat-label {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    margin-top: 3px;
-    font-weight: 600;
-}
-
-/* Filter Card */
-.tp-filter-card {
-    background: var(--surface-1);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: 16px 20px;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
-}
-.tp-filter-controls {
-    display: flex;
-    gap: 14px;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
 }
-.tp-search-wrapper {
+.tp-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     flex: 1;
-    min-width: 260px;
-    position: relative;
+    min-width: 240px;
 }
-.tp-search-icon {
+.tp-search-wrap {
+    position: relative;
+    flex: 1;
+    max-width: 320px;
+    min-width: 180px;
+}
+.tp-search-wrap i {
     position: absolute;
-    left: 14px;
+    left: 10px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-muted);
-    font-size: 1.05rem;
+    font-size: 0.85rem;
     pointer-events: none;
 }
 .tp-search-input {
     width: 100%;
-    padding: 10px 14px 10px 40px;
-    border-radius: var(--radius-md);
-    border: 1.5px solid var(--border-color);
+    padding: 6px 10px 6px 30px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
     background: var(--bg-input);
     color: var(--text-primary);
-    font-size: 0.92rem;
+    font-size: 0.82rem;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 .tp-search-input:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.18);
 }
-.tp-cat-filter {
-    min-width: 190px;
-    padding: 10px 14px;
-    border-radius: var(--radius-md);
-    border: 1.5px solid var(--border-color);
+.tp-cat-select {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
     background: var(--bg-input);
     color: var(--text-primary);
-    font-size: 0.92rem;
+    font-size: 0.82rem;
     outline: none;
     cursor: pointer;
+    max-width: 180px;
 }
 
-/* Category Accordion / Group */
-.tp-cat-group {
-    margin-bottom: 28px;
-}
-.tp-cat-header {
+/* Expand / Collapse Controls */
+.tp-toolbar-right {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 12px 18px;
-    background: var(--surface-2);
+    gap: 6px;
+}
+.tp-btn-tool {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 6px;
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    background: var(--surface-2);
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+    font-weight: 600;
     cursor: pointer;
-    user-select: none;
-    margin-bottom: 14px;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
 }
-.tp-cat-header:hover {
-    background: var(--surface-3, rgba(255,255,255,0.06));
-}
-.tp-cat-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.05rem;
-    font-weight: 700;
+.tp-btn-tool:hover {
+    background: var(--surface-3);
     color: var(--text-primary);
-}
-.tp-cat-badge {
-    font-size: 0.75rem;
-    padding: 2px 10px;
-    border-radius: 20px;
-    background: rgba(99,102,241,0.12);
-    color: var(--primary);
-    font-weight: 700;
-}
-.tp-cat-chevron {
-    color: var(--text-muted);
-    font-size: 1.1rem;
-    transition: transform 0.25s;
-}
-.tp-cat-group.collapsed .tp-cat-chevron {
-    transform: rotate(-90deg);
-}
-.tp-cat-group.collapsed .tp-cat-content {
-    display: none;
-}
-
-/* Product Card */
-.tp-product-card {
-    background: var(--surface-1);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    margin-bottom: 18px;
-    overflow: hidden;
-    box-shadow: 0 4px 18px rgba(0,0,0,0.04);
-    transition: border-color 0.2s;
-}
-.tp-product-card:hover {
-    border-color: rgba(99,102,241,0.4);
-}
-.tp-product-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 18px;
-    background: var(--surface-2);
-    border-bottom: 1px solid var(--border-color);
-    gap: 12px;
-    flex-wrap: wrap;
-}
-.tp-product-info {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex: 1;
-    min-width: 250px;
-}
-.tp-product-thumb {
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    object-fit: cover;
-    background: var(--surface-3, #f1f5f9);
-    border: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-    font-size: 1.2rem;
-    flex-shrink: 0;
-}
-.tp-product-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 9px;
-}
-.tp-product-name {
-    font-size: 1.02rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    line-height: 1.3;
-    margin: 0;
-}
-.tp-product-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    margin-top: 3px;
-    flex-wrap: wrap;
-}
-.tp-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 1px 8px;
-    border-radius: 4px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    background: rgba(148, 163, 184, 0.15);
-    color: var(--text-secondary, #94a3b8);
-}
-.tp-tag-brand {
-    background: rgba(16, 185, 129, 0.12);
-    color: #10b981;
-}
-.tp-tag-stock {
-    background: rgba(59, 130, 246, 0.12);
-    color: #3b82f6;
-}
-
-/* Packaging Block */
-.tp-packaging-box {
-    padding: 16px 18px;
-    border-bottom: 1px dashed var(--border-color);
-}
-.tp-packaging-box:last-child {
-    border-bottom: none;
-}
-.tp-packaging-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 14px;
-}
-.tp-packaging-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.tp-pkg-level-badge {
-    font-size: 0.74rem;
-    font-weight: 800;
-    padding: 2px 8px;
-    border-radius: 6px;
-    background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15));
-    color: var(--primary);
-    border: 1px solid rgba(99,102,241,0.25);
-}
-.tp-pkg-name {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-.tp-pkg-barcode {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    font-family: monospace;
-}
-
-/* Base Price Strip */
-.tp-base-strip {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 12px;
-    background: var(--surface-2);
-    padding: 12px 14px;
-    border-radius: var(--radius-md);
-    margin-bottom: 14px;
-    border: 1px solid var(--border-color);
-}
-.tp-base-item {
-    display: flex;
-    flex-direction: column;
-}
-.tp-base-label {
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 3px;
-}
-.tp-base-value {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-.tp-base-value.cost {
-    color: #ef4444;
-}
-.tp-base-value.profit {
-    color: #10b981;
-}
-.tp-base-input-wrap {
-    display: flex;
-    align-items: center;
-    position: relative;
-}
-.tp-base-input-prefix {
-    position: absolute;
-    left: 8px;
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    font-weight: 600;
-    pointer-events: none;
-}
-.tp-base-input {
-    width: 100%;
-    padding: 4px 8px 4px 30px;
-    border: 1.5px solid var(--border-color);
-    background: var(--bg-input);
-    color: var(--text-primary);
-    border-radius: 6px;
-    font-size: 0.9rem;
-    font-weight: 700;
-    outline: none;
-    transition: border-color 0.2s;
-}
-.tp-base-input:focus {
-    border-color: var(--primary);
-}
-
-/* Tier Table */
-.tp-table-wrap {
-    overflow-x: auto;
-    margin-bottom: 14px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-}
-.tp-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.86rem;
-    text-align: left;
-    min-width: 680px;
-}
-.tp-table th {
-    background: var(--surface-2);
-    padding: 10px 12px;
-    font-weight: 700;
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid var(--border-color);
-    white-space: nowrap;
-}
-.tp-table td {
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--border-color);
-    vertical-align: middle;
-}
-.tp-table tbody tr:last-child td {
-    border-bottom: none;
-}
-.tp-table tbody tr:hover {
-    background: rgba(255,255,255,0.02);
-}
-
-/* Tier Table Inputs */
-.tp-inp-qty {
-    width: 85px;
-    padding: 6px 8px;
-    border: 1.5px solid var(--border-color);
-    background: var(--bg-input);
-    color: var(--text-primary);
-    border-radius: 6px;
-    font-weight: 700;
-    text-align: center;
-    outline: none;
-}
-.tp-inp-qty:focus {
-    border-color: var(--primary);
-}
-.tp-inp-price-wrap {
-    display: inline-flex;
-    align-items: center;
-    position: relative;
-    width: 130px;
-}
-.tp-inp-price-prefix {
-    position: absolute;
-    left: 8px;
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    font-weight: 600;
-    pointer-events: none;
-}
-.tp-inp-price {
-    width: 100%;
-    padding: 6px 8px 6px 30px;
-    border: 1.5px solid var(--border-color);
-    background: var(--bg-input);
-    color: var(--text-primary);
-    border-radius: 6px;
-    font-weight: 700;
-    outline: none;
-}
-.tp-inp-price:focus {
-    border-color: var(--primary);
-}
-
-/* Profit & Info Pills */
-.tp-profit-pill {
-    display: inline-flex;
-    flex-direction: column;
-    gap: 2px;
-}
-.tp-profit-val {
-    font-weight: 800;
-    font-size: 0.9rem;
-    color: #10b981;
-}
-.tp-profit-val.loss {
-    color: #ef4444;
-}
-.tp-profit-sub {
-    font-size: 0.74rem;
-    color: var(--text-muted);
-}
-.tp-markup-badge {
-    display: inline-block;
-    padding: 2px 7px;
-    border-radius: 6px;
-    font-size: 0.74rem;
-    font-weight: 700;
-    background: rgba(16, 185, 129, 0.12);
-    color: #10b981;
-}
-.tp-markup-badge.loss {
-    background: rgba(239, 68, 68, 0.12);
-    color: #ef4444;
-}
-
-/* Tier Actions Bottom Bar */
-.tp-pkg-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
+    border-color: var(--text-muted);
 }
 
 /* Buttons */
@@ -515,9 +183,9 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 7px 14px;
-    border-radius: var(--radius-md);
-    font-size: 0.85rem;
+    padding: 6px 12px;
+    border-radius: 7px;
+    font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -528,7 +196,7 @@
     color: #fff;
 }
 .tp-btn-primary:hover {
-    background: var(--primary-hover, #4f46e5);
+    background: var(--primary-dark);
     transform: translateY(-1px);
 }
 .tp-btn-outline {
@@ -539,24 +207,23 @@
 .tp-btn-outline:hover {
     background: var(--surface-2);
     border-color: var(--primary);
-    color: var(--primary);
 }
 .tp-btn-success {
     background: linear-gradient(135deg, #10b981, #059669);
     color: #fff;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
 }
 .tp-btn-success:hover {
     opacity: 0.92;
     transform: translateY(-1px);
 }
 .tp-btn-sm {
-    padding: 4px 10px;
-    font-size: 0.78rem;
+    padding: 4px 8px;
+    font-size: 0.75rem;
 }
 .tp-btn-icon {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     display: inline-flex;
     align-items: center;
@@ -573,6 +240,495 @@
     color: #fff;
 }
 
+/* ==========================================================================
+   DESKTOP SPLIT LAYOUT (Master - Detail)
+   ========================================================================== */
+.tp-split-layout {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+}
+
+/* Master Column (Left) */
+.tp-master-col {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    position: sticky;
+    top: 14px;
+    max-height: calc(100vh - 28px);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+}
+.tp-master-header {
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+}
+.tp-master-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 6px 8px;
+}
+
+/* Category Tree Node in Master */
+.tp-cat-node {
+    margin-bottom: 6px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+}
+.tp-cat-node-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    border-radius: 6px;
+    background: var(--surface-2);
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s;
+}
+.tp-cat-node-header:hover {
+    background: var(--surface-3);
+}
+.tp-cat-node-title {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.tp-cat-node-badge {
+    font-size: 0.68rem;
+    padding: 1px 6px;
+    border-radius: 12px;
+    background: rgba(230, 57, 70, 0.12);
+    color: var(--primary-light);
+    font-weight: 700;
+}
+.tp-cat-node-chevron {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+}
+/* Default is Collapsed */
+.tp-cat-node.collapsed .tp-cat-node-chevron {
+    transform: rotate(-90deg);
+}
+.tp-cat-node.collapsed .tp-cat-node-items {
+    display: none;
+}
+.tp-cat-node-items {
+    padding: 4px 0 4px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+/* Product Item in Master List */
+.tp-prod-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+}
+.tp-prod-item:hover {
+    background: var(--surface-2);
+}
+.tp-prod-item.active {
+    background: rgba(230, 57, 70, 0.12);
+    border-color: rgba(230, 57, 70, 0.35);
+}
+.tp-prod-item-thumb {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--surface-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+.tp-prod-item-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 5px;
+}
+.tp-prod-item-info {
+    flex: 1;
+    min-width: 0;
+}
+.tp-prod-item-name {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.25;
+}
+.tp-prod-item-meta {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 1px;
+}
+.tp-prod-item-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 10px;
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+    flex-shrink: 0;
+}
+
+/* Detail Column (Right) */
+.tp-detail-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Product Detail Card */
+.tp-product-detail-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.04);
+}
+.tp-detail-banner {
+    padding: 12px 16px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.tp-detail-main-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.tp-detail-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 8px;
+    background: var(--surface-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    overflow: hidden;
+}
+.tp-detail-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.tp-detail-title {
+    font-size: 0.98rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.25;
+}
+.tp-detail-tags {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 3px;
+    flex-wrap: wrap;
+}
+.tp-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: rgba(148, 163, 184, 0.12);
+    color: var(--text-secondary);
+}
+.tp-tag-brand {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+}
+.tp-tag-stock {
+    background: rgba(59, 130, 246, 0.12);
+    color: #3b82f6;
+}
+
+/* Packaging Block */
+.tp-pkg-box {
+    padding: 14px 16px;
+    border-bottom: 1px dashed var(--border-color);
+}
+.tp-pkg-box:last-child {
+    border-bottom: none;
+}
+.tp-pkg-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.tp-pkg-badge-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.tp-pkg-lvl {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: rgba(230, 57, 70, 0.15);
+    color: var(--primary-light);
+    border: 1px solid rgba(230, 57, 70, 0.25);
+}
+.tp-pkg-unit {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.tp-pkg-code {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    font-family: monospace;
+}
+
+/* Base Financial Grid (Compact) */
+.tp-finance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
+    background: var(--surface-2);
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border-color);
+}
+.tp-finance-item {
+    display: flex;
+    flex-direction: column;
+}
+.tp-finance-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 2px;
+}
+.tp-finance-val {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.tp-finance-val.cost {
+    color: #ef4444;
+}
+.tp-finance-val.profit {
+    color: #10b981;
+}
+.tp-finance-inp-wrap {
+    display: flex;
+    align-items: center;
+    position: relative;
+    max-width: 140px;
+}
+.tp-finance-prefix {
+    position: absolute;
+    left: 7px;
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    pointer-events: none;
+}
+.tp-finance-inp {
+    width: 100%;
+    padding: 3px 6px 3px 26px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border-radius: 5px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    outline: none;
+}
+.tp-finance-inp:focus {
+    border-color: var(--primary);
+}
+
+/* Tier Table (Compact & Elegant) */
+.tp-table-wrap {
+    overflow-x: auto;
+    margin-bottom: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+}
+.tp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    text-align: left;
+    min-width: 620px;
+}
+.tp-table th {
+    background: var(--surface-2);
+    padding: 8px 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+}
+.tp-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+.tp-table tbody tr:last-child td {
+    border-bottom: none;
+}
+.tp-table tbody tr:hover {
+    background: rgba(255,255,255,0.02);
+}
+
+/* Tier Table Inputs */
+.tp-inp-qty {
+    width: 70px;
+    padding: 4px 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border-radius: 5px;
+    font-weight: 700;
+    text-align: center;
+    font-size: 0.8rem;
+    outline: none;
+}
+.tp-inp-qty:focus {
+    border-color: var(--primary);
+}
+.tp-inp-price-wrap {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+    width: 110px;
+}
+.tp-inp-price-prefix {
+    position: absolute;
+    left: 7px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    pointer-events: none;
+}
+.tp-inp-price {
+    width: 100%;
+    padding: 4px 6px 4px 26px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    border-radius: 5px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    outline: none;
+}
+.tp-inp-price:focus {
+    border-color: var(--primary);
+}
+
+/* Profit & Badge formatting */
+.tp-profit-val {
+    font-weight: 800;
+    font-size: 0.84rem;
+    color: #10b981;
+}
+.tp-profit-val.loss {
+    color: #ef4444;
+}
+.tp-markup-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+}
+.tp-markup-badge.loss {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+}
+
+/* Packaging Bottom Bar */
+.tp-pkg-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Detail Placeholder */
+.tp-detail-empty-prompt {
+    background: var(--surface-1);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 60px 20px;
+    text-align: center;
+}
+.tp-detail-empty-prompt i {
+    font-size: 2.5rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    display: block;
+}
+.tp-detail-empty-prompt h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 6px 0;
+}
+.tp-detail-empty-prompt p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
 /* Modal Styles */
 .tp-modal-backdrop {
     position: fixed;
@@ -586,7 +742,7 @@
     align-items: center;
     justify-content: center;
     z-index: 1050;
-    padding: 20px;
+    padding: 16px;
 }
 .tp-modal-backdrop.show {
     display: flex;
@@ -594,28 +750,28 @@
 .tp-modal-card {
     background: var(--surface-1);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     width: 100%;
-    max-width: 620px;
+    max-width: 540px;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
     box-shadow: 0 16px 40px rgba(0,0,0,0.3);
-    animation: tpModalSlide 0.25s ease-out;
+    animation: tpModalSlide 0.2s ease-out;
 }
 @keyframes tpModalSlide {
-    from { opacity: 0; transform: translateY(20px) scale(0.97); }
+    from { opacity: 0; transform: translateY(15px) scale(0.98); }
     to { opacity: 1; transform: translateY(0) scale(1); }
 }
 .tp-modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--border-color);
 }
 .tp-modal-title {
-    font-size: 1.15rem;
+    font-size: 0.98rem;
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
@@ -624,7 +780,7 @@
     gap: 8px;
 }
 .tp-modal-body {
-    padding: 20px;
+    padding: 16px;
     overflow-y: auto;
     flex: 1;
 }
@@ -632,26 +788,24 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 10px;
-    padding: 14px 20px;
+    gap: 8px;
+    padding: 12px 16px;
     border-top: 1px solid var(--border-color);
     background: var(--surface-2);
 }
-
-/* Search results in modal */
 .tp-modal-res-list {
-    max-height: 240px;
+    max-height: 200px;
     overflow-y: auto;
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    margin-top: 10px;
+    border-radius: 6px;
+    margin-top: 8px;
     background: var(--surface-2);
 }
 .tp-modal-res-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 10px 14px;
+    gap: 10px;
+    padding: 8px 10px;
     border-bottom: 1px solid var(--border-color);
     cursor: pointer;
     transition: background-color 0.15s;
@@ -660,82 +814,84 @@
     border-bottom: none;
 }
 .tp-modal-res-item:hover {
-    background: rgba(99,102,241,0.08);
-}
-.tp-modal-res-item.selected {
-    background: rgba(99,102,241,0.15);
-    border-left: 3px solid var(--primary);
+    background: rgba(230, 57, 70, 0.1);
 }
 
-/* Empty State */
-.tp-empty-box {
-    text-align: center;
-    padding: 60px 20px;
-    background: var(--surface-1);
-    border: 1.5px dashed var(--border-color);
-    border-radius: var(--radius-lg);
-    margin: 20px 0;
-}
-.tp-empty-icon {
-    font-size: 3rem;
-    color: var(--text-muted);
-    margin-bottom: 12px;
-}
-.tp-empty-title {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 6px;
-}
-.tp-empty-desc {
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    max-width: 420px;
-    margin: 0 auto 18px auto;
-}
-
-/* Toast/indicator helper */
+/* Save status indicator */
 .tp-save-indicator {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-size: 0.78rem;
+    font-size: 0.74rem;
     color: #10b981;
     font-weight: 700;
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: opacity 0.25s;
 }
 .tp-save-indicator.show {
     opacity: 1;
 }
 
-@media (max-width: 768px) {
+/* Spin animation */
+.spin-animation {
+    animation: tpSpin 0.7s linear infinite;
+}
+@keyframes tpSpin {
+    100% { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   MOBILE RESPONSIVENESS (< 992px)
+   ========================================================================== */
+@media (max-width: 991px) {
+    .tp-page-wrapper {
+        padding: 12px 14px 90px 14px;
+    }
+    .tp-split-layout {
+        display: block;
+    }
+    .tp-master-col {
+        position: static;
+        max-height: none;
+        margin-bottom: 16px;
+    }
     .tp-header {
         flex-direction: column;
-        align-items: stretch;
+        align-items: flex-start;
     }
     .tp-header-actions {
-        justify-content: stretch;
+        width: 100%;
     }
     .tp-header-actions .tp-btn {
         flex: 1;
         justify-content: center;
     }
-    .tp-filter-controls {
+    .tp-toolbar {
         flex-direction: column;
         align-items: stretch;
     }
-    .tp-search-wrapper, .tp-cat-filter {
-        width: 100%;
-        min-width: 0;
+    .tp-toolbar-left {
+        flex-direction: column;
+        align-items: stretch;
     }
-    .tp-base-strip {
+    .tp-search-wrap, .tp-cat-select {
+        max-width: none;
+        width: 100%;
+    }
+    .tp-toolbar-right {
+        justify-content: space-between;
+    }
+    .tp-toolbar-right .tp-btn-tool {
+        flex: 1;
+        justify-content: center;
+    }
+    .tp-finance-grid {
         grid-template-columns: 1fr 1fr;
     }
 }
 </style>
 
-<div class="tp-container">
+<div class="tp-page-wrapper">
     <!-- Hidden CSRF Token -->
     <input type="hidden" id="csrfToken" value="<?= htmlspecialchars($csrfToken ?? '') ?>">
 
@@ -747,12 +903,12 @@
             </div>
             <div>
                 <h1 class="tp-header-title">Manajemen Harga Tier</h1>
-                <p class="tp-header-subtitle">Kelola harga grosir bertingkat, pantau modal, selisih margin, dan keuntungan per kemasan.</p>
+                <p class="tp-header-subtitle">Kelola harga grosir bertingkat, pantau modal, selisih margin, dan keuntungan.</p>
             </div>
         </div>
         <div class="tp-header-actions">
             <button type="button" class="tp-btn tp-btn-primary" onclick="openAddProductModal()">
-                <i class="bi bi-plus-circle-fill"></i> Tambah Produk ke Tier
+                <i class="bi bi-plus-circle-fill"></i> Tambah Produk
             </button>
             <button type="button" class="tp-btn tp-btn-outline" onclick="loadTierProducts()" title="Muat Ulang Data">
                 <i class="bi bi-arrow-clockwise" id="btnRefreshIcon"></i> Segarkan
@@ -760,66 +916,79 @@
         </div>
     </div>
 
-    <!-- Stats Summary Row -->
-    <div class="tp-stats-row">
-        <div class="tp-stat-card">
-            <div class="tp-stat-icon" style="background: rgba(99,102,241,0.12); color: #818cf8;">
-                <i class="bi bi-box-seam-fill"></i>
-            </div>
-            <div>
-                <div class="tp-stat-value" id="statProductCount">0</div>
-                <div class="tp-stat-label">Produk Ber-Tier</div>
-            </div>
+    <!-- Compact Stats Ribbon -->
+    <div class="tp-stats-ribbon">
+        <div class="tp-stat-chip">
+            <i class="bi bi-box-seam-fill" style="color: #818cf8;"></i>
+            <span><strong id="statProductCount">0</strong> Produk Ber-Tier</span>
         </div>
-        <div class="tp-stat-card">
-            <div class="tp-stat-icon" style="background: rgba(16,185,129,0.12); color: #10b981;">
-                <i class="bi bi-layers-fill"></i>
-            </div>
-            <div>
-                <div class="tp-stat-value" id="statTierCount">0</div>
-                <div class="tp-stat-label">Total Aturan Tier</div>
-            </div>
+        <div class="tp-stat-chip">
+            <i class="bi bi-layers-fill" style="color: #10b981;"></i>
+            <span><strong id="statTierCount">0</strong> Aturan Tier</span>
         </div>
-        <div class="tp-stat-card">
-            <div class="tp-stat-icon" style="background: rgba(245,158,11,0.12); color: #f59e0b;">
-                <i class="bi bi-grid-fill"></i>
-            </div>
-            <div>
-                <div class="tp-stat-value" id="statCategoryCount">0</div>
-                <div class="tp-stat-label">Kategori</div>
-            </div>
+        <div class="tp-stat-chip">
+            <i class="bi bi-folder-fill" style="color: #f59e0b;"></i>
+            <span><strong id="statCategoryCount">0</strong> Kategori</span>
         </div>
     </div>
 
-    <!-- Search & Filter Card -->
-    <div class="tp-filter-card">
-        <div class="tp-filter-controls">
-            <div class="tp-search-wrapper">
-                <i class="bi bi-search tp-search-icon"></i>
-                <input type="text" id="tpSearchInput" class="tp-search-input" placeholder="Cari nama produk, barcode, SKU..." oninput="onFilterChange()">
+    <!-- Toolbar: Search, Category Filter, Expand All, Collapse All -->
+    <div class="tp-toolbar">
+        <div class="tp-toolbar-left">
+            <div class="tp-search-wrap">
+                <i class="bi bi-search"></i>
+                <input type="text" id="tpSearchInput" class="tp-search-input" placeholder="Cari nama, barcode, SKU..." oninput="onFilterChange()">
             </div>
-            <select id="tpCategorySelect" class="tp-cat-filter" onchange="onFilterChange()">
+            <select id="tpCategorySelect" class="tp-cat-select" onchange="onFilterChange()">
                 <option value="">Semua Kategori</option>
             </select>
+        </div>
+        <div class="tp-toolbar-right">
+            <button type="button" class="tp-btn-tool" onclick="expandAllCategories()" title="Buka Semua Kategori">
+                <i class="bi bi-arrows-expand"></i> Expand All
+            </button>
+            <button type="button" class="tp-btn-tool" onclick="collapseAllCategories()" title="Tutup Semua Kategori">
+                <i class="bi bi-arrows-collapse"></i> Collapse All
+            </button>
         </div>
     </div>
 
     <!-- Loading State -->
-    <div id="tpLoadingState" style="text-align: center; padding: 50px 0;">
-        <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;"></div>
-        <div style="margin-top: 12px; color: var(--text-muted); font-size: 0.9rem;">Memuat daftar harga tier produk...</div>
+    <div id="tpLoadingState" style="text-align: center; padding: 40px 0;">
+        <div class="spinner-border text-primary spinner-border-sm" role="status" style="width: 2rem; height: 2rem;"></div>
+        <div style="margin-top: 10px; color: var(--text-muted); font-size: 0.85rem;">Memuat daftar harga tier...</div>
     </div>
 
-    <!-- Container where category groups and product cards render -->
-    <div id="tpProductsContainer" style="display: none;"></div>
+    <!-- Split Mode Layout Container -->
+    <div class="tp-split-layout" id="tpSplitContainer" style="display: none;">
+        <!-- Left / Master: Category & Product Tree -->
+        <div class="tp-master-col">
+            <div class="tp-master-header">
+                <span><i class="bi bi-list-ul"></i> Daftar Produk Ber-Tier</span>
+                <span id="tpFilteredCount" style="font-size: 0.72rem; color: var(--text-muted);">0 Produk</span>
+            </div>
+            <div class="tp-master-list" id="tpMasterList">
+                <!-- Category nodes rendered dynamically -->
+            </div>
+        </div>
+
+        <!-- Right / Detail: Active Product Tier Editor -->
+        <div class="tp-detail-col" id="tpDetailPanel">
+            <div class="tp-detail-empty-prompt">
+                <i class="bi bi-hand-index-thumb"></i>
+                <h4>Pilih Produk di Sebelah Kiri</h4>
+                <p>Klik salah satu produk untuk mengedit harga jual, melihat rincian margin, dan mengatur tier grosir.</p>
+            </div>
+        </div>
+    </div>
 
     <!-- Empty State -->
-    <div id="tpEmptyState" class="tp-empty-box" style="display: none;">
-        <div class="tp-empty-icon"><i class="bi bi-tags"></i></div>
-        <div class="tp-empty-title">Belum Ada Produk Dengan Harga Tier</div>
-        <p class="tp-empty-desc">Belum ada produk yang diset memiliki harga grosir bertingkat (tier price). Klik tombol di bawah untuk menambahkan produk pertama ke tier pricing.</p>
+    <div id="tpEmptyState" class="tp-detail-empty-prompt" style="display: none; margin-top: 20px;">
+        <i class="bi bi-tags"></i>
+        <h4>Belum Ada Produk Dengan Harga Tier</h4>
+        <p style="margin-bottom: 14px;">Belum ada produk yang diset harga grosir bertingkat.</p>
         <button type="button" class="tp-btn tp-btn-primary" onclick="openAddProductModal()">
-            <i class="bi bi-plus-circle-fill"></i> Tambah Produk ke Tier Sekarang
+            <i class="bi bi-plus-circle-fill"></i> Tambah Produk Sekarang
         </button>
     </div>
 </div>
@@ -831,80 +1000,80 @@
             <h3 class="tp-modal-title">
                 <i class="bi bi-tags-fill" style="color: #f59e0b;"></i> Tambah Produk ke Tier Pricing
             </h3>
-            <button type="button" class="btn-close" onclick="closeAddProductModal()" style="background: none; border: none; font-size: 1.2rem; color: var(--text-muted); cursor: pointer;">
+            <button type="button" class="btn-close" onclick="closeAddProductModal()" style="background: none; border: none; font-size: 1.1rem; color: var(--text-muted); cursor: pointer;">
                 <i class="bi bi-x-lg"></i>
             </button>
         </div>
         <div class="tp-modal-body">
-            <div style="margin-bottom: 14px;">
-                <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; display: block;">
+            <div style="margin-bottom: 12px;">
+                <label style="font-size: 0.76rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
                     Cari Produk (Nama / Barcode / Kode)
                 </label>
-                <div class="tp-search-wrapper" style="width: 100%;">
-                    <i class="bi bi-search tp-search-icon"></i>
-                    <input type="text" id="modalProductSearch" class="tp-search-input" placeholder="Ketik minimal 1 karakter..." oninput="debounceModalSearch()">
+                <div class="tp-search-wrap" style="width: 100%; max-width: none;">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="modalProductSearch" class="tp-search-input" placeholder="Ketik nama atau scan barcode..." oninput="debounceModalSearch()">
                 </div>
-                <div id="modalSearchSpinner" style="display: none; font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">
-                    <span class="spinner-border spinner-border-sm"></span> Mencari produk...
+                <div id="modalSearchSpinner" style="display: none; font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">
+                    <span class="spinner-border spinner-border-sm"></span> Mencari...
                 </div>
                 <div id="modalSearchResults" class="tp-modal-res-list" style="display: none;"></div>
             </div>
 
             <!-- Detail produk terpilih -->
-            <div id="modalSelectedProductBox" style="display: none; background: var(--surface-2); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; margin-top: 14px;">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
-                    <div id="modalSelectedThumb" class="tp-product-thumb">
+            <div id="modalSelectedProductBox" style="display: none; background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; margin-top: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <div id="modalSelectedThumb" class="tp-detail-avatar" style="width:34px;height:34px;">
                         <i class="bi bi-box-seam"></i>
                     </div>
                     <div>
-                        <div id="modalSelectedName" style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);"></div>
-                        <div id="modalSelectedMeta" style="font-size: 0.75rem; color: var(--text-muted);"></div>
+                        <div id="modalSelectedName" style="font-weight: 700; font-size: 0.88rem; color: var(--text-primary);"></div>
+                        <div id="modalSelectedMeta" style="font-size: 0.72rem; color: var(--text-muted);"></div>
                     </div>
                 </div>
 
-                <div style="margin-bottom: 12px;">
-                    <label style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; display: block;">
-                        Pilih Kemasan yang Mau Ditambahkan Tier
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 0.76rem; font-weight: 700; color: var(--text-muted); margin-bottom: 3px; display: block;">
+                        Pilih Kemasan
                     </label>
-                    <select id="modalPackagingSelect" class="tp-cat-filter" style="width: 100%;" onchange="onModalPackagingSelect()">
+                    <select id="modalPackagingSelect" class="tp-cat-select" style="width: 100%; max-width: none;" onchange="onModalPackagingSelect()">
                     </select>
                 </div>
 
                 <!-- Info Modal Kemasan Terpilih -->
-                <div id="modalPkgDetailsBox" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-bottom: 14px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 4px;">
+                <div id="modalPkgDetailsBox" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 10px; font-size: 0.78rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
                         <span style="color: var(--text-muted);">Modal Kemasan:</span>
                         <span id="modalPkgBuyPrice" style="font-weight: 700; color: #ef4444;">Rp 0</span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 4px;">
+                    <div style="display: flex; justify-content: space-between;">
                         <span style="color: var(--text-muted);">Harga Jual Normal:</span>
                         <span id="modalPkgSellPrice" style="font-weight: 700; color: var(--text-primary);">Rp 0</span>
                     </div>
                 </div>
 
                 <!-- Form Input Tier Baru -->
-                <div style="border-top: 1px dashed var(--border-color); padding-top: 12px;">
-                    <div style="font-size: 0.84rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">
-                        Set Harga Tier Pertama:
+                <div style="border-top: 1px dashed var(--border-color); padding-top: 10px;">
+                    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">
+                        Set Harga Tier Awal:
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
                         <div>
-                            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 3px;">Min. Beli (Qty)</label>
+                            <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 2px;">Min. Beli (Qty)</label>
                             <input type="number" id="modalTierMinQty" class="tp-inp-qty" style="width: 100%;" value="5" min="2" oninput="recalcModalTier()">
                         </div>
                         <div>
-                            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 3px;">Harga Tier / Satuan (Rp)</label>
+                            <label style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 2px;">Harga Tier / Satuan (Rp)</label>
                             <input type="number" id="modalTierUnitPrice" class="tp-inp-qty" style="width: 100%; text-align: left;" placeholder="Contoh: 1800" oninput="recalcModalTier()">
                         </div>
                     </div>
 
                     <!-- Live Calculation Preview in Modal -->
-                    <div id="modalTierCalcPreview" style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: var(--radius-md); padding: 10px 12px; font-size: 0.82rem;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <div id="modalTierCalcPreview" style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 6px; padding: 8px 10px; font-size: 0.76rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
                             <span style="color: var(--text-muted);">Total Bayar:</span>
                             <span id="modalCalcSubtotal" style="font-weight: 700; color: var(--text-primary);">Rp 0</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
                             <span style="color: var(--text-muted);">Keuntungan / Satuan:</span>
                             <span id="modalCalcProfitPerUnit" style="font-weight: 800; color: #10b981;">Rp 0</span>
                         </div>
@@ -917,8 +1086,8 @@
             </div>
         </div>
         <div class="tp-modal-footer">
-            <button type="button" class="tp-btn tp-btn-outline" onclick="closeAddProductModal()">Batal</button>
-            <button type="button" id="modalBtnSubmit" class="tp-btn tp-btn-primary" onclick="saveNewProductTier()" disabled>
+            <button type="button" class="tp-btn tp-btn-outline tp-btn-sm" onclick="closeAddProductModal()">Batal</button>
+            <button type="button" id="modalBtnSubmit" class="tp-btn tp-btn-primary tp-btn-sm" onclick="saveNewProductTier()" disabled>
                 <i class="bi bi-check-lg"></i> Simpan ke Tier
             </button>
         </div>
@@ -927,23 +1096,25 @@
 
 <script>
 /**
- * State Management for Tier Prices Page
+ * State Management
  */
 let allProducts = [];
 let allCategories = [];
+let activeProductId = null;
 let selectedModalProduct = null;
 let modalSearchTimeout = null;
 
-// Format Currency
-function formatRupiah(number) {
-    if (isNaN(number) || number === null || number === undefined) return 'Rp 0';
-    return 'Rp ' + Math.round(number).toLocaleString('id-ID');
+// Track collapse state per category: default = true (all collapsed)
+let categoryCollapseState = {};
+
+function formatRupiah(num) {
+    if (isNaN(num) || num === null || num === undefined) return 'Rp 0';
+    return 'Rp ' + Math.round(num).toLocaleString('id-ID');
 }
 
-// Format number without Rp
-function formatNum(number) {
-    if (isNaN(number) || number === null || number === undefined) return '0';
-    return Math.round(number).toLocaleString('id-ID');
+function formatNum(num) {
+    if (isNaN(num) || num === null || num === undefined) return '0';
+    return Math.round(num).toLocaleString('id-ID');
 }
 
 function escapeHtml(str) {
@@ -965,13 +1136,13 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 async function loadTierProducts() {
     const loadingState = document.getElementById('tpLoadingState');
-    const container = document.getElementById('tpProductsContainer');
+    const splitContainer = document.getElementById('tpSplitContainer');
     const emptyState = document.getElementById('tpEmptyState');
     const refreshIcon = document.getElementById('btnRefreshIcon');
 
     if (refreshIcon) refreshIcon.classList.add('spin-animation');
     loadingState.style.display = 'block';
-    container.style.display = 'none';
+    splitContainer.style.display = 'none';
     emptyState.style.display = 'none';
 
     try {
@@ -985,9 +1156,23 @@ async function loadTierProducts() {
         allProducts = data.products || [];
         allCategories = data.categories || [];
 
+        // Set default category collapse to true (COLLAPSED BY DEFAULT)
+        allCategories.forEach(c => {
+            if (categoryCollapseState[c.name] === undefined) {
+                categoryCollapseState[c.name] = true; // default collapsed!
+            }
+        });
+
         updateStats();
         populateCategoryFilter();
-        renderProducts();
+        renderMasterList();
+
+        // If on desktop and there are products, auto select first product
+        if (allProducts.length > 0 && !activeProductId) {
+            selectProduct(allProducts[0].id);
+        } else if (activeProductId) {
+            renderDetailPanel(activeProductId);
+        }
 
     } catch (err) {
         console.error('Error loading tier products:', err);
@@ -1032,29 +1217,54 @@ function populateCategoryFilter() {
     if (currentVal) sel.value = currentVal;
 }
 
-/**
- * Filter change event handler
- */
 function onFilterChange() {
-    renderProducts();
+    renderMasterList();
 }
 
 /**
- * Render all products grouped by category
+ * Expand All Categories
  */
-function renderProducts() {
-    const container = document.getElementById('tpProductsContainer');
+function expandAllCategories() {
+    allCategories.forEach(c => {
+        categoryCollapseState[c.name] = false;
+    });
+    renderMasterList();
+}
+
+/**
+ * Collapse All Categories
+ */
+function collapseAllCategories() {
+    allCategories.forEach(c => {
+        categoryCollapseState[c.name] = true;
+    });
+    renderMasterList();
+}
+
+/**
+ * Toggle single category
+ */
+function toggleCategoryNode(catName) {
+    categoryCollapseState[catName] = !categoryCollapseState[catName];
+    renderMasterList();
+}
+
+/**
+ * Render Master Column (Left Panel Tree)
+ */
+function renderMasterList() {
+    const splitContainer = document.getElementById('tpSplitContainer');
     const emptyState = document.getElementById('tpEmptyState');
+    const masterList = document.getElementById('tpMasterList');
+    const filteredCount = document.getElementById('tpFilteredCount');
+
     const searchQuery = (document.getElementById('tpSearchInput').value || '').trim().toLowerCase();
     const selectedCategory = document.getElementById('tpCategorySelect').value;
 
-    // Filter products
     const filtered = allProducts.filter(p => {
-        // Category filter
         if (selectedCategory && (p.category_name || 'Tanpa Kategori') !== selectedCategory) {
             return false;
         }
-        // Search filter
         if (searchQuery) {
             const matchName = (p.full_name || '').toLowerCase().includes(searchQuery);
             const matchShort = (p.short_label || '').toLowerCase().includes(searchQuery);
@@ -1068,17 +1278,23 @@ function renderProducts() {
         return true;
     });
 
+    filteredCount.innerText = `${filtered.length} Produk`;
+
     if (filtered.length === 0) {
-        container.style.display = 'none';
-        container.innerHTML = '';
-        emptyState.style.display = 'block';
+        if (allProducts.length === 0) {
+            splitContainer.style.display = 'none';
+            emptyState.style.display = 'block';
+        } else {
+            splitContainer.style.display = 'grid';
+            masterList.innerHTML = `<div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 0.8rem;">Tidak ada produk yang cocok dengan pencarian.</div>`;
+        }
         return;
     }
 
     emptyState.style.display = 'none';
-    container.style.display = 'block';
+    splitContainer.style.display = window.innerWidth >= 992 ? 'grid' : 'block';
 
-    // Group filtered products by category
+    // Group by category
     const grouped = {};
     filtered.forEach(p => {
         const cat = p.category_name || 'Tanpa Kategori';
@@ -1088,41 +1304,95 @@ function renderProducts() {
 
     let html = '';
 
-    for (const [catName, products] of Object.entries(grouped)) {
+    for (const [catName, prods] of Object.entries(grouped)) {
+        // If searching, auto-expand matching categories
+        const isCollapsed = searchQuery ? false : (categoryCollapseState[catName] ?? true);
+
         html += `
-            <div class="tp-cat-group" id="catGroup_${escapeHtml(catName).replace(/[^a-zA-Z0-9]/g, '_')}">
-                <div class="tp-cat-header" onclick="toggleCategory('${escapeHtml(catName).replace(/[^a-zA-Z0-9]/g, '_')}')">
-                    <div class="tp-cat-title">
-                        <i class="bi bi-folder-fill" style="color: var(--primary);"></i>
+            <div class="tp-cat-node ${isCollapsed ? 'collapsed' : ''}" id="catNode_${escapeHtml(catName).replace(/[^a-zA-Z0-9]/g, '_')}">
+                <div class="tp-cat-node-header" onclick="toggleCategoryNode('${escapeHtml(catName)}')">
+                    <div class="tp-cat-node-title">
+                        <i class="bi bi-folder2-open" style="color: #f59e0b;"></i>
                         <span>${escapeHtml(catName)}</span>
-                        <span class="tp-cat-badge">${products.length} Produk</span>
+                        <span class="tp-cat-node-badge">${prods.length}</span>
                     </div>
-                    <i class="bi bi-chevron-down tp-cat-chevron"></i>
+                    <i class="bi bi-chevron-down tp-cat-node-chevron"></i>
                 </div>
-                <div class="tp-cat-content">
-                    ${products.map(p => renderProductCard(p)).join('')}
+                <div class="tp-cat-node-items">
+                    ${prods.map(p => {
+                        let tierCount = 0;
+                        (p.packagings || []).forEach(pkg => { tierCount += (pkg.qty_prices || []).length; });
+
+                        const thumbHtml = p.photo 
+                            ? `<img src="${BASE_URL}storage/products/${escapeHtml(p.photo)}" alt="">`
+                            : `<i class="bi bi-box-seam"></i>`;
+
+                        const isActive = p.id === activeProductId;
+
+                        return `
+                            <div class="tp-prod-item ${isActive ? 'active' : ''}" 
+                                 id="prodItem_${p.id}" 
+                                 onclick="selectProduct(${p.id})">
+                                <div class="tp-prod-item-thumb">${thumbHtml}</div>
+                                <div class="tp-prod-item-info">
+                                    <div class="tp-prod-item-name">${escapeHtml(p.short_label || p.full_name)}</div>
+                                    <div class="tp-prod-item-meta">
+                                        <span>${p.code ? escapeHtml(p.code) : ''}</span>
+                                        ${p.brand_name ? `<span>· ${escapeHtml(p.brand_name)}</span>` : ''}
+                                    </div>
+                                </div>
+                                <span class="tp-prod-item-badge">${tierCount} Tier</span>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
             </div>
         `;
     }
 
-    container.innerHTML = html;
+    masterList.innerHTML = html;
 }
 
 /**
- * Toggle category collapse
+ * Select a product to view and edit on the Right Detail Panel
  */
-function toggleCategory(cleanCatId) {
-    const el = document.getElementById(`catGroup_${cleanCatId}`);
-    if (el) {
-        el.classList.toggle('collapsed');
+function selectProduct(productId) {
+    activeProductId = productId;
+
+    // Highlight active in list
+    document.querySelectorAll('.tp-prod-item').forEach(el => el.classList.remove('active'));
+    const activeEl = document.getElementById(`prodItem_${productId}`);
+    if (activeEl) activeEl.classList.add('active');
+
+    renderDetailPanel(productId);
+
+    // On mobile, scroll smoothly to the detail panel
+    if (window.innerWidth < 992) {
+        const detailPanel = document.getElementById('tpDetailPanel');
+        if (detailPanel) {
+            detailPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
     }
 }
 
 /**
- * Render single product card with its packagings & tier rows
+ * Render Detail Panel for a selected Product
  */
-function renderProductCard(p) {
+function renderDetailPanel(productId) {
+    const detailPanel = document.getElementById('tpDetailPanel');
+    const p = allProducts.find(item => item.id === productId);
+
+    if (!p) {
+        detailPanel.innerHTML = `
+            <div class="tp-detail-empty-prompt">
+                <i class="bi bi-hand-index-thumb"></i>
+                <h4>Pilih Produk di Sebelah Kiri</h4>
+                <p>Klik salah satu produk untuk mengedit harga tier grosir.</p>
+            </div>
+        `;
+        return;
+    }
+
     const photoHtml = p.photo 
         ? `<img src="${BASE_URL}storage/products/${escapeHtml(p.photo)}" alt="${escapeHtml(p.full_name)}">`
         : `<i class="bi bi-box-seam"></i>`;
@@ -1130,22 +1400,24 @@ function renderProductCard(p) {
     const brandHtml = p.brand_name ? `<span class="tp-tag tp-tag-brand"><i class="bi bi-award"></i> ${escapeHtml(p.brand_name)}</span>` : '';
     const stockHtml = `<span class="tp-tag tp-tag-stock"><i class="bi bi-stack"></i> Stok: ${formatNum(p.current_qty_base || 0)}</span>`;
     const codeHtml = p.code ? `<span class="tp-tag"><i class="bi bi-upc"></i> ${escapeHtml(p.code)}</span>` : '';
+    const catHtml = `<span class="tp-tag"><i class="bi bi-folder"></i> ${escapeHtml(p.category_name || 'Tanpa Kategori')}</span>`;
 
-    return `
-        <div class="tp-product-card" id="prodCard_${p.id}">
-            <div class="tp-product-header">
-                <div class="tp-product-info">
-                    <div class="tp-product-thumb">${photoHtml}</div>
+    let html = `
+        <div class="tp-product-detail-card" id="detailCard_${p.id}">
+            <div class="tp-detail-banner">
+                <div class="tp-detail-main-info">
+                    <div class="tp-detail-avatar">${photoHtml}</div>
                     <div>
-                        <h3 class="tp-product-name">${escapeHtml(p.short_label || p.full_name)}</h3>
-                        <div class="tp-product-meta">
+                        <h2 class="tp-detail-title">${escapeHtml(p.short_label || p.full_name)}</h2>
+                        <div class="tp-detail-tags">
+                            ${catHtml}
                             ${codeHtml}
                             ${brandHtml}
                             ${stockHtml}
                         </div>
                     </div>
                 </div>
-                <div style="display: flex; gap: 8px;">
+                <div style="display: flex; gap: 6px;">
                     <a href="${BASE_URL}products/${p.id}/edit" class="tp-btn tp-btn-outline tp-btn-sm" target="_blank" title="Edit Lengkap">
                         <i class="bi bi-pencil-square"></i> Edit
                     </a>
@@ -1154,43 +1426,43 @@ function renderProductCard(p) {
                     </a>
                 </div>
             </div>
-            <div class="tp-product-body">
+            <div class="tp-detail-body">
                 ${(p.packagings || []).map(pkg => renderPackagingBox(p, pkg)).join('')}
             </div>
         </div>
     `;
+
+    detailPanel.innerHTML = html;
 }
 
 /**
- * Render a packaging box inside product card
+ * Render packaging block
  */
 function renderPackagingBox(product, pkg) {
     const buyPrice = parseFloat(pkg.buy_price) || 0;
     const sellPrice = parseFloat(pkg.sell_price_retail) || 0;
     const baseQty = parseFloat(pkg.base_qty) || 1;
-    const buyPricePerBase = buyPrice / baseQty;
-
     const normalDiff = sellPrice - buyPrice;
     const normalMarkup = buyPrice > 0 ? ((normalDiff / buyPrice) * 100) : 0;
     const tiers = pkg.qty_prices || [];
 
     const barcodeDisplay = pkg.barcode 
-        ? `<span class="tp-pkg-barcode"><i class="bi bi-upc-scan"></i> ${escapeHtml(pkg.barcode)}</span>`
-        : `<span class="tp-pkg-barcode" style="opacity:0.5;">(Tanpa Barcode)</span>`;
+        ? `<span class="tp-pkg-code"><i class="bi bi-upc-scan"></i> ${escapeHtml(pkg.barcode)}</span>`
+        : `<span class="tp-pkg-code" style="opacity:0.4;">(No Barcode)</span>`;
 
     const unitInfo = pkg.level > 1 && pkg.contained_qty > 1 
         ? `${escapeHtml(pkg.unit_name)} (Isi ${formatNum(pkg.contained_qty)})` 
         : `${escapeHtml(pkg.unit_name)}`;
 
     return `
-        <div class="tp-packaging-box" id="pkgBox_${pkg.id}">
-            <div class="tp-packaging-top">
-                <div class="tp-packaging-title">
-                    <span class="tp-pkg-level-badge">Lvl ${pkg.level}</span>
-                    <span class="tp-pkg-name">${unitInfo}</span>
+        <div class="tp-pkg-box" id="pkgBox_${pkg.id}">
+            <div class="tp-pkg-top-bar">
+                <div class="tp-pkg-badge-group">
+                    <span class="tp-pkg-lvl">Lvl ${pkg.level}</span>
+                    <span class="tp-pkg-unit">${unitInfo}</span>
                     ${barcodeDisplay}
                 </div>
-                <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
                     <span class="tp-save-indicator" id="saveInd_${pkg.id}">
                         <i class="bi bi-check-circle-fill"></i> Tersimpan
                     </span>
@@ -1200,32 +1472,32 @@ function renderPackagingBox(product, pkg) {
                 </div>
             </div>
 
-            <!-- Base Price Strip -->
-            <div class="tp-base-strip">
-                <div class="tp-base-item">
-                    <span class="tp-base-label">Harga Modal Kemasan</span>
-                    <span class="tp-base-value cost" id="txtBuyPrice_${pkg.id}">${formatRupiah(buyPrice)}</span>
+            <!-- Financial Strip -->
+            <div class="tp-finance-grid">
+                <div class="tp-finance-item">
+                    <span class="tp-finance-label">Modal Kemasan</span>
+                    <span class="tp-finance-val cost" id="txtBuyPrice_${pkg.id}">${formatRupiah(buyPrice)}</span>
                 </div>
-                <div class="tp-base-item">
-                    <span class="tp-base-label">Harga Jual Normal</span>
-                    <div class="tp-base-input-wrap">
-                        <span class="tp-base-input-prefix">Rp</span>
+                <div class="tp-finance-item">
+                    <span class="tp-finance-label">Harga Jual Normal</span>
+                    <div class="tp-finance-inp-wrap">
+                        <span class="tp-finance-prefix">Rp</span>
                         <input type="number" 
-                               class="tp-base-input" 
+                               class="tp-finance-inp" 
                                id="inpSellPrice_${pkg.id}" 
                                value="${Math.round(sellPrice)}" 
                                step="100" 
                                oninput="onPkgPriceChange(${pkg.id}, ${buyPrice}, ${baseQty})">
                     </div>
                 </div>
-                <div class="tp-base-item">
-                    <span class="tp-base-label">Selisih Jual - Beli</span>
-                    <span class="tp-base-value ${normalDiff >= 0 ? 'profit' : 'cost'}" id="txtDiff_${pkg.id}">
+                <div class="tp-finance-item">
+                    <span class="tp-finance-label">Selisih Normal</span>
+                    <span class="tp-finance-val ${normalDiff >= 0 ? 'profit' : 'cost'}" id="txtDiff_${pkg.id}">
                         ${normalDiff >= 0 ? '+' : ''}${formatRupiah(normalDiff)}
                     </span>
                 </div>
-                <div class="tp-base-item">
-                    <span class="tp-base-label">Markup Normal</span>
+                <div class="tp-finance-item">
+                    <span class="tp-finance-label">Markup Normal</span>
                     <div>
                         <span class="tp-markup-badge ${normalMarkup >= 0 ? '' : 'loss'}" id="txtMarkup_${pkg.id}">
                             ${normalMarkup >= 0 ? '+' : ''}${normalMarkup.toFixed(1)}%
@@ -1239,14 +1511,14 @@ function renderPackagingBox(product, pkg) {
                 <table class="tp-table" id="tierTable_${pkg.id}">
                     <thead>
                         <tr>
-                            <th style="width: 110px;">Min. Beli</th>
-                            <th style="width: 150px;">Harga Tier / Kemasan</th>
-                            <th>Total Belanja</th>
-                            <th>Keuntungan / Kemasan</th>
-                            <th>Keuntungan Total</th>
-                            <th>Markup Tier %</th>
+                            <th style="width: 90px;">Min. Beli</th>
+                            <th style="width: 130px;">Harga Tier</th>
+                            <th>Total</th>
+                            <th>Untung / Satuan</th>
+                            <th>Untung Total</th>
+                            <th>Markup Tier</th>
                             <th>Hemat Pembeli</th>
-                            <th style="width: 50px; text-align: center;">Aksi</th>
+                            <th style="width: 40px; text-align: center;">Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="tierTbody_${pkg.id}">
@@ -1260,8 +1532,8 @@ function renderPackagingBox(product, pkg) {
                 <button type="button" class="tp-btn tp-btn-outline tp-btn-sm" onclick="addTierRow(${pkg.id}, ${buyPrice})">
                     <i class="bi bi-plus-lg"></i> Tambah Tier
                 </button>
-                <div style="font-size: 0.78rem; color: var(--text-muted);">
-                    <i class="bi bi-info-circle"></i> Nilai keuntungan & markup otomatis dikalkulasi secara real-time.
+                <div style="font-size: 0.72rem; color: var(--text-muted);">
+                    <i class="bi bi-lightning-charge-fill" style="color: #f59e0b;"></i> Keuntungan &amp; hemat dihitung instan saat diketik.
                 </div>
             </div>
         </div>
@@ -1325,7 +1597,7 @@ function renderTierRow(pkgId, tier, buyPrice, normalSellPrice, index) {
                 </span>
             </td>
             <td>
-                <span class="tier-txt-saving" style="font-size: 0.8rem; color: ${customerSaving > 0 ? '#3b82f6' : 'var(--text-muted)'}; font-weight: 600;">
+                <span class="tier-txt-saving" style="font-size: 0.76rem; color: ${customerSaving > 0 ? '#3b82f6' : 'var(--text-muted)'}; font-weight: 600;">
                     ${customerSaving > 0 ? `Hemat ${formatRupiah(customerSaving)}` : '-'}
                 </span>
             </td>
@@ -1350,7 +1622,7 @@ function onPkgPriceChange(pkgId, buyPrice, baseQty) {
 
     const diffEl = document.getElementById(`txtDiff_${pkgId}`);
     if (diffEl) {
-        diffEl.className = `tp-base-value ${diff >= 0 ? 'profit' : 'cost'}`;
+        diffEl.className = `tp-finance-val ${diff >= 0 ? 'profit' : 'cost'}`;
         diffEl.innerText = `${diff >= 0 ? '+' : ''}${formatRupiah(diff)}`;
     }
 
@@ -1360,7 +1632,6 @@ function onPkgPriceChange(pkgId, buyPrice, baseQty) {
         markupEl.innerText = `${markup >= 0 ? '+' : ''}${markup.toFixed(1)}%`;
     }
 
-    // Recalculate customer savings on all tier rows for this packaging
     const tbody = document.getElementById(`tierTbody_${pkgId}`);
     if (tbody) {
         const rows = tbody.querySelectorAll('tr');
@@ -1425,7 +1696,7 @@ function recalcTierRow(pkgId, index) {
 }
 
 /**
- * Add a new tier row to packaging
+ * Add a new tier row
  */
 function addTierRow(pkgId, buyPrice) {
     const tbody = document.getElementById(`tierTbody_${pkgId}`);
@@ -1435,7 +1706,6 @@ function addTierRow(pkgId, buyPrice) {
     const sellInp = document.getElementById(`inpSellPrice_${pkgId}`);
     const normalSell = parseFloat(sellInp ? sellInp.value : 0) || 0;
 
-    // Suggest reasonable default tier: min_qty 5, unit_price 90% of normalSell
     const defMinQty = 5;
     const defUnitPrice = normalSell > 0 ? Math.round((normalSell * 0.9) / 100) * 100 : buyPrice * 1.1;
 
@@ -1462,7 +1732,6 @@ async function savePackagingChanges(productId, pkgId) {
     const sellInp = document.getElementById(`inpSellPrice_${pkgId}`);
     const newSellPrice = parseFloat(sellInp.value) || 0;
 
-    // Collect all tiers from tbody
     const tbody = document.getElementById(`tierTbody_${pkgId}`);
     const rows = tbody ? tbody.querySelectorAll('tr') : [];
     const tiers = [];
@@ -1479,7 +1748,6 @@ async function savePackagingChanges(productId, pkgId) {
         }
     });
 
-    // Find in-memory packaging
     let targetPkg = null;
     for (const p of allProducts) {
         if (p.id === productId) {
@@ -1530,17 +1798,16 @@ async function savePackagingChanges(productId, pkgId) {
             targetPkg.qty_prices = tiers;
         }
 
-        // If product has no tiers left on any packaging, update stats
         updateStats();
+        renderMasterList();
 
-        // Show indicator
         const ind = document.getElementById(`saveInd_${pkgId}`);
         if (ind) {
             ind.classList.add('show');
             setTimeout(() => ind.classList.remove('show'), 2500);
         }
 
-        showToast('Harga jual & tier harga berhasil disimpan!', 'success');
+        showToast('Harga jual & tier berhasil disimpan!', 'success');
 
     } catch (err) {
         console.error('Save packaging error:', err);
@@ -1561,7 +1828,7 @@ function openAddProductModal() {
     document.getElementById('modalSelectedProductBox').style.display = 'none';
     document.getElementById('modalBtnSubmit').disabled = true;
     selectedModalProduct = null;
-    setTimeout(() => document.getElementById('modalProductSearch').focus(), 150);
+    setTimeout(() => document.getElementById('modalProductSearch').focus(), 120);
 }
 
 function closeAddProductModal() {
@@ -1571,7 +1838,7 @@ function closeAddProductModal() {
 
 function debounceModalSearch() {
     clearTimeout(modalSearchTimeout);
-    modalSearchTimeout = setTimeout(searchModalProducts, 280);
+    modalSearchTimeout = setTimeout(searchModalProducts, 260);
 }
 
 async function searchModalProducts() {
@@ -1593,7 +1860,7 @@ async function searchModalProducts() {
 
         spinner.style.display = 'none';
         if (!Array.isArray(results) || results.length === 0) {
-            resBox.innerHTML = `<div style="padding: 12px; color: var(--text-muted); font-size: 0.85rem; text-align: center;">Tidak ada produk ditemukan.</div>`;
+            resBox.innerHTML = `<div style="padding: 10px; color: var(--text-muted); font-size: 0.8rem; text-align: center;">Tidak ada produk ditemukan.</div>`;
             resBox.style.display = 'block';
             return;
         }
@@ -1601,8 +1868,8 @@ async function searchModalProducts() {
         let html = '';
         results.forEach(p => {
             const thumb = p.photo 
-                ? `<img src="${BASE_URL}storage/products/${escapeHtml(p.photo)}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;">`
-                : `<div style="width:36px;height:36px;border-radius:6px;background:var(--surface-3);display:flex;align-items:center;justify-content:center;color:var(--text-muted);"><i class="bi bi-box"></i></div>`;
+                ? `<img src="${BASE_URL}storage/products/${escapeHtml(p.photo)}" style="width:30px;height:30px;border-radius:5px;object-fit:cover;">`
+                : `<div style="width:30px;height:30px;border-radius:5px;background:var(--surface-3);display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.75rem;"><i class="bi bi-box"></i></div>`;
 
             const name = escapeHtml(p.short_label || p.full_name);
             const brand = p.brand_name ? ` · ${escapeHtml(p.brand_name)}` : '';
@@ -1612,14 +1879,14 @@ async function searchModalProducts() {
                 <div class="tp-modal-res-item" onclick="selectModalProduct(${p.id})">
                     ${thumb}
                     <div style="flex: 1; min-width: 0;">
-                        <div style="font-weight: 700; font-size: 0.88rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        <div style="font-weight: 700; font-size: 0.82rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             ${code}${name}
                         </div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted);">
+                        <div style="font-size: 0.7rem; color: var(--text-muted);">
                             ${escapeHtml(p.category_name || 'Tanpa Kategori')}${brand}
                         </div>
                     </div>
-                    <i class="bi bi-chevron-right" style="color: var(--text-muted);"></i>
+                    <i class="bi bi-chevron-right" style="color: var(--text-muted); font-size: 0.75rem;"></i>
                 </div>
             `;
         });
@@ -1633,9 +1900,6 @@ async function searchModalProducts() {
     }
 }
 
-/**
- * Select a product from search results
- */
 async function selectModalProduct(productId) {
     const resBox = document.getElementById('modalSearchResults');
     resBox.style.display = 'none';
@@ -1660,25 +1924,23 @@ async function selectModalProduct(productId) {
 
         selectedModalProduct = p;
 
-        // Render selected box
         const box = document.getElementById('modalSelectedProductBox');
         box.style.display = 'block';
 
         const thumbBox = document.getElementById('modalSelectedThumb');
         thumbBox.innerHTML = p.photo 
-            ? `<img src="${BASE_URL}storage/products/${escapeHtml(p.photo)}" style="width:100%;height:100%;border-radius:9px;object-fit:cover;">`
+            ? `<img src="${BASE_URL}storage/products/${escapeHtml(p.photo)}" style="width:100%;height:100%;border-radius:5px;object-fit:cover;">`
             : `<i class="bi bi-box-seam"></i>`;
 
         document.getElementById('modalSelectedName').innerText = p.short_label || p.full_name;
         document.getElementById('modalSelectedMeta').innerText = `${p.category_name || 'Tanpa Kategori'} · ${p.brand_name || 'Tanpa Brand'}`;
 
-        // Populate packagings select
         const pkgSel = document.getElementById('modalPackagingSelect');
         pkgSel.innerHTML = '';
         p.packagings.forEach(pkg => {
             const opt = document.createElement('option');
             opt.value = pkg.id;
-            opt.textContent = `Level ${pkg.level}: ${pkg.unit_name} (Modal: ${formatRupiah(pkg.buy_price)} | Jual: ${formatRupiah(pkg.sell_price_retail)})`;
+            opt.textContent = `Lvl ${pkg.level}: ${pkg.unit_name} (Modal: ${formatRupiah(pkg.buy_price)} | Jual: ${formatRupiah(pkg.sell_price_retail)})`;
             pkgSel.appendChild(opt);
         });
 
@@ -1691,9 +1953,6 @@ async function selectModalProduct(productId) {
     }
 }
 
-/**
- * Packaging selected in modal
- */
 function onModalPackagingSelect() {
     if (!selectedModalProduct) return;
     const pkgId = parseInt(document.getElementById('modalPackagingSelect').value);
@@ -1706,16 +1965,12 @@ function onModalPackagingSelect() {
     document.getElementById('modalPkgBuyPrice').innerText = formatRupiah(buyPrice);
     document.getElementById('modalPkgSellPrice').innerText = formatRupiah(sellPrice);
 
-    // Default tier unit price = 90% of sell price or buy price + 10%
     const defUnitPrice = sellPrice > 0 ? Math.round((sellPrice * 0.9) / 100) * 100 : Math.round(buyPrice * 1.1);
     document.getElementById('modalTierUnitPrice').value = defUnitPrice;
 
     recalcModalTier();
 }
 
-/**
- * Recalculate preview in modal
- */
 function recalcModalTier() {
     if (!selectedModalProduct) return;
     const pkgId = parseInt(document.getElementById('modalPackagingSelect').value);
@@ -1741,9 +1996,6 @@ function recalcModalTier() {
     profitTotalEl.style.color = profitTotal >= 0 ? '#10b981' : '#ef4444';
 }
 
-/**
- * Save new product tier from modal
- */
 async function saveNewProductTier() {
     if (!selectedModalProduct) return;
     const btn = document.getElementById('modalBtnSubmit');
@@ -1785,7 +2037,8 @@ async function saveNewProductTier() {
         showToast('Produk berhasil ditambahkan ke tier pricing!', 'success');
         closeAddProductModal();
 
-        // Reload data to reflect changes
+        // Make sure newly added product is active
+        activeProductId = selectedModalProduct.id;
         await loadTierProducts();
 
     } catch (err) {
