@@ -9,8 +9,8 @@
  * They are cached on first request via the Cache-First fetch handler.
  * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v46.5';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v46.5';
+const CACHE_NAME = 'alfarezmart-cache-v46.6';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v46.6';
 const APP_ASSET_VERSION = '25.25';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [

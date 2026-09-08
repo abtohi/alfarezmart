@@ -36,21 +36,43 @@
             </div>
             <div style="flex:1;">
                 <label style="font-size:var(--font-size-xs); color:var(--text-muted); margin-bottom:4px; display:block;">Foto Invoice</label>
-                <input type="file" id="invoicePhotoCam" accept="image/*" capture="environment" style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; z-index:-1;" onchange="handlePhotoSelect(event, true)">
-                <input type="file" id="invoicePhotoGal" accept="image/*" style="position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; z-index:-1;" onchange="handlePhotoSelect(event, false)">
+                <input type="file" id="invoicePhotoCam" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event, true)">
+                <input type="file" id="invoicePhotoGal" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event, false)">
                 <div style="display:flex; gap:4px; align-items:center;">
-                    <label for="invoicePhotoCam" class="btn-outline-custom" id="btnPhotoCam" style="flex:1; padding:8px 4px; font-size:11px; display:inline-flex; align-items:center; justify-content:center; gap:4px; cursor:pointer; margin:0;">
+                    <button type="button" class="btn-outline-custom" id="btnPhotoCam" onclick="triggerCameraCapture(event)" style="flex:1; padding:8px 4px; font-size:11px; display:inline-flex; align-items:center; justify-content:center; gap:4px; cursor:pointer; margin:0;">
                         <i class="bi bi-camera"></i> Kamera
-                    </label>
-                    <label for="invoicePhotoGal" class="btn-outline-custom" id="btnPhotoGal" style="flex:1; padding:8px 4px; font-size:11px; display:inline-flex; align-items:center; justify-content:center; gap:4px; cursor:pointer; margin:0;">
+                    </button>
+                    <button type="button" class="btn-outline-custom" id="btnPhotoGal" onclick="triggerGalleryPicker(event)" style="flex:1; padding:8px 4px; font-size:11px; display:inline-flex; align-items:center; justify-content:center; gap:4px; cursor:pointer; margin:0;">
                         <i class="bi bi-image"></i> Galeri
-                    </label>
+                    </button>
                     <?php if (!empty($purchase['invoice_photo'])): ?>
                         <a href="<?= invoicePhotoUrl($purchase['invoice_photo']) ?>" target="_blank" class="btn-outline-custom" style="padding:8px; font-size:11px; text-decoration:none;" title="Lihat Foto Lama">
                             <i class="bi bi-eye"></i>
                         </a>
                     <?php endif; ?>
                 </div>
+
+                <!-- Thumbnail Preview Card if New Photo Selected -->
+                <div id="invoicePhotoPreviewCard" style="display:none; margin-top:6px; padding:8px 10px; background:var(--bg-input, rgba(255,255,255,0.03)); border:1px solid var(--border-color); border-radius:var(--radius-md, 8px); align-items:center; gap:10px;">
+                    <div style="position:relative; width:40px; height:40px; border-radius:6px; overflow:hidden; border:1px solid var(--border-color); flex-shrink:0; background:#000; display:flex; align-items:center; justify-content:center;">
+                        <img id="invoicePhotoThumbnail" src="" alt="Thumbnail Invoice" style="width:100%; height:100%; object-fit:cover; display:block;">
+                    </div>
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size:11px; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Foto Baru Disiapkan</div>
+                        <div style="font-size:10px; color:var(--color-success, #10b981); display:flex; align-items:center; gap:3px;">
+                            <i class="bi bi-check-circle-fill"></i> Siap scan / simpan
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:4px; flex-shrink:0;">
+                        <button type="button" class="btn-outline-custom" onclick="reopenPhotoPreview()" style="padding:4px 8px; font-size:10px; height:28px; border-radius:6px;" title="Atur atau putar kembali">
+                            <i class="bi bi-pencil-square"></i>
+                        </button>
+                        <button type="button" class="btn-outline-custom" onclick="removeInvoicePhoto()" style="padding:4px 6px; font-size:10px; height:28px; border-radius:6px; color:var(--color-danger, #ef4444); border-color:rgba(239,68,68,0.3);" title="Hapus foto baru">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+
                 <div style="display:flex; gap:4px; margin-top:4px;">
                     <?php
                     $currentAiModel = $aiModel ?? 'openrouter/auto';
@@ -73,8 +95,8 @@
     </div>
 
     <!-- Photo Preview Modal with Rotation & Document Enhancement -->
-    <div id="photoPreviewModal" class="modal-backdrop" style="display:none; z-index:2000; padding:16px; align-items:center; justify-content:center;">
-        <div class="modal-content" style="width:100%; max-width:680px; height:88vh; max-height:850px; padding:0; overflow:hidden; display:flex; flex-direction:column; background:var(--surface-1, #1e293b); border:1px solid var(--border-color); border-radius:var(--radius-xl, 16px); box-shadow:0 25px 60px -15px rgba(0,0,0,0.6);">
+    <div id="photoPreviewModal" class="photo-preview-overlay" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.82); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); padding:16px; align-items:center; justify-content:center; box-sizing:border-box;" onclick="if(event.target === this) closePhotoPreview()">
+        <div class="modal-content" style="width:100%; max-width:680px; height:88vh; max-height:850px; padding:0; overflow:hidden; display:flex; flex-direction:column; background:var(--surface-1, #1e293b); border:1px solid var(--border-color); border-radius:var(--radius-xl, 16px); box-shadow:0 25px 60px -15px rgba(0,0,0,0.6); position:relative;" onclick="event.stopPropagation()">
             <!-- Modal Header -->
             <div style="padding:14px 18px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; background:var(--surface-2, rgba(255,255,255,0.03));">
                 <div style="display:flex; align-items:center; gap:10px;">
@@ -306,32 +328,90 @@ let purchaseId = <?= (int)($purchase['id'] ?? 0) ?>;
 // Inject Existing Data
 const existingItems = <?= json_encode($purchase['items'] ?? []) ?>;
 
+function triggerCameraCapture(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const cam = document.getElementById('invoicePhotoCam');
+    if (cam) {
+        cam.value = '';
+        cam.click();
+    }
+}
+
+function triggerGalleryPicker(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const gal = document.getElementById('invoicePhotoGal');
+    if (gal) {
+        gal.value = '';
+        gal.click();
+    }
+}
+
 function handlePhotoSelect(e, isCamera) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        originalPhotoImg = new Image();
-        originalPhotoImg.onload = function() {
+    // Validate file type
+    if (file.type && !file.type.startsWith('image/')) {
+        showToast('File yang dipilih bukan gambar', 'error');
+        return;
+    }
+
+    showToast('Memuat foto invoice...', 'info');
+
+    const loadImageToCanvas = (src, isBlob = false) => {
+        const img = new Image();
+        img.onload = function() {
+            originalPhotoImg = img;
             photoRotationAngle = 0;
             const badge = document.getElementById('photoRotationBadge');
             if (badge) badge.textContent = '0°';
 
             const modal = document.getElementById('photoPreviewModal');
-            if (modal) modal.style.display = 'flex';
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
             const chk = document.getElementById('chkEnhancePhoto');
             if (chk) chk.checked = true; // Default to document mode
             applyPhotoFilter();
 
-            const cam = document.getElementById('invoicePhotoCam');
-            const gal = document.getElementById('invoicePhotoGal');
-            if (cam) cam.value = '';
-            if (gal) gal.value = '';
+            if (isBlob && src.startsWith('blob:')) {
+                URL.revokeObjectURL(src);
+            }
         };
-        originalPhotoImg.src = event.target.result;
+        img.onerror = function() {
+            if (isBlob && src.startsWith('blob:')) {
+                URL.revokeObjectURL(src);
+            }
+            if (isBlob) {
+                const fr = new FileReader();
+                fr.onload = function(ev) { loadImageToCanvas(ev.target.result, false); };
+                fr.onerror = function() { showToast('Gagal memuat foto invoice. Format tidak didukung.', 'error'); };
+                fr.readAsDataURL(file);
+            } else {
+                showToast('Gagal memproses gambar foto invoice.', 'error');
+            }
+        };
+        img.src = src;
     };
-    reader.readAsDataURL(file);
+
+    if (window.URL && typeof window.URL.createObjectURL === 'function') {
+        try {
+            const blobUrl = URL.createObjectURL(file);
+            loadImageToCanvas(blobUrl, true);
+        } catch (err) {
+            console.warn('URL.createObjectURL failed, falling back to FileReader:', err);
+            const reader = new FileReader();
+            reader.onload = function(event) { loadImageToCanvas(event.target.result, false); };
+            reader.onerror = function() { showToast('Gagal membaca file foto', 'error'); };
+            reader.readAsDataURL(file);
+        }
+    } else {
+        const reader = new FileReader();
+        reader.onload = function(event) { loadImageToCanvas(event.target.result, false); };
+        reader.onerror = function() { showToast('Gagal membaca file foto', 'error'); };
+        reader.readAsDataURL(file);
+    }
 }
 
 function rotatePhotoPreview(delta) {
@@ -352,9 +432,50 @@ function resetPhotoPreview() {
     applyPhotoFilter();
 }
 
+function reopenPhotoPreview() {
+    if (!originalPhotoImg && !invoicePhotoBase64) return;
+    const modal = document.getElementById('photoPreviewModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        applyPhotoFilter();
+    }
+}
+
 function closePhotoPreview() {
     const modal = document.getElementById('photoPreviewModal');
     if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function removeInvoicePhoto() {
+    invoicePhotoBase64 = null;
+    originalPhotoImg = null;
+    photoRotationAngle = 0;
+
+    const cam = document.getElementById('invoicePhotoCam');
+    const gal = document.getElementById('invoicePhotoGal');
+    if (cam) cam.value = '';
+    if (gal) gal.value = '';
+
+    const previewCard = document.getElementById('invoicePhotoPreviewCard');
+    if (previewCard) previewCard.style.display = 'none';
+
+    const btnCam = document.getElementById('btnPhotoCam');
+    const btnGal = document.getElementById('btnPhotoGal');
+    if (btnCam) {
+        btnCam.className = 'btn-outline-custom';
+        btnCam.innerHTML = '<i class="bi bi-camera"></i> Kamera';
+    }
+    if (btnGal) {
+        btnGal.className = 'btn-outline-custom';
+        btnGal.innerHTML = '<i class="bi bi-image"></i> Galeri';
+    }
+
+    const btnScan = document.getElementById('btnScanAI');
+    if (btnScan) btnScan.style.display = 'none';
+
+    showToast('Foto invoice baru dihapus', 'info');
 }
 
 function applyPhotoFilter() {
@@ -364,8 +485,10 @@ function applyPhotoFilter() {
     const chk = document.getElementById('chkEnhancePhoto');
     const isEnhanced = chk ? chk.checked : true;
     
-    let origW = originalPhotoImg.naturalWidth || originalPhotoImg.width;
-    let origH = originalPhotoImg.naturalHeight || originalPhotoImg.height;
+    let origW = originalPhotoImg.naturalWidth || originalPhotoImg.width || 0;
+    let origH = originalPhotoImg.naturalHeight || originalPhotoImg.height || 0;
+    if (origW <= 0 || origH <= 0) return;
+
     const max_size = 1600;
     
     let targetW = origW;
@@ -389,9 +512,15 @@ function applyPhotoFilter() {
     
     if (isEnhanced) {
         // Document mode: crisp contrast and brightness for OCR text readability
-        ctx.filter = 'grayscale(100%) contrast(145%) brightness(108%)';
+        try {
+            ctx.filter = 'grayscale(100%) contrast(145%) brightness(108%)';
+        } catch(e) {
+            ctx.filter = 'none';
+        }
     } else {
-        ctx.filter = 'none';
+        try {
+            ctx.filter = 'none';
+        } catch(e) {}
     }
     
     ctx.save();
@@ -408,20 +537,29 @@ function savePhotoPreview() {
     if (!canvas) return;
     invoicePhotoBase64 = canvas.toDataURL('image/jpeg', 0.85);
     
+    // Update thumbnail card
+    const previewCard = document.getElementById('invoicePhotoPreviewCard');
+    const thumbnailImg = document.getElementById('invoicePhotoThumbnail');
+    if (thumbnailImg) thumbnailImg.src = invoicePhotoBase64;
+    if (previewCard) previewCard.style.display = 'flex';
+
+    // Update buttons to show active status
     const btnCam = document.getElementById('btnPhotoCam');
     const btnGal = document.getElementById('btnPhotoGal');
-    btnCam.className = 'btn-success-custom';
-    btnGal.className = 'btn-success-custom';
-    btnCam.style.flex = '1'; btnGal.style.flex = '1';
-    btnCam.style.padding = '8px 4px'; btnGal.style.padding = '8px 4px';
-    btnCam.style.fontSize = '11px'; btnGal.style.fontSize = '11px';
-    btnCam.innerHTML = '<i class="bi bi-check2-circle"></i> OK';
-    btnGal.innerHTML = '<i class="bi bi-check2-circle"></i> OK';
+    if (btnCam) {
+        btnCam.className = 'btn-outline-custom';
+        btnCam.innerHTML = '<i class="bi bi-camera"></i> Kamera';
+    }
+    if (btnGal) {
+        btnGal.className = 'btn-outline-custom';
+        btnGal.innerHTML = '<i class="bi bi-image"></i> Galeri';
+    }
     
-    document.getElementById('btnScanAI').style.display = 'block';
+    const btnScan = document.getElementById('btnScanAI');
+    if (btnScan) btnScan.style.display = 'block';
     
     closePhotoPreview();
-    showToast('Foto berhasil disiapkan', 'success');
+    showToast('Foto invoice berhasil disiapkan', 'success');
 }
 
 // Helper to safely optimize any high-res image down to perfect OCR dimensions (< 300KB JPEG)

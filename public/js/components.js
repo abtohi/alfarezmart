@@ -61,7 +61,7 @@ const AppModal = {
         });
         window.addEventListener('pagehide', () => {
             document.body.style.overflow = '';
-            document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
+            document.querySelectorAll('.modal-backdrop:not(#photoPreviewModal):not([data-permanent="true"])').forEach(backdrop => backdrop.remove());
         });
     },
 
