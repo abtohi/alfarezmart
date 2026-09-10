@@ -1820,6 +1820,8 @@ async function submitProduct(e) {
                 const unitId = unitSB ? unitSB.getValue() : '';
                 const unitName = unitSB ? unitSB.getLabel() : '';
                 const pkgId = div.getAttribute('data-pkg-id');
+                const existingPkg = (localProduct.packagings || []).find(p => p.id == pkgId);
+                const existingQtyPrices = existingPkg && Array.isArray(existingPkg.qty_prices) ? existingPkg.qty_prices : [];
                 updatedPackagings.push({
                     id: pkgId ? parseInt(pkgId) : (Date.now() + idx),
                     product_id: parseInt(productId),
@@ -1833,7 +1835,8 @@ async function submitProduct(e) {
                     barcode: div.querySelector('.barcode-field')?.value || '',
                     ppn_pct: parseFloat(div.querySelector('.ppn-input')?.value) || 0,
                     discount_mode: div.querySelector('.discount-mode')?.value || 'rp',
-                    discount_value: parseFloat(div.querySelector('.discount-value')?.value) || 0
+                    discount_value: parseFloat(div.querySelector('.discount-value')?.value) || 0,
+                    qty_prices: existingQtyPrices
                 });
             });
             localProduct.packagings = updatedPackagings;

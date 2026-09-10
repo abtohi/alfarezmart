@@ -543,6 +543,9 @@ class InvoiceScanService
             ORDER BY pp.product_id, pp.level ASC
         ");
         $allPkgs = $pkgStmt->fetchAll(\PDO::FETCH_ASSOC);
+        if (!empty($allPkgs)) {
+            $allPkgs = $this->productModel->attachQtyPricesToPackagings($allPkgs);
+        }
         $pkgsByProduct = [];
         foreach ($allPkgs as $pkg) {
             $pkgsByProduct[$pkg['product_id']][] = $pkg;

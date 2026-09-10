@@ -147,9 +147,11 @@ class PurchaseModel extends Model
                                     ':pkg_id' => $pDb['id']
                                 ]);
 
-                                // Save tier prices if provided
-                                if (isset($pUpdate['qty_prices'])) {
+                                // Save tier prices if provided and not empty, or when explicit deletion is requested
+                                if (!empty($pUpdate['qty_prices'])) {
                                     $productModel->saveQtyPricesForPackaging($pDb['id'], $pUpdate['qty_prices']);
+                                } elseif (!empty($pUpdate['allow_tier_delete'])) {
+                                    $productModel->saveQtyPricesForPackaging($pDb['id'], []);
                                 }
                             }
                         }
@@ -591,8 +593,11 @@ class PurchaseModel extends Model
                                     ':pkg_id' => $pDb['id']
                                 ]);
 
-                                if (isset($pUpdate['qty_prices'])) {
+                                // Save tier prices if provided and not empty, or when explicit deletion is requested
+                                if (!empty($pUpdate['qty_prices'])) {
                                     $productModel->saveQtyPricesForPackaging($pDb['id'], $pUpdate['qty_prices']);
+                                } elseif (!empty($pUpdate['allow_tier_delete'])) {
+                                    $productModel->saveQtyPricesForPackaging($pDb['id'], []);
                                 }
                             }
                         }

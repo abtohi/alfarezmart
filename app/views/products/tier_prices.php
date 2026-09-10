@@ -2512,6 +2512,23 @@ async function savePackagingChanges(productId, pkgId) {
             targetPkg.qty_prices = tiers;
         }
 
+        if (typeof OfflineDB !== 'undefined' && OfflineDB.getProductById && OfflineDB.saveProduct && activeProductId) {
+            try {
+                const prod = await OfflineDB.getProductById(activeProductId);
+                if (prod && Array.isArray(prod.packagings)) {
+                    const p = prod.packagings.find(x => x.id == pkgId);
+                    if (p) {
+                        p.sell_price_retail = newSellPrice;
+                        p.sell_price_wholesale = wholesalePrice;
+                        p.qty_prices = tiers;
+                        await OfflineDB.saveProduct(prod);
+                    }
+                }
+            } catch (dexieErr) {
+                console.warn('OfflineDB sync failed in tier_prices:', dexieErr);
+            }
+        }
+
         updateStats();
         renderMasterList();
 

@@ -840,18 +840,19 @@ async function scanInvoiceWithAI() {
                 if (item.is_matched && item.product_id) {
                     try {
                         let productData = item.product_data;
-                        // If product_data from backend has no packagings, fetch full data
-                        if (!productData || !productData.packagings || productData.packagings.length === 0) {
-                            if (typeof OfflineDB !== 'undefined') {
-                                const offlineData = await OfflineDB.getProductById(item.product_id);
-                                if (offlineData && offlineData.packagings && offlineData.packagings.length > 0) {
-                                    productData = offlineData;
-                                }
-                            }
-                            if ((!productData || !productData.packagings || productData.packagings.length === 0) && navigator.onLine) {
+                        // If product_data from backend has no packagings or missing qty_prices, fetch full data
+                        const hasTiersField = productData?.packagings?.some(p => Array.isArray(p.qty_prices));
+                        if (!productData || !productData.packagings || productData.packagings.length === 0 || !hasTiersField) {
+                            if (navigator.onLine) {
                                 const apiData = await api(`${BASE_URL}api/products/${item.product_id}`);
                                 if (apiData && apiData.packagings && apiData.packagings.length > 0) {
                                     productData = apiData;
+                                }
+                            }
+                            if ((!productData || !productData.packagings || productData.packagings.length === 0) && typeof OfflineDB !== 'undefined') {
+                                const offlineData = await OfflineDB.getProductById(item.product_id);
+                                if (offlineData && offlineData.packagings && offlineData.packagings.length > 0) {
+                                    productData = offlineData;
                                 }
                             }
                             // Merge: if we had product_data with name but no packagings, keep the name
@@ -899,7 +900,8 @@ async function scanInvoiceWithAI() {
                                 if (p._orig_ret === undefined) p._orig_ret = parseFloat(p.sell_price_retail) || 0;
                                 p.harga_nett = parseFloat(p.buy_price) || 0;
                                 // Preserve qty_prices (tier pricing) from DB — never strip them
-                                if (!p.qty_prices) p.qty_prices = [];
+                                p.qty_prices = Array.isArray(p.qty_prices) ? JSON.parse(JSON.stringify(p.qty_prices)) : [];
+                                p.tier_cleared = false;
                                 // Ensure sell prices from DB are never blanked to 0
                                 p.sell_price_retail = parseFloat(p.sell_price_retail) || 0;
                                 p.sell_price_wholesale = parseFloat(p.sell_price_wholesale) || 0;
@@ -1832,12 +1834,21 @@ async function selectProductToLink(tempId, productId) {
     if (!item) return;
 
     try {
+        // Clean up any existing drawer DOM for this item before linking the new product
+        // so that collectDrawerDataForItem() will NOT read stale tiers or prices from the old product!
+        const oldDrawer = document.getElementById(`drawer_${tempId}`) || document.querySelector(`.bulk-item[data-bulk-id="${tempId}"] .bulk-drawer`);
+        if (oldDrawer) oldDrawer.remove();
+
         let productData = null;
-        if (typeof OfflineDB !== 'undefined') {
-            productData = await OfflineDB.getProductById(productId);
+        if (navigator.onLine) {
+            try {
+                productData = await api(`${BASE_URL}api/products/${productId}`);
+            } catch (e) {
+                console.warn('Online product fetch failed, fallback to offline DB:', e);
+            }
         }
-        if (!productData && navigator.onLine) {
-            productData = await api(`${BASE_URL}api/products/${productId}`);
+        if (!productData && typeof OfflineDB !== 'undefined') {
+            productData = await OfflineDB.getProductById(productId);
         }
         if (!productData || !productData.packagings || productData.packagings.length === 0) {
             showToast('Data produk tidak lengkap', 'error');
@@ -1877,8 +1888,9 @@ async function selectProductToLink(tempId, productId) {
             if (p.diskon_mode === undefined) p.diskon_mode = item.diskon_mode || 'rp';
             if (p.diskon_value === undefined) p.diskon_value = item.diskon_value || 0;
             p.harga_nett = parseFloat(p.buy_price) || 0;
-            // PRESERVE tier pricing (qty_prices) from DB — never wipe them
-            if (!p.qty_prices) p.qty_prices = [];
+            // PRESERVE tier pricing (qty_prices) from DB — deep clone
+            p.qty_prices = Array.isArray(p.qty_prices) ? JSON.parse(JSON.stringify(p.qty_prices)) : [];
+            p.tier_cleared = false;
             // PRESERVE sell prices from DB
             p.sell_price_retail = parseFloat(p.sell_price_retail) || 0;
             p.sell_price_wholesale = parseFloat(p.sell_price_wholesale) || 0;
@@ -2916,7 +2928,7 @@ function openAllPackagingsModal(tempId) {
                     const pkgId = lvEl.dataset.pkgId;
                     if (pkgId) {
                         try {
-                            await fetch(`${BASE_URL}api/packagings/${pkgId}/qty-prices`, {
+                            await fetch(`${BASE_URL}api/products/packaging/${pkgId}/qty-prices`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfVal },
                                 body: JSON.stringify({ tiers, csrf_token: csrfVal })
@@ -3509,7 +3521,7 @@ function buildDrawerRowHtml(item, prefix) {
                         </ul>
                         <input type="hidden" class="drawer-tier-mode" value="${t.sale_mode||'both'}">
                     </div>
-                    <button type="button" onclick="this.closest('.drawer-tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 6px;cursor:pointer;font-size:11px;min-width:0;"><i class="bi bi-x"></i></button>
+                    <button type="button" onclick="removeDrawerTierRow(this)" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 6px;cursor:pointer;font-size:11px;min-width:0;"><i class="bi bi-x"></i></button>
                 </div>
                 <input type="text" class="form-control-dark drawer-tier-label" value="${t.label||''}" placeholder="Label (opsional)" style="font-size:10px;padding:4px;width:100%;box-sizing:border-box;">
             </div>`;
@@ -3615,8 +3627,7 @@ function toggleItemDrawer(uid) {
         });
         // Initialize custom toggle states
         drawer.querySelectorAll('.drawer-pkg-row').forEach(row => {
-            const buyNote  = row.querySelector('.buy-locked-note');
-            const sellNote = row.querySelector('.sell-locked-note');
+        drawer.querySelectorAll('.drawer-pkg-row').forEach(row => {
             const buyToggle  = row.querySelector('.buy-custom-toggle');
             const sellToggle = row.querySelector('.sell-custom-toggle');
             if (buyToggle) {
@@ -3631,10 +3642,30 @@ function toggleItemDrawer(uid) {
     }
 }
 
+/** Remove tier row from drawer with clear detection */
+function removeDrawerTierRow(btn) {
+    const row = btn.closest('.drawer-tier-row');
+    const pkgRow = btn.closest('.drawer-pkg-row');
+    if (row) row.remove();
+    if (pkgRow) {
+        const remaining = pkgRow.querySelectorAll('.drawer-tier-row').length;
+        if (remaining === 0) {
+            pkgRow.dataset.tierCleared = "true";
+            let emptyHint = pkgRow.querySelector('.drawer-tier-empty');
+            if (!emptyHint) {
+                const cont = pkgRow.querySelector('.drawer-tier-rows-container');
+                if (cont) cont.insertAdjacentHTML('afterend', '<div class="drawer-tier-empty" style="font-size:9px;color:var(--text-muted);text-align:center;padding:4px;"><i class="bi bi-info-circle"></i> Belum ada harga tier. Klik Tambah.</div>');
+            }
+        }
+    }
+}
+
 /** Add new tier row to drawer */
 function addDrawerTierRow(btn) {
-    const container = btn.closest('.drawer-pkg-row').querySelector('.drawer-tier-rows-container');
-    const emptyHint = btn.closest('.drawer-pkg-row').querySelector('.drawer-tier-empty');
+    const pkgRow = btn.closest('.drawer-pkg-row');
+    if (pkgRow) pkgRow.removeAttribute('data-tier-cleared');
+    const container = pkgRow.querySelector('.drawer-tier-rows-container');
+    const emptyHint = pkgRow.querySelector('.drawer-tier-empty');
     if (emptyHint) emptyHint.remove();
     const row = document.createElement('div');
     row.className = 'drawer-tier-row';
@@ -3648,13 +3679,13 @@ function addDrawerTierRow(btn) {
                     <span>E+G</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:10px; min-width:100%;">
-                    <li><a class="dropdown-item active" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='both'; dp.querySelector('button span').textContent='E+G'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">E+G</a></li>
-                    <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='retail'; dp.querySelector('button span').textContent='Ecer'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">Ecer</a></li>
-                    <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='wholesale'; dp.querySelector('button span').textContent='Grosir'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active'); dp.querySelector('input').dispatchEvent(new Event('change'));">Grosir</a></li>
+                    <li><a class="dropdown-item active" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='both'; dp.querySelector('button span').textContent='E+G'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">E+G</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='retail'; dp.querySelector('button span').textContent='Ecer'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Ecer</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='wholesale'; dp.querySelector('button span').textContent='Grosir'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');">Grosir</a></li>
                 </ul>
                 <input type="hidden" class="drawer-tier-mode" value="both">
             </div>
-            <button type="button" onclick="this.closest('.drawer-tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 6px;cursor:pointer;font-size:11px;min-width:0;"><i class="bi bi-x"></i></button>
+            <button type="button" onclick="removeDrawerTierRow(this)" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 6px;cursor:pointer;font-size:11px;min-width:0;"><i class="bi bi-x"></i></button>
         </div>
         <input type="text" class="form-control-dark drawer-tier-label" placeholder="Label (opsional)" style="font-size:10px;padding:4px;width:100%;box-sizing:border-box;">`;
     container.appendChild(row);
@@ -3897,34 +3928,36 @@ function refreshMiniTableForItem(uid) {
 function collectDrawerDataForItem(uid) {
     let item = purchaseItems.find(i => i.id == uid);
     if (!item) item = bulkItems.find(b => b.id == uid);
-    if (!item) return;
+    if (!item || !item.packagings) return;
     const drawerEl = document.getElementById(`drawer_${uid}`) || document.querySelector(`.bulk-item[data-bulk-id="${uid}"] .bulk-drawer`);
     if (!drawerEl) return;
+    // Guard against stale drawer from previous product
+    if (drawerEl.dataset.productId && item.product_id && String(drawerEl.dataset.productId) !== String(item.product_id)) {
+        return;
+    }
     drawerEl.querySelectorAll('.drawer-pkg-row').forEach(row => {
         const level  = parseInt(row.dataset.level);
         const pkg    = item.packagings.find(p => p.level == level);
         if (!pkg) return;
-        // The following values are already handled by oninput handlers (onDrawerPkgInput & onDrawerCustomToggle)
-        // Overwriting them here can cause bugs if the drawer DOM is stale (e.g. when main input changes but drawer isn't re-rendered)
-        /*
-        pkg.buy_price            = parseFloat(row.querySelector('.drawer-pkg-buy')?.value) || pkg.buy_price;
-        pkg.sell_price_retail    = parseFloat(row.querySelector('.drawer-pkg-ret')?.value) || pkg.sell_price_retail;
-        pkg.sell_price_wholesale = parseFloat(row.querySelector('.drawer-pkg-who')?.value) || pkg.sell_price_wholesale;
-        pkg.buy_custom  = row.querySelector('.chk-buy-custom')?.checked  || false;
-        pkg.sell_custom = row.querySelector('.chk-sell-custom')?.checked || false;
-        pkg.harga_nett  = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
-        */
 
         // Collect tier prices
-        const tiers = [];
-        row.querySelectorAll('.drawer-tier-row').forEach(tr => {
-            const minQty = parseFloat(tr.querySelector('.drawer-tier-min-qty')?.value) || 0;
-            const totalH = parseFloat(tr.querySelector('.drawer-tier-total')?.value) || 0;
-            const mode   = tr.querySelector('.drawer-tier-mode')?.value || 'both';
-            const label  = tr.querySelector('.drawer-tier-label')?.value?.trim() || '';
-            if (minQty > 0 && totalH > 0) tiers.push({ min_qty: minQty, unit_price: totalH / minQty, sale_mode: mode, label: label });
-        });
-        pkg.qty_prices = tiers;
+        const tierRows = row.querySelectorAll('.drawer-tier-row');
+        if (tierRows.length > 0) {
+            const tiers = [];
+            tierRows.forEach(tr => {
+                const minQty = parseFloat(tr.querySelector('.drawer-tier-min-qty')?.value) || 0;
+                const totalH = parseFloat(tr.querySelector('.drawer-tier-total')?.value) || 0;
+                const mode   = tr.querySelector('.drawer-tier-mode')?.value || 'both';
+                const label  = tr.querySelector('.drawer-tier-label')?.value?.trim() || '';
+                if (minQty > 0 && totalH > 0) tiers.push({ min_qty: minQty, unit_price: totalH / minQty, sale_mode: mode, label: label });
+            });
+            pkg.qty_prices = tiers;
+            pkg.tier_cleared = (tiers.length === 0);
+        } else if (row.dataset.tierCleared === 'true' || pkg.tier_cleared) {
+            pkg.qty_prices = [];
+            pkg.tier_cleared = true;
+        }
+        // If tierRows.length === 0 and not explicitly cleared, preserve existing pkg.qty_prices from DB!
     });
 }
 
@@ -4124,7 +4157,7 @@ function renderCart() {
                 </button>
 
                 <!-- ── Collapsible Drawer ── -->
-                <div id="drawer_${item.id}" style="display:none;margin-top:10px;">
+                <div id="drawer_${item.id}" data-product-id="${item.product_id || ''}" style="display:none;margin-top:10px;">
                     <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;padding:8px;background:rgba(0,0,0,0.1);border-radius:var(--radius-sm);">
                         <i class="bi bi-info-circle"></i> Harga modal dihitung otomatis. PPN & Diskon sama untuk semua kemasan. Centang "Custom" untuk mengunci harga individual.
                     </div>
@@ -4326,7 +4359,8 @@ async function submitPurchase() {
                             diskon_mode: p.diskon_mode || 'rp',
                             diskon_value: parseFloat(p.diskon_value) || 0,
                             harga_nett: pkgNett,
-                            qty_prices: p.qty_prices || []
+                            qty_prices: p.qty_prices || [],
+                            allow_tier_delete: !!p.tier_cleared
                         };
                     })
                 };
