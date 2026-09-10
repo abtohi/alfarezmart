@@ -152,6 +152,34 @@ Berikut hal-hal yang **DILARANG** dilakukan:
 8. ❌ Menghapus properti `base_qty` / `contained_qty` dari cache POS.
 9. ❌ Mengubah pembulatan hasil (`Math.round`) menjadi pembulatan lain.
 10. ❌ Menghapus price breakdown yang menunjukkan rincian perhitungan tier ke user.
+11. ❌ Menghapus tier harga (`product_qty_prices`) pada model backend (`PurchaseModel`) saat menerima `qty_prices: []` tanpa ada izin eksplisit `allow_tier_delete: true`.
+12. ❌ Mengganti data produk di keranjang pembelian tanpa membersihkan drawer DOM lama, yang dapat menyebabkan data tier produk lama menimpa produk baru.
+13. ❌ Memuat produk dari AI Scan matcher (`InvoiceScanService`) tanpa menyertakan tier harga (`attachQtyPricesToPackagings`).
+14. ❌ Menghapus atau me-reset `qty_prices` dari packagings saat memperbarui cache produk lokal (`OfflineDB`).
+
+## 9. Proteksi Preservasi Tier Pricing & Non-Destructive Updates (Anti-Replace / Anti-Wipe)
+
+Untuk mencegah harga tier ter-replace atau hilang secara tidak sengaja pada saat pergantian produk, koreksi AI scan faktur, atau sinkronisasi data lokal:
+
+### A. Aturan Backend (`PurchaseModel`)
+- Update tier harga pada packaging saat menyimpan transaksi pembelian (`createWithDetails` & `updateWithDetails`) **TIDAK BOLEH** bersifat destruktif.
+- Jika `$pUpdate['qty_prices']` tidak kosong (`!empty`), panggil `$productModel->saveQtyPricesForPackaging($pDb['id'], $pUpdate['qty_prices'])`.
+- Jika `$pUpdate['qty_prices']` kosong (`[]`), database **DILARANG** menghapus tier harga yang ada, **KECUALI** jika terdapat parameter eksplisit `!empty($pUpdate['allow_tier_delete'])` (yang berarti user sengaja mengosongkan seluruh baris tier melalui antarmuka).
+
+### B. Aturan AI Scanner (`InvoiceScanService`)
+- Ketika `InvoiceScanService::getAllProductsWithPackagings()` memuat katalog produk beserta kemasannya, sistem **WAJIB** memanggil `$this->productModel->attachQtyPricesToPackagings($allPkgs)`.
+- Produk hasil scan/pencocokan AI **WAJIB** membawa relasi tier harga lengkap sehingga ketika masuk ke keranjang pembelian, seluruh tier harga bawaan tetap tersedia dan tidak hilang.
+
+### C. Aturan Antarmuka Pembelian (`purchases/create.php` & `purchases/edit.php`)
+- **Pembersihan DOM Drawer Lama**: Ketika produk pada baris pembelian diganti via `selectProductToLink()`, elemen drawer `#drawer_${tempId}` lama **WAJIB** dihapus dari DOM terlebih dahulu sebelum memuat produk baru, agar `collectDrawerDataForItem()` tidak membaca baris tier milik produk lama.
+- **Fresh Fetch dari API (Online First)**: Saat produk dipilih atau ditautkan ulang, prioritaskan fetch detail produk dari endpoint `/api/products/${productId}` agar struktur `packagings` dan `qty_prices` diambil langsung dalam keadaan paling mutakhir dari MySQL.
+- **Deep-Clone Data**: Seluruh array `packagings` dan `qty_prices` wajib di-deep-clone (`(p.qty_prices || []).map(t => ({...t}))`) agar mutasi pada satu baris tidak mempengaruhi baris lain atau referensi master.
+- **Pelindung `collectDrawerDataForItem`**: Wajib memeriksa `drawerEl.dataset.productId === String(item.product_id)`. Jika ada ketidakcocokan ID produk antara drawer DOM dan item data, drawer tersebut dianggap usang dan tidak boleh diproses.
+- **Flag `allow_tier_delete`**: Hanya dikirim jika user secara eksplisit menghapus semua baris tier menggunakan tombol hapus tier (`removeDrawerTierRow`), sehingga database tidak salah menafsirkan form yang belum dibuka sebagai perintah penghapusan.
+
+### D. Aturan Edit Produk & OfflineDB (`products/edit.php` & `products/tier_prices.php`)
+- Pada `products/edit.php`, saat memperbarui `OfflineDB.saveProduct(localProduct)` secara optimistik, sistem **WAJIB** mempertahankan `qty_prices` yang sudah ada pada packaging (`existingPkg.qty_prices`), bukan mengosongkannya.
+- Pada `products/tier_prices.php`, setelah berhasil menyimpan tier harga ke server, sistem **WAJIB** memperbarui record kemasan di `OfflineDB` (jika tersedia) agar cache lokal selalu sinkron dengan server.
 
 ---
 

@@ -114,3 +114,14 @@ Ketika produk memiliki beberapa level kemasan (contoh: Level 1 = PCS isi 1, Leve
 4. **Sinkronisasi UI Drawer & Modal**:
    - Ketika user mengetik harga di input drawer/modal, checkbox `chk-buy-custom` / `chk-sell-custom` dan badge toggle `.active` wajib otomatis aktif dan catatan `price-locked-note` disembunyikan.
 
+---
+
+## 8. Aturan Preservasi Harga Tier (Qty Prices) pada Pembelian
+Setiap interaksi pada form pembelian (`create.php` dan `edit.php`) yang melibatkan pergantian produk atau pembacaan hasil scan faktur AI **WAJIB** mematuhi aturan preservasi harga tier di `.agents/rules/tier-pricing-algorithm.md` (§9):
+1. Menghapus elemen DOM drawer `#drawer_${tempId}` sebelum memuat produk baru pada baris pembelian.
+2. Mengambil detail produk secara online (`/api/products/${productId}`) saat pemilihan/penggantian produk.
+3. Melakukan deep-clone pada `qty_prices` (`(p.qty_prices || []).map(t => ({...t}))`).
+4. Mengabaikan pembacaan drawer jika `drawerEl.dataset.productId !== String(item.product_id)`.
+5. Hanya mengizinkan database menghapus tier jika ada flag eksplisit `allow_tier_delete: true`.
+
+

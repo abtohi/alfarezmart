@@ -85,6 +85,7 @@ Pencocokan teks invoice ke database produk master wajib mematuhi hierarki 3 tier
    - Setiap baris hasil AI **dikonstruksi langsung sebagai 1 objek item keranjang tersendiri** di `purchaseItems`.
 2. **Item yang Cocok (`is_matched = true`)**:
    - Dimasukkan langsung dengan status aktif dan level kemasan yang sesuai.
+   - **WAJIB membawa tier harga (`qty_prices`)**: `getAllProductsWithPackagings()` wajib memanggil `attachQtyPricesToPackagings()` sehingga item tidak kehilangan tier harganya saat masuk keranjang.
    - Tetap menampilkan tombol **"Ganti Produk"** (`openLinkProductModal`) agar kasir dapat mengoreksi jika ada salah pilih master produk.
 3. **Item yang Belum Cocok (`is_matched = false` / Unmatched)**:
    - **WAJIB TETAP DIMASUKKAN KE KERANJANG** sebagai *Draft Item* (`is_unmatched: true`, `product_id: null`).
@@ -107,6 +108,7 @@ Pencocokan teks invoice ke database produk master wajib mematuhi hierarki 3 tier
 
 1. **Opsi Hubungkan / Ganti Produk di Setiap Kartu Item**:
    - Setiap kartu item di keranjang memiliki tombol **"Hubungkan Produk"** (untuk draft) atau **"Ganti Produk"** (untuk item yang sudah terhubung).
+   - **Perlindungan Tier Harga saat Ganti Produk**: Saat user mengganti produk di `selectProductToLink()`, elemen DOM drawer `#drawer_${tempId}` lama wajib dihapus dari DOM dan detail produk baru wajib diambil langsung dari endpoint server `/api/products/${productId}` agar tier harga produk baru tidak tertimpa/hilang oleh drawer produk sebelumnya.
 2. **Auto-Learning ke Kolom `supplier_invoice_name`**:
    - Saat produk dipilih di modal `openLinkProductModal`:
      - Data item di keranjang langsung terhubung ke produk master baru tersebut.
