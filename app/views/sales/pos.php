@@ -1298,6 +1298,8 @@ function addProductToCart(product, preferredLevel = null) {
             unit_price: 0,
             total: 0,
             price_note: '',
+            category_name: product.category_name || (product.category ? product.category.name : null) || 'Tanpa Kategori',
+            buy_price: parseFloat(selectedPkg.buy_price) || 0,
         };
         recalcItemPrice(newItem);
         cart.unshift(newItem);
@@ -1332,6 +1334,7 @@ function changeLevel(id, newLevel) {
         item.level = targetLevel;
         item.unit_name = pkg.unit_name;
         item.unit_abbr = pkg.unit_abbr;
+        item.buy_price = parseFloat(pkg.buy_price) || 0;
         item.use_custom_price = false;
         item.custom_line_total = null;
         item.custom_unit_price = null;
@@ -2046,6 +2049,7 @@ function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mi
                 mixInfo: mixInfo,
                 chainInfo: chainInfo,
             });
+            showHistorySaveConfirmation(invoiceNo, printTotal, printCart, chainInfo);
         };
     }
 
@@ -2279,6 +2283,146 @@ function showHistorySaveConfirmation(invoiceNo, total, cartItems, chainInfo) {
     const savedInvoiceNo = invoiceNo;
     const savedTotal = total;
 
+    // Helper icon kategori
+    const getCatIcon = function(catName) {
+        const cn = (catName || '').toLowerCase();
+        if (cn.includes('makan') || cn.includes('snack')) return 'bi-egg-fried';
+        if (cn.includes('minum')) return 'bi-cup-straw';
+        if (cn.includes('rokok')) return 'bi-fire';
+        if (cn.includes('sembako') || cn.includes('beras')) return 'bi-basket2';
+        if (cn.includes('sabun') || cn.includes('cuci') || cn.includes('kebersihan')) return 'bi-droplet';
+        if (cn.includes('kesehatan') || cn.includes('obat')) return 'bi-heart-pulse';
+        if (cn.includes('bayi')) return 'bi-emoji-smile';
+        if (cn.includes('dingin') || cn.includes('es')) return 'bi-snow';
+        if (cn.includes('atk') || cn.includes('kantor')) return 'bi-pen';
+        if (cn.includes('listrik') || cn.includes('elektronik')) return 'bi-lightning-charge';
+        if (cn.includes('bumbu') || cn.includes('dapur')) return 'bi-flower1';
+        return 'bi-tag-fill';
+    };
+
+    // Kalkulasi total, profit, dan markup per kategori
+    const categoryGroups = {};
+    (cartItems || []).forEach(item => {
+        const isCustom = !!(item.is_custom || item.product_id === 'CUSTOM' || String(item.product_id).toUpperCase() === 'CUSTOM');
+        let catName = item.category_name;
+        if (!catName) {
+            if (isCustom) {
+                catName = 'Lainnya / Custom';
+            } else if (window._posProductsCatalog && window._posProductsCatalog.length > 0) {
+                const p = window._posProductsCatalog.find(prod => prod.id == item.product_id);
+                if (p && p.category_name) catName = p.category_name;
+            }
+        }
+        if (!catName) catName = 'Tanpa Kategori';
+
+        let buyPrice = parseFloat(item.buy_price);
+        if (isNaN(buyPrice) || buyPrice <= 0) {
+            if (item.packagings && Array.isArray(item.packagings)) {
+                const pkg = item.packagings.find(p => p.level == item.level) || item.packagings[0];
+                if (pkg && pkg.buy_price) {
+                    buyPrice = parseFloat(pkg.buy_price) || 0;
+                }
+            }
+        }
+        if (isNaN(buyPrice) || buyPrice <= 0) {
+            if (window._posProductsCatalog && window._posProductsCatalog.length > 0) {
+                const p = window._posProductsCatalog.find(prod => prod.id == item.product_id);
+                if (p && p.packagings) {
+                    const pkg = p.packagings.find(pk => pk.level == item.level) || p.packagings[0];
+                    if (pkg && pkg.buy_price) {
+                        buyPrice = parseFloat(pkg.buy_price) || 0;
+                    }
+                }
+            }
+        }
+        if (isNaN(buyPrice) || isCustom) buyPrice = 0;
+
+        const qty = parseFloat(item.quantity) || 1;
+        const itemTotal = parseFloat(item.total) || 0;
+        const unitPrice = parseFloat(item.unit_price) || (qty > 0 ? itemTotal / qty : 0);
+        const itemModal = isCustom ? 0 : (buyPrice * qty);
+        const itemProfit = (isCustom || unitPrice <= 0) ? 0 : (unitPrice - buyPrice) * qty;
+
+        if (!categoryGroups[catName]) {
+            categoryGroups[catName] = {
+                name: catName,
+                count: 0,
+                total_qty: 0,
+                total_amount: 0,
+                total_modal: 0,
+                total_profit: 0,
+                icon: getCatIcon(catName)
+            };
+        }
+
+        categoryGroups[catName].count += 1;
+        categoryGroups[catName].total_qty += qty;
+        categoryGroups[catName].total_amount += itemTotal;
+        categoryGroups[catName].total_modal += itemModal;
+        categoryGroups[catName].total_profit += itemProfit;
+    });
+
+    const categoryList = Object.values(categoryGroups);
+    categoryList.sort((a, b) => b.total_amount - a.total_amount);
+
+    let categoryBreakdownHTML = '';
+    if (categoryList.length > 0) {
+        const catRowsHTML = categoryList.map(grp => {
+            const pct = savedTotal > 0 ? Math.round((grp.total_amount / savedTotal) * 100 * 10) / 10 : 0;
+            const markupPct = grp.total_modal > 0 ? ((grp.total_profit / grp.total_modal) * 100) : 0;
+            const isProfitPositive = grp.total_profit >= 0;
+
+            return `
+                <div style="background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:9px 11px;margin-bottom:8px;transition:all 0.15s ease;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                        <div style="flex:1;min-width:0;">
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <i class="bi ${grp.icon}" style="color:var(--primary);font-size:12px;flex-shrink:0;"></i>
+                                <span style="font-weight:700;font-size:12.5px;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escapeHtml(grp.name)}">
+                                    ${escapeHtml(grp.name)}
+                                </span>
+                            </div>
+                            <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;padding-left:18px;">
+                                ${grp.count} item (${grp.total_qty} unit) · <span style="color:var(--text-secondary);font-weight:600;">${pct}%</span>
+                            </div>
+                        </div>
+                        <div style="text-align:right;flex-shrink:0;">
+                            <div style="font-weight:800;font-size:13.5px;color:var(--text-primary);letter-spacing:-0.2px;">
+                                ${formatRupiah(grp.total_amount)}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="height:4px;width:100%;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;margin:7px 0 6px;">
+                        <div style="height:100%;width:${Math.min(pct, 100)}%;background:linear-gradient(90deg, var(--primary), #fb7185);border-radius:4px;"></div>
+                    </div>
+                    <div style="display:flex;justify-content:flex-end;align-items:center;gap:6px;">
+                        <span style="font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;background:${isProfitPositive ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)'};color:${isProfitPositive ? '#10b981' : '#ef4444'};border:1px solid ${isProfitPositive ? 'rgba(16,185,129,0.22)' : 'rgba(239,68,68,0.22)'};box-shadow:0 1.5px 3px rgba(0,0,0,0.25);letter-spacing:0.2px;" title="Profit Kategori: ${formatRupiah(grp.total_profit)}">
+                            P ${formatRupiah(grp.total_profit)}
+                        </span>
+                        <span style="font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:5px;background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.22);box-shadow:0 1.5px 3px rgba(0,0,0,0.25);letter-spacing:0.2px;" title="Rata-rata Markup: ${markupPct.toFixed(1)}%">
+                            %M ${markupPct > 0 ? markupPct.toFixed(1) + '%' : '0%'}
+                        </span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        categoryBreakdownHTML = `
+            <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:11px 12px 6px;margin-bottom:12px;text-align:left;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border-color);">
+                    <div style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:11.5px;color:var(--text-primary);text-transform:uppercase;letter-spacing:0.5px;">
+                        <i class="bi bi-pie-chart-fill" style="color:var(--primary);font-size:12px;"></i>
+                        <span>Total Belanja Per Kategori</span>
+                    </div>
+                    <span style="font-size:10.5px;color:var(--text-muted);font-weight:500;">${categoryList.length} Kategori</span>
+                </div>
+                <div style="max-height:190px;overflow-y:auto;padding-right:2px;">
+                    ${catRowsHTML}
+                </div>
+            </div>
+        `;
+    }
+
     setTimeout(() => {
         AppModal.show({
             title: 'Simpan Riwayat Transaksi',
@@ -2328,6 +2472,8 @@ function showHistorySaveConfirmation(invoiceNo, total, cartItems, chainInfo) {
                 <div style="background:var(--surface-2);border-radius:var(--radius-sm);padding:10px 12px;font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:12px;">
                     <i class="bi bi-info-circle"></i> ${cartItems.length} item · ${new Date().toLocaleString('id-ID', {day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}
                 </div>
+
+                ${categoryBreakdownHTML}
 
                 <!-- Tombol Lanjut ke Invoice Berikutnya -->
                 <button type="button" onclick="startNextInvoiceChain('${invoiceNo}', ${total})" style="width:100%; padding:12px 14px; font-weight:700; background:linear-gradient(135deg, rgba(79,70,229,0.1) 0%, rgba(99,102,241,0.15) 100%); border:1.5px dashed var(--primary); color:var(--primary); border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; gap:8px; font-size:var(--font-size-sm); cursor:pointer; transition:all 0.2s; margin-bottom:4px;" onmouseover="this.style.background='var(--primary-bg)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(79,70,229,0.1) 0%, rgba(99,102,241,0.15) 100%)'">
@@ -2522,6 +2668,8 @@ window.addCustomProductToCart = function(name, qty, unit, totalPrice) {
         unit_price: unitPrice,
         total: totalPrice,
         price_note: 'Barang Custom',
+        category_name: 'Lainnya / Custom',
+        buy_price: 0,
     };
     cart.unshift(newItem);
     renderCart();
