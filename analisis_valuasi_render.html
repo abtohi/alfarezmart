@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Analisis Valuasi & Perkiraan Harga Jual AlfarezMart</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 12mm 14mm 14mm 14mm;
+            @bottom-right {
+                content: counter(page) " / " counter(pages);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            color: #1e293b;
+            background: #ffffff;
+            line-height: 1.45;
+            font-size: 11pt;
+            margin: 0;
+            padding: 0;
+        }
+
+        .cover-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%);
+            color: #ffffff;
+            border-radius: 12px;
+            padding: 24px 28px;
+            margin-bottom: 20px;
+            position: relative;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15);
+        }
+
+        .cover-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #93c5fd;
+            font-size: 8.5pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-bottom: 10px;
+        }
+
+        .cover-title {
+            font-size: 20pt;
+            font-weight: 800;
+            margin: 0 0 6px 0;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+        }
+
+        .cover-subtitle {
+            font-size: 10pt;
+            color: #cbd5e1;
+            margin: 0 0 16px 0;
+            line-height: 1.4;
+        }
+
+        .cover-meta {
+            display: flex;
+            gap: 18px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            padding-top: 12px;
+            font-size: 8.5pt;
+            color: #e2e8f0;
+        }
+
+        .cover-meta span strong {
+            color: #ffffff;
+        }
+
+        /* Metric Highlights Grid */
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px 14px;
+            text-align: center;
+        }
+
+        .metric-val {
+            font-size: 15pt;
+            font-weight: 800;
+            color: #1e3a8a;
+            margin-bottom: 2px;
+        }
+
+        .metric-lbl {
+            font-size: 8pt;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Section Layout */
+        .section-box {
+            margin-bottom: 22px;
+            page-break-inside: avoid;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12.5pt;
+            font-weight: 800;
+            color: #0f172a;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+        }
+
+        .section-header .tag {
+            background: #2563eb;
+            color: #ffffff;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 9pt;
+        }
+
+        /* Tables */
+        table.styled-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 9pt;
+            margin-bottom: 14px;
+        }
+
+        table.styled-table th {
+            background: #0f172a;
+            color: #ffffff;
+            font-weight: 700;
+            padding: 9px 12px;
+            text-align: left;
+            letter-spacing: 0.2px;
+        }
+
+        table.styled-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+        }
+
+        table.styled-table tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        table.styled-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .price-badge {
+            display: inline-block;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            padding: 2px 7px;
+            border-radius: 5px;
+            font-weight: 700;
+            font-size: 8.5pt;
+            white-space: nowrap;
+        }
+
+        .price-highlight {
+            display: inline-block;
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+            padding: 2px 7px;
+            border-radius: 5px;
+            font-weight: 800;
+            font-size: 8.5pt;
+            white-space: nowrap;
+        }
+
+        /* 2-Column Cards */
+        .card-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .info-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid #2563eb;
+            border-radius: 8px;
+            padding: 12px 14px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .info-card.success-edge {
+            border-left-color: #10b981;
+        }
+
+        .info-card.amber-edge {
+            border-left-color: #f59e0b;
+        }
+
+        .info-card.purple-edge {
+            border-left-color: #8b5cf6;
+        }
+
+        .card-head {
+            font-weight: 700;
+            font-size: 10.5pt;
+            color: #0f172a;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-body {
+            font-size: 8.5pt;
+            color: #475569;
+            line-height: 1.45;
+        }
+
+        .card-body ul {
+            margin: 4px 0 0 0;
+            padding-left: 16px;
+        }
+
+        .card-body li {
+            margin-bottom: 2px;
+        }
+
+        /* Callout Box */
+        .callout-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 12px 0;
+            font-size: 8.8pt;
+            color: #1e3a8a;
+            line-height: 1.45;
+        }
+
+        .callout-box strong {
+            color: #1d4ed8;
+        }
+
+        .callout-highlight {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin: 12px 0;
+            font-size: 8.8pt;
+            color: #14532d;
+            line-height: 1.45;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        /* Footer Stamp */
+        .doc-footer {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 8px;
+            margin-top: 18px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 7.8pt;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- COVER / HEADER -->
+    <div class="cover-header">
+        <div class="cover-badge">Laporan Valuasi & Analisis Komersial</div>
+        <h1 class="cover-title">AlfarezMart Enterprise Retail Engine</h1>
+        <div class="cover-subtitle">
+            Kajian Finansial Biaya Rekonstruksi (*Cost-to-Build*), Nilai Pasar Aset Perangkat Lunak, dan Model Monetisasi untuk Korporasi (B2B) serta Retailer UMKM (Perseorangan).
+        </div>
+        <div class="cover-meta">
+            <span>Audit Sistem: <strong>September 2026</strong></span>
+            <span>Kategori: <strong>Point of Sale, Supply Chain & PPOB</strong></span>
+            <span>Status: <strong>Production-Ready (Aktif)</strong></span>
+            <span>Arsitektur: <strong>Fullstack Native MVC + PWA</strong></span>
+        </div>
+    </div>
+
+    <!-- METRICS GRID -->
+    <div class="metric-grid">
+        <div class="metric-card">
+            <div class="metric-val">95.299</div>
+            <div class="metric-lbl">Baris Kode (LOC)</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-val">> 1.050</div>
+            <div class="metric-lbl">Total Commit Git</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-val">1.210 Jam</div>
+            <div class="metric-lbl">Estimasi Waktu R&D</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-val">Rp 236 Jt</div>
+            <div class="metric-lbl">Biaya Pembuatan Ulang</div>
+        </div>
+    </div>
+
+    <!-- SECTION 1: RINGKASAN VALUASI -->
+    <div class="section-box">
+        <div class="section-header">
+            <span class="tag">01</span>
+            <span>Ringkasan Eksekutif Valuasi & Rekomendasi Harga Jual</span>
+        </div>
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th style="width:20%;">Segmen Pembeli</th>
+                    <th style="width:30%;">Skema Penjualan</th>
+                    <th style="width:26%;">Rentang Valuasi Wajar</th>
+                    <th style="width:24%;">Rekomendasi Harga Ideal</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Perusahaan / Investor</strong></td>
+                    <td><strong>Full IP & Source Code Buyout</strong><br><small style="color:#64748b;">Jual putus 100% hak cipta & repositori</small></td>
+                    <td><span class="price-badge">Rp 85.000.000 – Rp 250.000.000</span></td>
+                    <td><span class="price-highlight">Rp 125.000.000 – Rp 175.000.000</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Perusahaan Ritel</strong></td>
+                    <td><strong>Enterprise Multi-Branch License</strong><br><small style="color:#64748b;">Instalasi Server Mandiri (5–15 Cabang Toko)</small></td>
+                    <td><span class="price-badge">Rp 25.000.000 – Rp 60.000.000</span></td>
+                    <td><span class="price-highlight">Rp 35.000.000 + Rp 6 Jt/thn</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Perseorangan / UMKM</strong></td>
+                    <td><strong>One-Time Lifetime License</strong><br><small style="color:#64748b;">Lisensi permanen per toko tunggal (Software only)</small></td>
+                    <td><span class="price-badge">Rp 2.500.000 – Rp 7.500.000</span></td>
+                    <td><span class="price-highlight">Rp 3.500.000 – Rp 5.000.000</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Perseorangan / UMKM</strong></td>
+                    <td><strong>Bundling Hardware Turnkey Ready</strong><br><small style="color:#64748b;">Software + Mini PC + Scanner + Thermal Printer</small></td>
+                    <td><span class="price-badge">Rp 6.500.000 – Rp 12.000.000</span></td>
+                    <td><span class="price-highlight">Rp 7.900.000 – Rp 8.900.000</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Perseorangan / UMKM</strong></td>
+                    <td><strong>Model Langganan Cloud SaaS</strong><br><small style="color:#64748b;">Sewa bulanan/tahunan terpusat</small></td>
+                    <td><span class="price-badge">Rp 99.000 – Rp 250.000 / bln</span></td>
+                    <td><span class="price-highlight">Rp 149.000/bln (Rp 1,5 Jt/thn)</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- SECTION 2: BIAYA PEMBUATAN ULANG (COST-TO-BUILD) -->
+    <div class="section-box">
+        <div class="section-header">
+            <span class="tag">02</span>
+            <span>Metode 1: Analisis Biaya Rekonstruksi (Cost-to-Build / Replacement Value)</span>
+        </div>
+        <p style="font-size:8.8pt; color:#475569; margin-top:0;">
+            Metode ini menghitung biaya riil yang harus dikeluarkan korporasi jika menyewa agensi software engineering untuk merancang, mengode, dan menstabilkan sistem dari nol:
+        </p>
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th style="width:45%;">Komponen & Modul Sistem</th>
+                    <th style="width:20%;">Alokasi Waktu</th>
+                    <th style="width:35%;">Tingkat Kerumitan & Ruang Lingkup</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Analisis Bisnis Retail, ERD & Skema Database Relasional</td>
+                    <td><strong>120 Jam</strong></td>
+                    <td>19 tabel relasional terhubung, multi-kemasan, ledger piutang</td>
+                </tr>
+                <tr>
+                    <td>Core POS Engine, Multi-kemasan Bertingkat (Dus/Pak/Pcs) & Multi-harga</td>
+                    <td><strong>240 Jam</strong></td>
+                    <td>Mode Ecer, Grosir, Mix, barcode scanner, cart logic, diskon</td>
+                </tr>
+                <tr>
+                    <td>Thermal Printer Native Web Bluetooth (ESC/POS) & Offline PWA</td>
+                    <td><strong>100 Jam</strong></td>
+                    <td>Cetak Bluetooth langsung via Chrome, draft offline IndexedDB</td>
+                </tr>
+                <tr>
+                    <td>Modul Pembelian, Supplier, Hutang/Piutang & Estimasi Order</td>
+                    <td><strong>180 Jam</strong></td>
+                    <td>Siklus restock, mapping kode supplier, sales rep tracking</td>
+                </tr>
+                <tr>
+                    <td>Integrasi PPOB Digiflazz (Webhook, Cek Saldo & Auto Markup)</td>
+                    <td><strong>150 Jam</strong></td>
+                    <td>Sinkronisasi katalog pulsa/PLN, margin laba instan, saldo API</td>
+                </tr>
+                <tr>
+                    <td>Modul Portofolio Investasi & Tabungan Mikro</td>
+                    <td><strong>130 Jam</strong></td>
+                    <td>Manajemen simpanan nasabah, NAV reksa dana, simulasi return</td>
+                </tr>
+                <tr>
+                    <td>AI Business Assistant & Context Builder Knowledge Engine</td>
+                    <td><strong>110 Jam</strong></td>
+                    <td>Prompt engineering, context assembler dari query database</td>
+                </tr>
+                <tr>
+                    <td>Pengujian Stabilitas, UI/UX Refinement & Mobile Ordering Responsive</td>
+                    <td><strong>180 Jam</strong></td>
+                    <td>Uji performa, zero-error syntax, touch UI mobile kasir</td>
+                </tr>
+                <tr style="background:#f1f5f9; font-weight:700;">
+                    <td>TOTAL ESTIMASI WAKTU PENGEMBANGAN</td>
+                    <td style="color:#1d4ed8;">1.210 Jam</td>
+                    <td>Setara 7–8 bulan kerja tim Fullstack Senior & QA</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="callout-box">
+            <strong>Kalkulasi Finansial Tenaga Ahli:</strong><br>
+            • Standar tarif Senior Software Engineer Indonesia: <strong>Rp 175.000 / jam</strong> (konservatif).<br>
+            • Biaya Pembuatan Kode: <code>1.210 jam × Rp 175.000 = Rp 211.750.000</code><br>
+            • Biaya QA, Manajemen Proyek & Infrastruktur Staging: <code>Rp 25.000.000</code><br>
+            • <strong>Total Nilai Penggantian Riil (*Replacement Value*): Rp 236.750.000</strong>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- SECTION 3: SKEMA JUAL KE PERUSAHAAN (B2B) -->
+    <div class="section-box">
+        <div class="section-header">
+            <span class="tag">03</span>
+            <span>Metode 2: Penjualan ke Perusahaan / Korporasi (B2B)</span>
+        </div>
+
+        <div class="card-row">
+            <div class="info-card">
+                <div class="card-head">
+                    <span>A. Jual Putus Hak Cipta (Full IP Buyout)</span>
+                    <span class="price-highlight">Rp 85 Jt – Rp 250 Jt</span>
+                </div>
+                <div class="card-body">
+                    <strong>Target Pembeli:</strong> Ritel jaringan, Software House, Koperasi berskala besar, atau Investor startup.<br>
+                    <strong>Aset yang Diserahkan:</strong>
+                    <ul>
+                        <li>100% kepemilikan kode sumber (*full git history*).</li>
+                        <li>Hak komersial penuh untuk me-rebrand (*white-label*) atau menjual ulang tanpa batas.</li>
+                        <li>Database schema, data seeder, dan panduan arsitektur sistem.</li>
+                        <li>Sesi *handover knowledge transfer* selama 1–2 minggu.</li>
+                    </ul>
+                    <small style="color:#2563eb; font-weight:600;">Rekomendasi harga wajar: Rp 125.000.000 – Rp 175.000.000.</small>
+                </div>
+            </div>
+
+            <div class="info-card success-edge">
+                <div class="card-head">
+                    <span>B. Lisensi Multi-Cabang Enterprise</span>
+                    <span class="price-highlight">Rp 25 Jt – Rp 50 Jt</span>
+                </div>
+                <div class="card-body">
+                    <strong>Target Pembeli:</strong> Pemilik ritel yang memiliki 3 hingga 15 cabang toko / minimarket.<br>
+                    <strong>Mekanisme Kerjasama:</strong>
+                    <ul>
+                        <li>Setup server private cloud / VPS khusus untuk korporasi tersebut.</li>
+                        <li>Konfigurasi sinkronisasi data antar kasir dan kantor pusat.</li>
+                        <li>Hak cipta *source code* tetap di tangan pengembang.</li>
+                        <li><strong>Annual Maintenance (SLA):</strong> 15% – 20% per tahun (pendapatan pasif rutin <strong>Rp 5 Jt – Rp 9 Jt / tahun</strong>).</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 4: SKEMA JUAL KE PERSEORANGAN / UMKM -->
+    <div class="section-box">
+        <div class="section-header">
+            <span class="tag">04</span>
+            <span>Metode 3: Penjualan ke Perseorangan / Toko Kelontong Modern (UMKM)</span>
+        </div>
+
+        <div class="card-row">
+            <div class="info-card amber-edge">
+                <div class="card-head">
+                    <span>Skema 1: Lisensi Lifetime (Software Only)</span>
+                    <span class="price-badge">Rp 3,5 Jt – Rp 5 Jt</span>
+                </div>
+                <div class="card-body">
+                    Sistem sekali beli seumur hidup untuk 1 toko tunggal (instalasi lokal di PC toko):
+                    <ul>
+                        <li>Cocok untuk pemilik toko yang sudah memiliki komputer/laptop sendiri.</li>
+                        <li>Bisa ditambahkan biaya jasa input master data awal (Rp 500rb – Rp 1,5jt).</li>
+                        <li>Garansi teknis gratis 3–6 bulan pertama.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="info-card success-edge">
+                <div class="card-head">
+                    <span>Skema 2: Bundling Hardware (Turnkey Solution)</span>
+                    <span class="price-highlight">Rp 7,9 Jt – Rp 11,5 Jt</span>
+                </div>
+                <div class="card-body">
+                    Paket siap pakai (*plug-and-play*) yang paling diminati pemilik toko ritel:
+                    <ul>
+                        <li><strong>Paket Isi:</strong> Mini PC/Tablet Kasir + Scanner Barcode + Printer Thermal Bluetooth + Laci Kasir (Cash Drawer) + Software AlfarezMart.</li>
+                        <li><strong>Modal Hardware:</strong> Rp 4,2 Jt – Rp 5,2 Jt.</li>
+                        <li><strong>Keuntungan Bersih Software: Rp 3,7 Jt – Rp 6,3 Jt per paket!</strong></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="callout-highlight">
+            <strong>Skema 3: Model Langganan SaaS Cloud Terpusat (Recurring Income Jangka Panjang)</strong><br>
+            Jika sistem di-hosting secara cloud dengan tarif langganan <strong>Rp 179.000 / bulan / toko</strong>:<br>
+            • <strong>30 Toko Pelanggan</strong> = <code>30 × Rp 179.000 = Rp 5.370.000 / bulan</code> (<strong>Rp 64.440.000 / tahun</strong>).<br>
+            • <strong>100 Toko Pelanggan</strong> = <code>100 × Rp 179.000 = Rp 17.900.000 / bulan</code> (<strong>Rp 214.800.000 / tahun</strong>).
+        </div>
+    </div>
+
+    <!-- SECTION 5: UNIQUE SELLING POINTS (USP) -->
+    <div class="section-box">
+        <div class="section-header">
+            <span class="tag">05</span>
+            <span>Nilai Tambah & Keunggulan Kompetitif vs Aplikasi POS Pasaran</span>
+        </div>
+
+        <table class="styled-table">
+            <thead>
+                <tr>
+                    <th style="width:30%;">Fitur Unggulan AlfarezMart</th>
+                    <th style="width:35%;">Aplikasi POS Pasaran (Moka/Pawoon/Majoo)</th>
+                    <th style="width:35%;">Keuntungan Nyata bagi Pemilik Bisnis</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Multi-Kemasan Bertingkat (Level 1–4)</strong></td>
+                    <td>Umumnya hanya 1 satuan atau varian terpisah</td>
+                    <td>Otomatis potong stok dari Dus ➔ Pak ➔ Renceng ➔ Pcs tanpa selisih stok.</td>
+                </tr>
+                <tr>
+                    <td><strong>Mode Harga Ecer, Grosir & Mix</strong></td>
+                    <td>Harga jual kaku, harus ganti akun atau input diskon</td>
+                    <td>Kasir bisa beralih harga grosir langsung di keranjang hanya dalam 1 klik.</td>
+                </tr>
+                <tr>
+                    <td><strong>PPOB Terintegrasi (Digiflazz API)</strong></td>
+                    <td>Tidak ada (harus pakai aplikasi agen pulsa terpisah)</td>
+                    <td>Toko dapat keuntungan ekstra dari transaksi pulsa, token PLN, e-wallet dari 1 layar.</td>
+                </tr>
+                <tr>
+                    <td><strong>Thermal Bluetooth Native Web Print</strong></td>
+                    <td>Wajib instal aplikasi jembatan/driver berbayar</td>
+                    <td>Bisa langsung cetak struk dari browser Chrome HP/PC tanpa konfigurasi rumit.</td>
+                </tr>
+                <tr>
+                    <td><strong>Struk Berantai (Invoice Continuation)</strong></td>
+                    <td>Tidak ada (struk harus dicetak ulang utuh)</td>
+                    <td>Solusi instan bila pembeli menambah belanjaan sesaat setelah struk pertama keluar.</td>
+                </tr>
+                <tr>
+                    <td><strong>AI Assistant & Context Engine</strong></td>
+                    <td>Hampir tidak ada di aplikasi kasir konvensional</td>
+                    <td>Tanya jawab data performa bisnis secara natural, meningkatkan daya tawar modern.</td>
+                </tr>
+                <tr>
+                    <td><strong>Offline-First Ready (PWA Engine)</strong></td>
+                    <td>Wajib koneksi internet 100% aktif</td>
+                    <td>Kasir tetap bisa melayani pembeli meskipun jaringan internet sedang padam.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- SECTION 6: PANDUAN NEGOSIASI -->
+    <div class="section-box">
+        <div class="section-header">
+            <span class="tag">06</span>
+            <span>Panduan Strategi Eksekusi & Taktik Negosiasi</span>
+        </div>
+        <div class="card-row">
+            <div class="info-card purple-edge">
+                <div class="card-head">
+                    <span>1. Target Uang Tunai Cepat (Cashflow)</span>
+                </div>
+                <div class="card-body">
+                    Fokus pada penjualan <strong>Paket Bundling Hardware + Software</strong> ke toko kelontong atau grosir di wilayah Anda. Cukup dapatkan 3–5 klien untuk mengantongi laba bersih tunai <strong>Rp 15 Jt – Rp 25 Jt</strong> dalam 30 hari.
+                </div>
+            </div>
+            <div class="info-card success-edge">
+                <div class="card-head">
+                    <span>2. Taktik Negosiasi Jual Putus (Exit)</span>
+                </div>
+                <div class="card-body">
+                    Jika ada investor/korporasi yang menawar source code, buka penawaran di <strong>Rp 175 Jt – Rp 200 Jt</strong>. Tetapkan batas negosiasi bawah (*floor price*) di <strong>Rp 95 Jt – Rp 110 Jt</strong>. Jangan lepas di bawah Rp 80 Jt karena aset kode 95.000+ baris bernilai jauh lebih tinggi.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER STAMP -->
+    <div class="doc-footer">
+        <span>© 2026 AlfarezMart Development Team. Dokumen Analisis Bisnis & Valuasi Rahasia (Confidential).</span>
+        <span>Dicetak secara otomatis via Native Rendering Engine</span>
+    </div>
+
+</body>
+</html>
