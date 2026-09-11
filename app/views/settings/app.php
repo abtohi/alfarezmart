@@ -140,6 +140,24 @@
                             'desc' => 'Model AI gratis (free tier) NVIDIA Nemotron 3.5 Lightning'
                         ],
                         [
+                            'id' => 'nex-agi/nex-n2.5-mini:free',
+                            'name' => 'Nex AGI: Nex N2.5 Mini Vision (free)',
+                            'icon' => '⚡',
+                            'icon_bg' => 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model multimodal vision gratis super cepat & akurat untuk scan faktur'
+                        ],
+                        [
+                            'id' => 'inclusionai/ling-3.0-flash-vl:free',
+                            'name' => 'inclusionAI: Ling 3.0 Flash Vision (free)',
+                            'icon' => '🏮',
+                            'icon_bg' => 'linear-gradient(135deg, #ea580c, #c2410c)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model multimodal vision gratis dari inclusionAI, akurat untuk faktur'
+                        ],
+                        [
                             'id' => 'inclusionai/ling-3.0-flash-fin:free',
                             'name' => 'inclusionAI: Ling 3.0 Flash Fin (free)',
                             'icon' => '🏮',

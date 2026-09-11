@@ -724,16 +724,20 @@ class InvoiceScanService
 
         set_time_limit(180);
 
-        // 100% FREE MULTIMODAL VISION MODELS (Benchmarked: ultra-fast, zero credit cost, unlimited free invoice scanning):
+        if ($model === 'dots-studio/dots3-note-preview:free') {
+            $model = 'dots-studio/dots-3-note-preview:free';
+        }
+
+        // 100% FREE MULTIMODAL VISION MODELS (Benchmarked: ultra-accurate OCR, zero credit cost, unlimited free scanning):
         $FREE_VISION_MODELS = [
             'nex-agi/nex-n2.5-mini:free',
+            'inclusionai/ling-3.0-flash-vl:free',
             'dots-studio/dots-3-note-preview:free',
             'google/gemma-4-31b-it:free',
             'google/gemma-4-26b-a4b-it:free',
         ];
 
         $GENERAL_VISION_MODELS = [
-            'google/gemini-2.5-flash',
             'openrouter/auto',
         ];
 
@@ -765,8 +769,8 @@ class InvoiceScanService
         foreach ($modelsToTry as $tryModel) {
             // Check total elapsed time to never exceed Nginx's 60s gateway timeout:
             $elapsedTotal = microtime(true) - $scanStartTime;
-            if ($elapsedTotal >= 35) {
-                error_log("SCAN_AI_TRACE: Overall scan time budget (35s) reached, exiting model failover loop to prevent Nginx 504");
+            if ($elapsedTotal >= 32) {
+                error_log("SCAN_AI_TRACE: Overall scan time budget reached, exiting model failover loop to prevent Nginx 504");
                 break;
             }
 
@@ -774,7 +778,7 @@ class InvoiceScanService
             error_log("SCAN_AI_TRACE: Attempting OpenRouter vision model: {$tryModel} (elapsed: " . round($elapsedTotal, 2) . "s)");
             $requestCount++;
 
-            // Use 1500 max_tokens: optimal for full invoice JSON (30+ items) while avoiding OpenRouter upfront credit reservation rejection
+            // 2500 max_tokens + reasoning: max_tokens 0 (prevents CoT models from wasting tokens and getting truncated at length)
             $payload = [
                 'model'    => $tryModel,
                 'messages' => [
@@ -785,7 +789,8 @@ class InvoiceScanService
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => 1500,
+                'max_tokens'  => 2500,
+                'reasoning'   => ['max_tokens' => 0],
             ];
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
@@ -799,9 +804,9 @@ class InvoiceScanService
                 'X-Title: AlfarezMart Invoice Scanner',
             ]);
 
-            // 15s timeout per model attempt: fast failover guarantees response stays safely within 8-15s
-            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+            // 28s timeout per model attempt: allows deep OCR extraction while staying far below Nginx 60s limit
+            curl_setopt($ch, CURLOPT_TIMEOUT, 28);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 6);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);
@@ -848,8 +853,8 @@ class InvoiceScanService
                             'HTTP-Referer: ' . (defined('BASE_URL') ? BASE_URL : 'https://alfarezmart.com/'),
                             'X-Title: AlfarezMart Invoice Scanner',
                         ]);
-                        curl_setopt($rch, CURLOPT_TIMEOUT, 15);
-                        curl_setopt($rch, CURLOPT_CONNECTTIMEOUT, 5);
+                        curl_setopt($rch, CURLOPT_TIMEOUT, 25);
+                        curl_setopt($rch, CURLOPT_CONNECTTIMEOUT, 6);
                         curl_setopt($rch, CURLOPT_SSL_VERIFYPEER, false);
                         $rResponse = curl_exec($rch);
                         $rHttpCode = curl_getinfo($rch, CURLINFO_HTTP_CODE);
@@ -900,6 +905,14 @@ class InvoiceScanService
                 if ($fb !== false && $lb !== false && $lb > $fb) {
                     $resData = json_decode(substr($cleanResponse, $fb, $lb - $fb + 1), true);
                 }
+            }
+
+            // Direct JSON array envelope support:
+            if (is_array($resData) && isset($resData[0]) && is_array($resData[0])) {
+                $metrics['ai_provider'] = 'openrouter';
+                $metrics['ai_model_used'] = $tryModel;
+                $metrics['ai_request_count'] = $requestCount;
+                return $resData;
             }
 
             $content = '';
