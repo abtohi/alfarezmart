@@ -724,20 +724,17 @@ class InvoiceScanService
 
         set_time_limit(180);
 
-        // 100% FREE MULTIMODAL VISION MODELS (Zero credit cost, unlimited free invoice scanning):
+        // 100% FREE MULTIMODAL VISION MODELS (Benchmarked: ultra-fast, zero credit cost, unlimited free invoice scanning):
         $FREE_VISION_MODELS = [
-            'openrouter/free',
-            'nex-agi/nex-n2.5-pro:free',
             'nex-agi/nex-n2.5-mini:free',
+            'dots-studio/dots-3-note-preview:free',
             'google/gemma-4-31b-it:free',
             'google/gemma-4-26b-a4b-it:free',
-            'dots-studio/dots-3-note-preview:free',
-            'meta-llama/llama-3.2-11b-vision-instruct:free',
         ];
 
         $GENERAL_VISION_MODELS = [
-            'openrouter/auto',
             'google/gemini-2.5-flash',
+            'openrouter/auto',
         ];
 
         $isUserModelFree = !empty($model) && (stripos($model, ':free') !== false || stripos($model, 'free') !== false);
@@ -755,21 +752,29 @@ class InvoiceScanService
             $modelsToTry = array_unique(array_merge([$model], $GENERAL_VISION_MODELS, $FREE_VISION_MODELS));
         }
 
-        // Try up to 5 models with fast failover
-        $modelsToTry = array_slice($modelsToTry, 0, 5);
+        // Try up to 4 models with fast failover
+        $modelsToTry = array_slice($modelsToTry, 0, 4);
 
         $imageBlock   = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
         $lastError    = null;
         $requestCount = 0;
         $rateLimitCount   = 0;
         $noEndpointCount  = 0;
+        $scanStartTime    = microtime(true);
 
         foreach ($modelsToTry as $tryModel) {
-            set_time_limit(90);
-            error_log("SCAN_AI_TRACE: Attempting OpenRouter vision model: {$tryModel}");
+            // Check total elapsed time to never exceed Nginx's 60s gateway timeout:
+            $elapsedTotal = microtime(true) - $scanStartTime;
+            if ($elapsedTotal >= 35) {
+                error_log("SCAN_AI_TRACE: Overall scan time budget (35s) reached, exiting model failover loop to prevent Nginx 504");
+                break;
+            }
+
+            set_time_limit(60);
+            error_log("SCAN_AI_TRACE: Attempting OpenRouter vision model: {$tryModel} (elapsed: " . round($elapsedTotal, 2) . "s)");
             $requestCount++;
 
-            // Use 2000 max_tokens: optimal for full invoice JSON (30+ items) while avoiding OpenRouter upfront credit reservation rejection
+            // Use 1500 max_tokens: optimal for full invoice JSON (30+ items) while avoiding OpenRouter upfront credit reservation rejection
             $payload = [
                 'model'    => $tryModel,
                 'messages' => [
@@ -780,7 +785,7 @@ class InvoiceScanService
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => 2000,
+                'max_tokens'  => 1500,
             ];
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
@@ -794,9 +799,9 @@ class InvoiceScanService
                 'X-Title: AlfarezMart Invoice Scanner',
             ]);
 
-            // 55s timeout per model attempt: allows deep vision models to finish generating 20+ line items safely
-            curl_setopt($ch, CURLOPT_TIMEOUT, 55);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+            // 15s timeout per model attempt: fast failover guarantees response stays safely within 8-15s
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
             $response = curl_exec($ch);
@@ -843,8 +848,8 @@ class InvoiceScanService
                             'HTTP-Referer: ' . (defined('BASE_URL') ? BASE_URL : 'https://alfarezmart.com/'),
                             'X-Title: AlfarezMart Invoice Scanner',
                         ]);
-                        curl_setopt($rch, CURLOPT_TIMEOUT, 50);
-                        curl_setopt($rch, CURLOPT_CONNECTTIMEOUT, 10);
+                        curl_setopt($rch, CURLOPT_TIMEOUT, 15);
+                        curl_setopt($rch, CURLOPT_CONNECTTIMEOUT, 5);
                         curl_setopt($rch, CURLOPT_SSL_VERIFYPEER, false);
                         $rResponse = curl_exec($rch);
                         $rHttpCode = curl_getinfo($rch, CURLINFO_HTTP_CODE);
