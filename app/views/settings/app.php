@@ -113,6 +113,123 @@
                             'desc' => 'Vision multimodal berkecepatan tinggi dari NVIDIA'
                         ],
                         [
+                            'id' => 'nvidia/nemotron-3-ultra:free',
+                            'name' => 'NVIDIA: Nemotron 3 Ultra (free)',
+                            'icon' => '🟢',
+                            'icon_bg' => 'linear-gradient(135deg, #10b981, #047857)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model AI gratis (free tier) NVIDIA Nemotron 3 Ultra'
+                        ],
+                        [
+                            'id' => 'poolside/laguna-s-2.1:free',
+                            'name' => 'Poolside: Laguna S 2.1 (free)',
+                            'icon' => '🌊',
+                            'icon_bg' => 'linear-gradient(135deg, #0284c7, #0369a1)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model AI gratis (free tier) Poolside Laguna S 2.1'
+                        ],
+                        [
+                            'id' => 'nvidia/nemotron-3.5-lightning:free',
+                            'name' => 'NVIDIA: Nemotron 3.5 Lightning (free)',
+                            'icon' => '⚡',
+                            'icon_bg' => 'linear-gradient(135deg, #10b981, #059669)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model AI gratis (free tier) NVIDIA Nemotron 3.5 Lightning'
+                        ],
+                        [
+                            'id' => 'inclusionai/ling-3.0-flash-fin:free',
+                            'name' => 'inclusionAI: Ling 3.0 Flash Fin (free)',
+                            'icon' => '🏮',
+                            'icon_bg' => 'linear-gradient(135deg, #f97316, #c2410c)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model AI gratis (free tier) inclusionAI Ling 3.0 Flash Fin'
+                        ],
+                        [
+                            'id' => 'dots-studio/dots3-note-preview:free',
+                            'name' => 'Dots Studio: Dots3-Note Preview (free)',
+                            'icon' => '📝',
+                            'icon_bg' => 'linear-gradient(135deg, #6366f1, #4338ca)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model AI gratis (free tier) Dots Studio Dots3-Note Preview'
+                        ],
+                        [
+                            'id' => 'nvidia/nemotron-3-super:free',
+                            'name' => 'NVIDIA: Nemotron 3 Super (free)',
+                            'icon' => '🟢',
+                            'icon_bg' => 'linear-gradient(135deg, #059669, #065f46)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model AI gratis (free tier) NVIDIA Nemotron 3 Super'
+                        ],
+                        [
+                            'id' => 'thinkingmachines/inkling:free',
+                            'name' => 'Thinking Machines: Inkling (free)',
+                            'icon' => '💡',
+                            'icon_bg' => 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model AI gratis (free tier) Thinking Machines Inkling'
+                        ],
+                        [
+                            'id' => 'inclusionai/ling-3.0-flash-sante:free',
+                            'name' => 'inclusionAI: Ling 3.0 Flash Sante (free)',
+                            'icon' => '🏮',
+                            'icon_bg' => 'linear-gradient(135deg, #ea580c, #9a3412)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model AI gratis (free tier) inclusionAI Ling 3.0 Flash Sante'
+                        ],
+                        [
+                            'id' => 'thinkingmachines/inkling-small:free',
+                            'name' => 'Thinking Machines: Inkling Small (free)',
+                            'icon' => '💡',
+                            'icon_bg' => 'linear-gradient(135deg, #a855f7, #6b21a8)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model AI gratis (free tier) Thinking Machines Inkling Small'
+                        ],
+                        [
+                            'id' => 'nex-agi/nex-n2.5-pro:free',
+                            'name' => 'Nex AGI: Nex-N2.5-Pro (free)',
+                            'icon' => '🔮',
+                            'icon_bg' => 'linear-gradient(135deg, #ec4899, #be185d)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model AI gratis (free tier) multimodal vision dari Nex AGI Pro'
+                        ],
+                        [
+                            'id' => 'cohere/north-mini-code:free',
+                            'name' => 'Cohere: North Mini Code (free)',
+                            'icon' => '🔷',
+                            'icon_bg' => 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model AI gratis (free tier) Cohere North Mini Code'
+                        ],
+                        [
+                            'id' => 'poolside/laguna-xs-2.1:free',
+                            'name' => 'Poolside: Laguna XS 2.1 (free)',
+                            'icon' => '🌊',
+                            'icon_bg' => 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model AI gratis (free tier) Poolside Laguna XS 2.1'
+                        ],
+                        [
+                            'id' => 'nex-agi/nex-n2.5-mini:free',
+                            'name' => 'Nex AGI: Nex-N2.5-Mini (free)',
+                            'icon' => '🔮',
+                            'icon_bg' => 'linear-gradient(135deg, #f43f5e, #e11d48)',
+                            'badge' => 'GRATIS',
+                            'badge_class' => 'model-badge-free',
+                            'desc' => 'Model AI gratis (free tier) multimodal vision dari Nex AGI Mini'
+                        ],
+                        [
                             'id' => 'custom',
                             'name' => 'Model Kustom OpenRouter',
                             'icon' => '⚙️',
