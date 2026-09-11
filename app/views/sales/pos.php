@@ -365,6 +365,20 @@ function recalcItemPrice(item) {
         item.price_note = 'Harga custom (total)';
         return;
     }
+
+    // Refresh packagings if in-memory catalog has fresher tier pricing
+    if (window._posProductsCatalog && window._posProductsCatalog.length > 0) {
+        const catProd = window._posProductsCatalog.find(p => p.id == item.product_id);
+        if (catProd && catProd.packagings && catProd.packagings.length > 0) {
+            const curItemPkg = getPkgForItem(item);
+            const curHasTiers = curItemPkg && Array.isArray(curItemPkg.qty_prices) && curItemPkg.qty_prices.length > 0;
+            const catHasTiers = catProd.packagings.some(cp => Array.isArray(cp.qty_prices) && cp.qty_prices.length > 0);
+            if (!curHasTiers && catHasTiers) {
+                item.packagings = JSON.parse(JSON.stringify(catProd.packagings));
+            }
+        }
+    }
+
     const pkg = getPkgForItem(item);
     if (!pkg) return;
 
@@ -422,9 +436,6 @@ function recalcItemPrice(item) {
     let discountAmount = 0;
     if (dVal > 0) {
         if (dMode === 'pct') {
-            // Usually discount percent is applied to base + ppn or just base. 
-            // In typical POS, if both exist: (Base + PPN) - Diskon or (Base - Diskon) + PPN
-            // We'll apply % discount to (basePricePerUnit + ppnAmount)
             discountAmount = (basePricePerUnit + ppnAmount) * (dVal / 100);
         } else {
             discountAmount = dVal;
@@ -432,7 +443,7 @@ function recalcItemPrice(item) {
     }
 
     const finalUnitPrice = basePricePerUnit + ppnAmount - discountAmount;
-    item.total = Math.round(finalUnitPrice * qty);
+    item.total = (ppnPct === 0 && dVal === 0) ? Math.round(rawTotal) : Math.round(finalUnitPrice * qty);
     item.unit_price = qty > 0 ? item.total / qty : 0;
 
     // Add Diskon info to price_note (Hide PPN per task rules)
@@ -468,6 +479,10 @@ function updateCartItemDom(item) {
         } else {
             noteEl.style.display = 'none';
         }
+    }
+    const qtyInput = row.querySelector('.pos-cart-qty-input');
+    if (qtyInput && document.activeElement !== qtyInput && parseFloat(qtyInput.value) !== item.quantity) {
+        qtyInput.value = item.quantity;
     }
     
     // Update custom markup info
@@ -621,7 +636,7 @@ window._posProductsCatalog = window._posProductsCatalog || [];
 async function preloadPosCatalog() {
     const POS_LAST_SYNC_KEY = 'pos_last_auto_sync_time';
     const POS_CACHE_VER_KEY = 'pos_catalog_cache_ver';
-    const CURRENT_POS_CACHE_VER = 'v25.10_baseqty';
+    const CURRENT_POS_CACHE_VER = 'v25.26_tier_pricing';
 
     // Invalidate stale local catalog cache ONLY when online so offline mode never loses data
     if (navigator.onLine && localStorage.getItem(POS_CACHE_VER_KEY) !== CURRENT_POS_CACHE_VER) {
@@ -630,21 +645,13 @@ async function preloadPosCatalog() {
             localStorage.removeItem(POS_LAST_SYNC_KEY);
             localStorage.setItem(POS_CACHE_VER_KEY, CURRENT_POS_CACHE_VER);
             window._posProductsCatalog = [];
+            if (typeof db !== 'undefined' && db.products) {
+                await db.products.clear();
+            }
         } catch(e) {}
     }
 
-    // 1. Load from LocalStorage for 0ms immediate availability (only available products for POS)
-    try {
-        const cached = localStorage.getItem('pos_catalog_cache');
-        if (cached) {
-            const parsed = JSON.parse(cached);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                window._posProductsCatalog = parsed.filter(p => p.is_available != 0 && p.is_available !== '0' && p.is_available !== false);
-            }
-        }
-    } catch(e) {}
-
-    // 2. Load from Dexie IndexedDB if localStorage is still empty
+    // 1. Load from Dexie IndexedDB as primary offline catalog (full catalog with all tiers)
     if ((!window._posProductsCatalog || window._posProductsCatalog.length === 0) && typeof db !== 'undefined' && db.products) {
         try {
             const dbItems = await db.products.filter(p => p.is_available != 0 && p.is_available !== '0' && p.is_available !== false).toArray();
@@ -654,10 +661,23 @@ async function preloadPosCatalog() {
         } catch(e) {}
     }
 
-    // 3. Fetch fresh catalog from server (throttled to 10 mins if local data already present)
+    // 2. Load from LocalStorage fallback if IndexedDB is still empty
+    if (!window._posProductsCatalog || window._posProductsCatalog.length === 0) {
+        try {
+            const cached = localStorage.getItem('pos_catalog_cache');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    window._posProductsCatalog = parsed.filter(p => p.is_available != 0 && p.is_available !== '0' && p.is_available !== false);
+                }
+            }
+        } catch(e) {}
+    }
+
+    // 3. Fetch fresh catalog from server (throttled to 5 mins if local data already present)
     const lastSyncTime = parseInt(localStorage.getItem(POS_LAST_SYNC_KEY) || '0', 10);
     const hasLocalCatalog = window._posProductsCatalog && window._posProductsCatalog.length > 0;
-    const shouldFetch = !hasLocalCatalog || (Date.now() - lastSyncTime > 600000); // 10 minutes
+    const shouldFetch = !hasLocalCatalog || (Date.now() - lastSyncTime > 300000); // 5 minutes
 
     if (navigator.onLine && shouldFetch) {
         try {
@@ -679,35 +699,11 @@ async function preloadPosCatalog() {
                             await db.products.bulkPut(data.products);
                         } catch(dbErr) {}
                     }
-                    // Update localStorage cache with slim payload (strip photos/heavy fields to protect mobile RAM)
-                    try {
-                        const slimCatalog = availProducts.map(p => ({
-                            id: p.id,
-                            full_name: p.full_name,
-                            short_label: p.short_label,
-                            code: p.code,
-                            is_available: p.is_available,
-                            photo: (p.photo && !p.photo.startsWith('data:')) ? p.photo : null,
-                            packagings: (p.packagings || []).map(pkg => ({
-                                level: pkg.level,
-                                unit_name: pkg.unit_name,
-                                unit_abbr: pkg.unit_abbr,
-                                barcode: pkg.barcode,
-                                base_qty: pkg.base_qty || 1,
-                                sell_price_retail: pkg.sell_price_retail,
-                                sell_price_wholesale: pkg.sell_price_wholesale,
-                                buy_price: pkg.buy_price || 0,
-                                ppn_pct: pkg.ppn_pct || 0,
-                                discount_mode: pkg.discount_mode || 'rp',
-                                discount_value: pkg.discount_value || 0,
-                                qty_prices: pkg.qty_prices || []
-                            }))
-                        }));
-                        const serialized = JSON.stringify(slimCatalog);
-                        if (serialized.length < 2500000) {
-                            localStorage.setItem('pos_catalog_cache', serialized);
-                        }
-                    } catch(e) {}
+                    // Auto-refresh any items in active cart to pick up fresh tier prices
+                    if (Array.isArray(cart) && cart.length > 0) {
+                        cart.forEach(it => recalcItemPrice(it));
+                        renderCart();
+                    }
                 }
             }
         } catch(e) {}
@@ -820,6 +816,18 @@ async function processBarcodeScan(q, inpEl, sugEl, fromScanner) {
     if (!q) return;
     q = q.trim();
     if (fromScanner === undefined) fromScanner = false;
+
+    // Support multiplier shortcut (e.g. 4*barcode, 4x barcode, barcode*4)
+    let multiplierQty = 1;
+    const multMatch = q.match(/^(\d+(?:\.\d+)?)\s*[*xX]\s*(.+)$/);
+    const suffixMultMatch = q.match(/^(.+)\s*[*xX]\s*(\d+(?:\.\d+)?)$/);
+    if (multMatch) {
+        multiplierQty = parseFloat(multMatch[1]) || 1;
+        q = multMatch[2].trim();
+    } else if (suffixMultMatch && !/^\d{8,18}$/.test(q)) {
+        multiplierQty = parseFloat(suffixMultMatch[2]) || 1;
+        q = suffixMultMatch[1].trim();
+    }
     
     // Prevent duplicate scan of the same code within 350ms
     const now = Date.now();
@@ -850,9 +858,29 @@ async function processBarcodeScan(q, inpEl, sugEl, fromScanner) {
     }
 
     if (result && result.id) {
+        // If result has no tier prices cached, verify with server if online
+        const hasTiers = result.packagings && result.packagings.some(pkg => Array.isArray(pkg.qty_prices) && pkg.qty_prices.length > 0);
+        if (!hasTiers && navigator.onLine) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 1200);
+                const resp = await fetch(`${BASE_URL}api/products/${result.id}?pos=1`, { credentials: 'same-origin', signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (resp.ok) {
+                    const fresh = await resp.json();
+                    if (fresh && fresh.id && fresh.packagings && fresh.packagings.length > 0) {
+                        result = fresh;
+                        if (window._posProductsCatalog) {
+                            const idx = window._posProductsCatalog.findIndex(p => p.id == result.id);
+                            if (idx >= 0) window._posProductsCatalog[idx] = result;
+                        }
+                    }
+                }
+            } catch(e) {}
+        }
         if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
         const matchedLevel = findMatchedLevelForBarcode(result, q);
-        addProductToCart(result, matchedLevel);
+        addProductToCart(result, matchedLevel, multiplierQty);
         // Input was already cleared before this async call; ensure clean state
         if (inpEl) inpEl.value = '';
         if (sugEl) sugEl.innerHTML = '';
@@ -872,7 +900,7 @@ async function processBarcodeScan(q, inpEl, sugEl, fromScanner) {
                 if (result && result.id) {
                     if (typeof window.playBarcodeBeep === 'function') window.playBarcodeBeep();
                     const matchedLevel = findMatchedLevelForBarcode(result, q);
-                    addProductToCart(result, matchedLevel);
+                    addProductToCart(result, matchedLevel, multiplierQty);
                     // Ensure clean state
                     if (inpEl) inpEl.value = '';
                     if (sugEl) sugEl.innerHTML = '';
@@ -1172,6 +1200,10 @@ function renderPosSearchSuggestions(sug, items, q) {
         return;
     }
     
+    // Cache current search items to memory map for instant 100% accurate lookup
+    window._currentSearchItemsMap = window._currentSearchItemsMap || {};
+    items.forEach(p => { window._currentSearchItemsMap[p.id] = p; });
+
     // Sort by display label (short_label if not empty, else full_name) ascending
     items.sort((a, b) => {
         const getLabel = (p) => (p.short_label && p.short_label.trim() !== '') ? p.short_label : (p.full_name || '');
@@ -1217,12 +1249,16 @@ function renderPosSearchSuggestions(sug, items, q) {
     }).join('');
 }
 
-async function selectProduct(id) {
+async function selectProduct(id, productData = null, initialQty = 1) {
     try {
-        let data = null;
+        let data = productData;
+
+        if (!data && window._currentSearchItemsMap && window._currentSearchItemsMap[id]) {
+            data = window._currentSearchItemsMap[id];
+        }
 
         // 1. Instant 0ms lookup in memory catalog
-        if (window._posProductsCatalog && window._posProductsCatalog.length > 0) {
+        if (!data && window._posProductsCatalog && window._posProductsCatalog.length > 0) {
             data = window._posProductsCatalog.find(p => p.id == id);
         }
 
@@ -1231,14 +1267,20 @@ async function selectProduct(id) {
             try { data = await OfflineDB.getProductById(id); } catch(e){}
         }
 
-        // 3. Network fetch fallback if still not found
-        if (!data && navigator.onLine) {
+        // 3. Network fetch fallback if not found or missing tier prices while online
+        const hasTiers = data && data.packagings && data.packagings.some(pkg => Array.isArray(pkg.qty_prices) && pkg.qty_prices.length > 0);
+        if ((!data || !hasTiers) && navigator.onLine) {
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 2000);
-                const resp = await fetch(`${BASE_URL}api/products/${id}`, { credentials: 'same-origin', signal: controller.signal });
+                const resp = await fetch(`${BASE_URL}api/products/${id}?pos=1`, { credentials: 'same-origin', signal: controller.signal });
                 clearTimeout(timeoutId);
-                if (resp.ok) data = await resp.json();
+                if (resp.ok) {
+                    const fresh = await resp.json();
+                    if (fresh && fresh.id && fresh.packagings && fresh.packagings.length > 0) {
+                        data = fresh;
+                    }
+                }
             } catch(e){}
         }
         
@@ -1246,10 +1288,18 @@ async function selectProduct(id) {
             showToast('Data produk tidak ditemukan', 'error');
             return;
         }
+
+        // Keep window._posProductsCatalog updated
+        if (window._posProductsCatalog && data.packagings) {
+            const idx = window._posProductsCatalog.findIndex(p => p.id == data.id);
+            if (idx >= 0) window._posProductsCatalog[idx] = data;
+            else window._posProductsCatalog.push(data);
+        }
+
         const inp = document.getElementById('posSearch');
         const qVal = inp ? inp.value.trim() : '';
         const matchedLevel = findMatchedLevelForBarcode(data, qVal);
-        addProductToCart(data, matchedLevel);
+        addProductToCart(data, matchedLevel, initialQty);
         const sug = document.getElementById('posSuggestions');
         if (inp) inp.value = '';
         if (sug) sug.innerHTML = '';
@@ -1259,11 +1309,13 @@ async function selectProduct(id) {
     }
 }
 
-function addProductToCart(product, preferredLevel = null) {
+function addProductToCart(product, preferredLevel = null, initialQty = 1) {
     if (!product.packagings || product.packagings.length === 0) {
         showToast('Produk belum punya data kemasan/harga', 'warning');
         return;
     }
+
+    const addQty = parseFloat(initialQty) > 0 ? parseFloat(initialQty) : 1;
 
     let selectedPkg = null;
     if (preferredLevel != null) {
@@ -1277,7 +1329,10 @@ function addProductToCart(product, preferredLevel = null) {
 
     const existingIndex = cart.findIndex(i => i.product_id == product.id && i.level == selectedPkg.level && !i.use_custom_price);
     if (existingIndex > -1) {
-        cart[existingIndex].quantity += 1;
+        cart[existingIndex].quantity += addQty;
+        if (product.packagings && product.packagings.length > 0) {
+            cart[existingIndex].packagings = product.packagings;
+        }
         recalcItemPrice(cart[existingIndex]);
     } else {
         const newItem = {
@@ -1291,7 +1346,7 @@ function addProductToCart(product, preferredLevel = null) {
             level: selectedPkg.level,
             unit_name: selectedPkg.unit_name,
             unit_abbr: selectedPkg.unit_abbr,
-            quantity: 1,
+            quantity: addQty,
             use_custom_price: false,
             custom_line_total: null,
             custom_unit_price: null,
@@ -1324,6 +1379,25 @@ function updateQty(id, delta) {
     }
     renderCart();
 }
+
+function setItemQty(id, val) {
+    const item = cart.find(i => i.id == id);
+    if (!item) return;
+    const num = parseFloat(val);
+    if (isNaN(num) || num <= 0) {
+        cart = cart.filter(i => i.id != id);
+    } else {
+        item.quantity = num;
+        if (item.use_custom_price && item.unit_price > 0) {
+            item.custom_line_total = item.unit_price * item.quantity;
+            item.custom_price_draft = String(item.custom_line_total);
+        }
+        recalcItemPrice(item);
+    }
+    renderCart();
+}
+window.setItemQty = setItemQty;
+
 
 function changeLevel(id, newLevel) {
     const item = cart.find(i => i.id == id);
@@ -1475,7 +1549,7 @@ function renderCart() {
                     </div>
                     <div style="display:flex;align-items:center;background:var(--surface-1);border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--border-color);box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                         <button type="button" onclick="updateQty(${item.id}, -1)" style="border:none;background:none;color:var(--text-secondary);padding:5px 11px;cursor:pointer;transition:all 150ms;"><i class="bi bi-dash"></i></button>
-                        <span style="font-weight:700;width:30px;text-align:center;font-size:0.9rem;color:var(--text-primary);">${item.quantity}</span>
+                        <input type="number" min="1" step="any" value="${item.quantity}" class="pos-cart-qty-input form-control-dark" onchange="setItemQty(${item.id}, this.value)" onfocus="this.select()" style="width:48px;height:30px;padding:2px 4px;font-weight:700;text-align:center;font-size:0.9rem;color:var(--text-primary);background:transparent;border:none;outline:none;-moz-appearance:textfield;" title="Ketik jumlah item">
                         <button type="button" onclick="updateQty(${item.id}, 1)" style="border:none;background:none;color:var(--primary);padding:5px 11px;cursor:pointer;transition:all 150ms;"><i class="bi bi-plus"></i></button>
                     </div>
                     <button type="button" onclick="cart = cart.filter(i => i.id != ${item.id}); renderCart();" style="border:1px solid rgba(230,57,70,0.2);background:var(--danger-bg);color:var(--danger);cursor:pointer;padding:5px 11px;border-radius:var(--radius-sm);transition:all 150ms;"><i class="bi bi-trash3"></i></button>
@@ -2886,28 +2960,28 @@ async function loadSaleForEdit(id) {
                 if (!isCustom) {
                     const curPkg = packagings.find(p => parseInt(p.level, 10) === savedLevel) || packagings[0];
                     if (curPkg) {
-                        const expectedRetail = typeof QtyPricing !== 'undefined'
-                            ? QtyPricing.calculateTotalPrice(curPkg, 'retail', 1, false, null, packagings)
-                            : (parseFloat(curPkg.sell_price_retail) || 0);
-                        const expectedWholesale = typeof QtyPricing !== 'undefined'
-                            ? QtyPricing.calculateTotalPrice(curPkg, 'wholesale', 1, false, null, packagings)
-                            : (parseFloat(curPkg.sell_price_wholesale) || expectedRetail);
+                        const expectedRetailTotal = typeof QtyPricing !== 'undefined'
+                            ? QtyPricing.calculateTotalPrice(curPkg, 'retail', savedQuantity, false, null, packagings)
+                            : ((parseFloat(curPkg.sell_price_retail) || 0) * savedQuantity);
+                        const expectedWholesaleTotal = typeof QtyPricing !== 'undefined'
+                            ? QtyPricing.calculateTotalPrice(curPkg, 'wholesale', savedQuantity, false, null, packagings)
+                            : ((parseFloat(curPkg.sell_price_wholesale) || (parseFloat(curPkg.sell_price_retail) || 0)) * savedQuantity);
 
-                        const eps = 1;
+                        const eps = 1.0;
                         if (targetMode === 'mix') {
-                            if (Math.abs(savedUnitPrice - expectedRetail) <= eps) {
+                            if (Math.abs(savedTotalPrice - expectedRetailTotal) <= eps) {
                                 isCustomPrice = false;
                                 detectedOverrideMode = 'retail';
-                            } else if (Math.abs(savedUnitPrice - expectedWholesale) <= eps) {
+                            } else if (Math.abs(savedTotalPrice - expectedWholesaleTotal) <= eps) {
                                 isCustomPrice = false;
                                 detectedOverrideMode = 'wholesale';
                             } else {
                                 isCustomPrice = true;
                             }
                         } else if (targetMode === 'wholesale') {
-                            isCustomPrice = Math.abs(savedUnitPrice - expectedWholesale) > eps;
+                            isCustomPrice = Math.abs(savedTotalPrice - expectedWholesaleTotal) > eps;
                         } else {
-                            isCustomPrice = Math.abs(savedUnitPrice - expectedRetail) > eps;
+                            isCustomPrice = Math.abs(savedTotalPrice - expectedRetailTotal) > eps;
                         }
                     }
                 }
