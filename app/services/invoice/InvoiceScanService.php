@@ -724,29 +724,39 @@ class InvoiceScanService
 
         set_time_limit(180);
 
-        // HIGH-PRECISION & ULTRA-FAST VISION MODEL STRATEGY:
-        // 1. google/gemini-2.0-flash-001: Ultra fast (~3-5s), native high-res multimodal OCR, top precision.
-        // 2. google/gemini-2.5-flash: Gemini 2.5 Flash Vision.
-        // 3. openrouter/auto: Auto-routes to best available vision model.
-        // 4. qwen/qwen-2.5-vl-72b-instruct: Deep vision specialist fallback.
-        // 5. meta-llama/llama-3.2-11b-vision-instruct:free: Free lightweight vision fallback.
-        $DEFAULT_VISION_MODELS = [
-            'google/gemini-2.0-flash-001',
-            'google/gemini-2.5-flash',
-            'openrouter/auto',
-            'qwen/qwen-2.5-vl-72b-instruct',
+        // 100% FREE MULTIMODAL VISION MODELS (Zero credit cost, unlimited free invoice scanning):
+        $FREE_VISION_MODELS = [
+            'openrouter/free',
+            'nex-agi/nex-n2.5-pro:free',
+            'nex-agi/nex-n2.5-mini:free',
+            'google/gemma-4-31b-it:free',
+            'google/gemma-4-26b-a4b-it:free',
+            'dots-studio/dots-3-note-preview:free',
             'meta-llama/llama-3.2-11b-vision-instruct:free',
         ];
 
-        if (empty($model) || in_array($model, ['openrouter/auto', 'auto', 'openrouter/free'])) {
-            $modelsToTry = $DEFAULT_VISION_MODELS;
+        $GENERAL_VISION_MODELS = [
+            'openrouter/auto',
+            'google/gemini-2.5-flash',
+        ];
+
+        $isUserModelFree = !empty($model) && (stripos($model, ':free') !== false || stripos($model, 'free') !== false);
+
+        if (empty($model) || in_array($model, ['openrouter/auto', 'auto'])) {
+            $modelsToTry = array_unique(array_merge($GENERAL_VISION_MODELS, $FREE_VISION_MODELS));
+        } elseif ($model === 'openrouter/free') {
+            $modelsToTry = $FREE_VISION_MODELS;
+        } elseif ($isUserModelFree) {
+            // User specifically chose a FREE model -> prioritize user's choice, then 100% FREE fallbacks only!
+            // Never fall back to paid models to guarantee truly unlimited, zero-credit-limit scanning.
+            $modelsToTry = array_unique(array_merge([$model], $FREE_VISION_MODELS));
         } else {
-            // User configured specific model -> try user's choice FIRST, followed by robust fallbacks
-            $modelsToTry = array_unique(array_merge([$model], $DEFAULT_VISION_MODELS));
+            // User chose paid or custom model -> try user's choice, then general, then free fallbacks
+            $modelsToTry = array_unique(array_merge([$model], $GENERAL_VISION_MODELS, $FREE_VISION_MODELS));
         }
 
-        // Try up to 3 models with fast failover
-        $modelsToTry = array_slice($modelsToTry, 0, 3);
+        // Try up to 5 models with fast failover
+        $modelsToTry = array_slice($modelsToTry, 0, 5);
 
         $imageBlock   = $this->preprocessor->buildImageUrlBlock($imageB64, $imageFormat);
         $lastError    = null;
@@ -759,6 +769,7 @@ class InvoiceScanService
             error_log("SCAN_AI_TRACE: Attempting OpenRouter vision model: {$tryModel}");
             $requestCount++;
 
+            // Use 2000 max_tokens: optimal for full invoice JSON (30+ items) while avoiding OpenRouter upfront credit reservation rejection
             $payload = [
                 'model'    => $tryModel,
                 'messages' => [
@@ -769,7 +780,7 @@ class InvoiceScanService
                     ]]
                 ],
                 'temperature' => 0.1,
-                'max_tokens'  => 4500,
+                'max_tokens'  => 2000,
             ];
 
             $ch = curl_init('https://openrouter.ai/api/v1/chat/completions');
@@ -803,8 +814,53 @@ class InvoiceScanService
                 $rateLimitCount++;
                 $this->recordRateLimitError();
                 error_log("SCAN_AI_TRACE: Model {$tryModel} rate limited 429 ({$rateLimitCount}x)");
-                $lastError = "AI Scanner sedang sibuk (rate limit). Mencoba model alternatif...";
+                $lastError = "Model AI sedang sibuk (rate limit). Mencoba model alternatif...";
                 continue;
+            }
+
+            // Dynamic Token & Credit Limit Recovery:
+            // If OpenRouter returns credit/token constraint (402 or "requires more credits, or fewer max_tokens")
+            if ($httpCode === 402 || ($httpCode !== 200 && (stripos($response, 'credits') !== false || stripos($response, 'fewer max_tokens') !== false))) {
+                $errData = json_decode($response, true);
+                $msg = $errData['error']['message'] ?? "Batas kredit/token OpenRouter";
+                error_log("SCAN_AI_TRACE: Model {$tryModel} credit/token constraint ($httpCode): $msg");
+
+                // If OpenRouter indicates exact affordable tokens (e.g. "can only afford 2036"):
+                if (preg_match('/can only afford (\d+)/i', $msg, $affordMatches)) {
+                    $affordable = (int)$affordMatches[1];
+                    if ($affordable >= 400 && $payload['max_tokens'] > $affordable) {
+                        error_log("SCAN_AI_TRACE: Retrying {$tryModel} dynamically with affordable max_tokens: {$affordable}");
+                        $retryPayload = $payload;
+                        $retryPayload['max_tokens'] = $affordable;
+
+                        $rch = curl_init('https://openrouter.ai/api/v1/chat/completions');
+                        curl_setopt($rch, CURLOPT_RETURNTRANSFER, true);
+                        curl_setopt($rch, CURLOPT_POST, true);
+                        curl_setopt($rch, CURLOPT_POSTFIELDS, json_encode($retryPayload));
+                        curl_setopt($rch, CURLOPT_HTTPHEADER, [
+                            'Authorization: Bearer ' . $apiKey,
+                            'Content-Type: application/json',
+                            'HTTP-Referer: ' . (defined('BASE_URL') ? BASE_URL : 'https://alfarezmart.com/'),
+                            'X-Title: AlfarezMart Invoice Scanner',
+                        ]);
+                        curl_setopt($rch, CURLOPT_TIMEOUT, 50);
+                        curl_setopt($rch, CURLOPT_CONNECTTIMEOUT, 10);
+                        curl_setopt($rch, CURLOPT_SSL_VERIFYPEER, false);
+                        $rResponse = curl_exec($rch);
+                        $rHttpCode = curl_getinfo($rch, CURLINFO_HTTP_CODE);
+                        curl_close($rch);
+
+                        if ($rHttpCode === 200) {
+                            $response = $rResponse;
+                            $httpCode = 200;
+                        }
+                    }
+                }
+
+                if ($httpCode !== 200) {
+                    $lastError = "Batas kredit OpenRouter tercapai. Beralih otomatis ke model gratis...";
+                    continue;
+                }
             }
 
             if ($httpCode !== 200) {
@@ -812,9 +868,18 @@ class InvoiceScanService
                 $msg = $errData['error']['message'] ?? "HTTP $httpCode";
                 error_log("SCAN_AI_TRACE: Model {$tryModel} error ($httpCode): $msg");
 
-                if (stripos($msg, 'no endpoints') !== false || stripos($msg, 'not found') !== false || stripos($msg, 'guardrail') !== false || stripos($msg, 'privacy') !== false) {
+                if (
+                    stripos($msg, 'no endpoints') !== false ||
+                    stripos($msg, 'not found') !== false ||
+                    stripos($msg, 'guardrail') !== false ||
+                    stripos($msg, 'privacy') !== false ||
+                    stripos($msg, 'not a valid model') !== false ||
+                    stripos($msg, 'support image') !== false ||
+                    stripos($msg, 'agentic harness') !== false ||
+                    stripos($msg, 'upstream') !== false
+                ) {
                     $noEndpointCount++;
-                    $lastError = "Model AI tidak tersedia atau memerlukan izin privasi. Mencoba model lain...";
+                    $lastError = "Model AI tidak tersedia atau tidak mendukung gambar. Mencoba model alternatif gratis...";
                     continue;
                 }
 
