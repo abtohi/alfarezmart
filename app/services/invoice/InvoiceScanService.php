@@ -791,7 +791,7 @@ class InvoiceScanService
             $response = curl_exec($ch);
             $err      = curl_error($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            unset($ch);
+            curl_close($ch);
 
             if ($err) {
                 error_log("SCAN_AI_TRACE: Model {$tryModel} curl error: {$err}");
