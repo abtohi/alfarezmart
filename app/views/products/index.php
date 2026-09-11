@@ -549,22 +549,42 @@ function applyPriceFilter() {
 
 function scanProductBarcode() {
     const searchInput = document.getElementById('productSearchInput');
+    const form = document.getElementById('productSearchForm');
+
+    const handleScannedCode = async (code) => {
+        if (!code) return;
+        const cleanCode = String(code).trim();
+        if (searchInput) searchInput.value = cleanCode;
+
+        // Reset category & price filters so barcode lookup searches globally across all products
+        if (form) {
+            const catInp = form.querySelector('input[name="category"]');
+            if (catInp) catInp.value = '';
+            const minPInp = form.querySelector('input[name="min_price"]');
+            if (minPInp) minPInp.value = '';
+            const maxPInp = form.querySelector('input[name="max_price"]');
+            if (maxPInp) maxPInp.value = '';
+        }
+
+        // Instant visual update (0ms) on product list so the item displays immediately
+        if (typeof doOfflineSearch === 'function') {
+            doOfflineSearch(cleanCode);
+        }
+
+        const newUrl = '<?= BASE_URL ?>products?q=' + encodeURIComponent(cleanCode);
+        try {
+            window.history.replaceState({ q: cleanCode }, '', newUrl);
+        } catch(e) {}
+
+        if (form) {
+            form.submit();
+        } else {
+            window.location.href = newUrl;
+        }
+    };
+
     if (typeof BarcodeUtil !== 'undefined' && BarcodeUtil.scanBarcode) {
-        BarcodeUtil.scanBarcode(searchInput, async (code) => {
-            if (code) {
-                if (searchInput) searchInput.value = code;
-                if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
-                    const product = await OfflineDB.findByBarcode(code);
-                    if (product) {
-                        window.location.href = `<?= BASE_URL ?>products/${product.id}`;
-                        return;
-                    }
-                }
-                const form = document.getElementById('productSearchForm');
-                if (form) form.submit();
-                else window.location.href = '<?= BASE_URL ?>products?q=' + encodeURIComponent(code);
-            }
-        });
+        BarcodeUtil.scanBarcode(searchInput, handleScannedCode);
     } else {
         AppModal.show({
             title: 'Cari Produk via Barcode',
@@ -578,17 +598,7 @@ function scanProductBarcode() {
             submitText: '<i class="bi bi-search"></i> Cari',
             onSubmit: () => {
                 const code = document.getElementById('manualBarcodeInput')?.value?.trim();
-                if (code) {
-                    if (searchInput) searchInput.value = code;
-                    if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
-                        OfflineDB.findByBarcode(code).then(product => {
-                            if (product) window.location.href = `<?= BASE_URL ?>products/${product.id}`;
-                            else window.location.href = '<?= BASE_URL ?>products?q=' + encodeURIComponent(code);
-                        });
-                    } else {
-                        window.location.href = '<?= BASE_URL ?>products?q=' + encodeURIComponent(code);
-                    }
-                }
+                if (code) handleScannedCode(code);
                 return true;
             }
         });
@@ -797,9 +807,14 @@ async function doOfflineSearch(query) {
                 } catch(e) {}
             }
         } else {
-            // 2. Cari produk dari IndexedDB
+            // 2. Cari produk dari IndexedDB (prioritaskan pencocokan barcode exact jika ada)
             if (typeof OfflineDB !== 'undefined') {
-                items = await OfflineDB.searchProducts(cleanQ);
+                const bcHit = await OfflineDB.findByBarcode(cleanQ);
+                if (bcHit) {
+                    items = [bcHit];
+                } else {
+                    items = await OfflineDB.searchProducts(cleanQ);
+                }
             }
             // 2b. Fallback cari di memory / localStorage
             if ((!items || items.length === 0) && window._posProductsCatalog && window._posProductsCatalog.length > 0) {
@@ -965,14 +980,14 @@ async function doOfflineSearch(query) {
             } catch(syncErr) {}
         }
 
-        // Apply Filters from URL params safely
+        // Apply Filters from URL params safely (hanya jika bukan pencarian spesifik/barcode)
         const urlParams = new URLSearchParams(window.location.search);
         const rawCatId = urlParams.get('category');
         const catId = (rawCatId && rawCatId.trim() !== '' && rawCatId !== '0' && rawCatId !== 'null') ? rawCatId.trim() : null;
         const minP = parseFloat(urlParams.get('min_price'));
         const maxP = parseFloat(urlParams.get('max_price'));
         
-        if (items && items.length > 0 && (catId || (!isNaN(minP) && minP > 0) || (!isNaN(maxP) && maxP > 0))) {
+        if (!cleanQ && items && items.length > 0 && (catId || (!isNaN(minP) && minP > 0) || (!isNaN(maxP) && maxP > 0))) {
             items = items.filter(p => {
                 let match = true;
                 if (catId) {

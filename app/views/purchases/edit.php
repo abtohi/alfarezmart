@@ -3627,7 +3627,6 @@ function toggleItemDrawer(uid) {
         });
         // Initialize custom toggle states
         drawer.querySelectorAll('.drawer-pkg-row').forEach(row => {
-        drawer.querySelectorAll('.drawer-pkg-row').forEach(row => {
             const buyToggle  = row.querySelector('.buy-custom-toggle');
             const sellToggle = row.querySelector('.sell-custom-toggle');
             if (buyToggle) {

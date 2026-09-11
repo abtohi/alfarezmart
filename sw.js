@@ -1,5 +1,5 @@
 /**
- * AlfarezMart PWA - Service Worker v46.7
+ * AlfarezMart PWA - Service Worker v46.8
  * Cache Strategy:
  * - CSS/JS versioned assets: Cache First with EXACT URL match & safe offline fallback
  * - Navigation / HTML: Fast Network Race (350ms Timeout) with Stale-While-Revalidate
@@ -9,9 +9,9 @@
  * They are cached on first request via the Cache-First fetch handler.
  * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v46.7';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v46.7';
-const APP_ASSET_VERSION = '25.26';
+const CACHE_NAME = 'alfarezmart-cache-v46.8';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v46.8';
+const APP_ASSET_VERSION = '25.27';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
     // Static app shell assets only — dynamic PHP pages are cached at runtime upon navigation
@@ -136,9 +136,11 @@ self.addEventListener('fetch', event => {
 
     // ── 2. Auth & Critical Live Pages: Always Network First for CSRF & Auth Freshness ──
     const liveFreshPages = ['/', '/login', '/logout', '/register', '/sales/pos', '/purchases/create', '/products/create', '/ppob', '/ppob/history'];
+    const hasSearchParam = url.search && (url.searchParams.has('q') || url.searchParams.has('barcode') || url.searchParams.has('category') || url.searchParams.has('min_price') || url.searchParams.has('max_price'));
     const isLiveFreshPage = url.pathname === '/' || 
                             url.pathname === BASE_URL || 
                             url.pathname === BASE_URL.replace(/\/$/, '') ||
+                            hasSearchParam ||
                             liveFreshPages.some(p => p !== '/' && (url.pathname === p || url.pathname === BASE_URL.replace(/\/$/, '') + p || url.pathname.endsWith(p)));
     if (isLiveFreshPage) {
         event.respondWith(
@@ -230,8 +232,9 @@ self.addEventListener('fetch', event => {
     }
 
     // ── 5. HTML/Navigation Requests: Ultra-Fast Race Strategy (350ms) ──
+    const matchOptions = hasSearchParam ? {} : { ignoreSearch: true };
     event.respondWith(
-        caches.match(event.request, { ignoreSearch: true }).then(async cachedResponse => {
+        caches.match(event.request, matchOptions).then(async cachedResponse => {
             // Background fetcher helper
             const fetchPromise = fetch(event.request, { cache: 'no-cache', credentials: 'same-origin' })
                 .then(networkResponse => {

@@ -24,9 +24,9 @@ class ProductController extends Controller
 
     public function index()
     {
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
         $search = isset($_GET['q']) ? Security::sanitize($_GET['q']) : '';
-        $categoryId = isset($_GET['category']) ? (int)$_GET['category'] : null;
+        $categoryId = (!empty($_GET['category']) && is_numeric($_GET['category'])) ? (int)$_GET['category'] : null;
         $minPrice = isset($_GET['min_price']) && $_GET['min_price'] !== '' ? max(0, (float)$_GET['min_price']) : null;
         $maxPrice = isset($_GET['max_price']) && $_GET['max_price'] !== '' ? max(0, (float)$_GET['max_price']) : null;
 

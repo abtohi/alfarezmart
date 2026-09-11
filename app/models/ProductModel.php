@@ -507,6 +507,14 @@ class ProductModel extends Model
                         $priceClause = " OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND (CAST(ROUND(pp.sell_price_retail) AS CHAR) LIKE $p_price_r OR CAST(ROUND(pp.sell_price_wholesale) AS CHAR) LIKE $p_price_w OR CAST(ROUND(pp.buy_price) AS CHAR) LIKE $p_price_b))";
                     }
                     
+                    $barClause = "pp.barcode LIKE $p_bar";
+                    $trimZero = ltrim($word, '0');
+                    if ($trimZero !== '' && $trimZero !== $word && strlen($word) >= 5) {
+                        $p_bar_trim = ":s_{$idx}_bar_trim";
+                        $params[$p_bar_trim] = "%{$trimZero}%";
+                        $barClause = "(pp.barcode LIKE $p_bar OR pp.barcode LIKE $p_bar_trim)";
+                    }
+
                     $where .= " AND (
                         p.full_name LIKE $p_name 
                         OR p.short_label LIKE $p_label 
@@ -519,7 +527,7 @@ class ProductModel extends Model
                         OR EXISTS (SELECT 1 FROM supplier_products sp WHERE sp.product_id = p.id AND sp.supplier_product_code LIKE $p_scode2)
                         OR b.name LIKE $p_brand 
                         OR c.name LIKE $p_cat 
-                        OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND pp.barcode LIKE $p_bar)
+                        OR EXISTS (SELECT 1 FROM product_packagings pp WHERE pp.product_id = p.id AND $barClause)
                         $priceClause
                     )";
                     
