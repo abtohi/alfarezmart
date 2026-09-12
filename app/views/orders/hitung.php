@@ -6,113 +6,132 @@
  * @var string $csrfToken
  */
 ?>
-<div class="page-section" style="padding-bottom: 120px;">
-
-    <!-- Modern Header Card -->
-    <div class="order-header-card">
-        <div class="order-header-top">
-            <div class="order-header-info">
-                <div class="order-badge-pill">
-                    <i class="bi bi-calculator"></i> Kalkulator Restok
-                </div>
-                <h4 class="order-title">Hitung Orderan</h4>
-                <p class="order-subtitle">Susun estimasi daftar belanja ke supplier &amp; copy ke WhatsApp</p>
-            </div>
-            <button type="button" class="btn-drafts-pill" onclick="openOrderDrafts()" title="Buka riwayat draft tersimpan">
-                <i class="bi bi-journal-bookmark-fill text-warning"></i>
-                <span>Draft</span>
-            </button>
-        </div>
-
-        <!-- Summary KPI Grid -->
-        <div class="order-summary-grid">
-            <div class="summary-stat-box">
-                <div class="stat-icon-wrap info-icon">
-                    <i class="bi bi-box-seam"></i>
-                </div>
-                <div class="stat-meta">
-                    <span class="stat-label">Jumlah Item</span>
-                    <span id="orderItemCount" class="stat-value text-info">0</span>
-                </div>
-            </div>
-            <div class="summary-stat-box">
-                <div class="stat-icon-wrap success-icon">
-                    <i class="bi bi-cash-stack"></i>
-                </div>
-                <div class="stat-meta">
-                    <span class="stat-label">Estimasi Total Belanja</span>
-                    <span id="orderEstimateTotal" class="stat-value text-success">Rp 0</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
+<div class="page-section order-page-container">
     <input type="hidden" id="csrfToken" value="<?= htmlspecialchars($csrfToken ?? '') ?>">
 
-    <!-- Supplier Picker Card -->
-    <div class="order-search-card mb-3">
-        <label class="section-input-label">
-            <i class="bi bi-building"></i> Supplier Tujuan <span class="text-muted fw-normal">(Opsional)</span>
-        </label>
-        <div style="position:relative;">
-            <input type="hidden" id="supplierSelect" value="">
-            <input type="hidden" id="supplierName" value="">
-            <div class="modern-input-wrap">
-                <i class="bi bi-shop search-lead-icon text-muted"></i>
-                <input type="text" id="supplierSearchInput" autocomplete="off" placeholder="Ketik nama supplier atau sales..." class="modern-text-input">
-                <button type="button" id="btnClearSupplier" class="btn-input-clear" style="display:none;" title="Hapus supplier">
-                    <i class="bi bi-x"></i>
+    <div class="order-desktop-layout">
+        <!-- Left Column: Setup, Search & Summary -->
+        <div class="order-left-panel">
+            <!-- Modern Header Card -->
+            <div class="order-header-card">
+                <div class="order-header-top">
+                    <div class="order-header-info">
+                        <div class="order-badge-pill">
+                            <i class="bi bi-calculator"></i> Kalkulator Restok
+                        </div>
+                        <h4 class="order-title">Hitung Orderan</h4>
+                        <p class="order-subtitle">Susun estimasi daftar belanja ke supplier &amp; copy ke WhatsApp</p>
+                    </div>
+                    <button type="button" class="btn-drafts-pill" onclick="openOrderDrafts()" title="Buka riwayat draft tersimpan">
+                        <i class="bi bi-journal-bookmark-fill text-warning"></i>
+                        <span>Draft</span>
+                    </button>
+                </div>
+
+                <!-- Summary KPI Grid -->
+                <div class="order-summary-grid">
+                    <div class="summary-stat-box">
+                        <div class="stat-icon-wrap info-icon">
+                            <i class="bi bi-box-seam"></i>
+                        </div>
+                        <div class="stat-meta">
+                            <span class="stat-label">Jumlah Item</span>
+                            <span id="orderItemCount" class="stat-value text-info">0</span>
+                        </div>
+                    </div>
+                    <div class="summary-stat-box">
+                        <div class="stat-icon-wrap success-icon">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+                        <div class="stat-meta">
+                            <span class="stat-label">Estimasi Total Belanja</span>
+                            <span id="orderEstimateTotal" class="stat-value text-success">Rp 0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Supplier Picker Card -->
+            <div class="order-search-card">
+                <label class="section-input-label">
+                    <i class="bi bi-building"></i> Supplier Tujuan <span class="text-muted fw-normal">(Opsional)</span>
+                </label>
+                <div style="position:relative;">
+                    <input type="hidden" id="supplierSelect" value="">
+                    <input type="hidden" id="supplierName" value="">
+                    <div class="modern-input-wrap">
+                        <i class="bi bi-shop search-lead-icon text-muted"></i>
+                        <input type="text" id="supplierSearchInput" autocomplete="off" placeholder="Ketik nama supplier atau sales..." class="modern-text-input">
+                        <button type="button" id="btnClearSupplier" class="btn-input-clear" style="display:none;" title="Hapus supplier">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    <div id="supplierSearchResults" class="custom-dropdown-results" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Product Search Card -->
+            <div class="order-search-card" style="position:relative;">
+                <label class="section-input-label">
+                    <i class="bi bi-search"></i> Tambah Produk ke Orderan
+                </label>
+                <div class="modern-input-wrap">
+                    <button type="button" id="btnOrderScan" class="btn-scan-action" title="Scan Barcode Kamera">
+                        <i class="bi bi-upc-scan"></i>
+                    </button>
+                    <input type="text" id="orderSearchInput" autocomplete="off" placeholder="Ketik nama produk, merek, atau scan barcode..." class="modern-text-input">
+                    <button type="button" id="btnClearProductSearch" class="btn-input-clear" style="display:none;" title="Bersihkan pencarian">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+                <div id="orderSearchResults" class="custom-dropdown-results" style="display:none;"></div>
+            </div>
+
+            <!-- Desktop Action Bar (Visible only on Desktop) -->
+            <div class="desktop-action-bar">
+                <button id="btnSaveOrderDesktop" type="button" class="btn-desktop-save" onclick="saveOrderDraft()" title="Simpan sebagai Draft">
+                    <i class="bi bi-bookmark-check"></i>
+                    <span>Simpan Draft</span>
+                </button>
+                <button id="btnCopyOrderDesktop" type="button" class="btn-desktop-wa btn-action-copy-wa" title="Salin daftar orderan murni untuk WhatsApp">
+                    <i class="bi bi-whatsapp"></i>
+                    <span>Copy WhatsApp</span>
                 </button>
             </div>
-            <div id="supplierSearchResults" class="custom-dropdown-results" style="display:none;"></div>
         </div>
-    </div>
 
-    <!-- Product Search Card -->
-    <div class="order-search-card mb-3" style="position:relative;">
-        <label class="section-input-label">
-            <i class="bi bi-search"></i> Tambah Produk ke Orderan
-        </label>
-        <div class="modern-input-wrap">
-            <button type="button" id="btnOrderScan" class="btn-scan-action" title="Scan Barcode Kamera">
-                <i class="bi bi-upc-scan"></i>
-            </button>
-            <input type="text" id="orderSearchInput" autocomplete="off" placeholder="Ketik nama produk, merek, atau scan barcode..." class="modern-text-input">
-            <button type="button" id="btnClearProductSearch" class="btn-input-clear" style="display:none;" title="Bersihkan pencarian">
-                <i class="bi bi-x"></i>
-            </button>
-        </div>
-        <div id="orderSearchResults" class="custom-dropdown-results" style="display:none;"></div>
-    </div>
-
-    <!-- Order Items Section Header -->
-    <div class="d-flex justify-content-between align-items-center mb-2 px-1">
-        <div class="items-list-title">
-            <i class="bi bi-list-check text-primary me-1"></i> Daftar Orderan
-        </div>
-        <button id="btnClearOrder" type="button" class="btn-clear-list" title="Hapus semua item">
-            <i class="bi bi-trash3 me-1"></i> Kosongkan
-        </button>
-    </div>
-
-    <!-- Order Items List Container -->
-    <div id="orderItemsList" class="order-items-wrapper">
-        <div id="orderEmptyState" class="order-empty-state">
-            <div class="empty-icon-circle">
-                <i class="bi bi-cart3"></i>
+        <!-- Right Column: Order Items List -->
+        <div class="order-right-panel">
+            <!-- Order Items Section Header -->
+            <div class="d-flex justify-content-between align-items-center mb-2 px-1">
+                <div class="items-list-title">
+                    <i class="bi bi-list-check text-primary me-1"></i> Daftar Orderan
+                </div>
+                <button id="btnClearOrder" type="button" class="btn-clear-list" title="Hapus semua item">
+                    <i class="bi bi-trash3 me-1"></i> Kosongkan
+                </button>
             </div>
-            <div class="empty-title">Belum ada item dalam daftar orderan</div>
-            <div class="empty-subtitle">Ketik nama produk atau scan barcode pada kolom pencarian di atas untuk menambahkan barang belanjaan.</div>
+
+            <!-- Order Items List Container -->
+            <div id="orderItemsList" class="order-items-wrapper">
+                <div id="orderEmptyState" class="order-empty-state">
+                    <div class="empty-icon-circle">
+                        <i class="bi bi-cart3"></i>
+                    </div>
+                    <div class="empty-title">Belum ada item dalam daftar orderan</div>
+                    <div class="empty-subtitle">Ketik nama produk atau scan barcode pada kolom pencarian di sebelah kiri untuk menambahkan barang belanjaan.</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Modern Floating Bottom Action Bar -->
+    <!-- Modern Floating Bottom Action Bar (Visible on Mobile) -->
     <div class="order-floating-bar">
         <button id="btnSaveOrder" type="button" class="btn-floating-save" onclick="saveOrderDraft()" title="Simpan sebagai Draft">
             <i class="bi bi-bookmark-check"></i>
             <span>Simpan</span>
         </button>
-        <button id="btnCopyOrder" type="button" class="btn-floating-wa" title="Salin daftar orderan murni untuk WhatsApp">
+        <button id="btnCopyOrder" type="button" class="btn-floating-wa btn-action-copy-wa" title="Salin daftar orderan murni untuk WhatsApp">
             <i class="bi bi-whatsapp"></i>
             <span>Copy WA</span>
         </button>
@@ -918,6 +937,110 @@
     transform: scale(0.98);
 }
 
+/* =====================================================================
+   DESKTOP 2-COLUMN SPLIT LAYOUT
+   ===================================================================== */
+.order-desktop-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.desktop-action-bar {
+    display: none;
+}
+
+.btn-desktop-save {
+    flex: 0.38;
+    padding: 11px 14px;
+    font-weight: 700;
+    font-size: 0.82rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--surface-2);
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s;
+}
+
+.btn-desktop-save:hover {
+    background: var(--surface-3);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+.btn-desktop-wa {
+    flex: 0.62;
+    padding: 11px 16px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    border: none;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+    transition: all 0.2s;
+}
+
+.btn-desktop-wa:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(37, 211, 102, 0.45);
+}
+
+.btn-desktop-wa:active {
+    transform: scale(0.98);
+}
+
+@media (min-width: 992px) {
+    .order-page-container {
+        padding-bottom: 40px !important;
+    }
+
+    .order-desktop-layout {
+        display: grid;
+        grid-template-columns: 390px 1fr;
+        gap: 20px;
+        align-items: start;
+        max-width: 1320px;
+        margin: 0 auto;
+    }
+
+    .order-left-panel {
+        position: sticky;
+        top: 75px;
+        z-index: 15;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .order-right-panel {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .order-floating-bar {
+        display: none !important;
+    }
+
+    .desktop-action-bar {
+        display: flex !important;
+        gap: 10px;
+        margin-top: 2px;
+    }
+}
+
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
@@ -1032,7 +1155,11 @@
 
     window.applySupplierPrice = function(idx, supplierId, newPrice, supplierName) {
         if (!orderItems[idx]) return;
+        const prodId = orderItems[idx].product_id;
         orderItems[idx].buy_price = parseFloat(newPrice) || 0;
+        
+        // Langsung tutup / hilangkan dropdown list perbandingan supplier
+        expandedSuppliers[prodId] = false;
         
         // If supplier Tujuan at header is empty, auto-fill it
         if (!elSupplier.value) {
@@ -1651,7 +1778,7 @@
     }
 
     // ── Copy to WhatsApp: Clean format (Only product label + quantity + unit) ──
-    document.getElementById('btnCopyOrder').addEventListener('click', async () => {
+    async function handleCopyWa() {
         if (orderItems.length === 0) {
             if (typeof showToast === 'function') showToast('Daftar orderan masih kosong', 'warning');
             return;
@@ -1685,6 +1812,10 @@
         } catch (err) {
             promptCopyFallback(text);
         }
+    }
+
+    document.querySelectorAll('.btn-action-copy-wa').forEach(btn => {
+        btn.addEventListener('click', handleCopyWa);
     });
 
     function promptCopyFallback(text) {
