@@ -9,11 +9,23 @@ $avatarColors = [
     '#F06292', '#BA68C8', '#4DB6AC', '#7986CB', '#81C784',
     '#A1887F', '#E06666', '#93C47D', '#8E7CC3', '#F6B26B'
 ];
-function getAvatarColor($name, $colors) {
+/**
+ * @param string|null $name
+ * @param array<int, string> $colors
+ * @return string
+ */
+function getAvatarColor(?string $name, array $colors): string {
+    $name = (string)$name;
     $hash = abs(crc32($name));
     return $colors[$hash % count($colors)];
 }
-function getInitial($name) {
+
+/**
+ * @param string|null $name
+ * @return string
+ */
+function getInitial(?string $name): string {
+    $name = (string)$name;
     $clean = preg_replace('/[^a-zA-Z0-9]/', '', $name);
     return strtoupper(substr($clean, 0, 1) ?: '?');
 }
