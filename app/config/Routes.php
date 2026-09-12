@@ -131,6 +131,8 @@ $router->post('/api/products/multivariant-apply', 'ApiController@applyMultivaria
 $router->get('/api/products/barcode/{code}', 'ApiController@getByBarcode');
 $router->get('/api/barcode/generate', 'ApiController@generateBarcode');
 $router->get('/api/products/{id}', 'ApiController@getById');
+$router->get('/api/products/{id}/supplier-pricing', 'ApiController@getProductSupplierPricing');
+$router->post('/api/products/supplier-pricing-batch', 'ApiController@getBatchProductSupplierPricing');
 $router->post('/api/products', 'ApiController@createProduct');
 $router->post('/api/products/update/{id}', 'ApiController@updateProduct');
 $router->post('/api/products/{id}/update-barcodes', 'ApiController@updateBarcodes');

@@ -554,6 +554,266 @@
     transform: scale(1.05);
 }
 
+/* =====================================================================
+   SUPPLIER COMPARISON & CHEAPEST SUPPLIER ON ITEM CARD
+   ===================================================================== */
+.item-supplier-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.025);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 5px 9px;
+    margin: 7px 0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.item-supplier-bar:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(76, 201, 240, 0.35);
+}
+
+.item-supplier-bar.has-cheapest {
+    border-left: 3px solid #2ec4b6;
+}
+
+.sup-chip-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.sup-badge-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.sup-cheapest-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.sup-cheapest-name {
+    color: var(--text-primary);
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sup-cheapest-price {
+    color: #2ec4b6;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.sup-toggle-icon {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.sup-toggle-icon.open {
+    transform: rotate(180deg);
+    color: var(--info);
+}
+
+/* Expandable Drawer */
+.item-supplier-drawer {
+    background: rgba(10, 15, 29, 0.75);
+    border: 1px solid rgba(76, 201, 240, 0.2);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    margin: 4px 0 8px 0;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.drawer-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 6px;
+    margin-bottom: 7px;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+    font-size: 0.66rem;
+    color: var(--text-muted);
+}
+
+.drawer-header-target {
+    color: var(--info);
+    font-weight: 700;
+}
+
+.sup-list-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sup-card-item {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 7px 9px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.15s ease;
+}
+
+.sup-card-item:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.sup-card-item.is-cheapest {
+    border-color: rgba(46, 196, 182, 0.45);
+    background: linear-gradient(90deg, rgba(46, 196, 182, 0.08) 0%, var(--surface-2) 100%);
+}
+
+.sup-card-left {
+    min-width: 0;
+    flex: 1;
+}
+
+.sup-name-line {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-bottom: 3px;
+}
+
+.sup-title {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.25;
+}
+
+.badge-cheapest-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(46, 196, 182, 0.18);
+    border: 1px solid rgba(46, 196, 182, 0.4);
+    color: #2ec4b6;
+    font-size: 0.58rem;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.badge-source-pill {
+    font-size: 0.58rem;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 1px 5px;
+    border-radius: 4px;
+}
+
+.sup-meta-line {
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.sup-card-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    flex-shrink: 0;
+}
+
+.sup-price-tag {
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #2ec4b6;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.sup-diff-tag {
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+.sup-diff-tag.saving {
+    background: rgba(46, 196, 182, 0.15);
+    color: #2ec4b6;
+    border: 1px solid rgba(46, 196, 182, 0.25);
+}
+
+.sup-diff-tag.higher {
+    background: rgba(230, 57, 70, 0.12);
+    color: #ff6b6b;
+    border: 1px solid rgba(230, 57, 70, 0.2);
+}
+
+.sup-diff-tag.same {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-muted);
+}
+
+.btn-apply-sup {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    font-size: 0.64rem;
+    font-weight: 700;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--surface-3);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-top: 1px;
+}
+
+.btn-apply-sup:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
 .order-empty-state {
     text-align: center;
     padding: 36px 20px;
@@ -674,6 +934,9 @@
     let searchTimer = null;
     let searchSeq = 0; // Prevent race conditions
     let supplierSearchTimer = null;
+    let supplierPricingCache = {}; // { [productId]: pricingData }
+    let expandedSuppliers = {}; // { [productId]: boolean }
+    const pendingFetches = new Set();
 
     const elInput = document.getElementById('orderSearchInput');
     const elResults = document.getElementById('orderSearchResults');
@@ -694,6 +957,97 @@
         return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
+    async function fetchSupplierPricing(productId) {
+        if (!productId || supplierPricingCache[productId] || pendingFetches.has(productId)) return;
+        pendingFetches.add(productId);
+        try {
+            const res = await fetch(`<?= BASE_URL ?>api/products/${productId}/supplier-pricing`, { credentials: 'same-origin' });
+            if (res.ok) {
+                const json = await res.json();
+                if (json.success && json.data) {
+                    supplierPricingCache[productId] = json.data;
+                    // If any item in orderItems was missing packagings, sync from pricing
+                    orderItems.forEach(it => {
+                        if (it.product_id === productId && (!it.packagings || it.packagings.length === 0)) {
+                            it.packagings = json.data.packagings || [];
+                        }
+                    });
+                    renderList();
+                }
+            }
+        } catch (e) {
+            console.error('Gagal memuat supplier pricing:', e);
+        } finally {
+            pendingFetches.delete(productId);
+        }
+    }
+
+    async function fetchBatchSupplierPricing(productIds) {
+        const toFetch = productIds.filter(id => id > 0 && !supplierPricingCache[id] && !pendingFetches.has(id));
+        if (toFetch.length === 0) return;
+        toFetch.forEach(id => pendingFetches.add(id));
+        try {
+            const csrf = document.getElementById('csrfToken')?.value || '';
+            const res = await fetch(`<?= BASE_URL ?>api/products/supplier-pricing-batch`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
+                credentials: 'same-origin',
+                body: JSON.stringify({ product_ids: toFetch })
+            });
+            if (res.ok) {
+                const json = await res.json();
+                if (json.success && json.data) {
+                    Object.keys(json.data).forEach(pid => {
+                        supplierPricingCache[pid] = json.data[pid];
+                    });
+                    orderItems.forEach(it => {
+                        if (json.data[it.product_id] && (!it.packagings || it.packagings.length === 0)) {
+                            it.packagings = json.data[it.product_id].packagings || [];
+                        }
+                    });
+                    renderList();
+                }
+            }
+        } catch (e) {
+            console.error('Gagal memuat batch supplier pricing:', e);
+        } finally {
+            toFetch.forEach(id => pendingFetches.delete(id));
+        }
+    }
+
+    window.toggleSupplierDrawer = function(productId) {
+        expandedSuppliers[productId] = !expandedSuppliers[productId];
+        const drawer = document.getElementById(`supDrawer_${productId}`);
+        if (drawer) {
+            drawer.style.display = expandedSuppliers[productId] ? 'block' : 'none';
+        }
+        const card = drawer ? drawer.closest('.order-item-card') : null;
+        if (card) {
+            const icon = card.querySelector('.sup-toggle-icon');
+            if (icon) {
+                icon.classList.toggle('open', !!expandedSuppliers[productId]);
+            }
+        }
+    };
+
+    window.applySupplierPrice = function(idx, supplierId, newPrice, supplierName) {
+        if (!orderItems[idx]) return;
+        orderItems[idx].buy_price = parseFloat(newPrice) || 0;
+        
+        // If supplier Tujuan at header is empty, auto-fill it
+        if (!elSupplier.value) {
+            elSupplier.value = supplierId;
+            elSupplierName.value = supplierName;
+            elSupplierInput.value = supplierName;
+            elBtnClearSupplier.style.display = 'flex';
+        }
+        
+        renderList();
+        if (typeof showToast === 'function') {
+            showToast(`✅ Harga disesuaikan: ${fmtRp(newPrice)} (${supplierName})`, 'success');
+        }
+    };
+
     function recompute() {
         let total = 0;
         orderItems.forEach(it => { total += (parseFloat(it.buy_price) || 0) * (parseFloat(it.qty) || 0); });
@@ -711,6 +1065,7 @@
             card.className = 'order-item-card';
 
             const itemSubtotal = (parseFloat(it.buy_price) || 0) * (parseFloat(it.qty) || 0);
+            const currentPkgId = it.packaging_id || (it.packagings && it.packagings[0] ? it.packagings[0].id : 0);
 
             let packHtml = '';
             if (it.packagings && it.packagings.length > 0) {
@@ -751,11 +1106,155 @@
                 packHtml = `<div style="font-size:11px; color:var(--text-muted); font-weight:600;">Satuan: <span style="color:var(--text-primary);">${escapeHtml(it.unit_name)}</span> &bull; @${fmtRp(it.buy_price)}</div>`;
             }
 
+            // ── Supplier Comparison & Cheapest Section ──
+            let supplierHtml = '';
+            const pricing = supplierPricingCache[it.product_id];
+
+            if (!pricing) {
+                supplierHtml = `
+                    <div class="item-supplier-bar" style="cursor:default;">
+                        <div class="sup-chip-left">
+                            <span class="sup-badge-count"><i class="bi bi-shop"></i> Supplier</span>
+                            <span style="font-size:0.68rem; color:var(--text-muted);"><i class="bi bi-arrow-repeat spin me-1"></i> Memuat info supplier...</span>
+                        </div>
+                    </div>`;
+                fetchSupplierPricing(it.product_id);
+            } else if (!pricing.suppliers || pricing.suppliers.length === 0) {
+                supplierHtml = `
+                    <div class="item-supplier-bar" style="cursor:default;">
+                        <div class="sup-chip-left">
+                            <span class="sup-badge-count"><i class="bi bi-shop"></i> 0 Supplier</span>
+                            <span style="font-size:0.68rem; color:var(--text-muted);">Belum ada riwayat supplier</span>
+                        </div>
+                    </div>`;
+            } else {
+                const currentPkg = (it.packagings || []).find(pk => pk.id == currentPkgId);
+                const activeUnitName = currentPkg ? currentPkg.unit_name : (it.unit_name || 'pcs');
+
+                const supEstimates = pricing.suppliers.map(sup => {
+                    let est = sup.estimates ? sup.estimates[currentPkgId] : null;
+                    let price = est ? parseFloat(est.estimated_price) : 0;
+                    let isExact = est ? est.is_exact : false;
+                    let date = est && est.date ? est.date : sup.last_purchase_date;
+
+                    if ((!price || price <= 0) && sup.base_unit_price > 0) {
+                        const bQty = currentPkg ? (parseFloat(currentPkg.base_qty) || 1) : 1;
+                        price = Math.round(sup.base_unit_price * bQty * 100) / 100;
+                        isExact = false;
+                    }
+
+                    return {
+                        supplier_id: sup.supplier_id,
+                        supplier_name: sup.supplier_name,
+                        supplier_phone: sup.supplier_phone,
+                        last_purchase_date: date,
+                        purchase_count: sup.purchase_count,
+                        price: price,
+                        is_exact: isExact
+                    };
+                }).filter(s => s.price > 0);
+
+                if (supEstimates.length === 0) {
+                    supplierHtml = `
+                        <div class="item-supplier-bar" style="cursor:default;">
+                            <div class="sup-chip-left">
+                                <span class="sup-badge-count"><i class="bi bi-shop"></i> ${pricing.suppliers.length} Supplier</span>
+                                <span style="font-size:0.68rem; color:var(--text-muted);">Harga belum tersedia untuk ${escapeHtml(activeUnitName)}</span>
+                            </div>
+                        </div>`;
+                } else {
+                    supEstimates.sort((a, b) => a.price - b.price);
+                    const cheapestPrice = supEstimates[0].price;
+                    const cheapestSupplier = supEstimates[0];
+                    const isExpanded = !!expandedSuppliers[it.product_id];
+
+                    let supplierCardsHtml = '';
+                    supEstimates.forEach(sup => {
+                        const isCheapest = (sup.price <= cheapestPrice);
+                        const currentItemBuyPrice = parseFloat(it.buy_price) || 0;
+                        const diff = sup.price - currentItemBuyPrice;
+
+                        let diffBadge = '';
+                        if (currentItemBuyPrice > 0) {
+                            if (Math.abs(diff) < 0.01) {
+                                diffBadge = `<span class="sup-diff-tag same">Harga Saat Ini</span>`;
+                            } else if (diff < 0) {
+                                const pct = Math.round((Math.abs(diff) / currentItemBuyPrice) * 100);
+                                diffBadge = `<span class="sup-diff-tag saving"><i class="bi bi-arrow-down-short"></i> Hemat ${fmtRp(Math.abs(diff))} (${pct}%)</span>`;
+                            } else {
+                                diffBadge = `<span class="sup-diff-tag higher"><i class="bi bi-arrow-up-short"></i> +${fmtRp(diff)}</span>`;
+                            }
+                        }
+
+                        const sourceBadge = sup.is_exact 
+                            ? `<span class="badge-source-pill" title="Harga persis dari faktur/pembelian kemasan ini"><i class="bi bi-check2-circle text-info"></i> Riwayat Kemasan</span>`
+                            : `<span class="badge-source-pill" title="Estimasi dikonversi dari satuan unit dasar"><i class="bi bi-calculator"></i> Konversi Unit</span>`;
+
+                        const dateStr = sup.last_purchase_date 
+                            ? `<span title="Tanggal order terakhir"><i class="bi bi-calendar3 me-1"></i>${new Date(sup.last_purchase_date).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'})}</span>` 
+                            : '';
+
+                        const phoneStr = sup.supplier_phone 
+                            ? `<a href="https://wa.me/${sup.supplier_phone.replace(/[^0-9]/g, '')}" target="_blank" class="text-decoration-none text-success" title="Hubungi via WhatsApp" onclick="event.stopPropagation();"><i class="bi bi-whatsapp me-1"></i>${escapeHtml(sup.supplier_phone)}</a>` 
+                            : '';
+
+                        supplierCardsHtml += `
+                            <div class="sup-card-item ${isCheapest ? 'is-cheapest' : ''}">
+                                <div class="sup-card-left">
+                                    <div class="sup-name-line">
+                                        <span class="sup-title">${escapeHtml(sup.supplier_name)}</span>
+                                        ${isCheapest ? '<span class="badge-cheapest-pill"><i class="bi bi-award-fill"></i> Termurah</span>' : ''}
+                                        ${sourceBadge}
+                                    </div>
+                                    <div class="sup-meta-line">
+                                        ${dateStr}
+                                        ${phoneStr ? `&bull; ${phoneStr}` : ''}
+                                        ${sup.purchase_count > 1 ? `&bull; <span>${sup.purchase_count}x order</span>` : ''}
+                                    </div>
+                                </div>
+                                <div class="sup-card-right">
+                                    <div class="sup-price-tag">${fmtRp(sup.price)}</div>
+                                    ${diffBadge}
+                                    <button type="button" class="btn-apply-sup" 
+                                        onclick="applySupplierPrice(${idx}, ${sup.supplier_id}, ${sup.price}, '${escapeHtml(sup.supplier_name)}')">
+                                        <i class="bi bi-check2"></i> Gunakan
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    supplierHtml = `
+                        <div class="item-supplier-bar has-cheapest" onclick="toggleSupplierDrawer(${it.product_id})">
+                            <div class="sup-chip-left">
+                                <span class="sup-badge-count"><i class="bi bi-shop me-1"></i>${supEstimates.length} Supplier</span>
+                                <span class="sup-cheapest-inline">
+                                    <i class="bi bi-award-fill text-warning"></i> Termurah: 
+                                    <strong class="sup-cheapest-name">${escapeHtml(cheapestSupplier.supplier_name)}</strong> 
+                                    <span class="sup-cheapest-price">(${fmtRp(cheapestPrice)})</span>
+                                </span>
+                            </div>
+                            <i class="bi bi-chevron-down sup-toggle-icon ${isExpanded ? 'open' : ''}"></i>
+                        </div>
+                        <div id="supDrawer_${it.product_id}" class="item-supplier-drawer" style="display:${isExpanded ? 'block' : 'none'};">
+                            <div class="drawer-header-row">
+                                <div><i class="bi bi-tags-fill text-info me-1"></i> Estimasi Harga Supplier &bull; Kemasan: <strong class="drawer-header-target">${escapeHtml(activeUnitName)}</strong></div>
+                                <div style="font-size:0.62rem; color:var(--text-muted);">${supEstimates.length} supplier</div>
+                            </div>
+                            <div class="sup-list-container">
+                                ${supplierCardsHtml}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
             card.innerHTML = `
                 <div class="item-top-row">
                     <div class="item-name-heading">${escapeHtml(it.name)}</div>
                     <div class="item-subtotal-badge">${fmtRp(itemSubtotal)}</div>
                 </div>
+                ${supplierHtml}
                 <div class="item-bottom-controls">
                     <div class="item-pkg-selector-wrap">
                         ${packHtml}
@@ -1071,6 +1570,7 @@
             qty: 1,
             base_qty: targetPkg ? parseInt(targetPkg.base_qty || 1, 10) : 1
         });
+        fetchSupplierPricing(prodId);
         renderList();
     }
 
@@ -1334,6 +1834,11 @@
                 qty: parseFloat(it.quantity) || 0,
                 base_qty: 1 
             }));
+
+            const pids = orderItems.map(it => it.product_id);
+            if (pids.length > 0) {
+                fetchBatchSupplierPricing(pids);
+            }
             
             currentDraftId = d.id;
             draftTitle = d.title;

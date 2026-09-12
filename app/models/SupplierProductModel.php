@@ -182,4 +182,170 @@ class SupplierProductModel extends Model
         $stmt = $this->db->prepare("DELETE FROM supplier_products WHERE supplier_id = :sid AND product_id = :pid");
         return $stmt->execute([':sid' => $supplierId, ':pid' => $productId]);
     }
+
+    /**
+     * Get suppliers that sell this product with packaging-based price estimation.
+     * Accurately checks purchase history per packaging and extrapolates across same packagings.
+     *
+     * @param int $productId
+     * @return array
+     */
+    public function getProductSupplierPricing(int $productId): array
+    {
+        // 1. Get packagings for this product
+        $stmtPkg = $this->db->prepare("
+            SELECT pp.id, pp.level, pp.base_qty, pp.buy_price, u.name as unit_name
+            FROM product_packagings pp
+            LEFT JOIN units u ON pp.unit_id = u.id
+            WHERE pp.product_id = :pid
+            ORDER BY pp.level ASC
+        ");
+        $stmtPkg->execute([':pid' => $productId]);
+        $packagings = $stmtPkg->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        // 2. Query all distinct suppliers associated with this product
+        $stmtSup = $this->db->prepare("
+            SELECT 
+                s.id as supplier_id,
+                s.name as supplier_name,
+                (SELECT sr.phone FROM sales_reps sr WHERE sr.supplier_id = s.id AND sr.phone IS NOT NULL AND sr.phone != '' LIMIT 1) as supplier_phone,
+                COALESCE(sp.last_purchase_date, MAX(pu.purchase_date)) as last_purchase_date,
+                COALESCE(sp.purchase_count, COUNT(DISTINCT pu.id)) as purchase_count,
+                COALESCE(sp.last_buy_price, 0) as sp_last_buy_price
+            FROM suppliers s
+            LEFT JOIN supplier_products sp ON sp.supplier_id = s.id AND sp.product_id = :pid1
+            LEFT JOIN purchases pu ON pu.supplier_id = s.id
+            LEFT JOIN purchase_items pi ON pi.purchase_id = pu.id AND pi.product_id = :pid2
+            WHERE sp.id IS NOT NULL OR pi.id IS NOT NULL
+            GROUP BY s.id, s.name, sp.last_purchase_date, sp.purchase_count, sp.last_buy_price
+            ORDER BY last_purchase_date DESC, s.name ASC
+        ");
+        $stmtSup->execute([':pid1' => $productId, ':pid2' => $productId]);
+        $suppliers = $stmtSup->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        if (empty($suppliers)) {
+            return [
+                'product_id' => $productId,
+                'packagings' => $packagings,
+                'suppliers' => []
+            ];
+        }
+
+        // 3. For each supplier, get latest purchase details per packaging
+        $stmtHist = $this->db->prepare("
+            SELECT 
+                pi.packaging_id,
+                pp.level,
+                COALESCE(pp.base_qty, 1) as base_qty,
+                COALESCE(u.name, 'pcs') as unit_name,
+                COALESCE(NULLIF(pi.nett_price, 0), pi.buy_price) as price,
+                pi.buy_price as gross_price,
+                pu.purchase_date,
+                pu.id as purchase_id
+            FROM purchase_items pi
+            JOIN purchases pu ON pi.purchase_id = pu.id
+            LEFT JOIN product_packagings pp ON pi.packaging_id = pp.id
+            LEFT JOIN units u ON pp.unit_id = u.id
+            WHERE pi.product_id = :pid AND pu.supplier_id = :sid
+            ORDER BY pu.purchase_date DESC, pu.id DESC
+        ");
+
+        $supplierList = [];
+        foreach ($suppliers as $sup) {
+            $sid = (int)$sup['supplier_id'];
+            $stmtHist->execute([':pid' => $productId, ':sid' => $sid]);
+            $historyRows = $stmtHist->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            $pkgPrices = [];
+            $latestRecord = null;
+            foreach ($historyRows as $row) {
+                if (!$latestRecord) {
+                    $latestRecord = $row;
+                }
+                $pkgId = (int)$row['packaging_id'];
+                if (!isset($pkgPrices[$pkgId])) {
+                    $pkgPrices[$pkgId] = [
+                        'packaging_id' => $pkgId,
+                        'base_qty' => (float)$row['base_qty'],
+                        'unit_name' => $row['unit_name'],
+                        'price' => (float)$row['price'],
+                        'gross_price' => (float)$row['gross_price'],
+                        'purchase_date' => $row['purchase_date']
+                    ];
+                }
+            }
+
+            // Determine unit base price (price per 1 base_qty)
+            $baseUnitPrice = 0;
+            if ($latestRecord && (float)$latestRecord['base_qty'] > 0) {
+                $baseUnitPrice = (float)$latestRecord['price'] / (float)$latestRecord['base_qty'];
+            } elseif ((float)$sup['sp_last_buy_price'] > 0) {
+                $baseUnitPrice = (float)$sup['sp_last_buy_price'];
+            }
+
+            // Calculate estimates for all packagings
+            $estimates = [];
+            foreach ($packagings as $pkg) {
+                $pkgId = (int)$pkg['id'];
+                $targetBaseQty = (float)($pkg['base_qty'] ?? 1);
+                
+                if (isset($pkgPrices[$pkgId]) && $pkgPrices[$pkgId]['price'] > 0) {
+                    $estPrice = $pkgPrices[$pkgId]['price'];
+                    $isExact = true;
+                    $recordDate = $pkgPrices[$pkgId]['purchase_date'];
+                } elseif ($baseUnitPrice > 0) {
+                    $estPrice = round($baseUnitPrice * $targetBaseQty, 2);
+                    $isExact = false;
+                    $recordDate = $sup['last_purchase_date'];
+                } else {
+                    $estPrice = 0;
+                    $isExact = false;
+                    $recordDate = $sup['last_purchase_date'];
+                }
+
+                $estimates[$pkgId] = [
+                    'packaging_id' => $pkgId,
+                    'unit_name' => $pkg['unit_name'] ?? 'pcs',
+                    'base_qty' => $targetBaseQty,
+                    'estimated_price' => $estPrice,
+                    'is_exact' => $isExact,
+                    'date' => $recordDate
+                ];
+            }
+
+            $supplierList[] = [
+                'supplier_id' => $sid,
+                'supplier_name' => $sup['supplier_name'],
+                'supplier_phone' => $sup['supplier_phone'],
+                'last_purchase_date' => $sup['last_purchase_date'],
+                'purchase_count' => (int)$sup['purchase_count'],
+                'base_unit_price' => $baseUnitPrice,
+                'estimates' => $estimates
+            ];
+        }
+
+        return [
+            'product_id' => $productId,
+            'packagings' => $packagings,
+            'suppliers' => $supplierList
+        ];
+    }
+
+    /**
+     * Batch fetch supplier pricing for multiple products
+     *
+     * @param array $productIds
+     * @return array [product_id => pricingData]
+     */
+    public function getBatchProductSupplierPricing(array $productIds): array
+    {
+        $cleanIds = array_filter(array_map('intval', $productIds), fn($id) => $id > 0);
+        if (empty($cleanIds)) return [];
+
+        $results = [];
+        foreach ($cleanIds as $pid) {
+            $results[$pid] = $this->getProductSupplierPricing($pid);
+        }
+        return $results;
+    }
 }

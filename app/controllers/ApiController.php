@@ -2616,6 +2616,48 @@ class ApiController extends Controller
         }
     }
 
+    public function getProductSupplierPricing(string $id)
+    {
+        try {
+            $productId = (int)$id;
+            if ($productId <= 0) {
+                $this->json(['error' => 'ID Produk tidak valid'], 400);
+                return;
+            }
+            $model = new SupplierProductModel();
+            $data = $model->getProductSupplierPricing($productId);
+            $this->json(['success' => true, 'data' => $data]);
+        } catch (\Throwable $e) {
+            error_log('[getProductSupplierPricing] Error: ' . $e->getMessage());
+            $this->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function getBatchProductSupplierPricing()
+    {
+        try {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $ids = [];
+            if (!empty($input['product_ids']) && is_array($input['product_ids'])) {
+                $ids = $input['product_ids'];
+            } elseif (!empty($_GET['ids'])) {
+                $ids = explode(',', $_GET['ids']);
+            }
+
+            if (empty($ids)) {
+                $this->json(['success' => true, 'data' => []]);
+                return;
+            }
+
+            $model = new SupplierProductModel();
+            $data = $model->getBatchProductSupplierPricing($ids);
+            $this->json(['success' => true, 'data' => $data]);
+        } catch (\Throwable $e) {
+            error_log('[getBatchProductSupplierPricing] Error: ' . $e->getMessage());
+            $this->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
     public function searchProductsForPurchase()
     {
         try {
