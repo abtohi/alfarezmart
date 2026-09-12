@@ -407,7 +407,12 @@ async function showSalesReps(supplierId, supplierName) {
             listHTML += `
                 <div style="background:var(--surface-2);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
                     <div>
-                        <div style="font-weight:600;font-size:13px;">${sr.name} ${sr.status === 'Non-Aktif' ? '<span class="badge-custom badge-warning" style="font-size:9px;padding:2px 4px;margin-left:4px;">Non-Aktif</span>' : ''}</div>
+                        <div style="font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px;">
+                            <span>${sr.name}</span>
+                            ${sr.status === 'Non-Aktif' 
+                                ? '<span class="badge-custom badge-danger" style="font-size:9px;padding:2px 6px;">Non-Aktif</span>' 
+                                : '<span class="badge-custom badge-success" style="font-size:9px;padding:2px 6px;">Aktif</span>'}
+                        </div>
                         <div style="font-size:11px;color:var(--text-muted);">${sr.phone || '-'} | Kunjungan: ${sr.visit_day || '-'}</div>
                     </div>
                     <div style="display:flex;gap:4px;">
@@ -441,7 +446,36 @@ async function showSalesReps(supplierId, supplierName) {
     });
 }
 
+function setSalesStatus(status) {
+    const input = document.getElementById('modalSalesStatus');
+    if (input) input.value = status;
+    const btnAktif = document.getElementById('btnSalesStatusAktif');
+    const btnNonAktif = document.getElementById('btnSalesStatusNonAktif');
+    if (btnAktif && btnNonAktif) {
+        if (status === 'Aktif') {
+            btnAktif.style.background = 'rgba(16, 185, 129, 0.18)';
+            btnAktif.style.color = '#10b981';
+            btnAktif.style.borderColor = 'rgba(16, 185, 129, 0.5)';
+            btnAktif.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.2)';
+            btnNonAktif.style.background = 'transparent';
+            btnNonAktif.style.color = 'var(--text-muted)';
+            btnNonAktif.style.borderColor = 'transparent';
+            btnNonAktif.style.boxShadow = 'none';
+        } else {
+            btnAktif.style.background = 'transparent';
+            btnAktif.style.color = 'var(--text-muted)';
+            btnAktif.style.borderColor = 'transparent';
+            btnAktif.style.boxShadow = 'none';
+            btnNonAktif.style.background = 'rgba(239, 68, 68, 0.18)';
+            btnNonAktif.style.color = '#ef4444';
+            btnNonAktif.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+            btnNonAktif.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.2)';
+        }
+    }
+}
+
 function getSalesRepFormHTML(sr = {}) {
+    const isNonAktif = (sr.status === 'Non-Aktif');
     return `
         <div class="modal-form-group">
             <label>Nama Sales *</label>
@@ -466,29 +500,29 @@ function getSalesRepFormHTML(sr = {}) {
             <input type="text" class="form-control-dark" id="modalSalesNotes" value="${sr.notes || ''}" placeholder="..." autocomplete="off">
         </div>
         <div class="modal-form-group">
-            <label>Status</label>
-            <div class="dropdown" style="width:100%;">
-                <button class="btn-dropdown-modern dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <span><i class="bi bi-circle-fill me-2 ${sr.status === 'Non-Aktif' ? 'text-danger' : 'text-success'}" style="font-size:8px;"></i>${sr.status === 'Non-Aktif' ? 'Non-Aktif' : 'Aktif'}</span>
+            <label>Status Sales</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;background:var(--bg-input);padding:4px;border-radius:var(--radius-md);border:1px solid var(--border-color);">
+                <button type="button" id="btnSalesStatusAktif" onclick="setSalesStatus('Aktif')" style="padding:9px 12px;border-radius:var(--radius-sm);border:1px solid ${isNonAktif ? 'transparent' : 'rgba(16, 185, 129, 0.5)'};font-weight:600;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;transition:all 0.2s;background:${isNonAktif ? 'transparent' : 'rgba(16, 185, 129, 0.18)'};color:${isNonAktif ? 'var(--text-muted)' : '#10b981'};box-shadow:${isNonAktif ? 'none' : '0 2px 8px rgba(16, 185, 129, 0.2)'};">
+                    <i class="bi bi-check-circle-fill"></i> Aktif
                 </button>
-                <ul class="dropdown-menu dropdown-menu-dark shadow" style="font-size:12px; min-width:100%;">
-                    <li><a class="dropdown-item ${sr.status !== 'Non-Aktif' ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Aktif'; dp.querySelector('button span').innerHTML='<i class=\'bi bi-circle-fill me-2 text-success\' style=\'font-size:8px;\'></i>Aktif'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');"><i class="bi bi-check-circle me-2 text-success"></i>Aktif</a></li>
-                    <li><a class="dropdown-item ${sr.status === 'Non-Aktif' ? 'active' : ''}" href="#" onclick="event.preventDefault(); const dp=this.closest('.dropdown'); dp.querySelector('input').value='Non-Aktif'; dp.querySelector('button span').innerHTML='<i class=\'bi bi-circle-fill me-2 text-danger\' style=\'font-size:8px;\'></i>Non-Aktif'; dp.querySelectorAll('.dropdown-item').forEach(el=>el.classList.remove('active')); this.classList.add('active');"><i class="bi bi-x-circle me-2 text-danger"></i>Non-Aktif</a></li>
-                </ul>
-                <input type="hidden" id="modalSalesStatus" value="${sr.status === 'Non-Aktif' ? 'Non-Aktif' : 'Aktif'}">
+                <button type="button" id="btnSalesStatusNonAktif" onclick="setSalesStatus('Non-Aktif')" style="padding:9px 12px;border-radius:var(--radius-sm);border:1px solid ${isNonAktif ? 'rgba(239, 68, 68, 0.5)' : 'transparent'};font-weight:600;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;transition:all 0.2s;background:${isNonAktif ? 'rgba(239, 68, 68, 0.18)' : 'transparent'};color:${isNonAktif ? '#ef4444' : 'var(--text-muted)'};box-shadow:${isNonAktif ? '0 2px 8px rgba(239, 68, 68, 0.2)' : 'none'};">
+                    <i class="bi bi-x-circle-fill"></i> Non-Aktif
+                </button>
             </div>
+            <input type="hidden" id="modalSalesStatus" value="${isNonAktif ? 'Non-Aktif' : 'Aktif'}">
         </div>
     `;
 }
 
 function getSalesRepFormData() {
+    const statusEl = document.getElementById('modalSalesStatus');
     return {
         name: document.getElementById('modalSalesName').value.trim(),
         phone: document.getElementById('modalSalesPhone').value.trim(),
         visit_day: document.getElementById('modalSalesVisit').value.trim(),
         delivery_day: document.getElementById('modalSalesDelivery').value.trim(),
         notes: document.getElementById('modalSalesNotes').value.trim(),
-        status: document.getElementById('modalSalesStatus').value
+        status: statusEl ? statusEl.value : 'Aktif'
     };
 }
 

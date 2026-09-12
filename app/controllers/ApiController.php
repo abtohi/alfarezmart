@@ -2506,6 +2506,11 @@ class ApiController extends Controller
             if (empty($name)) throw new Exception('Nama sales wajib diisi');
             if (empty($supplierId)) throw new Exception('Supplier wajib dipilih');
 
+            $status = $this->input('status', 'Aktif');
+            if (!in_array($status, ['Aktif', 'Non-Aktif'], true)) {
+                $status = 'Aktif';
+            }
+
             $model = new SalesRepModel();
             $id = $model->create([
                 'name' => $name,
@@ -2514,7 +2519,7 @@ class ApiController extends Controller
                 'visit_day' => $this->input('visit_day', ''),
                 'delivery_day' => $this->input('delivery_day', ''),
                 'notes' => $this->input('notes', ''),
-                'status' => $this->input('status', 'Aktif'),
+                'status' => $status,
             ]);
             $salesRep = $model->findWithSupplier($id);
             $this->json(['success' => true, 'id' => $id, 'name' => $name, 'sales_rep' => $salesRep]);
@@ -2530,6 +2535,11 @@ class ApiController extends Controller
             $name = $this->input('name');
             if (empty($name)) throw new Exception('Nama sales wajib diisi');
 
+            $status = $this->input('status', 'Aktif');
+            if (!in_array($status, ['Aktif', 'Non-Aktif'], true)) {
+                $status = 'Aktif';
+            }
+
             $model = new SalesRepModel();
             $model->update($id, [
                 'name' => $name,
@@ -2537,7 +2547,7 @@ class ApiController extends Controller
                 'visit_day' => $this->input('visit_day', ''),
                 'delivery_day' => $this->input('delivery_day', ''),
                 'notes' => $this->input('notes', ''),
-                'status' => $this->input('status', 'Aktif'),
+                'status' => $status,
                 'updated_at' => date('Y-m-d H:i:s')
             ]);
             $salesRep = $model->findWithSupplier($id);
