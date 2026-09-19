@@ -218,6 +218,57 @@
     margin-top: 2px;
 }
 
+/* Privacy Mode (Password / Masking for Sensitive Financial Stats) */
+.btn-kpi-eye {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 3px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    line-height: 1;
+}
+.btn-kpi-eye:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.08);
+}
+.btn-privacy-all {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+.btn-privacy-all:hover {
+    color: var(--text-primary);
+    border-color: var(--primary);
+    background: var(--primary-bg, rgba(230, 57, 70, 0.1));
+}
+.btn-privacy-all i {
+    font-size: 13px;
+}
+.privacy-mask {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    letter-spacing: 1.5px;
+    font-weight: 800;
+    user-select: none;
+    opacity: 0.85;
+}
+
+
 /* Charts Grid */
 .dash-charts-grid {
     display: grid;
@@ -379,7 +430,15 @@
     <?php $userLevel = $currentUser['level'] ?? 'staff'; ?>
 
     <!-- 1. STATUS & RINGKASAN HARI INI -->
-    <div class="section-title">Status &amp; Ringkasan Hari Ini</div>
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <div class="section-title mb-0">Status &amp; Ringkasan Hari Ini</div>
+        <?php if ($userLevel === 'superadmin'): ?>
+        <button type="button" class="btn-privacy-all" id="btnToggleAllPrivacy" onclick="toggleAllPrivacy()" title="Tampilkan / Sembunyikan Semua Informasi Sensitif">
+            <i class="bi bi-eye-slash" id="iconToggleAllPrivacy"></i>
+            <span id="textToggleAllPrivacy">Tampilkan Semua</span>
+        </button>
+        <?php endif; ?>
+    </div>
     <div class="dash-kpi-grid">
 
         <?php if ($userLevel === 'superadmin'): ?>
@@ -387,27 +446,39 @@
             <div class="dash-kpi-card">
                 <div class="dash-kpi-header">
                     <span class="dash-kpi-title">Omzet Hari Ini</span>
-                    <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
-                        <i class="bi bi-cash-stack"></i>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <button type="button" class="btn-kpi-eye" onclick="toggleKpiPrivacy('omzet', event)" title="Tampilkan/Sembunyikan Nilai Omzet">
+                            <i class="bi bi-eye-slash" id="icon-privacy-omzet"></i>
+                        </button>
+                        <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
                     </div>
                 </div>
                 <div class="dash-kpi-value" style="color:var(--success);">
-                    Rp <?= number_format($stats['today_revenue'] ?? 0, 0, ',', '.') ?>
+                    <span class="privacy-mask privacy-mask-omzet">Rp ••••••••</span>
+                    <span class="privacy-real privacy-real-omzet" style="display:none;">Rp <?= number_format($stats['today_revenue'] ?? 0, 0, ',', '.') ?></span>
                 </div>
                 <div class="dash-kpi-sub">
-                    Profit: <strong style="color:var(--success);">Rp <?= number_format($stats['today_profit'] ?? 0, 0, ',', '.') ?></strong>
+                    Profit: <strong style="color:var(--success);"><span class="privacy-mask privacy-mask-omzet">Rp ••••••</span><span class="privacy-real privacy-real-omzet" style="display:none;">Rp <?= number_format($stats['today_profit'] ?? 0, 0, ',', '.') ?></span></strong>
                 </div>
             </div>
 
             <a href="<?= BASE_URL ?>finance" class="dash-kpi-card">
                 <div class="dash-kpi-header">
                     <span class="dash-kpi-title">Keuangan Harian</span>
-                    <div class="dash-kpi-icon" style="background:rgba(99,102,241,0.12);color:#818cf8;">
-                        <i class="bi bi-wallet2"></i>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <button type="button" class="btn-kpi-eye" onclick="toggleKpiPrivacy('finance', event)" title="Tampilkan/Sembunyikan Nilai Keuangan">
+                            <i class="bi bi-eye-slash" id="icon-privacy-finance"></i>
+                        </button>
+                        <div class="dash-kpi-icon" style="background:rgba(99,102,241,0.12);color:#818cf8;">
+                            <i class="bi bi-wallet2"></i>
+                        </div>
                     </div>
                 </div>
                 <div class="dash-kpi-value">
-                    Rp <?= number_format($stats['finance_today']['accumulative_net'] ?? 0, 0, ',', '.') ?>
+                    <span class="privacy-mask privacy-mask-finance">Rp ••••••••</span>
+                    <span class="privacy-real privacy-real-finance" style="display:none;">Rp <?= number_format($stats['finance_today']['accumulative_net'] ?? 0, 0, ',', '.') ?></span>
                 </div>
                 <div class="dash-kpi-sub" style="color:var(--primary);font-weight:600;display:flex;align-items:center;gap:2px;">
                     Detail Dompet <i class="bi bi-chevron-right" style="font-size:8px;"></i>
@@ -431,15 +502,21 @@
             <a href="<?= BASE_URL ?>ppob/summary" class="dash-kpi-card">
                 <div class="dash-kpi-header">
                     <span class="dash-kpi-title">PPOB Hari Ini</span>
-                    <div class="dash-kpi-icon" style="background:rgba(168,85,247,0.12);color:#a855f7;">
-                        <i class="bi bi-phone-fill"></i>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <button type="button" class="btn-kpi-eye" onclick="toggleKpiPrivacy('ppob', event)" title="Tampilkan/Sembunyikan Nilai PPOB">
+                            <i class="bi bi-eye-slash" id="icon-privacy-ppob"></i>
+                        </button>
+                        <div class="dash-kpi-icon" style="background:rgba(168,85,247,0.12);color:#a855f7;">
+                            <i class="bi bi-phone-fill"></i>
+                        </div>
                     </div>
                 </div>
                 <div class="dash-kpi-value" style="color:#a855f7;">
-                    Rp <?= number_format($ppobStats['today_revenue'] ?? 0, 0, ',', '.') ?>
+                    <span class="privacy-mask privacy-mask-ppob">Rp ••••••••</span>
+                    <span class="privacy-real privacy-real-ppob" style="display:none;">Rp <?= number_format($ppobStats['today_revenue'] ?? 0, 0, ',', '.') ?></span>
                 </div>
                 <div class="dash-kpi-sub">
-                    <?= number_format($ppobStats['today_total'] ?? 0) ?> Trx &middot; Profit: <strong style="color:var(--success);">Rp <?= number_format($ppobStats['today_profit'] ?? 0, 0, ',', '.') ?></strong>
+                    <?= number_format($ppobStats['today_total'] ?? 0) ?> Trx &middot; Profit: <strong style="color:var(--success);"><span class="privacy-mask privacy-mask-ppob">Rp ••••••</span><span class="privacy-real privacy-real-ppob" style="display:none;">Rp <?= number_format($ppobStats['today_profit'] ?? 0, 0, ',', '.') ?></span></strong>
                 </div>
             </a>
             <?php endif; ?>
@@ -839,15 +916,21 @@
         <div class="dash-kpi-card">
             <div class="dash-kpi-header">
                 <span class="dash-kpi-title">Omzet PPOB Hari Ini</span>
-                <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
-                    <i class="bi bi-wallet2"></i>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <button type="button" class="btn-kpi-eye" onclick="toggleKpiPrivacy('ppob', event)" title="Tampilkan/Sembunyikan Nilai Omzet PPOB">
+                        <i class="bi bi-eye-slash" id="icon-privacy-ppob-section"></i>
+                    </button>
+                    <div class="dash-kpi-icon" style="background:rgba(16,185,129,0.12);color:var(--success);">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
                 </div>
             </div>
             <div class="dash-kpi-value" style="color:var(--success);">
-                Rp <?= number_format($ppobStats['today_revenue'] ?? 0, 0, ',', '.') ?>
+                <span class="privacy-mask privacy-mask-ppob">Rp ••••••••</span>
+                <span class="privacy-real privacy-real-ppob" style="display:none;">Rp <?= number_format($ppobStats['today_revenue'] ?? 0, 0, ',', '.') ?></span>
             </div>
             <div class="dash-kpi-sub">
-                Profit: <strong style="color:var(--success);">Rp <?= number_format($ppobStats['today_profit'] ?? 0, 0, ',', '.') ?></strong>
+                Profit: <strong style="color:var(--success);"><span class="privacy-mask privacy-mask-ppob">Rp ••••••</span><span class="privacy-real privacy-real-ppob" style="display:none;">Rp <?= number_format($ppobStats['today_profit'] ?? 0, 0, ',', '.') ?></span></strong>
             </div>
         </div>
         <?php else: ?>
@@ -1991,5 +2074,71 @@ async function _spaLoadComparison(supplierId, supplierLabel) {
 
 function fmtNumber(n) {
     return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+// ===== DASHBOARD PRIVACY MODE (PASSWORD / MASKING SENSITIVE DATA) =====
+const kpiPrivacyState = {
+    'omzet': false,
+    'finance': false,
+    'ppob': false
+};
+
+function toggleKpiPrivacy(type, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    kpiPrivacyState[type] = !kpiPrivacyState[type];
+    applyKpiPrivacy(type, kpiPrivacyState[type]);
+    updateToggleAllPrivacyButton();
+}
+
+function applyKpiPrivacy(type, isVisible) {
+    const masks = document.querySelectorAll('.privacy-mask-' + type);
+    const reals = document.querySelectorAll('.privacy-real-' + type);
+    
+    masks.forEach(el => el.style.display = isVisible ? 'none' : 'inline-block');
+    reals.forEach(el => el.style.display = isVisible ? 'inline-block' : 'none');
+    
+    const icons = document.querySelectorAll('#icon-privacy-' + type + ', #icon-privacy-' + type + '-section');
+    icons.forEach(icon => {
+        if (isVisible) {
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        } else {
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        }
+    });
+}
+
+function toggleAllPrivacy() {
+    const hasHidden = Object.values(kpiPrivacyState).some(v => v === false);
+    const targetState = hasHidden;
+    
+    for (const key in kpiPrivacyState) {
+        kpiPrivacyState[key] = targetState;
+        applyKpiPrivacy(key, targetState);
+    }
+    
+    updateToggleAllPrivacyButton();
+}
+
+function updateToggleAllPrivacyButton() {
+    const btnText = document.getElementById('textToggleAllPrivacy');
+    const btnIcon = document.getElementById('iconToggleAllPrivacy');
+    if (!btnText || !btnIcon) return;
+    
+    const allVisible = Object.values(kpiPrivacyState).every(v => v === true);
+    if (allVisible) {
+        btnText.textContent = 'Sembunyikan';
+        btnIcon.classList.remove('bi-eye-slash');
+        btnIcon.classList.add('bi-eye');
+    } else {
+        btnText.textContent = 'Tampilkan Semua';
+        btnIcon.classList.remove('bi-eye');
+        btnIcon.classList.add('bi-eye-slash');
+    }
 }
 </script>
