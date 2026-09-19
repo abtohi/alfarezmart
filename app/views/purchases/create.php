@@ -2817,7 +2817,10 @@ function openAllPackagingsModal(tempId) {
         // Tier rows
         const tiers = pkg.qty_prices || [];
         let tierRowsHtml = tiers.map(t => {
-            const totalH = Math.round((parseFloat(t.min_qty)||0) * (parseFloat(t.unit_price)||0));
+            const minQty = parseFloat(t.min_qty) || 0;
+            const unitPrice = parseFloat(t.unit_price) || 0;
+            const totalH = Math.round(minQty * unitPrice);
+            const hintHtml = buildTierHintHtml(minQty, totalH, nett);
             return `
             <div class="tier-row" style="margin-bottom:6px;">
                 <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
@@ -2836,6 +2839,7 @@ function openAllPackagingsModal(tempId) {
                     </div>
                     <button type="button" onclick="this.closest('.tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 6px;cursor:pointer;font-size:11px;min-width:0;"><i class="bi bi-x"></i></button>
                 </div>
+                ${hintHtml}
                 <input type="text" class="form-control-dark tier-label" value="${t.label||''}" placeholder="Label (opsional)" style="font-size:10px;padding:4px;width:100%;box-sizing:border-box;">
             </div>`;
         }).join('');
@@ -3045,8 +3049,152 @@ function addTierRow(btn) {
             </div>
             <button type="button" onclick="this.closest('.tier-row').remove()" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 6px;cursor:pointer;font-size:11px;min-width:0;"><i class="bi bi-x"></i></button>
         </div>
+        ${buildTierHintHtml(0, 0, 0)}
         <input type="text" class="form-control-dark tier-label" placeholder="Label (opsional)" style="font-size:10px;padding:4px;width:100%;box-sizing:border-box;">`;
     container.appendChild(row);
+}
+
+/** Build informative persistent hint HTML for tier price row */
+function buildTierHintHtml(minQty, totalH, nett) {
+    minQty = parseFloat(minQty) || 0;
+    totalH = parseFloat(totalH) || 0;
+    nett   = parseFloat(nett) || 0;
+
+    if (minQty > 0 && totalH > 0) {
+        const pricePerUnit = totalH / minQty;
+        const diff = pricePerUnit - nett;
+        const markupPct = nett > 0 ? ((diff / nett) * 100) : 0;
+        const isNegative = nett > 0 && diff < 0;
+        const color = isNegative ? 'var(--danger)' : (markupPct >= 5 ? 'var(--success)' : 'var(--warning)');
+        const diffSign = diff >= 0 ? '+' : '−';
+        const formatRp = 'Rp' + Math.round(Math.abs(diff)).toLocaleString('id-ID');
+
+        if (isNegative) {
+            return `
+            <div class="tier-hint" style="font-size:10px;padding:5px 8px;margin-bottom:5px;background:rgba(230,57,70,0.12);border:1px solid var(--danger);border-radius:var(--radius-sm);width:100%;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;color:var(--danger);">
+                <span style="font-weight:600;display:inline-flex;align-items:center;gap:4px;">
+                    <i class="bi bi-exclamation-triangle-fill"></i> ≈ Rp${Math.round(pricePerUnit).toLocaleString('id-ID')}/satuan
+                </span>
+                <span style="display:inline-flex;align-items:center;gap:4px;">
+                    Markup: <strong style="color:var(--danger);font-size:11px;">${markupPct.toFixed(1)}%</strong>
+                    <span style="font-size:9.5px;color:var(--danger);font-weight:600;">(${diffSign}${formatRp})</span>
+                    <span style="background:var(--danger);color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;font-weight:800;letter-spacing:0.5px;">MINUS</span>
+                </span>
+            </div>`;
+        } else {
+            return `
+            <div class="tier-hint" style="font-size:10px;padding:5px 8px;margin-bottom:5px;background:var(--surface-1);border:1px dashed var(--border-color);border-radius:var(--radius-sm);width:100%;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;color:var(--text-muted);">
+                <span>≈ Rp${Math.round(pricePerUnit).toLocaleString('id-ID')}/satuan</span>
+                <span>Markup: <strong style="color:${color}">${markupPct.toFixed(1)}%</strong> <span style="font-size:9.5px;color:var(--text-muted);">(${diffSign}${formatRp})</span></span>
+            </div>`;
+        }
+    } else {
+        return `
+        <div class="tier-hint" style="font-size:10px;padding:4px 8px;margin-bottom:5px;background:var(--surface-1);border:1px dashed var(--border-color);border-radius:var(--radius-sm);width:100%;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;color:var(--text-muted);">
+            <span style="font-style:italic;">Masukkan qty dan total harga tier</span><span>Markup: —</span>
+        </div>`;
+    }
+}
+
+/** Compute nett cost for a packaging */
+function getPkgNettPrice(item, pkg) {
+    if (!pkg) return 0;
+    if (pkg.harga_nett !== undefined && pkg.harga_nett !== null && !isNaN(pkg.harga_nett) && parseFloat(pkg.harga_nett) > 0) {
+        return parseFloat(pkg.harga_nett);
+    }
+    const buy = parseFloat(pkg.buy_price) || 0;
+    const bq  = parseFloat(pkg.base_qty) || 1;
+    const selPkg = item.packagings?.find(p => p.level == item.level) || item.packagings?.[0];
+    const selBaseQty = parseFloat(selPkg?.base_qty) || 1;
+    const qty = parseFloat(item.quantity) || 1;
+    const totalPcs = qty * selBaseQty;
+    const ppn = parseFloat(pkg.ppn_pct !== undefined ? pkg.ppn_pct : (item.ppn_pct || 0));
+    const dm  = pkg.diskon_mode || item.diskon_mode || 'rp';
+    const dv  = parseFloat(pkg.diskon_value !== undefined ? pkg.diskon_value : (item.diskon_value || 0));
+    const ppnAmt = buy * (ppn / 100);
+    let discForPkg = 0;
+    if (dm === 'pct') {
+        discForPkg = buy * (dv / 100);
+    } else {
+        const discPerPcs = totalPcs > 0 ? (dv / totalPcs) : 0;
+        discForPkg = discPerPcs * bq;
+    }
+    return Math.max(0, buy + ppnAmt - discForPkg);
+}
+
+/** Check count of negative sell/tier prices for an item */
+function getItemNegativePriceCount(item) {
+    if (!item || !item.packagings) return 0;
+    let count = 0;
+    item.packagings.forEach(pkg => {
+        const nett = getPkgNettPrice(item, pkg);
+        const ret  = parseFloat(pkg.sell_price_retail) || 0;
+        const who  = parseFloat(pkg.sell_price_wholesale) || 0;
+        if (nett > 0 && ret > 0 && ret < nett) count++;
+        if (nett > 0 && who > 0 && who < nett) count++;
+
+        (pkg.qty_prices || []).forEach(t => {
+            const minQty = parseFloat(t.min_qty) || 0;
+            const uPrice = parseFloat(t.unit_price) || (parseFloat(t.total) && minQty ? parseFloat(t.total) / minQty : 0);
+            if (nett > 0 && uPrice > 0 && uPrice < nett) count++;
+        });
+    });
+    return count;
+}
+
+/** Update visual alert state of drawer toggle button (both closed and open state) */
+function updateDrawerButtonDisplay(uid, isOpen) {
+    let item = (typeof purchaseItems !== 'undefined' ? purchaseItems.find(i => i.id == uid) : null) || (typeof bulkItems !== 'undefined' ? bulkItems.find(b => b.id == uid) : null);
+    if (!item) return;
+
+    const minusCount = getItemNegativePriceCount(item);
+    
+    // Regular cart item button
+    const btn = document.getElementById(`drawer_btn_${uid}`);
+    if (btn) {
+        if (isOpen) {
+            btn.innerHTML = minusCount > 0
+                ? `<i class="bi bi-chevron-up"></i> Tutup Panel Kemasan <span style="background:var(--danger);color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:6px;"><i class="bi bi-exclamation-triangle-fill"></i> ${minusCount} Harga Minus</span>`
+                : '<i class="bi bi-chevron-up"></i> Tutup Panel Kemasan';
+            btn.style.borderColor = minusCount > 0 ? 'var(--danger)' : 'var(--primary)';
+            btn.style.borderStyle = 'solid';
+            btn.style.color = minusCount > 0 ? 'var(--danger)' : 'var(--primary)';
+            btn.style.background = minusCount > 0 ? 'rgba(230,57,70,0.08)' : 'var(--surface-2)';
+        } else {
+            btn.innerHTML = minusCount > 0
+                ? `<i class="bi bi-exclamation-triangle-fill" style="color:var(--danger);margin-right:4px;"></i> Atur Harga Kemasan Lainnya <span style="background:var(--danger);color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:6px;"><i class="bi bi-arrow-down-circle"></i> ${minusCount} Harga Minus</span>`
+                : '<i class="bi bi-tags"></i> Atur Harga Kemasan Lainnya';
+            btn.style.borderColor = minusCount > 0 ? 'var(--danger)' : 'var(--border-color)';
+            btn.style.borderStyle = minusCount > 0 ? 'solid' : 'dashed';
+            btn.style.color = minusCount > 0 ? 'var(--danger)' : 'var(--primary)';
+            btn.style.background = minusCount > 0 ? 'rgba(230,57,70,0.1)' : 'var(--surface-2)';
+        }
+    }
+
+    // Bulk item button
+    const bulkEl = document.querySelector(`.bulk-item[data-bulk-id="${uid}"]`);
+    if (bulkEl) {
+        const bBtn = bulkEl.querySelector('.bulk-drawer-btn');
+        if (bBtn) {
+            if (isOpen) {
+                bBtn.innerHTML = minusCount > 0
+                    ? `<i class="bi bi-chevron-up"></i> Tutup Panel Kemasan <span style="background:var(--danger);color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:6px;"><i class="bi bi-exclamation-triangle-fill"></i> ${minusCount} Harga Minus</span>`
+                    : '<i class="bi bi-chevron-up"></i> Tutup Panel Kemasan';
+                bBtn.style.borderColor = minusCount > 0 ? 'var(--danger)' : 'var(--primary)';
+                bBtn.style.borderStyle = 'solid';
+                bBtn.style.color = minusCount > 0 ? 'var(--danger)' : 'var(--primary)';
+                bBtn.style.background = minusCount > 0 ? 'rgba(230,57,70,0.08)' : 'var(--surface-2)';
+            } else {
+                bBtn.innerHTML = minusCount > 0
+                    ? `<i class="bi bi-exclamation-triangle-fill" style="color:var(--danger);margin-right:4px;"></i> Atur Harga Kemasan Lainnya <span style="background:var(--danger);color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:6px;"><i class="bi bi-arrow-down-circle"></i> ${minusCount} Harga Minus</span>`
+                    : '<i class="bi bi-tags"></i> Atur Harga Kemasan Lainnya';
+                bBtn.style.borderColor = minusCount > 0 ? 'var(--danger)' : 'var(--border-color)';
+                bBtn.style.borderStyle = minusCount > 0 ? 'solid' : 'dashed';
+                bBtn.style.color = minusCount > 0 ? 'var(--danger)' : 'var(--primary)';
+                bBtn.style.background = minusCount > 0 ? 'rgba(230,57,70,0.1)' : 'var(--surface-2)';
+            }
+        }
+    }
 }
 
 /** Show per-unit hint for tier total harga input */
@@ -3055,68 +3203,60 @@ function recalcTierHint(el) {
     if (!row) return;
     const minQty = parseFloat(row.querySelector('.tier-min-qty, .drawer-tier-min-qty')?.value) || 0;
     const totalH = parseFloat(row.querySelector('.tier-total-harga, .drawer-tier-total')?.value) || 0;
-    let hint = row.querySelector('.tier-hint');
-    if (!hint) {
-        hint = document.createElement('div');
-        hint.className = 'tier-hint';
-        hint.style.cssText = 'font-size:10px;color:var(--text-muted);padding:6px 10px;margin-bottom:6px;background:var(--surface-1);border:1px dashed var(--border-color);border-radius:var(--radius-sm);width:100%;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;';
-        const labelEl = row.querySelector('.tier-label, .drawer-tier-label');
-        if (labelEl) {
-            labelEl.before(hint);
+    
+    let nett = 0;
+    const lvEl = row.closest('.packaging-level-edit');
+    const drawerEl = row.closest('.drawer-pkg-row');
+    let uid = null;
+    
+    if (lvEl) {
+        const buy = parseFloat(lvEl.querySelector('.pkg-buy, .buy-price')?.value) || 0;
+        const ppn = parseFloat(lvEl.querySelector('.pkg-ppn')?.value) || 0;
+        const diskonMode = lvEl.querySelector('.pkg-diskon-mode')?.value || 'rp';
+        const diskonVal = parseFloat(lvEl.querySelector('.pkg-diskon-value')?.value) || 0;
+        nett = typeof calcItemNett === 'function' ? calcItemNett(buy, ppn, diskonMode, diskonVal) : buy;
+    } else if (drawerEl) {
+        uid = drawerEl.closest('[id^="drawer_"]')?.id?.split('_')?.[1];
+        if (!uid) {
+            const bulkEl = drawerEl.closest('.bulk-item');
+            if (bulkEl) uid = bulkEl.dataset.bulkId;
+        }
+        
+        let item = (typeof purchaseItems !== 'undefined' ? purchaseItems.find(i => i.id == uid) : null) || (typeof bulkItems !== 'undefined' ? bulkItems.find(b => b.id == uid) : null);
+        const level = parseInt(drawerEl.dataset.level || 1, 10);
+        const pkg = item?.packagings?.find(p => p.level == level);
+        
+        if (pkg && pkg.harga_nett !== undefined && pkg.harga_nett !== null && !isNaN(pkg.harga_nett) && parseFloat(pkg.harga_nett) > 0) {
+            nett = parseFloat(pkg.harga_nett);
         } else {
-            row.appendChild(hint);
+            const buy = parseFloat(drawerEl.querySelector('.drawer-pkg-buy')?.value) || 0;
+            const ppn = parseFloat(drawerEl.closest('[data-item-ppn]')?.dataset.itemPpn || drawerEl.closest('.item-card')?.dataset.ppn || item?.ppn_pct || 0);
+            nett = typeof calcItemNett === 'function' ? calcItemNett(buy, ppn, item?.diskon_mode || 'rp', item?.diskon_value || 0, item?.quantity || 1) : buy;
         }
     }
     
-    if (minQty > 0 && totalH > 0) {
-        const pricePerUnit = totalH / minQty;
-        let text = `≈ Rp${Math.round(pricePerUnit).toLocaleString('id-ID')}/satuan`;
-        
-        let nett = 0;
-        const lvEl = row.closest('.packaging-level-edit');
-        const drawerEl = row.closest('.drawer-pkg-row');
-        
-        if (lvEl) {
-            const buy = parseFloat(lvEl.querySelector('.pkg-buy, .buy-price')?.value) || 0;
-            const ppn = parseFloat(lvEl.querySelector('.pkg-ppn')?.value) || 0;
-            const diskonMode = lvEl.querySelector('.pkg-diskon-mode')?.value || 'rp';
-            const diskonVal = parseFloat(lvEl.querySelector('.pkg-diskon-value')?.value) || 0;
-            nett = typeof calcItemNett === 'function' ? calcItemNett(buy, ppn, diskonMode, diskonVal) : buy;
-        } else if (drawerEl) {
-            const buy = parseFloat(drawerEl.querySelector('.drawer-pkg-buy')?.value) || 0;
-            const ppn = parseFloat(drawerEl.closest('[data-item-ppn]')?.dataset.itemPpn || drawerEl.closest('.item-card')?.dataset.ppn || 0);
-            
-            const uid = drawerEl.closest('[id^="drawer_"]')?.id.split('_')[1];
-            let qty = 1;
-            if (uid) {
-                let item = typeof purchaseItems !== 'undefined' ? purchaseItems.find(i => i.id == uid) : null;
-                if (!item && typeof bulkItems !== 'undefined') item = bulkItems.find(b => b.id == uid);
-                qty = item?.quantity || 1;
-            }
-            nett = typeof calcItemNett === 'function' ? calcItemNett(buy, ppn, 'rp', 0, qty) : buy;
-            
-            if (uid) {
-                let item = typeof purchaseItems !== 'undefined' ? purchaseItems.find(i => i.id == uid) : null;
-                if (!item && typeof bulkItems !== 'undefined') item = bulkItems.find(b => b.id == uid);
-                if (item) {
-                    const level = parseInt(drawerEl.dataset.level || 1, 10);
-                    const pkg = item.packagings.find(p => p.level == level);
-                    if (pkg) nett = pkg.harga_nett || (typeof calcItemNett === 'function' ? calcItemNett(buy, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value, item.quantity) : buy);
-                }
-            }
-        }
-        
-        if (nett > 0) {
-            const profit = pricePerUnit - nett;
-            const marginPct = (profit / nett * 100);
-            const color = marginPct >= 5 ? 'var(--success)' : (marginPct >= 0 ? 'var(--warning)' : 'var(--danger)');
-            const formatRp = (num) => 'Rp ' + Math.round(num).toLocaleString('id-ID');
-            text += ` <span>Mkp: <strong style="color:${color}">${marginPct.toFixed(1)}%</strong> <span style="font-size:9px;color:var(--text-muted);">(${profit > 0 ? '+' : ''}${formatRp(profit)})</span></span>`;
-        }
-        
-        hint.innerHTML = text;
+    const newHintHtml = buildTierHintHtml(minQty, totalH, nett);
+    let hint = row.querySelector('.tier-hint');
+    if (hint) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = newHintHtml.trim();
+        const newEl = tempDiv.firstElementChild;
+        hint.replaceWith(newEl);
     } else {
-        hint.innerHTML = '';
+        const labelEl = row.querySelector('.tier-label, .drawer-tier-label');
+        if (labelEl) {
+            labelEl.insertAdjacentHTML('beforebegin', newHintHtml);
+        } else {
+            row.insertAdjacentHTML('beforeend', newHintHtml);
+        }
+    }
+    
+    // Live update drawer data & warning displays
+    if (uid && typeof collectDrawerDataForItem === 'function') {
+        collectDrawerDataForItem(uid);
+        if (typeof refreshMiniTableForItem === 'function') {
+            refreshMiniTableForItem(uid);
+        }
     }
 }
 
@@ -3476,10 +3616,37 @@ function buildMiniPricingTableHtml(item) {
     // Check if any packaging has tiers
     let tierSummaryList = [];
     item.packagings.forEach(p => {
+        const pNett = getPkgNettPrice(item, p);
         (p.qty_prices || []).forEach(t => {
-            const uPrice = parseFloat(t.unit_price) || 0;
+            const minQty = parseFloat(t.min_qty) || 0;
+            const uPrice = parseFloat(t.unit_price) || (parseFloat(t.total) && minQty ? parseFloat(t.total) / minQty : 0);
             const modeLbl = t.sale_mode === 'retail' ? 'Ecer' : t.sale_mode === 'wholesale' ? 'Grosir' : 'E+G';
-            tierSummaryList.push(`<strong>${p.unit_name} &ge;${t.min_qty}</strong>: <span style="color:var(--info);">Rp${Math.round(uPrice).toLocaleString('id-ID')}</span> <span style="font-size:8px;opacity:0.8;">(${modeLbl})</span>`);
+            const profit = uPrice - pNett;
+            const mkp = pNett > 0 ? ((profit / pNett) * 100) : 0;
+            const isNeg = (uPrice > 0 && pNett > 0 && profit < 0);
+            const color = isNeg ? 'var(--danger)' : (mkp >= 5 ? 'var(--success)' : 'var(--warning)');
+            const diffSign = profit >= 0 ? '+' : '−';
+            const diffRp = 'Rp' + Math.round(Math.abs(profit)).toLocaleString('id-ID');
+
+            if (isNeg) {
+                tierSummaryList.push(`
+                    <span style="background:rgba(230,57,70,0.18);border:1px solid var(--danger);border-radius:4px;padding:2px 6px;color:var(--danger);display:inline-flex;align-items:center;gap:3px;font-weight:600;">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <strong>${p.unit_name} &ge;${t.min_qty}</strong>: 
+                        <span>Rp${Math.round(uPrice).toLocaleString('id-ID')}</span>
+                        <span style="font-size:8.5px;font-weight:700;">(Mkp: ${mkp.toFixed(1)}% | ${diffSign}${diffRp} MINUS)</span>
+                    </span>
+                `);
+            } else {
+                tierSummaryList.push(`
+                    <span style="display:inline-flex;align-items:center;gap:3px;">
+                        <strong>${p.unit_name} &ge;${t.min_qty}</strong>: 
+                        <span style="color:var(--info);">Rp${Math.round(uPrice).toLocaleString('id-ID')}</span>
+                        <span style="font-size:8.5px;color:${color};font-weight:600;">(Mkp: ${mkp.toFixed(1)}% | ${diffSign}${diffRp})</span>
+                        <span style="font-size:8px;opacity:0.8;">(${modeLbl})</span>
+                    </span>
+                `);
+            }
         });
     });
 
@@ -3489,7 +3656,14 @@ function buildMiniPricingTableHtml(item) {
             ${tierSummaryList.join('<span style="opacity:0.4;">|</span>')}
         </div>` : '';
 
-    return `<div style="margin-top:10px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid rgba(255,255,255,0.06);">
+    const minusCount = getItemNegativePriceCount(item);
+    const negativeAlertHtml = minusCount > 0 ? `
+        <div style="margin-top:6px;padding:6px 10px;border-radius:var(--radius-sm);background:rgba(230,57,70,0.12);border:1px solid var(--danger);color:var(--danger);font-size:10px;display:flex;align-items:center;gap:6px;line-height:1.4;">
+            <i class="bi bi-exclamation-triangle-fill" style="flex-shrink:0;font-size:13px;"></i>
+            <div><strong>Peringatan:</strong> Ada <strong>${minusCount} pengaturan harga</strong> (jual/tier) yang masih <strong>minus / di bawah modal</strong>. Periksa panel kemasan sebelum menyimpan.</div>
+        </div>` : '';
+
+    return `<div style="margin-top:10px;border-radius:var(--radius-sm);overflow:hidden;border:1px solid ${minusCount > 0 ? 'var(--danger)' : 'rgba(255,255,255,0.06)'};">
         <table style="width:100%;border-collapse:collapse;">
             <thead>
                 <tr style="background:rgba(255,255,255,0.04);">
@@ -3502,7 +3676,8 @@ function buildMiniPricingTableHtml(item) {
             <tbody>${rows}</tbody>
         </table>
         ${tierFooter}
-    </div>`;
+    </div>
+    ${negativeAlertHtml}`;
 }
 
 /**
@@ -3609,10 +3784,13 @@ function buildDrawerRowHtml(item, prefix) {
         // Tier rows
         const tiers = pkg.qty_prices || [];
         const tierRowsHtml = tiers.map(t => {
-            const th = Math.round((parseFloat(t.min_qty)||0) * (parseFloat(t.unit_price)||0));
+            const minQty = parseFloat(t.min_qty) || 0;
+            const unitPrice = parseFloat(t.unit_price) || 0;
+            const th = Math.round(minQty * unitPrice);
+            const hintHtml = buildTierHintHtml(minQty, th, nett);
             return `<div class="drawer-tier-row" style="margin-bottom:6px;">
                 <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
-                    <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" value="${t.min_qty}" min="1">
+                    <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" value="${t.min_qty}" min="1" oninput="recalcTierHint(this)">
                     <input type="number" class="form-control-dark drawer-tier-total" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" value="${th}" min="0" oninput="recalcTierHint(this)">
                     <div class="dropdown" style="min-width:0; box-sizing:border-box; width:100%;">
                         <button class="btn btn-dark dropdown-toggle drawer-tier-mode-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:4px; font-size:10px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
@@ -3627,6 +3805,7 @@ function buildDrawerRowHtml(item, prefix) {
                     </div>
                     <button type="button" onclick="removeDrawerTierRow(this)" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 6px;cursor:pointer;font-size:11px;min-width:0;"><i class="bi bi-x"></i></button>
                 </div>
+                ${hintHtml}
                 <input type="text" class="form-control-dark drawer-tier-label" value="${t.label||''}" placeholder="Label (opsional)" style="font-size:10px;padding:4px;width:100%;box-sizing:border-box;">
             </div>`;
         }).join('');
@@ -3714,15 +3893,19 @@ function toggleItemDrawer(uid) {
     const btn     = document.getElementById(`drawer_btn_${uid}`);
     if (!drawer || !btn) return;
     const isOpen = drawer.style.display !== 'none';
+    
+    // If closing, collect drawer data back first to ensure data model is updated
+    if (isOpen) {
+        collectDrawerDataForItem(uid);
+    }
+
     drawer.style.display = isOpen ? 'none' : 'block';
-    btn.innerHTML = isOpen
-        ? '<i class="bi bi-tags"></i> Atur Harga Kemasan Lainnya'
-        : '<i class="bi bi-chevron-up"></i> Tutup Panel Kemasan';
-    btn.style.borderStyle = isOpen ? 'dashed' : 'solid';
+    
+    // Update button display with negative price warning awareness
+    updateDrawerButtonDisplay(uid, !isOpen);
+    refreshMiniTableForItem(uid);
+
     if (!isOpen) {
-        // Refresh mini table and trend banner (now outside drawer, in main card)
-        refreshMiniTableForItem(uid);
-        
         // Refresh drawer inputs to ensure they match item.packagings
         refreshOpenDrawer(uid);
         
@@ -3752,6 +3935,7 @@ function toggleItemDrawer(uid) {
 function removeDrawerTierRow(btn) {
     const row = btn.closest('.drawer-tier-row');
     const pkgRow = btn.closest('.drawer-pkg-row');
+    const uid = pkgRow?.closest('[id^="drawer_"]')?.id?.split('_')?.[1] || pkgRow?.closest('.bulk-item')?.dataset?.bulkId;
     if (row) row.remove();
     if (pkgRow) {
         const remaining = pkgRow.querySelectorAll('.drawer-tier-row').length;
@@ -3762,6 +3946,12 @@ function removeDrawerTierRow(btn) {
                 const cont = pkgRow.querySelector('.drawer-tier-rows-container');
                 if (cont) cont.insertAdjacentHTML('afterend', '<div class="drawer-tier-empty" style="font-size:9px;color:var(--text-muted);text-align:center;padding:4px;"><i class="bi bi-info-circle"></i> Belum ada harga tier. Klik Tambah.</div>');
             }
+        }
+    }
+    if (uid && typeof collectDrawerDataForItem === 'function') {
+        collectDrawerDataForItem(uid);
+        if (typeof refreshMiniTableForItem === 'function') {
+            refreshMiniTableForItem(uid);
         }
     }
 }
@@ -3778,7 +3968,7 @@ function addDrawerTierRow(btn) {
     row.style.cssText = 'margin-bottom:6px;';
     row.innerHTML = `
         <div style="display:grid;grid-template-columns:minmax(0,0.8fr) minmax(0,1fr) minmax(0,1fr) 30px;gap:4px;margin-bottom:4px;align-items:center;">
-            <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" min="1">
+            <input type="number" class="form-control-dark drawer-tier-min-qty" style="font-size:10px;padding:4px;min-width:0;box-sizing:border-box;width:100%;" placeholder="Qty" min="1" oninput="recalcTierHint(this)">
             <input type="number" class="form-control-dark drawer-tier-total" style="font-size:10px;padding:4px;color:var(--success);min-width:0;box-sizing:border-box;width:100%;" placeholder="Total" value="" min="0" oninput="recalcTierHint(this)">
             <div class="dropdown" style="min-width:0; box-sizing:border-box; width:100%;">
                 <button class="btn btn-dark dropdown-toggle drawer-tier-mode-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center; padding:4px; font-size:10px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--radius-md);">
@@ -3793,6 +3983,7 @@ function addDrawerTierRow(btn) {
             </div>
             <button type="button" onclick="removeDrawerTierRow(this)" style="background:var(--danger-bg);color:var(--danger);border:none;border-radius:4px;padding:4px 6px;cursor:pointer;font-size:11px;min-width:0;"><i class="bi bi-x"></i></button>
         </div>
+        ${buildTierHintHtml(0, 0, 0)}
         <input type="text" class="form-control-dark drawer-tier-label" placeholder="Label (opsional)" style="font-size:10px;padding:4px;width:100%;box-sizing:border-box;">`;
     container.appendChild(row);
 }
@@ -3825,6 +4016,12 @@ function refreshDrawerRowMargin(rowEl) {
     const wEl   = rowEl.querySelector('.drawer-margin-wholesale');
     if (rEl) rEl.innerHTML = formatMarginWithProfit('Ecer', nett, ret);
     if (wEl) wEl.innerHTML = formatMarginWithProfit('Grosir', nett, who);
+
+    // Refresh all tier hints inside this drawer-pkg-row
+    rowEl.querySelectorAll('.drawer-tier-row').forEach(tr => {
+        const inp = tr.querySelector('.drawer-tier-total') || tr.querySelector('.drawer-tier-min-qty');
+        if (inp) recalcTierHint(inp);
+    });
 }
 
 /**
@@ -4042,6 +4239,9 @@ function refreshMiniTableForItem(uid) {
         if (miniTbl) miniTbl.innerHTML = buildMiniPricingTableHtml(item);
         const trendEl = bulkEl.querySelector('.bulk-trend-banner');
         if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(item);
+        const drawer = bulkEl.querySelector('.bulk-drawer');
+        const isOpen = drawer && drawer.style.display !== 'none';
+        updateDrawerButtonDisplay(uid, isOpen);
     } else {
         // Regular cart item: update by ID (outside drawer)
         const itemEl = document.getElementById(`item_card_${uid}`);
@@ -4050,6 +4250,9 @@ function refreshMiniTableForItem(uid) {
             if (tblEl) tblEl.innerHTML = buildMiniPricingTableHtml(item);
             const trendEl = itemEl.querySelector('.item-trend-banner');
             if (trendEl) trendEl.innerHTML = buildTrendBannerHtml(item);
+            const drawer = document.getElementById(`drawer_${uid}`);
+            const isOpen = drawer && drawer.style.display !== 'none';
+            updateDrawerButtonDisplay(uid, isOpen);
         }
     }
 }
@@ -4292,8 +4495,10 @@ function renderCart() {
 
                 <!-- ── Drawer Toggle Button ── -->
                 <button id="drawer_btn_${item.id}" type="button" onclick="toggleItemDrawer(${item.id})"
-                        style="width:100%;margin-top:10px;background:var(--surface-2);color:var(--primary);border:1px dashed var(--border-color);padding:9px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;">
-                    <i class="bi bi-tags"></i> Atur Harga Kemasan Lainnya
+                        style="${getItemNegativePriceCount(item) > 0 ? 'width:100%;margin-top:10px;background:rgba(230,57,70,0.1);color:var(--danger);border:1px solid var(--danger);padding:9px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;' : 'width:100%;margin-top:10px;background:var(--surface-2);color:var(--primary);border:1px dashed var(--border-color);padding:9px;border-radius:var(--radius-sm);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;'}">
+                    ${getItemNegativePriceCount(item) > 0 
+                        ? `<i class="bi bi-exclamation-triangle-fill" style="color:var(--danger);margin-right:4px;"></i> Atur Harga Kemasan Lainnya <span style="background:var(--danger);color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;margin-left:6px;"><i class="bi bi-arrow-down-circle"></i> ${getItemNegativePriceCount(item)} Harga Minus</span>`
+                        : `<i class="bi bi-tags"></i> Atur Harga Kemasan Lainnya`}
                 </button>
 
                 <!-- ── Collapsible Drawer ── -->
@@ -4927,14 +5132,14 @@ function toggleBulkDrawer(bulkId, btn) {
     const drawer = el.querySelector('.bulk-drawer');
     if (!drawer) return;
     const isOpen = drawer.style.display !== 'none';
+    if (isOpen) {
+        collectDrawerDataForItem(bulkId);
+    }
     drawer.style.display = isOpen ? 'none' : 'block';
-    btn.innerHTML = isOpen
-        ? '<i class="bi bi-tags"></i> Atur Harga Kemasan Lainnya'
-        : '<i class="bi bi-chevron-up"></i> Tutup Panel Kemasan';
-    btn.style.borderStyle = isOpen ? 'dashed' : 'solid';
+    updateDrawerButtonDisplay(bulkId, !isOpen);
+    refreshMiniTableForItem(bulkId);
     
     if (!isOpen) {
-        refreshMiniTableForItem(bulkId);
         refreshOpenDrawer(bulkId);
     }
 }
