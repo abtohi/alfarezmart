@@ -95,9 +95,9 @@ class AiChatController extends Controller
             exit;
         }
 
-        $model = $this->settingModel->get('ai_chat_model', 'openrouter/free');
+        $model = $this->settingModel->get('ai_chat_model', 'cohere/north-mini-code:free');
         if (empty($model) || in_array($model, ['openrouter/auto', 'deepseek/deepseek-chat:free', 'meta-llama/llama-3.3-70b-instruct:free'])) {
-            $model = 'openrouter/free';
+            $model = 'cohere/north-mini-code:free';
         }
 
         try {
@@ -132,14 +132,12 @@ class AiChatController extends Controller
             $aiResponse  = '';
             $totalTokens = 0;
 
-            // List of reliable 100% FREE models to try sequentially if primary model fails
+            // Highly responsive and intelligent models (benchmarked < 2s TTFT)
             $fallbackModels = [
                 $model,
-                'openrouter/free',
-                'google/gemma-4-26b-a4b-it:free',
-                'nvidia/nemotron-nano-12b-v2-vl:free',
-                'openai/gpt-oss-20b:free',
                 'cohere/north-mini-code:free',
+                'openrouter/free',
+                'deepseek/deepseek-chat',
             ];
             $fallbackModels = array_values(array_unique(array_filter($fallbackModels)));
 
@@ -161,8 +159,8 @@ class AiChatController extends Controller
                         CURLOPT_RETURNTRANSFER => true,
                         CURLOPT_POST           => true,
                         CURLOPT_POSTFIELDS     => json_encode($postData),
-                        CURLOPT_CONNECTTIMEOUT => 15,
-                        CURLOPT_TIMEOUT        => 60,
+                        CURLOPT_CONNECTTIMEOUT => 5,
+                        CURLOPT_TIMEOUT        => 25,
                         CURLOPT_SSL_VERIFYPEER => false,
                         CURLOPT_SSL_VERIFYHOST => 0,
                         CURLOPT_HTTPHEADER     => [

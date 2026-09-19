@@ -49,7 +49,7 @@ class AiContextBuilder
 
         // --- 1. Core Identity & Strict Rules ---
         $prompt  = "Kamu adalah AI Asisten cerdas toko AlfarezMart. Nama kamu: AlfarezMart AI.\n";
-        $prompt .= "ATURAN BAHASA & FORMAT: WAJIB 100% BAHASA INDONESIA. DILARANG KERAS MENGGUNAAN BAHASA INGGRIS ATAU MENGELUARKAN INTERNAL THOUGHT / REASONING PROCESS SEPERTI 'We need to query...', 'The user is asking...'. JIKA MEMBUTUHKAN DATA DATABASE, LANGSUNG TULIS TAG [SQL_QUERY]SELECT ...[/SQL_QUERY] TANPA KATA-KATA LAIN SEBELUM/SESUDAHNYA.\n\n";
+        $prompt .= "ATURAN BAHASA & FORMAT: WAJIB 100% BAHASA INDONESIA. DILARANG KERAS MENGGUNAKAN BAHASA INGGRIS ATAU MENGELUARKAN INTERNAL THOUGHT / REASONING PROCESS SEPERTI 'We need to query...', 'The user is asking...'. JIKA MEMBUTUHKAN DATA DATABASE, LANGSUNG TULIS TAG [SQL_QUERY]SELECT ...[/SQL_QUERY] TANPA KATA-KATA LAIN SEBELUM/SESUDAHNYA.\n\n";
 
         if (!empty($currentUser)) {
             $prompt .= "PENGGUNA AKTIF SEKARANG: ID=" . ($currentUser['id'] ?? '?') . ", Nama=\"" . ($currentUser['name'] ?? 'User') . "\", Level=" . ($currentUser['level'] ?? 'user') . "\n\n";
@@ -57,33 +57,19 @@ class AiContextBuilder
 
         $prompt .= "ATURAN KETAT:\n";
         $prompt .= "1. Jawab dalam BAHASA INDONESIA yang ramah, akurat, dan profesional.\n";
-        $prompt .= "2. PRIORITAS UTAMA: Gunakan DATA INTERNAL di bawah jika tersedia. DILARANG menebak angka/harga.\n";
-        $prompt .= "3. Jika data TIDAK ADA di konteks, WAJIB query database dengan format:\n";
+        $prompt .= "2. PRIORITAS UTAMA (FAST PATH): Gunakan DATA INTERNAL di bawah jika tersedia. DILARANG menebak angka/harga.\n";
+        $prompt .= "   - JIKA data yang ditanyakan sudah ada pada ## PRODUK DITEMUKAN DI KATALOG atau ## SNAPSHOT BISNIS atau ## FAKTA YANG SUDAH DIPELAJARI, LANGSUNG berikan jawaban lengkap dan ramah dalam 1 kali respon tanpa perlu membuat query [SQL_QUERY].\n";
+        $prompt .= "3. Jika data TIDAK ADA di konteks dan membutuhkan data database, WAJIB query database dengan format:\n";
         $prompt .= "   [SQL_QUERY]SELECT ... FROM ... LIMIT 50[/SQL_QUERY]\n";
         $prompt .= "   HANYA tag itu saja. TANPA kalimat apapun sebelum/sesudah tag.\n";
-        $prompt .= "4. DILARANG bilang 'tidak tahu' / 'tidak memiliki akses' SEBELUM mencoba SQL query.\n";
+        $prompt .= "4. DILARANG bilang 'tidak tahu' / 'tidak memiliki akses' SEBELUM mencoba SQL query.\n\n";
+
         $skillEngine = AiSkillEngine::getInstance();
-        $prompt .= $skillEngine->getSkillInstructions() . "\n";
+        $prompt .= $skillEngine->getSkillInstructions($userMessage) . "\n";
 
-        $prompt .= "ATURAN SKILL PENCARIAN PRODUK & TYPO TOLERANCE:\n";
-        $prompt .= "1. MULTI-COLUMN SEARCH: Nama produk di database tersimpan dalam beberapa kolom di tabel `products`: `full_name` (nama lengkap), `short_label` (label cetak), `invoice_name` (nama nota), `supplier_invoice_name` (nama di faktur supplier, misal 'R.SERGIO' untuk Sergio), `variant`, `code`.\n";
-        $prompt .= "2. FLEXIBLE & FUZZY MATCHING: Saat mencari data produk, penjualan, atau riwayat pembelian produk tertentu (misal: 'rokok sergio', 'saset', 'mie'):\n";
-        $prompt .= "   - SELALU gunakan klausa WHERE dengan OR/LIKE pada beberapa kolom sekaligus agar fleksibel terhadap typo dan variasi nama di faktur/nota.\n";
-        $prompt .= "   - Contoh query riwayat pembelian (Purchases) untuk produk 'rokok sergio':\n";
-        $prompt .= "     [SQL_QUERY]SELECT p.purchase_date, s.name AS supplier_name, pr.full_name, pr.supplier_invoice_name, pi.quantity, pi.buy_price, pi.total_price FROM purchases p JOIN purchase_items pi ON p.id = pi.purchase_id JOIN products pr ON pi.product_id = pr.id LEFT JOIN suppliers s ON p.supplier_id = s.id WHERE (pr.full_name LIKE '%sergio%' OR pr.short_label LIKE '%sergio%' OR pr.invoice_name LIKE '%sergio%' OR pr.supplier_invoice_name LIKE '%sergio%' OR pr.supplier_invoice_name LIKE '%R.SERGIO%' OR pr.full_name LIKE '%rokok%') ORDER BY p.purchase_date DESC LIMIT 50[/SQL_QUERY]\n";
-        $prompt .= "3. PENANGANAN TYPO: Wajib deteksi typo umum user! Misal: 'saset' -> cari 'sachet' & 'saset', 'poci' -> cari 'pouch' & 'poci', 'coklat' -> cari 'cokelat' & 'coklat', 'sergio' -> cari 'sergio' & 'R.SERGIO'. Buat query SQL yang mencakup variasi kata asli dan variasi kata yang sudah dinormalisasi.\n\n";
-
-        $prompt .= "ATURAN SKILL OUTPUT TABEL & GAMBAR:\n";
-        $prompt .= "1. SKILL TABEL MARKDOWN: Saat user meminta daftar/list produk dengan kolom-kolom tertentu, SELALU sajikan dalam format TABEL MARKDOWN (`| Header1 | Header2 | ... |`). Tabel ini akan dirender sangat rapi dan dapat di-scroll horizontal secara halus pada layar hp/mobile.\n";
-        $prompt .= "2. SKILL GAMBAR PRODUK: Tabel `products` memiliki kolom `photo` yang menyimpan lokasi foto produk (misal: `storage/uploads/products/prod_170_1782085048.webp`).\n";
-        $prompt .= "   - Jika user meminta melihat gambar/foto produk atau daftar produk beserta fotonya, SELALU sertakan kolom `photo` dalam query SQL.\n";
-        $prompt .= "   - Tampilkan foto produk menggunakan sintaks Markdown Gambar: `![Nama Produk](path_photo)` (contoh: `![ABC Kecap](storage/uploads/products/prod_170_1782085048.webp)`).\n";
-        $prompt .= "   - Dalam tabel markdown, Anda dapat menaruh markdown gambar `![Nama](path_photo)` langsung di dalam sel tabel kolom Foto.\n";
-        $prompt .= "   - Jika kolom `photo` kosong/null, tampilkan `-` atau `(Tidak ada foto)`.\n\n";
-
-        $prompt .= "PETUNJUK PERTANYAAN PENJUALAN & PEMBELIAN:\n";
-        $prompt .= "- Jika user bertanya 'belanja apa aja' / 'pembelian toko' / 'barang masuk': Query tabel `purchases` JOIN `purchase_items` ON purchases.id = purchase_items.purchase_id JOIN `products` ON purchase_items.product_id = products.id WHERE DATE(purchases.purchase_date) = CURDATE() (atau tanggal sesuai pertanyaan).\n";
-        $prompt .= "- Jika user bertanya 'penjualan' / 'omzet' / 'transaksi kasir': Query `sale_transactions` JOIN `sale_items` ON sale_transactions.id = sale_items.transaction_id JOIN `products` ON sale_items.product_id = products.id WHERE DATE(sale_transactions.created_at) = CURDATE().\n\n";
+        $prompt .= "PETUNJUK RELASIONAL PENJUALAN & PEMBELIAN:\n";
+        $prompt .= "- Pembelian / Barang Masuk: `purchases` p JOIN `purchase_items` pi ON p.id = pi.purchase_id JOIN `products` pr ON pi.product_id = pr.id LEFT JOIN `suppliers` s ON p.supplier_id = s.id WHERE DATE(p.purchase_date) = CURDATE() (atau filter tanggal).\n";
+        $prompt .= "- Penjualan / Omzet Kasir: `sale_transactions` st JOIN `sale_items` si ON st.id = si.transaction_id JOIN `products` pr ON si.product_id = pr.id WHERE DATE(st.created_at) = CURDATE().\n\n";
 
         // --- 2. Current date/time ---
         $hari = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
@@ -151,19 +137,19 @@ class AiContextBuilder
             $prompt .= $this->getBusinessSnapshot();
         }
 
-        // --- 7. Dynamic Database Schema (auto-introspected) ---
+        // --- 7. Dynamic Database Schema (auto-introspected with disk cache) ---
         $prompt .= $this->getDynamicSchema();
 
         return $prompt;
     }
 
     // ================================================================
-    // DYNAMIC DATABASE SCHEMA (Auto-Introspection)
+    // DYNAMIC DATABASE SCHEMA (Auto-Introspection with Disk Cache)
     // ================================================================
 
     /**
      * Auto-discover database schema using SHOW TABLES + DESCRIBE.
-     * Cached per-request to avoid repeated introspection.
+     * Cached to disk (24h TTL) & static memory to eliminate 50+ remote DB roundtrips.
      */
     private function getDynamicSchema(): string
     {
@@ -171,33 +157,64 @@ class AiContextBuilder
             return self::$cachedSchema;
         }
 
+        $storageDir = defined('STORAGE_PATH') ? STORAGE_PATH : dirname(dirname(__DIR__)) . '/storage';
+        $cacheFile  = $storageDir . '/ai_schema_cache.json';
+
+        // Check persistent disk cache (24 hours TTL)
+        if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < 86400)) {
+            $cached = @file_get_contents($cacheFile);
+            if (!empty($cached)) {
+                self::$cachedSchema = $cached;
+                return $cached;
+            }
+        }
+
         try {
             $driver = $this->db->getAttribute(PDO::ATTR_DRIVER_NAME);
-            $schema = "\n## SKEMA DATABASE (auto-detected)\n";
+            $schema = "\n## SKEMA DATABASE & RELASIONAL\n";
             $schema .= "Gunakan skema ini untuk membuat SQL_QUERY yang akurat.\n\n";
 
+            // Core retail tables that need full column definitions
+            $coreTables = [
+                'products', 'product_packagings', 'product_qty_prices', 'stock', 'stock_movements',
+                'sale_transactions', 'sale_items', 'purchases', 'purchase_items',
+                'suppliers', 'supplier_products', 'customers', 'customer_debts', 'customer_debt_payments',
+                'shop_debts', 'shop_debt_payments', 'finance_accounts', 'finance_logs',
+                'users', 'categories', 'brands', 'units', 'app_settings'
+            ];
+
+            // Tables to completely skip
+            $skipTables = [
+                'sessions', 'cache', 'migrations', 'password_resets', 'failed_jobs',
+                'ai_scan_cache', 'ai_invoice_learning_logs', 'chat_history', 'user_activity_logs'
+            ];
+
             if ($driver === 'mysql') {
-                // Get all tables
                 $tables = $this->db->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
 
-                // Skip system/cache tables to save tokens
-                $skipTables = ['sessions', 'cache', 'migrations', 'password_resets', 'failed_jobs'];
-
                 foreach ($tables as $table) {
-                    if (in_array($table, $skipTables)) continue;
+                    if (in_array($table, $skipTables, true)) continue;
 
+                    $isCore = in_array($table, $coreTables, true);
                     $cols = $this->db->query("DESCRIBE `{$table}`")->fetchAll(PDO::FETCH_ASSOC);
                     $colNames = [];
+
                     foreach ($cols as $col) {
                         $name = $col['Field'];
                         $type = $col['Type'];
+
+                        // If not a core table, only include primary key & foreign keys/important fields
+                        if (!$isCore && $col['Key'] !== 'PRI' && !preg_match('/(?:_id|code|name|status|amount|date)/i', $name)) {
+                            continue;
+                        }
+
                         // Simplify type for token efficiency
                         if (strpos($type, 'int') !== false) $type = 'INT';
                         elseif (strpos($type, 'varchar') !== false) $type = 'VARCHAR';
                         elseif (strpos($type, 'text') !== false) $type = 'TEXT';
                         elseif (strpos($type, 'decimal') !== false || strpos($type, 'double') !== false || strpos($type, 'float') !== false) $type = 'DECIMAL';
                         elseif (strpos($type, 'date') !== false || strpos($type, 'time') !== false) $type = 'DATETIME';
-                        elseif (strpos($type, 'enum') !== false) $type = $col['Type']; // Keep enum values
+                        elseif (strpos($type, 'enum') !== false) $type = $col['Type'];
                         elseif (strpos($type, 'tinyint') !== false) $type = 'BOOL';
 
                         $pk = ($col['Key'] === 'PRI') ? '*' : '';
@@ -210,6 +227,7 @@ class AiContextBuilder
                 $tables = $this->db->query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
                                    ->fetchAll(PDO::FETCH_COLUMN);
                 foreach ($tables as $table) {
+                    if (in_array($table, $skipTables, true)) continue;
                     $cols = $this->db->query("PRAGMA table_info(`{$table}`)")->fetchAll(PDO::FETCH_ASSOC);
                     $colNames = [];
                     foreach ($cols as $col) {
@@ -234,6 +252,7 @@ class AiContextBuilder
             $schema .= "- Kategori: products JOIN categories ON products.category_id = categories.id\n";
 
             self::$cachedSchema = $schema;
+            @file_put_contents($cacheFile, $schema);
             return $schema;
 
         } catch (Throwable $e) {

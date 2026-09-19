@@ -446,4 +446,4 @@ body { background: var(--bg-primary); }
 
 <!-- Marked.js for Markdown -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script src="<?= BASE_URL ?>public/js/chat.js?v=5.0"></script>
+<script src="<?= BASE_URL ?>public/js/chat.js?v=5.1"></script>

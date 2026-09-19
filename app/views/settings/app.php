@@ -359,27 +359,27 @@
 
                     <div style="margin-bottom:10px;">
                         <div class="model-cards-grid">
-                            <div class="model-card <?= $aiChatModel === 'openrouter/auto' ? 'selected' : '' ?>" onclick="selectChatModel('openrouter/auto', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#5c5c5c,#2c2c2c);">A</div>
+                            <div class="model-card <?= in_array($aiChatModel, ['openrouter/auto', 'openrouter/free', 'cohere/north-mini-code:free']) ? 'selected' : '' ?>" onclick="selectChatModel('cohere/north-mini-code:free', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#00b4d8,#0077b6);">⚡</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Auto Model</div>
-                                    <div class="model-card-meta">Otomatis</div>
+                                    <div class="model-card-name">Ultra-Fast Free</div>
+                                    <div class="model-card-meta">Respon Kilat (Gratis)</div>
                                 </div>
                             </div>
                             
-                            <div class="model-card <?= $aiChatModel === 'deepseek/deepseek-chat:free' ? 'selected' : '' ?>" onclick="selectChatModel('deepseek/deepseek-chat:free', this)">
+                            <div class="model-card <?= in_array($aiChatModel, ['deepseek/deepseek-chat', 'deepseek/deepseek-chat:free']) ? 'selected' : '' ?>" onclick="selectChatModel('deepseek/deepseek-chat', this)">
                                 <div class="model-card-icon" style="background:linear-gradient(135deg,#0052CC,#003d99);">D</div>
                                 <div class="model-card-info">
                                     <div class="model-card-name">DeepSeek V3</div>
-                                    <div class="model-card-meta">Terbaik Gratis</div>
+                                    <div class="model-card-meta">Super Pintar</div>
                                 </div>
                             </div>
 
-                            <div class="model-card <?= $aiChatModel === 'google/gemini-2.0-flash-001' ? 'selected' : '' ?>" onclick="selectChatModel('google/gemini-2.0-flash-001', this)">
+                            <div class="model-card <?= in_array($aiChatModel, ['google/gemini-2.5-flash', 'google/gemini-2.0-flash-001']) ? 'selected' : '' ?>" onclick="selectChatModel('google/gemini-2.5-flash', this)">
                                 <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#34A853);">G</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Gemini 2.0 Flash</div>
-                                    <div class="model-card-meta">Pro Terjangkau</div>
+                                    <div class="model-card-name">Gemini Flash</div>
+                                    <div class="model-card-meta">Google AI Cepat</div>
                                 </div>
                             </div>
 
@@ -387,7 +387,7 @@
                                 <div class="model-card-icon" style="background:linear-gradient(135deg,#d97757,#b35f42);">C</div>
                                 <div class="model-card-info">
                                     <div class="model-card-name">Claude 3.5 Sonnet</div>
-                                    <div class="model-card-meta">Pro Terbaik</div>
+                                    <div class="model-card-meta">Pro Premium</div>
                                 </div>
                             </div>
                         </div>

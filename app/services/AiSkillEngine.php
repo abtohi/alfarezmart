@@ -197,16 +197,50 @@ class AiSkillEngine
     }
 
     /**
-     * Get concatenated skill instructions for inclusion in System Prompt
+     * Get concatenated skill instructions for inclusion in System Prompt.
+     * When a query is passed, intelligently includes advanced BI/Marketing skills
+     * only when the user's intent is analytical or strategic, keeping standard prompts ultra-fast.
      */
-    public function getSkillInstructions(): string
+    public function getSkillInstructions(?string $query = null): string
     {
         $out = "## AI SKILLS & ADVANCED CAPABILITIES:\n";
-        foreach ($this->skills as $id => $s) {
-            if (!empty($s['instruction'])) {
-                $out .= $s['instruction'] . "\n";
+        $isAnalytics = false;
+        if ($query !== null) {
+            $q = mb_strtolower($query);
+            $analyticsKeywords = [
+                'analis', 'analisis', 'strategi', 'omzet', 'omset', 'tren', 'trend', 'laba', 'profit',
+                'margin', 'laris', 'terlaris', 'performa', 'laporan', 'growth', 'pertumbuhan',
+                'promosi', 'promo', 'bundling', 'dead stock', 'fast moving', 'slow moving', 'insight',
+                'evaluasi', 'penjualan tertinggi', 'terbanyak', 'rekomendasi bisnis', 'kategori'
+            ];
+            foreach ($analyticsKeywords as $kw) {
+                if (strpos($q, $kw) !== false) {
+                    $isAnalytics = true;
+                    break;
+                }
             }
+        } else {
+            $isAnalytics = true; // Include all if no query context specified
         }
+
+        $analyticsSkillIds = ['business_intelligence', 'sales_marketing', 'product_category_analyst', 'growth_strategy'];
+
+        foreach ($this->skills as $id => $s) {
+            if (empty($s['instruction'])) continue;
+
+            if (!$isAnalytics && in_array($id, $analyticsSkillIds, true)) {
+                continue;
+            }
+
+            $out .= $s['instruction'] . "\n";
+        }
+
+        // If not in full analytics mode, add a concise hint so AI knows it can analyze data when prompted
+        if (!$isAnalytics) {
+            $out .= "SKILL ANALITIK & BISNIS INTELIJEN:\n";
+            $out .= "- Kamu juga mampu melakukan analisis mendalam (omzet, profit, margin, produk terlaris, dead stock, strategi promosi). Lakukan query SQL agregasi bila user memintanya.\n\n";
+        }
+
         return $out;
     }
 

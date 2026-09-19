@@ -134,11 +134,20 @@ function showCopiedFeedback(btn) {
     }, 2000);
 }
 
-function appendMessage(role, content) {
-    if (!chatMessages) return;
+let _typingStatusInterval = null;
 
+function removeTypingIndicator() {
+    if (_typingStatusInterval) {
+        clearInterval(_typingStatusInterval);
+        _typingStatusInterval = null;
+    }
     const indicator = document.getElementById('typingIndicator');
     if (indicator) indicator.remove();
+}
+
+function appendMessage(role, content) {
+    if (!chatMessages) return;
+    removeTypingIndicator();
 
     chatMessages.insertAdjacentHTML('beforeend', generateBubbleHTML(role, content));
     scrollToBottom();
@@ -146,17 +155,43 @@ function appendMessage(role, content) {
 
 function showTypingIndicator() {
     if (!chatMessages) return;
+    removeTypingIndicator();
+
     chatMessages.insertAdjacentHTML('beforeend', `
         <div class="message ai" id="typingIndicator">
-            <div class="message-bubble" style="padding:12px 16px;">
-                <div class="typing-indicator">
+            <div class="message-bubble" style="padding:10px 16px; display:inline-flex; align-items:center; gap:10px;">
+                <div class="typing-indicator" style="padding:0;">
                     <div class="typing-dot"></div>
                     <div class="typing-dot"></div>
                     <div class="typing-dot"></div>
                 </div>
+                <span id="typingStatusText" style="font-size:12px; color:var(--text-muted); font-weight:500; transition:opacity 0.25s ease;">Menganalisis pertanyaan...</span>
             </div>
         </div>`);
     scrollToBottom();
+
+    const statusTexts = [
+        'Menganalisis pertanyaan...',
+        'Mengecek database toko...',
+        'Menyusun jawaban terbaik...'
+    ];
+    let step = 0;
+    _typingStatusInterval = setInterval(() => {
+        step = (step + 1) % statusTexts.length;
+        const textEl = document.getElementById('typingStatusText');
+        if (textEl) {
+            textEl.style.opacity = '0';
+            setTimeout(() => {
+                if (textEl) {
+                    textEl.textContent = statusTexts[step];
+                    textEl.style.opacity = '1';
+                }
+            }, 250);
+        } else {
+            clearInterval(_typingStatusInterval);
+            _typingStatusInterval = null;
+        }
+    }, 1800);
 }
 
 function scrollToBottom() {
@@ -222,15 +257,13 @@ async function handleChatSubmit(e) {
         if (data.success && data.data && typeof data.data.response === 'string' && data.data.response.trim().length > 0) {
             appendMessage('assistant', data.data.response);
         } else {
-            const ind = document.getElementById('typingIndicator');
-            if (ind) ind.remove();
+            removeTypingIndicator();
             const errMsg = data.error || (data.data && data.data.response === '' ? 'Model AI tidak memberikan respon text. Silakan coba lagi.' : 'Terjadi kesalahan sistem.');
             appendMessage('assistant', `⚠️ ${errMsg}`);
         }
     } catch (err) {
         console.error('Chat error:', err);
-        const ind = document.getElementById('typingIndicator');
-        if (ind) ind.remove();
+        removeTypingIndicator();
         appendMessage('assistant', navigator.onLine
             ? `⚠️ Gagal terhubung ke server (${err.message || 'Network Error'}). Silakan coba lagi.`
             : '📶 Anda sedang offline. Fitur AI Chat membutuhkan koneksi internet.');
