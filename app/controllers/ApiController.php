@@ -963,7 +963,80 @@ class ApiController extends Controller
         }
         $product['last_purchase'] = $lastPurchase;
 
+        // 4. Smart Resolution for product_type if blank
+        if (empty($product['product_type'])) {
+            $inferredType = null;
+            // 4a. Check sibling products of the same brand
+            if (!empty($product['brand_id'])) {
+                try {
+                    $stmtSib = $this->db->prepare("
+                        SELECT product_type, COUNT(*) as cnt 
+                        FROM products 
+                        WHERE brand_id = :bid AND product_type IS NOT NULL AND TRIM(product_type) != '' AND is_active = 1
+                        GROUP BY product_type 
+                        ORDER BY cnt DESC 
+                        LIMIT 1
+                    ");
+                    $stmtSib->execute([':bid' => $product['brand_id']]);
+                    $sibRow = $stmtSib->fetch(PDO::FETCH_ASSOC);
+                    if ($sibRow && !empty($sibRow['product_type'])) {
+                        $inferredType = trim($sibRow['product_type']);
+                    }
+                } catch (\Throwable $e) {}
+            }
+            // 4b. If still blank, try extracting between brand and variant in full_name or short_label
+            if (empty($inferredType)) {
+                $inferredType = self::inferProductTypeFromName(
+                    $product['full_name'] ?? '',
+                    $product['short_label'] ?? '',
+                    $product['brand_name'] ?? '',
+                    $product['variant'] ?? ''
+                );
+            }
+            if (!empty($inferredType)) {
+                $product['product_type'] = $inferredType;
+                $product['is_inferred_product_type'] = true;
+            }
+        }
+
         return $product;
+    }
+
+    public static function inferProductTypeFromName(string $fullName, string $shortLabel, string $brandName, string $variant): ?string
+    {
+        $text = !empty($shortLabel) ? $shortLabel : $fullName;
+        if (empty($text)) return null;
+
+        // Strip packaging in parentheses e.g. (40 x 75g) or (12 x 77g)
+        $text = preg_replace('/\s*\([^)]*\)/', '', $text);
+
+        // Strip trailing weight / unit tokens e.g. 75g, 100ml, 1kg, 110pps, 2ply
+        $unitsRegex = '(?:g|gr|gram|kg|kilo|kilogram|ml|l|liter|ltr|oz|pcs|pps|ply|lbr|lembar|shet|sheet|sachet|btg|kotak|dus|rcg|slp|pack|btl|cup)';
+        $text = preg_replace('/\s+\d+(?:[.,]\d+)?\s*' . $unitsRegex . '\b.*$/i', '', $text);
+
+        // Strip brand from beginning if present
+        if (!empty($brandName)) {
+            $brandEsc = preg_quote($brandName, '/');
+            $text = preg_replace('/^' . $brandEsc . '\s+/i', '', trim($text));
+        }
+
+        // If variant is known and appears at end or within text, strip it
+        if (!empty($variant)) {
+            $varEsc = preg_quote($variant, '/');
+            $text = preg_replace('/\s*' . $varEsc . '\s*/i', ' ', $text);
+        }
+
+        // Clean up trailing weight/count tokens that might have been revealed after variant removal
+        $text = preg_replace('/\s+\d+(?:[.,]\d+)?\s*' . $unitsRegex . '\b.*$/i', '', $text);
+
+        $candidate = trim(preg_replace('/\s+/', ' ', $text));
+
+        // If candidate is a sensible length and not just numbers or symbols
+        if (strlen($candidate) >= 2 && strlen($candidate) <= 50 && !preg_match('/^\d+$/', $candidate)) {
+            return $candidate;
+        }
+
+        return null;
     }
 
     public function getProductVariants(int $id)

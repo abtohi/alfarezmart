@@ -262,33 +262,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyReferenceLock();
     });
 
-    // Multivariant toggle
-    document.getElementById('isMultivariant')?.addEventListener('change', (e) => {
-        isMultivariant = e.target.checked;
+    function toggleMultivariant(checked) {
+        isMultivariant = checked;
+        const mvCheck = document.getElementById('isMultivariant');
+        if (mvCheck && mvCheck.checked !== checked) {
+            mvCheck.checked = checked;
+        }
+        if (brandSB) brandSB.close();
+        if (categorySB) categorySB.close();
+        if (weightUnitSB) weightUnitSB.close();
+
         if (isMultivariant) {
-            // Close all SearchBox dropdowns before changing panel visibility
-            if (brandSB) brandSB.close();
-            if (categorySB) categorySB.close();
-            if (weightUnitSB) weightUnitSB.close();
-            
-            // Show multivariant panel
             document.getElementById('multiVariantPanel').style.display = 'block';
             document.getElementById('singleVariantPanel').style.display = 'none';
             document.getElementById('singleNameInput').required = false;
             if (brandSB) brandSB.setRequired(true);
         } else {
-            // Close all SearchBox dropdowns before changing panel visibility
-            if (brandSB) brandSB.close();
-            if (categorySB) categorySB.close();
-            if (weightUnitSB) weightUnitSB.close();
-            
-            // Show single variant panel
             document.getElementById('multiVariantPanel').style.display = 'none';
             document.getElementById('singleVariantPanel').style.display = 'block';
             document.getElementById('singleNameInput').required = true;
             if (brandSB) brandSB.setRequired(false);
         }
         updateNamePreview();
+    }
+    window.toggleMultivariant = toggleMultivariant;
+
+    // Multivariant toggle
+    document.getElementById('isMultivariant')?.addEventListener('change', (e) => {
+        toggleMultivariant(e.target.checked);
     });
 
     document.getElementById('isCustomLabel')?.addEventListener('change', (e) => {
@@ -496,9 +497,16 @@ async function selectReferenceProduct(id) {
                 product = await OfflineDB.getProductById(id);
             } catch(e) {}
         }
-        if (!product || !product.packagings || product.packagings.length === 0) {
+        // If product missing locally, or packagings missing, or product_type/brand_id missing, or when online, fetch canonical detail from API
+        if (!product || !product.packagings || product.packagings.length === 0 || !product.product_type || !product.brand_id) {
             try {
-                product = await api(`${BASE_URL}api/products/${id}`);
+                const fresh = await api(`${BASE_URL}api/products/${id}`);
+                if (fresh && fresh.id) {
+                    product = fresh;
+                    if (typeof OfflineDB !== 'undefined' && OfflineDB.saveProduct) {
+                        OfflineDB.saveProduct(fresh).catch(() => {});
+                    }
+                }
             } catch(e) {
                 if (!product) throw e;
             }
@@ -511,6 +519,46 @@ async function selectReferenceProduct(id) {
     }
 }
 
+function extractProductType(product) {
+    if (!product) return '';
+    if (product.product_type && String(product.product_type).trim()) {
+        return String(product.product_type).trim();
+    }
+
+    let text = product.short_label || product.full_name || '';
+    if (!text) return '';
+
+    // Strip packaging parentheses like (40 x 75g)
+    text = text.replace(/\s*\([^)]*\)/g, ' ');
+
+    // Strip trailing weight / unit tokens like 75g, 250ml, 1kg, 110pps
+    const unitsRegex = '(?:g|gr|gram|kg|kilo|kilogram|ml|l|liter|ltr|oz|pcs|pps|ply|lbr|lembar|shet|sheet|sachet|btg|kotak|dus|rcg|slp|pack|btl|cup)';
+    text = text.replace(new RegExp('\\s+\\d+(?:[.,]\\d+)?\\s*' + unitsRegex + '\\b.*$', 'i'), '');
+
+    // Strip brand name from start if matches
+    const brandName = (product.brand_name || (typeof brandSB !== 'undefined' ? brandSB.getLabel() : '') || '').trim();
+    if (brandName) {
+        const escapedBrand = brandName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        text = text.replace(new RegExp('^' + escapedBrand + '\\s+', 'i'), '');
+    }
+
+    // Strip variant if known
+    const variant = (product.variant || '').trim();
+    if (variant) {
+        const escapedVar = variant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        text = text.replace(new RegExp('\\s*' + escapedVar + '\\s*', 'i'), ' ');
+    }
+
+    // Clean up trailing tokens revealed after variant removal
+    text = text.replace(new RegExp('\\s+\\d+(?:[.,]\\d+)?\\s*' + unitsRegex + '\\b.*$', 'i'), '');
+
+    const candidate = text.replace(/\s+/g, ' ').trim();
+    if (candidate && candidate.length >= 2 && candidate.length <= 40 && !/^\d+$/.test(candidate)) {
+        return candidate;
+    }
+    return '';
+}
+
 function loadReferenceProduct(product) {
     if (!product) return;
     referenceProductData = product;
@@ -521,6 +569,16 @@ function loadReferenceProduct(product) {
     const refSelectedDiv = document.getElementById('referenceSelected');
     if (refSelectedDiv) refSelectedDiv.style.display = 'block';
 
+    // 1. Pastikan mode multivarian aktif saat memilih produk referensi
+    const mvCheck = document.getElementById('isMultivariant');
+    if (mvCheck && !mvCheck.checked) {
+        mvCheck.checked = true;
+        if (typeof toggleMultivariant === 'function') toggleMultivariant(true);
+    } else if (!isMultivariant && typeof toggleMultivariant === 'function') {
+        toggleMultivariant(true);
+    }
+
+    // 2. Brand
     if (product.brand_id && typeof brandSB !== 'undefined') {
         brandSB.select(String(product.brand_id), product.brand_name || '');
     } else if (product.brand_name && typeof brandSB !== 'undefined') {
@@ -528,6 +586,7 @@ function loadReferenceProduct(product) {
         if (found) brandSB.select(found.value, found.label);
     }
 
+    // 3. Category
     if (product.category_id && typeof categorySB !== 'undefined') {
         categorySB.select(String(product.category_id), product.category_name || '');
     } else if (product.category_name && typeof categorySB !== 'undefined') {
@@ -535,14 +594,32 @@ function loadReferenceProduct(product) {
         if (found) categorySB.select(found.value, found.label);
     }
 
-    const typeInput = document.querySelector('[name="product_type"]');
-    if (typeInput) typeInput.value = product.product_type || '';
+    // 4. Jenis Produk (product_type) dengan smart resolution & fallback
+    let resolvedType = (product.product_type || '').trim();
+    if (!resolvedType && typeof extractProductType === 'function') {
+        resolvedType = extractProductType(product);
+    }
+
+    const typeInput = document.getElementById('productTypeInput') || document.querySelector('[name="product_type"]');
+    if (typeInput) {
+        if (resolvedType) {
+            typeInput.value = resolvedType;
+        } else if (!typeInput.value || !typeInput.value.trim()) {
+            typeInput.value = '';
+        }
+        // Jangan timpa input yang sudah diketik user jika referensi kosong
+        typeInput.dispatchEvent(new Event('input', { bubbles: true }));
+        typeInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // 5. Weight & Unit
     const weightValInput = document.querySelector('[name="weight_value"]');
     if (weightValInput) weightValInput.value = product.weight_value || '';
     if (product.weight_unit && typeof weightUnitSB !== 'undefined') {
         weightUnitSB.select(product.weight_unit, product.weight_unit);
     }
 
+    // 6. Varian dikosongkan & difokuskan untuk varian baru
     const variantInput = document.querySelector('[name="variant"]');
     if (variantInput) {
         variantInput.value = '';
@@ -640,13 +717,28 @@ function rebuildPackagingsFromReference(packagings) {
 function applyReferenceLock() {
     const locked = referenceMode && referenceProductData;
     const identity = document.getElementById('identitySection');
+    const typeInput = document.getElementById('productTypeInput') || document.querySelector('[name="product_type"]');
+    const isTypeEmpty = !typeInput || !typeInput.value.trim();
+
     identity?.querySelectorAll('input, .searchbox-wrapper').forEach(el => {
         if (el.name === 'variant') return;
+        // Jika Jenis Produk kosong di data referensi, JANGAN kunci input agar user bebas mengisi!
+        if (el.name === 'product_type') {
+            if (isTypeEmpty || !locked) {
+                el.style.pointerEvents = '';
+                el.style.opacity = '1';
+                el.placeholder = 'Jenis Produk (isi jika diperlukan)';
+                return;
+            }
+        }
         el.style.pointerEvents = locked ? 'none' : '';
         el.style.opacity = locked ? '0.65' : '';
     });
-    document.querySelector('[name="variant"]').style.pointerEvents = '';
-    document.querySelector('[name="variant"]').style.opacity = '1';
+    const varInput = document.querySelector('[name="variant"]');
+    if (varInput) {
+        varInput.style.pointerEvents = '';
+        varInput.style.opacity = '1';
+    }
 
     document.querySelectorAll('.packaging-level').forEach(lv => {
         lv.querySelectorAll('input, .searchbox-wrapper').forEach(el => {
@@ -1297,8 +1389,14 @@ async function submitProduct(e) {
             full_name: payload.full_name,
             short_label: payload.short_label || payload.full_name,
             invoice_name: payload.invoice_name || payload.short_label || payload.full_name,
+            brand_id: payload.brand_id ? parseInt(payload.brand_id) : null,
             brand_name: brandSB ? brandSB.getLabel() : '',
+            category_id: payload.category_id ? parseInt(payload.category_id) : null,
             category_name: categorySB ? categorySB.getLabel() : '',
+            product_type: payload.product_type || '',
+            variant: payload.variant || '',
+            weight_value: payload.weight_value || '',
+            weight_unit: payload.weight_unit || '',
             code: payload.code || '',
             is_available: parseInt(payload.is_available) || 0,
             packagings: [],
