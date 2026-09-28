@@ -90,44 +90,44 @@
                 // --- GEMINI SCANNER MODELS ---
                 $geminiScannerModelsList = [
                     [
-                        'id' => 'gemini-2.0-flash',
-                        'name' => 'Google: Gemini 2.0 Flash Vision',
-                        'icon' => '⚡',
+                        'id' => 'gemini-flash-latest',
+                        'name' => 'Google: Gemini Flash (Auto Latest)',
+                        'icon' => '✨',
                         'icon_bg' => 'linear-gradient(135deg, #4285F4, #34A853)',
                         'badge' => 'REKOMENDASI (FREE)',
                         'badge_class' => 'model-badge-free',
-                        'desc' => 'Multimodal OCR super cepat, akurasi tinggi, kuota harian reset otomatis'
+                        'desc' => 'Otomatis versi Flash tercepat & mutakhir (Gemini 3.8 Flash), bebas biaya token'
                     ],
                     [
-                        'id' => 'gemini-2.5-flash',
-                        'name' => 'Google: Gemini 2.5 Flash Vision',
-                        'icon' => '🌟',
+                        'id' => 'gemini-3.8-flash',
+                        'name' => 'Google: Gemini 3.8 Flash Vision',
+                        'icon' => '⚡',
                         'icon_bg' => 'linear-gradient(135deg, #1a73e8, #00acc1)',
                         'badge' => 'TERBARU',
                         'badge_class' => 'model-badge-free',
-                        'desc' => 'Generasi multimodal terkini dengan reasoning tinggi untuk nota/faktur rumit'
+                        'desc' => 'Generasi multimodal terkini (Super Pintar, Kilat, Akurat untuk nota & faktur)'
                     ],
                     [
-                        'id' => 'gemini-1.5-flash',
-                        'name' => 'Google: Gemini 1.5 Flash Vision',
-                        'icon' => '💎',
+                        'id' => 'gemini-3.5-flash',
+                        'name' => 'Google: Gemini 3.5 Flash Vision',
+                        'icon' => '🌟',
                         'icon_bg' => 'linear-gradient(135deg, #0ea5e9, #2563eb)',
                         'badge' => 'STABIL',
                         'badge_class' => 'model-badge-free',
-                        'desc' => 'Model stabil dan teruji untuk membaca faktur dan struk belanja panjang'
+                        'desc' => 'Model stabil berakurasi tinggi untuk membaca struk dan faktur panjang'
                     ],
                     [
-                        'id' => 'gemini-2.0-flash-lite',
-                        'name' => 'Google: Gemini 2.0 Flash Lite',
+                        'id' => 'gemini-3.5-flash-lite',
+                        'name' => 'Google: Gemini 3.5 Flash Lite',
                         'icon' => '🚀',
                         'icon_bg' => 'linear-gradient(135deg, #10b981, #059669)',
                         'badge' => 'KILAT',
                         'badge_class' => 'model-badge-free',
-                        'desc' => 'Versi ringan berlatensi rendah untuk scan dokumen kasir cepat'
+                        'desc' => 'Versi ringan berlatensi rendah untuk scan dokumen cepat'
                     ],
                     [
-                        'id' => 'gemini-1.5-pro',
-                        'name' => 'Google: Gemini 1.5 Pro Vision',
+                        'id' => 'gemini-pro-latest',
+                        'name' => 'Google: Gemini Pro Latest Vision',
                         'icon' => '🧠',
                         'icon_bg' => 'linear-gradient(135deg, #8b5cf6, #6d28d9)',
                         'badge' => 'PRO DETAIL',
@@ -329,6 +329,9 @@
                         ],
                     ];
                     $currentScannerModel = $aiModel ?? 'openrouter/auto';
+                    if (in_array($currentScannerModel, ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'])) {
+                        $currentScannerModel = 'gemini-flash-latest';
+                    }
                     $isCurrentProviderGemini = ($aiProvider ?? 'openrouter') === 'gemini';
 
                     // Determine active item for Gemini
@@ -590,43 +593,43 @@
                     <!-- GEMINI CHAT MODELS GRID -->
                     <div id="chat-models-gemini-wrap" style="display:<?= $isCurrentChatProviderGemini ? 'block' : 'none' ?>; margin-bottom:10px;">
                         <div class="model-cards-grid">
-                            <div class="model-card <?= in_array($aiChatModel, ['gemini-2.0-flash', 'google/gemini-2.0-flash', 'google/gemini-2.0-flash-001']) || ($isCurrentChatProviderGemini && !in_array($aiChatModel, ['gemini-2.5-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro'])) ? 'selected' : '' ?>" data-model="gemini-2.0-flash" onclick="selectChatModel('gemini-2.0-flash', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#34A853);">G</div>
+                            <div class="model-card <?= in_array($aiChatModel, ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash']) || ($isCurrentChatProviderGemini && !in_array($aiChatModel, ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-pro-latest'])) ? 'selected' : '' ?>" data-model="gemini-flash-latest" onclick="selectChatModel('gemini-flash-latest', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#4285F4,#34A853);">✨</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Gemini 2.0 Flash</div>
-                                    <div class="model-card-meta">Rekomendasi (Kilat & Cerdas)</div>
+                                    <div class="model-card-name">Gemini Flash (Auto)</div>
+                                    <div class="model-card-meta">Rekomendasi (Otomatis Versi Terbaru)</div>
                                 </div>
                             </div>
 
-                            <div class="model-card <?= in_array($aiChatModel, ['gemini-2.5-flash', 'google/gemini-2.5-flash']) ? 'selected' : '' ?>" data-model="gemini-2.5-flash" onclick="selectChatModel('gemini-2.5-flash', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#1a73e8,#00acc1);">🌟</div>
+                            <div class="model-card <?= in_array($aiChatModel, ['gemini-3.8-flash']) ? 'selected' : '' ?>" data-model="gemini-3.8-flash" onclick="selectChatModel('gemini-3.8-flash', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#1a73e8,#00acc1);">⚡</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Gemini 2.5 Flash</div>
-                                    <div class="model-card-meta">Akurasi & Reasoning Tinggi</div>
+                                    <div class="model-card-name">Gemini 3.8 Flash</div>
+                                    <div class="model-card-meta">Super Cerdas & Kilat</div>
                                 </div>
                             </div>
 
-                            <div class="model-card <?= in_array($aiChatModel, ['gemini-2.0-flash-lite', 'google/gemini-2.0-flash-lite']) ? 'selected' : '' ?>" data-model="gemini-2.0-flash-lite" onclick="selectChatModel('gemini-2.0-flash-lite', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#10b981,#059669);">⚡</div>
+                            <div class="model-card <?= in_array($aiChatModel, ['gemini-3.5-flash']) ? 'selected' : '' ?>" data-model="gemini-3.5-flash" onclick="selectChatModel('gemini-3.5-flash', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#0ea5e9,#2563eb);">🌟</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Gemini 2.0 Flash Lite</div>
-                                    <div class="model-card-meta">Respon Instan (Super Ringan)</div>
-                                </div>
-                            </div>
-
-                            <div class="model-card <?= in_array($aiChatModel, ['gemini-1.5-flash', 'google/gemini-flash-1.5']) ? 'selected' : '' ?>" data-model="gemini-1.5-flash" onclick="selectChatModel('gemini-1.5-flash', this)">
-                                <div class="model-card-icon" style="background:linear-gradient(135deg,#0ea5e9,#2563eb);">💎</div>
-                                <div class="model-card-info">
-                                    <div class="model-card-name">Gemini 1.5 Flash</div>
+                                    <div class="model-card-name">Gemini 3.5 Flash</div>
                                     <div class="model-card-meta">Stabil & Teruji</div>
                                 </div>
                             </div>
 
-                            <div class="model-card <?= in_array($aiChatModel, ['gemini-1.5-pro', 'google/gemini-pro-1.5']) ? 'selected' : '' ?>" data-model="gemini-1.5-pro" onclick="selectChatModel('gemini-1.5-pro', this)">
+                            <div class="model-card <?= in_array($aiChatModel, ['gemini-3.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-2.5-flash-lite']) ? 'selected' : '' ?>" data-model="gemini-3.5-flash-lite" onclick="selectChatModel('gemini-3.5-flash-lite', this)">
+                                <div class="model-card-icon" style="background:linear-gradient(135deg,#10b981,#059669);">🚀</div>
+                                <div class="model-card-info">
+                                    <div class="model-card-name">Gemini 3.5 Flash Lite</div>
+                                    <div class="model-card-meta">Respon Instan (Super Ringan)</div>
+                                </div>
+                            </div>
+
+                            <div class="model-card <?= in_array($aiChatModel, ['gemini-pro-latest', 'gemini-1.5-pro', 'gemini-2.5-pro']) ? 'selected' : '' ?>" data-model="gemini-pro-latest" onclick="selectChatModel('gemini-pro-latest', this)">
                                 <div class="model-card-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);">🧠</div>
                                 <div class="model-card-info">
-                                    <div class="model-card-name">Gemini 1.5 Pro</div>
-                                    <div class="model-card-meta">Analisis Mendalam</div>
+                                    <div class="model-card-name">Gemini Pro Latest</div>
+                                    <div class="model-card-meta">Analisis Konteks Mendalam</div>
                                 </div>
                             </div>
                         </div>
@@ -1081,7 +1084,7 @@
         const hiddenModel = document.getElementById('ai_model');
         if (hiddenModel) {
             if (isGemini) {
-                const val = document.getElementById('scanner-selected-gemini-val')?.value || 'gemini-2.0-flash';
+                const val = document.getElementById('scanner-selected-gemini-val')?.value || 'gemini-flash-latest';
                 hiddenModel.value = val;
             } else {
                 const val = document.getElementById('scanner-selected-or-val')?.value || 'openrouter/auto';
@@ -1188,7 +1191,7 @@
 
     function onCustomModelInput(val, provider) {
         const isGemini = (provider === 'gemini');
-        const fallback = isGemini ? 'gemini-2.0-flash' : 'openrouter/auto';
+        const fallback = isGemini ? 'gemini-flash-latest' : 'openrouter/auto';
         const finalVal = val.trim() || fallback;
         const hiddenInput = document.getElementById('ai_model');
         if (hiddenInput) hiddenInput.value = finalVal;
@@ -1224,7 +1227,7 @@
         if (hiddenModel) {
             if (isGemini) {
                 const activeCard = document.querySelector('#chat-models-gemini-wrap .model-card.selected');
-                hiddenModel.value = activeCard?.getAttribute('data-model') || 'gemini-2.0-flash';
+                hiddenModel.value = activeCard?.getAttribute('data-model') || 'gemini-flash-latest';
             } else {
                 const activeCard = document.querySelector('#chat-models-openrouter-wrap .model-card.selected');
                 hiddenModel.value = activeCard?.getAttribute('data-model') || 'cohere/north-mini-code:free';

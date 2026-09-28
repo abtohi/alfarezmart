@@ -164,10 +164,11 @@ class AiChatController extends Controller
                 if ($chatProvider === 'gemini') {
                     $geminiContents = $this->buildGeminiContents($messages);
                     $geminiFallbackModels = array_values(array_unique(array_filter([
-                        $model,
-                        'gemini-2.0-flash',
-                        'gemini-2.5-flash',
-                        'gemini-1.5-flash',
+                        $this->normalizeGeminiModelName($model),
+                        'gemini-flash-latest',
+                        'gemini-3.8-flash',
+                        'gemini-3.5-flash',
+                        'gemini-pro-latest',
                     ])));
 
                     foreach ($geminiFallbackModels as $currentModel) {
@@ -608,14 +609,29 @@ class AiChatController extends Controller
         return '';
     }
 
+    private function normalizeGeminiModelName(?string $model): string
+    {
+        $m = strtolower(trim((string)$model));
+        if (empty($m) || in_array($m, ['auto', 'gemini-auto', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'])) {
+            return 'gemini-flash-latest';
+        }
+        if (in_array($m, ['gemini-2.0-flash-lite', 'gemini-2.5-flash-lite'])) {
+            return 'gemini-3.5-flash-lite';
+        }
+        if (in_array($m, ['gemini-1.5-pro', 'gemini-2.5-pro'])) {
+            return 'gemini-pro-latest';
+        }
+        return $model;
+    }
+
     private function getGeminiChatModel(): string
     {
         $model = trim((string)$this->settingModel->get('ai_chat_model', ''));
         if (!empty($model) && strpos($model, 'gemini') !== false && strpos($model, 'openrouter') === false && strpos($model, '/') === false) {
-            return $model;
+            return $this->normalizeGeminiModelName($model);
         }
-        $geminiModel = trim((string)$this->settingModel->get('ai_chat_gemini_model', 'gemini-2.0-flash'));
-        return $geminiModel ?: 'gemini-2.0-flash';
+        $geminiModel = trim((string)$this->settingModel->get('ai_chat_gemini_model', 'gemini-flash-latest'));
+        return $this->normalizeGeminiModelName($geminiModel ?: 'gemini-flash-latest');
     }
 
     private function buildGeminiContents(array $messages): array

@@ -637,14 +637,29 @@ class InvoiceScanService
         return $model ?: 'openrouter/auto';
     }
 
+    private function normalizeGeminiModelName(?string $model): string
+    {
+        $m = strtolower(trim((string)$model));
+        if (empty($m) || in_array($m, ['auto', 'gemini-auto', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'])) {
+            return 'gemini-flash-latest';
+        }
+        if (in_array($m, ['gemini-2.0-flash-lite', 'gemini-2.5-flash-lite'])) {
+            return 'gemini-3.5-flash-lite';
+        }
+        if (in_array($m, ['gemini-1.5-pro', 'gemini-2.5-pro'])) {
+            return 'gemini-pro-latest';
+        }
+        return $model;
+    }
+
     private function getGeminiModelName(): string
     {
         $model = trim((string)$this->settingModel->get('ai_model', ''));
         if (!empty($model) && strpos($model, 'gemini') !== false && strpos($model, 'openrouter') === false && strpos($model, '/') === false) {
-            return $model;
+            return $this->normalizeGeminiModelName($model);
         }
-        $geminiModel = trim((string)$this->settingModel->get('ai_gemini_model', 'gemini-2.0-flash'));
-        return $geminiModel ?: 'gemini-2.0-flash';
+        $geminiModel = trim((string)$this->settingModel->get('ai_gemini_model', 'gemini-flash-latest'));
+        return $this->normalizeGeminiModelName($geminiModel ?: 'gemini-flash-latest');
     }
 
     // ================================================================
@@ -944,15 +959,17 @@ class InvoiceScanService
 
         // Robust Gemini vision fallback hierarchy
         $DEFAULT_GEMINI_MODELS = [
-            'gemini-2.0-flash',
-            'gemini-2.5-flash',
-            'gemini-1.5-flash',
+            'gemini-flash-latest',
+            'gemini-3.8-flash',
+            'gemini-3.5-flash',
+            'gemini-pro-latest',
         ];
 
-        if (empty($model) || in_array($model, ['auto', 'gemini-auto'])) {
+        $normalizedModel = $this->normalizeGeminiModelName($model);
+        if (empty($normalizedModel) || in_array($normalizedModel, ['auto', 'gemini-auto'])) {
             $modelsToTry = $DEFAULT_GEMINI_MODELS;
         } else {
-            $modelsToTry = array_unique(array_merge([$model], $DEFAULT_GEMINI_MODELS));
+            $modelsToTry = array_unique(array_merge([$normalizedModel], $DEFAULT_GEMINI_MODELS));
         }
 
         $modelsToTry = array_slice($modelsToTry, 0, 3);
@@ -962,6 +979,7 @@ class InvoiceScanService
         $rateLimitCount  = 0;
 
         foreach ($modelsToTry as $tryModel) {
+            $tryModel = $this->normalizeGeminiModelName($tryModel);
             set_time_limit(90);
             error_log("SCAN_AI_TRACE: Attempting Google Gemini vision model: {$tryModel}");
             $requestCount++;
