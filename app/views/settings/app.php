@@ -1059,18 +1059,11 @@
         const hiddenProvider = document.getElementById('ai_provider');
         if (hiddenProvider) hiddenProvider.value = provider;
         
-        // Toggle provider cards UI
-        const cardGemini = document.getElementById('scanner-provider-gemini');
-        const cardOr = document.getElementById('scanner-provider-openrouter');
-        if (cardGemini && cardOr) {
-            cardGemini.classList.toggle('selected', isGemini);
-            const radioGemini = cardGemini.querySelector('.provider-card-radio i');
-            if (radioGemini) radioGemini.className = isGemini ? 'bi bi-check-circle-fill' : 'bi bi-circle';
-
-            cardOr.classList.toggle('selected', !isGemini);
-            const radioOr = cardOr.querySelector('.provider-card-radio i');
-            if (radioOr) radioOr.className = !isGemini ? 'bi bi-check-circle-fill' : 'bi bi-circle';
-        }
+        // Toggle provider cards UI (IDs match HTML: provider-card-scanner-*)
+        const cardGemini = document.getElementById('provider-card-scanner-gemini');
+        const cardOr = document.getElementById('provider-card-scanner-openrouter');
+        if (cardGemini) cardGemini.classList.toggle('selected', isGemini);
+        if (cardOr) cardOr.classList.toggle('selected', !isGemini);
 
         // Toggle dropdown wrappers
         const geminiWrap = document.getElementById('scanner-model-container-gemini');
@@ -1208,18 +1201,11 @@
         const hiddenProvider = document.getElementById('ai_chat_provider');
         if (hiddenProvider) hiddenProvider.value = provider;
 
-        // Toggle card selected classes
-        const cardGemini = document.getElementById('chat-provider-gemini');
-        const cardOr = document.getElementById('chat-provider-openrouter');
-        if (cardGemini && cardOr) {
-            cardGemini.classList.toggle('selected', isGemini);
-            const radioGemini = cardGemini.querySelector('.provider-card-radio i');
-            if (radioGemini) radioGemini.className = isGemini ? 'bi bi-check-circle-fill' : 'bi bi-circle';
-
-            cardOr.classList.toggle('selected', !isGemini);
-            const radioOr = cardOr.querySelector('.provider-card-radio i');
-            if (radioOr) radioOr.className = !isGemini ? 'bi bi-check-circle-fill' : 'bi bi-circle';
-        }
+        // Toggle card selected classes (IDs match HTML: provider-card-chat-*)
+        const cardGemini = document.getElementById('provider-card-chat-gemini');
+        const cardOr = document.getElementById('provider-card-chat-openrouter');
+        if (cardGemini) cardGemini.classList.toggle('selected', isGemini);
+        if (cardOr) cardOr.classList.toggle('selected', !isGemini);
 
         // Toggle chat model grids
         const geminiWrap = document.getElementById('chat-models-gemini-wrap');
@@ -1302,27 +1288,28 @@
         aiForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = this.querySelector('button[type="submit"]');
+            if (!btn) return;
             const originalText = btn.textContent;
             try {
                 btn.disabled = true;
                 btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
                 const data = {
                     csrf_token: csrfToken,
-                    ai_provider: document.getElementById('ai_provider').value,
-                    ai_model: document.getElementById('ai_model').value,
-                    ai_api_key: document.getElementById('ai_api_key') ? document.getElementById('ai_api_key').value : '',
-                    ai_gemini_api_key: document.getElementById('ai_gemini_api_key') ? document.getElementById('ai_gemini_api_key').value : '',
-                    ai_invoice_prompt: document.getElementById('ai_invoice_prompt').value
+                    ai_provider: document.getElementById('ai_provider')?.value || 'openrouter',
+                    ai_model: document.getElementById('ai_model')?.value || '',
+                    ai_api_key: document.getElementById('ai_api_key')?.value || '',
+                    ai_gemini_api_key: document.getElementById('ai_gemini_api_key')?.value || '',
+                    ai_invoice_prompt: document.getElementById('ai_invoice_prompt')?.value || ''
                 };
                 const result = await api('<?= BASE_URL ?>api/settings/app', 'POST', data);
                 showToast(result.message || 'Pengaturan AI berhasil disimpan', 'success');
-                if (data.ai_gemini_api_key && document.getElementById('ai_gemini_api_key')) {
-                    document.getElementById('ai_gemini_api_key').value = '';
-                    document.getElementById('ai_gemini_api_key').placeholder = '(Tersimpan - Diubah untuk mengganti)';
+                if (data.ai_gemini_api_key) {
+                    const el = document.getElementById('ai_gemini_api_key');
+                    if (el) { el.value = ''; el.placeholder = '(Tersimpan - Diubah untuk mengganti)'; }
                 }
-                if (data.ai_api_key && document.getElementById('ai_api_key')) {
-                    document.getElementById('ai_api_key').value = '';
-                    document.getElementById('ai_api_key').placeholder = '(Tersimpan - Diubah untuk mengganti)';
+                if (data.ai_api_key) {
+                    const el = document.getElementById('ai_api_key');
+                    if (el) { el.value = ''; el.placeholder = '(Tersimpan - Diubah untuk mengganti)'; }
                 }
             } catch (err) {
                 showToast(err.message || 'Gagal menyimpan pengaturan AI', 'error');
@@ -1339,27 +1326,28 @@
         chatForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = this.querySelector('button[type="submit"]');
+            if (!btn) return;
             const originalText = btn.textContent;
             try {
                 btn.disabled = true;
                 btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
                 const data = {
                     csrf_token: csrfToken,
-                    ai_chat_enabled: document.getElementById('ai_chat_enabled').checked ? '1' : '0',
-                    ai_chat_provider: document.getElementById('ai_chat_provider').value,
-                    ai_chat_model: document.getElementById('ai_chat_model').value,
-                    ai_chat_api_key: document.getElementById('ai_chat_api_key') ? document.getElementById('ai_chat_api_key').value : '',
-                    ai_chat_gemini_api_key: document.getElementById('ai_chat_gemini_api_key') ? document.getElementById('ai_chat_gemini_api_key').value : ''
+                    ai_chat_enabled: document.getElementById('ai_chat_enabled')?.checked ? '1' : '0',
+                    ai_chat_provider: document.getElementById('ai_chat_provider')?.value || 'openrouter',
+                    ai_chat_model: document.getElementById('ai_chat_model')?.value || '',
+                    ai_chat_api_key: document.getElementById('ai_chat_api_key')?.value || '',
+                    ai_chat_gemini_api_key: document.getElementById('ai_chat_gemini_api_key')?.value || ''
                 };
                 const result = await api('<?= BASE_URL ?>api/settings/chat', 'POST', data);
                 showToast(result.message || 'Pengaturan Chat berhasil disimpan', 'success');
-                if (data.ai_chat_gemini_api_key && document.getElementById('ai_chat_gemini_api_key')) {
-                    document.getElementById('ai_chat_gemini_api_key').value = '';
-                    document.getElementById('ai_chat_gemini_api_key').placeholder = '(Tersimpan - Diubah untuk mengganti)';
+                if (data.ai_chat_gemini_api_key) {
+                    const el = document.getElementById('ai_chat_gemini_api_key');
+                    if (el) { el.value = ''; el.placeholder = '(Tersimpan - Diubah untuk mengganti)'; }
                 }
-                if (data.ai_chat_api_key && document.getElementById('ai_chat_api_key')) {
-                    document.getElementById('ai_chat_api_key').value = '';
-                    document.getElementById('ai_chat_api_key').placeholder = '(Tersimpan - Diubah untuk mengganti)';
+                if (data.ai_chat_api_key) {
+                    const el = document.getElementById('ai_chat_api_key');
+                    if (el) { el.value = ''; el.placeholder = '(Tersimpan - Diubah untuk mengganti)'; }
                 }
             } catch (err) {
                 showToast(err.message || 'Gagal menyimpan pengaturan chat', 'error');
@@ -1376,15 +1364,16 @@
         geoForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             const btn = this.querySelector('button[type="submit"]');
+            if (!btn) return;
             const originalText = btn.textContent;
             try {
                 btn.disabled = true;
                 btn.innerHTML = '<i class="spinner-border spinner-border-sm"></i> Menyimpan...';
                 const data = {
                     csrf_token: csrfToken,
-                    store_latitude: document.getElementById('store_latitude').value,
-                    store_longitude: document.getElementById('store_longitude').value,
-                    store_radius_meters: document.getElementById('store_radius_meters').value
+                    store_latitude: document.getElementById('store_latitude')?.value || '',
+                    store_longitude: document.getElementById('store_longitude')?.value || '',
+                    store_radius_meters: document.getElementById('store_radius_meters')?.value || '0'
                 };
                 const result = await api('<?= BASE_URL ?>api/settings/app', 'POST', data);
                 showToast(result.message || 'Pengaturan Lokasi berhasil disimpan', 'success');
