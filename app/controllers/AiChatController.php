@@ -59,9 +59,13 @@ class AiChatController extends Controller
             exit;
         }
 
+        $chatProvider = $this->settingModel->get('ai_chat_provider', 'openrouter');
+        $aiProviderName = ($chatProvider === 'gemini') ? 'Google Gemini (Free Tier)' : 'OpenRouter';
+
         $this->view('chat/index', [
-            'title'       => 'AI Assistant - AlfarezMart',
-            'active_menu' => 'chat',
+            'title'          => 'AI Assistant - AlfarezMart',
+            'active_menu'    => 'chat',
+            'aiProviderName' => $aiProviderName,
         ]);
     }
 
@@ -88,16 +92,27 @@ class AiChatController extends Controller
             exit;
         }
 
-        // API Key: Settings UI > .env > fail
-        $apiKey = $this->getApiKey();
-        if (empty($apiKey)) {
-            echo json_encode(['success' => false, 'error' => 'API Key OpenRouter belum dikonfigurasi. Masukkan di Pengaturan > Aplikasi > AI Chat.']);
-            exit;
-        }
+        $chatProvider = $this->settingModel->get('ai_chat_provider', 'openrouter');
 
-        $model = $this->settingModel->get('ai_chat_model', 'cohere/north-mini-code:free');
-        if (empty($model) || in_array($model, ['openrouter/auto', 'deepseek/deepseek-chat:free', 'meta-llama/llama-3.3-70b-instruct:free'])) {
-            $model = 'cohere/north-mini-code:free';
+        if ($chatProvider === 'gemini') {
+            $apiKey = $this->getGeminiApiKey();
+            if (empty($apiKey)) {
+                echo json_encode(['success' => false, 'error' => 'API Key Google AI Studio belum dikonfigurasi. Masukkan di Pengaturan > Aplikasi > AI Chat.']);
+                exit;
+            }
+            $model = $this->getGeminiChatModel();
+        } else {
+            // API Key: Settings UI > .env > fail
+            $apiKey = $this->getApiKey();
+            if (empty($apiKey)) {
+                echo json_encode(['success' => false, 'error' => 'API Key OpenRouter belum dikonfigurasi. Masukkan di Pengaturan > Aplikasi > AI Chat.']);
+                exit;
+            }
+
+            $model = $this->settingModel->get('ai_chat_model', 'cohere/north-mini-code:free');
+            if (empty($model) || in_array($model, ['openrouter/auto', 'deepseek/deepseek-chat:free', 'meta-llama/llama-3.3-70b-instruct:free'])) {
+                $model = 'cohere/north-mini-code:free';
+            }
         }
 
         try {
@@ -146,74 +161,148 @@ class AiChatController extends Controller
                 $requestSuccess = false;
                 $lastErrMsg = '';
 
-                foreach ($fallbackModels as $currentModel) {
-                    $postData = [
-                        'model'       => $currentModel,
-                        'messages'    => $messages,
-                        'temperature' => 0.15,
-                        'max_tokens'  => 2500,
-                    ];
+                if ($chatProvider === 'gemini') {
+                    $geminiContents = $this->buildGeminiContents($messages);
+                    $geminiFallbackModels = array_values(array_unique(array_filter([
+                        $model,
+                        'gemini-2.0-flash',
+                        'gemini-2.5-flash',
+                        'gemini-1.5-flash',
+                    ])));
 
-                    $ch = curl_init($url);
-                    curl_setopt_array($ch, [
-                        CURLOPT_RETURNTRANSFER => true,
-                        CURLOPT_POST           => true,
-                        CURLOPT_POSTFIELDS     => json_encode($postData),
-                        CURLOPT_CONNECTTIMEOUT => 5,
-                        CURLOPT_TIMEOUT        => 25,
-                        CURLOPT_SSL_VERIFYPEER => false,
-                        CURLOPT_SSL_VERIFYHOST => 0,
-                        CURLOPT_HTTPHEADER     => [
-                            'Authorization: Bearer ' . $apiKey,
-                            'Content-Type: application/json',
-                            'HTTP-Referer: https://alfarezmart.com',
-                            'X-Title: AlfarezMart AI',
-                        ],
-                    ]);
+                    foreach ($geminiFallbackModels as $currentModel) {
+                        $postData = [
+                            'system_instruction' => [
+                                'parts' => [['text' => $systemPrompt]]
+                            ],
+                            'contents' => $geminiContents,
+                            'generationConfig' => [
+                                'temperature'     => 0.2,
+                                'maxOutputTokens' => 2500,
+                            ]
+                        ];
 
-                    $response  = curl_exec($ch);
-                    $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    $curlError = curl_error($ch);
+                        $geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$currentModel}:generateContent?key=" . urlencode($apiKey);
 
-                    if ($response === false) {
-                        $lastErrMsg = 'Koneksi cURL gagal: ' . $curlError;
-                        continue;
-                    }
+                        $ch = curl_init($geminiUrl);
+                        curl_setopt_array($ch, [
+                            CURLOPT_RETURNTRANSFER => true,
+                            CURLOPT_POST           => true,
+                            CURLOPT_POSTFIELDS     => json_encode($postData),
+                            CURLOPT_CONNECTTIMEOUT => 5,
+                            CURLOPT_TIMEOUT        => 30,
+                            CURLOPT_SSL_VERIFYPEER => false,
+                            CURLOPT_SSL_VERIFYHOST => 0,
+                            CURLOPT_HTTPHEADER     => [
+                                'Content-Type: application/json',
+                                'x-goog-api-key: ' . $apiKey,
+                            ],
+                        ]);
 
-                    $resData = json_decode($response, true);
-                    if ($httpCode >= 400 || isset($resData['error'])) {
-                        $lastErrMsg = $resData['error']['message'] ?? ('HTTP ' . $httpCode);
-                        continue;
-                    }
+                        $response  = curl_exec($ch);
+                        $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                        $curlError = curl_error($ch);
 
-                    $choiceMsg  = $resData['choices'][0]['message'] ?? [];
-                    $rawContent = $choiceMsg['content'] ?? '';
+                        if ($response === false) {
+                            $lastErrMsg = 'Koneksi ke Google AI Studio gagal: ' . $curlError;
+                            continue;
+                        }
 
-                    // Strip any internal <think>...</think> tags if present
-                    if (!empty($rawContent)) {
-                        $rawContent = preg_replace('/<think>[\s\S]*?<\/think>/i', '', $rawContent);
-                        $rawContent = trim($rawContent);
-                    }
+                        $resData = json_decode($response, true);
+                        if ($httpCode >= 400 || isset($resData['error'])) {
+                            $lastErrMsg = $resData['error']['message'] ?? ('HTTP ' . $httpCode);
+                            continue;
+                        }
 
-                    // Only use reasoning if it contains an actual [SQL_QUERY] tag
-                    if (empty($rawContent) && !empty($choiceMsg['reasoning'])) {
-                        if (stripos($choiceMsg['reasoning'], '[SQL_QUERY]') !== false) {
-                            $rawContent = trim($choiceMsg['reasoning']);
+                        $rawContent = '';
+                        if (isset($resData['candidates'][0]['content']['parts'])) {
+                            foreach ($resData['candidates'][0]['content']['parts'] as $part) {
+                                if (isset($part['text'])) {
+                                    $rawContent .= $part['text'];
+                                }
+                            }
+                        }
+
+                        if (!empty($rawContent)) {
+                            $rawContent = preg_replace('/<think>[\s\S]*?<\/think>/i', '', $rawContent);
+                            $rawContent = trim($rawContent);
+                        }
+
+                        if (!empty($rawContent)) {
+                            $totalTokens += $resData['usageMetadata']['totalTokenCount'] ?? 0;
+                            $requestSuccess = true;
+                            break;
                         }
                     }
+                } else {
+                    foreach ($fallbackModels as $currentModel) {
+                        $postData = [
+                            'model'       => $currentModel,
+                            'messages'    => $messages,
+                            'temperature' => 0.15,
+                            'max_tokens'  => 2500,
+                        ];
 
-                    // Filter out raw English internal thinking logs (e.g. "We need to query...", "I think...", "The user is asking...")
-                    if (preg_match('/^(?:I think|The user|Let\'s|First,|Looking at|To answer|The rule|We need|We should|We must|Query the|Step \d|Here is|Based on)/i', $rawContent)) {
-                        // If it doesn't contain [SQL_QUERY], ignore this raw English thinking log
-                        if (stripos($rawContent, '[SQL_QUERY]') === false) {
-                            $rawContent = '';
+                        $ch = curl_init($url);
+                        curl_setopt_array($ch, [
+                            CURLOPT_RETURNTRANSFER => true,
+                            CURLOPT_POST           => true,
+                            CURLOPT_POSTFIELDS     => json_encode($postData),
+                            CURLOPT_CONNECTTIMEOUT => 5,
+                            CURLOPT_TIMEOUT        => 25,
+                            CURLOPT_SSL_VERIFYPEER => false,
+                            CURLOPT_SSL_VERIFYHOST => 0,
+                            CURLOPT_HTTPHEADER     => [
+                                'Authorization: Bearer ' . $apiKey,
+                                'Content-Type: application/json',
+                                'HTTP-Referer: https://alfarezmart.com',
+                                'X-Title: AlfarezMart AI',
+                            ],
+                        ]);
+
+                        $response  = curl_exec($ch);
+                        $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                        $curlError = curl_error($ch);
+
+                        if ($response === false) {
+                            $lastErrMsg = 'Koneksi cURL gagal: ' . $curlError;
+                            continue;
                         }
-                    }
 
-                    if (!empty($rawContent)) {
-                        $totalTokens += $resData['usage']['total_tokens'] ?? 0;
-                        $requestSuccess = true;
-                        break; // Success!
+                        $resData = json_decode($response, true);
+                        if ($httpCode >= 400 || isset($resData['error'])) {
+                            $lastErrMsg = $resData['error']['message'] ?? ('HTTP ' . $httpCode);
+                            continue;
+                        }
+
+                        $choiceMsg  = $resData['choices'][0]['message'] ?? [];
+                        $rawContent = $choiceMsg['content'] ?? '';
+
+                        // Strip any internal <think>...</think> tags if present
+                        if (!empty($rawContent)) {
+                            $rawContent = preg_replace('/<think>[\s\S]*?<\/think>/i', '', $rawContent);
+                            $rawContent = trim($rawContent);
+                        }
+
+                        // Only use reasoning if it contains an actual [SQL_QUERY] tag
+                        if (empty($rawContent) && !empty($choiceMsg['reasoning'])) {
+                            if (stripos($choiceMsg['reasoning'], '[SQL_QUERY]') !== false) {
+                                $rawContent = trim($choiceMsg['reasoning']);
+                            }
+                        }
+
+                        // Filter out raw English internal thinking logs (e.g. "We need to query...", "I think...", "The user is asking...")
+                        if (preg_match('/^(?:I think|The user|Let\'s|First,|Looking at|To answer|The rule|We need|We should|We must|Query the|Step \d|Here is|Based on)/i', $rawContent)) {
+                            if (stripos($rawContent, '[SQL_QUERY]') === false) {
+                                $rawContent = '';
+                            }
+                        }
+
+                        if (!empty($rawContent)) {
+                            $totalTokens += $resData['usage']['total_tokens'] ?? 0;
+                            $requestSuccess = true;
+                            break; // Success!
+                        }
                     }
                 }
 
@@ -492,5 +581,85 @@ class AiChatController extends Controller
         }
 
         return '';
+    }
+
+    private function getGeminiApiKey(): string
+    {
+        // Priority 1: Settings UI Chat Gemini key
+        $key = trim((string)$this->settingModel->get('ai_chat_gemini_api_key', ''));
+        if (!empty($key)) return $key;
+
+        // Priority 2: Settings UI Scanner Gemini key
+        $key = trim((string)$this->settingModel->get('ai_gemini_api_key', ''));
+        if (!empty($key)) return $key;
+
+        // Priority 3: Check if ai_chat_api_key / ai_api_key starts with AIza
+        $chatKey = trim((string)$this->settingModel->get('ai_chat_api_key', ''));
+        if (strpos($chatKey, 'AIza') === 0) return $chatKey;
+
+        $legacyKey = trim((string)$this->settingModel->get('ai_api_key', ''));
+        if (strpos($legacyKey, 'AIza') === 0) return $legacyKey;
+
+        // Priority 4: .env file
+        if (defined('GEMINI_API_KEY') && !empty(GEMINI_API_KEY)) {
+            return GEMINI_API_KEY;
+        }
+
+        return '';
+    }
+
+    private function getGeminiChatModel(): string
+    {
+        $model = trim((string)$this->settingModel->get('ai_chat_model', ''));
+        if (!empty($model) && strpos($model, 'gemini') !== false && strpos($model, 'openrouter') === false && strpos($model, '/') === false) {
+            return $model;
+        }
+        $geminiModel = trim((string)$this->settingModel->get('ai_chat_gemini_model', 'gemini-2.0-flash'));
+        return $geminiModel ?: 'gemini-2.0-flash';
+    }
+
+    private function buildGeminiContents(array $messages): array
+    {
+        $contents = [];
+        $currentRole = null;
+        $currentParts = [];
+
+        foreach ($messages as $msg) {
+            $role = $msg['role'] ?? 'user';
+            if ($role === 'system') continue;
+
+            $geminiRole = ($role === 'assistant' || $role === 'model') ? 'model' : 'user';
+            $text = trim((string)($msg['content'] ?? ''));
+            if ($text === '') continue;
+
+            if ($geminiRole === $currentRole) {
+                $currentParts[] = $text;
+            } else {
+                if ($currentRole !== null) {
+                    $contents[] = [
+                        'role'  => $currentRole,
+                        'parts' => [['text' => implode("\n\n", $currentParts)]]
+                    ];
+                }
+                $currentRole  = $geminiRole;
+                $currentParts = [$text];
+            }
+        }
+
+        if ($currentRole !== null && !empty($currentParts)) {
+            $contents[] = [
+                'role'  => $currentRole,
+                'parts' => [['text' => implode("\n\n", $currentParts)]]
+            ];
+        }
+
+        if (!empty($contents) && $contents[0]['role'] !== 'user') {
+            array_unshift($contents, [
+                'role'  => 'user',
+                'parts' => [['text' => 'Halo']]
+            ]);
+        }
+
+        return $contents;
     }
 }

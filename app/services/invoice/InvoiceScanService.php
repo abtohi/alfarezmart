@@ -263,7 +263,12 @@ class InvoiceScanService
             }
 
             // Make AI Vision Call
-            $aiResponse = $this->callOpenRouter($systemPrompt, $userMessageText, $imageB64, $imageInfo['format'], null, null, $metrics);
+            $aiProvider = $this->settingModel->get('ai_provider', 'openrouter');
+            if ($aiProvider === 'gemini') {
+                $aiResponse = $this->callGemini($systemPrompt, $userMessageText, $imageB64, $imageInfo['format'], null, null, $metrics);
+            } else {
+                $aiResponse = $this->callOpenRouter($systemPrompt, $userMessageText, $imageB64, $imageInfo['format'], null, null, $metrics);
+            }
             $metrics['ai_called'] = true;
             $metrics['ai_duration'] = round(microtime(true) - $aiStartTime, 2);
 
@@ -609,10 +614,37 @@ class InvoiceScanService
         return trim($key);
     }
 
+    private function getGeminiApiKey(): string
+    {
+        $key = trim((string)$this->settingModel->get('ai_gemini_api_key', ''));
+        if (!empty($key)) return $key;
+
+        $legacyKey = trim((string)$this->settingModel->get('ai_api_key', ''));
+        if (strpos($legacyKey, 'AIza') === 0) {
+            return $legacyKey;
+        }
+
+        if (defined('GEMINI_API_KEY') && !empty(GEMINI_API_KEY)) {
+            return GEMINI_API_KEY;
+        }
+
+        return '';
+    }
+
     private function getModelName(): string
     {
         $model = trim($this->settingModel->get('ai_model', 'openrouter/auto'));
         return $model ?: 'openrouter/auto';
+    }
+
+    private function getGeminiModelName(): string
+    {
+        $model = trim((string)$this->settingModel->get('ai_model', ''));
+        if (!empty($model) && strpos($model, 'gemini') !== false && strpos($model, 'openrouter') === false && strpos($model, '/') === false) {
+            return $model;
+        }
+        $geminiModel = trim((string)$this->settingModel->get('ai_gemini_model', 'gemini-2.0-flash'));
+        return $geminiModel ?: 'gemini-2.0-flash';
     }
 
     // ================================================================
@@ -791,7 +823,6 @@ class InvoiceScanService
             $response = curl_exec($ch);
             $err      = curl_error($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
 
             if ($err) {
                 error_log("SCAN_AI_TRACE: Model {$tryModel} curl error: {$err}");
@@ -870,6 +901,180 @@ class InvoiceScanService
             throw new \Exception('AI Scanner sedang padat (rate limit). Coba beberapa saat lagi atau pastikan API key OpenRouter aktif.');
         }
         throw new \Exception($lastError ?: 'AI belum berhasil membaca gambar invoice. Pastikan gambar jelas, terang, dan tidak buram.');
+    }
+
+    // ================================================================
+    // GOOGLE AI STUDIO (GEMINI) API CALL — 100% Free Daily Reset Quota
+    // ================================================================
+
+    private function callGemini(
+        string $systemPrompt,
+        string $userPrompt,
+        string $imageB64,
+        string $imageFormat,
+        ?string $apiKey = null,
+        ?string $model = null,
+        array &$metrics = []
+    ): ?array {
+        $apiKey = $apiKey ?? $this->getGeminiApiKey();
+        $model  = $model  ?? $this->getGeminiModelName();
+
+        if (empty($apiKey)) {
+            throw new \Exception('API Key Google AI Studio (Gemini) belum diatur di Pengaturan Sistem & AI.');
+        }
+
+        set_time_limit(180);
+
+        // Clean raw base64 data
+        if (strpos($imageB64, ';base64,') !== false) {
+            $imageB64 = explode(';base64,', $imageB64)[1];
+        }
+
+        // Determine MIME type
+        $mimeType = 'image/jpeg';
+        if (!empty($imageFormat)) {
+            $fmt = strtolower(trim($imageFormat));
+            if (strpos($fmt, '/') !== false) {
+                $mimeType = $fmt;
+            } else {
+                $fmt = ltrim($fmt, '.');
+                $mimeType = ($fmt === 'jpg') ? 'image/jpeg' : ('image/' . $fmt);
+            }
+        }
+
+        // Robust Gemini vision fallback hierarchy
+        $DEFAULT_GEMINI_MODELS = [
+            'gemini-2.0-flash',
+            'gemini-2.5-flash',
+            'gemini-1.5-flash',
+        ];
+
+        if (empty($model) || in_array($model, ['auto', 'gemini-auto'])) {
+            $modelsToTry = $DEFAULT_GEMINI_MODELS;
+        } else {
+            $modelsToTry = array_unique(array_merge([$model], $DEFAULT_GEMINI_MODELS));
+        }
+
+        $modelsToTry = array_slice($modelsToTry, 0, 3);
+
+        $lastError       = null;
+        $requestCount    = 0;
+        $rateLimitCount  = 0;
+
+        foreach ($modelsToTry as $tryModel) {
+            set_time_limit(90);
+            error_log("SCAN_AI_TRACE: Attempting Google Gemini vision model: {$tryModel}");
+            $requestCount++;
+
+            $payload = [
+                'system_instruction' => [
+                    'parts' => [
+                        ['text' => $systemPrompt]
+                    ]
+                ],
+                'contents' => [
+                    [
+                        'role' => 'user',
+                        'parts' => [
+                            ['text' => $userPrompt],
+                            [
+                                'inline_data' => [
+                                    'mime_type' => $mimeType,
+                                    'data'      => $imageB64
+                                ]
+                            ]
+                        ]
+                    ]
+                ],
+                'generationConfig' => [
+                    'temperature'      => 0.1,
+                    'maxOutputTokens'  => 8192,
+                    'responseMimeType' => 'application/json'
+                ]
+            ];
+
+            $endpoint = "https://generativelanguage.googleapis.com/v1beta/models/{$tryModel}:generateContent?key=" . urlencode($apiKey);
+
+            $ch = curl_init($endpoint);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+                'x-goog-api-key: ' . $apiKey,
+            ]);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+            $response = curl_exec($ch);
+            $err      = curl_error($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+            if ($err) {
+                error_log("SCAN_AI_TRACE: Gemini {$tryModel} curl error: {$err}");
+                $lastError = "Koneksi ke Google AI Studio gagal ({$tryModel}): " . $err;
+                continue;
+            }
+
+            if ($httpCode === 429) {
+                $rateLimitCount++;
+                $this->recordRateLimitError();
+                error_log("SCAN_AI_TRACE: Gemini {$tryModel} rate limited 429 ({$rateLimitCount}x)");
+                $lastError = "Google AI Studio rate limit (429). Mencoba model alternatif...";
+                continue;
+            }
+
+            if ($httpCode !== 200) {
+                $errData = json_decode($response, true);
+                $msg = $errData['error']['message'] ?? "HTTP $httpCode";
+                error_log("SCAN_AI_TRACE: Gemini {$tryModel} error ($httpCode): $msg");
+                $lastError = "Google AI Studio error: $msg";
+                continue;
+            }
+
+            $cleanResponse = trim($response);
+            $resData = json_decode($cleanResponse, true);
+            if (!is_array($resData)) {
+                error_log("SCAN_AI_TRACE: Gemini {$tryModel} non-JSON response: " . substr($cleanResponse, 0, 200));
+                continue;
+            }
+
+            $content = '';
+            if (isset($resData['candidates'][0]['content']['parts'])) {
+                foreach ($resData['candidates'][0]['content']['parts'] as $part) {
+                    if (isset($part['text'])) {
+                        $content .= $part['text'];
+                    }
+                }
+            }
+
+            if (empty(trim($content))) {
+                error_log("SCAN_AI_TRACE: Gemini {$tryModel} returned empty content: " . substr($cleanResponse, 0, 200));
+                continue;
+            }
+
+            $decoded = $this->extractJsonFromContent($content);
+
+            if (is_array($decoded) && !empty($decoded)) {
+                error_log("SCAN_AI_TRACE: Successfully parsed response from Gemini model {$tryModel}");
+                $metrics['ai_provider'] = 'gemini';
+                $metrics['ai_model_used'] = $tryModel;
+                $metrics['ai_request_count'] = $requestCount;
+                return $decoded;
+            } else {
+                error_log("SCAN_AI_TRACE: Gemini {$tryModel} returned unparseable content: " . substr($content, 0, 200));
+            }
+        }
+
+        $metrics['ai_request_count'] = $requestCount;
+        $this->resetCircuitBreaker();
+
+        if ($rateLimitCount >= 2) {
+            throw new \Exception('Google AI Studio sedang mencapai rate limit harian/menit. Silakan tunggu 1 menit atau coba esok hari saat kuota di-reset.');
+        }
+
+        throw new \Exception($lastError ?: 'AI Gemini belum berhasil membaca gambar faktur. Pastikan gambar jelas, terang, dan tidak buram.');
     }
 
     /**

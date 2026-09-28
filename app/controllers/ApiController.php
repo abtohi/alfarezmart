@@ -4095,7 +4095,7 @@ class ApiController extends Controller
 
         try {
             $settingModel = new SettingModel();
-            $fields = ['ai_model', 'ai_api_key', 'ai_invoice_prompt', 'store_latitude', 'store_longitude', 'store_radius_meters'];
+            $fields = ['ai_provider', 'ai_model', 'ai_api_key', 'ai_gemini_api_key', 'ai_invoice_prompt', 'store_latitude', 'store_longitude', 'store_radius_meters'];
             
             foreach ($fields as $field) {
                 $val = $this->input($field);
@@ -4120,7 +4120,7 @@ class ApiController extends Controller
 
         try {
             $settingModel = new SettingModel();
-            $fields = ['ai_chat_enabled', 'ai_chat_model', 'ai_chat_api_key', 'ai_chat_context_months', 'ai_chat_max_history'];
+            $fields = ['ai_chat_enabled', 'ai_chat_provider', 'ai_chat_model', 'ai_chat_api_key', 'ai_chat_gemini_api_key', 'ai_chat_context_months', 'ai_chat_max_history'];
             
             foreach ($fields as $field) {
                 $val = $this->input($field);

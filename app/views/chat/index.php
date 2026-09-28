@@ -80,7 +80,7 @@
             </div>
         </form>
         <div class="chat-input-footer">
-            AI menggunakan data internal toko. Klik ✏️ untuk koreksi · Powered by OpenRouter
+            AI menggunakan data internal toko. Klik ✏️ untuk koreksi · Powered by <?= htmlspecialchars($aiProviderName ?? 'OpenRouter') ?>
         </div>
     </div>
 </div>
