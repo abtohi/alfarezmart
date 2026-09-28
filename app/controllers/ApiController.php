@@ -4088,7 +4088,8 @@ class ApiController extends Controller
     public function saveAppSettings()
     {
         $this->validateCSRF();
-        if (AuthController::currentUser()['level'] !== 'superadmin' && AuthController::currentUser()['level'] !== 'admin') {
+        $user = AuthController::currentUser();
+        if (!$user || !in_array($user['level'] ?? '', ['superadmin', 'admin'])) {
             $this->json(['error' => 'Akses ditolak'], 403);
             return;
         }
@@ -4113,7 +4114,8 @@ class ApiController extends Controller
     public function saveChatSettings()
     {
         $this->validateCSRF();
-        if (AuthController::currentUser()['level'] !== 'superadmin' && AuthController::currentUser()['level'] !== 'admin') {
+        $user = AuthController::currentUser();
+        if (!$user || !in_array($user['level'] ?? '', ['superadmin', 'admin'])) {
             $this->json(['error' => 'Akses ditolak'], 403);
             return;
         }

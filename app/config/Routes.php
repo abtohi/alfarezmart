@@ -151,6 +151,8 @@ $router->post('/api/products/{id}/stock', 'ApiController@updateProductStock');
 $router->get('/api/settings/receipt', 'ApiController@getReceiptSettings');
 $router->post('/api/settings/receipt', 'ApiController@saveReceiptSettings');
 $router->post('/api/settings/app', 'ApiController@saveAppSettings');
+$router->post('/api/settings/chat', 'ApiController@saveChatSettings');
+$router->post('/api/users/change-password', 'ApiController@changePassword');
 
 // AI Agent API
 $router->post('/api/ai/scan-invoice', 'ApiController@scanInvoiceAI');
