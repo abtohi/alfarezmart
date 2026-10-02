@@ -343,6 +343,90 @@
     flex-shrink: 0;
 }
 
+/* Financial & Percentage Collapsible System */
+.dash-finance-collapsed-banner {
+    background: var(--surface-1);
+    border: 1px dashed rgba(99, 102, 241, 0.35);
+    border-radius: var(--radius-lg);
+    padding: 12px 18px;
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+.dash-finance-collapsed-banner:hover {
+    border-color: #6366f1;
+    background: var(--surface-2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.12);
+}
+.btn-expand-pill {
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #ffffff;
+    border: none;
+    border-radius: 20px;
+    padding: 7px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.btn-expand-pill:hover {
+    filter: brightness(1.1);
+    transform: scale(1.02);
+}
+.btn-expand-collapse {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+.btn-expand-collapse:hover {
+    background: var(--surface-3);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+.btn-expand-collapse.is-expanded {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: rgba(99, 102, 241, 0.3);
+    color: #818cf8;
+}
+.btn-collapse-panel {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 16px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+.btn-collapse-panel:hover {
+    background: var(--surface-3);
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
 /* Desktop Layout Adjustments (min-width: 1024px) */
 @media (min-width: 1024px) {
     .dash-kpi-grid {
@@ -433,17 +517,52 @@
     <div class="d-flex align-items-center justify-content-between mb-2">
         <div class="section-title mb-0">Status &amp; Ringkasan Hari Ini</div>
         <?php if ($userLevel === 'superadmin'): ?>
-        <button type="button" class="btn-privacy-all" id="btnToggleAllPrivacy" onclick="toggleAllPrivacy()" title="Tampilkan / Sembunyikan Semua Informasi Sensitif">
-            <i class="bi bi-eye-slash" id="iconToggleAllPrivacy"></i>
-            <span id="textToggleAllPrivacy">Tampilkan Semua</span>
-        </button>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn-expand-collapse" id="btnToggleFinanceExpand" onclick="toggleFinanceMarkupExpand()" title="Buka / Tutup Semua Informasi Keuangan &amp; Persentase Markup">
+                <i class="bi bi-chevron-down" id="iconFinanceExpand"></i>
+                <span id="textFinanceExpand">Tampilkan Keuangan &amp; Markup</span>
+            </button>
+            <button type="button" class="btn-privacy-all" id="btnToggleAllPrivacy" onclick="toggleAllPrivacy()" title="Tampilkan / Sembunyikan Semua Informasi Sensitif">
+                <i class="bi bi-eye-slash" id="iconToggleAllPrivacy"></i>
+                <span id="textToggleAllPrivacy">Tampilkan Semua</span>
+            </button>
+        </div>
         <?php endif; ?>
     </div>
     <div class="dash-kpi-grid">
 
         <?php if ($userLevel === 'superadmin'): ?>
-            <!-- Superadmin: Financial & Operational Overview -->
-            <div class="dash-kpi-card">
+            <!-- Superadmin: Operational (Always Visible) & Financial Overview (Collapsible) -->
+            <!-- 1. Operasional: Transaksi POS (Selalu Tampak) -->
+            <a href="<?= BASE_URL ?>sales" class="dash-kpi-card">
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Transaksi POS</span>
+                    <div class="dash-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">
+                        <i class="bi bi-receipt"></i>
+                    </div>
+                </div>
+                <div class="dash-kpi-value">
+                    <?= number_format($stats['today_transactions'] ?? 0) ?> Struk
+                </div>
+                <div class="dash-kpi-sub">Penjualan Hari Ini</div>
+            </a>
+
+            <!-- 2. Operasional: Stok Terendah (Selalu Tampak) -->
+            <a href="<?= BASE_URL ?>products?filter=low_stock" class="dash-kpi-card">
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Stok Terendah</span>
+                    <div class="dash-kpi-icon" style="background:var(--danger-bg);color:var(--danger);">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                </div>
+                <div class="dash-kpi-value" style="color:var(--danger);">
+                    <?= number_format($stats['low_stock_count'] ?? 0) ?> Produk
+                </div>
+                <div class="dash-kpi-sub" style="color:var(--danger);font-weight:600;">Perlu Restok!</div>
+            </a>
+
+            <!-- 3. Finansial: Omzet Hari Ini (Collapsible) -->
+            <div class="dash-kpi-card kpi-financial-item" style="display:none;">
                 <div class="dash-kpi-header">
                     <span class="dash-kpi-title">Omzet Hari Ini</span>
                     <div style="display:flex;align-items:center;gap:6px;">
@@ -464,7 +583,8 @@
                 </div>
             </div>
 
-            <a href="<?= BASE_URL ?>finance" class="dash-kpi-card">
+            <!-- 4. Finansial: Keuangan Harian (Collapsible) -->
+            <a href="<?= BASE_URL ?>finance" class="dash-kpi-card kpi-financial-item" style="display:none;">
                 <div class="dash-kpi-header">
                     <span class="dash-kpi-title">Keuangan Harian</span>
                     <div style="display:flex;align-items:center;gap:6px;">
@@ -485,21 +605,9 @@
                 </div>
             </a>
 
-            <a href="<?= BASE_URL ?>sales" class="dash-kpi-card">
-                <div class="dash-kpi-header">
-                    <span class="dash-kpi-title">Transaksi POS</span>
-                    <div class="dash-kpi-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6;">
-                        <i class="bi bi-receipt"></i>
-                    </div>
-                </div>
-                <div class="dash-kpi-value">
-                    <?= number_format($stats['today_transactions'] ?? 0) ?> Struk
-                </div>
-                <div class="dash-kpi-sub">Penjualan Hari Ini</div>
-            </a>
-
+            <!-- 5. Finansial: PPOB Hari Ini (Collapsible) -->
             <?php if ($this->hasServiceAccess('ppob')): ?>
-            <a href="<?= BASE_URL ?>ppob/summary" class="dash-kpi-card">
+            <a href="<?= BASE_URL ?>ppob/summary" class="dash-kpi-card kpi-financial-item" style="display:none;">
                 <div class="dash-kpi-header">
                     <span class="dash-kpi-title">PPOB Hari Ini</span>
                     <div style="display:flex;align-items:center;gap:6px;">
@@ -521,20 +629,8 @@
             </a>
             <?php endif; ?>
 
-            <a href="<?= BASE_URL ?>products?filter=low_stock" class="dash-kpi-card">
-                <div class="dash-kpi-header">
-                    <span class="dash-kpi-title">Stok Terendah</span>
-                    <div class="dash-kpi-icon" style="background:var(--danger-bg);color:var(--danger);">
-                        <i class="bi bi-exclamation-triangle-fill"></i>
-                    </div>
-                </div>
-                <div class="dash-kpi-value" style="color:var(--danger);">
-                    <?= number_format($stats['low_stock_count'] ?? 0) ?> Produk
-                </div>
-                <div class="dash-kpi-sub" style="color:var(--danger);font-weight:600;">Perlu Restok!</div>
-            </a>
-
-            <a href="#sectionMarkupProduct" class="dash-kpi-card" style="border-left: 3px solid #6366f1;">
+            <!-- 6. Persentase: Markup Produk (Collapsible) -->
+            <a href="javascript:void(0)" onclick="toggleFinanceMarkupExpand(true); document.getElementById('sectionMarkupProduct')?.scrollIntoView({behavior:'smooth'});" class="dash-kpi-card kpi-financial-item" style="display:none;border-left:3px solid #6366f1;">
                 <div class="dash-kpi-header">
                     <span class="dash-kpi-title">Markup Produk</span>
                     <div style="display:flex;align-items:center;gap:6px;">
@@ -694,9 +790,30 @@
 
     </div>
 
-    <!-- 1.B ANALISIS PERSENTASE MARKUP PRODUK (SUPERADMIN) -->
     <?php if ($userLevel === 'superadmin'): ?>
-    <div id="sectionMarkupProduct" class="dash-markup-section mb-4" style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:0 4px 20px rgba(0,0,0,0.04);">
+    <!-- Collapsed Banner for Financial & Percentage Stats (Default Collapsed) -->
+    <div id="financeMarkupCollapsedBanner" class="dash-finance-collapsed-banner" onclick="toggleFinanceMarkupExpand(true)" style="display:flex;">
+        <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+            <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg, rgba(99,102,241,0.18), rgba(168,85,247,0.18));color:#818cf8;display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;">
+                <i class="bi bi-wallet2"></i>
+            </div>
+            <div style="min-width:0;">
+                <div style="font-size:12px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    Informasi Keuangan &amp; Persentase Markup
+                    <span class="badge" style="background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border-color);font-size:9px;font-weight:600;">Default Collapsed</span>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">
+                    Klik untuk membuka Omzet, Profit, Kas Dompet, &amp; Rincian Markup Ecer (+<?= number_format($markupStats['level1']['avg_ecer'] ?? 0, 1, ',', '.') ?>%) &amp; Grosir (+<?= number_format($markupStats['level1']['avg_grosir'] ?? 0, 1, ',', '.') ?>%)
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn-expand-pill" style="flex-shrink:0;">
+            <i class="bi bi-chevron-down"></i> Tampilkan
+        </button>
+    </div>
+
+    <!-- 1.B ANALISIS PERSENTASE MARKUP PRODUK (SUPERADMIN - COLLAPSIBLE) -->
+    <div id="sectionMarkupProduct" class="dash-markup-section mb-4" style="display:none;background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:0 4px 20px rgba(0,0,0,0.04);">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;border-bottom:1px solid var(--border-color);padding-bottom:14px;">
             <div style="display:flex;align-items:center;gap:10px;">
                 <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2));color:#818cf8;display:flex;align-items:center;justify-content:center;font-size:1.2rem;box-shadow:0 2px 8px rgba(99,102,241,0.2);">
@@ -713,7 +830,7 @@
                 </div>
             </div>
 
-            <!-- Mode Selector: Satuan Dasar (Level 1) vs Semua Kemasan -->
+            <!-- Controls: Mode Selector + Sembunyikan Panel + Privacy Eye -->
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 <div class="markup-mode-switch" style="display:inline-flex;background:var(--surface-2);border:1px solid var(--border-color);border-radius:20px;padding:3px;">
                     <button type="button" class="btn-markup-mode active" id="btnModeLevel1" onclick="switchMarkupMode('level1')" style="border:none;background:var(--primary);color:#fff;font-size:11px;font-weight:700;padding:5px 12px;border-radius:16px;cursor:pointer;transition:all 0.2s;">
@@ -723,6 +840,9 @@
                         Semua Kemasan (Dus/Pak/Pcs)
                     </button>
                 </div>
+                <button type="button" onclick="toggleFinanceMarkupExpand(false)" class="btn-collapse-panel" title="Tutup / Sembunyikan Panel Ini">
+                    <i class="bi bi-chevron-up"></i> Sembunyikan
+                </button>
                 <button type="button" class="btn-kpi-eye" onclick="toggleKpiPrivacy('markup', event)" title="Sembunyikan/Tampilkan Angka Markup" style="background:var(--surface-2);border:1px solid var(--border-color);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
                     <i class="bi bi-eye-slash" id="icon-privacy-markup-section"></i>
                 </button>
@@ -2338,6 +2458,53 @@ function updateToggleAllPrivacyButton() {
         btnText.textContent = 'Tampilkan Semua';
         btnIcon.classList.remove('bi-eye');
         btnIcon.classList.add('bi-eye-slash');
+    }
+}
+
+// ===== DASHBOARD FINANCE & MARKUP EXPAND/COLLAPSE =====
+let isFinanceMarkupExpanded = false;
+
+function toggleFinanceMarkupExpand(forceState) {
+    if (typeof forceState === 'boolean') {
+        isFinanceMarkupExpanded = forceState;
+    } else {
+        isFinanceMarkupExpanded = !isFinanceMarkupExpanded;
+    }
+    applyFinanceMarkupExpand(isFinanceMarkupExpanded);
+}
+
+function applyFinanceMarkupExpand(expanded) {
+    const finCards = document.querySelectorAll('.kpi-financial-item');
+    const markupSec = document.getElementById('sectionMarkupProduct');
+    const banner = document.getElementById('financeMarkupCollapsedBanner');
+    const btnText = document.getElementById('textFinanceExpand');
+    const btnIcon = document.getElementById('iconFinanceExpand');
+    const btnToggle = document.getElementById('btnToggleFinanceExpand');
+
+    finCards.forEach(card => {
+        card.style.display = expanded ? 'flex' : 'none';
+    });
+
+    if (markupSec) {
+        markupSec.style.display = expanded ? 'block' : 'none';
+    }
+
+    if (banner) {
+        banner.style.display = expanded ? 'none' : 'flex';
+    }
+
+    if (btnText && btnIcon && btnToggle) {
+        if (expanded) {
+            btnText.textContent = 'Sembunyikan Keuangan';
+            btnIcon.classList.remove('bi-chevron-down');
+            btnIcon.classList.add('bi-chevron-up');
+            btnToggle.classList.add('is-expanded');
+        } else {
+            btnText.textContent = 'Tampilkan Keuangan & Markup';
+            btnIcon.classList.remove('bi-chevron-up');
+            btnIcon.classList.add('bi-chevron-down');
+            btnToggle.classList.remove('is-expanded');
+        }
     }
 }
 </script>
