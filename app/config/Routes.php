@@ -321,6 +321,7 @@ $router->get('/finance', 'FinanceController@index');
 // Finance API Routes
 $router->get('/api/finance/summary', 'ApiController@getFinanceSummary');
 $router->get('/api/finance/logs', 'ApiController@getFinanceLogs');
+$router->get('/api/finance/omzet-analytics', 'ApiController@getOmzetAnalytics');
     $router->post('/api/finance/logs', 'ApiController@createFinanceLog');
     $router->post('/api/finance/logs/bulk-delete', 'ApiController@bulkDeleteFinanceLogs');
     $router->post('/api/finance/logs/{id}/update', 'ApiController@updateFinanceLog');

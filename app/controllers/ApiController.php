@@ -3927,6 +3927,202 @@ class ApiController extends Controller
         }
     }
 
+    /**
+     * API untuk Grafik & Analisis Omzet & Estimasi Profit
+     * Menggunakan rata-rata markup gabungan grosir & ecer
+     */
+    public function getOmzetAnalytics()
+    {
+        $this->requireSuperadmin();
+        try {
+            $startDate = isset($_GET['start_date']) ? trim($_GET['start_date']) : date('Y-m-d', strtotime('-6 days'));
+            $endDate = isset($_GET['end_date']) ? trim($_GET['end_date']) : date('Y-m-d');
+
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
+                $startDate = date('Y-m-d', strtotime('-6 days'));
+            }
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+                $endDate = date('Y-m-d');
+            }
+
+            // Swap if start > end
+            if ($startDate > $endDate) {
+                $tmp = $startDate;
+                $startDate = $endDate;
+                $endDate = $tmp;
+            }
+
+            // Cap range at 366 days
+            $startTs = strtotime($startDate);
+            $endTs = strtotime($endDate);
+            $diffDays = round(($endTs - $startTs) / 86400) + 1;
+            if ($diffDays > 366) {
+                $startDate = date('Y-m-d', strtotime('-365 days', $endTs));
+                $startTs = strtotime($startDate);
+                $diffDays = 366;
+            }
+
+            $db = Database::getInstance()->getConnection();
+
+            // Combined Markup stats
+            $productModel = new ProductModel();
+            $markupStats = $productModel->getMarkupStats();
+            $combinedMarkup = (float)($markupStats['level1']['avg_combined'] ?? 27.82);
+            $marginRatio = $combinedMarkup > 0 ? ($combinedMarkup / (100 + $combinedMarkup)) : 0;
+
+            // 1. Sales revenue & transactions query
+            $stmtRevs = $db->prepare("
+                SELECT DATE(created_at) as date_str, COUNT(id) as tx_count, COALESCE(SUM(total_amount), 0) as revenue
+                FROM sale_transactions
+                WHERE DATE(created_at) BETWEEN :s AND :e
+                GROUP BY DATE(created_at)
+            ");
+            $stmtRevs->execute([':s' => $startDate, ':e' => $endDate]);
+            $revsMap = [];
+            foreach ($stmtRevs->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $revsMap[$r['date_str']] = $r;
+            }
+
+            // 2. Realized profit & items sold query
+            $stmtProf = $db->prepare("
+                SELECT DATE(st.created_at) as date_str, COALESCE(SUM(si.profit), 0) as realized_profit, COALESCE(SUM(si.quantity), 0) as items_sold
+                FROM sale_items si
+                JOIN sale_transactions st ON st.id = si.transaction_id
+                WHERE DATE(st.created_at) BETWEEN :s AND :e
+                GROUP BY DATE(st.created_at)
+            ");
+            $stmtProf->execute([':s' => $startDate, ':e' => $endDate]);
+            $profMap = [];
+            foreach ($stmtProf->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $profMap[$r['date_str']] = $r;
+            }
+
+            // 3. Previous period query for growth comparison
+            $prevStartDate = date('Y-m-d', strtotime("-$diffDays days", $startTs));
+            $prevEndDate = date('Y-m-d', strtotime("-1 day", $startTs));
+            $stmtPrev = $db->prepare("
+                SELECT COUNT(id) as prev_tx_count, COALESCE(SUM(total_amount), 0) as prev_revenue
+                FROM sale_transactions
+                WHERE DATE(created_at) BETWEEN :ps AND :pe
+            ");
+            $stmtPrev->execute([':ps' => $prevStartDate, ':pe' => $prevEndDate]);
+            $prevData = $stmtPrev->fetch(PDO::FETCH_ASSOC) ?: [];
+            $prevRevenue = (float)($prevData['prev_revenue'] ?? 0);
+            $prevTxCount = (int)($prevData['prev_tx_count'] ?? 0);
+
+            // 4. Build daily series
+            $days = [];
+            $cur = $startTs;
+            $dayNamesIndo = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            $dayShortIndo = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+            $monthNamesIndo = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
+            $totalRevenue = 0;
+            $totalEstimatedProfit = 0;
+            $totalRealizedProfit = 0;
+            $totalTransactions = 0;
+            $totalItems = 0;
+            $peakDay = null;
+
+            while ($cur <= $endTs) {
+                $dStr = date('Y-m-d', $cur);
+                $w = (int)date('w', $cur);
+                $m = (int)date('n', $cur);
+                $dayLabel = $dayShortIndo[$w] . ', ' . date('j', $cur) . ' ' . $monthNamesIndo[$m];
+                $dayFullLabel = $dayNamesIndo[$w] . ', ' . date('j', $cur) . ' ' . $monthNamesIndo[$m] . ' ' . date('Y', $cur);
+
+                $rev = (float)($revsMap[$dStr]['revenue'] ?? 0);
+                $tx = (int)($revsMap[$dStr]['tx_count'] ?? 0);
+                $realProf = (float)($profMap[$dStr]['realized_profit'] ?? 0);
+                $items = (float)($profMap[$dStr]['items_sold'] ?? 0);
+                $estProf = round($rev * $marginRatio, 2);
+
+                $totalRevenue += $rev;
+                $totalEstimatedProfit += $estProf;
+                $totalRealizedProfit += $realProf;
+                $totalTransactions += $tx;
+                $totalItems += $items;
+
+                if ($peakDay === null || $rev > $peakDay['revenue']) {
+                    $peakDay = [
+                        'date' => $dStr,
+                        'label' => $dayLabel,
+                        'full_label' => $dayFullLabel,
+                        'revenue' => $rev,
+                        'tx_count' => $tx
+                    ];
+                }
+
+                $days[] = [
+                    'date' => $dStr,
+                    'label' => $dayLabel,
+                    'full_label' => $dayFullLabel,
+                    'short_label' => date('d/m', $cur),
+                    'day_name' => $dayNamesIndo[$w],
+                    'revenue' => $rev,
+                    'estimated_profit' => $estProf,
+                    'realized_profit' => $realProf,
+                    'transactions' => $tx,
+                    'items_sold' => $items,
+                    'margin_pct' => $rev > 0 ? round(($estProf / $rev) * 100, 1) : round($marginRatio * 100, 1)
+                ];
+
+                $cur = strtotime('+1 day', $cur);
+            }
+
+            $daysCount = count($days);
+            $avgDailyRev = $daysCount > 0 ? round($totalRevenue / $daysCount, 2) : 0;
+            $avgDailyProfit = $daysCount > 0 ? round($totalEstimatedProfit / $daysCount, 2) : 0;
+            $avgAOV = $totalTransactions > 0 ? round($totalRevenue / $totalTransactions, 2) : 0;
+
+            // Growth calculation
+            $growthRevenuePct = 0;
+            if ($prevRevenue > 0) {
+                $growthRevenuePct = round((($totalRevenue - $prevRevenue) / $prevRevenue) * 100, 1);
+            } elseif ($totalRevenue > 0) {
+                $growthRevenuePct = 100.0;
+            }
+
+            $growthTxPct = 0;
+            if ($prevTxCount > 0) {
+                $growthTxPct = round((($totalTransactions - $prevTxCount) / $prevTxCount) * 100, 1);
+            } elseif ($totalTransactions > 0) {
+                $growthTxPct = 100.0;
+            }
+
+            $this->json([
+                'success' => true,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'days_count' => $daysCount,
+                'summary' => [
+                    'total_revenue' => $totalRevenue,
+                    'total_estimated_profit' => round($totalEstimatedProfit, 2),
+                    'total_realized_profit' => round($totalRealizedProfit, 2),
+                    'total_transactions' => $totalTransactions,
+                    'total_items_sold' => $totalItems,
+                    'avg_daily_revenue' => $avgDailyRev,
+                    'avg_daily_profit' => $avgDailyProfit,
+                    'avg_basket_size' => $avgAOV,
+                    'growth_revenue_pct' => $growthRevenuePct,
+                    'growth_tx_pct' => $growthTxPct,
+                    'prev_revenue' => $prevRevenue,
+                    'prev_transactions' => $prevTxCount,
+                    'peak_day' => $peakDay,
+                ],
+                'markup_info' => [
+                    'combined_markup_pct' => $combinedMarkup,
+                    'estimated_margin_pct' => round($marginRatio * 100, 2),
+                    'level1_ecer_pct' => (float)($markupStats['level1']['avg_ecer'] ?? 0),
+                    'level1_grosir_pct' => (float)($markupStats['level1']['avg_grosir'] ?? 0),
+                ],
+                'series' => $days
+            ]);
+        } catch (Exception $e) {
+            $this->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     public function createFinanceLog()
     {
         $this->requireSuperadmin();
