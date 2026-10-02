@@ -8,6 +8,7 @@ class DashboardController extends Controller
     {
         $productModel = new ProductModel();
         $stats = $productModel->getStats();
+        $markupStats = $productModel->getMarkupStats();
 
         // Fetch sales stats for today
         $saleModel = new SaleModel();
@@ -192,6 +193,7 @@ class DashboardController extends Controller
             'ppobStats' => $ppobStats,
             'ppobTopToday' => $ppobTopToday,
             'ppobCat30Days' => $ppobCat30Days,
+            'markupStats' => $markupStats,
         ]);
     }
 
@@ -281,6 +283,8 @@ class DashboardController extends Controller
             $debtOut['shop'] = (float)($row['v'] ?? 0);
         } catch (\Throwable $e) {}
 
+        $markupStats = (new ProductModel())->getMarkupStats();
+
         $this->view('dashboard.summary', [
             'title' => 'Summary & Statistik',
             'activeNav' => 'home',
@@ -291,6 +295,7 @@ class DashboardController extends Controller
             'dailySeries' => $dailySeries,
             'topProducts' => $topProducts,
             'debtOut' => $debtOut,
+            'markupStats' => $markupStats,
         ]);
     }
 

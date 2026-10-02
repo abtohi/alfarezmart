@@ -75,6 +75,36 @@ if ($maxRev <= 0) $maxRev = 1;
         </div>
     </div>
 
+    <!-- Markup Produk Master -->
+    <?php if (isset($markupStats)): ?>
+    <div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="font-size:var(--font-size-sm); font-weight:700;"><i class="bi bi-percent"></i> Persentase Markup Seluruh Produk</div>
+            <span style="font-size:10px; color:var(--text-muted);">Satuan Dasar (Level 1)</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; text-align:center;">
+            <div style="background:var(--bg-primary); padding:10px; border-radius:var(--radius-sm); border-top:2px solid var(--success);">
+                <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">ECER</div>
+                <div style="font-weight:800; color:var(--success); font-size:var(--font-size-md);">+<?= number_format($markupStats['level1']['avg_ecer'] ?? 0, 1, ',', '.') ?>%</div>
+                <div style="font-size:9px; color:var(--text-muted); margin-top:2px;"><?= number_format($markupStats['level1']['ecer_count'] ?? 0) ?> item</div>
+            </div>
+            <div style="background:var(--bg-primary); padding:10px; border-radius:var(--radius-sm); border-top:2px solid var(--warning);">
+                <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">GROSIR</div>
+                <div style="font-weight:800; color:#f59e0b; font-size:var(--font-size-md);">+<?= number_format($markupStats['level1']['avg_grosir'] ?? 0, 1, ',', '.') ?>%</div>
+                <div style="font-size:9px; color:var(--text-muted); margin-top:2px;"><?= number_format($markupStats['level1']['grosir_count'] ?? 0) ?> item</div>
+            </div>
+            <div style="background:var(--bg-primary); padding:10px; border-radius:var(--radius-sm); border-top:2px solid #818cf8;">
+                <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">GABUNGAN</div>
+                <div style="font-weight:800; color:#818cf8; font-size:var(--font-size-md);">+<?= number_format($markupStats['level1']['avg_combined'] ?? 0, 1, ',', '.') ?>%</div>
+                <div style="font-size:9px; color:var(--text-muted); margin-top:2px;">Rata-rata Gabungan</div>
+            </div>
+        </div>
+        <div style="font-size:10px; color:var(--text-muted); margin-top:10px; text-align:center;">
+            Semua kemasan (multi-satuan): Ecer +<?= number_format($markupStats['all_packagings']['avg_ecer'] ?? 0, 1, ',', '.') ?>% &middot; Grosir +<?= number_format($markupStats['all_packagings']['avg_grosir'] ?? 0, 1, ',', '.') ?>% &middot; Gabungan +<?= number_format($markupStats['all_packagings']['avg_combined'] ?? 0, 1, ',', '.') ?>%
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Outstanding Debt -->
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px;">
         <div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:12px;">

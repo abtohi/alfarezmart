@@ -346,8 +346,8 @@
 /* Desktop Layout Adjustments (min-width: 1024px) */
 @media (min-width: 1024px) {
     .dash-kpi-grid {
-        grid-template-columns: repeat(5, 1fr) !important;
-        gap: 16px !important;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;
+        gap: 14px !important;
         margin-bottom: 24px !important;
     }
     .dash-kpi-card {
@@ -534,6 +534,27 @@
                 <div class="dash-kpi-sub" style="color:var(--danger);font-weight:600;">Perlu Restok!</div>
             </a>
 
+            <a href="#sectionMarkupProduct" class="dash-kpi-card" style="border-left: 3px solid #6366f1;">
+                <div class="dash-kpi-header">
+                    <span class="dash-kpi-title">Markup Produk</span>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <button type="button" class="btn-kpi-eye" onclick="toggleKpiPrivacy('markup', event)" title="Tampilkan/Sembunyikan Nilai Markup">
+                            <i class="bi bi-eye-slash" id="icon-privacy-markup"></i>
+                        </button>
+                        <div class="dash-kpi-icon" style="background:rgba(99,102,241,0.12);color:#818cf8;">
+                            <i class="bi bi-percent"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="dash-kpi-value" style="color:#818cf8;">
+                    <span class="privacy-mask privacy-mask-markup">+••.•%</span>
+                    <span class="privacy-real privacy-real-markup" style="display:none;">+<?= number_format($markupStats['level1']['avg_combined'] ?? 0, 1, ',', '.') ?>%</span>
+                </div>
+                <div class="dash-kpi-sub">
+                    Ecer: <strong style="color:var(--success);"><span class="privacy-mask privacy-mask-markup">+••%</span><span class="privacy-real privacy-real-markup" style="display:none;">+<?= number_format($markupStats['level1']['avg_ecer'] ?? 0, 1, ',', '.') ?>%</span></strong> &middot; Grosir: <strong style="color:#f59e0b;"><span class="privacy-mask privacy-mask-markup">+••%</span><span class="privacy-real privacy-real-markup" style="display:none;">+<?= number_format($markupStats['level1']['avg_grosir'] ?? 0, 1, ',', '.') ?>%</span></strong>
+                </div>
+            </a>
+
         <?php elseif ($userLevel === 'admin'): ?>
             <!-- Admin: Operational Overview (NO MONEY INFO) -->
             <a href="<?= BASE_URL ?>sales" class="dash-kpi-card">
@@ -672,6 +693,152 @@
         <?php endif; ?>
 
     </div>
+
+    <!-- 1.B ANALISIS PERSENTASE MARKUP PRODUK (SUPERADMIN) -->
+    <?php if ($userLevel === 'superadmin'): ?>
+    <div id="sectionMarkupProduct" class="dash-markup-section mb-4" style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:0 4px 20px rgba(0,0,0,0.04);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;border-bottom:1px solid var(--border-color);padding-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2));color:#818cf8;display:flex;align-items:center;justify-content:center;font-size:1.2rem;box-shadow:0 2px 8px rgba(99,102,241,0.2);">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+                <div>
+                    <h3 style="margin:0;font-size:var(--font-size-base);font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:8px;">
+                        Persentase Markup Seluruh Produk
+                        <span class="badge-custom badge-primary" style="font-size:10px;padding:2px 8px;">Katalog Master</span>
+                    </h3>
+                    <p style="margin:2px 0 0;font-size:var(--font-size-xs);color:var(--text-muted);">
+                        Rata-rata persentase margin markup terhadap harga modal untuk seluruh produk aktif
+                    </p>
+                </div>
+            </div>
+
+            <!-- Mode Selector: Satuan Dasar (Level 1) vs Semua Kemasan -->
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <div class="markup-mode-switch" style="display:inline-flex;background:var(--surface-2);border:1px solid var(--border-color);border-radius:20px;padding:3px;">
+                    <button type="button" class="btn-markup-mode active" id="btnModeLevel1" onclick="switchMarkupMode('level1')" style="border:none;background:var(--primary);color:#fff;font-size:11px;font-weight:700;padding:5px 12px;border-radius:16px;cursor:pointer;transition:all 0.2s;">
+                        Satuan Dasar (Pcs/Unit)
+                    </button>
+                    <button type="button" class="btn-markup-mode" id="btnModeAll" onclick="switchMarkupMode('all')" style="border:none;background:transparent;color:var(--text-secondary);font-size:11px;font-weight:700;padding:5px 12px;border-radius:16px;cursor:pointer;transition:all 0.2s;">
+                        Semua Kemasan (Dus/Pak/Pcs)
+                    </button>
+                </div>
+                <button type="button" class="btn-kpi-eye" onclick="toggleKpiPrivacy('markup', event)" title="Sembunyikan/Tampilkan Angka Markup" style="background:var(--surface-2);border:1px solid var(--border-color);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
+                    <i class="bi bi-eye-slash" id="icon-privacy-markup-section"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3 Utama Metrics Cards + 1 Spread Card -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));gap:12px;margin-bottom:16px;">
+            <!-- Ecer Card -->
+            <div style="background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:14px;border-top:3px solid var(--success);position:relative;overflow:hidden;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">
+                        <i class="bi bi-tag-fill me-1" style="color:var(--success);"></i> Rata-Rata Ecer
+                    </span>
+                    <span class="badge" style="background:rgba(16,185,129,0.12);color:var(--success);font-size:10px;font-weight:700;">Retail</span>
+                </div>
+                <div style="font-size:1.55rem;font-weight:800;color:var(--success);line-height:1.2;margin:4px 0;">
+                    <span class="privacy-mask privacy-mask-markup">+••.•%</span>
+                    <span class="privacy-real privacy-real-markup" id="markupValEcer" style="display:none;">+<?= number_format($markupStats['level1']['avg_ecer'] ?? 0, 1, ',', '.') ?>%</span>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+                    <span id="markupCountEcer"><?= number_format($markupStats['level1']['ecer_count'] ?? 0, 0, ',', '.') ?></span> produk aktif
+                </div>
+            </div>
+
+            <!-- Grosir Card -->
+            <div style="background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:14px;border-top:3px solid var(--warning);position:relative;overflow:hidden;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">
+                        <i class="bi bi-box-seam-fill me-1" style="color:var(--warning);"></i> Rata-Rata Grosir
+                    </span>
+                    <span class="badge" style="background:rgba(245,158,11,0.12);color:#f59e0b;font-size:10px;font-weight:700;">Wholesale</span>
+                </div>
+                <div style="font-size:1.55rem;font-weight:800;color:#f59e0b;line-height:1.2;margin:4px 0;">
+                    <span class="privacy-mask privacy-mask-markup">+••.•%</span>
+                    <span class="privacy-real privacy-real-markup" id="markupValGrosir" style="display:none;">+<?= number_format($markupStats['level1']['avg_grosir'] ?? 0, 1, ',', '.') ?>%</span>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+                    <span id="markupCountGrosir"><?= number_format($markupStats['level1']['grosir_count'] ?? 0, 0, ',', '.') ?></span> produk aktif
+                </div>
+            </div>
+
+            <!-- Gabungan Card -->
+            <div style="background:linear-gradient(135deg, rgba(99,102,241,0.06), rgba(168,85,247,0.06));border:1px solid rgba(99,102,241,0.25);border-radius:var(--radius-md);padding:14px;border-top:3px solid #6366f1;position:relative;overflow:hidden;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-size:11px;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:0.5px;">
+                        <i class="bi bi-calculator-fill me-1"></i> Rata-Rata Gabungan
+                    </span>
+                    <span class="badge" style="background:rgba(99,102,241,0.18);color:#818cf8;font-size:10px;font-weight:700;">Ecer + Grosir</span>
+                </div>
+                <div style="font-size:1.55rem;font-weight:800;color:#818cf8;line-height:1.2;margin:4px 0;">
+                    <span class="privacy-mask privacy-mask-markup">+••.•%</span>
+                    <span class="privacy-real privacy-real-markup" id="markupValCombined" style="display:none;">+<?= number_format($markupStats['level1']['avg_combined'] ?? 0, 1, ',', '.') ?>%</span>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);">
+                    Rata-rata seluruh titik harga jual
+                </div>
+            </div>
+
+            <!-- Selisih Spread Ecer vs Grosir -->
+            <div style="background:var(--surface-2);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:14px;border-top:3px solid #06b6d4;position:relative;overflow:hidden;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">
+                        <i class="bi bi-arrow-left-right me-1" style="color:#06b6d4;"></i> Spread Ecer vs Grosir
+                    </span>
+                    <span class="badge" style="background:rgba(6,182,212,0.12);color:#06b6d4;font-size:10px;font-weight:700;">Diskon Grosir</span>
+                </div>
+                <?php 
+                    $spreadL1 = ($markupStats['level1']['avg_ecer'] ?? 0) - ($markupStats['level1']['avg_grosir'] ?? 0);
+                ?>
+                <div style="font-size:1.55rem;font-weight:800;color:#06b6d4;line-height:1.2;margin:4px 0;">
+                    <span class="privacy-mask privacy-mask-markup">+••.•%</span>
+                    <span class="privacy-real privacy-real-markup" id="markupValSpread" style="display:none;">+<?= number_format($spreadL1, 1, ',', '.') ?>%</span>
+                </div>
+                <div style="font-size:11px;color:var(--text-muted);">
+                    Potongan margin belanja grosir
+                </div>
+            </div>
+        </div>
+
+        <!-- Breakdown Top Kategori Markup -->
+        <?php if (!empty($markupStats['categories'])): ?>
+        <div style="background:var(--surface-2);border-radius:var(--radius-md);border:1px solid var(--border-color);padding:12px 14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <div style="font-size:11px;font-weight:700;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+                    <i class="bi bi-layers-fill" style="color:#818cf8;"></i> Rata-Rata Markup per Kategori Utama
+                </div>
+                <span style="font-size:10px;color:var(--text-muted);">Satuan Terkecil / Dasar</span>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:10px;">
+                <?php foreach ($markupStats['categories'] as $cat): ?>
+                <div style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:8px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:12px;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            <?= htmlspecialchars($cat['category_name']) ?>
+                        </div>
+                        <div style="font-size:10px;color:var(--text-muted);">
+                            <?= number_format($cat['total_products'] ?? 0) ?> produk
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                        <div style="text-align:right;">
+                            <div style="font-size:10px;color:var(--text-muted);">Ecer: <strong style="color:var(--success);">+<?= number_format($cat['avg_mkp_ecer'] ?? 0, 1, ',', '.') ?>%</strong></div>
+                            <div style="font-size:10px;color:var(--text-muted);">Grosir: <strong style="color:#f59e0b;">+<?= number_format($cat['avg_mkp_grosir'] ?? 0, 1, ',', '.') ?>%</strong></div>
+                        </div>
+                        <div style="background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);border-radius:6px;padding:3px 7px;font-size:11px;font-weight:800;text-align:center;" title="Gabungan Ecer & Grosir">
+                            +<?= number_format($cat['avg_mkp_combined'] ?? 0, 1, ',', '.') ?>%
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
 
     <!-- 2. AKSI CEPAT MENU -->
     <div class="section-title">Aksi Cepat Menu</div>
@@ -2080,8 +2247,40 @@ function fmtNumber(n) {
 const kpiPrivacyState = {
     'omzet': false,
     'finance': false,
-    'ppob': false
+    'ppob': false,
+    'markup': false
 };
+
+const markupData = <?= json_encode($markupStats ?? []) ?>;
+
+function switchMarkupMode(mode) {
+    const btnL1 = document.getElementById('btnModeLevel1');
+    const btnAll = document.getElementById('btnModeAll');
+    if (!btnL1 || !btnAll || !markupData || !markupData.level1 || !markupData.all_packagings) return;
+
+    const isL1 = mode === 'level1';
+    btnL1.style.background = isL1 ? 'var(--primary)' : 'transparent';
+    btnL1.style.color = isL1 ? '#fff' : 'var(--text-secondary)';
+    btnAll.style.background = !isL1 ? 'var(--primary)' : 'transparent';
+    btnAll.style.color = !isL1 ? '#fff' : 'var(--text-secondary)';
+
+    const d = isL1 ? markupData.level1 : markupData.all_packagings;
+    const spread = (d.avg_ecer || 0) - (d.avg_grosir || 0);
+
+    const elEcer = document.getElementById('markupValEcer');
+    const elGrosir = document.getElementById('markupValGrosir');
+    const elCombined = document.getElementById('markupValCombined');
+    const elSpread = document.getElementById('markupValSpread');
+    const elCntEcer = document.getElementById('markupCountEcer');
+    const elCntGrosir = document.getElementById('markupCountGrosir');
+
+    if (elEcer) elEcer.textContent = '+' + (d.avg_ecer || 0).toFixed(1).replace('.', ',') + '%';
+    if (elGrosir) elGrosir.textContent = '+' + (d.avg_grosir || 0).toFixed(1).replace('.', ',') + '%';
+    if (elCombined) elCombined.textContent = '+' + (d.avg_combined || 0).toFixed(1).replace('.', ',') + '%';
+    if (elSpread) elSpread.textContent = '+' + spread.toFixed(1).replace('.', ',') + '%';
+    if (elCntEcer) elCntEcer.textContent = fmtNumber(d.ecer_count || 0);
+    if (elCntGrosir) elCntGrosir.textContent = fmtNumber(d.grosir_count || 0);
+}
 
 function toggleKpiPrivacy(type, event) {
     if (event) {

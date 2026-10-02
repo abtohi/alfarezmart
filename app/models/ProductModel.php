@@ -989,4 +989,118 @@ class ProductModel extends Model
         
         return $stats;
     }
+
+    /**
+     * Dapatkan statistik persentase markup seluruh produk aktif:
+     * - Satuan Dasar (Level 1): Ecer, Grosir, Gabungan
+     * - Semua Satuan Kemasan: Ecer, Grosir, Gabungan
+     * - Top Kategori dengan markup rata-rata
+     */
+    public function getMarkupStats()
+    {
+        $sqlCombined = "
+            SELECT 
+                -- Level 1 (Satuan Dasar / Satuan Terkecil)
+                COUNT(DISTINCT CASE WHEN pp.level = 1 THEN p.id END) as l1_total_products,
+                COUNT(CASE WHEN pp.level = 1 AND pp.buy_price > 0 AND pp.sell_price_retail > 0 THEN 1 END) as l1_ecer_count,
+                ROUND(AVG(CASE WHEN pp.level = 1 AND pp.buy_price > 0 AND pp.sell_price_retail > 0 
+                    THEN ((pp.sell_price_retail - pp.buy_price) / pp.buy_price * 100) END), 2) as l1_avg_ecer,
+                COUNT(CASE WHEN pp.level = 1 AND pp.buy_price > 0 AND pp.sell_price_wholesale > 0 THEN 1 END) as l1_grosir_count,
+                ROUND(AVG(CASE WHEN pp.level = 1 AND pp.buy_price > 0 AND pp.sell_price_wholesale > 0 
+                    THEN ((pp.sell_price_wholesale - pp.buy_price) / pp.buy_price * 100) END), 2) as l1_avg_grosir,
+                ROUND(
+                    (
+                        SUM(CASE WHEN pp.level = 1 AND pp.buy_price > 0 AND pp.sell_price_retail > 0 THEN ((pp.sell_price_retail - pp.buy_price) / pp.buy_price * 100) ELSE 0 END)
+                        +
+                        SUM(CASE WHEN pp.level = 1 AND pp.buy_price > 0 AND pp.sell_price_wholesale > 0 THEN ((pp.sell_price_wholesale - pp.buy_price) / pp.buy_price * 100) ELSE 0 END)
+                    ) / NULLIF(
+                        COUNT(CASE WHEN pp.level = 1 AND pp.buy_price > 0 AND pp.sell_price_retail > 0 THEN 1 END)
+                        +
+                        COUNT(CASE WHEN pp.level = 1 AND pp.buy_price > 0 AND pp.sell_price_wholesale > 0 THEN 1 END),
+                        0
+                    ),
+                    2
+                ) as l1_avg_combined,
+                
+                -- All Packagings (Semua Satuan Kemasan)
+                COUNT(pp.id) as all_total_packagings,
+                COUNT(CASE WHEN pp.buy_price > 0 AND pp.sell_price_retail > 0 THEN 1 END) as all_ecer_count,
+                ROUND(AVG(CASE WHEN pp.buy_price > 0 AND pp.sell_price_retail > 0 
+                    THEN ((pp.sell_price_retail - pp.buy_price) / pp.buy_price * 100) END), 2) as all_avg_ecer,
+                COUNT(CASE WHEN pp.buy_price > 0 AND pp.sell_price_wholesale > 0 THEN 1 END) as all_grosir_count,
+                ROUND(AVG(CASE WHEN pp.buy_price > 0 AND pp.sell_price_wholesale > 0 
+                    THEN ((pp.sell_price_wholesale - pp.buy_price) / pp.buy_price * 100) END), 2) as all_avg_grosir,
+                ROUND(
+                    (
+                        SUM(CASE WHEN pp.buy_price > 0 AND pp.sell_price_retail > 0 THEN ((pp.sell_price_retail - pp.buy_price) / pp.buy_price * 100) ELSE 0 END)
+                        +
+                        SUM(CASE WHEN pp.buy_price > 0 AND pp.sell_price_wholesale > 0 THEN ((pp.sell_price_wholesale - pp.buy_price) / pp.buy_price * 100) ELSE 0 END)
+                    ) / NULLIF(
+                        COUNT(CASE WHEN pp.buy_price > 0 AND pp.sell_price_retail > 0 THEN 1 END)
+                        +
+                        COUNT(CASE WHEN pp.buy_price > 0 AND pp.sell_price_wholesale > 0 THEN 1 END),
+                        0
+                    ),
+                    2
+                ) as all_avg_combined
+            FROM products p
+            JOIN product_packagings pp ON pp.product_id = p.id
+            WHERE p.is_active = 1
+        ";
+        $stmt = $this->db->query($sqlCombined);
+        $res = $stmt ? ($stmt->fetch(PDO::FETCH_ASSOC) ?: []) : [];
+
+        // Breakdown top 6 categories
+        $sqlCat = "
+            SELECT 
+                COALESCE(c.name, 'Umum / Lainnya') as category_name,
+                COUNT(DISTINCT p.id) as total_products,
+                ROUND(AVG(CASE WHEN pp.buy_price > 0 AND pp.sell_price_retail > 0 
+                    THEN ((pp.sell_price_retail - pp.buy_price) / pp.buy_price * 100) END), 1) as avg_mkp_ecer,
+                ROUND(AVG(CASE WHEN pp.buy_price > 0 AND pp.sell_price_wholesale > 0 
+                    THEN ((pp.sell_price_wholesale - pp.buy_price) / pp.buy_price * 100) END), 1) as avg_mkp_grosir,
+                ROUND(
+                    (
+                        SUM(CASE WHEN pp.buy_price > 0 AND pp.sell_price_retail > 0 THEN ((pp.sell_price_retail - pp.buy_price) / pp.buy_price * 100) ELSE 0 END)
+                        +
+                        SUM(CASE WHEN pp.buy_price > 0 AND pp.sell_price_wholesale > 0 THEN ((pp.sell_price_wholesale - pp.buy_price) / pp.buy_price * 100) ELSE 0 END)
+                    ) / NULLIF(
+                        COUNT(CASE WHEN pp.buy_price > 0 AND pp.sell_price_retail > 0 THEN 1 END)
+                        +
+                        COUNT(CASE WHEN pp.buy_price > 0 AND pp.sell_price_wholesale > 0 THEN 1 END),
+                        0
+                    ),
+                    1
+                ) as avg_mkp_combined
+            FROM products p
+            JOIN product_packagings pp ON pp.product_id = p.id AND pp.level = 1
+            LEFT JOIN categories c ON c.id = p.category_id
+            WHERE p.is_active = 1
+            GROUP BY category_name
+            ORDER BY total_products DESC
+            LIMIT 6
+        ";
+        $catStmt = $this->db->query($sqlCat);
+        $catStats = $catStmt ? ($catStmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+
+        return [
+            'level1' => [
+                'total_products' => (int)($res['l1_total_products'] ?? 0),
+                'ecer_count'     => (int)($res['l1_ecer_count'] ?? 0),
+                'avg_ecer'       => (float)($res['l1_avg_ecer'] ?? 0),
+                'grosir_count'   => (int)($res['l1_grosir_count'] ?? 0),
+                'avg_grosir'     => (float)($res['l1_avg_grosir'] ?? 0),
+                'avg_combined'   => (float)($res['l1_avg_combined'] ?? 0),
+            ],
+            'all_packagings' => [
+                'total_packagings' => (int)($res['all_total_packagings'] ?? 0),
+                'ecer_count'       => (int)($res['all_ecer_count'] ?? 0),
+                'avg_ecer'         => (float)($res['all_avg_ecer'] ?? 0),
+                'grosir_count'     => (int)($res['all_grosir_count'] ?? 0),
+                'avg_grosir'       => (float)($res['all_avg_grosir'] ?? 0),
+                'avg_combined'     => (float)($res['all_avg_combined'] ?? 0),
+            ],
+            'categories' => $catStats,
+        ];
+    }
 }
