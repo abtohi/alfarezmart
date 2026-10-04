@@ -998,6 +998,15 @@ class ProductModel extends Model
      */
     public function getMarkupStats()
     {
+        // Cache hasil di memory untuk satu request HTTP (static variable).
+        // Query ini berat (full-scan + multi-aggregation JOIN), jadi cukup
+        // dijalankan sekali per request meskipun dipanggil dari beberapa tempat
+        // (DashboardController::index, DashboardController::summary, FinanceController).
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+
         $sqlCombined = "
             SELECT 
                 -- Level 1 (Satuan Dasar / Satuan Terkecil)
@@ -1083,7 +1092,7 @@ class ProductModel extends Model
         $catStmt = $this->db->query($sqlCat);
         $catStats = $catStmt ? ($catStmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
 
-        return [
+        $cached = [
             'level1' => [
                 'total_products' => (int)($res['l1_total_products'] ?? 0),
                 'ecer_count'     => (int)($res['l1_ecer_count'] ?? 0),
@@ -1102,5 +1111,6 @@ class ProductModel extends Model
             ],
             'categories' => $catStats,
         ];
+        return $cached;
     }
 }
