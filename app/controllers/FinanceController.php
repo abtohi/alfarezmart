@@ -24,7 +24,7 @@ class FinanceController extends Controller
         }
 
         $this->view('finance.index', [
-            'title' => 'Keuangan Harian & Laporan Omzet',
+            'title' => 'Catatan Keuangan & Arus Kas',
             'activeNav' => 'home', // Keeps home menu active in bottom-nav
             'combinedMarkup' => $combinedMarkup,
             'markupStats' => $markupStats,

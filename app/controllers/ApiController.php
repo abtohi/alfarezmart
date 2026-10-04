@@ -4123,6 +4123,100 @@ class ApiController extends Controller
         }
     }
 
+    /**
+     * API Grafik Arus Kas: Pemasukan vs Pengeluaran per hari dari finance_logs.
+     * Sumber data: catatan manual (bukan dari POS), sehingga 100% akurat.
+     * Field tambahan `omzet` = pemasukan dengan detail='Omzet' (jurnal omzet manual).
+     */
+    public function getArusKas()
+    {
+        $this->requireSuperadmin();
+        try {
+            $startDate = isset($_GET['start_date']) ? trim($_GET['start_date']) : date('Y-m-d', strtotime('-13 days'));
+            $endDate   = isset($_GET['end_date'])   ? trim($_GET['end_date'])   : date('Y-m-d');
+
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) $startDate = date('Y-m-d', strtotime('-13 days'));
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate))   $endDate   = date('Y-m-d');
+            if ($startDate > $endDate) { $tmp = $startDate; $startDate = $endDate; $endDate = $tmp; }
+
+            // Cap at 366 days
+            $startTs = strtotime($startDate);
+            $endTs   = strtotime($endDate);
+            if (($endTs - $startTs) / 86400 > 365) {
+                $startDate = date('Y-m-d', strtotime('-365 days', $endTs));
+                $startTs   = strtotime($startDate);
+            }
+
+            $db = Database::getInstance()->getConnection();
+
+            // Agregasi per hari dari finance_logs
+            $stmt = $db->prepare("
+                SELECT
+                    DATE(log_date) as date,
+                    COALESCE(SUM(CASE WHEN category = 'Pemasukan' THEN amount ELSE 0 END), 0) as income,
+                    COALESCE(SUM(CASE WHEN category = 'Pengeluaran' THEN amount ELSE 0 END), 0) as expense,
+                    COALESCE(SUM(CASE WHEN category = 'Pemasukan' AND LOWER(TRIM(detail)) = 'omzet' THEN amount ELSE 0 END), 0) as omzet,
+                    COUNT(CASE WHEN category = 'Pemasukan' THEN 1 END) as income_count,
+                    COUNT(CASE WHEN category = 'Pengeluaran' THEN 1 END) as expense_count
+                FROM finance_logs
+                WHERE DATE(log_date) BETWEEN :s AND :e
+                GROUP BY DATE(log_date)
+                ORDER BY date ASC
+            ");
+            $stmt->execute([':s' => $startDate, ':e' => $endDate]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Map ke date
+            $map = [];
+            foreach ($rows as $r) { $map[$r['date']] = $r; }
+
+            // Build series lengkap (satu entry per hari meski tidak ada data)
+            $series = [];
+            $totalIncome  = 0;
+            $totalExpense = 0;
+            $totalIncomeCount  = 0;
+            $totalExpenseCount = 0;
+            $cur = $startTs;
+            while ($cur <= $endTs) {
+                $d = date('Y-m-d', $cur);
+                $inc  = (float)($map[$d]['income']  ?? 0);
+                $exp  = (float)($map[$d]['expense'] ?? 0);
+                $omz  = (float)($map[$d]['omzet']   ?? 0);
+                $ic   = (int)($map[$d]['income_count']  ?? 0);
+                $ec   = (int)($map[$d]['expense_count'] ?? 0);
+                $totalIncome  += $inc;
+                $totalExpense += $exp;
+                $totalIncomeCount  += $ic;
+                $totalExpenseCount += $ec;
+                $series[] = [
+                    'date'          => $d,
+                    'income'        => $inc,
+                    'expense'       => $exp,
+                    'omzet'         => $omz,
+                    'net'           => $inc - $exp,
+                    'income_count'  => $ic,
+                    'expense_count' => $ec,
+                ];
+                $cur = strtotime('+1 day', $cur);
+            }
+
+            $this->json([
+                'success'    => true,
+                'start_date' => $startDate,
+                'end_date'   => $endDate,
+                'summary'    => [
+                    'total_income'         => $totalIncome,
+                    'total_expense'        => $totalExpense,
+                    'net'                  => $totalIncome - $totalExpense,
+                    'income_count'         => $totalIncomeCount,
+                    'expense_count'        => $totalExpenseCount,
+                ],
+                'series' => $series,
+            ]);
+        } catch (\Exception $e) {
+            $this->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
     public function createFinanceLog()
     {
         $this->requireSuperadmin();
