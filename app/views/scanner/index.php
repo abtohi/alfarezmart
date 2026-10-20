@@ -4,40 +4,513 @@ $scannerUserLevel = $_SESSION['user_level'] ?? '';
 $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
 ?>
 <div class="page-section" style="padding-bottom:100px;">
-    <!-- Modern Header -->
-    <div class="scanner-header-card" style="background: linear-gradient(135deg, var(--surface-1), var(--surface-2)); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 22px 20px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
-        <div style="margin-bottom: 14px;">
-            <h2 class="scanner-page-title" style="font-size: 1.4rem; font-weight: 800; margin-bottom: 4px; color: var(--text-primary); letter-spacing: -0.3px; display:flex; align-items:center; gap:8px;">
-                <i class="bi bi-upc-scan text-primary"></i> Cek Harga &amp; Scan Barcode
-            </h2>
-            <p class="scanner-page-subtitle" style="color: var(--text-muted); font-size: 12px; margin: 0;">Scan barcode produk atau ketik nama/kode barcode untuk cek harga &amp; stok real-time</p>
-        </div>
+    <!-- Modern Hero Scanner Terminal Card -->
+    <div class="scanner-hero-card">
+        <div class="scanner-hero-glow"></div>
+        <div class="scanner-hero-inner">
+            <!-- Top Status Row -->
+            <div class="scanner-status-row">
+                <div class="scanner-live-badge">
+                    <span class="scanner-pulse-dot"></span>
+                    <span>SCANNER ENGINE ACTIVE</span>
+                </div>
+                <div class="scanner-hardware-pill" onclick="document.getElementById('barcodeInput').focus()" title="Tekan F2 untuk fokus scanner">
+                    <i class="bi bi-bluetooth text-info"></i>
+                    <span>USB / Bluetooth Gun Ready</span>
+                    <kbd class="scanner-kbd">F2</kbd>
+                </div>
+            </div>
 
-        <!-- Manual Input Bar with Camera Trigger Icon -->
-        <div style="position: relative;">
-            <div class="scanner-search-bar" style="background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 4px 6px 4px 14px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-                <i class="bi bi-upc-scan" onclick="openGlobalScanner()" style="color: var(--primary); font-size: 1.3rem; cursor: pointer;" title="Klik ikon barcode ini untuk Buka Kamera Scanner"></i>
-                <input type="text" id="barcodeInput" placeholder="Ketik nama produk atau scan kode barcode..." 
-                       style="flex:1; border:none; background:transparent; padding:10px 0; color:var(--text-primary); font-size:13px; outline:none; font-family: var(--font-family);" 
+            <!-- Title & Subtitle -->
+            <div class="scanner-headline-wrap">
+                <h1 class="scanner-page-title">
+                    <span class="scanner-icon-badge"><i class="bi bi-upc-scan"></i></span>
+                    <span class="scanner-title-text">Cek Harga &amp; Scan Barcode</span>
+                </h1>
+                <p class="scanner-page-subtitle">
+                    Pindai barcode fisik atau ketik nama/kode barang untuk informasi harga eceran, grosir bertingkat, stok real-time, dan riwayat modal.
+                </p>
+            </div>
+
+            <!-- Sleek Input Capsule with Quick Action Buttons -->
+            <div class="scanner-search-capsule">
+                <div class="scanner-input-lens" onclick="openGlobalScanner()" title="Klik untuk Buka Kamera Scanner">
+                    <i class="bi bi-camera-fill"></i>
+                </div>
+                <input type="text" id="barcodeInput" 
+                       placeholder="Scan barcode USB/kamera atau ketik nama produk..." 
                        autocomplete="off" autofocus>
-                <button onclick="lookupBarcode()" class="scanner-search-btn" style="border:none; background:var(--primary); color:white; padding:9px 22px; border-radius: 8px; font-weight:700; font-size: 12px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
-                    <i class="bi bi-search"></i> Cari
+                
+                <button type="button" id="scannerClearBtn" class="scanner-clear-btn" onclick="clearScannerSearch()" title="Bersihkan input" style="display:none;">
+                    <i class="bi bi-x-circle-fill"></i>
+                </button>
+
+                <button type="button" onclick="openGlobalScanner()" class="scanner-cam-btn" title="Buka Kamera Scanner">
+                    <i class="bi bi-camera-video-fill"></i>
+                    <span class="btn-text">Kamera</span>
+                </button>
+
+                <button type="button" onclick="lookupBarcode()" class="scanner-submit-btn">
+                    <i class="bi bi-search"></i>
+                    <span class="btn-text">Cari</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Desktop Hardware Scanner Hint -->
-    <div class="desktop-scanner-hint" style="background:var(--surface-1); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:10px 14px; margin-bottom:20px; font-size:12px; color:var(--text-muted); display:flex; align-items:center; gap:8px;">
-        <i class="bi bi-bluetooth text-info" style="font-size:1.1rem;"></i>
-        <span>Hubungkan scanner barcode USB/Bluetooth — barcode otomatis terdeteksi. Tekan <kbd style="background:var(--surface-2);padding:2px 6px;border-radius:4px;font-size:0.75rem;border:1px solid var(--border-color);color:var(--text-primary);">F2</kbd> untuk fokus ke pencarian.</span>
-    </div>
-
-    <!-- Result Area (3 Split Columns Grid on Desktop or Rich Split Detail View) -->
+    <!-- Result Area (Empty State Hub, Multiple Results, or Single Product Detail) -->
     <div id="scanResult"></div>
 </div>
 
 <style>
+/* ==========================================================================
+   ALFAREZMAKT SCANNER - LUXURY RETAIL UI & HIGH-RESPONSIVE STYLING (v2.0)
+   ========================================================================== */
+
+/* Hero Terminal Card */
+.scanner-hero-card {
+    position: relative;
+    background: linear-gradient(135deg, var(--surface-1) 0%, var(--surface-2) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg, 20px);
+    padding: 24px 26px;
+    margin-bottom: 22px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+.scanner-hero-glow {
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+    border-radius: 50%;
+}
+.scanner-hero-inner {
+    position: relative;
+    z-index: 2;
+}
+
+/* Status Row */
+.scanner-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.scanner-live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    text-transform: uppercase;
+}
+.scanner-pulse-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: scannerPulse 1.8s infinite;
+}
+@keyframes scannerPulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.scanner-hardware-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 11px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.scanner-hardware-pill:hover {
+    border-color: var(--primary);
+    color: var(--text-primary);
+}
+.scanner-kbd {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Headline */
+.scanner-headline-wrap {
+    margin-bottom: 18px;
+}
+.scanner-page-title {
+    font-size: 1.45rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+    letter-spacing: -0.4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.scanner-icon-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary, #3b82f6), #6366f1);
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    flex-shrink: 0;
+}
+.scanner-page-subtitle {
+    color: var(--text-muted);
+    font-size: 12.5px;
+    margin: 0;
+    line-height: 1.45;
+}
+
+/* Modern Input Capsule */
+.scanner-search-capsule {
+    background: var(--surface-1);
+    border: 1.5px solid var(--border-color);
+    border-radius: 14px;
+    padding: 6px 8px 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+    transition: all 0.25s ease;
+}
+.scanner-search-capsule:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), 0 8px 24px rgba(0, 0, 0, 0.07);
+}
+.scanner-input-lens {
+    color: var(--primary);
+    font-size: 1.25rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+}
+.scanner-input-lens:hover {
+    transform: scale(1.15);
+}
+.scanner-search-capsule input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 8px 0;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    outline: none;
+    font-family: inherit;
+}
+.scanner-search-capsule input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.75;
+}
+
+.scanner-clear-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 4px;
+    display: inline-flex;
+    align-items: center;
+    transition: color 0.15s;
+}
+.scanner-clear-btn:hover {
+    color: var(--danger, #ef4444);
+}
+
+.scanner-cam-btn {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(59, 130, 246, 0.08));
+    color: var(--primary, #3b82f6);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: 10px;
+    padding: 9px 15px;
+    font-weight: 700;
+    font-size: 12.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+.scanner-cam-btn:hover {
+    background: var(--primary, #3b82f6);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.scanner-submit-btn {
+    background: linear-gradient(135deg, var(--primary, #3b82f6), #4f46e5);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 9px 20px;
+    font-weight: 700;
+    font-size: 12.5px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.25);
+    white-space: nowrap;
+}
+.scanner-submit-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(99, 102, 241, 0.38);
+}
+
+/* ==========================================================================
+   INTERACTIVE EMPTY STATE HUB (Cyber Holographic Viewfinder)
+   ========================================================================== */
+.scanner-hub-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg, 20px);
+    padding: 36px 24px;
+    text-align: center;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.03);
+    margin-bottom: 24px;
+}
+
+.scanner-viewfinder-wrapper {
+    margin-bottom: 30px;
+}
+.scanner-viewfinder-reticle {
+    position: relative;
+    width: 200px;
+    height: 130px;
+    margin: 0 auto 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, rgba(99, 102, 241, 0.04) 0%, rgba(99, 102, 241, 0.01) 100%);
+    border-radius: 16px;
+    overflow: hidden;
+}
+.corner {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    border-color: var(--primary, #6366f1);
+    border-style: solid;
+}
+.corner-tl { top: 8px; left: 8px; border-width: 3px 0 0 3px; border-top-left-radius: 6px; }
+.corner-tr { top: 8px; right: 8px; border-width: 3px 3px 0 0; border-top-right-radius: 6px; }
+.corner-bl { bottom: 8px; left: 8px; border-width: 0 0 3px 3px; border-bottom-left-radius: 6px; }
+.corner-br { bottom: 8px; right: 8px; border-width: 0 3px 3px 0; border-bottom-right-radius: 6px; }
+
+.scanner-laser-beam {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    height: 2.5px;
+    background: linear-gradient(90deg, transparent, #ef4444, #f43f5e, #ef4444, transparent);
+    box-shadow: 0 0 14px 2px rgba(239, 68, 68, 0.85);
+    border-radius: 2px;
+    animation: laserScanMotion 2.4s ease-in-out infinite;
+    z-index: 3;
+}
+@keyframes laserScanMotion {
+    0%, 100% { top: 18%; opacity: 0.35; }
+    50% { top: 80%; opacity: 1; }
+}
+
+.scanner-barcode-silhouette {
+    color: var(--text-muted);
+    opacity: 0.35;
+    transition: opacity 0.3s;
+}
+.scanner-viewfinder-reticle:hover .scanner-barcode-silhouette {
+    opacity: 0.6;
+}
+
+.scanner-hub-label h3 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    letter-spacing: -0.2px;
+}
+.scanner-hub-label p {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+/* 3 Features Action Grid */
+.scanner-features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    max-width: 900px;
+    margin: 0 auto 28px;
+    text-align: left;
+}
+.scanner-feature-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md, 14px);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.25s ease;
+    cursor: pointer;
+}
+.scanner-feature-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--primary);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+}
+.sfc-icon-wrapper {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    margin-bottom: 12px;
+}
+.sfc-icon-wrapper.camera {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(59, 130, 246, 0.1));
+    color: #6366f1;
+}
+.sfc-icon-wrapper.hardware {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.1));
+    color: #10b981;
+}
+.sfc-icon-wrapper.database {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.1));
+    color: #f59e0b;
+}
+
+.sfc-content h4 {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+.sfc-content p {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    margin: 0 0 12px;
+    line-height: 1.4;
+}
+
+.btn-sfc {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--primary);
+}
+.badge-sfc-ready {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 3px 9px;
+    border-radius: 6px;
+}
+.badge-sfc-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+    padding: 3px 9px;
+    border-radius: 6px;
+}
+
+/* Quick Search Suggestions */
+.scanner-quick-search-box {
+    border-top: 1px dashed var(--border-color);
+    padding-top: 20px;
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.sqs-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.sqs-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.sqs-chip {
+    background: var(--surface-2);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 9999px;
+    padding: 4px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.sqs-chip:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   SEARCH RESULTS GRID (Multiple Results)
+   ========================================================================== */
 .scan-results-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -57,7 +530,7 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
 .scan-result-card {
     background: var(--surface-1);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-lg, 16px);
     padding: 16px;
     display: flex;
     flex-direction: column;
@@ -71,14 +544,13 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
 .scan-result-card:hover {
     transform: translateY(-4px);
     border-color: var(--primary) !important;
-    box-shadow: 0 12px 32px rgba(0,0,0,0.2) !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.12) !important;
 }
 
-/* Large E-Commerce Showcase Stage */
 .scan-card-image-stage {
     width: 100%;
     height: 180px;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-md, 12px);
     background: var(--surface-2);
     border: 1px solid var(--border-color);
     display: flex;
@@ -101,7 +573,7 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
 .scan-card-no-image {
     font-size: 3.2rem;
     color: var(--primary);
-    opacity: 0.65;
+    opacity: 0.5;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -121,10 +593,10 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
     margin-bottom: 6px;
 }
 .scan-pill-badge {
-    font-size: 9px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 6px;
     display: inline-block;
 }
 .scan-pill-badge.brand {
@@ -146,32 +618,51 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
     border-radius: 4px;
 }
 
-/* Mobile Responsive Detail View Styling (Max-Width 991.98px) */
+/* ==========================================================================
+   MOBILE RESPONSIVENESS (Max-Width 991.98px)
+   ========================================================================== */
 @media (max-width: 991.98px) {
-    /* Page Header Card Mobile */
-    .scanner-header-card {
-        padding: 14px 16px !important;
-        margin-bottom: 14px !important;
+    .scanner-hero-card {
+        padding: 18px 16px !important;
+        margin-bottom: 16px !important;
+        border-radius: 16px !important;
     }
     .scanner-page-title {
-        font-size: 1.05rem !important;
-        margin-bottom: 2px !important;
-        letter-spacing: -0.2px !important;
+        font-size: 1.18rem !important;
+        gap: 8px !important;
+    }
+    .scanner-icon-badge {
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 1rem !important;
     }
     .scanner-page-subtitle {
-        font-size: 10px !important;
-        line-height: 1.35 !important;
+        font-size: 11px !important;
     }
-    .scanner-search-bar {
-        padding: 3px 4px 3px 10px !important;
+    .scanner-search-capsule {
+        padding: 4px 6px 4px 10px !important;
         gap: 6px !important;
     }
-    .scanner-search-btn {
+    .scanner-search-capsule input {
+        font-size: 13px !important;
+    }
+    .scanner-cam-btn {
+        padding: 7px 11px !important;
+        font-size: 11px !important;
+    }
+    .scanner-submit-btn {
         padding: 7px 14px !important;
         font-size: 11px !important;
     }
+    .scanner-features-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+    .scanner-hub-card {
+        padding: 24px 16px !important;
+    }
 
-    /* Back Button Bar Mobile & Desktop Side-by-Side */
+    /* Back Button Bar Mobile */
     .scanner-back-btn-wrapper {
         display: flex !important;
         flex-direction: row !important;
@@ -187,7 +678,7 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
         white-space: nowrap !important;
         flex-shrink: 0 !important;
         font-size: 11px !important;
-        padding: 6px 10px !important;
+        padding: 6px 12px !important;
         border-radius: 8px !important;
     }
     .scanner-back-keyword {
@@ -196,30 +687,25 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
-        max-width: 52% !important;
+        max-width: 55% !important;
         color: var(--text-muted) !important;
-        display: inline-block !important;
     }
 
-    /* Mobile Flex Wrapper - Align Left & Right Borders 100% with Header Card */
+    /* Mobile Flex Wrapper */
     .scan-mobile-flex-wrapper {
         display: flex !important;
         flex-direction: column !important;
         gap: 14px !important;
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-        padding-left: 0 !important;
-        padding-right: 0 !important;
     }
     .scan-mobile-flex-col {
         display: contents !important;
     }
-    .scan-m-order-1 { order: 1 !important; margin-bottom: 0 !important; margin-top: 0 !important; }
-    .scan-m-order-2 { order: 2 !important; margin-bottom: 0 !important; margin-top: 0 !important; }
-    .scan-m-order-3 { order: 3 !important; margin-bottom: 0 !important; margin-top: 0 !important; }
-    .scan-m-order-4 { order: 4 !important; margin-bottom: 0 !important; margin-top: 0 !important; }
-    .scan-m-order-5 { order: 5 !important; margin-bottom: 0 !important; margin-top: 0 !important; }
-    .scan-m-order-6 { order: 6 !important; margin-bottom: 0 !important; margin-top: 0 !important; }
+    .scan-m-order-1 { order: 1 !important; }
+    .scan-m-order-2 { order: 2 !important; }
+    .scan-m-order-3 { order: 3 !important; }
+    .scan-m-order-4 { order: 4 !important; }
+    .scan-m-order-5 { order: 5 !important; }
+    .scan-m-order-6 { order: 6 !important; }
 
     /* Photo Stage Mobile */
     .scanner-detail-photo-stage {
@@ -229,24 +715,16 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
     .scanner-detail-photo-stage img {
         max-height: 210px !important;
     }
-    .scanner-detail-photo-card {
-        margin-bottom: 0 !important;
-    }
 
-    /* Product Title & Header Mobile */
+    /* Header & Pricing Mobile */
     .scanner-detail-header-card {
         padding: 16px !important;
-        margin-bottom: 0 !important;
     }
     .scanner-detail-prod-title {
         font-size: 1.15rem !important;
-        margin-bottom: 8px !important;
     }
-
-    /* Packaging & Pricing Cards Mobile */
     .scanner-detail-pkg-card {
         padding: 16px !important;
-        margin-bottom: 0 !important;
     }
     .scanner-pkg-card {
         padding: 12px !important;
@@ -264,28 +742,16 @@ $scannerIsSuperadmin = $scannerUserLevel === 'superadmin';
     .scanner-modal-text {
         font-size: 11px !important;
         font-weight: 700 !important;
-        color: var(--text-muted) !important;
-        opacity: 0.8 !important;
     }
-
-    /* Info & History Cards Mobile */
     .scanner-detail-info-card {
         padding: 16px !important;
-        margin-bottom: 0 !important;
-        margin-top: 0 !important;
-    }
-    .scanner-detail-lastpurchase-card {
-        padding: 12px 14px !important;
-        margin-bottom: 0 !important;
     }
     .scanner-detail-supplier-card {
         padding: 16px !important;
-        margin-bottom: 0 !important;
-        overflow: hidden !important;
-        max-width: 100% !important;
     }
 }
 </style>
+
 
 <script>
 const SCANNER_IS_SUPERADMIN = <?= $scannerIsSuperadmin ? 'true' : 'false' ?>;
@@ -297,13 +763,147 @@ let lastSearchResultsData = null;
 let _scannerJustSearched = false;
 let _scannerAutoLookupTimer = null;
 
+function renderEmptyStateHub() {
+    const resultDiv = document.getElementById('scanResult');
+    if (!resultDiv) return;
+    resultDiv.innerHTML = `
+        <div id="scannerEmptyState" class="scanner-hub-card">
+            <div class="scanner-viewfinder-wrapper">
+                <div class="scanner-viewfinder-reticle">
+                    <div class="corner corner-tl"></div>
+                    <div class="corner corner-tr"></div>
+                    <div class="corner corner-bl"></div>
+                    <div class="corner corner-br"></div>
+                    <div class="scanner-laser-beam"></div>
+                    <div class="scanner-barcode-silhouette">
+                        <svg viewBox="0 0 160 80" width="140" height="70" fill="currentColor">
+                            <rect x="0" y="5" width="4" height="70" rx="1"/>
+                            <rect x="7" y="5" width="8" height="70" rx="1"/>
+                            <rect x="18" y="5" width="3" height="70" rx="1"/>
+                            <rect x="24" y="5" width="10" height="70" rx="1"/>
+                            <rect x="37" y="5" width="5" height="70" rx="1"/>
+                            <rect x="45" y="5" width="3" height="70" rx="1"/>
+                            <rect x="51" y="5" width="8" height="70" rx="1"/>
+                            <rect x="62" y="5" width="4" height="70" rx="1"/>
+                            <rect x="69" y="5" width="12" height="70" rx="1"/>
+                            <rect x="84" y="5" width="4" height="70" rx="1"/>
+                            <rect x="91" y="5" width="6" height="70" rx="1"/>
+                            <rect x="100" y="5" width="10" height="70" rx="1"/>
+                            <rect x="113" y="5" width="3" height="70" rx="1"/>
+                            <rect x="119" y="5" width="8" height="70" rx="1"/>
+                            <rect x="130" y="5" width="4" height="70" rx="1"/>
+                            <rect x="137" y="5" width="10" height="70" rx="1"/>
+                            <rect x="150" y="5" width="4" height="70" rx="1"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="scanner-hub-label">
+                    <h3>Siap Memindai Produk</h3>
+                    <p>Arahkan barcode ke scanner fisik USB/Bluetooth, gunakan kamera HP, atau ketik nama barang</p>
+                </div>
+            </div>
+
+            <div class="scanner-features-grid">
+                <div class="scanner-feature-card" onclick="openGlobalScanner()">
+                    <div class="sfc-icon-wrapper camera">
+                        <i class="bi bi-camera-video-fill"></i>
+                    </div>
+                    <div class="sfc-content">
+                        <h4>Kamera Scanner HP</h4>
+                        <p>Gunakan kamera smartphone atau webcam laptop untuk membaca barcode fisik seketika</p>
+                    </div>
+                    <div class="sfc-action">
+                        <span class="btn-sfc">Buka Kamera <i class="bi bi-arrow-right"></i></span>
+                    </div>
+                </div>
+
+                <div class="scanner-feature-card" onclick="document.getElementById('barcodeInput').focus()">
+                    <div class="sfc-icon-wrapper hardware">
+                        <i class="bi bi-upc-scan"></i>
+                    </div>
+                    <div class="sfc-content">
+                        <h4>Scanner Barcode Standby</h4>
+                        <p>Scanner barcode USB/Bluetooth otomatis terdeteksi instan. Tekan tombol <kbd class="scanner-kbd">F2</kbd> untuk fokus</p>
+                    </div>
+                    <div class="sfc-action">
+                        <span class="badge-sfc-ready"><i class="bi bi-check-circle-fill"></i> Standby 0ms</span>
+                    </div>
+                </div>
+
+                <div class="scanner-feature-card" onclick="document.getElementById('barcodeInput').focus()">
+                    <div class="sfc-icon-wrapper database">
+                        <i class="bi bi-layers-half"></i>
+                    </div>
+                    <div class="sfc-content">
+                        <h4>Multi-Satuan &amp; Grosir</h4>
+                        <p>Cek harga eceran, grosir bertingkat, stok real-time, dan kalkulasi profit modal secara presisi</p>
+                    </div>
+                    <div class="sfc-action">
+                        <span class="badge-sfc-info"><i class="bi bi-shield-check"></i> Akurat</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="scanner-quick-search-box">
+                <div class="sqs-title">
+                    <i class="bi bi-stars text-warning"></i>
+                    <span>Coba Pencarian Populer:</span>
+                </div>
+                <div class="sqs-chips">
+                    <button type="button" class="sqs-chip" onclick="quickSearchProduct('Minyak')">Minyak</button>
+                    <button type="button" class="sqs-chip" onclick="quickSearchProduct('Beras')">Beras</button>
+                    <button type="button" class="sqs-chip" onclick="quickSearchProduct('Gula')">Gula</button>
+                    <button type="button" class="sqs-chip" onclick="quickSearchProduct('Kecap')">Kecap</button>
+                    <button type="button" class="sqs-chip" onclick="quickSearchProduct('Susu')">Susu</button>
+                    <button type="button" class="sqs-chip" onclick="quickSearchProduct('Mie')">Mie</button>
+                    <button type="button" class="sqs-chip" onclick="quickSearchProduct('Sabun')">Sabun</button>
+                    <button type="button" class="sqs-chip" onclick="quickSearchProduct('Kopi')">Kopi</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function quickSearchProduct(term) {
+    const input = document.getElementById('barcodeInput');
+    if (input) {
+        input.value = term;
+        toggleClearButton();
+        lookupBarcode();
+    }
+}
+
+function clearScannerSearch() {
+    const input = document.getElementById('barcodeInput');
+    if (input) {
+        input.value = '';
+        input.focus();
+        toggleClearButton();
+    }
+    lastSearchKeyword = '';
+    lastSearchResultsData = null;
+    renderEmptyStateHub();
+}
+
+function toggleClearButton() {
+    const input = document.getElementById('barcodeInput');
+    const clearBtn = document.getElementById('scannerClearBtn');
+    if (clearBtn && input) {
+        clearBtn.style.display = input.value.trim().length > 0 ? 'inline-flex' : 'none';
+    }
+}
+
 async function lookupBarcode() {
     clearTimeout(scannerTimer);
     clearTimeout(_scannerAutoLookupTimer);
 
     const input = document.getElementById('barcodeInput');
     const code = input?.value?.trim();
-    if (!code) return;
+    toggleClearButton();
+    if (!code) {
+        renderEmptyStateHub();
+        return;
+    }
 
     lastSearchKeyword = code;
     _scannerJustSearched = true;
@@ -517,13 +1117,14 @@ function goBackToSearchResults() {
     if (lastSearchKeyword) {
         input.value = lastSearchKeyword;
     }
+    toggleClearButton();
     
     if (lastSearchResultsData && lastSearchResultsData.products && lastSearchResultsData.products.length > 1) {
         renderMultipleSearchResults(lastSearchResultsData.products, lastSearchResultsData.isOffline);
     } else if (lastSearchKeyword) {
         lookupBarcode();
     } else {
-        document.getElementById('scanResult').innerHTML = '';
+        renderEmptyStateHub();
     }
     input.focus();
 }
@@ -1135,7 +1736,13 @@ if (barcodeInpEl) {
 
     barcodeInpEl.addEventListener('input', (e) => {
         const val = barcodeInpEl.value.trim();
+        toggleClearButton();
         clearTimeout(scannerTimer);
+
+        if (val.length === 0) {
+            renderEmptyStateHub();
+            return;
+        }
 
         if (val.length < 2) {
             return;
@@ -1150,6 +1757,34 @@ if (barcodeInpEl) {
     // Auto-focus only on desktop (prevent opening mobile virtual keyboard automatically on page load)
     if (!('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
         barcodeInpEl.focus();
+    }
+}
+
+// Global F2 shortcut for instant hardware scanner or cashier focus
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'F2') {
+        e.preventDefault();
+        const input = document.getElementById('barcodeInput');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }
+});
+
+// Initial Page Load: Render Rich Empty State Hub if no initial query
+document.addEventListener('DOMContentLoaded', () => {
+    if (barcodeInpEl && barcodeInpEl.value.trim().length > 0) {
+        toggleClearButton();
+        lookupBarcode();
+    } else {
+        renderEmptyStateHub();
+    }
+});
+// Fallback if DOMContentLoaded has already fired
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    if (barcodeInpEl && barcodeInpEl.value.trim().length === 0) {
+        renderEmptyStateHub();
     }
 }
 </script>

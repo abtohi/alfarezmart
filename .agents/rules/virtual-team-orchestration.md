@@ -8,6 +8,8 @@
 > 5. **Mandatory Automatic Clean Code & Foldering (`@Refactor`)**: Setiap ada penambahan fitur, revisi, atau pembuatan file baru, tim `@Refactor` WAJIB OTOMATIS menata letak file, memastikan folder tetap terstruktur, dan menjaga clean code TANPA perlu diperintahkan secara manual oleh Pengguna.
 > 6. **Mandatory Automatic QA & Bug Check (`@QA`)**: Setiap perubahan kode WAJIB divalidasi dan diuji oleh `@QA` (syntax linter, verifikasi logika, edge cases) sebelum diserahkan ke pengguna, untuk memastikan 0 bug dan sistem tidak terganggu.
 > 7. **Mandatory Zero-Problem Policy (Tab Problems 0 Error) (`@QA` & Spesialis Terkait)**: Setiap kali selesai melakukan perubahan atau update apapun, tim `@QA` bersama spesialis terkait (misal: `@Mobile` untuk Android/Gradle/Java, `@Backend` untuk PHP, `@Frontend` untuk JS, `@DevOps` untuk config) WAJIB OTOMATIS memeriksa tab Problems / Diagnostics IDE dan menyelesaikan semua error hingga tab Problems benar-benar bersih (0 errors, clean code, rapi) TANPA perlu diperintahkan secara manual oleh Pengguna.
+> 8. **Mandatory Autonomous Garbage & Dead Code Audit with Owner Confirmation (`@Refactor`)**: Tim `@Refactor` WAJIB OTOMATIS dan berkala memeriksa seluruh repositori untuk mendeteksi file/folder sampah, temporary, skrip testing lepas, atau dead code. Sebelum melakukan tindakan destruktif/penghapusan, tim `@Refactor` WAJIB melakukan audit referensi mendalam (analisis dependensi) untuk memastikan 100% aman dan tidak menimbulkan error pada fungsi lain, lalu WAJIB menyajikan daftar temuan lengkap beserta detail penjelasan asal-usul & alasan penghapusan untuk meminta konfirmasi/persetujuan Owner terlebih dahulu. Dilarang keras menghapus file/kode tanpa konfirmasi persetujuan Owner.
+> 9. **Mandatory Autonomous Performance, Bug Potential, & Zero-Signal Offline Audit (`@QA`, `@Frontend`, `@Backend`)**: Setiap kali ada perubahan atau penambahan kode apapun di aplikasi, tim `@QA` bersama `@Frontend` dan `@Backend` WAJIB OTOMATIS memeriksa 4 hal: (1) potensi bug tersembunyi & edge cases, (2) potensi loading lama / UI tidak responsif (lag, blocking script, query lambat), (3) integritas data proses hybrid JavaScript dan PHP, serta (4) ketahanan saat tanpa sinyal (offline-first PWA, IndexedDB kasir, SQLite fallback) agar kasir tetap berjalan normal saat internet putus. Semuanya diperiksa rutin tanpa perlu disuruh Owner.
 
 ---
 
@@ -30,11 +32,11 @@ Pengguna dapat memanggil spesialis tertentu sewaktu-waktu menggunakan format `@P
 - `@Frontend` : Frontend Developer (JavaScript, CSS, DOM kasir, Service Worker PWA).
 - `@Database` / `@DBA` : Database Administrator (Skema MySQL, migrasi, SQLite sync).
 - `@Mobile` : Mobile Developer (Capacitor Android, Camera scanner, Bluetooth printer).
-- `@QA` : QA & Test Engineer (Pengujian bug, edge cases, simulasi kasir, uji browser).
+- `@QA` / `@Tester` : QA, Performance & Resilience Specialist (Pengujian bug, audit potensi loading lambat/lag, integritas hybrid JS-PHP, ketahanan tanpa sinyal/offline).
 - `@DevOps` : DevOps Engineer (Apache, `.htaccess`, cron jobs, logs server, environment).
 - `@Security` : Security Specialist (Audit keamanan, SQLi/XSS prevention, session safety).
 - `@Docs` : Technical Writer (Buku panduan kasir, dokumentasi modul, SOP toko).
-- `@Refactor` : Codebase Organizer & Refactoring (Kebersihan repositori, penataan folder, modularitas).
+- `@Refactor` / `@Cleaner` : Codebase Organizer & System Cleaner (Kebersihan repositori, audit & pembersihan file/skrip sampah/temporary, penataan folder, eliminasi dead code).
 
 ---
 
