@@ -140,9 +140,12 @@ class AiChatController extends Controller
                 $messages[] = ['role' => $h['role'], 'content' => $h['content']];
             }
 
-            // 5. Agentic SQL Loop (max 3 passes)
+            // 5. Agentic SQL Loop (controlled execution budget to prevent Nginx 504 Gateway Time-out)
+            @set_time_limit(55);
+            $startTime   = microtime(true);
+            $maxBudget   = 38.0; // Max 38 seconds (safely under Nginx 60s timeout)
             $url         = 'https://openrouter.ai/api/v1/chat/completions';
-            $maxPasses   = 3;
+            $maxPasses   = 2;    // Max 2 passes (Pass 1: Query database, Pass 2: Final response)
             $currentPass = 1;
             $aiResponse  = '';
             $totalTokens = 0;
@@ -150,28 +153,48 @@ class AiChatController extends Controller
             // Highly responsive and intelligent models (benchmarked < 2s TTFT)
             $fallbackModels = [
                 $model,
+                'google/gemini-2.0-flash-exp:free',
+                'meta-llama/llama-3.3-70b-instruct:free',
+                'qwen/qwen-2.5-72b-instruct:free',
                 'cohere/north-mini-code:free',
-                'openrouter/free',
-                'deepseek/deepseek-chat',
             ];
             $fallbackModels = array_values(array_unique(array_filter($fallbackModels)));
 
             while ($currentPass <= $maxPasses) {
+                $elapsed = microtime(true) - $startTime;
+                $remainingBudget = $maxBudget - $elapsed;
+                if ($remainingBudget <= 6.0) {
+                    if (!empty($aiResponse) && stripos($aiResponse, '[SQL_QUERY]') === false) {
+                        break;
+                    }
+                    echo json_encode([
+                        'success' => false,
+                        'error'   => 'Server AI memerlukan waktu lebih lama dari biasanya untuk memproses data ini. Silakan coba tanyakan kembali.'
+                    ]);
+                    exit;
+                }
+
                 $rawContent = '';
                 $requestSuccess = false;
                 $lastErrMsg = '';
+                $curlTimeout = (int)min(12, max(5, floor($remainingBudget / 2)));
 
                 if ($chatProvider === 'gemini') {
                     $geminiContents = $this->buildGeminiContents($messages);
                     $geminiFallbackModels = array_values(array_unique(array_filter([
                         $this->normalizeGeminiModelName($model),
-                        'gemini-flash-latest',
-                        'gemini-3.8-flash',
-                        'gemini-3.5-flash',
-                        'gemini-pro-latest',
+                        'gemini-1.5-flash',
+                        'gemini-2.0-flash',
+                        'gemini-1.5-flash-8b',
+                        'gemini-1.5-pro',
                     ])));
 
                     foreach ($geminiFallbackModels as $currentModel) {
+                        // Check if time budget is running low before calling next model
+                        if ((microtime(true) - $startTime) > ($maxBudget - 5.0)) {
+                            break;
+                        }
+
                         $postData = [
                             'system_instruction' => [
                                 'parts' => [['text' => $systemPrompt]]
@@ -190,8 +213,8 @@ class AiChatController extends Controller
                             CURLOPT_RETURNTRANSFER => true,
                             CURLOPT_POST           => true,
                             CURLOPT_POSTFIELDS     => json_encode($postData),
-                            CURLOPT_CONNECTTIMEOUT => 5,
-                            CURLOPT_TIMEOUT        => 30,
+                            CURLOPT_CONNECTTIMEOUT => 3,
+                            CURLOPT_TIMEOUT        => $curlTimeout,
                             CURLOPT_SSL_VERIFYPEER => false,
                             CURLOPT_SSL_VERIFYHOST => 0,
                             CURLOPT_HTTPHEADER     => [
@@ -237,6 +260,11 @@ class AiChatController extends Controller
                     }
                 } else {
                     foreach ($fallbackModels as $currentModel) {
+                        // Check if time budget is running low before calling next model
+                        if ((microtime(true) - $startTime) > ($maxBudget - 5.0)) {
+                            break;
+                        }
+
                         $postData = [
                             'model'       => $currentModel,
                             'messages'    => $messages,
@@ -249,8 +277,8 @@ class AiChatController extends Controller
                             CURLOPT_RETURNTRANSFER => true,
                             CURLOPT_POST           => true,
                             CURLOPT_POSTFIELDS     => json_encode($postData),
-                            CURLOPT_CONNECTTIMEOUT => 5,
-                            CURLOPT_TIMEOUT        => 25,
+                            CURLOPT_CONNECTTIMEOUT => 3,
+                            CURLOPT_TIMEOUT        => $curlTimeout,
                             CURLOPT_SSL_VERIFYPEER => false,
                             CURLOPT_SSL_VERIFYHOST => 0,
                             CURLOPT_HTTPHEADER     => [
@@ -347,11 +375,15 @@ class AiChatController extends Controller
                     $messages[] = ['role' => 'assistant', 'content' => $aiResponse];
 
                     if (strpos($sqlResult, 'ERROR') !== false) {
-                        $messages[] = ['role' => 'user', 'content' => "[SQL_ERROR]\n{$sqlResult}\n[/SQL_ERROR]\nPerbaiki query SQL-mu dan coba lagi."];
+                        $messages[] = ['role' => 'user', 'content' => "[SQL_ERROR]\n{$sqlResult}\n[/SQL_ERROR]\nPerbaiki query SQL-mu dan berikan jawaban langsung."];
                     } elseif ($sqlResult === '[]') {
-                        $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n[]\n[/SQL_RESULT]\nData spesifik tidak ditemukan pada query ini. DILARANG memberikan jawaban mati seperti 'data tidak ditemukan' saja!\n- Jika ini pass 1 atau 2: Lakukan pencarian [SQL_QUERY] yang lebih luas (broad search) menggunakan nama brand/merek utama atau variasi kata kunci lain.\n- Jika ini pass terakhir: Tampilkan varian/produk serupa yang ada di database toko dan pandu pengguna dengan pertanyaan klarifikasi/rekomendasi selanjutnya."];
+                        $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n[]\n[/SQL_RESULT]\nData spesifik tidak ditemukan pada query ini. Tampilkan varian/produk serupa yang ada di toko dan pandu pengguna dengan rekomendasi ramah dalam Bahasa Indonesia. DILARANG membuat query [SQL_QUERY] lagi."];
                     } else {
-                        $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n{$sqlResult}\n[/SQL_RESULT]\nJawab pertanyaan berdasarkan data di atas. Jangan tampilkan query SQL ke user."];
+                        if ($currentPass >= $maxPasses || ($maxBudget - (microtime(true) - $startTime)) <= 12.0) {
+                            $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n{$sqlResult}\n[/SQL_RESULT]\nJawab pertanyaan pengguna SEKARANG secara lengkap, ramah, dan jelas dalam Bahasa Indonesia berdasarkan data di atas. DILARANG membuat query [SQL_QUERY] lagi."];
+                        } else {
+                            $messages[] = ['role' => 'user', 'content' => "[SQL_RESULT]\n{$sqlResult}\n[/SQL_RESULT]\nJawab pertanyaan berdasarkan data di atas. Jangan tampilkan query SQL ke user."];
+                        }
 
                         // AUTO-LEARN: Save successful SQL result as a learned fact
                         $this->autoLearnFromResult($message, $sqlResult, $contextBuilder);
@@ -612,14 +644,17 @@ class AiChatController extends Controller
     private function normalizeGeminiModelName(?string $model): string
     {
         $m = strtolower(trim((string)$model));
-        if (empty($m) || in_array($m, ['auto', 'gemini-auto', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'])) {
-            return 'gemini-flash-latest';
+        if (empty($m) || in_array($m, ['auto', 'gemini-auto', 'gemini-flash-latest', 'gemini-1.5-flash', 'gemini-3.5-flash'])) {
+            return 'gemini-1.5-flash';
         }
-        if (in_array($m, ['gemini-2.0-flash-lite', 'gemini-2.5-flash-lite'])) {
-            return 'gemini-3.5-flash-lite';
+        if (in_array($m, ['gemini-2.0-flash', 'gemini-3.8-flash', 'gemini-2.5-flash'])) {
+            return 'gemini-2.0-flash';
         }
-        if (in_array($m, ['gemini-1.5-pro', 'gemini-2.5-pro'])) {
-            return 'gemini-pro-latest';
+        if (in_array($m, ['gemini-3.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-2.5-flash-lite', 'gemini-1.5-flash-8b'])) {
+            return 'gemini-1.5-flash-8b';
+        }
+        if (in_array($m, ['gemini-pro-latest', 'gemini-1.5-pro', 'gemini-2.5-pro'])) {
+            return 'gemini-1.5-pro';
         }
         return $model;
     }

@@ -252,22 +252,76 @@ async function handleChatSubmit(e) {
             body: JSON.stringify({ message, session_id: chatSessionId })
         });
 
-        const data = await response.json();
+        // 1. Check HTTP status first before attempting JSON parse
+        if (!response.ok) {
+            let errorMsg = `Server merespon dengan status ${response.status}`;
+            if (response.status === 504 || response.status === 502 || response.status === 503) {
+                errorMsg = 'Koneksi ke AI server time out (HTTP ' + response.status + '). Server sedang memproses permintaan yang padat. Silakan coba kirim ulang.';
+            } else if (response.status === 401 || response.status === 403) {
+                errorMsg = 'Sesi login telah berakhir. Silakan muat ulang halaman ini.';
+            }
+            appendErrorMessage(message, errorMsg, response.status !== 401 && response.status !== 403);
+            return;
+        }
+
+        // 2. Read raw response text and parse safely
+        const rawText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(rawText);
+        } catch (jsonErr) {
+            console.warn('Gagal mem-parse respon JSON dari AI API:', rawText.substring(0, 150));
+            appendErrorMessage(message, 'Respon dari server tidak dalam format JSON yang valid. Silakan coba kirim ulang.', true);
+            return;
+        }
 
         if (data.success && data.data && typeof data.data.response === 'string' && data.data.response.trim().length > 0) {
             appendMessage('assistant', data.data.response);
         } else {
-            removeTypingIndicator();
-            const errMsg = data.error || (data.data && data.data.response === '' ? 'Model AI tidak memberikan respon text. Silakan coba lagi.' : 'Terjadi kesalahan sistem.');
-            appendMessage('assistant', `⚠️ ${errMsg}`);
+            const errMsg = data.error || (data.data && data.data.response === '' ? 'Model AI tidak memberikan respon teks. Silakan coba lagi.' : 'Terjadi kesalahan sistem.');
+            appendErrorMessage(message, errMsg, true);
         }
     } catch (err) {
-        console.error('Chat error:', err);
-        removeTypingIndicator();
-        appendMessage('assistant', navigator.onLine
-            ? `⚠️ Gagal terhubung ke server (${err.message || 'Network Error'}). Silakan coba lagi.`
-            : '📶 Anda sedang offline. Fitur AI Chat membutuhkan koneksi internet.');
+        console.warn('Chat network error:', err);
+        const errMsg = navigator.onLine
+            ? `Gagal terhubung ke server (${err.message || 'Network Error'}). Silakan periksa koneksi Anda dan coba lagi.`
+            : 'Anda sedang offline. Fitur AI Chat membutuhkan koneksi internet aktif.';
+        appendErrorMessage(message, errMsg, true);
     }
+}
+
+function appendErrorMessage(userMsg, errorText, isRetryable = true) {
+    removeTypingIndicator();
+    if (!chatMessages) return;
+
+    const encodedMsg = escapeAttr(userMsg || '');
+    const retryBtn = isRetryable ? `
+        <button class="btn-chat-action" style="margin-top:8px;background:var(--primary);color:#fff;border:none;padding:5px 12px;font-weight:600;border-radius:6px;cursor:pointer;" onclick="retrySendMessage(this)" data-msg="${encodedMsg}">
+            🔄 Coba Lagi
+        </button>` : '';
+
+    const html = `
+        <div class="message ai">
+            <div class="message-bubble" style="border-left:3px solid var(--danger);background:rgba(230,57,70,0.08);">
+                <div style="display:flex;align-items:flex-start;gap:8px;">
+                    <span style="font-size:16px;">⚠️</span>
+                    <div>
+                        <div style="color:var(--text-primary);font-size:13px;line-height:1.5;">${escapeHtml(errorText)}</div>
+                        ${retryBtn}
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    chatMessages.insertAdjacentHTML('beforeend', html);
+    scrollToBottom();
+}
+
+function retrySendMessage(btn) {
+    const msg = btn.getAttribute('data-msg');
+    if (!msg) return;
+    const parentMsg = btn.closest('.message');
+    if (parentMsg) parentMsg.remove();
+    sendSuggested(msg);
 }
 
 // ============================================================
@@ -277,7 +331,10 @@ async function handleChatSubmit(e) {
 async function loadChatHistory() {
     try {
         const response = await fetch(`${BASE_URL}api/chat/history?session_id=${chatSessionId}`);
-        const data     = await response.json();
+        if (!response.ok) return;
+        const rawText  = await response.text();
+        let data;
+        try { data = JSON.parse(rawText); } catch (e) { return; }
 
         if (data.success && data.data && data.data.length > 0) {
             const suggestions = document.getElementById('chatSuggestions');
@@ -290,7 +347,7 @@ async function loadChatHistory() {
             scrollToBottom();
         }
     } catch (err) {
-        console.error('Failed to load chat history:', err);
+        console.warn('Failed to load chat history:', err);
     }
 }
 
@@ -307,6 +364,10 @@ async function clearChatHistory() {
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': chatCsrf },
             body: JSON.stringify({ session_id: chatSessionId })
         });
+        if (!response.ok) {
+            alert('Gagal membersihkan histori (HTTP ' + response.status + ')');
+            return;
+        }
         const data = await response.json();
         if (data.success) {
             chatSessionId = 'sess_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
@@ -314,7 +375,7 @@ async function clearChatHistory() {
             window.location.reload();
         }
     } catch (err) {
-        alert('Gagal membersihkan histori');
+        alert('Gagal membersihkan histori: ' + err.message);
     }
 }
 
