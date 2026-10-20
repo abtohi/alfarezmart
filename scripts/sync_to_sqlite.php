@@ -4,10 +4,10 @@
  * This ensures that whenever MySQL goes offline or hits connection limits,
  * the local SQLite database still has full product data and search works seamlessly!
  */
-define('BASE_PATH', 'C:/xampp/htdocs/AlfarezMart');
-define('APP_PATH', BASE_PATH . '/app');
-define('STORAGE_PATH', dirname(BASE_PATH) . '/storage');
-require BASE_PATH . '/app/config/App.php';
+defined('BASE_PATH') || define('BASE_PATH', dirname(__DIR__));
+defined('APP_PATH') || define('APP_PATH', BASE_PATH . '/app');
+defined('STORAGE_PATH') || define('STORAGE_PATH', is_dir(BASE_PATH . '/storage') ? BASE_PATH . '/storage' : dirname(BASE_PATH) . '/storage');
+require_once APP_PATH . '/config/App.php';
 
 $host   = defined('DB_HOST')     ? DB_HOST     : '153.92.15.83';
 $port   = defined('DB_PORT')     ? DB_PORT     : '3306';
