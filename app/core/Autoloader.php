@@ -17,6 +17,8 @@ if (!class_exists('Autoloader')) {
             'app/controllers/',
             'app/config/',
             'app/services/',
+            'app/services/pricing/',
+            'app/services/invoice/',
         ];
 
         /** @var array<string,string> In-process cache: className → absolute file path */

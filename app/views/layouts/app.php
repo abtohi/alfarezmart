@@ -815,6 +815,7 @@ if ($userLevel === 'staff') {
         };
     </script>
     <script src="<?= BASE_URL ?>public/js/utils.js<?= $v ?>"></script>
+    <script src="<?= BASE_URL ?>public/js/core/pricing.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/dexie.min.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/db.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/printer_v3.js<?= $v ?>"></script>

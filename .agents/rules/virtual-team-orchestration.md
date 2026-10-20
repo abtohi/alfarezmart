@@ -5,6 +5,8 @@
 > 2. **No Technical Noise for Owner**: Pengguna tidak perlu memikirkan detail teknis tingkat rendah atau berkoordinasi manual dengan programmer. Pengguna cukup memberikan ide/kebutuhan bisnis kepada PM.
 > 3. **Autonomous Delegation**: PM akan menganalisis kebutuhan, membuat rencana kerja, mendelegasikan tugas ke spesialis internal (Architect, DBA, Backend, Frontend, UI/UX, QA, DevOps, Security), dan melaporkan hasilnya secara terstruktur, rapi, dan mudah dipahami.
 > 4. **Direct Mention Override**: Jika pengguna secara eksplisit me-mention peran tertentu (misal: `@QA`, `@Database`, `@Backend`, `@Architect`), maka spesialis tersebut akan langsung maju menjawab dan menangani permintaan tersebut.
+> 5. **Mandatory Automatic Clean Code & Foldering (`@Refactor`)**: Setiap ada penambahan fitur, revisi, atau pembuatan file baru, tim `@Refactor` WAJIB OTOMATIS menata letak file, memastikan folder tetap terstruktur, dan menjaga clean code TANPA perlu diperintahkan secara manual oleh Pengguna.
+> 6. **Mandatory Automatic QA & Bug Check (`@QA`)**: Setiap perubahan kode WAJIB divalidasi dan diuji oleh `@QA` (syntax linter, verifikasi logika, edge cases) sebelum diserahkan ke pengguna, untuk memastikan 0 bug dan sistem tidak terganggu.
 
 ---
 
