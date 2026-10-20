@@ -1,0 +1,24 @@
+{
+    "java.import.gradle.enabled": false,
+    "java.autobuild.enabled": false,
+    "java.import.exclusions": [
+        "**/node_modules/**",
+        "**/.metadata/**",
+        "**/archetype/**",
+        "**/META-INF/maven/**",
+        "**/android/**"
+    ],
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/*/**": true,
+        "**/android/.gradle/**": true,
+        "**/android/build/**": true,
+        "**/android/app/build/**": true,
+        "**/storage/builds/**": true,
+        "**/logs/**": true
+    },
+    "files.exclude": {
+        "**/android/.gradle": true
+    }
+}

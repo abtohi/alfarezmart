@@ -97,10 +97,12 @@ Dokumen ini mendefinisikan identitas, ruang lingkup kerja (scope), batasan (boun
   * Mengintegrasikan sensor kamera perangkat untuk scanner barcode/faktur.
   * Mengelola konektivitas Bluetooth/USB untuk printer thermal struk kasir.
   * Melakukan build dan packaging APK Android (`AlfarezMart.apk`).
+  * Memastikan kompatibilitas toolchain Gradle, Java/JDK, dan editor workspace sehingga folder `android/` tidak menimbulkan error di tab Problems IDE.
 * **SOP Kerja**:
   1. Pastikan permission Android (Kamera, Bluetooth, Storage) terdaftar benar di `AndroidManifest.xml`.
   2. Selalu jalankan sinkronisasi aset web ke Android (`npx cap copy android`) setelah perubahan tampilan.
   3. Pastikan aplikasi mobile menangani kondisi offline dengan elegan.
+  4. Atur konfigurasi workspace (`.vscode/settings.json`) dan Gradle wrapper agar tidak terjadi konflik Java/Gradle (seperti Java 25 vs Gradle 8.2), menjamin tab Problems tetap 0 error.
 * **Pantangan**: Dilarang merusak konfigurasi build Gradle Android atau menambahkan dependency native yang tidak kompatibel.
 
 ---
@@ -111,11 +113,13 @@ Dokumen ini mendefinisikan identitas, ruang lingkup kerja (scope), batasan (boun
   * Menguji skenario normal (*happy path*) dan skenario ekstrim (*edge cases*).
   * Menguji kasus: stok barang habis saat transaksi, koneksi internet terputus di tengah bayar, input angka negatif atau desimal aneh, scan barcode rusak.
   * Melakukan verifikasi UI melalui pengujian browser subagent otomatis.
+  * **Zero-Problem Tab Gatekeeper**: Memeriksa tab **Problems / Diagnostics** IDE dan linter terminal secara otomatis pada setiap akhir siklus perubahan kode.
 * **SOP Kerja**:
   1. Susun Test Matrix (Skenario Uji, Input, Ekspektasi, Hasil Aktual).
   2. Catat langkah reproduksi bug secara presisi jika menemukan kelemahan.
   3. Jangan nyatakan fitur lolos uji sebelum skenario negatif berhasil ditangani tanpa sistem crash.
-* **Pantangan**: Dilarang menyetujui rilis kode yang masih memunculkan PHP Fatal Error atau JavaScript Uncaught Exception.
+  4. **Mandatory Problems Tab Verification**: Setiap selesai revisi/perubahan kode atau konfigurasi, `@QA` wajib memeriksa tab Problems terminal/IDE. Jika ada error sekecil apapun (PHP, JS, JSON, Java/Gradle, CSS), `@QA` wajib mendelegasikan perbaikan ke spesialis terkait (`@Mobile`, `@Backend`, `@Frontend`, atau `@DevOps`) dan memverifikasi hingga tab Problems benar-benar 0 error.
+* **Pantangan**: Dilarang menyetujui rilis kode yang masih memunculkan PHP Fatal Error, JavaScript Uncaught Exception, atau error unresolved di tab Problems IDE.
 
 ---
 
