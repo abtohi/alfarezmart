@@ -3358,6 +3358,9 @@ function loadDraft() {
 
         if (Array.isArray(draft.items) && draft.items.length > 0) {
             purchaseItems = draft.items;
+            purchaseItems.forEach(item => {
+                propagateFromMainInputs(item);
+            });
             renderCart();
             calculateTotal();
             showToast('Draft sebelumnya berhasil dimuat', 'info');
@@ -3546,21 +3549,17 @@ function buildMiniPricingTableHtml(item) {
         const ret  = parseFloat(pkg.sell_price_retail) || 0;
         const who  = parseFloat(pkg.sell_price_wholesale) || 0;
 
-        let nett = (pkg.harga_nett !== undefined && pkg.harga_nett !== null && !isNaN(pkg.harga_nett))
-            ? parseFloat(pkg.harga_nett)
-            : null;
-
-        if (nett === null) {
-            const ppnAmt = buy * (ppn / 100);
-            let discForPkg = 0;
-            if (dm === 'pct') {
-                discForPkg = buy * (dv / 100);
-            } else {
-                const discPerPcs = totalPcs > 0 ? (dv / totalPcs) : 0;
-                discForPkg = discPerPcs * bq;
-            }
-            nett = Math.max(0, buy + ppnAmt - discForPkg);
+        const ppnAmt = buy * (ppn / 100);
+        let discForPkg = 0;
+        if (dm === 'pct') {
+            discForPkg = buy * (dv / 100);
+        } else {
+            const discPerPcs = totalPcs > 0 ? (dv / totalPcs) : 0;
+            discForPkg = discPerPcs * bq;
         }
+        const calculatedNett = Math.max(0, buy + ppnAmt - discForPkg);
+        let nett = (calculatedNett > 0 || buy <= 0) ? calculatedNett : (parseFloat(pkg.harga_nett) || buy);
+        pkg.harga_nett = nett;
 
         const mR = (nett > 0 && ret > 0) ? ((ret - nett) / nett * 100) : null;
         const mW = (nett > 0 && who > 0) ? ((who - nett) / nett * 100) : null;
@@ -3750,10 +3749,10 @@ function buildDrawerRowHtml(item, prefix) {
         const ppn       = parseFloat(pkg.ppn_pct !== undefined ? pkg.ppn_pct : (item.ppn_pct || 0));
         const dm        = pkg.diskon_mode || item.diskon_mode || 'rp';
         const dv        = parseFloat(pkg.diskon_value !== undefined ? pkg.diskon_value : (item.diskon_value || 0));
-        const discForPkgDrawer = dm === 'pct' ? (buy * (dv / 100)) : (totalPcsDrawer > 0 ? (dv / totalPcsDrawer) * bq : 0);
-        let nett        = (pkg.harga_nett !== undefined && pkg.harga_nett !== null && !isNaN(pkg.harga_nett))
-            ? parseFloat(pkg.harga_nett)
-            : Math.max(0, buy + (buy * (ppn / 100)) - discForPkgDrawer);
+        const ppnAmtDrawer = buy * (ppn / 100);
+        const calculatedNett = Math.max(0, buy + ppnAmtDrawer - discForPkgDrawer);
+        let nett        = (calculatedNett > 0 || buy <= 0) ? calculatedNett : (parseFloat(pkg.harga_nett) || buy);
+        pkg.harga_nett  = nett;
         const ret       = parseFloat(pkg.sell_price_retail) || 0;
         const who       = parseFloat(pkg.sell_price_wholesale) || 0;
         const origBuy   = parseFloat(pkg._orig_buy) || 0;
@@ -3990,24 +3989,56 @@ function addDrawerTierRow(btn) {
 
 /** Recalc margin display for a single drawer-pkg-row element */
 function refreshDrawerRowMargin(rowEl) {
-    const buy   = parseFloat(rowEl.querySelector('.drawer-pkg-buy')?.value) || 0;
-    const ppn   = parseFloat(rowEl.closest('[data-item-ppn]')?.dataset.itemPpn || rowEl.closest('.item-card')?.dataset.ppn || 0);
+    const buyInp = rowEl.querySelector('.drawer-pkg-buy');
+    let liveBuy = buyInp ? parseFloat(buyInp.value) : NaN;
+    if (isNaN(liveBuy) || liveBuy < 0) liveBuy = 0;
     
     let nett = null;
+    let pkg = null;
+    let item = null;
     const uid = rowEl.closest('[id^="drawer_"]')?.id.split('_')[1];
     if (uid) {
-        let item = typeof purchaseItems !== 'undefined' ? purchaseItems.find(i => i.id == uid) : null;
+        item = typeof purchaseItems !== 'undefined' ? purchaseItems.find(i => i.id == uid) : null;
         if (!item && typeof bulkItems !== 'undefined') item = bulkItems.find(b => b.id == uid);
-        if (item) {
+        if (item && item.packagings) {
             const level = parseInt(rowEl.dataset.level || 1, 10);
-            const pkg = item.packagings.find(p => p.level == level);
-            if (pkg && pkg.harga_nett !== undefined && pkg.harga_nett !== null && !isNaN(pkg.harga_nett)) {
-                nett = parseFloat(pkg.harga_nett);
-            }
+            pkg = item.packagings.find(p => p.level == level);
         }
     }
-    if (nett === null) {
-        nett = calcItemNett(buy, ppn, 'rp', 0);
+
+    if (liveBuy <= 0 && pkg && parseFloat(pkg.buy_price) > 0) {
+        liveBuy = parseFloat(pkg.buy_price);
+        if (buyInp && document.activeElement !== buyInp) buyInp.value = liveBuy;
+    }
+    if (pkg && liveBuy > 0) {
+        pkg.buy_price = liveBuy;
+    }
+
+    const ppn = parseFloat(pkg?.ppn_pct !== undefined ? pkg.ppn_pct : (item?.ppn_pct || rowEl.closest('[data-item-ppn]')?.dataset.itemPpn || rowEl.closest('.item-card')?.dataset.ppn || 0)) || 0;
+    const dm  = pkg?.diskon_mode || item?.diskon_mode || 'rp';
+    const dv  = parseFloat(pkg?.diskon_value !== undefined ? pkg.diskon_value : (item?.diskon_value || 0)) || 0;
+
+    if (item && item.packagings && item.packagings.length > 0) {
+        const selPkgDrawer = item.packagings.find(p => p.level == item.level) || item.packagings[0];
+        const selBqDrawer  = parseFloat(selPkgDrawer?.base_qty) || 1;
+        const totalPcsDrawer = (parseFloat(item.quantity) || 1) * selBqDrawer;
+        const bq           = parseFloat(pkg?.base_qty) || 1;
+
+        const ppnAmt = liveBuy * (ppn / 100);
+        let discForPkg = 0;
+        if (dm === 'pct') {
+            discForPkg = liveBuy * (dv / 100);
+        } else {
+            const discPerPcs = totalPcsDrawer > 0 ? (dv / totalPcsDrawer) : 0;
+            discForPkg = discPerPcs * bq;
+        }
+        nett = Math.max(0, liveBuy + ppnAmt - discForPkg);
+    } else {
+        nett = calcItemNett(liveBuy, ppn, dm, dv, 1);
+    }
+
+    if (pkg) {
+        pkg.harga_nett = nett;
     }
 
     const ret   = parseFloat(rowEl.querySelector('.drawer-pkg-ret')?.value) || 0;
@@ -4127,6 +4158,10 @@ function onDrawerSellInput(prefix, uid, level, type, newVal) {
     if (!pkg) return;
     if (type === 'retail')    pkg.sell_price_retail    = parseFloat(newVal) || 0;
     if (type === 'wholesale') pkg.sell_price_wholesale = parseFloat(newVal) || 0;
+    if (item.level == level) {
+        if (type === 'retail')    item.sell_price_retail    = pkg.sell_price_retail;
+        if (type === 'wholesale') item.sell_price_wholesale = pkg.sell_price_wholesale;
+    }
     if (level !== 1) {
         pkg.sell_custom = true; // Lock custom sale price
         const isBulk = (prefix === 'bulk');
