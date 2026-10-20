@@ -521,6 +521,9 @@
         }
 
         document.getElementById('receipt-preview-area').innerHTML = getReceiptPreviewContent(activeTrxData, activeTrxData.sell_price);
+        if (typeof pregeneratePpobReceiptImage === 'function') {
+            pregeneratePpobReceiptImage(activeTrxData);
+        }
         
         // Initialize custom price input
         document.getElementById('custom-print-price').value = parseInt(activeTrxData.sell_price || 0);
@@ -554,6 +557,9 @@
             previewTotalVal.innerText = 'Rp ' + price.toLocaleString('id-ID');
         }
         activeTrxData.sell_price = price;
+        if (typeof pregeneratePpobReceiptImage === 'function') {
+            pregeneratePpobReceiptImage(activeTrxData, price);
+        }
         if (price > 0 && activeTrxData.ref_id) {
             fetch('<?= BASE_URL ?>api/ppob/transaction/update-price', {
                 method: 'POST',
@@ -769,69 +775,128 @@
         triggerToast('✅ Teks invoice berhasil disalin', 'success');
     }
 
-    async function triggerPpobImageShare() {
-        if (!activeTrxData) return;
-        const d = { ...activeTrxData };
-        const customPriceInput = document.getElementById('custom-print-price');
-        if (customPriceInput && customPriceInput.value) {
-            d.sell_price = parseInt(customPriceInput.value) || d.sell_price;
-        }
+    // =====================================================================
+    // ULTRA-FAST RECEIPT IMAGE GENERATION & DIRECT NATIVE SHARE
+    // =====================================================================
+    let _cachedPpobReceiptFile = null;
+    let _cachedPpobReceiptKey = null;
+    let _isGeneratingPpobReceipt = false;
+    let _pendingReceiptPromise = null;
 
-        try {
-            if (typeof html2canvas === 'undefined') {
-                await new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.src = '<?= BASE_URL ?>public/js/html2canvas.min.js';
-                    script.onload = resolve;
-                    script.onerror = reject;
-                    document.head.appendChild(script);
-                });
-            }
-
-            const previewArea = document.getElementById('receipt-preview-area');
-            const canvas = await html2canvas(previewArea, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff'
-            });
-
-            canvas.toBlob(async (blob) => {
-                if (!blob) {
-                    triggerToast('❌ Gagal membuat gambar struk', 'danger');
-                    return;
-                }
-                const file = new File([blob], `Struk_PPOB_${d.ref_id}.png`, { type: 'image/png' });
-
-                if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                    try {
-                        await navigator.share({
-                            title: 'Struk Pembayaran AlfarezMart',
-                            text: `Struk Pembayaran ${d.product_name}`,
-                            files: [file]
-                        });
-                        triggerToast('✅ Berhasil membagikan struk!', 'success');
-                    } catch (err) {
-                        console.log('Share canceled or failed', err);
-                    }
-                } else {
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = file.name;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                    triggerToast('✅ Gambar struk berhasil diunduh', 'success');
-                }
-            }, 'image/png');
-        } catch (error) {
-            console.error('Error sharing receipt:', error);
-            triggerToast('❌ Gagal membagikan struk', 'danger');
-        }
+    function getPpobReceiptCacheKey(d, sellPrice) {
+        return `${d.ref_id || d.trx_id || ''}_${d.sn || ''}_${sellPrice}_${d.customer_name || ''}`;
     }
 
+    async function generatePpobReceiptFile(d, explicitSellPrice = null) {
+        if (!d) return null;
+        const sellPrice = explicitSellPrice !== null 
+            ? explicitSellPrice 
+            : parseInt(document.getElementById('custom-print-price')?.value || d.sell_price || 0, 10);
+        
+        const key = getPpobReceiptCacheKey(d, sellPrice);
+        if (_cachedPpobReceiptKey === key && _cachedPpobReceiptFile) {
+            return _cachedPpobReceiptFile;
+        }
+
+        if (_isGeneratingPpobReceipt && _pendingReceiptPromise) {
+            return await _pendingReceiptPromise;
+        }
+
+        _isGeneratingPpobReceipt = true;
+        _pendingReceiptPromise = (async () => {
+            try {
+                if (typeof html2canvas === 'undefined') {
+                    await new Promise((resolve, reject) => {
+                        const script = document.createElement('script');
+                        script.src = (typeof BASE_URL !== 'undefined' ? BASE_URL : '/') + 'public/js/html2canvas.min.js';
+                        script.onload = resolve;
+                        script.onerror = reject;
+                        document.head.appendChild(script);
+                    });
+                }
+
+                // Prefer the visible receipt preview area if populated
+                let sourceElem = document.getElementById('receipt-preview-area');
+                let createdContainer = null;
+                if (!sourceElem || !sourceElem.innerHTML.trim()) {
+                    createdContainer = document.createElement('div');
+                    createdContainer.id = 'ppob-history-temp-render';
+                    createdContainer.style.position = 'fixed';
+                    createdContainer.style.left = '-9999px';
+                    createdContainer.style.top = '0';
+                    createdContainer.style.width = '340px';
+                    createdContainer.style.zIndex = '-9999';
+                    createdContainer.style.opacity = '0';
+                    createdContainer.style.pointerEvents = 'none';
+                    createdContainer.style.background = '#ffffff';
+                    createdContainer.innerHTML = getReceiptPreviewContent(d, sellPrice);
+                    document.body.appendChild(createdContainer);
+                    sourceElem = createdContainer;
+                }
+
+                // Wait for images inside container to finish loading
+                const imgEls = Array.from(sourceElem.querySelectorAll('img'));
+                if (imgEls.length > 0) {
+                    await Promise.all(imgEls.map(img => {
+                        if (img.complete) return Promise.resolve();
+                        return new Promise(res => {
+                            img.onload = res;
+                            img.onerror = res;
+                            setTimeout(res, 400);
+                        });
+                    }));
+                }
+
+                const canvas = await html2canvas(sourceElem, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false,
+                    backgroundColor: '#ffffff',
+                    imageTimeout: 1000
+                });
+
+                if (createdContainer && createdContainer.parentNode) {
+                    createdContainer.parentNode.removeChild(createdContainer);
+                }
+
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                if (!blob) throw new Error('Pembuatan gambar struk gagal');
+
+                const cleanProd = (d.product_name || 'PPOB').replace(/[^a-zA-Z0-9]/g, '_').substring(0, 25);
+                const fileName = `Struk_${cleanProd}_${d.ref_id || Date.now()}.png`;
+                const file = new File([blob], fileName, { type: 'image/png' });
+
+                _cachedPpobReceiptFile = file;
+                _cachedPpobReceiptKey = key;
+                return file;
+            } catch (err) {
+                console.error('generatePpobReceiptFile error:', err);
+                return null;
+            } finally {
+                _isGeneratingPpobReceipt = false;
+                _pendingReceiptPromise = null;
+            }
+        })();
+
+        return await _pendingReceiptPromise;
+    }
+
+    function pregeneratePpobReceiptImage(d, explicitSellPrice = null) {
+        if (!d) return;
+        const sellPrice = explicitSellPrice !== null 
+            ? explicitSellPrice 
+            : parseInt(document.getElementById('custom-print-price')?.value || d.sell_price || 0, 10);
+        const key = getPpobReceiptCacheKey(d, sellPrice);
+        if (_cachedPpobReceiptKey === key && _cachedPpobReceiptFile) return;
+        
+        // Non-blocking background generation
+        setTimeout(() => {
+            generatePpobReceiptFile(d, sellPrice).catch(e => console.warn('Background receipt generation error:', e));
+        }, 60);
+    }
+
+    // Direct Native Image Share in history modal
     async function executeShareReceipt() {
         if (!activeTrxData) {
             triggerToast('⚠️ Data transaksi tidak ditemukan', 'warning');
@@ -844,9 +909,47 @@
             d.sell_price = parseInt(customPriceInput.value) || d.sell_price;
         }
 
+        const btn = document.getElementById('btn-share-receipt');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Membuka...';
+        }
+
+        try {
+            const file = await generatePpobReceiptFile(d, d.sell_price);
+            if (!file) throw new Error('Gagal menyiapkan gambar struk');
+
+            const shareTitle = `Struk Pembayaran ${d.product_name || 'PPOB'} - AlfarezMart`;
+            const shareText = `Struk Pembayaran ${d.product_name} - No: ${d.customer_no}`;
+
+            // DIRECT SHARE IMAGE via Web Share API Level 2 (files)
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: shareTitle,
+                    text: shareText,
+                    files: [file]
+                });
+                triggerToast('✅ Berhasil membagikan struk!', 'success');
+            } else {
+                // Desktop browser fallback
+                showPpobHistoryShareFallbackModal(d, file);
+            }
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                console.warn('Share error or canceled:', err);
+                triggerToast('⚠️ Batal atau gagal membagikan struk: ' + (err.message || ''), 'warning');
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+    }
+
+    function showPpobHistoryShareFallbackModal(d, file) {
         const shareText = formatPpobInvoiceText(d);
-        
-        // Format customer phone for WhatsApp
         let cleanPhone = String(d.customer_no || '').replace(/\D/g, '');
         let waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
         if (cleanPhone.startsWith('08')) {
@@ -858,27 +961,28 @@
 
         if (typeof AppModal !== 'undefined') {
             AppModal.show({
-                title: 'Bagikan Invoice Digital PPOB',
+                title: 'Bagikan Struk Digital PPOB',
                 subtitle: `${d.product_name} - ${d.customer_no}`,
-                icon: 'bi-whatsapp',
+                icon: 'bi-share-fill',
                 iconColor: 'rgba(37,211,102,0.15)',
                 iconAccent: '#25D366',
                 bodyHTML: `
                     <div style="text-align:center;padding:4px 0;">
-                        <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Kirimkan bukti pembayaran digital ke WhatsApp pelanggan atau bagikan struk:</div>
-                        
-                        <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:14px;">
-                            <a href="${waUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:13px;background:#25D366;color:white;border-radius:12px;text-decoration:none;font-weight:700;font-size:13.5px;box-shadow:0 4px 14px rgba(37,211,102,0.35);transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-                                <i class="bi bi-whatsapp" style="font-size:1.3rem;"></i> Kirim via WhatsApp
-                            </a>
+                        <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px;">Browser desktop tidak mendukung share file langsung ke aplikasi shortcut. Pilih opsi berikut:</div>
+
+                        <div style="display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:12px;">
+                            <button type="button" onclick="copyHistoryReceiptImageToClipboard()" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;background:#25D366;color:white;border:none;border-radius:12px;font-weight:700;font-size:13px;box-shadow:0 4px 14px rgba(37,211,102,0.3);cursor:pointer;">
+                                <i class="bi bi-clipboard-check" style="font-size:1.2rem;"></i> Salin Gambar ke Clipboard
+                            </button>
+                            <small style="color:var(--text-muted);font-size:11px;margin-top:-4px;">Setelah disalin, Anda bisa langsung <strong>Paste (Ctrl+V)</strong> gambar di WhatsApp Web!</small>
                         </div>
 
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-                            <button type="button" onclick="copyReceiptText(\`${encodeURIComponent(shareText)}\`)" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:var(--surface-2);border:1px solid var(--border-color);color:var(--text-primary);border-radius:10px;font-weight:600;font-size:12px;cursor:pointer;">
-                                <i class="bi bi-clipboard"></i> Salin Teks
-                            </button>
-                            <button type="button" onclick="triggerPpobImageShare()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:var(--surface-2);border:1px solid var(--border-color);color:var(--text-primary);border-radius:10px;font-weight:600;font-size:12px;cursor:pointer;">
-                                <i class="bi bi-image"></i> Gambar Struk
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">
+                            <a href="${waUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:var(--surface-2);border:1px solid var(--border-color);color:var(--text-primary);border-radius:10px;text-decoration:none;font-weight:600;font-size:12px;">
+                                <i class="bi bi-whatsapp"></i> WhatsApp Web
+                            </a>
+                            <button type="button" onclick="downloadHistoryReceiptFile()" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;background:var(--surface-2);border:1px solid var(--border-color);color:var(--text-primary);border-radius:10px;font-weight:600;font-size:12px;cursor:pointer;">
+                                <i class="bi bi-download"></i> Unduh Gambar
                             </button>
                         </div>
                     </div>
@@ -887,14 +991,58 @@
                 cancelText: 'Tutup'
             });
         } else {
-            window.open(waUrl, '_blank');
+            downloadHistoryReceiptFile();
         }
+    }
+
+    async function copyHistoryReceiptImageToClipboard() {
+        try {
+            if (!_cachedPpobReceiptFile && activeTrxData) {
+                await generatePpobReceiptFile(activeTrxData);
+            }
+            if (!_cachedPpobReceiptFile) throw new Error('Gambar belum siap');
+
+            if (navigator.clipboard && window.ClipboardItem) {
+                await navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': _cachedPpobReceiptFile })
+                ]);
+                triggerToast('✅ Gambar struk disalin ke clipboard! Buka WhatsApp Web & tekan Ctrl+V', 'success');
+            } else {
+                downloadHistoryReceiptFile();
+            }
+        } catch (e) {
+            console.warn('Clipboard write image failed, downloading instead:', e);
+            downloadHistoryReceiptFile();
+        }
+    }
+
+    function downloadHistoryReceiptFile() {
+        if (!_cachedPpobReceiptFile && activeTrxData) {
+            generatePpobReceiptFile(activeTrxData).then(downloadHistoryReceiptFile);
+            return;
+        }
+        if (!_cachedPpobReceiptFile) return;
+        const url = URL.createObjectURL(_cachedPpobReceiptFile);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = _cachedPpobReceiptFile.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        triggerToast('✅ Gambar struk berhasil diunduh', 'success');
+    }
+
+    // Backward-compatibility alias
+    async function triggerPpobImageShare() {
+        return executeShareReceipt();
     }
 
     // =====================================================================
     // RECEIPT DESIGN SYSTEM — Elegant, Product-Differentiated
     // =====================================================================
 </script>
+<script src="<?= BASE_URL ?>public/js/html2canvas.min.js"></script>
 <script src="<?= BASE_URL ?>public/js/ppob_receipt.js<?= $v ?>"></script>
 <script>
     function executePreviewBrowser() {
