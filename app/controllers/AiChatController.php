@@ -177,16 +177,17 @@ class AiChatController extends Controller
                 $rawContent = '';
                 $requestSuccess = false;
                 $lastErrMsg = '';
-                $curlTimeout = (int)min(12, max(5, floor($remainingBudget / 2)));
+                $curlTimeout = (int)min(16, max(8, floor($remainingBudget / 2)));
 
                 if ($chatProvider === 'gemini') {
                     $geminiContents = $this->buildGeminiContents($messages);
                     $geminiFallbackModels = array_values(array_unique(array_filter([
                         $this->normalizeGeminiModelName($model),
-                        'gemini-1.5-flash',
-                        'gemini-2.0-flash',
-                        'gemini-1.5-flash-8b',
-                        'gemini-1.5-pro',
+                        'gemini-3.5-flash-lite',
+                        'gemini-flash-lite-latest',
+                        'gemini-3.5-flash',
+                        'gemini-3.8-flash',
+                        'gemini-flash-latest',
                     ])));
 
                     foreach ($geminiFallbackModels as $currentModel) {
@@ -644,17 +645,20 @@ class AiChatController extends Controller
     private function normalizeGeminiModelName(?string $model): string
     {
         $m = strtolower(trim((string)$model));
-        if (empty($m) || in_array($m, ['auto', 'gemini-auto', 'gemini-flash-latest', 'gemini-1.5-flash', 'gemini-3.5-flash'])) {
-            return 'gemini-1.5-flash';
+        if (empty($m) || in_array($m, ['auto', 'gemini-auto', 'gemini-3.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash'])) {
+            return 'gemini-3.5-flash';
         }
-        if (in_array($m, ['gemini-2.0-flash', 'gemini-3.8-flash', 'gemini-2.5-flash'])) {
-            return 'gemini-2.0-flash';
+        if (in_array($m, ['gemini-3.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-2.5-flash-lite', 'gemini-1.5-flash-8b', 'gemini-flash-lite-latest'])) {
+            return 'gemini-3.5-flash-lite';
         }
-        if (in_array($m, ['gemini-3.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-2.5-flash-lite', 'gemini-1.5-flash-8b'])) {
-            return 'gemini-1.5-flash-8b';
+        if (in_array($m, ['gemini-3.8-flash'])) {
+            return 'gemini-3.8-flash';
+        }
+        if (in_array($m, ['gemini-flash-latest'])) {
+            return 'gemini-flash-latest';
         }
         if (in_array($m, ['gemini-pro-latest', 'gemini-1.5-pro', 'gemini-2.5-pro'])) {
-            return 'gemini-1.5-pro';
+            return 'gemini-pro-latest';
         }
         return $model;
     }

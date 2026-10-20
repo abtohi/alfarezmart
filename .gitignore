@@ -69,3 +69,6 @@ phpunit.xml
 *.bak
 *.backup
 *.apk
+
+# Scratch
+scratch/

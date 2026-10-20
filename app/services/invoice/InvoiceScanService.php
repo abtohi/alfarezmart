@@ -640,13 +640,19 @@ class InvoiceScanService
     private function normalizeGeminiModelName(?string $model): string
     {
         $m = strtolower(trim((string)$model));
-        if (empty($m) || in_array($m, ['auto', 'gemini-auto', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'])) {
-            return 'gemini-flash-latest';
+        if (empty($m) || in_array($m, ['auto', 'gemini-auto', 'gemini-3.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash'])) {
+            return 'gemini-3.5-flash';
         }
-        if (in_array($m, ['gemini-2.0-flash-lite', 'gemini-2.5-flash-lite'])) {
+        if (in_array($m, ['gemini-3.5-flash-lite', 'gemini-2.0-flash-lite', 'gemini-2.5-flash-lite', 'gemini-1.5-flash-8b', 'gemini-flash-lite-latest'])) {
             return 'gemini-3.5-flash-lite';
         }
-        if (in_array($m, ['gemini-1.5-pro', 'gemini-2.5-pro'])) {
+        if (in_array($m, ['gemini-3.8-flash'])) {
+            return 'gemini-3.8-flash';
+        }
+        if (in_array($m, ['gemini-flash-latest'])) {
+            return 'gemini-flash-latest';
+        }
+        if (in_array($m, ['gemini-1.5-pro', 'gemini-2.5-pro', 'gemini-pro-latest'])) {
             return 'gemini-pro-latest';
         }
         return $model;
@@ -959,9 +965,10 @@ class InvoiceScanService
 
         // Robust Gemini vision fallback hierarchy
         $DEFAULT_GEMINI_MODELS = [
+            'gemini-3.5-flash',
+            'gemini-3.5-flash-lite',
             'gemini-flash-latest',
             'gemini-3.8-flash',
-            'gemini-3.5-flash',
             'gemini-pro-latest',
         ];
 
