@@ -494,6 +494,12 @@ if ($userLevel === 'staff') {
                 <span>Produk Digital (PPOB)</span>
             </a>
             <?php endif; ?>
+            <?php if ($this->hasServiceAccess('reports')): ?>
+            <a href="<?= BASE_URL ?>dashboard/summary" class="sidebar-item <?= ($activeNav ?? '') === 'summary' ? 'active' : '' ?>" title="Summary, Dashboard &amp; Analitik Toko">
+                <i class="bi <?= ($activeNav ?? '') === 'summary' ? 'bi-pie-chart-fill' : 'bi-pie-chart' ?>"></i>
+                <span>Summary &amp; Dashboard</span>
+            </a>
+            <?php endif; ?>
             <a href="<?= BASE_URL ?>sales" class="sidebar-item">
                 <i class="bi bi-clock-history"></i>
                 <span>Riwayat Penjualan</span>
@@ -520,10 +526,6 @@ if ($userLevel === 'staff') {
             </a>
             <?php endif; ?>
             <?php if ($this->hasServiceAccess('reports')): ?>
-            <a href="<?= BASE_URL ?>dashboard/summary" class="sidebar-item <?= ($activeNav ?? '') === 'summary' ? 'active' : '' ?>" title="Summary &amp; Analitik Eksekutif">
-                <i class="bi <?= ($activeNav ?? '') === 'summary' ? 'bi-pie-chart-fill' : 'bi-pie-chart' ?>"></i>
-                <span>Summary &amp; Analitik</span>
-            </a>
             <a href="<?= BASE_URL ?>reports" class="sidebar-item">
                 <i class="bi bi-graph-up"></i>
                 <span>Laporan</span>
