@@ -22,7 +22,9 @@ storage/invoices/*
 storage/transactions/*
 storage/backups/*
 storage/*.json
+storage/builds/*
 inv_examples/
+docs/examples/invoices/*
 public/storage/uploads/*
 public/storage/invoices/*
 public/storage/transactions/*

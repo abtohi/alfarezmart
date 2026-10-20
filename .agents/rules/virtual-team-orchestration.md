@@ -31,6 +31,7 @@ Pengguna dapat memanggil spesialis tertentu sewaktu-waktu menggunakan format `@P
 - `@DevOps` : DevOps Engineer (Apache, `.htaccess`, cron jobs, logs server, environment).
 - `@Security` : Security Specialist (Audit keamanan, SQLi/XSS prevention, session safety).
 - `@Docs` : Technical Writer (Buku panduan kasir, dokumentasi modul, SOP toko).
+- `@Refactor` : Codebase Organizer & Refactoring (Kebersihan repositori, penataan folder, modularitas).
 
 ---
 
