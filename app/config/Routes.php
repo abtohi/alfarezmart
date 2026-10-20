@@ -289,8 +289,9 @@ $router->post('/api/orders/estimates', 'ApiController@saveOrderEstimate');
 $router->get('/api/orders/estimates/{id}', 'ApiController@getOrderEstimateDetails');
 $router->post('/api/orders/estimates/{id}/delete', 'ApiController@deleteOrderEstimate');
 
-// Dashboard Summary (superadmin)
+// Dashboard Summary (superadmin/admin)
 $router->get('/dashboard/summary', 'DashboardController@summary');
+$router->get('/api/dashboard/markup-stats', 'DashboardController@apiMarkupStats');
 
 // Debts & Customers API Routes
 $router->get('/api/customers', 'ApiController@getCustomers');

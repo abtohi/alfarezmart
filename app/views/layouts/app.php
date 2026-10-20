@@ -415,7 +415,7 @@ if ($userLevel === 'staff') {
             animation: lineProgressAnim 1.4s infinite ease-in-out;
         }
     </style>
-    <div id="appInitLoader" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#0d0e15;z-index:99999;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 0.4s ease;">
+    <div id="appInitLoader" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#0d0e15;z-index:99999;display:flex;flex-direction:column;justify-content:center;align-items:center;transition:opacity 0.15s ease;">
         <div class="splash-brand-text">
             <span class="splash-brand-alfarez">Alfarez</span><span class="splash-brand-mart">Mart</span>
         </div>
@@ -431,30 +431,24 @@ if ($userLevel === 'staff') {
         loader.dataset.hidden = '1';
         loader.style.pointerEvents = 'none';
         loader.style.opacity = '0';
-        setTimeout(function() { if (loader) loader.style.display = 'none'; }, 300);
+        setTimeout(function() { if (loader) loader.style.display = 'none'; }, 150);
     }
-    // Multiple redundant triggers to GUARANTEE loader is always removed:
-    // 1. Instant check if DOM is already ready
+    // Multiple redundant triggers to GUARANTEE loader is removed instantly:
     if (document.readyState === 'interactive' || document.readyState === 'complete') {
         hideAppLoader();
     } else {
-        // 2. DOMContentLoaded (fires when HTML is parsed)
         document.addEventListener('DOMContentLoaded', hideAppLoader);
-        // 3. Load event (fires when all resources including images are loaded)
         window.addEventListener('load', hideAppLoader);
     }
-    // 4. Short timeout safety (600ms)
-    setTimeout(hideAppLoader, 600);
-    // 5. Ultimate failsafe: if ANY JS error occurs before loader is hidden, force-hide it
-    //    This prevents permanent black screen from fatal script errors
+    // Rapid safety trigger (80ms instead of 600ms)
+    setTimeout(hideAppLoader, 80);
     var _origOnerror = window.onerror;
     window.onerror = function() {
         hideAppLoader();
         if (_origOnerror) return _origOnerror.apply(this, arguments);
         return false;
     };
-    // 6. Long timeout ultimate failsafe (3s) — covers slow mobile devices
-    setTimeout(hideAppLoader, 3000);
+    setTimeout(hideAppLoader, 1500);
     </script>
 
     <!-- Desktop Sidebar Navigation (hidden on mobile via CSS) -->
@@ -526,6 +520,10 @@ if ($userLevel === 'staff') {
             </a>
             <?php endif; ?>
             <?php if ($this->hasServiceAccess('reports')): ?>
+            <a href="<?= BASE_URL ?>dashboard/summary" class="sidebar-item <?= ($activeNav ?? '') === 'summary' ? 'active' : '' ?>" title="Summary &amp; Analitik Eksekutif">
+                <i class="bi <?= ($activeNav ?? '') === 'summary' ? 'bi-pie-chart-fill' : 'bi-pie-chart' ?>"></i>
+                <span>Summary &amp; Analitik</span>
+            </a>
             <a href="<?= BASE_URL ?>reports" class="sidebar-item">
                 <i class="bi bi-graph-up"></i>
                 <span>Laporan</span>

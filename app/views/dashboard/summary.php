@@ -75,6 +75,26 @@ if ($maxRev <= 0) $maxRev = 1;
         </div>
     </div>
 
+    <!-- PPOB Monthly KPI (jika ada transaksi) -->
+    <?php if (!empty($ppobMonthly) && ($ppobMonthly['tx_count'] ?? 0) > 0): ?>
+    <div style="background:var(--bg-secondary); border:1px solid rgba(168,85,247,0.3); border-radius:var(--radius-md); padding:14px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-size:var(--font-size-sm); font-weight:700; color:#a855f7;"><i class="bi bi-phone-fill"></i> Transaksi PPOB Bulan Ini</div>
+            <span style="font-size:10px; color:var(--text-muted);"><?= number_format($ppobMonthly['tx_count']) ?> transaksi sukses</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div style="background:var(--bg-primary); padding:10px; border-radius:var(--radius-sm);">
+                <div style="font-size:10px; color:var(--text-muted); margin-bottom:2px;">Omzet PPOB</div>
+                <div style="font-weight:800; color:#a855f7; font-size:var(--font-size-sm);">Rp <?= number_format($ppobMonthly['revenue'], 0, ',', '.') ?></div>
+            </div>
+            <div style="background:var(--bg-primary); padding:10px; border-radius:var(--radius-sm);">
+                <div style="font-size:10px; color:var(--text-muted); margin-bottom:2px;">Profit PPOB</div>
+                <div style="font-weight:800; color:var(--success); font-size:var(--font-size-sm);">Rp <?= number_format($ppobMonthly['profit'], 0, ',', '.') ?></div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Markup Produk Master -->
     <?php if (isset($markupStats)): ?>
     <div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:14px; margin-bottom:16px;">

@@ -560,20 +560,25 @@ class ProductModel extends Model
                 $params[':max_price'] = (float)$maxPrice;
             }
 
-            $countStmt = $this->db->prepare("
-                SELECT COUNT(*) as total FROM products p 
-                LEFT JOIN brands b ON p.brand_id = b.id 
-                LEFT JOIN categories c ON p.category_id = c.id 
-                {$where}
-            ");
-            $countStmt->execute($params);
-            $total = $countStmt->fetch()['total'];
+            if (empty($rawSearch) && empty($categoryId) && $minPrice === null && $maxPrice === null) {
+                $countStmt = $this->db->query("SELECT COUNT(*) as total FROM products WHERE is_active = 1");
+                $total = (int)$countStmt->fetch()['total'];
+            } else {
+                $countStmt = $this->db->prepare("
+                    SELECT COUNT(*) as total FROM products p 
+                    LEFT JOIN brands b ON p.brand_id = b.id 
+                    LEFT JOIN categories c ON p.category_id = c.id 
+                    {$where}
+                ");
+                $countStmt->execute($params);
+                $total = (int)$countStmt->fetch()['total'];
+            }
 
             $offset = ($page - 1) * $perPage;
             $params[':limit'] = $perPage;
             $params[':offset'] = $offset;
 
-            $orderSql = "ORDER BY COALESCE(p.updated_at, p.created_at) DESC, COALESCE(NULLIF(TRIM(p.short_label), ''), p.full_name) ASC";
+            $orderSql = "ORDER BY p.updated_at DESC, p.id DESC";
             if (!empty($rawSearch)) {
                 $params[':pref_kw1'] = $rawSearch . '%';
                 $params[':pref_kw2'] = $rawSearch . '%';

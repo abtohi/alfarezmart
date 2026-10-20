@@ -518,6 +518,10 @@
         <div class="section-title mb-0">Status &amp; Ringkasan Hari Ini</div>
         <?php if ($userLevel === 'superadmin'): ?>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <a href="<?= BASE_URL ?>dashboard/summary" class="btn-expand-collapse" style="background:rgba(99,102,241,0.12);border-color:rgba(99,102,241,0.3);color:#818cf8;text-decoration:none;" title="Buka Halaman Khusus Summary &amp; Analitik Lengkap">
+                <i class="bi bi-pie-chart-fill"></i>
+                <span>Menu Summary &amp; Analitik &rarr;</span>
+            </a>
             <button type="button" class="btn-expand-collapse" id="btnToggleFinanceExpand" onclick="toggleFinanceMarkupExpand()" title="Buka / Tutup Semua Informasi Keuangan &amp; Persentase Markup">
                 <i class="bi bi-chevron-down" id="iconFinanceExpand"></i>
                 <span id="textFinanceExpand">Tampilkan Keuangan &amp; Markup</span>
@@ -2499,6 +2503,29 @@ function applyFinanceMarkupExpand(expanded) {
             btnIcon.classList.remove('bi-chevron-down');
             btnIcon.classList.add('bi-chevron-up');
             btnToggle.classList.add('is-expanded');
+
+            // Load markup stats asynchronously if not already loaded
+            if (!window._markupLoaded) {
+                fetch('<?= BASE_URL ?>api/dashboard/markup-stats')
+                    .then(res => res.json())
+                    .then(res => {
+                        if (res && res.data && res.data.level1) {
+                            window._markupLoaded = true;
+                            const m = res.data;
+                            const elCombined = document.querySelector('.privacy-real-markup');
+                            if (elCombined) elCombined.textContent = '+' + (m.level1.avg_combined || 0).toLocaleString('id-ID', {minimumFractionDigits:1, maximumFractionDigits:1}) + '%';
+                            const elEcer = document.getElementById('markupValEcer');
+                            if (elEcer) elEcer.textContent = '+' + (m.level1.avg_ecer || 0).toLocaleString('id-ID', {minimumFractionDigits:1, maximumFractionDigits:1}) + '%';
+                            const elCountEcer = document.getElementById('markupCountEcer');
+                            if (elCountEcer) elCountEcer.textContent = (m.level1.ecer_count || 0).toLocaleString('id-ID');
+                            const elGrosir = document.getElementById('markupValGrosir');
+                            if (elGrosir) elGrosir.textContent = '+' + (m.level1.avg_grosir || 0).toLocaleString('id-ID', {minimumFractionDigits:1, maximumFractionDigits:1}) + '%';
+                            const elCountGrosir = document.getElementById('markupCountGrosir');
+                            if (elCountGrosir) elCountGrosir.textContent = (m.level1.grosir_count || 0).toLocaleString('id-ID');
+                        }
+                    })
+                    .catch(() => {});
+            }
         } else {
             btnText.textContent = 'Tampilkan Keuangan & Markup';
             btnIcon.classList.remove('bi-chevron-up');

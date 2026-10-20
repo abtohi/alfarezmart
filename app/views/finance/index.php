@@ -41,31 +41,31 @@ $markupGrosir   = isset($markupStats['level1']['avg_grosir']) ? (float)$markupSt
     <input type="hidden" id="csrfToken" value="<?= $csrfToken ?>">
 
     <!-- ============================================================
-         JURNAL OMZET MANUAL
+         RINGKASAN PEMASUKAN & PENGELUARAN 7 HARI (DAILY SUMMARY)
     ============================================================= -->
-    <div id="jurnalOmzetSection" style="margin-bottom:20px;">
+    <div id="ringkasanHarianSection" style="margin-bottom:20px;">
 
         <!-- Section Header -->
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <div>
-                <div class="section-title" style="margin-bottom:2px;"><i class="bi bi-journal-bookmark" style="color:var(--success);"></i> Jurnal Omzet Harian</div>
-                <div style="font-size:10px; color:var(--text-muted);">Catat omzet manual (tidak dari kasir POS)</div>
+                <div class="section-title" style="margin-bottom:2px;"><i class="bi bi-calendar-week" style="color:var(--info);"></i> Ringkasan Keuangan Harian</div>
+                <div style="font-size:10px; color:var(--text-muted);">Pemasukan &amp; pengeluaran 7 hari terakhir (seluruh kategori)</div>
             </div>
-            <button id="btnQuickOmzet" onclick="showQuickOmzetModal()"
-                style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(16,185,129,.35);">
-                <i class="bi bi-pencil-square"></i> Catat Omzet
+            <button id="btnQuickAddLog" onclick="showAddLogModal()"
+                style="background:linear-gradient(135deg,var(--primary),#c53030);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(230,57,70,.35);">
+                <i class="bi bi-plus-lg"></i> Catat Transaksi
             </button>
         </div>
 
-        <!-- Omzet Harian Cards: 7 hari terakhir -->
-        <div id="omzetJurnalCards" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none;">
+        <!-- Daily Summary Cards: 7 hari terakhir -->
+        <div id="dailySummaryCards" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; scrollbar-width:thin;">
             <div class="elegant-loader" style="margin:10px auto;"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
         </div>
 
         <!-- Catatan info -->
         <div style="background:var(--surface-2); border-radius:10px; padding:10px 14px; margin-top:10px; font-size:10px; color:var(--text-muted); display:flex; align-items:center; gap:8px;">
             <i class="bi bi-info-circle" style="color:var(--info); flex-shrink:0;"></i>
-            <span>Omzet manual dicatat sebagai <strong>Pemasukan &rarr; Omzet</strong> di pos keuangan yang kamu pilih. Data ini digunakan untuk grafik arus kas di bawah.</span>
+            <span>Menghitung <strong>semua transaksi pemasukan dan pengeluaran</strong> dari seluruh kategori catatan keuangan. Klik kartu tanggal untuk melihat atau mencatat transaksi hari tersebut.</span>
         </div>
     </div>
 
@@ -740,6 +740,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 showToast(`${selectedLogs.size} transaksi berhasil dihapus`, 'success');
                 selectedLogs.clear();
                 loadFinanceData();
+                if (typeof loadDailySummaryCards === 'function') loadDailySummaryCards();
+                if (typeof loadArusKas === 'function') loadArusKas();
             }
         } catch (e) {
             showToast(e.message, 'error');
@@ -887,7 +889,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         } catch(e) { showToast(e.message, 'error'); }
     };
 
-    window.showAddLogModal = async function() {
+    window.showAddLogModal = async function(presetDate = null) {
         // Ensure master data is loaded before showing modal
         if (!accountsData || accountsData.length === 0) {
             showToast('Tunggu, data POS Keuangan masih dimuat...', 'info');
@@ -907,7 +909,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             await refreshMasterDataFromServer().catch(e => console.error('Refresh failed:', e));
         }
 
-        const currentDate = dateInput.value;
+        const currentDate = presetDate || dateInput.value || '<?= date('Y-m-d') ?>';
         
         // Build Select Options for POS
         let posOptions = '';
@@ -1015,6 +1017,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                             dateInput.value = date;
                         }
                         loadFinanceData();
+                        if (typeof loadDailySummaryCards === 'function') loadDailySummaryCards();
+                        if (typeof loadArusKas === 'function') loadArusKas();
                         return true;
                     }
 
@@ -1034,6 +1038,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                             dateInput.value = date;
                         }
                         loadFinanceData();
+                        if (typeof loadDailySummaryCards === 'function') loadDailySummaryCards();
+                        if (typeof loadArusKas === 'function') loadArusKas();
                         return true;
                     }
                 } catch (e) {
@@ -1205,6 +1211,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                             dateInput.value = date;
                         }
                         loadFinanceData();
+                        if (typeof loadDailySummaryCards === 'function') loadDailySummaryCards();
+                        if (typeof loadArusKas === 'function') loadArusKas();
                         return true;
                     }
                 } catch (e) {
@@ -1301,6 +1309,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                     if (res.success) {
                         showToast(res.message || 'Transaksi berhasil dihapus', 'success');
                         loadFinanceData();
+                        if (typeof loadDailySummaryCards === 'function') loadDailySummaryCards();
+                        if (typeof loadArusKas === 'function') loadArusKas();
                         return true;
                     }
                 } catch (e) {
@@ -1459,25 +1469,101 @@ document.addEventListener('DOMContentLoaded', async function() {
     border-color: transparent;
     box-shadow: 0 3px 10px rgba(16,185,129,.35);
 }
+.summary-day-card,
 .omzet-day-card {
-    flex-shrink: 0;
-    min-width: 68px;
+    flex: 1 0 100px;
+    min-width: 96px;
+    max-width: 125px;
     background: var(--gradient-card);
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 10px 8px;
-    text-align: center;
+    padding: 8px 10px;
     cursor: pointer;
-    transition: all .2s;
+    transition: all .2s ease;
     position: relative;
+    user-select: none;
+    text-align: left;
 }
-.omzet-day-card:hover { transform: translateY(-2px); border-color: var(--success); }
-.omzet-day-card.has-data { border-top: 2px solid var(--success); }
-.omzet-day-card.today { border-color: var(--info); }
-.odc-day { font-size: 9px; color: var(--text-muted); font-weight: 600; margin-bottom: 2px; }
-.odc-date { font-size: 11px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; }
-.odc-amt { font-size: 10px; font-weight: 700; color: var(--success); }
-.odc-empty { font-size: 9px; color: var(--text-muted); }
+.summary-day-card:hover,
+.omzet-day-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--info);
+}
+.summary-day-card.has-data,
+.omzet-day-card.has-data {
+    border-top: 2px solid var(--info);
+}
+.summary-day-card.today,
+.omzet-day-card.today {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px rgba(239,68,68,0.25);
+}
+.summary-day-card.selected,
+.omzet-day-card.selected {
+    border-color: var(--info) !important;
+    background: rgba(76,201,240,0.08) !important;
+    box-shadow: 0 0 0 2px rgba(76,201,240,0.35) !important;
+}
+.sdc-day, .odc-day {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.sdc-date, .odc-date {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+.sdc-badge-today {
+    display: inline-block;
+    font-size: 7.5px;
+    font-weight: 800;
+    background: rgba(239,68,68,0.15);
+    color: var(--primary);
+    padding: 1px 5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    letter-spacing: 0.3px;
+}
+.sdc-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 9.5px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 2px;
+}
+.sdc-arrow {
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+}
+.sdc-val {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sdc-net {
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px dashed var(--border-color);
+    font-size: 9px;
+    font-weight: 800;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.sdc-net.surplus { color: var(--success); }
+.sdc-net.deficit { color: var(--primary); }
+.sdc-empty, .odc-empty {
+    padding: 8px 0;
+    text-align: center;
+    color: var(--text-muted);
+}
 </style>
 
 <script>
@@ -1485,10 +1571,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     /* ---- Utilities ---- */
     function fmtRp(v) {
         v = parseFloat(v) || 0;
-        if (v >= 1_000_000_000) return 'Rp ' + (v/1_000_000_000).toFixed(1) + 'M';
-        if (v >= 1_000_000)     return 'Rp ' + (v/1_000_000).toFixed(1) + ' Jt';
-        if (v >= 1_000)         return 'Rp ' + (v/1_000).toFixed(0) + 'rb';
-        return 'Rp ' + Math.round(v).toLocaleString('id-ID');
+        const sign = v < 0 ? '-' : '';
+        const abs = Math.abs(v);
+        if (abs >= 1_000_000_000) return sign + 'Rp ' + (abs/1_000_000_000).toFixed(1) + 'M';
+        if (abs >= 1_000_000)     return sign + 'Rp ' + (abs/1_000_000).toFixed(1) + ' Jt';
+        if (abs >= 1_000)         return sign + 'Rp ' + (abs/1_000).toFixed(0) + 'rb';
+        return sign + 'Rp ' + Math.round(abs).toLocaleString('id-ID');
     }
     function fmtRpFull(v) {
         return 'Rp ' + Math.round(parseFloat(v)||0).toLocaleString('id-ID');
@@ -1509,10 +1597,22 @@ document.addEventListener('DOMContentLoaded', async function() {
     let currentArusPreset = 14;
 
     /* ======================================================
-       JURNAL OMZET MANUAL â€” 7 Hari Terakhir Cards
+       RINGKASAN KE UANGAN HARIAN â€” 7 Hari Terakhir Cards
+       (Menghitung semua pemasukan & pengeluaran seluruh kategori)
     ====================================================== */
-    async function loadOmzetJurnalCards() {
-        const container = document.getElementById('omzetJurnalCards');
+    window.selectFinanceDay = function(d) {
+        const dateInput = document.getElementById('selectedDate');
+        if (dateInput) {
+            dateInput.value = d;
+            document.querySelectorAll('.summary-day-card, .omzet-day-card').forEach(c => c.classList.remove('selected'));
+            const card = document.getElementById(`card_day_${d}`);
+            if (card) card.classList.add('selected');
+            if (typeof loadFinanceData === 'function') loadFinanceData();
+        }
+    };
+
+    async function loadDailySummaryCards() {
+        const container = document.getElementById('dailySummaryCards') || document.getElementById('omzetJurnalCards');
         if (!container) return;
 
         try {
@@ -1524,128 +1624,103 @@ document.addEventListener('DOMContentLoaded', async function() {
                 days.push(isoDate(d));
             }
 
-            // Fetch omzet logs for last 7 days (filter detail = 'Omzet', category = 'Pemasukan')
             const start = days[0];
             const end   = days[days.length - 1];
-            const res = await fetch(`${BASE_URL}api/finance/arus-kas?start_date=${start}&end_date=${end}`, { credentials: 'same-origin' });
-            const data = await res.json();
+            const seriesMap = {};
+            days.forEach(d => {
+                seriesMap[d] = { income: 0, expense: 0, net: 0, count: 0 };
+            });
 
-            // Build map: date -> total omzet (pemasukan dengan detail = 'Omzet')
-            const omzetByDate = {};
-            if (data.success && data.series) {
-                data.series.forEach(row => {
-                    omzetByDate[row.date] = (omzetByDate[row.date] || 0) + (parseFloat(row.omzet) || 0);
+            if (!navigator.onLine && typeof OfflineDB !== 'undefined') {
+                const allLogs = await OfflineDB.getAllFinanceLogs();
+                allLogs.forEach(log => {
+                    const d = (log.log_date || '').substring(0, 10);
+                    if (seriesMap[d]) {
+                        const amt = parseFloat(log.amount) || 0;
+                        if (log.category === 'Pemasukan') {
+                            seriesMap[d].income += amt;
+                            seriesMap[d].net += amt;
+                        } else if (log.category === 'Pengeluaran') {
+                            seriesMap[d].expense += amt;
+                            seriesMap[d].net -= amt;
+                        }
+                        seriesMap[d].count++;
+                    }
                 });
+            } else {
+                const res = await fetch(`${BASE_URL}api/finance/arus-kas?start_date=${start}&end_date=${end}`, { credentials: 'same-origin' });
+                const data = await res.json();
+                if (data.success && data.series) {
+                    data.series.forEach(row => {
+                        const inc = parseFloat(row.income) || 0;
+                        const exp = parseFloat(row.expense) || 0;
+                        seriesMap[row.date] = {
+                            income: inc,
+                            expense: exp,
+                            net: inc - exp,
+                            count: (parseInt(row.income_count) || 0) + (parseInt(row.expense_count) || 0)
+                        };
+                    });
+                }
             }
 
             const todayStr = isoDate(today);
+            const activeDate = document.getElementById('selectedDate')?.value || todayStr;
             let html = '';
+
             days.forEach(d => {
-                const amt = omzetByDate[d] || 0;
-                const isToday = d === todayStr;
+                const data = seriesMap[d] || { income: 0, expense: 0, net: 0, count: 0 };
+                const inc = data.income;
+                const exp = data.expense;
+                const net = data.net;
+                const hasData = (inc > 0 || exp > 0);
+                const isToday = (d === todayStr);
+                const isSelected = (d === activeDate);
+
                 html += `
-                <div class="omzet-day-card ${amt > 0 ? 'has-data' : ''} ${isToday ? 'today' : ''}" 
-                     onclick="showQuickOmzetModal('${d}')" title="Klik untuk catat omzet ${d}">
-                    <div class="odc-day">${dayNames(d)}</div>
-                    <div class="odc-date">${dateLabel(d)}</div>
-                    ${amt > 0 
-                        ? `<div class="odc-amt">${fmtRp(amt)}</div>` 
-                        : `<div class="odc-empty"><i class="bi bi-plus-circle" style="font-size:14px; color:var(--border-color);"></i></div>`
-                    }
+                <div class="summary-day-card ${hasData ? 'has-data' : ''} ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}" 
+                     id="card_day_${d}"
+                     onclick="selectFinanceDay('${d}')" 
+                     title="${dayNames(d)}, ${dateLabel(d)}: Masuk ${fmtRpFull(inc)} | Keluar ${fmtRpFull(exp)}">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span class="sdc-day">${dayNames(d)}</span>
+                        <span class="sdc-date">${dateLabel(d)}</span>
+                    </div>
+                    ${isToday ? `<div class="sdc-badge-today">Hari Ini</div>` : ''}
+                    ${hasData ? `
+                        <div class="sdc-row" title="Total Pemasukan: ${fmtRpFull(inc)}">
+                            <span class="sdc-arrow" style="color:var(--success);"><i class="bi bi-arrow-down-short"></i></span>
+                            <span class="sdc-val" style="color:var(--success); font-weight:800;">+${fmtRp(inc)}</span>
+                        </div>
+                        <div class="sdc-row" title="Total Pengeluaran: ${fmtRpFull(exp)}">
+                            <span class="sdc-arrow" style="color:var(--primary);"><i class="bi bi-arrow-up-short"></i></span>
+                            <span class="sdc-val" style="color:var(--primary); font-weight:800;">-${fmtRp(exp)}</span>
+                        </div>
+                        <div class="sdc-net ${net >= 0 ? 'surplus' : 'deficit'}" title="Selisih (Net): ${fmtRpFull(net)}">
+                            <span style="font-size:8px; color:var(--text-muted); text-transform:uppercase;">Net</span>
+                            <span style="font-size:9.5px; font-weight:800; color:${net >= 0 ? 'var(--success)' : 'var(--primary)'};">${net >= 0 ? '+' : ''}${fmtRp(net)}</span>
+                        </div>
+                    ` : `
+                        <div class="sdc-empty">
+                            <i class="bi bi-dash-circle" style="font-size:13px; opacity:0.35;"></i>
+                            <span style="font-size:8.5px; display:block; margin-top:2px;">Kosong</span>
+                        </div>
+                    `}
                 </div>`;
             });
             container.innerHTML = html;
         } catch(e) {
-            container.innerHTML = `<div style="font-size:11px; color:var(--text-muted); padding:10px;">Gagal memuat data.</div>`;
+            container.innerHTML = `<div style="font-size:11px; color:var(--text-muted); padding:10px;">Gagal memuat ringkasan.</div>`;
         }
     }
 
-    /* ======================================================
-       QUICK OMZET MODAL
-    ====================================================== */
-    window.showQuickOmzetModal = async function(presetDate = null) {
-        // Ambil accounts untuk pilihan POS
-        let posOptions = [];
-        try {
-            const accRes = await fetch(`${BASE_URL}api/finance/accounts`, { credentials: 'same-origin' });
-            const accData = await accRes.json();
-            if (accData.success) posOptions = accData.data;
-        } catch(e) {}
-
-        const today = isoDate(new Date());
-        const defaultDate = presetDate || document.getElementById('selectedDate')?.value || today;
-        const csrfVal = document.getElementById('csrfToken')?.value || '';
-
-        // Hidden account options (dependents)
-        const hiddenPos = ['Uang Laci', 'Uang Pulsa', 'Uang Rokok', 'Uang Pinjaman'];
-        const visiblePos = posOptions.filter(a => !hiddenPos.includes(a.name));
-        
-        let posHtml = visiblePos.map(a => 
-            `<option value="${a.name}">${a.name}</option>`
-        ).join('');
-
-        const bodyHTML = `
-            <div style="margin-bottom:14px;">
-                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">Tanggal *</label>
-                <input type="date" id="qOmzetDate" class="form-control-dark" value="${defaultDate}">
-            </div>
-            <div style="margin-bottom:14px;">
-                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">Nominal Omzet (Rp) *</label>
-                <input type="number" id="qOmzetAmt" class="form-control-dark" placeholder="Cth: 500000" min="1" autofocus>
-                <div style="font-size:10px; color:var(--text-muted); margin-top:4px;">Total penjualan hari ini (termasuk yang tidak lewat kasir)</div>
-            </div>
-            <div style="margin-bottom:14px;">
-                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">Pos Keuangan *</label>
-                <select id="qOmzetPos" class="form-control-dark">${posHtml || '<option value="Saldo Utama">Saldo Utama</option>'}</select>
-            </div>
-            <div style="margin-bottom:4px;">
-                <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:6px;">Keterangan (Opsional)</label>
-                <input type="text" id="qOmzetDesc" class="form-control-dark" placeholder="Cth: Penjualan warung pagi-sore">
-            </div>
-        `;
-
-        AppModal.show({
-            title: 'Catat Omzet Manual',
-            subtitle: 'Masukkan total penjualan harian (manual)',
-            icon: 'bi-pencil-square',
-            iconColor: 'rgba(16,185,129,.15)',
-            iconAccent: '#10b981',
-            bodyHTML,
-            submitText: 'Simpan Omzet',
-            onSubmit: async () => {
-                const amt    = parseFloat(document.getElementById('qOmzetAmt')?.value);
-                const date   = document.getElementById('qOmzetDate')?.value;
-                const pos    = document.getElementById('qOmzetPos')?.value;
-                const desc   = document.getElementById('qOmzetDesc')?.value?.trim();
-
-                if (!amt || amt <= 0) { showToast('Nominal omzet wajib diisi', 'warning'); return false; }
-                if (!date)           { showToast('Tanggal wajib diisi', 'warning'); return false; }
-                if (!pos)            { showToast('Pos keuangan wajib dipilih', 'warning'); return false; }
-
-                try {
-                    const res = await api(`${BASE_URL}api/finance/logs`, 'POST', {
-                        csrf_token: csrfVal,
-                        category: 'Pemasukan',
-                        balance_type: pos,
-                        amount: amt,
-                        log_date: date,
-                        detail: 'Omzet',
-                        description: desc || null
-                    });
-                    if (res.success) {
-                        showToast('Omzet berhasil dicatat!', 'success');
-                        loadOmzetJurnalCards();
-                        loadArusKas();
-                        // Sync selected date in main finance section
-                        const mainDateInput = document.getElementById('selectedDate');
-                        if (mainDateInput && mainDateInput.value !== date) mainDateInput.value = date;
-                        if (typeof loadFinanceData === 'function') loadFinanceData();
-                        return true;
-                    }
-                } catch(e) { showToast(e.message, 'error'); }
-                return false;
-            }
-        });
+    // Expose helpers globally & backwards compatibility
+    window.loadDailySummaryCards = loadDailySummaryCards;
+    window.loadOmzetJurnalCards = loadDailySummaryCards;
+    window.showQuickOmzetModal = function(presetDate = null) {
+        if (typeof showAddLogModal === 'function') {
+            showAddLogModal(presetDate);
+        }
     };
 
     /* ======================================================
@@ -1812,7 +1887,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     /* ---- Init ---- */
     document.addEventListener('DOMContentLoaded', function() {
-        loadOmzetJurnalCards();
+        loadDailySummaryCards();
         const range = getArusDateRange(currentArusPreset);
         loadArusKas(range.start, range.end);
     });

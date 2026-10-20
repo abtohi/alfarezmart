@@ -8,7 +8,17 @@ class DashboardController extends Controller
     {
         $productModel = new ProductModel();
         $stats = $productModel->getStats();
-        $markupStats = $productModel->getMarkupStats();
+        
+        // Markup stats lengkap dialihkan ke menu baru /dashboard/summary agar Beranda instan < 0.2s
+        $markupStats = [
+            'level1' => [
+                'avg_ecer' => 0,
+                'avg_grosir' => 0,
+                'avg_combined' => 0,
+                'ecer_count' => 0,
+                'grosir_count' => 0
+            ]
+        ];
 
         // Fetch sales stats for today
         $saleModel = new SaleModel();
@@ -198,12 +208,14 @@ class DashboardController extends Controller
     }
 
     /**
-     * Summary & statistik bulanan untuk superadmin
+     * Summary & statistik bulanan untuk superadmin dan admin
      * (omzet, belanja, profit, markup rata-rata, top produk)
      */
     public function summary()
     {
-        $this->requireSuperadmin();
+        if (!$this->isSuperadmin() && !$this->isAdmin()) {
+            $this->requireSuperadmin();
+        }
 
         $month = isset($_GET['month']) ? preg_replace('/[^0-9\-]/', '', $_GET['month']) : date('Y-m');
         if (!preg_match('/^\d{4}-\d{2}$/', $month)) {
@@ -283,11 +295,27 @@ class DashboardController extends Controller
             $debtOut['shop'] = (float)($row['v'] ?? 0);
         } catch (\Throwable $e) {}
 
+        // Hitung markup stats lengkap pada halaman summary
         $markupStats = (new ProductModel())->getMarkupStats();
 
+        // PPOB bulanan
+        $ppobMonthly = ['revenue' => 0, 'profit' => 0, 'tx_count' => 0];
+        try {
+            $stmtPpob = $db->prepare("
+                SELECT 
+                    COUNT(*) as tx_count,
+                    COALESCE(SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN sell_price ELSE 0 END), 0) as revenue,
+                    COALESCE(SUM(CASE WHEN LOWER(status) IN ('success', 'sukses') THEN profit ELSE 0 END), 0) as profit
+                FROM digi_transactions
+                WHERE DATE(created_at) BETWEEN :s AND :e
+            ");
+            $stmtPpob->execute([':s' => $start, ':e' => $end]);
+            $ppobMonthly = $stmtPpob->fetch(PDO::FETCH_ASSOC) ?: $ppobMonthly;
+        } catch (\Throwable $e) {}
+
         $this->view('dashboard.summary', [
-            'title' => 'Summary & Statistik',
-            'activeNav' => 'home',
+            'title' => 'Summary & Analitik Bisnis',
+            'activeNav' => 'summary',
             'month' => $month,
             'salesAgg' => $salesAgg,
             'purchaseAgg' => $purchaseAgg,
@@ -296,7 +324,18 @@ class DashboardController extends Controller
             'topProducts' => $topProducts,
             'debtOut' => $debtOut,
             'markupStats' => $markupStats,
+            'ppobMonthly' => $ppobMonthly,
         ]);
+    }
+
+    /**
+     * API async untuk memuat statistik markup tanpa membebani page load awal
+     */
+    public function apiMarkupStats()
+    {
+        $productModel = new ProductModel();
+        $markupStats = $productModel->getMarkupStats();
+        $this->json(['status' => 'success', 'data' => $markupStats]);
     }
 
     public function help()

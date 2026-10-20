@@ -19,20 +19,31 @@ class SettingModel extends Model {
         } catch (\Throwable $e) {}
     }
     
+    private static array $cache = [];
+    private static bool $allLoaded = false;
+
     public function get($key, $default = null)
     {
+        if (array_key_exists($key, self::$cache)) {
+            return self::$cache[$key] !== null ? self::$cache[$key] : $default;
+        }
+
         try {
             $stmt = $this->db->prepare("SELECT setting_value FROM app_settings WHERE setting_key = :key LIMIT 1");
             $stmt->execute([':key' => $key]);
             $row = $stmt->fetch();
-            return $row ? $row['setting_value'] : $default;
+            $val = $row ? $row['setting_value'] : null;
+            self::$cache[$key] = $val;
+            return $val !== null ? $val : $default;
         } catch (\Throwable $e) {
             $this->ensureTable();
             try {
                 $stmt = $this->db->prepare("SELECT setting_value FROM app_settings WHERE setting_key = :key LIMIT 1");
                 $stmt->execute([':key' => $key]);
                 $row = $stmt->fetch();
-                return $row ? $row['setting_value'] : $default;
+                $val = $row ? $row['setting_value'] : null;
+                self::$cache[$key] = $val;
+                return $val !== null ? $val : $default;
             } catch (\Throwable $e2) {
                 return $default;
             }
@@ -41,6 +52,7 @@ class SettingModel extends Model {
 
     public function set($key, $value)
     {
+        self::$cache[$key] = $value;
         $isSqlite = ($this->db->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite');
         try {
             if ($isSqlite) {
