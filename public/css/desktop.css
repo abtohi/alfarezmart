@@ -714,31 +714,31 @@
 
     /* Right Column: Structured Sticky Ringkasan Kasir Card (LOCKED AT TOP) */
     .desktop-pos-layout .pos-checkout-bar {
-        display: contents !important;
-        order: 1 !important;
         position: static !important;
-        padding: 0 !important;
-        margin: 0 !important;
+        bottom: auto !important;
+        left: auto !important;
+        right: auto !important;
+        top: auto !important;
         width: 100% !important;
         max-width: none !important;
+        z-index: auto !important;
+        padding: 0 !important;
+        margin: 0 !important;
         transform: none !important;
+        background: transparent !important;
         pointer-events: auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        box-sizing: border-box !important;
     }
 
-    .desktop-pos-layout #mixDefaultPriceBox {
-        order: 2 !important;
-        margin-top: 0 !important;
-        margin-bottom: 0 !important;
-    }
-
+    .desktop-pos-layout #mixDefaultPriceBox,
     .desktop-pos-layout #posChainBanner {
-        order: 3 !important;
         margin-top: 0 !important;
         margin-bottom: 0 !important;
     }
 
     .desktop-pos-layout .pos-checkout-bar__inner {
-        order: 1 !important;
         pointer-events: auto !important;
         display: flex !important;
         flex-direction: column !important;
@@ -750,9 +750,7 @@
         padding: 20px 22px !important;
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14) !important;
         margin: 0 !important;
-        margin-top: 0 !important;
         width: 100% !important;
-        box-sizing: border-box !important;
         height: auto !important;
         box-sizing: border-box !important;
         color: var(--text-primary) !important;

@@ -37,7 +37,7 @@
             font-weight: 700;
             box-shadow: 0 2px 8px rgba(230, 57, 70, 0.4);
         }
-        /* ──── Mobile Layout Ordering & Scroll Optimization (<992px) ──── */
+        /* ──── Mobile Layout Ordering (<992px) ──── */
         @media (max-width: 991.98px) {
             .desktop-pos-layout {
                 display: flex;
@@ -48,154 +48,12 @@
                 display: contents;
             }
             .pos-header-toolbar { order: 1; }
-            #mixDefaultPriceBox { 
-                order: 2; 
-                padding: 8px 12px !important;
-                margin-bottom: 8px !important;
-                border-radius: var(--radius-md) !important;
-            }
+            #mixDefaultPriceBox { order: 2; }
             #posChainBanner    { order: 3; }
             .pos-customer-block { order: 4; }
             .pos-search-block   { order: 5; }
-            #cartItems          { 
-                order: 6; 
-                touch-action: pan-y;
-            }
+            #cartItems          { order: 6; }
             .pos-desktop-customer-header { display: none !important; }
-
-            /* Generous bottom clearance on mobile so cart items are never obscured by floating checkout bar */
-            .page-section {
-                padding-bottom: calc(260px + env(safe-area-inset-bottom, 20px)) !important;
-            }
-            body.mode-mix-active .page-section {
-                padding-bottom: calc(300px + env(safe-area-inset-bottom, 20px)) !important;
-            }
-
-            /* Cart item touch action for effortless vertical scrolling */
-            .cart-item-card {
-                touch-action: pan-y;
-            }
-
-            /* Mobile floating checkout bar - collapse & expand feature */
-            .pos-mobile-collapse-handle {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                width: 100%;
-                padding: 0 0 6px;
-                cursor: pointer;
-                color: var(--text-muted);
-                user-select: none;
-                margin-top: -4px;
-            }
-            .pos-mobile-collapse-handle span {
-                width: 38px;
-                height: 4px;
-                border-radius: 2px;
-                background: var(--border-color);
-                transition: background 0.2s ease, width 0.2s ease;
-            }
-            .pos-mobile-collapse-handle:hover span,
-            .pos-mobile-collapse-handle:active span {
-                background: var(--primary);
-                width: 46px;
-            }
-
-            .pos-checkout-bar.collapsed .pos-checkout-bar__inner {
-                padding: 8px 14px 10px !important;
-                border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
-            }
-            .pos-checkout-bar.collapsed .pos-checkout-bar__summary {
-                margin-bottom: 0 !important;
-                gap: 8px !important;
-            }
-            .pos-checkout-bar.collapsed .pos-checkout-bar__summary-label,
-            .pos-checkout-bar.collapsed #cartProfit,
-            .pos-checkout-bar.collapsed .pos-desktop-summary-details,
-            .pos-checkout-bar.collapsed .pos-checkout-bar__btn-draft {
-                display: none !important;
-            }
-            .pos-checkout-bar.collapsed .pos-checkout-bar__total {
-                font-size: 1.15rem !important;
-            }
-            .pos-checkout-bar.collapsed .pos-checkout-bar__actions {
-                width: auto !important;
-                margin-top: 0 !important;
-            }
-            .pos-checkout-bar.collapsed .pos-checkout-bar__btn-pay {
-                padding: 6px 14px !important;
-                font-size: 0.85rem !important;
-                height: 34px !important;
-            }
-        }
-
-        /* ──── Desktop 2-Column Pixel-Perfect Alignment (≥992px) ──── */
-        @media (min-width: 992px) {
-            .pos-mobile-collapse-handle {
-                display: none !important;
-            }
-            .desktop-pos-layout {
-                display: grid !important;
-                grid-template-columns: minmax(0, 1fr) 390px !important;
-                gap: 24px !important;
-                align-items: start !important;
-                margin-top: 0 !important;
-                padding-top: 0 !important;
-            }
-            .pos-left-panel,
-            .pos-right-panel {
-                display: flex !important;
-                flex-direction: column !important;
-                gap: 18px !important;
-                margin-top: 0 !important;
-                padding-top: 0 !important;
-                border-top: none !important;
-            }
-            /* Make pos-checkout-bar completely transparent in layout tree so inner card is a direct child */
-            .desktop-pos-layout .pos-checkout-bar {
-                display: contents !important;
-                order: 1 !important;
-                position: static !important;
-                padding: 0 !important;
-                margin: 0 !important;
-                width: 100% !important;
-                max-width: none !important;
-                transform: none !important;
-            }
-            /* Both top cards strictly level-aligned with identical box model */
-            .desktop-pos-layout .pos-customer-block,
-            .desktop-pos-layout .pos-checkout-bar__inner {
-                order: 1 !important;
-                margin: 0 !important;
-                margin-top: 0 !important;
-                padding: 20px 22px !important;
-                background: var(--surface-1) !important;
-                border: 1px solid var(--border-color) !important;
-                border-radius: var(--radius-lg) !important;
-                box-sizing: border-box !important;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14) !important;
-            }
-            .desktop-pos-layout .pos-desktop-customer-header,
-            .desktop-pos-layout .pos-desktop-sidebar-header {
-                display: flex !important;
-                align-items: center !important;
-                justify-content: space-between !important;
-                padding-bottom: 12px !important;
-                border-bottom: 1px solid var(--border-color) !important;
-                margin-bottom: 14px !important;
-                margin-top: 0 !important;
-                padding-top: 0 !important;
-                width: 100% !important;
-                box-sizing: border-box !important;
-            }
-            .desktop-pos-layout #mixDefaultPriceBox {
-                order: 2 !important;
-                margin-top: 0 !important;
-            }
-            .desktop-pos-layout #posChainBanner {
-                order: 3 !important;
-                margin-top: 0 !important;
-            }
         }
     </style>
 
@@ -296,17 +154,27 @@
 
         </div><!-- /pos-left-panel -->
 
-        <!-- ── RIGHT PANEL: Checkout Card · Mix Box · Chain Banner ── -->
+        <!-- ── RIGHT PANEL: Mix Box · Chain Banner · Checkout Card ── -->
         <div class="pos-right-panel">
+
+            <!-- Mix Default Price Selector (Slim Bar) -->
+            <div id="mixDefaultPriceBox" style="display:none; background:var(--surface-1); border-radius:var(--radius-lg); padding:14px 18px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; border:1px solid var(--border-color); box-shadow:0 8px 24px rgba(0,0,0,0.14);">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <i class="bi bi-shuffle" style="color:var(--primary); font-size:1.1rem;"></i>
+                    <span style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">Default Mix:</span>
+                </div>
+                <div class="pos-segmented">
+                    <button id="btnMixDefaultRetail" class="active" onclick="setMixDefault('retail')">Ecer</button>
+                    <button id="btnMixDefaultWholesale" onclick="setMixDefault('wholesale')">Grosir</button>
+                </div>
+            </div>
+
+            <!-- Banner Indicator Struk / Invoice Lanjutan -->
+            <div id="posChainBanner" style="display:none; background:linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border-radius:var(--radius-lg); padding:14px 18px; border:1px solid rgba(129,140,248,0.4); color:white; box-shadow:0 8px 24px rgba(0,0,0,0.15);"></div>
 
             <!-- Checkout Card (Floating on mobile, Sticky Sidebar Panel on desktop) -->
             <div class="pos-checkout-bar" id="posCheckoutBar">
                 <div class="pos-checkout-bar__inner">
-
-                    <!-- Mobile collapse/expand handle (Tap to minimize/expand price bar) -->
-                    <div class="pos-mobile-collapse-handle" onclick="toggleMobileCheckoutBar()" title="Minimalkan / Perluas Ringkasan">
-                        <span></span>
-                    </div>
 
                     <!-- Desktop Sidebar Title Header (Visible on Desktop >=992px) -->
                     <div class="pos-desktop-sidebar-header">
@@ -345,21 +213,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Mix Default Price Selector (Slim Bar) -->
-            <div id="mixDefaultPriceBox" style="display:none; background:var(--surface-1); border-radius:var(--radius-lg); padding:14px 18px; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; border:1px solid var(--border-color); box-shadow:0 8px 24px rgba(0,0,0,0.14);">
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <i class="bi bi-shuffle" style="color:var(--primary); font-size:1.1rem;"></i>
-                    <span style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.8px;">Default Mix:</span>
-                </div>
-                <div class="pos-segmented">
-                    <button id="btnMixDefaultRetail" class="active" onclick="setMixDefault('retail')">Ecer</button>
-                    <button id="btnMixDefaultWholesale" onclick="setMixDefault('wholesale')">Grosir</button>
-                </div>
-            </div>
-
-            <!-- Banner Indicator Struk / Invoice Lanjutan -->
-            <div id="posChainBanner" style="display:none; background:linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border-radius:var(--radius-lg); padding:14px 18px; border:1px solid rgba(129,140,248,0.4); color:white; box-shadow:0 8px 24px rgba(0,0,0,0.15);"></div>
 
         </div><!-- /pos-right-panel -->
 
@@ -745,15 +598,12 @@ function setSaleMode(mode) {
     if (mode === 'retail') {
         if (btnRetail) { btnRetail.className = 'active'; }
         if (mixBox) mixBox.style.display = 'none';
-        document.body.classList.remove('mode-mix-active');
     } else if (mode === 'wholesale') {
         if (btnWholesale) { btnWholesale.className = 'active'; }
         if (mixBox) mixBox.style.display = 'none';
-        document.body.classList.remove('mode-mix-active');
     } else if (mode === 'mix') {
         if (btnMix) { btnMix.className = 'active'; }
         if (mixBox) mixBox.style.display = '';
-        document.body.classList.add('mode-mix-active');
         // Only set default for items that don't already have an override (preserves edit-loaded overrides)
         cart.forEach(item => { if (item.mix_override_mode === undefined) item.mix_override_mode = mixDefaultPrice; });
     }
@@ -765,12 +615,6 @@ function setSaleMode(mode) {
     }
     renderCart();
 }
-
-window.toggleMobileCheckoutBar = function() {
-    const bar = document.getElementById('posCheckoutBar');
-    if (!bar) return;
-    bar.classList.toggle('collapsed');
-};
 
 function setMixDefault(mode) {
     mixDefaultPrice = mode;
@@ -1681,7 +1525,7 @@ function renderCart() {
         const displayName = item.name;
 
         html += `
-            <div data-cart-id="${item.id}" class="cart-item-card" style="background:var(--surface-1);border-radius:var(--radius-md);padding:12px;margin-bottom:10px;border:1px solid var(--border-color);transition:box-shadow 0.15s;touch-action:pan-y;">
+            <div data-cart-id="${item.id}" style="background:var(--surface-1);border-radius:var(--radius-md);padding:12px;margin-bottom:10px;border:1px solid var(--border-color);transition:box-shadow 0.15s;">
                 <!-- Baris 1: Foto + Info Produk + Total -->
                 <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
                     ${thumbHtml}
@@ -1727,15 +1571,13 @@ function renderCart() {
             const isRetail = currentOverride === 'retail';
             const isWholesale = currentOverride === 'wholesale';
             html += `
-                <!-- Baris 4: Mix Mode Toggle (Compact & Touch-Safe) -->
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; font-size:11px; padding:6px 10px; background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--border-color); touch-action:pan-y;">
-                    <div style="display:flex; align-items:center; gap:6px; color:var(--text-secondary); font-weight:600;">
-                        <i class="bi bi-shuffle" style="color:var(--primary); font-size:0.95rem;"></i>
-                        <span>Mode Harga:</span>
-                    </div>
-                    <div class="pos-segmented" style="padding:2px;">
-                        <button type="button" onclick="toggleItemMixMode(${item.id}, 'retail')" class="${isRetail ? 'active' : ''}" style="padding:4px 14px; font-size:11px;">Ecer</button>
-                        <button type="button" onclick="toggleItemMixMode(${item.id}, 'wholesale')" class="${isWholesale ? 'active' : ''}" style="padding:4px 14px; font-size:11px;">Grosir</button>
+                <!-- Baris 4: Mix Mode Toggle -->
+                <div style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:11px; padding:8px 12px; background:var(--surface-2); border-radius:var(--radius-sm); border:1px solid var(--border-color);">
+                    <i class="bi bi-shuffle" style="color:var(--primary); font-size:1rem;"></i>
+                    <span style="font-weight:600; color:var(--text-primary); margin-right:auto;">Harga:</span>
+                    <div class="pos-segmented">
+                        <button type="button" onclick="toggleItemMixMode(${item.id}, 'retail')" class="${isRetail ? 'active' : ''}">Ecer</button>
+                        <button type="button" onclick="toggleItemMixMode(${item.id}, 'wholesale')" class="${isWholesale ? 'active' : ''}">Grosir</button>
                     </div>
                 </div>
             `;
