@@ -12,6 +12,7 @@ database/backups/*
 storage/database/*
 
 # Logs
+logs/*.log
 storage/logs/*
 *.log
 debug.log

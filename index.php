@@ -79,6 +79,8 @@ if (!is_dir(APP_PATH)) {
 // Load core classes with error handling
 $coreFiles = [
     APP_PATH . '/core/Autoloader.php',
+    APP_PATH . '/core/Logger.php',
+    APP_PATH . '/core/ErrorHandler.php',
     APP_PATH . '/core/Session.php',
     APP_PATH . '/core/Security.php',
 ];
@@ -118,8 +120,9 @@ if (!class_exists('Autoloader')) {
 
 try {
     Autoloader::register();
+    ErrorHandler::register();
 } catch (Throwable $e) {
-    die("ERROR: Failed to register Autoloader\nError: " . $e->getMessage());
+    die("ERROR: Failed to register Autoloader / ErrorHandler\nError: " . $e->getMessage());
 }
 
 // Load environment FIRST (before initializing session)
