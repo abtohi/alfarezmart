@@ -144,15 +144,16 @@
             }
             .pos-left-panel,
             .pos-right-panel {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 18px !important;
                 margin-top: 0 !important;
                 padding-top: 0 !important;
+                border-top: none !important;
             }
-            .desktop-pos-layout .pos-customer-block,
-            .desktop-pos-layout .pos-checkout-bar,
-            .desktop-pos-layout .pos-checkout-bar__inner {
-                margin-top: 0 !important;
-            }
+            /* Make pos-checkout-bar completely transparent in layout tree so inner card is a direct child */
             .desktop-pos-layout .pos-checkout-bar {
+                display: contents !important;
                 order: 1 !important;
                 position: static !important;
                 padding: 0 !important;
@@ -161,6 +162,32 @@
                 max-width: none !important;
                 transform: none !important;
             }
+            /* Both top cards strictly level-aligned with identical box model */
+            .desktop-pos-layout .pos-customer-block,
+            .desktop-pos-layout .pos-checkout-bar__inner {
+                order: 1 !important;
+                margin: 0 !important;
+                margin-top: 0 !important;
+                padding: 20px 22px !important;
+                background: var(--surface-1) !important;
+                border: 1px solid var(--border-color) !important;
+                border-radius: var(--radius-lg) !important;
+                box-sizing: border-box !important;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14) !important;
+            }
+            .desktop-pos-layout .pos-desktop-customer-header,
+            .desktop-pos-layout .pos-desktop-sidebar-header {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                padding-bottom: 12px !important;
+                border-bottom: 1px solid var(--border-color) !important;
+                margin-bottom: 14px !important;
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
             .desktop-pos-layout #mixDefaultPriceBox {
                 order: 2 !important;
                 margin-top: 0 !important;
@@ -168,13 +195,6 @@
             .desktop-pos-layout #posChainBanner {
                 order: 3 !important;
                 margin-top: 0 !important;
-            }
-            .desktop-pos-layout .pos-customer-block,
-            .desktop-pos-layout .pos-checkout-bar__inner {
-                padding: 20px 22px !important;
-                border: 1px solid var(--border-color) !important;
-                border-radius: var(--radius-lg) !important;
-                box-sizing: border-box !important;
             }
         }
     </style>

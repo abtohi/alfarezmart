@@ -52,7 +52,7 @@ if ($userLevel === 'staff') {
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- App CSS & JS cache versioning -->
-    <?php $v = '?v=25.28'; ?>
+    <?php $v = '?v=25.29'; ?>
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/variables.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/app.css<?= $v ?>">
     <link rel="stylesheet" href="<?= BASE_URL ?>public/css/components.css<?= $v ?>">
@@ -883,7 +883,7 @@ if ($userLevel === 'staff') {
 
     <!-- Service Worker Registration & Cache Buster -->
     <script>
-    const APP_VERSION = '25.25'; // Update this to force client reloads
+    const APP_VERSION = '25.29'; // Update this to force client reloads
 
     // Safe PWA Version Guard: Update Service Worker in background without destroying offline cache
     (function() {
@@ -894,6 +894,8 @@ if ($userLevel === 'staff') {
                 caches.keys().then(function(keys) {
                     keys.forEach(function(key) {
                         caches.open(key).then(function(cache) {
+                            cache.delete('<?= BASE_URL ?>sales/pos').catch(() => {});
+                            cache.delete('<?= BASE_URL ?>sales').catch(() => {});
                             cache.delete('<?= BASE_URL ?>ppob').catch(() => {});
                             cache.delete('<?= BASE_URL ?>ppob/history').catch(() => {});
                         });
