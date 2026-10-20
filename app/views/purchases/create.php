@@ -3749,6 +3749,7 @@ function buildDrawerRowHtml(item, prefix) {
         const ppn       = parseFloat(pkg.ppn_pct !== undefined ? pkg.ppn_pct : (item.ppn_pct || 0));
         const dm        = pkg.diskon_mode || item.diskon_mode || 'rp';
         const dv        = parseFloat(pkg.diskon_value !== undefined ? pkg.diskon_value : (item.diskon_value || 0));
+        const discForPkgDrawer = dm === 'pct' ? (buy * (dv / 100)) : (totalPcsDrawer > 0 ? (dv / totalPcsDrawer) * bq : 0);
         const ppnAmtDrawer = buy * (ppn / 100);
         const calculatedNett = Math.max(0, buy + ppnAmtDrawer - discForPkgDrawer);
         let nett        = (calculatedNett > 0 || buy <= 0) ? calculatedNett : (parseFloat(pkg.harga_nett) || buy);
@@ -3996,7 +3997,7 @@ function refreshDrawerRowMargin(rowEl) {
     let nett = null;
     let pkg = null;
     let item = null;
-    const uid = rowEl.closest('[id^="drawer_"]')?.id.split('_')[1];
+    const uid = rowEl.closest('[id^="drawer_"]')?.id.split('_')[1] || rowEl.closest('.bulk-item')?.dataset?.bulkId;
     if (uid) {
         item = typeof purchaseItems !== 'undefined' ? purchaseItems.find(i => i.id == uid) : null;
         if (!item && typeof bulkItems !== 'undefined') item = bulkItems.find(b => b.id == uid);
