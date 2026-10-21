@@ -666,7 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentAbortController = null;
     let resultsDiv = document.createElement('div');
     resultsDiv.id = 'productLiveResults';
-    resultsDiv.style.cssText = 'position:absolute;left:0;right:0;top:100%;z-index:1000;display:none;background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-md);max-height:320px;overflow-y:auto;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4);pointer-events:auto;-webkit-overflow-scrolling:touch;';
+    resultsDiv.style.cssText = 'position:absolute;left:0;right:0;top:100%;z-index:1000;display:none;background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-md);max-height:320px;overflow-y:auto;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4);pointer-events:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;';
     const wrapper = input.closest('.search-input-wrapper');
     wrapper.style.position = 'relative';
     wrapper.appendChild(resultsDiv);
@@ -711,8 +711,40 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsDiv.style.display = 'block';
     }
 
-    // Direct event listener for selecting search result (works reliably across desktop & mobile touch)
-    const navigateToResult = (e) => {
+    // Allow natural scrolling on mobile touch without accidentally triggering navigation
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchDidMove = false;
+
+    resultsDiv.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length > 0) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchDidMove = false;
+        }
+    }, { passive: true });
+
+    resultsDiv.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches.length > 0) {
+            const dx = Math.abs(e.touches[0].clientX - touchStartX);
+            const dy = Math.abs(e.touches[0].clientY - touchStartY);
+            if (dx > 6 || dy > 6) {
+                touchDidMove = true;
+            }
+        }
+    }, { passive: true });
+
+    resultsDiv.addEventListener('touchend', () => {
+        setTimeout(() => { touchDidMove = false; }, 300);
+    }, { passive: true });
+
+    // Navigate only on real tap or click, never when scrolling
+    resultsDiv.addEventListener('click', (e) => {
+        if (touchDidMove) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
         const item = e.target.closest('.live-result-item');
         if (item && item.href) {
             e.preventDefault();
@@ -720,9 +752,7 @@ document.addEventListener('DOMContentLoaded', () => {
             resultsDiv.style.display = 'none';
             window.location.href = item.href;
         }
-    };
-    resultsDiv.addEventListener('pointerdown', navigateToResult);
-    resultsDiv.addEventListener('click', navigateToResult);
+    });
 
     input.addEventListener('input', function() {
         clearTimeout(timer);
