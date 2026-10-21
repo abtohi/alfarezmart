@@ -9,8 +9,8 @@
  * They are cached on first request via the Cache-First fetch handler.
  * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v47.2';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v47.2';
+const CACHE_NAME = 'alfarezmart-cache-v47.3';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v47.3';
 const APP_ASSET_VERSION = '25.30';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
@@ -135,7 +135,7 @@ self.addEventListener('fetch', event => {
     }
 
     // ── 2. Auth & Critical Live Pages: Always Network First for CSRF & Auth Freshness ──
-    const liveFreshPages = ['/', '/login', '/logout', '/register', '/sales/pos', '/purchases/create', '/products/create', '/ppob', '/ppob/history'];
+    const liveFreshPages = ['/', '/login', '/logout', '/register', '/sales/pos', '/purchases/create', '/products', '/products/create', '/ppob', '/ppob/history'];
     const hasSearchParam = url.search && (url.searchParams.has('q') || url.searchParams.has('barcode') || url.searchParams.has('category') || url.searchParams.has('min_price') || url.searchParams.has('max_price'));
     const isLiveFreshPage = url.pathname === '/' || 
                             url.pathname === BASE_URL || 
@@ -148,15 +148,24 @@ self.addEventListener('fetch', event => {
                 .then(response => {
                     if (response && response.ok && !response.redirected) {
                         const clone = response.clone();
-                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
+                        // CRITICAL: Do NOT cache pages that have query params (?q=...) into CACHE_NAME as generic offline fallback.
+                        // Only cache base pages without query parameters to prevent serving stale search results.
+                        if (!hasSearchParam) {
+                            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
+                        }
                     }
                     return response;
                 })
                 .catch(async () => {
-                    const cached = await caches.match(event.request, { ignoreSearch: true });
+                    // Exact match first (safe when offline)
+                    const cached = await caches.match(event.request);
                     if (cached) return cached;
-                    const baseCached = await caches.match(BASE_URL);
-                    if (baseCached) return baseCached;
+                    if (!hasSearchParam) {
+                        const baseProducts = await caches.match(BASE_URL + 'products');
+                        if (baseProducts) return baseProducts;
+                        const baseCached = await caches.match(BASE_URL);
+                        if (baseCached) return baseCached;
+                    }
                     return new Response('Offline: Halaman belum tersedia di cache', { status: 503, headers: { 'Content-Type': 'text/plain' } });
                 })
         );
@@ -232,7 +241,7 @@ self.addEventListener('fetch', event => {
     }
 
     // ── 5. HTML/Navigation Requests: Ultra-Fast Race Strategy (350ms) ──
-    const matchOptions = hasSearchParam ? {} : { ignoreSearch: true };
+    const matchOptions = {};
     event.respondWith(
         caches.match(event.request, matchOptions).then(async cachedResponse => {
             // Background fetcher helper
@@ -240,14 +249,16 @@ self.addEventListener('fetch', event => {
                 .then(networkResponse => {
                     if (networkResponse && networkResponse.status === 200 && networkResponse.type !== 'opaque' && !networkResponse.redirected && event.request.url.startsWith('http')) {
                         const clone = networkResponse.clone();
-                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
+                        if (!hasSearchParam) {
+                            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone)).catch(() => {});
+                        }
                     }
                     return networkResponse;
                 })
                 .catch(async () => {
                     if (cachedResponse) return cachedResponse;
                     
-                    // Fallback to other available cached pages in order of priority
+                    // Fallback to other available cached pages in order of priority (exact matches only)
                     const fallbackUrls = [
                         BASE_URL,
                         BASE_URL + 'sales/pos',
@@ -255,7 +266,7 @@ self.addEventListener('fetch', event => {
                         BASE_URL + 'settings/error-logs'
                     ];
                     for (const fUrl of fallbackUrls) {
-                        const hit = await caches.match(fUrl, { ignoreSearch: true });
+                        const hit = await caches.match(fUrl);
                         if (hit) return hit;
                     }
 

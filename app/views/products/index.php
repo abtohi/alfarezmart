@@ -32,9 +32,9 @@ if ($clearPriceParts) $clearPriceUrl .= '?' . implode('&', $clearPriceParts);
             <div class="search-input-wrapper">
                 <i class="bi bi-search"></i>
                 <input type="text" name="q" id="productSearchInput" class="no-track" value="<?= htmlspecialchars($search ?? '') ?>" placeholder="Cari produk..." autocomplete="off">
-                <?php if (!empty($search)): ?>
-                    <a href="<?= $clearSearchUrl ?>" style="color:var(--text-muted);text-decoration:none;flex-shrink:0;"><i class="bi bi-x-lg"></i></a>
-                <?php endif; ?>
+                <button type="button" id="clearSearchBtn" onclick="clearProductSearch(event)" title="Hapus pencarian" style="<?= empty($search) ? 'display:none;' : 'display:flex;' ?>align-items:center;justify-content:center;background:none;border:none;color:var(--text-muted);cursor:pointer;padding:0 6px;font-size:14px;flex-shrink:0;">
+                    <i class="bi bi-x-lg"></i>
+                </button>
             </div>
         </form>
         <button type="button" onclick="scanProductBarcode()" title="Scan Barcode"
@@ -525,12 +525,43 @@ function filterByCategory(val) {
     window.location.href = '<?= BASE_URL ?>products' + (parts.length ? '?' + parts.join('&') : '');
 }
 
-// Ensure search input is clear on load if URL has no 'q' (prevents browser autofill/bfcache from repopulating it)
+function clearProductSearch(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    const input = document.getElementById('productSearchInput');
+    const resultsDiv = document.getElementById('productLiveResults');
+    const clearBtn = document.getElementById('clearSearchBtn');
+
+    if (resultsDiv) resultsDiv.style.display = 'none';
+    if (input) input.value = '';
+    if (clearBtn) clearBtn.style.display = 'none';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('q')) {
+        urlParams.delete('q');
+        const qs = urlParams.toString();
+        window.location.href = '<?= BASE_URL ?>products' + (qs ? '?' + qs : '');
+    } else {
+        if (!navigator.onLine && typeof doOfflineSearch === 'function') {
+            doOfflineSearch('');
+        }
+    }
+}
+
+// Ensure search input and clear button state match URL on load
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
+    const searchInput = document.getElementById('productSearchInput');
+    const clearBtn = document.getElementById('clearSearchBtn');
     if (!urlParams.has('q')) {
-        const searchInput = document.getElementById('productSearchInput');
         if (searchInput) searchInput.value = '';
+        if (clearBtn) clearBtn.style.display = 'none';
+    } else {
+        if (clearBtn && searchInput && searchInput.value.trim().length > 0) {
+            clearBtn.style.display = 'flex';
+        }
     }
 });
 
@@ -635,7 +666,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentAbortController = null;
     let resultsDiv = document.createElement('div');
     resultsDiv.id = 'productLiveResults';
-    resultsDiv.style.cssText = 'position:absolute;left:0;right:0;top:100%;z-index:100;display:none;background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-md);max-height:320px;overflow-y:auto;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,0.3);';
+    resultsDiv.style.cssText = 'position:absolute;left:0;right:0;top:100%;z-index:1000;display:none;background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-md);max-height:320px;overflow-y:auto;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4);pointer-events:auto;-webkit-overflow-scrolling:touch;';
     const wrapper = input.closest('.search-input-wrapper');
     wrapper.style.position = 'relative';
     wrapper.appendChild(resultsDiv);
@@ -643,7 +674,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderResults(items, querySent) {
         if (input.value.trim() !== querySent) return; // Stale check
         if (!items || items.length === 0) {
-            resultsDiv.innerHTML = '<div style="padding:12px;text-align:center;color:var(--text-muted);font-size:var(--font-size-xs);">Tidak ditemukan</div>';
+            resultsDiv.innerHTML = '<div style="padding:14px;text-align:center;color:var(--text-muted);font-size:var(--font-size-xs);">Produk tidak ditemukan</div>';
         } else {
             resultsDiv.innerHTML = items.map(p => {
                 const label = (p.short_label || p.full_name || '').replace(/</g,'&lt;');
@@ -667,7 +698,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? `<img src="${BASE_URL}${p.photo}" style="width:44px;height:44px;object-fit:contain;border-radius:8px;background:transparent;flex-shrink:0;" loading="lazy">`
                     : `<div style="width:44px;height:44px;border-radius:8px;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;"><i class="bi bi-box-seam"></i></div>`;
 
-                return `<a href="${BASE_URL}products/${p.id}" style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border-color);text-decoration:none;color:var(--text-primary);font-size:var(--font-size-sm);transition:background 0.15s;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
+                return `<a href="${BASE_URL}products/${p.id}" class="live-result-item" data-id="${p.id}" style="display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border-color);text-decoration:none;color:var(--text-primary);font-size:var(--font-size-sm);transition:background 0.15s;cursor:pointer;" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background=''">
                     ${imgHtml}
                     <div style="flex:1;min-width:0;">
                         <div style="font-weight:600;line-height:1.3;">${label}</div>
@@ -680,6 +711,19 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsDiv.style.display = 'block';
     }
 
+    // Direct event listener for selecting search result (works reliably across desktop & mobile touch)
+    const navigateToResult = (e) => {
+        const item = e.target.closest('.live-result-item');
+        if (item && item.href) {
+            e.preventDefault();
+            e.stopPropagation();
+            resultsDiv.style.display = 'none';
+            window.location.href = item.href;
+        }
+    };
+    resultsDiv.addEventListener('pointerdown', navigateToResult);
+    resultsDiv.addEventListener('click', navigateToResult);
+
     input.addEventListener('input', function() {
         clearTimeout(timer);
         if (currentAbortController) {
@@ -688,23 +732,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const q = this.value.trim();
-        if (q.length < 1) { resultsDiv.style.display = 'none'; return; }
+        const clearBtn = document.getElementById('clearSearchBtn');
+        if (clearBtn) clearBtn.style.display = q.length > 0 ? 'flex' : 'none';
 
-        // Instant local search preview (0ms delay)
-        let localFound = false;
+        if (q.length < 1) {
+            resultsDiv.style.display = 'none';
+            return;
+        }
+
+        let timerFired = false;
+        // Instant preview from OfflineDB if available
         if (typeof OfflineDB !== 'undefined') {
             OfflineDB.searchProducts(q).then(localItems => {
-                if (input.value.trim() === q && localItems && localItems.length > 0) {
-                    localFound = true;
+                if (input.value.trim() === q && !timerFired && localItems && localItems.length > 0) {
                     renderResults(localItems, q);
                 }
             }).catch(() => {});
         }
 
         timer = setTimeout(async () => {
+            timerFired = true;
             if (input.value.trim() !== q) return;
 
-            let fetchedItems = null;
+            let serverSuccess = false;
             if (navigator.onLine) {
                 try {
                     currentAbortController = new AbortController();
@@ -712,43 +762,41 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (currentAbortController) currentAbortController.abort();
                     }, 4000);
 
-                    const res = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}`, {
-                        signal: currentAbortController.signal
+                    const res = await fetch(`${BASE_URL}api/products/search?q=${encodeURIComponent(q)}&_t=${Date.now()}`, {
+                        signal: currentAbortController.signal,
+                        cache: 'no-store'
                     });
                     clearTimeout(timeoutId);
 
                     if (res.ok && input.value.trim() === q) {
                         const items = await res.json();
+                        serverSuccess = true;
                         if (Array.isArray(items)) {
-                            if (items.length > 0) {
-                                fetchedItems = items;
-                                renderResults(items, q);
-                                return;
-                            } else if (!localFound) {
-                                // Only show empty results if local search also didn't find anything
-                                fetchedItems = items;
-                                renderResults([], q);
-                                return;
+                            // Server result is authoritative when online
+                            renderResults(items, q);
+
+                            // Background sync fresh products to OfflineDB
+                            if (items.length > 0 && typeof OfflineDB !== 'undefined' && typeof OfflineDB.saveProduct === 'function') {
+                                items.forEach(p => OfflineDB.saveProduct(p).catch(() => {}));
                             }
-                            // If local search found items, keep displaying local items
                             return;
                         }
                     }
                 } catch (apiErr) {
-                    // Aborted or failed
+                    // Aborted or offline
                 }
             }
 
-            // Fallback to offline DB if server fetch failed or timed out
-            if (input.value.trim() === q && !fetchedItems && typeof OfflineDB !== 'undefined') {
+            // Fallback to offline DB only when server request failed or device is offline
+            if (input.value.trim() === q && !serverSuccess && typeof OfflineDB !== 'undefined') {
                 try {
                     const fallback = await OfflineDB.searchProducts(q);
-                    if (input.value.trim() === q && fallback && fallback.length > 0) {
-                        renderResults(fallback, q);
+                    if (input.value.trim() === q) {
+                        renderResults(fallback || [], q);
                     }
                 } catch(e) {}
             }
-        }, 300);
+        }, 250);
     });
 
     input.addEventListener('keypress', e => {
@@ -771,9 +819,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('#productSearchForm') && !e.target.closest('#productLiveResults'))
+    document.addEventListener('pointerdown', (e) => {
+        if (!e.target.closest('#productSearchForm') && !e.target.closest('#productLiveResults')) {
             resultsDiv.style.display = 'none';
+        }
     });
 })();
 
@@ -1147,11 +1196,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof OfflineDB !== 'undefined') {
         try { await OfflineDB.init(); } catch(e) {}
         const serverCards = document.querySelectorAll('#productListContainer .product-card');
+        const emptyState = document.querySelector('#productListContainer .empty-state');
         const urlParams = new URLSearchParams(window.location.search);
         const q = urlParams.get('q') || '';
         
-        if (!navigator.onLine || window.IS_DB_OFFLINE || serverCards.length === 0) {
+        // Only run offline fallback if truly offline or database offline,
+        // OR container has neither cards nor an explicit server empty-state message.
+        // Never override a valid server response (including empty search result) when online!
+        if (!navigator.onLine || window.IS_DB_OFFLINE || (!emptyState && serverCards.length === 0)) {
             doOfflineSearch(q);
+        }
+
+        // Background sync fresh products into OfflineDB when online
+        if (navigator.onLine && typeof OfflineDB.syncProductsFromServer === 'function') {
+            setTimeout(() => {
+                OfflineDB.syncProductsFromServer().catch(() => {});
+            }, 2500);
         }
     }
 });
