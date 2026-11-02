@@ -145,6 +145,8 @@
             <button onclick="setQuickDate('week')" class="filter-quick-btn" data-key="week" style="padding:5px 10px;border-radius:30px;border:1px solid var(--border-color);background:var(--surface-2);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.2s;">7 Hari</button>
             <button onclick="setQuickDate('month')" class="filter-quick-btn" data-key="month" style="padding:5px 10px;border-radius:30px;border:1px solid var(--border-color);background:var(--surface-2);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.2s;">Bulan Ini</button>
             <button onclick="setQuickDate('last30')" class="filter-quick-btn" data-key="last30" style="padding:5px 10px;border-radius:30px;border:1px solid var(--border-color);background:var(--surface-2);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.2s;">30 Hari</button>
+            <button onclick="setQuickDate('year')" class="filter-quick-btn" data-key="year" style="padding:5px 10px;border-radius:30px;border:1px solid var(--border-color);background:var(--surface-2);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.2s;">1 Tahun</button>
+            <button onclick="setQuickDate('all')" class="filter-quick-btn" data-key="all" style="padding:5px 10px;border-radius:30px;border:1px solid var(--border-color);background:var(--surface-2);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.2s;">Semua Periode</button>
         </div>
 
         <div style="display:flex;gap:8px;">
@@ -172,6 +174,38 @@
             <i class="bi bi-chevron-down" id="rankingChevron" style="color:var(--text-muted);transition:transform 0.3s;"></i>
         </div>
         <div id="rankingBody" style="display:none;border:1px solid var(--border-color);border-top:none;border-radius:0 0 var(--radius-lg) var(--radius-lg);background:var(--surface-1);overflow:hidden;">
+            <!-- Filter toolbar khusus Top Pelanggan -->
+            <div style="padding:10px 14px;border-bottom:1px solid var(--border-color);background:rgba(0,0,0,0.06);">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+                    <div style="font-size:10px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;gap:4px;">
+                        <i class="bi bi-funnel"></i> Periode Peringkat:
+                    </div>
+                    <div id="rankingPeriodLabel" style="font-size:10px;font-weight:700;color:var(--primary);text-align:right;">Sesuai Filter</div>
+                </div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;">
+                    <button type="button" onclick="setRankingPeriod('sync')" class="ranking-period-btn" data-rkey="sync" style="padding:4px 9px;border-radius:20px;border:1px solid var(--primary);background:var(--primary);font-size:10px;font-weight:600;color:#fff;cursor:pointer;transition:all 0.2s;">Sesuai Filter</button>
+                    <button type="button" onclick="setRankingPeriod('last30')" class="ranking-period-btn" data-rkey="last30" style="padding:4px 9px;border-radius:20px;border:1px solid var(--border-color);background:var(--surface-2);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.2s;">30 Hari</button>
+                    <button type="button" onclick="setRankingPeriod('year')" class="ranking-period-btn" data-rkey="year" style="padding:4px 9px;border-radius:20px;border:1px solid var(--border-color);background:var(--surface-2);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.2s;">1 Tahun</button>
+                    <button type="button" onclick="setRankingPeriod('all')" class="ranking-period-btn" data-rkey="all" style="padding:4px 9px;border-radius:20px;border:1px solid var(--border-color);background:var(--surface-2);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.2s;">Semua Periode</button>
+                    <button type="button" onclick="setRankingPeriod('custom')" class="ranking-period-btn" data-rkey="custom" style="padding:4px 9px;border-radius:20px;border:1px solid var(--border-color);background:var(--surface-2);font-size:10px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all 0.2s;"><i class="bi bi-calendar-range"></i> Range Tanggal</button>
+                </div>
+                <!-- Custom Date Range Subpanel -->
+                <div id="rankingCustomRangePanel" style="display:none;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border-color);">
+                    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:end;">
+                        <div>
+                            <label style="font-size:9px;color:var(--text-muted);display:block;margin-bottom:2px;">Dari</label>
+                            <input type="date" id="rankingDateFrom" class="form-control-dark" style="font-size:11px;padding:5px 8px;width:100%;">
+                        </div>
+                        <div>
+                            <label style="font-size:9px;color:var(--text-muted);display:block;margin-bottom:2px;">Sampai</label>
+                            <input type="date" id="rankingDateTo" class="form-control-dark" style="font-size:11px;padding:5px 8px;width:100%;">
+                        </div>
+                        <button type="button" onclick="applyRankingCustomDate()" class="btn-primary-custom" style="padding:6px 12px;font-size:11px;height:31px;display:flex;align-items:center;gap:4px;cursor:pointer;">
+                            <i class="bi bi-check-lg"></i> Terapkan
+                        </button>
+                    </div>
+                </div>
+            </div>
             <div id="rankingList" style="padding:8px 0;"></div>
         </div>
     </div>
@@ -418,19 +452,28 @@ function clearCustFilter() {
 // ===== Quick Date Buttons =====
 function setQuickDate(key) {
     const today = new Date();
-    let from, to;
-    to = isoDate(today);
+    let from = '', to = '';
 
     if (key === 'today') {
-        from = to;
+        from = to = isoDate(today);
     } else if (key === 'week') {
+        to = isoDate(today);
         const d = new Date(today); d.setDate(d.getDate() - 6);
         from = isoDate(d);
     } else if (key === 'month') {
+        to = isoDate(today);
         from = isoDate(new Date(today.getFullYear(), today.getMonth(), 1));
     } else if (key === 'last30') {
+        to = isoDate(today);
         const d = new Date(today); d.setDate(d.getDate() - 29);
         from = isoDate(d);
+    } else if (key === 'year') {
+        to = isoDate(today);
+        const d = new Date(today); d.setFullYear(d.getFullYear() - 1);
+        from = isoDate(d);
+    } else if (key === 'all') {
+        from = '';
+        to = '';
     }
 
     document.getElementById('filterDateFrom').value = from;
@@ -573,18 +616,36 @@ function renderSummary(summary) {
     document.getElementById('summaryCard').style.display = 'block';
 }
 
-// ===== Render Customer Ranking =====
+// ===== Render Customer Ranking & Period Filter =====
+let _currentRankingKey = 'sync';
+
 function renderCustomerRanking(ranking) {
     const section = document.getElementById('customerRankingSection');
-    const list    = document.getElementById('rankingList');
+    if (section) section.style.display = 'block';
+
+    if (_currentRankingKey === 'sync') {
+        const label = document.getElementById('rankingPeriodLabel');
+        if (label) label.textContent = 'Sesuai Filter';
+        renderCustomerRankingList(ranking);
+    }
+}
+
+function renderCustomerRankingList(ranking) {
+    const list     = document.getElementById('rankingList');
     const subtitle = document.getElementById('rankingSubtitle');
+    if (!list) return;
 
     if (!ranking || ranking.length === 0) {
-        section.style.display = 'none';
+        if (subtitle) subtitle.textContent = '0 pelanggan ditemukan';
+        list.innerHTML = `
+            <div style="padding:24px 16px;text-align:center;color:var(--text-muted);font-size:var(--font-size-xs);">
+                <i class="bi bi-people" style="font-size:1.6rem;display:block;margin-bottom:8px;opacity:0.35;"></i>
+                Tidak ada data transaksi pelanggan pada periode ini
+            </div>`;
         return;
     }
 
-    subtitle.textContent = `${ranking.length} pelanggan ditemukan`;
+    if (subtitle) subtitle.textContent = `${ranking.length} pelanggan ditemukan`;
 
     const medals = ['🥇','🥈','🥉'];
     const colors  = ['var(--warning)','#adb5bd','#cd7f32'];
@@ -597,7 +658,7 @@ function renderCustomerRanking(ranking) {
                 ${i < 3 ? medals[i] : '#' + (i+1)}
             </div>
             <div style="flex:1;min-width:0;">
-                <div style="font-size:var(--font-size-xs);font-weight:700;color:var(--text-primary);text-overflow:ellipsis;overflow:hidden;white-space:nowrap;">${c.name}</div>
+                <div style="font-size:var(--font-size-xs);font-weight:700;color:var(--text-primary);text-overflow:ellipsis;overflow:hidden;white-space:nowrap;">${escSales(c.name || 'Pelanggan')}</div>
                 <div style="font-size:10px;color:var(--text-muted);margin-top:1px;">${c.transaction_count} transaksi · ${c.phone || 'Tanpa HP'}</div>
             </div>
             <div style="text-align:right;flex-shrink:0;">
@@ -607,8 +668,99 @@ function renderCustomerRanking(ranking) {
             </div>
         </div>`;
     }).join('');
+}
 
-    section.style.display = 'block';
+async function setRankingPeriod(key) {
+    _currentRankingKey = key;
+    const customPanel = document.getElementById('rankingCustomRangePanel');
+    const labelEl = document.getElementById('rankingPeriodLabel');
+    if (customPanel) customPanel.style.display = (key === 'custom') ? 'block' : 'none';
+
+    document.querySelectorAll('.ranking-period-btn').forEach(btn => {
+        const isActive = btn.dataset.rkey === key;
+        btn.style.background = isActive ? 'var(--primary)' : 'var(--surface-2)';
+        btn.style.color = isActive ? 'white' : 'var(--text-muted)';
+        btn.style.borderColor = isActive ? 'var(--primary)' : 'var(--border-color)';
+    });
+
+    if (key === 'sync') {
+        if (labelEl) labelEl.textContent = 'Sesuai Filter';
+        if (_currentData && _currentData.customer_ranking) {
+            renderCustomerRankingList(_currentData.customer_ranking);
+        } else {
+            renderCustomerRankingList([]);
+        }
+        return;
+    }
+
+    const today = new Date();
+    let from = '', to = '';
+    if (key === 'last30') {
+        to = isoDate(today);
+        const d = new Date(today); d.setDate(d.getDate() - 29);
+        from = isoDate(d);
+        if (labelEl) labelEl.textContent = '30 Hari Terakhir';
+        await fetchRankingOnly(from, to);
+    } else if (key === 'year') {
+        to = isoDate(today);
+        const d = new Date(today); d.setFullYear(d.getFullYear() - 1);
+        from = isoDate(d);
+        if (labelEl) labelEl.textContent = '1 Tahun Kebelakang';
+        await fetchRankingOnly(from, to);
+    } else if (key === 'all') {
+        from = '';
+        to = '';
+        if (labelEl) labelEl.textContent = 'Semua Periode';
+        await fetchRankingOnly(from, to);
+    } else if (key === 'custom') {
+        if (labelEl) labelEl.textContent = 'Range Tanggal';
+    }
+}
+
+async function applyRankingCustomDate() {
+    const from = document.getElementById('rankingDateFrom').value;
+    const to = document.getElementById('rankingDateTo').value;
+    if (!from && !to) {
+        if (typeof showToast === 'function') showToast('Pilih minimal salah satu tanggal', 'warning');
+        return;
+    }
+    const labelEl = document.getElementById('rankingPeriodLabel');
+    if (labelEl) {
+        labelEl.textContent = (from ? from : 'Awal') + ' s/d ' + (to ? to : 'Hari Ini');
+    }
+    await fetchRankingOnly(from, to);
+}
+
+async function fetchRankingOnly(from, to) {
+    const list = document.getElementById('rankingList');
+    const subtitle = document.getElementById('rankingSubtitle');
+    if (list) {
+        list.innerHTML = `<div class="elegant-loader" style="margin:20px auto;"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>`;
+    }
+    try {
+        const params = new URLSearchParams();
+        if (from) params.set('date_from', from);
+        if (to) params.set('date_to', to);
+        params.set('ranking_only', '1');
+
+        const baseUrl = (typeof window.BASE_URL !== 'undefined') ? window.BASE_URL : '/';
+        const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : (baseUrl + '/');
+        const res = await fetch(`${cleanBaseUrl}api/sales/analytics?${params.toString()}`, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        });
+        if (!res.ok) throw new Error('Gagal memuat ranking');
+        const json = await res.json();
+        if (json && json.success && json.data && json.data.customer_ranking) {
+            renderCustomerRankingList(json.data.customer_ranking);
+        } else {
+            renderCustomerRankingList([]);
+        }
+    } catch (e) {
+        if (list) {
+            list.innerHTML = `<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:var(--font-size-xs);">Gagal memuat peringkat: ${e.message}</div>`;
+        }
+    }
 }
 
 function toggleRanking() {
@@ -1033,8 +1185,13 @@ async function mergeSelectedInvoices() {
     showToast('Memuat data invoice yang dipilih...', 'info');
 
     try {
+        const baseUrl = (typeof window.BASE_URL !== 'undefined') ? window.BASE_URL : '/';
+        const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : (baseUrl + '/');
         const responses = await Promise.all(ids.map(id => 
-            fetch(`${BASE_URL}api/sales/invoice/${id}`).then(r => r.json())
+            fetch(`${cleanBaseUrl}api/sales/invoice/${encodeURIComponent(id)}`, {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            }).then(r => r.json())
         ));
 
         const validTransactions = responses
@@ -1330,7 +1487,11 @@ const _prewarmedInvoices = new Map();
 function prewarmInvoice(saleId) {
     if (!saleId || _prewarmedInvoices.has(saleId)) return;
     const baseUrl = (typeof window.BASE_URL !== 'undefined') ? window.BASE_URL : '/';
-    _prewarmedInvoices.set(saleId, fetch(`${baseUrl}api/sales/invoice/${saleId}`).then(r => r.ok ? r.json() : null).catch(() => null));
+    const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : (baseUrl + '/');
+    _prewarmedInvoices.set(saleId, fetch(`${cleanBaseUrl}api/sales/invoice/${encodeURIComponent(saleId)}`, {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+    }).then(r => r.ok ? r.json() : null).catch(() => null));
 }
 
 async function shareInvoice(saleId, invoiceNumber) {

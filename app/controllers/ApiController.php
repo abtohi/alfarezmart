@@ -2797,6 +2797,17 @@ class ApiController extends Controller
                 'customer_id' => trim($_GET['customer_id'] ?? ''),
             ];
 
+            if (!empty($_GET['ranking_only'])) {
+                $customerRanking = $model->getCustomerProfitRanking($filters);
+                $this->json([
+                    'success' => true,
+                    'data' => [
+                        'customer_ranking' => $customerRanking,
+                    ],
+                ]);
+                return;
+            }
+
             $transactions     = $model->getFiltered($filters);
             $customerRanking  = $model->getCustomerProfitRanking($filters);
 
@@ -2881,7 +2892,7 @@ class ApiController extends Controller
             $this->json(['error' => $e->getMessage()], 500);
         }
     }
-    public function getInvoice(int $id) {
+    public function getInvoice($id) {
         try {
             $model = new SaleModel();
             // Try by ID first, then by invoice number

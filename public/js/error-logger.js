@@ -137,7 +137,10 @@
         var msg = args.map(function (a) {
             return (a instanceof Error) ? (a.message + ' | ' + (a.stack || '')) : String(a);
         }).join(' | ');
-        addLog('console_error', msg, null);
+        // Jangan catat AbortError atau signal aborted sebagai error sistem
+        if (msg.indexOf('AbortError') === -1 && msg.indexOf('aborted without reason') === -1) {
+            addLog('console_error', msg, null);
+        }
         _origConsoleError.apply(console, arguments);
     };
 
@@ -159,6 +162,7 @@
         '/setup',                 // 403 intentional di production
         '/sw.js',                 // service worker check
         '/api/ai/scan-invoice',   // AI scan error ditangkap langsung oleh scanInvoiceWithAI() dengan detail lebih lengkap
+        '/api/sales/invoice/',    // invoice fetch / prewarm
     ];
 
     function isIgnoredUrl(url) {

@@ -808,6 +808,7 @@ if ($userLevel === 'staff') {
     <!-- App JS -->
     <script>
         const BASE_URL = '<?= BASE_URL ?>';
+        window.BASE_URL = '<?= BASE_URL ?>';
         const version = '25.25';
         window.IS_DB_OFFLINE = <?= (class_exists('Database') && Database::getInstance()->isOffline()) ? 'true' : 'false' ?>;
         window.PPOB_CONFIG = {

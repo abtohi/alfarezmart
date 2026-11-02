@@ -334,7 +334,7 @@ class SaleModel extends Model
                 {$whereStr}
                 GROUP BY c.id, c.name, c.phone
                 ORDER BY total_profit DESC
-                LIMIT 20";
+                LIMIT 50";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);

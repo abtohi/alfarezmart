@@ -9,8 +9,8 @@
  * They are cached on first request via the Cache-First fetch handler.
  * This prevents the old unversioned cache entry from being served for new versioned URLs.
  */
-const CACHE_NAME = 'alfarezmart-cache-v46.6';
-const DYNAMIC_CACHE = 'alfarezmart-dynamic-v46.6';
+const CACHE_NAME = 'alfarezmart-cache-v46.7';
+const DYNAMIC_CACHE = 'alfarezmart-dynamic-v46.7';
 const APP_ASSET_VERSION = '25.25';
 const BASE_URL = self.location.pathname.replace('/sw.js', '/');
 const STATIC_ASSETS = [
@@ -98,17 +98,12 @@ self.addEventListener('fetch', event => {
 
     const url = new URL(event.request.url);
 
-    // Bypass API products sync and CSRF from SW interception
-    if (url.pathname.includes('/api/products/sync') || url.pathname.includes('/api/csrf-token')) {
-        event.respondWith(
-            fetch(event.request, { cache: 'no-cache', credentials: 'same-origin' }).catch(() => {
-                return new Response(
-                    JSON.stringify({ offline: true, error: 'Offline' }),
-                    { status: 200, headers: { 'Content-Type': 'application/json' } }
-                );
-            })
-        );
-        return;
+    // Bypass API products sync, CSRF, and dynamic sales endpoints from SW interception
+    if (url.pathname.includes('/api/products/sync') || 
+        url.pathname.includes('/api/csrf-token') || 
+        url.pathname.includes('/api/sales/invoice/') ||
+        url.pathname.includes('/api/sales/analytics')) {
+        return; // Biarkan browser menangani langsung via native network stack
     }
 
     // ── 1. API Requests: Network First with Fast Cache Fallback ──

@@ -569,7 +569,11 @@
                 if (typeof window.showToast === 'function') window.showToast('Menyiapkan gambar invoice...', 'info');
                 const fetchId = saleId || invoiceNumber;
                 const baseUrl = (typeof window.BASE_URL !== 'undefined') ? window.BASE_URL : '/';
-                const res = await fetch(`${baseUrl}api/sales/invoice/${fetchId}`);
+                const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl : (baseUrl + '/');
+                const res = await fetch(`${cleanBaseUrl}api/sales/invoice/${encodeURIComponent(fetchId)}`, {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' }
+                });
                 if (!res.ok) throw new Error('Gagal mengambil data transaksi');
                 const json = await res.json();
                 if (!json.success) throw new Error(json.error || 'Data invoice tidak ditemukan');
