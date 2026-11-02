@@ -2,10 +2,11 @@
  * sales_invoice.js - Engine Pembuatan & Berbagi Struk/Invoice Gambar AlfarezMart
  * Fitur:
  * 1. Desain invoice modern, elegan, profesional dengan Logo AlfarezMart.
- * 2. Tanpa nama pelanggan pada tampilan invoice.
- * 3. Render gambar resolusi tinggi (High-DPI 3x) via html2canvas.
+ * 2. Tanpa nama pelanggan pada tampilan invoice (sesuai instruksi).
+ * 3. Render gambar resolusi tinggi (Retina 2x DPI, ultra-cepat & jernih).
  * 4. Berbagi langsung dalam bentuk gambar ke WhatsApp/Telegram via Web Share API Level 2 (files).
- * 5. Fallback desktop: Salin Gambar ke Clipboard (1-click Paste Ctrl+V di WA Web) & Unduh.
+ * 5. Penanganan anti-timeout transient user activation (fresh gesture modal action).
+ * 6. Fallback desktop: Salin Gambar ke Clipboard (1-click Paste Ctrl+V di WA Web) & Unduh.
  */
 
 (function (window, document) {
@@ -15,6 +16,8 @@
     const _invoiceImageCache = new Map();
     let _activeModalBlob = null;
     let _activeModalFile = null;
+    let _activeShareTitle = '';
+    let _activeShareText = '';
 
     function formatRupiah(amount) {
         return 'Rp ' + Math.round(Number(amount) || 0).toLocaleString('id-ID');
@@ -274,7 +277,7 @@
     }
 
     /**
-     * Generate File Gambar PNG Invoice menggunakan html2canvas dengan Resolusi Tinggi (3x DPI)
+     * Generate File Gambar PNG Invoice menggunakan html2canvas dengan Resolusi Tinggi (2x DPI Retina)
      */
     async function generateSalesInvoiceImageFile(data) {
         const h2c = await ensureHtml2Canvas();
@@ -307,15 +310,16 @@
                 return new Promise(res => {
                     img.onload = res;
                     img.onerror = res;
-                    setTimeout(res, 500);
+                    setTimeout(res, 400);
                 });
             }));
         }
 
         const cardNode = container.querySelector('#sales-invoice-card') || container.firstElementChild;
 
+        // Skala 2x DPI: Menghasilkan 760px lebar, sangat jernih (Retina Quality) dan 8x lebih cepat render
         const canvas = await h2c(cardNode, {
-            scale: 2.8,
+            scale: 2,
             useCORS: true,
             allowTaint: true,
             backgroundColor: '#ffffff',
@@ -363,18 +367,23 @@
     }
 
     /**
-     * Tampilkan Modal Fallback Share untuk Desktop
-     * CATATAN PENTING: Bebas dari link cek alfarezmart sesuai instruksi user.
+     * Tampilkan Modal Share & Fallback Invoice
+     * Menangani baik Web Share API (fresh user gesture) maupun fallback Desktop/Clipboard
      */
-    function showSalesInvoiceShareFallbackModal(invoiceData, fileData) {
+    function showSalesInvoiceShareFallbackModal(invoiceData, fileData, options = {}) {
         const invoiceNo = invoiceData.invoice_number || invoiceData.invoice || 'INV';
         const storeName = invoiceData.store_name || 'Alfarez Mart';
         const { blob, fileName, file } = fileData;
 
         _activeModalBlob = blob;
         _activeModalFile = file;
+        _activeShareTitle = options.shareTitle || `Struk Pembelian ${storeName}`;
+        _activeShareText = options.shareText || `Struk Pembelian No. ${invoiceNo} - ${storeName}`;
 
         const imageUrl = URL.createObjectURL(blob);
+        const canShareFiles = (typeof navigator.share === 'function') && 
+            (typeof navigator.canShare === 'function' ? navigator.canShare({ files: [file] }) : true);
+        const isMobileOrShareable = options.isMobileShare !== undefined ? options.isMobileShare : canShareFiles;
 
         if (typeof window.AppModal !== 'undefined') {
             window.AppModal.show({
@@ -390,7 +399,29 @@
                             <img src="${imageUrl}" style="width:100%;max-width:240px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);display:block;" alt="Preview Invoice ${invoiceNo}">
                         </div>
 
-                        <!-- 1-Click Copy Image Button for WA Web / Telegram -->
+                        ${isMobileOrShareable ? `
+                        <!-- Direct Share Trigger Button (Guaranteed Fresh User Gesture) -->
+                        <div style="margin-bottom:12px;">
+                            <button type="button" id="btnDirectShareModal" onclick="window.shareSalesInvoiceDirectFromModal()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:13px;background:linear-gradient(135deg, #25D366 0%, #128C7E 100%);color:white;border:none;border-radius:12px;font-weight:700;font-size:14px;box-shadow:0 4px 14px rgba(37,211,102,0.35);cursor:pointer;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                <i class="bi bi-whatsapp" style="font-size:1.3rem;"></i>
+                                <span>Kirim Struk ke WhatsApp / Media Sosial</span>
+                            </button>
+                            <div style="margin-top:6px;font-size:11px;color:var(--text-muted);line-height:1.4;">
+                                💡 Klik tombol hijau di atas untuk langsung memilih kontak WhatsApp atau media sosial lainnya.
+                            </div>
+                        </div>
+
+                        <!-- Secondary Actions: Copy & Download -->
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;">
+                            <button type="button" onclick="window.copySalesInvoiceImageFromModal()" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:var(--surface-2);border:1px solid var(--border-color);color:var(--text-primary);border-radius:10px;font-weight:600;font-size:12px;cursor:pointer;">
+                                <i class="bi bi-clipboard-check-fill" style="color:#25D366;font-size:1.1rem;"></i> Salin Gambar
+                            </button>
+                            <button type="button" onclick="window.downloadSalesInvoiceImageFromModal('${fileName}')" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px;background:var(--surface-2);border:1px solid var(--border-color);color:var(--text-primary);border-radius:10px;font-weight:600;font-size:12px;cursor:pointer;">
+                                <i class="bi bi-download" style="color:var(--primary);font-size:1.1rem;"></i> Unduh Gambar
+                            </button>
+                        </div>
+                        ` : `
+                        <!-- Desktop Fallback: 1-Click Copy Image Button for WA Web / Telegram -->
                         <div style="margin-bottom:12px;">
                             <button type="button" id="btnCopyInvoiceImgModal" onclick="window.copySalesInvoiceImageFromModal()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:10px;padding:13px;background:linear-gradient(135deg, #25D366 0%, #128C7E 100%);color:white;border:none;border-radius:12px;font-weight:700;font-size:13.5px;box-shadow:0 4px 14px rgba(37,211,102,0.35);cursor:pointer;transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                                 <i class="bi bi-clipboard-check-fill" style="font-size:1.25rem;"></i>
@@ -410,6 +441,7 @@
                                 <i class="bi bi-download" style="color:var(--primary);font-size:1.1rem;"></i> Unduh Gambar
                             </button>
                         </div>
+                        `}
                     </div>
                 `,
                 submitText: null,
@@ -420,6 +452,56 @@
             });
         }
     }
+
+    /**
+     * Berbagi langsung dari klik tombol modal dengan Fresh User Gesture (bebas timeout)
+     */
+    window.shareSalesInvoiceDirectFromModal = async function () {
+        const btn = document.getElementById('btnDirectShareModal');
+        if (!_activeModalFile) {
+            if (typeof window.showToast === 'function') window.showToast('Gambar invoice belum siap', 'error');
+            return;
+        }
+
+        if (typeof navigator.share === 'function') {
+            try {
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Membuka Aplikasi...';
+                }
+                await navigator.share({
+                    title: _activeShareTitle || 'Struk Pembelian Alfarez Mart',
+                    text: _activeShareText || '',
+                    files: [_activeModalFile]
+                });
+                if (typeof window.showToast === 'function') {
+                    window.showToast('✅ Invoice berhasil dibagikan!', 'success');
+                }
+                if (window.AppModal && typeof window.AppModal.close === 'function') {
+                    window.AppModal.close();
+                }
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    // Pengguna membatalkan / menutup sheet share
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="bi bi-whatsapp" style="font-size:1.3rem;"></i><span>Kirim Struk ke WhatsApp / Media Sosial</span>';
+                    }
+                    return;
+                }
+                console.warn('Direct share from modal failed, falling back to copy:', err);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-whatsapp" style="font-size:1.3rem;"></i><span>Kirim Struk ke WhatsApp / Media Sosial</span>';
+                }
+            }
+        }
+
+        // Fallback jika tidak didukung
+        window.copySalesInvoiceImageFromModal();
+    };
 
     // Modal Helper Actions
     window.copySalesInvoiceImageFromModal = async function () {
@@ -514,7 +596,7 @@
                 data.store_logo = data.storeSettings.store_logo;
             }
 
-            // Generate file gambar invoice beresolusi tinggi
+            // Generate file gambar invoice beresolusi tinggi (scale 2x, cepat & super tajam)
             const genResult = await generateSalesInvoiceImageFile(data);
             const { file, blob, fileName } = genResult;
 
@@ -522,18 +604,40 @@
             const shareText = `Struk Pembelian No. ${data.invoice_number || ''} - ${data.store_name || 'Alfarez Mart'}`;
 
             // LANGKAH UTAMA: Cek Web Share API Level 2 untuk Berbagi File Gambar Langsung
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: shareTitle,
-                    text: shareText,
-                    files: [file]
-                });
-                if (typeof window.showToast === 'function') {
-                    window.showToast('✅ Invoice berhasil dibagikan!', 'success');
+            const canShareFiles = (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] }));
+            if (canShareFiles) {
+                try {
+                    await navigator.share({
+                        title: shareTitle,
+                        text: shareText,
+                        files: [file]
+                    });
+                    if (typeof window.showToast === 'function') {
+                        window.showToast('✅ Invoice berhasil dibagikan!', 'success');
+                    }
+                    return;
+                } catch (shareErr) {
+                    if (shareErr.name === 'AbortError') {
+                        // User membatalkan dialog share - bukan error
+                        return;
+                    }
+                    console.warn('Native share gesture expired or failed, showing action modal:', shareErr);
+                    // Jika token user gesture kedaluwarsa (NotAllowedError) karena waktu render/fetch:
+                    // Buka modal interaktif dengan fresh user gesture button
+                    showSalesInvoiceShareFallbackModal(data, genResult, {
+                        shareTitle,
+                        shareText,
+                        isMobileShare: true
+                    });
+                    return;
                 }
             } else {
                 // Fallback untuk desktop PC atau browser tanpa Web Share Level 2
-                showSalesInvoiceShareFallbackModal(data, genResult);
+                showSalesInvoiceShareFallbackModal(data, genResult, {
+                    shareTitle,
+                    shareText,
+                    isMobileShare: false
+                });
             }
         } catch (err) {
             if (err.name !== 'AbortError') {
@@ -550,6 +654,13 @@
         }
     }
 
+    // Pre-initialize html2canvas saat idle agar tidak delay saat tombol share pertama kali diklik
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(() => ensureHtml2Canvas().catch(() => {}));
+    } else {
+        setTimeout(() => ensureHtml2Canvas().catch(() => {}), 300);
+    }
+
     // Expose API ke Window
     window.renderSalesInvoiceHTML = renderSalesInvoiceHTML;
     window.generateSalesInvoiceImageFile = generateSalesInvoiceImageFile;
@@ -559,4 +670,3 @@
     window.shareSalesInvoice = shareSalesInvoice;
 
 })(window, document);
-

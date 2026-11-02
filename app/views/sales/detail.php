@@ -1369,6 +1369,24 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
     const STORE_SETTINGS = <?= json_encode($storeSettings) ?>;
     const SALE_DATA = <?= json_encode($sale) ?>;
 
+    // Pre-generate gambar struk di background agar saat tombol bagikan diklik langsung terbuka seketika
+    if (typeof window.generateSalesInvoiceImageFile === 'function' && typeof SALE_DATA !== 'undefined' && SALE_DATA) {
+        setTimeout(() => {
+            window.generateSalesInvoiceImageFile({
+                saleId: SALE_DATA.id,
+                invoice_number: SALE_DATA.invoice_number,
+                created_at: SALE_DATA.created_at,
+                payment_method: SALE_DATA.payment_method,
+                sale_mode: SALE_DATA.sale_mode,
+                total_amount: SALE_DATA.total_amount,
+                items: SALE_DATA.items || [],
+                storeSettings: STORE_SETTINGS,
+                store_name: STORE_SETTINGS?.store_name || 'Alfarez Mart',
+                store_logo: STORE_SETTINGS?.store_logo
+            }).catch(() => {});
+        }, 300);
+    }
+
     async function shareDetailInvoice() {
         const btn = document.getElementById('btnShareDetailInvoice');
         if (typeof window.shareSalesInvoice === 'function') {

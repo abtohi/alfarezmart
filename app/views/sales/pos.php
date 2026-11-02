@@ -1969,6 +1969,11 @@ async function proceedCheckout() {
                 store_logo: STORE_SETTINGS?.store_logo
             };
 
+            // Pre-generate file gambar struk di background agar saat tombol bagikan diklik langsung terbuka tanpa delay
+            if (typeof window.generateSalesInvoiceImageFile === 'function') {
+                window.generateSalesInvoiceImageFile(window._lastCheckoutInvoiceData).catch(() => {});
+            }
+
             cart = [];
             currentDraftId = null;
             clearCustomer();

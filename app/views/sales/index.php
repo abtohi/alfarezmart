@@ -773,7 +773,7 @@ function renderGroupedSales(transactions) {
                         <button type="button" onclick="printSingleSale(${t.id}, '${t.invoice_number}')" title="Cetak Struk Transaksi" class="btn-outline-custom" style="padding:4px 8px;font-size:11px;border-radius:6px;color:var(--success);border-color:rgba(16,185,129,0.3);">
                             <i class="bi bi-printer"></i>
                         </button>
-                        <button type="button" onclick="shareInvoice(${t.id}, '${t.invoice_number}')" data-share-btn="${t.id}" title="Bagikan / Unduh Struk" class="btn-outline-custom" style="padding:4px 8px;font-size:11px;border-radius:6px;color:var(--primary);border-color:var(--primary-bg);">
+                        <button type="button" onpointerdown="prewarmInvoice(${t.id})" onclick="shareInvoice(${t.id}, '${t.invoice_number}')" data-share-btn="${t.id}" title="Bagikan / Unduh Struk" class="btn-outline-custom" style="padding:4px 8px;font-size:11px;border-radius:6px;color:var(--primary);border-color:var(--primary-bg);">
                             <i class="bi bi-share"></i>
                         </button>
                         <button type="button" onclick="deleteSingleSale(${t.id}, '${t.invoice_number}')" title="Hapus Transaksi" class="btn-outline-custom" style="padding:4px 8px;font-size:11px;border-radius:6px;color:var(--danger);border-color:rgba(239,68,68,0.3);">
@@ -825,6 +825,7 @@ function renderSaleCard(t) {
                         <i class="bi bi-printer"></i>
                     </button>
                     <button type="button"
+                        onpointerdown="prewarmInvoice(${t.id})"
                         onclick="event.stopPropagation(); shareInvoice(${t.id}, '${t.invoice_number}')"
                         title="Bagikan struk"
                         style="background:none;border:none;padding:2px 4px;cursor:pointer;color:var(--text-muted);font-size:1rem;border-radius:var(--radius-sm);transition:color 0.2s,background 0.2s;line-height:1;display:flex;align-items:center;"
@@ -1325,12 +1326,41 @@ document.addEventListener('DOMContentLoaded', () => {
 /**
  * Berbagi Invoice / Struk dalam bentuk Gambar rapi & modern via sales_invoice.js
  */
+const _prewarmedInvoices = new Map();
+function prewarmInvoice(saleId) {
+    if (!saleId || _prewarmedInvoices.has(saleId)) return;
+    const baseUrl = (typeof window.BASE_URL !== 'undefined') ? window.BASE_URL : '/';
+    _prewarmedInvoices.set(saleId, fetch(`${baseUrl}api/sales/invoice/${saleId}`).then(r => r.ok ? r.json() : null).catch(() => null));
+}
+
 async function shareInvoice(saleId, invoiceNumber) {
     const btn = document.querySelector(`[data-share-btn="${saleId}"]`);
     if (typeof window.shareSalesInvoice === 'function') {
+        let prewarmedData = null;
+        if (_prewarmedInvoices.has(saleId)) {
+            try {
+                const json = await _prewarmedInvoices.get(saleId);
+                if (json && json.success) {
+                    const tx = json.transaction || {};
+                    prewarmedData = {
+                        saleId: tx.id || saleId,
+                        invoice_number: tx.invoice_number || invoiceNumber,
+                        created_at: tx.created_at,
+                        payment_method: tx.payment_method,
+                        sale_mode: tx.sale_mode,
+                        total_amount: tx.total_amount,
+                        items: json.items || tx.items || [],
+                        store_name: json.store_name,
+                        store_logo: json.store_logo,
+                        storeSettings: json.store_settings
+                    };
+                }
+            } catch(e) {}
+        }
         await window.shareSalesInvoice({
             saleId: saleId,
             invoiceNumber: invoiceNumber,
+            data: prewarmedData,
             buttonEl: btn
         });
     } else {
