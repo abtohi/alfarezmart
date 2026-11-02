@@ -617,20 +617,9 @@ function detectPackagingCustomFlags(packagings) {
         const ratio = bQty / lv1BaseQty;
 
         // Buy Custom Detection:
-        // Keep true if already set; otherwise compare with proportional Level 1 buy price
-        if (p.buy_custom === true) {
-            // Keep user or previously flagged custom
-        } else {
-            const expBuy = lv1Buy * ratio;
-            const buyPrice = parseFloat(p.buy_price) || 0;
-            if (buyPrice > 0 && lv1Buy > 0 && Math.abs(buyPrice - expBuy) > 0.5) {
-                p.buy_custom = true;
-            } else if (buyPrice > 0 && lv1Buy <= 0) {
-                p.buy_custom = true;
-            } else {
-                p.buy_custom = false;
-            }
-        }
+        // Harga modal per kemasan HARUS unchecklist & linear dengan level 1 secara default.
+        // Hanya menjadi custom jika user secara manual mencentang checkbox custom.
+        p.buy_custom = (p.buy_custom === true && p.buy_custom_manual === true);
 
         // Sell Custom Detection:
         // Keep true if already set; otherwise compare retail/wholesale with proportional Level 1
@@ -945,9 +934,6 @@ async function scanInvoiceWithAI() {
                             const targetPkg = clonePkgs.find(p => p.level == selectedPkg.level);
                             if (targetPkg) {
                                 targetPkg.buy_price = unitPriceVal;
-                                if (targetPkg.level != 1) {
-                                    targetPkg.buy_custom = true;
-                                }
                             }
 
                             // Propagate buy_price & calculated nett across all packaging levels based on quantity and contents
@@ -1859,9 +1845,6 @@ async function selectProductToLink(tempId, productId) {
 
         if (currentBuyPrice > 0) {
             selectedPkg.buy_price = currentBuyPrice;
-            if (selectedPkg.level != 1) {
-                selectedPkg.buy_custom = true;
-            }
         } else if (currentTotal > 0 && qty > 0) {
             selectedPkg.buy_price = currentTotal / qty;
             item.buy_price = selectedPkg.buy_price;
@@ -2320,6 +2303,7 @@ function updateItem(tempId, field, value) {
         item.harga_nett = calcItemNett(item.buy_price, item.ppn_pct || 0, item.diskon_mode || 'rp', item.diskon_value || 0, item.quantity);
         const nettEl = document.getElementById(`nett_info_${tempId}`);
         if (nettEl) nettEl.innerHTML = buildNettInfo(item);
+        propagateFromMainInputs(item);
     }
     
     // Auto update margin displays
@@ -2411,6 +2395,8 @@ function updateItemTotal(tempId, totalValue) {
         infoEl.innerHTML = `<span style="color:var(--text-muted);">Harga modal per pcs: Rp${Math.round(newBaseBuyPrice).toLocaleString('id-ID')}</span>`;
     }
     
+    // Re-sync all packaging levels and nett prices
+    propagateFromMainInputs(item);
     // Re-render tabel harga kemasan dengan harga modal yang sudah ter-update
     renderCart();
 }
@@ -2949,6 +2935,7 @@ function openAllPackagingsModal(tempId) {
                 const lvEl = document.querySelector(`.packaging-level-edit[data-level="${pkg.level}"]`);
                 if (lvEl) {
                     pkg.buy_custom = lvEl.querySelector('.chk-buy-custom')?.checked || false;
+                    pkg.buy_custom_manual = pkg.buy_custom;
                     pkg.sell_custom = lvEl.querySelector('.chk-sell-custom')?.checked || false;
 
                     // Collect tier data
@@ -4070,6 +4057,7 @@ function onDrawerBuyInput(prefix, uid, level, newVal) {
     pkg.buy_price  = parseFloat(newVal) || 0;
     if (level !== 1) {
         pkg.buy_custom = true;
+        pkg.buy_custom_manual = true;
         const isBulk = (prefix === 'bulk');
         const rowEl = isBulk
             ? document.querySelector(`.bulk-item[data-bulk-id="${uid}"] .drawer-pkg-row[data-level="${level}"]`)
@@ -4209,7 +4197,7 @@ function onDrawerCustomToggle(prefix, uid, level, priceType, isCustom) {
     if (!item) return;
     const pkg = item.packagings.find(p => p.level == level);
     if (!pkg) return;
-    if (priceType === 'buy')  pkg.buy_custom  = isCustom;
+    if (priceType === 'buy')  { pkg.buy_custom = isCustom; pkg.buy_custom_manual = isCustom; }
     if (priceType === 'sell') pkg.sell_custom = isCustom;
     const isBulk = (prefix === 'bulk');
     const rowEl = isBulk
@@ -5007,6 +4995,7 @@ async function openBulkInputModal() {
                         pkg.sell_price_retail    = parseFloat(row.querySelector('.drawer-pkg-ret')?.value) || pkg.sell_price_retail;
                         pkg.sell_price_wholesale = parseFloat(row.querySelector('.drawer-pkg-who')?.value) || pkg.sell_price_wholesale;
                         pkg.buy_custom  = row.querySelector('.chk-buy-custom')?.checked  || false;
+                    pkg.buy_custom_manual = pkg.buy_custom;
                         pkg.sell_custom = row.querySelector('.chk-sell-custom')?.checked || false;
                         pkg.harga_nett  = calcItemNett(pkg.buy_price, pkg.ppn_pct, pkg.diskon_mode, pkg.diskon_value);
                         const tiers = [];

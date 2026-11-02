@@ -58,7 +58,7 @@ class LayoutAnalyzer
      */
     const PACKAGING_LEVEL_HINTS = [
         3 => ['bsr', 'big', 'karton', 'carton', 'ctn', 'case', 'master', 'dus',
-              'outer', 'box', 'kardus', 'krt', 'kotak', 'dos'],
+              'outer', 'box', 'kardus', 'krt', 'kotak', 'dos', 'tin', 'tk', 'bal'],
         2 => ['tgh', 'inner', 'pack', 'pak', 'renteng', 'slop', 'mid', 'bundle',
               'wrap', 'set', 'lusin', 'dozen', 'dz'],
         1 => ['kcl', 'pcs', 'ecer', 'satuan', 'biji', 'buah', 'unit', 'btl',

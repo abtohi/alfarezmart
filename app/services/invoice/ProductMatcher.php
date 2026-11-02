@@ -660,29 +660,49 @@ class ProductMatcher
     private function detectBestPackagingLevel(array $packagings, float $unitPrice, string $unit): int
     {
         $bestLevel = 1;
-        $bestScore = -1;
+        $bestScore = -999;
+
+        $unitAliases = [
+            'tin' => ['tin', 'tk', 'tim', 'kaleng', 'klg'],
+            'slop' => ['slop', 'slo', 'slp'],
+            'karton' => ['karton', 'krt', 'dus', 'dos', 'box', 'case', 'ctn', 'crt'],
+            'bungkus' => ['bungkus', 'bks', 'pack', 'pak'],
+            'pcs' => ['pcs', 'biji', 'buah', 'btl', 'botol', 'satuan'],
+        ];
+        $unitClean = strtolower(trim($unit));
 
         foreach ($packagings as $pkg) {
             $score = 0;
             $lvl   = (int)$pkg['level'];
+            $pkgUnit = strtolower(trim($pkg['unit_name'] ?? ''));
 
-            // 1. Unit name match (+40)
-            if (!empty($unit) && !empty($pkg['unit_name'])) {
-                if (stripos($pkg['unit_name'], $unit) !== false ||
-                    stripos($unit, $pkg['unit_name']) !== false) {
+            // 1. Unit name match (+40 to +50)
+            if (!empty($unitClean) && !empty($pkgUnit)) {
+                if ($unitClean === $pkgUnit) {
+                    $score += 50;
+                } elseif (stripos($pkgUnit, $unitClean) !== false || stripos($unitClean, $pkgUnit) !== false) {
                     $score += 40;
+                } else {
+                    foreach ($unitAliases as $group) {
+                        if (in_array($unitClean, $group) && in_array($pkgUnit, $group)) {
+                            $score += 35;
+                            break;
+                        }
+                    }
                 }
             }
 
-            // 2. Price distance match (+30)
+            // 2. Price distance match (+60) or heavy penalty (-60) for massive mismatch
             $dbPrice = (float)($pkg['buy_price'] ?? 0);
             if ($unitPrice > 0 && $dbPrice > 0) {
                 $diff = abs($dbPrice - $unitPrice);
                 $pct  = $diff / max($dbPrice, $unitPrice);
                 if ($pct <= 0.10) {
-                    $score += 30;
+                    $score += 60;
                 } elseif ($pct <= 0.25) {
-                    $score += 15;
+                    $score += 30;
+                } elseif ($pct >= 0.60) {
+                    $score -= 60; // Penalize massive price discrepancies (e.g. 10x)
                 }
             }
 

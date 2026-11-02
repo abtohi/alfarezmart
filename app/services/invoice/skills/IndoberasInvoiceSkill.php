@@ -256,6 +256,16 @@ class IndoberasInvoiceSkill implements InvoiceSkillInterface
             foreach ($packagings as $pkg) {
                 $pkgUnit = strtolower(trim($pkg['unit_name'] ?? ''));
                 if ($pkgUnit === $unitLower) {
+                    // Price sanity check: if exact unit has massive mismatch (>= 60%) but another packaging matches within 15%
+                    $pkgBuy = (float)($pkg['buy_price'] ?? 0);
+                    if ($unitPrice > 0 && $pkgBuy > 0 && abs($pkgBuy - $unitPrice) / max($pkgBuy, $unitPrice) >= 0.60) {
+                        foreach ($packagings as $altPkg) {
+                            $altBuy = (float)($altPkg['buy_price'] ?? 0);
+                            if ($altBuy > 0 && abs($altBuy - $unitPrice) / max($altBuy, $unitPrice) <= 0.15) {
+                                return ['packaging' => $altPkg, 'level' => (int)$altPkg['level'], 'strategy' => 'price_sanity_override'];
+                            }
+                        }
+                    }
                     return ['packaging' => $pkg, 'level' => (int)$pkg['level'], 'strategy' => 'unit_exact'];
                 }
             }
@@ -267,10 +277,22 @@ class IndoberasInvoiceSkill implements InvoiceSkillInterface
                         return ['packaging' => $pkg, 'level' => 2, 'strategy' => 'unit_level_mapping'];
                     }
                 }
-            } elseif (in_array($unitLower, ['karton', 'crt', 'dus', 'case', 'ctn', 'sak', 'karung'])) {
+            } elseif (in_array($unitLower, ['karton', 'crt', 'dus', 'case', 'ctn', 'sak', 'karung', 'tin', 'tk', 'tim'])) {
                 foreach ($packagings as $pkg) {
                     if ((int)$pkg['level'] === 3) {
                         return ['packaging' => $pkg, 'level' => 3, 'strategy' => 'unit_level_mapping'];
+                    }
+                }
+            }
+
+            // Price sanity cross-check for Strategy 2:
+            // If the matched packaging has a massive price mismatch (>= 60%) with invoice unitPrice,
+            // but another packaging matches within 25%, prioritize the price-matched packaging.
+            if ($unitPrice > 0) {
+                foreach ($packagings as $candidatePkg) {
+                    $cPrice = (float)($candidatePkg['buy_price'] ?? 0);
+                    if ($cPrice > 0 && abs($cPrice - $unitPrice) / max($cPrice, $unitPrice) <= 0.15) {
+                        return ['packaging' => $candidatePkg, 'level' => (int)$candidatePkg['level'], 'strategy' => 'price_sanity_override'];
                     }
                 }
             }
@@ -350,14 +372,16 @@ class IndoberasInvoiceSkill implements InvoiceSkillInterface
         if ($u === 'sak' || strpos($u, 'sak') !== false) return 'Sak';
         if ($u === 'crt' || $u === 'karton' || $u === 'dus' || $u === 'ctn') return 'Karton';
         if ($u === 'bal' || $u === 'ball') return 'Bal';
+        if ($u === 'tin' || $u === 'tk' || $u === 'tim') return 'Tin';
         if ($u === 'slo' || $u === 'slp' || $u === 'slop') return 'Slop';
         if ($u === 'rcg' || $u === 'renceng') return 'Renceng';
         if ($u === 'box' || $u === 'pak' || $u === 'pack') return 'Box';
         if ($u === 'bks' || $u === 'bungkus') return 'Bungkus';
         if ($u === 'pcs' || $u === 'biji' || $u === 'satuan') return 'Pcs';
 
-        // Infer unit from product name prefix if unit is empty
+        // Infer unit from product name if unit is empty
         $pLower = strtolower($productName);
+        if (preg_match('/\[tk\]|\b(tk|tin|tim)\b/i', $productName)) return 'Tin';
         if (strpos($pLower, 'r.') === 0 || strpos($pLower, 'rokok') !== false) return 'Slop';
         if (strpos($pLower, 'b.') === 0 || strpos($pLower, 'beras') !== false) return 'Sak';
 
