@@ -289,7 +289,11 @@ function fmtDateTime(dateStr) {
     return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}, ${hh}:${mm}`;
 }
 function isoDate(d) {
-    return d.toISOString().split('T')[0];
+    if (!d || !(d instanceof Date) || isNaN(d)) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 // ===== Customer Filter Searchbox (Custom, Elegant) =====
@@ -518,13 +522,10 @@ async function applyFilter() {
     const exactCacheKey = `sales_analytics_${dateFrom || 'all'}_${dateTo || 'all'}_${customerId || 'all'}`;
     const fallbackCacheKey = `sales_analytics_latest_backup`;
 
-    // 1. Instant 0ms cache check (coba exact cache key dulu, jika belum ada gunakan latest backup cache)
+    // 1. Instant 0ms cache check (hanya render cache jika exactCacheKey cocok agar tidak salah render periode)
     let hasRenderedCache = false;
     try {
         let cachedRaw = localStorage.getItem(exactCacheKey) || sessionStorage.getItem(exactCacheKey);
-        if (!cachedRaw) {
-            cachedRaw = localStorage.getItem(fallbackCacheKey);
-        }
         if (cachedRaw) {
             const cachedData = JSON.parse(cachedRaw);
             if (cachedData && cachedData.summary && cachedData.transactions && cachedData.transactions.length > 0) {
@@ -549,13 +550,20 @@ async function applyFilter() {
         if (dateTo)      params.set('date_to', dateTo);
         if (customerId)  params.set('customer_id', customerId);
 
+        const baseUrl = (typeof window.BASE_URL !== 'undefined') ? window.BASE_URL : (typeof BASE_URL !== 'undefined' ? BASE_URL : '/');
+        const cleanBaseUrl = (baseUrl && baseUrl.endsWith('/')) ? baseUrl : ((baseUrl || '') + '/');
+
         let res;
         if (typeof api === 'function') {
-            res = await api(`${BASE_URL}api/sales/analytics?${params.toString()}`, { silent: true, timeout: 15000 });
+            res = await api(`${cleanBaseUrl}api/sales/analytics?${params.toString()}`, { silent: true, timeout: 15000 });
         } else {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 15000);
-            const fetchRes = await fetch(`${BASE_URL}api/sales/analytics?${params.toString()}`, { signal: controller.signal });
+            const fetchRes = await fetch(`${cleanBaseUrl}api/sales/analytics?${params.toString()}`, {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' },
+                signal: controller.signal
+            });
             clearTimeout(timeoutId);
             if (!fetchRes.ok) throw new Error('Gagal mengambil data dari server');
             res = await fetchRes.json();

@@ -187,27 +187,8 @@ class SaleModel extends Model
      */
     public function cleanupOldTransactions($days = 30)
     {
-        try {
-            // Because of foreign keys with CASCADE or SET NULL, we only need to delete the parent table.
-            // But wait, sale_items has transaction_id, which should be CASCADE. Let's just delete sale_transactions.
-            // If they are not CASCADE, we should delete sale_items first. Let's delete sale_items explicitly to be safe.
-            $stmt = $this->db->prepare("
-                DELETE si FROM sale_items si
-                JOIN sale_transactions st ON si.transaction_id = st.id
-                WHERE st.created_at < DATE_SUB(NOW(), INTERVAL :days DAY)
-            ");
-            $stmt->bindValue(':days', (int)$days, PDO::PARAM_INT);
-            $stmt->execute();
-
-            $stmt2 = $this->db->prepare("
-                DELETE FROM sale_transactions 
-                WHERE created_at < DATE_SUB(NOW(), INTERVAL :days DAY)
-            ");
-            $stmt2->bindValue(':days', (int)$days, PDO::PARAM_INT);
-            $stmt2->execute();
-        } catch (Exception $e) {
-            error_log("Cleanup error: " . $e->getMessage());
-        }
+        // Dinonaktifkan: Data riwayat transaksi penjualan disimpan selamanya untuk analitik jangka panjang
+        return 0;
     }
 
     /**

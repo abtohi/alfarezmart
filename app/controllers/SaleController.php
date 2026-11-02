@@ -31,8 +31,7 @@ class SaleController extends Controller
     public function index()
     {
         $model = new SaleModel();
-        // Auto cleanup old transactions (> 30 days) to save storage
-        $model->cleanupOldTransactions(30);
+        // Catatan: Transaksi penjualan disimpan selamanya untuk analitik & rekap riwayat tahunan
 
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $sales = $model->getList($page, 20);
