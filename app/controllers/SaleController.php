@@ -4,6 +4,30 @@
  */
 class SaleController extends Controller
 {
+    private function getStoreSettings(): array
+    {
+        $settings = new SettingModel();
+        $storeLogo = $settings->get('store_logo', '');
+        if (empty($storeLogo)) {
+            $iconPath = PUBLIC_PATH . '/images/Icon.png';
+            if (file_exists($iconPath)) {
+                $storeLogo = 'data:image/png;base64,' . base64_encode(file_get_contents($iconPath));
+            } else {
+                $storeLogo = BASE_URL . 'public/images/Icon.png';
+            }
+        }
+
+        return [
+            'store_name' => $settings->get('store_name', 'Alfarez Mart'),
+            'store_address' => $settings->get('store_address', ''),
+            'store_phone' => $settings->get('store_phone', ''),
+            'thermal_printer_width' => (int) $settings->get('thermal_printer_width', 58),
+            'receipt_header' => $settings->get('receipt_header', ''),
+            'receipt_footer' => $settings->get('receipt_footer', ''),
+            'store_logo' => $storeLogo,
+        ];
+    }
+
     public function index()
     {
         $model = new SaleModel();
@@ -17,13 +41,13 @@ class SaleController extends Controller
             'title' => 'Riwayat Penjualan',
             'activeNav' => 'pos',
             'sales' => $sales,
+            'storeSettings' => $this->getStoreSettings(),
             'csrfToken' => (new Security())->getCSRFToken(),
         ]);
     }
 
     public function pos()
     {
-        $settings = new SettingModel();
         require_once __DIR__ . '/../models/DebtModel.php';
         $debtModel = new DebtModel();
         $customerTypes = $debtModel->getCustomerTypes();
@@ -31,15 +55,7 @@ class SaleController extends Controller
         $this->view('sales.pos', [
             'title' => 'Kasir',
             'activeNav' => 'pos',
-            'storeSettings' => [
-                'store_name' => $settings->get('store_name', 'AlfarezMart'),
-                'store_address' => $settings->get('store_address', ''),
-                'store_phone' => $settings->get('store_phone', ''),
-                'thermal_printer_width' => (int) $settings->get('thermal_printer_width', 58),
-                'receipt_header' => $settings->get('receipt_header', ''),
-                'receipt_footer' => $settings->get('receipt_footer', ''),
-                'store_logo' => $settings->get('store_logo', BASE_URL . 'public/images/Icon.png'),
-            ],
+            'storeSettings' => $this->getStoreSettings(),
             'customerTypes' => $customerTypes,
             'csrfToken' => (new Security())->getCSRFToken(),
         ]);
@@ -59,20 +75,11 @@ class SaleController extends Controller
             exit;
         }
 
-        $settings = new SettingModel();
         $this->view('sales.detail', [
             'title' => 'Detail Transaksi ' . $sale['invoice_number'],
             'activeNav' => 'pos',
             'sale' => $sale,
-            'storeSettings' => [
-                'store_name' => $settings->get('store_name', 'AlfarezMart'),
-                'store_address' => $settings->get('store_address', ''),
-                'store_phone' => $settings->get('store_phone', ''),
-                'thermal_printer_width' => (int) $settings->get('thermal_printer_width', 58),
-                'receipt_header' => $settings->get('receipt_header', ''),
-                'receipt_footer' => $settings->get('receipt_footer', ''),
-                'store_logo' => $settings->get('store_logo', BASE_URL . 'public/images/Icon.png'),
-            ]
+            'storeSettings' => $this->getStoreSettings(),
         ]);
     }
 }

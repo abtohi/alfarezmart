@@ -2893,7 +2893,36 @@ class ApiController extends Controller
                 $this->json(['error' => 'Transaksi tidak ditemukan'], 404);
                 return;
             }
-            $this->json(['success' => true, 'transaction' => $transaction]);
+
+            $settingModel = new SettingModel();
+            $storeLogo = $settingModel->get('store_logo', '');
+            if (empty($storeLogo)) {
+                $iconPath = PUBLIC_PATH . '/images/Icon.png';
+                if (file_exists($iconPath)) {
+                    $storeLogo = 'data:image/png;base64,' . base64_encode(file_get_contents($iconPath));
+                } else {
+                    $storeLogo = BASE_URL . 'public/images/Icon.png';
+                }
+            }
+
+            $storeSettings = [
+                'store_name' => $settingModel->get('store_name', 'Alfarez Mart'),
+                'store_address' => $settingModel->get('store_address', ''),
+                'store_phone' => $settingModel->get('store_phone', ''),
+                'thermal_printer_width' => (int) $settingModel->get('thermal_printer_width', 58),
+                'receipt_header' => $settingModel->get('receipt_header', ''),
+                'receipt_footer' => $settingModel->get('receipt_footer', ''),
+                'store_logo' => $storeLogo,
+            ];
+
+            $this->json([
+                'success' => true,
+                'transaction' => $transaction,
+                'items' => $transaction['items'] ?? [],
+                'store_name' => $storeSettings['store_name'],
+                'store_settings' => $storeSettings,
+                'store_logo' => $storeLogo,
+            ]);
         } catch (Exception $e) {
             $this->json(['error' => $e->getMessage()], 500);
         }

@@ -820,6 +820,8 @@ if ($userLevel === 'staff') {
     <script src="<?= BASE_URL ?>public/js/db.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/printer_v3.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/ppob_receipt.js<?= $v ?>"></script>
+    <script src="<?= BASE_URL ?>public/js/html2canvas.min.js"></script>
+    <script src="<?= BASE_URL ?>public/js/sales_invoice.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/barcode.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/packaging-prices.js<?= $v ?>"></script>
     <script src="<?= BASE_URL ?>public/js/qty-pricing.js<?= $v ?>"></script>

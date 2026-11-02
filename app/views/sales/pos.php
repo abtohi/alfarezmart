@@ -1955,6 +1955,19 @@ async function proceedCheckout() {
             const currentCustomer = selectedCustomer ? { ...selectedCustomer } : null;
             const mixInfo = getMixDiscountInfo();
             const currentChainInfo = getChainInfo();
+            window._lastCheckoutInvoiceData = {
+                saleId: result.id || null,
+                invoice_number: invoiceNo,
+                created_at: new Date().toISOString(),
+                payment_method: 'Tunai',
+                sale_mode: currentSaleMode,
+                total_amount: printTotal,
+                items: printCart,
+                mixInfo: mixInfo,
+                storeSettings: STORE_SETTINGS,
+                store_name: STORE_SETTINGS?.store_name || 'Alfarez Mart',
+                store_logo: STORE_SETTINGS?.store_logo
+            };
 
             cart = [];
             currentDraftId = null;
@@ -2037,6 +2050,13 @@ async function proceedCheckout() {
                     </div>
 
 
+                    <div style="margin-bottom:14px;">
+                        <button type="button" id="btnSharePosInvoice" onclick="shareCurrentPosInvoice()" style="width:100%;padding:13px;font-weight:700;background:linear-gradient(135deg, #25D366 0%, #128C7E 100%);color:white;border:none;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;gap:8px;font-size:var(--font-size-sm);cursor:pointer;box-shadow:0 4px 14px rgba(37,211,102,0.3);transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.01)'" onmouseout="this.style.transform='scale(1)'">
+                            <i class="bi bi-share-fill" style="font-size:1.1rem;"></i>
+                            <span>Bagikan Invoice / Struk (Gambar)</span>
+                        </button>
+                    </div>
+
                     <div id="printerSection" style="background:var(--surface-1);border:1px solid var(--border-color);border-radius:var(--radius-md);padding:16px;">
                         <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;">
                             <div style="width:40px;height:40px;background:var(--info-bg);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
@@ -2102,6 +2122,24 @@ async function proceedCheckout() {
         btnCheckout.disabled = false;
     }
 }
+
+window.shareCurrentPosInvoice = async function() {
+    const btn = document.getElementById('btnSharePosInvoice');
+    if (!window._lastCheckoutInvoiceData) {
+        showToast('Data struk tidak ditemukan', 'error');
+        return;
+    }
+    if (typeof window.shareSalesInvoice === 'function') {
+        await window.shareSalesInvoice({
+            data: window._lastCheckoutInvoiceData,
+            invoiceNumber: window._lastCheckoutInvoiceData.invoice_number,
+            saleId: window._lastCheckoutInvoiceData.saleId,
+            buttonEl: btn
+        });
+    } else {
+        showToast('Modul bagikan invoice sedang dimuat...', 'info');
+    }
+};
 
 function setupPrinterButtons(printCart, printTotal, invoiceNo, printSaleMode, mixInfo, chainInfo) {
     const btnConnect = document.getElementById('btnConnectPrinter');
@@ -2548,6 +2586,12 @@ function showHistorySaveConfirmation(invoiceNo, total, cartItems, chainInfo) {
                 </div>
 
                 ${categoryBreakdownHTML}
+
+                <!-- Tombol Bagikan Struk ke WA (Gambar) -->
+                <button type="button" onclick="shareCurrentPosInvoice()" style="width:100%; padding:12px 14px; font-weight:700; background:linear-gradient(135deg, #25D366 0%, #128C7E 100%); color:white; border:none; border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; gap:8px; font-size:var(--font-size-sm); cursor:pointer; margin-bottom:10px; box-shadow:0 4px 12px rgba(37,211,102,0.25); transition:transform 0.15s;" onmouseover="this.style.transform='scale(1.01)'" onmouseout="this.style.transform='scale(1)'">
+                    <i class="bi bi-share-fill" style="font-size:1.15rem;"></i>
+                    <span>Bagikan Struk ke WhatsApp (Gambar)</span>
+                </button>
 
                 <!-- Tombol Lanjut ke Invoice Berikutnya -->
                 <button type="button" onclick="startNextInvoiceChain('${invoiceNo}', ${total})" style="width:100%; padding:12px 14px; font-weight:700; background:linear-gradient(135deg, rgba(79,70,229,0.1) 0%, rgba(99,102,241,0.15) 100%); border:1.5px dashed var(--primary); color:var(--primary); border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; gap:8px; font-size:var(--font-size-sm); cursor:pointer; transition:all 0.2s; margin-bottom:4px;" onmouseover="this.style.background='var(--primary-bg)'" onmouseout="this.style.background='linear-gradient(135deg, rgba(79,70,229,0.1) 0%, rgba(99,102,241,0.15) 100%)'">

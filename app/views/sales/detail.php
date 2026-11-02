@@ -1343,6 +1343,9 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
 
             <!-- Fast Action Footer Card in Sidebar -->
             <div class="sale-sidebar-card" style="display:flex; flex-direction:column; gap:10px;">
+                <button type="button" id="btnShareDetailInvoice" onclick="shareDetailInvoice()" class="btn-sale-action" style="justify-content:center; padding:10px; background:linear-gradient(135deg, #25D366 0%, #128C7E 100%); color:white; border:none; font-weight:700; box-shadow:0 4px 12px rgba(37,211,102,0.25);">
+                    <i class="bi bi-share-fill"></i> Bagikan Struk (Gambar)
+                </button>
                 <button type="button" onclick="printReceipt()" class="btn-sale-action primary" style="justify-content:center; padding:10px;">
                     <i class="bi bi-printer"></i> Cetak Struk Belanja
                 </button>
@@ -1365,6 +1368,29 @@ window.SALE_DATA = <?= json_encode($sale, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HE
 <script>
     const STORE_SETTINGS = <?= json_encode($storeSettings) ?>;
     const SALE_DATA = <?= json_encode($sale) ?>;
+
+    async function shareDetailInvoice() {
+        const btn = document.getElementById('btnShareDetailInvoice');
+        if (typeof window.shareSalesInvoice === 'function') {
+            await window.shareSalesInvoice({
+                data: {
+                    saleId: SALE_DATA.id,
+                    invoice_number: SALE_DATA.invoice_number,
+                    created_at: SALE_DATA.created_at,
+                    payment_method: SALE_DATA.payment_method,
+                    sale_mode: SALE_DATA.sale_mode,
+                    total_amount: SALE_DATA.total_amount,
+                    items: SALE_DATA.items || [],
+                    storeSettings: STORE_SETTINGS,
+                    store_name: STORE_SETTINGS?.store_name || 'Alfarez Mart',
+                    store_logo: STORE_SETTINGS?.store_logo
+                },
+                invoiceNumber: SALE_DATA.invoice_number,
+                saleId: SALE_DATA.id,
+                buttonEl: btn
+            });
+        }
+    }
 
     // ── Grouping & Accordion Controls ──────────────────────────────────────────
     let isGroupingActive = true;
